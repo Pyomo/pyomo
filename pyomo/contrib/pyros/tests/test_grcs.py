@@ -15,6 +15,7 @@ Tests for the PyROS solver.
 
 import logging
 import math
+import os
 import time
 
 import pyomo.common.unittest as unittest
@@ -32,6 +33,7 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import replace_expressions
 from pyomo.environ import assert_optimal_termination, maximize as pyo_max, units as u
 from pyomo.opt import (
@@ -3417,6 +3419,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
             " backup_local_solvers=[]\n"
             " backup_global_solvers=[]\n"
             " subproblem_file_directory=None\n"
+            " subproblem_format_options={'bar': {'symbolic_solver_labels': True}}\n"
             " bypass_local_separation=False\n"
             " bypass_global_separation=False\n"
             " p_robustness={}\n" + "-" * 78 + "\n"
@@ -3701,6 +3704,93 @@ class SimpleTestSolver:
         res.solver.termination_condition = TerminationCondition.unknown
 
         return res
+
+
+class TestPyROSSubproblemWriter(unittest.TestCase):
+    """
+    Test PyROS subproblem writers behave as expected when
+    solution of a subproblem fails.
+    """
+
+    @unittest.skipUnless(baron_available, "BARON not available.")
+    def test_pyros_write_master_problem(self):
+        m = build_leyffer()
+
+        with TempfileManager.new_context() as TMP:
+            tmpdir = TMP.create_tempdir()
+            res = SolverFactory("pyros").solve(
+                model=m,
+                first_stage_variables=[m.x1, m.x2],
+                second_stage_variables=[],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet([[1, 2]]),
+                local_solver=SimpleTestSolver(),
+                global_solver=SolverFactory("baron"),
+                solve_master_globally=False,
+                keepfiles=True,
+                subproblem_file_directory=tmpdir,
+                subproblem_format_options={
+                    "bar": {},
+                    "gams": {"symbolic_solver_labels": True},
+                },
+            )
+            expected_subproblem_file = os.path.join(tmpdir, "box_unknown_master_0")
+            format_files_exist_dict = {
+                "bar": os.path.exists(f"{expected_subproblem_file}.bar"),
+                "gams": os.path.exists(f"{expected_subproblem_file}.gams"),
+            }
+
+        self.assertTrue(format_files_exist_dict["bar"])
+        self.assertTrue(format_files_exist_dict["gams"])
+        self.assertEqual(res.iterations, 1)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.subsolver_error
+        )
+
+    @unittest.skipUnless(baron_available, "BARON not available.")
+    def test_pyros_write_separation_problem(self):
+        m = build_leyffer()
+        subproblem_format_options = {
+            "bar": {},
+            "gams": {"symbolic_solver_labels": True},
+        }
+
+        with TempfileManager.new_context() as TMP:
+            tmpdir = TMP.create_tempdir()
+            expected_subproblem_filenames = [
+                os.path.join(
+                    tmpdir, f"box_unknown_separation_0_obj_separation_obj_0.{fmt}"
+                )
+                for fmt in subproblem_format_options.keys()
+            ]
+
+            res = SolverFactory("pyros").solve(
+                model=m,
+                first_stage_variables=[m.x1, m.x2],
+                second_stage_variables=[],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet([[1, 2]]),
+                local_solver=SimpleTestSolver(),
+                global_solver=SolverFactory("baron"),
+                solve_master_globally=True,
+                bypass_global_separation=True,
+                keepfiles=True,
+                subproblem_file_directory=tmpdir,
+                subproblem_format_options=subproblem_format_options,
+            )
+
+            subproblem_files_created = {
+                fname: os.path.exists(fname) for fname in expected_subproblem_filenames
+            }
+
+        for fname, file_created in subproblem_files_created.items():
+            self.assertTrue(
+                file_created, msg=f"Subproblem was not written to file {fname}."
+            )
+        self.assertEqual(res.iterations, 1)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.subsolver_error
+        )
 
 
 class TestPyROSSolverAdvancedValidation(unittest.TestCase):

@@ -16,7 +16,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 from typing import Union, Type
 
-from pyomo.common.deprecation import RenamedClass
+from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
@@ -545,7 +545,7 @@ class TemplateConstraintData(ConstraintData):
     def expr(self):
         # Note that it is faster to just generate the expression from
         # scratch than it is to clone it and replace the IndexTemplate objects
-        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        self.set_value(self.parent_component()._rule(self.parent_block(), self.index()))
         return self.expr
 
     def template_expr(self):
@@ -640,9 +640,9 @@ class Constraint(ActiveIndexedComponent):
         _init = self._pop_from_kwargs('Constraint', kwargs, ('rule', 'expr'), None)
         # Special case: we accept 2- and 3-tuples as constraints
         if type(_init) is tuple:
-            self.rule = Initializer(_init, treat_sequences_as_mappings=False)
+            self._rule = Initializer(_init, treat_sequences_as_mappings=False)
         else:
-            self.rule = Initializer(_init)
+            self._rule = Initializer(_init)
 
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
@@ -663,7 +663,7 @@ class Constraint(ActiveIndexedComponent):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        rule = self.rule
+        rule = self._rule
         try:
             # We do not (currently) accept data for constructing Constraints
             index = None
@@ -719,9 +719,9 @@ class Constraint(ActiveIndexedComponent):
             timer.report()
 
     def _getitem_when_not_present(self, idx):
-        if self.rule is None:
+        if self._rule is None:
             raise KeyError(idx)
-        con = self._setitem_when_not_present(idx, self.rule(self.parent_block(), idx))
+        con = self._setitem_when_not_present(idx, self._rule(self.parent_block(), idx))
         if con is None:
             raise KeyError(idx)
         return con
@@ -745,6 +745,20 @@ class Constraint(ActiveIndexedComponent):
                 v.active,
             ],
         )
+
+    @property
+    def rule(self):
+        return self._rule
+
+    @rule.setter
+    @deprecated(
+        f"The 'Constraint.rule' attribute will be made "
+        "read-only in a future Pyomo release.",
+        version='6.9.3.dev0',
+        remove_in='6.11',
+    )
+    def rule(self, rule):
+        self._rule = rule
 
     def display(self, prefix="", ostream=None):
         """
@@ -971,14 +985,14 @@ class ConstraintList(IndexedConstraint):
 
         super().__init__(Set(dimen=1), **kwargs)
 
-        self.rule = Initializer(
+        self._rule = Initializer(
             _rule, treat_sequences_as_mappings=False, allow_generators=True
         )
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
         # reliable.
-        if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(self, self.rule, self._starting_index)
+        if self._rule is not None and type(self._rule) is IndexedCallInitializer:
+            self._rule = CountedCallInitializer(self, self._rule, self._starting_index)
 
     def construct(self, data=None):
         """
@@ -995,8 +1009,8 @@ class ConstraintList(IndexedConstraint):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        if self.rule is not None:
-            _rule = self.rule(self.parent_block(), ())
+        if self._rule is not None:
+            _rule = self._rule(self.parent_block(), ())
             for cc in iter(_rule):
                 if cc is ConstraintList.End:
                     break

@@ -14,7 +14,7 @@ import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 
-from pyomo.common.deprecation import RenamedClass
+from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.enums import ObjectiveSense, minimize, maximize
 from pyomo.common.log import is_debug_set
@@ -185,7 +185,7 @@ class TemplateObjectiveData(ObjectiveData):
     def args(self):
         # Note that it is faster to just generate the expression from
         # scratch than it is to clone it and replace the IndexTemplate objects
-        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        self.set_value(self.parent_component()._rule(self.parent_block(), self.index()))
         return self._args_
 
     def template_expr(self):
@@ -267,7 +267,7 @@ class Objective(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
-        self.rule = Initializer(_init)
+        self._rule = Initializer(_init)
         self._init_sense = Initializer(_sense)
 
     def construct(self, data=None):
@@ -286,7 +286,7 @@ class Objective(ActiveIndexedComponent):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        rule = self.rule
+        rule = self._rule
         try:
             # We do not (currently) accept data for constructing Objectives
             index = None
@@ -348,11 +348,11 @@ class Objective(ActiveIndexedComponent):
             timer.report()
 
     def _getitem_when_not_present(self, index):
-        if self.rule is None:
+        if self._rule is None:
             raise KeyError(index)
 
         block = self.parent_block()
-        obj = self._setitem_when_not_present(index, self.rule(block, index))
+        obj = self._setitem_when_not_present(index, self._rule(block, index))
         if obj is None:
             raise KeyError(index)
         obj.set_sense(self._init_sense(block, index))
@@ -373,6 +373,20 @@ class Objective(ActiveIndexedComponent):
             ("Active", "Sense", "Expression"),
             lambda k, v: [v.active, v.sense, v.expr],
         )
+
+    @property
+    def rule(self):
+        return self._rule
+
+    @rule.setter
+    @deprecated(
+        f"The 'Objective.rule' attribute will be made "
+        "read-only in a future Pyomo release.",
+        version='6.9.3.dev0',
+        remove_in='6.11',
+    )
+    def rule(self, rule):
+        self._rule = rule
 
     def display(self, prefix="", ostream=None):
         """Provide a verbose display of this object"""
@@ -573,12 +587,12 @@ class ObjectiveList(IndexedObjective):
 
         super().__init__(Set(dimen=1), **kwargs)
 
-        self.rule = Initializer(_rule, allow_generators=True)
+        self._rule = Initializer(_rule, allow_generators=True)
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
         # reliable.
-        if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(self, self.rule, self._starting_index)
+        if self._rule is not None and type(self._rule) is IndexedCallInitializer:
+            self._rule = CountedCallInitializer(self, self._rule, self._starting_index)
 
     def construct(self, data=None):
         """
@@ -595,8 +609,8 @@ class ObjectiveList(IndexedObjective):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        if self.rule is not None:
-            _rule = self.rule(self.parent_block(), ())
+        if self._rule is not None:
+            _rule = self._rule(self.parent_block(), ())
             for cc in iter(_rule):
                 if cc is ObjectiveList.End:
                     break
