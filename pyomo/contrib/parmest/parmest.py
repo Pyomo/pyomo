@@ -823,13 +823,6 @@ class Estimator(object):
             if obj_function is None:
                 self.obj_function = obj_function
             else:
-                deprecation_warning(
-                    "You're using a deprecated input to the `obj_function` argument by "
-                    "passing a custom function. This usage will be removed in a "
-                    "future release. Please update to the new parmest interface using "
-                    "the built-in 'SSE' and 'SSE_weighted' objectives.",
-                    version="6.9.3.dev0",
-                )
                 self.obj_function = obj_function
 
         self.tee = tee
@@ -1270,9 +1263,11 @@ class Estimator(object):
                 sse_expr = SSE_weighted(model)
             else:
                 raise ValueError(
-                    f"Invalid objective function for covariance calculation: "
-                    f"{self.obj_function}. Choose from: "
-                    f"{[e.value for e in ObjectiveType]} in the Estimator object."
+                    f"Invalid objective function for covariance calculation. "
+                    f"The covariance matrix can only be calculated using the built-in "
+                    f"objective functions: {[e.value for e in ObjectiveType]}. Supply "
+                    f"the Estimator object one of these built-in objectives and "
+                    f"re-run the code."
                 )
 
             # evaluate the numerical SSE and store it
@@ -1374,8 +1369,7 @@ class Estimator(object):
                 if all(item is not None for item in meas_error):
                     if (
                         cov_method == CovarianceMethod.finite_difference
-                        or cov_method
-                        == CovarianceMethod.automatic_differentiation_kaug
+                        or cov_method == CovarianceMethod.automatic_differentiation_kaug
                     ):
                         cov = compute_covariance_matrix(
                             self.exp_list,
