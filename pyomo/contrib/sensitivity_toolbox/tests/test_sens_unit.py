@@ -9,24 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# ____________________________________________________________________________
-#
-# Pyomo: Python Optimization Modeling Objects
-# Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-# Under the terms of Contract DE-NA0003525 with National Technology and
-# Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-# rights in this software.
-# This software is distributed under the 3-clause BSD License.
-# ____________________________________________________________________________
-
 """
 Unit Tests for interfacing with sIPOPT and k_aug
 """
 
 import pyomo.common.unittest as unittest
-from io import StringIO
-import logging
 
 from pyomo.environ import (
     ConcreteModel,
@@ -35,7 +22,6 @@ from pyomo.environ import (
     Var,
     Block,
     Suffix,
-    value,
     Constraint,
     inequality,
     NonNegativeReals,
@@ -44,8 +30,8 @@ from pyomo.environ import (
 )
 from pyomo.core.base.component import ComponentData
 from pyomo.common.dependencies import scipy_available
-from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters
 from pyomo.contrib.sensitivity_toolbox.sens import (
     SensitivityInterface,
@@ -860,30 +846,32 @@ class TestSensitivityInterface(unittest.TestCase):
         '''
         It tests the function line_num
         '''
-        import os
 
-        file_name = "test_col.col"
-        with open(file_name, "w") as file:
-            file.write("var1\n")
-            file.write("var3\n")
-        i = line_num(file_name, 'var1')
-        j = line_num(file_name, 'var3')
-        self.assertEqual(i, 1)
-        self.assertEqual(j, 2)
+        with TempfileManager.new_context() as TMP:
+            file_name = TMP.create_tempfile('test_col.col')
+            with open(file_name, "w") as file:
+                file.write("var1\n")
+                file.write("var3\n")
+            i = line_num(file_name, 'var1')
+            j = line_num(file_name, 'var3')
+            self.assertEqual(i, 1)
+            self.assertEqual(j, 2)
 
     def test_line_num2(self):
         '''
         It tests an exception error when file does not include target
         '''
-        import os
 
-        file_name = "test_col.col"
-        with open(file_name, "w") as file:
-            file.write("var1\n")
-            file.write("var3\n")
-        with self.assertRaises(Exception) as context:
-            i = line_num(file_name, 'var2')
-        self.assertTrue('test_col.col does not include var2' in str(context.exception))
+        with TempfileManager.new_context() as TMP:
+            file_name = TMP.create_tempfile('test_col.col')
+            with open(file_name, "w") as file:
+                file.write("var1\n")
+                file.write("var3\n")
+            with self.assertRaises(Exception) as context:
+                i = line_num(file_name, 'var2')
+            self.assertTrue(
+                'test_col.col does not include var2' in str(context.exception)
+            )
 
 
 if __name__ == "__main__":

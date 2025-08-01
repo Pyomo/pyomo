@@ -162,6 +162,94 @@ trim_doctest_flags = True
 # they have a caption.
 numfig = True
 
+
+# We want to be able to document the CONFIG class attribute in a special
+# section.  Nominally, we would use the napoleon_custom_sections hook.
+# Unfortunately, there isn't a generic "kwargs_style", and aliasing
+# 'Keyword Arguments' would render the section header in the
+# documentation as 'Keyword Arguments'.
+#
+# Our solution is to declare a new PyObject field type (:config:) and
+# define a new parser that generates :config: fields.  We register the
+# new parser with Napoleon by monkey-patching _load_custom_sections().
+def _monkey_patch_napoleon():
+    from sphinx.ext.napoleon.docstring import GoogleDocstring
+    from sphinx.domains.python._object import PyObject, PyTypedField
+    from sphinx.locale import _
+    from sphinx import addnodes
+    from functools import partial
+
+    class PyConfigDomainField(PyTypedField):
+        def make_xref(
+            self,
+            rolename: str,
+            domain: str,
+            target: str,
+            innernode=addnodes.literal_emphasis,
+            contnode=None,
+            env=None,
+            inliner=None,
+            location=None,
+        ):
+            ans = super().make_xref(
+                rolename=rolename,
+                domain=domain,
+                target=target,
+                innernode=innernode,
+                contnode=contnode,
+                env=env,
+                inliner=inliner,
+                location=location,
+            )
+            # Part of the call stack will override the reftype to
+            # "class".  We want to support a broader set of domain
+            # types, so we will set it to "anything" (i.e., object)
+            ans['reftype'] = 'obj'
+            return ans
+
+    PyObject.doc_field_types.append(
+        PyConfigDomainField(
+            'config',
+            label=_('CONFIG'),
+            names=('config',),
+            typerolename='obj',
+            typenames=('configtype',),
+            can_collapse=True,
+        )
+    )
+    PyObject.doc_field_types.append(
+        PyConfigDomainField(
+            'option',
+            label=_('Options'),
+            names=('option',),
+            typerolename='obj',
+            typenames=('optiontype',),
+            can_collapse=True,
+        )
+    )
+
+    def _parse_config_section(self, field: str, section: str) -> list[str]:
+        fields = self._consume_fields()
+        if self._config.napoleon_use_keyword:
+            return self._format_docutils_params(
+                fields, field_role=field, type_role=field + 'type'
+            )
+        else:
+            return self._format_fields(_(section), fields)
+
+    original_loader = GoogleDocstring._load_custom_sections
+
+    def _load_custom_sections(self):
+        self._sections['config'] = partial(self._parse_config_section, 'config')
+        self._sections['options'] = partial(self._parse_config_section, 'option')
+        return original_loader(self)
+
+    GoogleDocstring._parse_config_section = _parse_config_section
+    GoogleDocstring._load_custom_sections = _load_custom_sections
+
+
+_monkey_patch_napoleon()
+
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
