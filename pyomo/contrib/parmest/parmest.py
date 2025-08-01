@@ -331,7 +331,7 @@ def _get_labeled_model_helper(experiment):
     get_model = getattr(experiment, "get_labeled_model", None)
     if not callable(get_model):
         raise AttributeError(
-            'The experiment object must have a "get_labeled_model" ' 'function.'
+            'The experiment object must have a "get_labeled_model" function.'
         )
 
     try:
