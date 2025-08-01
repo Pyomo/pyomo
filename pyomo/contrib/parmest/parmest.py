@@ -340,7 +340,7 @@ def _get_labeled_model_helper(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
-class CovarianceMethodLib(Enum):
+class CovarianceMethod(Enum):
     finite_difference = "finite_difference"
     automatic_differentiation_kaug = "automatic_differentiation_kaug"
     reduced_hessian = "reduced_hessian"
