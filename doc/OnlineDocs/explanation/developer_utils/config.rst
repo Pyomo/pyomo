@@ -327,9 +327,15 @@ to the :class:`~argparse.ArgumentParser` object:
       --disable-linesearch  [DON'T] use line search
     <BLANKLINE>
     Tolerances:
-      --reltol FLOAT, -r FLOAT  relative convergence tolerance
-      --abstol FLOAT, -a FLOAT  absolute convergence tolerance
+      --reltol... -r FLOAT  relative convergence tolerance
+      --abstol... -a FLOAT  absolute convergence tolerance
     <BLANKLINE>
+
+..
+   NOTE: the text above uses an Ellipsis because the line is rendered as:
+      --reltol FLOAT, -r FLOAT  relative convergence tolerance
+   through Python 3.12, and beginning in Python 3.13 changed to:
+      --reltol, -r FLOAT  relative convergence tolerance
 
 .. doctest::
    :hide:
