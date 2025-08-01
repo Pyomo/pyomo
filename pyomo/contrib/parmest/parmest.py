@@ -346,7 +346,7 @@ class CovarianceMethod(Enum):
     reduced_hessian = "reduced_hessian"
 
 
-class ObjectiveLib(Enum):
+class ObjectiveType(Enum):
     SSE = "SSE"
     SSE_weighted = "SSE_weighted"
 
