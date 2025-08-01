@@ -26,7 +26,7 @@ methods which have been implemented in parmest.
 
     Where :math:`V_{\boldsymbol{\theta}}` is the covariance matrix of the estimated
     parameters, :math:`\boldsymbol{\theta}` are the unknown parameters,
-    :math:`\boldsymbol{\theta^*}` are the estimate of the unknown parameters, and
+    :math:`\boldsymbol{\theta^*}` are the estimates of the unknown parameters, and
     :math:`\sigma^2` is the variance of the measurement error. When the standard
     deviation of the measurement error is not supplied by the user, parmest
     approximates the variance of the measurement error as
