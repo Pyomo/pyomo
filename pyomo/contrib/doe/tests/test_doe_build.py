@@ -474,6 +474,14 @@ class TestReactorExampleBuild(unittest.TestCase):
                 doe_obj.model.find_component("scenario_blocks[" + str(i) + "]")
             )
 
+    def test_reactor_update_suffix_items(self):
+        """Test the reactor example with updating suffix items."""
+        from pyomo.contrib.doe.examples.updatesuffix_doe_example import (
+            run_reactor_update_suffix_items,
+        )
+
+        # Run the reactor update suffix items example
+        run_reactor_update_suffix_items()
 
 if __name__ == "__main__":
     unittest.main()

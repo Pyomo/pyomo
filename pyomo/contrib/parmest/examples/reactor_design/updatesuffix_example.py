@@ -20,8 +20,7 @@ import pyomo.environ as pyo
 from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 
 
-# Example to run a DoE on the reactor
-def run_reactor_update_suffix_items():
+def main():
     # Read in file
     # Read in data
     file_dirname = dirname(abspath(str(__file__)))
@@ -58,4 +57,4 @@ def run_reactor_update_suffix_items():
 
 
 if __name__ == "__main__":
-    run_reactor_update_suffix_items()
+    main()

@@ -52,7 +52,7 @@ def run_reactor_update_suffix_items():
     orig_vals = np.array([suffix_obj[v] for v in me_vars])
 
     # Original values
-    print("Original σ values:", orig_vals)
+    print("Original sigma values:", orig_vals)
     # Update the suffix with new values
     new_vals = orig_vals + 1
     # Here we are updating the values of the unknown parameters
@@ -60,7 +60,7 @@ def run_reactor_update_suffix_items():
     update_model_from_suffix(suffix_obj, new_vals)
 
     # Updated values
-    print("Updated σ values :", [suffix_obj[v] for v in me_vars])
+    print("Updated sigma values :", [suffix_obj[v] for v in me_vars])
 
 
 if __name__ == "__main__":

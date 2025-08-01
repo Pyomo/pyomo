@@ -196,10 +196,10 @@ class TestReactorDesignExamples(unittest.TestCase):
 
     def test_reactor_design_updatesuffix(self):
         from pyomo.contrib.parmest.examples.reactor_design import (
-            reactor_design_updatesuffix,
+            updatesuffix_example,
         )
 
-        reactor_design_updatesuffix.run_reactor_update_suffix_items()
+        updatesuffix_example.main()
 
 
 if __name__ == "__main__":
