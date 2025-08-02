@@ -15,11 +15,11 @@ import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 from pyomo.common.fileutils import find_library
 
-flib = find_library("asl_functions_lib")
+flib = find_library("libaslfunctions")
 is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 
-@unittest.skipIf(not flib, 'Could not find the "asl_functions_lib" library')
+@unittest.skipIf(not flib, 'Could not find the "aslfunctions" library')
 @unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
 class TestAMPLExternalFunction(unittest.TestCase):
 

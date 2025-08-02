@@ -13,10 +13,10 @@ import sys
 from pyomo.common.cmake_builder import build_cmake_project
 
 
-def build_asl_functions_lib(user_args=[], parallel=None):
+def build_aslfunctions(user_args=[], parallel=None):
     return build_cmake_project(
         targets=["src"],
-        package_name="asl_functions_lib",
+        package_name="aslfunctions",
         description="Useful AMPL external functions",
         user_args=["-DBUILD_AMPLASL_IF_NEEDED=ON"] + user_args,
         parallel=parallel,
@@ -25,8 +25,8 @@ def build_asl_functions_lib(user_args=[], parallel=None):
 
 class LibASLFunctionsBuilder(object):
     def __call__(self, parallel):
-        return build_asl_functions_lib(parallel=parallel)
+        return build_aslfunctions(parallel=parallel)
 
 
 if __name__ == "__main__":
-    build_asl_functions_lib(sys.argv[1:])
+    build_aslfunctions(sys.argv[1:])

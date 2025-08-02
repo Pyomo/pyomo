@@ -8,7 +8,7 @@ Modeling Utilities
    latex_printer
    preprocessing
    scaling
-   asl_functions_lib/index
+   aslfunctions/index
 
 
 ..

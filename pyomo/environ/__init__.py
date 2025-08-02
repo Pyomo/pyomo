@@ -46,7 +46,7 @@ _packages = [
     'pyomo.contrib.gdpopt',
     'pyomo.contrib.gjh',
     'pyomo.contrib.gdp_bounds',
-    'pyomo.contrib.asl_functions_lib',
+    'pyomo.contrib.aslfunctions',
     'pyomo.contrib.mcpp',
     'pyomo.contrib.mindtpy',
     'pyomo.contrib.multistart',

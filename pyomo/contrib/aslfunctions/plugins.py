@@ -10,8 +10,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.extensions import ExtensionBuilderFactory
-from pyomo.contrib.asl_functions_lib.build import LibASLFunctionsBuilder
+from pyomo.contrib.aslfunctions.build import LibASLFunctionsBuilder
 
 
 def load():
-    ExtensionBuilderFactory.register("asl_functions_lib")(LibASLFunctionsBuilder)
+    ExtensionBuilderFactory.register("aslfunctions")(LibASLFunctionsBuilder)

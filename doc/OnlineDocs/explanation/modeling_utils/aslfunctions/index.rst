@@ -1,5 +1,5 @@
-asl_functions_lib
-=================
+aslfunctions
+============
 
 Pyomo provides a set of AMPL user-defined functions that commonly occur but cannot be easily written as Pyomo expressions. 
 
@@ -9,7 +9,7 @@ Using These AMPL External Functions
 Build
 ~~~~~
 
-You must build the Pyomo extensions to use these functions.  Run ``pyomo build-extensions`` in the terminal and make sure the ``asl_functions_lib`` build status is "ok."
+You must build the Pyomo extensions to use these functions.  Run ``pyomo build-extensions`` in the terminal and make sure the ``aslfunctions`` build status is "ok."
 
 Example
 ~~~~~~~
@@ -18,7 +18,7 @@ Example
 
     >>> import pyomo.environ as pyo
     >>> from pyomo.common.fileutils import find_library
-    >>> flib = find_library("asl_functions_lib")
+    >>> flib = find_library("libaslfunctions")
     >>> m = pyo.ConcreteModel(name = 'AMPLExternalFunctions')
     >>> m.sinc = pyo.ExternalFunction(library=flib, function="sinc")
     >>> m.x = pyo.Var()

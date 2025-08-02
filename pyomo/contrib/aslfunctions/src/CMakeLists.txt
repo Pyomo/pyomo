@@ -12,7 +12,7 @@
 cmake_minimum_required(VERSION 3.0...3.31)
 # This was developed against CMake 3.0, and appears to comply with 3.5
 
-PROJECT( asl_functions_lib )
+PROJECT( aslfunctions )
 
 INCLUDE(
   "${CMAKE_CURRENT_SOURCE_DIR}/../../ampl_function_demo/src/FindASL.cmake")
@@ -22,22 +22,22 @@ OPTION(BUILD_EXTERNAL_FCN_LIBRARY
   "Build the ASL external function example library" ON)
 
 IF( BUILD_EXTERNAL_FCN_LIBRARY )
-  ADD_LIBRARY( asl_functions_lib SHARED "functions.cpp" )
-  TARGET_LINK_LIBRARIES( asl_functions_lib
+  ADD_LIBRARY( aslfunctions SHARED "functions.cpp" )
+  TARGET_LINK_LIBRARIES( aslfunctions
     PUBLIC ${ASL_LIBRARY} ${CMAKE_DL_LIBS})
-  TARGET_INCLUDE_DIRECTORIES( asl_functions_lib
+  TARGET_INCLUDE_DIRECTORIES( aslfunctions
     PUBLIC ${ASL_INCLUDE_DIR}
     INTERFACE . )
   # If you need a CPP directive defined when building the library (e.g.,
   # for managing __declspec(dllimport) under Windows) uncomment the
   # following:
-  #TARGET_COMPILE_DEFINITIONS( asl_functions_lib PRIVATE BUILDING_ASL_DEMO )
-  #SET_TARGET_PROPERTIES( asl_functions_lib PROPERTIES ENABLE_EXPORTS 1 )
-  INSTALL( TARGETS asl_functions_lib LIBRARY DESTINATION lib
+  #TARGET_COMPILE_DEFINITIONS( aslfunctions PRIVATE BUILDING_ASL_DEMO )
+  #SET_TARGET_PROPERTIES( aslfunctions PROPERTIES ENABLE_EXPORTS 1 )
+  INSTALL( TARGETS aslfunctions LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib )
   IF( BUILD_AMPLASL )
     # If we are building AMPL/asl (from FindASL), it is possible that we
     # are linking against it, so we will add the appropriate dependency
-    add_dependencies(asl_functions_lib ampl_asl)
+    add_dependencies(aslfunctions ampl_asl)
   ENDIF()
 ENDIF()
