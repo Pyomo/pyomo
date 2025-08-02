@@ -275,6 +275,8 @@ setup_kwargs = dict(
     package_data={
         "pyomo.contrib.ampl_function_demo": ["src/*"],
         "pyomo.contrib.appsi.cmodel": ["src/*"],
+        "pyomo.contrib.cspline_external": ["src/*"],
+        "pyomo.contrib.aslfunctions": ["src/*"],
         "pyomo.contrib.mcpp": ["*.cpp"],
         "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
         "pyomo.contrib.viewer": ["*.ui"],
