@@ -1411,7 +1411,7 @@ class UninitializedMixin(object):
     attempt to access the ``_data`` will trigger the initialization of the
     Config object from its ``_default`` value.  Setting the ``_data``
     attribute will also trigger resolution of the Config object, but
-    without processing the ``_default__``.
+    without processing the ``_default``.
 
     """
 
@@ -1449,7 +1449,7 @@ class UninitializedMixin(object):
         # recursively lookup the _data attribute and the second lookup
         # will resolve to normal attribute assignment).
         #
-        # We first encountered this issue for Config objects stores as
+        # We first encountered this issue for Config objects stored as
         # class attributes (i.e., the default Config for something like
         # a solver or writer) and multiple threads were simultaneously
         # creating instances of the class (each of which was resolving
