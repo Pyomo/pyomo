@@ -220,7 +220,6 @@ class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
         return self._args_
 
 
-
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
     """
