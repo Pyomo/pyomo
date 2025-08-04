@@ -18,7 +18,7 @@ Example
 
     >>> import pyomo.environ as pyo
     >>> from pyomo.common.fileutils import find_library
-    >>> flib = find_library("libaslfunctions")
+    >>> flib = find_library("aslfunctions")
     >>> m = pyo.ConcreteModel(name = 'AMPLExternalFunctions')
     >>> m.sinc = pyo.ExternalFunction(library=flib, function="sinc")
     >>> m.x = pyo.Var()

@@ -15,7 +15,7 @@ import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 from pyomo.common.fileutils import find_library
 
-flib = find_library("libaslfunctions")
+flib = find_library("aslfunctions")
 is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 
