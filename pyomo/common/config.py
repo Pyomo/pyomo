@@ -1628,7 +1628,12 @@ class ConfigBase(object):
 
     def set_domain(self, domain):
         self._domain = domain
-        self.set_value(self.value(accessValue=False))
+        # Note that the domain is generally a callable (type, function,
+        # or functor).  However, ConfigDict can also have a str domain
+        # (because ConfigDict doesn't need/use an actual domain for
+        # validation, we re-use that slot to *document* the domain).
+        if domain.__class__ is not str:
+            self.set_value(self.value(accessValue=False))
 
     def _cast(self, value):
         if value is None:
