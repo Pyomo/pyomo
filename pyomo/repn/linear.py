@@ -181,7 +181,7 @@ class LinearRepn(object):
         # change). Omitting the assertion for efficiency.
         # assert self.multiplier == 1
         _type, other = other
-        if _type <= _FIXED:
+        if _type <= _FIXED:  # Note: catching _FIXED and _CONSTANT
             self.constant += other
             return
 
@@ -234,7 +234,7 @@ class LinearRepn(object):
 
 
 def to_expression(visitor, arg):
-    if arg[0] <= _VARIABLE:
+    if arg[0] <= _VARIABLE:  # Note: catching _VARIABLE, _FIXED, and _CONSTANT
         return arg[1]
     else:
         return arg[1].to_expression(visitor)
@@ -916,7 +916,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         ans = result[1]
         if ans.__class__ is not self.Result:
             ans = self.Result()
-            assert result[0] <= _FIXED
+            assert result[0] <= _FIXED  # Note: allowing _FIXED or _CONSTANT
             ans.constant = result[1]
             return ans
 

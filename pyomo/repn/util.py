@@ -67,6 +67,10 @@ int_float = {int, float}
 
 
 class ExprType(enums.IntEnum):
+    # Note that the ordering is meaningful, and we will compare
+    # instances using relational operators.  In particular, we assume
+    # that the Enum values increase in polynomial degree, starting at
+    # CONSTANT and endine at GENERAL (nonlinear).
     CONSTANT = 0
     FIXED = 3
     VARIABLE = 5

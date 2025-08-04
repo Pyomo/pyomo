@@ -180,6 +180,13 @@ class TemplateDataMixin(object):
         return self._args_
 
     def set_value(self, expr):
+        # Setting a value will convert this instance from a templatized
+        # type to the original Data type (and call the original set_value()).
+        #
+        # Note: We assume that the templatized type is created by
+        # inheriting (TemplateDataMixin, <original data class>), and
+        # that this instance doesn't have additional multiple
+        # inheritance that could re-order the MRO.
         self.__class__ = self.__class__.__mro__[
             self.__class__.__mro__.index(TemplateDataMixin) + 1
         ]
