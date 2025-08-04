@@ -70,6 +70,7 @@ from pyomo.common.config import (
     ConfigFormatter,
     String_ConfigFormatter,
     document_kwargs_from_configdict,
+    document_class_CONFIG,
     add_docstring_list,
     USER_OPTION,
     DEVELOPER_OPTION,
@@ -2657,11 +2658,11 @@ Node information:
 
     def test_argparse_lists(self):
         c = ConfigDict()
-        self.assertEqual(c.domain_name(), '')
+        self.assertEqual(c.domain_name(), 'dict')
         sub_dict = c.declare('sub_dict', ConfigDict())
         sub_dict.declare('a', ConfigValue(domain=int))
         sub_dict.declare('b', ConfigValue())
-        self.assertEqual(c.sub_dict.domain_name(), 'sub-dict')
+        self.assertEqual(c.sub_dict.domain_name(), 'dict')
         self.assertEqual(c.sub_dict.get('a').domain_name(), 'int')
         self.assertEqual(c.sub_dict.get('b').domain_name(), '')
         c.declare('lst', ConfigList(domain=int)).declare_as_argument(action='append')
@@ -2680,7 +2681,7 @@ Node information:
             """
   -h, --help            show this help message and exit
   --lst INT
-  --sub SUB-DICT
+  --sub DICT
   --listof LISTOF[INT]""".strip(),
             parser.format_help(),
         )
@@ -3350,6 +3351,102 @@ option_2: int, default=5
         cfg.get('lb').reset()
         self.assertEqual(record.data, [10, 11, 'a', 'b'])
         self.assertEqual(cfg.lb.value(), ['a', 'b'])
+
+    def test_document_class_config(self):
+        class _base(object):
+            CONFIG = ConfigDict()
+            CONFIG.declare(
+                'option_1', ConfigValue(default=1, domain=int, doc="class option 1")
+            )
+            CONFIG.declare('option_2', ConfigValue(domain=float, doc="class option 2"))
+
+            def fcn1(self, **kwargs):
+                "Base class docstring 1"
+
+            def fcn2(self, **kwargs):
+                "Base class docstring 2"
+
+            def fcn3(self, **kwargs):
+                pass
+
+        @document_class_CONFIG(methods=['fcn1', 'fcn2', 'fcn3'])
+        class _derived(_base):
+            "Derived class documentation"
+
+            def fcn1(self, **kwargs):
+                "Derived docstring 1"
+
+        self.assertEqual(_base.__doc__, None)
+        self.assertEqual(
+            _derived.__doc__,
+            """Derived class documentation
+
+**Class configuration**
+
+This class leverages the Pyomo Configuration System for managing
+configuration options.  See the discussion on :ref:`configuring class
+hierarchies <class_config>` for more information on how configuration
+class attributes, instance attributes, and method keyword arguments
+interact.
+
+.. _pyomo.common.tests.test_config._derived::CONFIG:
+
+CONFIG
+------
+option_1: int, default=1
+
+    class option 1
+
+option_2: float, optional
+
+    class option 2""",
+        )
+
+        self.assertEqual(_base.fcn1.__doc__, "Base class docstring 1")
+        self.assertEqual(
+            _derived.fcn1.__doc__,
+            """Derived docstring 1
+
+Keyword Arguments
+-----------------
+option_1: int, default=1
+
+    class option 1
+
+option_2: float, optional
+
+    class option 2""",
+        )
+
+        self.assertEqual(_base.fcn2.__doc__, "Base class docstring 2")
+        self.assertEqual(
+            _derived.fcn2.__doc__,
+            """Base class docstring 2
+
+Keyword Arguments
+-----------------
+option_1: int, default=1
+
+    class option 1
+
+option_2: float, optional
+
+    class option 2""",
+        )
+
+        self.assertEqual(_base.fcn3.__doc__, None)
+        self.assertEqual(
+            _derived.fcn3.__doc__,
+            """Keyword Arguments
+-----------------
+option_1: int, default=1
+
+    class option 1
+
+option_2: float, optional
+
+    class option 2""",
+        )
 
 
 if __name__ == "__main__":
