@@ -64,7 +64,7 @@ methods which have been implemented in parmest.
     However, this method uses the model optimality (KKT) condition to compute the
     Jacobian matrix, :math:`\mathbf{G}_{\text{kaug},\, i}`, for experiment :math:`i`.
 
-The covariance matrix can only be calculated using the built-in objective functions,
+Covariance matrix calculation is only supported with the built-in objective functions
 "SSE" or "SSE_weighted".
 
 In parmest, the covariance matrix can be calculated after defining the
