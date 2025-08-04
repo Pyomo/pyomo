@@ -157,7 +157,6 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 		<!--         GLPK                                              -->
 		<!--      </packageName>                                       -->
 		<!--      <packageURL>                                         -->
-		<!--         http://www.gnu.org/software/glpk/                 -->
 		<!--      </packageURL>                                        -->
 		<!--      <requiredOrOptional>                                 -->
 		<!--         Optional                                          -->
