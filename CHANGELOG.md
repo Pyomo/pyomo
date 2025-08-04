@@ -2,6 +2,73 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.9.3   (6 Aug 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Typo corrections (#3675, #3652, #3615)
+  - Rework `ConfigDict` numpydoc generation support (#3667)
+  - Improve `TeeStream` robustness (#3583, #3588, #3601, #3633, #3640)
+  - Modernize infrastructure to use `pyproject.toml` (#3603)
+  - Numpy2 Compatibility fixes (#3607, #3636)
+  - Allow custom messages in derived classes from `PyomoException` (#3596)
+  - Resolve Python 3.14 compatibility issues (#3643)
+  - Resolve an assortment of infrastructure errors (pkg_resources/GAMS) (#3644)
+  - Introduce Retries into `download-extensions` (#3656)
+  - Add project-level default configuration for `black` (#3660)
+- Core
+  - Add a default rule for custom blocks (#3570)
+  - Bugfix: Evaluate name in message (#3580)
+  - Map Constraint.Feasible/Infeasible to concrete constraints (#3546)
+  - Rewrite `core.relax_integer_vars` transformation (#3586, #3645)
+  - Disallow calling `del_component` with ComponentData arguments (#3440)
+  - Support initialization of indexed Set from scalar functions returning
+    dicts (#3664)
+- Documentation
+  - Remove outdated references to `contrib.simplemodel` (#3666)
+  - Document and Test Dual Sign Convention (#3528)
+  - Remove references to projects.coin-or.org (#3612)
+  - Add Solver Information Table to Getting Started (#3619)
+- Solver Interfaces
+  - NL writer: resolve model scaling bug writing `Expression` objects (#3673)
+  - Add qp support for HiGHS (#3531)
+  - Update Supported NEOS Solvers (#3576, #3582, #3653)
+  - Resolve GAMS/Windows logfile name issue (#3595)
+  - Ensure Full Test List of Solvers (#3598)
+  - Suppress warmstart message from Xpress (#3599)
+  - Resolve issues copying and pickling `SolverResults` (#3597)
+  - Detailed IPOPT Log in `ipopt_v2` (#3577)
+  - Fix how QUADOBJ section written to MPS files (#3609)
+  - Correctly handle HighsModelStatus.kSolutionLimit (#3634)
+  - More robust GAMS results parsing (#3642)
+  - Mark expected failures for BARON 25.7.16 (#3662, #3665)
+- Testing
+  - Exclude gnu.org from the URL checker tests (#3674)
+  - Remove Leftover Files After Testing (#3670)
+  - Relax test tolerances due to changes in Xpress 45.1.1 (#3584)
+  - Remove `__version__` requirement for performance test driver (#3617)
+  - Temporarily pinning the scikit-learn and Python 3.13 versions (#3625)
+- Contributed Packages
+  - APPSI: Remove debugging messages in `appsi_highs` (#3613)
+  - aslfunctions: Add external function library (#3648)
+  - cspline_external: Add utils to constrain parameter calculations (#3593)
+  - DoE: Various bugfixes (#3574)
+  - DoE: More verbose output for sensitivity analysis (#3525)
+  - mpc: Add time interpolation to data (#3559)
+  - parmest: Fix inconsistent results when using seed in examples (#3621)
+  - parmest: Bug fixes in main driver and example files (#3635)
+  - PyNumero: improve BlockVector numpy2 compatability (#3585)
+  - PyROS: Make exporting subproblems more customizable (#3649)
+  - PyROS: Update Separation Priority Ordering Interface (#3581)
+  - PyROS: Update Uncertainty Set Validation Methods (#3558)
+  - PyROS: Adjust handling of separation objective evaluation errors (#3646)
+  - sensitivity_toolbox: Add independent variable rows to sensitivity toolbox
+    Pynumero-based sensitivity calcs (#3655)
+  - sensitivity_toolbox: Add PyNumero-based functions (#3561)
+  - simplification: Newer version of GiNaC - URL failure resolution (#3604)
+  - viewer: Update for PyQt6, improve load time (#3647)
+
+-------------------------------------------------------------------------------
 Pyomo 6.9.2   (16 Apr 2025)
 -------------------------------------------------------------------------------
 
