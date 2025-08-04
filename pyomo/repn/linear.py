@@ -797,7 +797,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                 for vid, coef in zeros:
                     del ans.linear[vid]
             elif not mult:
-                # the mulltiplier has cleared out the entire expression.
+                # the multiplier has cleared out the entire expression.
                 # Warn if this is suppressing a NaN (unusual, and
                 # non-standard, but we will wait to remove this behavior
                 # for the time being)
