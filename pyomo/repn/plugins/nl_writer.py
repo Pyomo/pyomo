@@ -18,12 +18,7 @@ from math import log10 as _log10
 from operator import itemgetter, attrgetter
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import (
-    ConfigDict,
-    ConfigValue,
-    InEnum,
-    document_kwargs_from_configdict,
-)
+from pyomo.common.config import ConfigDict, ConfigValue, InEnum, document_class_CONFIG
 from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
 from pyomo.common.gc_manager import PauseGC
@@ -163,7 +158,10 @@ class NLWriterInfo(object):
 
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
+@document_class_CONFIG(methods=['write'])
 class NLWriter(object):
+    #: Global class configuration;
+    #: see :ref:`pyomo.repn.plugins.nl_writer.NLWriter::CONFIG`.
     CONFIG = ConfigDict('nlwriter')
     CONFIG.declare(
         'show_section_timing',
@@ -283,6 +281,8 @@ class NLWriter(object):
     )
 
     def __init__(self):
+        #: Instance configuration;
+        #: see :ref:`pyomo.repn.plugins.nl_writer.NLWriter::CONFIG`.
         self.config = self.CONFIG()
 
     def __call__(self, model, filename, solver_capability, io_options):
@@ -337,7 +337,6 @@ class NLWriter(object):
         # was generated and the symbol_map
         return filename, symbol_map
 
-    @document_kwargs_from_configdict(CONFIG)
     def write(
         self, model, ostream, rowstream=None, colstream=None, **options
     ) -> NLWriterInfo:
@@ -610,6 +609,7 @@ class _NLWriter_impl(object):
             del suffix_data['scaling_factor']
         else:
             scaling_factor = _NoScalingFactor()
+            scaling_cache = None
         scale_model = scaling_factor.scale
 
         timer.toc("Collected suffixes", level=logging.DEBUG)
@@ -1361,7 +1361,7 @@ class _NLWriter_impl(object):
                 # Note: checking target_expr == 0 is equivalent to
                 # testing "(_con_id is not None and _obj_id is not None)
                 # or _con_id == 0 or _obj_id == 0"
-                self._write_v_line(_id, 0)
+                self._write_v_line(_id, 0, scale_model, scaling_cache)
             else:
                 if target_expr not in single_use_subexpressions:
                     single_use_subexpressions[target_expr] = []
@@ -1396,7 +1396,7 @@ class _NLWriter_impl(object):
                 break
             if single_use_subexpressions:
                 for _id in single_use_subexpressions.get(id(info[0]), ()):
-                    self._write_v_line(_id, row_idx + 1)
+                    self._write_v_line(_id, row_idx + 1, scale_model, scaling_cache)
             ostream.write(f'C{row_idx}{row_comments[row_idx]}\n')
             self._write_nl_expression(info[1], False)
 
@@ -1409,7 +1409,9 @@ class _NLWriter_impl(object):
                     # Note that "Writing .nl files" (2005) is incorrectly
                     # missing the "+ 1" in the description of V lines
                     # appearing in only Objectives (bottom of page 9).
-                    self._write_v_line(_id, n_cons + n_lcons + obj_idx + 1)
+                    self._write_v_line(
+                        _id, n_cons + n_lcons + obj_idx + 1, scale_model, scaling_cache
+                    )
             lbl = row_comments[n_cons + obj_idx]
             sense = 0 if info[0].sense == minimize else 1
             ostream.write(f'O{obj_idx} {sense}{lbl}\n')
@@ -1983,7 +1985,7 @@ class _NLWriter_impl(object):
         else:
             self.ostream.write(self.template.const % 0)
 
-    def _write_v_line(self, expr_id, k):
+    def _write_v_line(self, expr_id, k, scale_model, scaling_cache):
         ostream = self.ostream
         column_order = self.column_order
         info = self.subexpression_cache[expr_id]
@@ -1995,10 +1997,14 @@ class _NLWriter_impl(object):
         # Do NOT write out 0 coefficients here: doing so fouls up the
         # ASL's logic for calculating derivatives, leading to 'nan' in
         # the Hessian results.
-        linear = dict(item for item in info[1].linear.items() if item[1])
+        linear = info[1].linear
+        linear_ids = list(_id for _id, coef in linear.items() if coef)
+        if scale_model:
+            for _id in linear_ids:
+                linear[_id] /= scaling_cache[_id]
         #
-        ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
-        for _id in sorted(linear, key=column_order.__getitem__):
+        ostream.write(f'V{self.next_V_line_id} {len(linear_ids)} {k}{lbl}\n')
+        for _id in sorted(linear_ids, key=column_order.__getitem__):
             ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
         self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1
