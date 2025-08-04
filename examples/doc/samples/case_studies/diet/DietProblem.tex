@@ -62,7 +62,7 @@ We restrict our domain to the non-negative reals.  If we accepted negative numbe
 
 At this point we must start defining the rules associated with our parameters and variables.  We begin with the most important rule, the cost rule, which will tell the model to try and minimize the overall cost.  Logically, the total cost is going to be the sum of how much is spent on each food, and that value in turn is going to be determined by the cost of the food and how much of it is purchased.  For example, if three \$5 hamburgers and two \$1 apples are purchased, than the total cost would be $3 \cdot 5 + 2 \cdot 1 = 17$.  Note that this process is the same as taking the dot product of the amounts vector and the costs vector.
 
-To input this, we must define the cost rule, which we creatively call costRule as 
+To input this, we must define the cost rule, which we creatively call costRule as
 
 \begin{verbatim}def costRule(model):
     return sum(model.costs[n]*model.amount[n] for n in model.foods)
@@ -75,10 +75,10 @@ which will go through and multiply the costs and amounts of each food together a
 
 This line defines the objective of the model as the costRule,  which Pyomo interprets as the value it needs to minimize; in this case it will minimize our costs.  Also, as a note, we defined the objective as ``model.cost'' which is not to be confused with the parameter we defined earlier as ``model.costs,'' despite their similar names.  These are two different values and accidentally giving them the same name will cause problems when trying to solve the problem.
 
-We must also create a rule for the volume consumed.  The construction of this rule is similar to the cost rule as once again we take the dot product, this time between the volume and amount vectors. 
+We must also create a rule for the volume consumed.  The construction of this rule is similar to the cost rule as once again we take the dot product, this time between the volume and amount vectors.
 
 \begin{verbatim}def volumeRule(model):
-    return sum(model.volumes[n]*model.amount[n] for n in 
+    return sum(model.volumes[n]*model.amount[n] for n in
         model.foods) <= model.max_volume
 
 model.volume = pyo.Constraint(rule=volumeRule)
@@ -90,7 +90,7 @@ Finally, we need to add the constraint that ensures we obtain proper amounts of 
 
 \begin{verbatim}
 def nutrientRule(n, model):
-    value = sum(model.nutrient_value[n,f]*model.amount[f] 
+    value = sum(model.nutrient_value[n,f]*model.amount[f]
         for f in model.foods)
     return (model.min_nutrient[n], value, model.max_nutrient[n])
 
@@ -160,7 +160,7 @@ vc          0     30    0;
 
 The amount of spaces between each element is irrelevant (as long as there is at least one) so the matrix should be formatted for ease of reading.
 
-Now that we have finished both the model and the data file save them both. It's convention to give the model file a .py extension and the data file a .dat extension.  
+Now that we have finished both the model and the data file save them both. It's convention to give the model file a .py extension and the data file a .dat extension.
 
 \subsection*{Solution}
 

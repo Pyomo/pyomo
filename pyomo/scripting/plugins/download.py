@@ -11,8 +11,12 @@
 
 import logging
 import sys
+import time
 from pyomo.common.download import FileDownloader, DownloadFactory
 from pyomo.scripting.pyomo_parser import add_subparser
+
+MAX_RETRIES = 3
+RETRY_SLEEP_SECONDS = 5
 
 
 class GroupDownloader(object):
@@ -35,43 +39,62 @@ class GroupDownloader(object):
         results = []
         result_fmt = "[%s]  %s"
         returncode = 0
+
         self.downloader.cacert = args.cacert
         self.downloader.insecure = args.insecure
+
         logger.info(
-            "As of February 9, 2023, AMPL GSL can no longer be downloaded \
-            through download-extensions. Visit https://portal.ampl.com/ \
-            to download the AMPL GSL binaries."
+            "As of February 9, 2023, AMPL GSL can no longer be downloaded "
+            "through download-extensions. Visit https://portal.ampl.com/ "
+            "to download the AMPL GSL binaries."
         )
+
         for target in DownloadFactory:
-            try:
-                ext = DownloadFactory(target, downloader=self.downloader)
-                if hasattr(ext, 'skip') and ext.skip():
-                    result = 'SKIP'
-                elif hasattr(ext, '__call__'):
-                    ext()
-                    result = ' OK '
-                else:
-                    # Extension was a simple function and already ran
-                    result = ' OK '
-            except SystemExit:
-                _info = sys.exc_info()
-                _cls = (
-                    str(_info[0].__name__ if _info[0] is not None else "NoneType")
-                    + ": "
-                )
-                logger.error(_cls + str(_info[1]))
-                result = 'FAIL'
-                returncode |= 2
-            except:
-                _info = sys.exc_info()
-                _cls = (
-                    str(_info[0].__name__ if _info[0] is not None else "NoneType")
-                    + ": "
-                )
-                logger.error(_cls + str(_info[1]))
-                result = 'FAIL'
-                returncode |= 1
+            attempt = 0
+            result = "FAIL"
+
+            while attempt < MAX_RETRIES:
+                try:
+                    ext = DownloadFactory(target, downloader=self.downloader)
+
+                    if hasattr(ext, "skip") and ext.skip():
+                        result = "SKIP"
+                    elif hasattr(ext, "__call__"):
+                        ext()
+                        result = " OK "
+                    else:
+                        result = " OK "
+
+                    break
+
+                except SystemExit:
+                    _info = sys.exc_info()
+                    _cls = (
+                        f"{_info[0].__name__ if _info[0] is not None else 'NoneType'}: "
+                    )
+                    logger.error(_cls + str(_info[1]))
+                    if attempt + 1 == MAX_RETRIES:
+                        returncode |= 2
+                except Exception:
+                    _info = sys.exc_info()
+                    _cls = (
+                        f"{_info[0].__name__ if _info[0] is not None else 'NoneType'}: "
+                    )
+                    logger.error(_cls + str(_info[1]))
+                    if attempt + 1 == MAX_RETRIES:
+                        returncode |= 1
+                finally:
+                    if result != " OK ":
+                        attempt += 1
+                        if attempt < MAX_RETRIES:
+                            logger.info(
+                                f"Retrying download of '{target}' "
+                                f"(attempt {attempt + 1} of {MAX_RETRIES})"
+                            )
+                            time.sleep(RETRY_SLEEP_SECONDS)
+
             results.append(result_fmt % (result, target))
+
         logger.info("Finished downloading Pyomo extensions.")
         logger.info(
             "The following extensions were downloaded:\n    " + "\n    ".join(results)
