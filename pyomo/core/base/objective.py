@@ -212,9 +212,6 @@ class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
     def template_expr(self):
         return self._args_
 
-    def set_value(self, expr):
-        self.__class__ = ObjectiveData
-        return self.set_value(expr)
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
