@@ -42,11 +42,6 @@ def main():
     print("----------------------")
     print(orig_var_vals)
 
-    # Original values
-    # print("Original sigma values")
-    # print("----------------------")
-    # suffix_obj.pprint()
-
     # Update the suffix with new values
     new_vals = orig_var_vals + 0.5
 
@@ -62,13 +57,7 @@ def main():
     print("Updated sigma values :")
     print("-----------------------")
     new_var_vals = np.array([pyo.value(v) for v in var_list])
-    new_suffix_vals = np.array([tag for _, tag in suffix_obj.items()])
     print(new_var_vals)
-
-    # suffix_values = list(suffix_obj.values())
-    # print("Updated suffix values :")
-    # print("-----------------------")
-    # print(suffix_values)
 
     # Return the suffix obj, original and new values for further use if needed
     return suffix_obj, new_vals, new_var_vals
