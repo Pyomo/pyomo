@@ -35,15 +35,24 @@ def main():
     example_suffix = "unknown_parameters"
     suffix_obj = reactor_model.unknown_parameters
     var_list = list(suffix_obj.keys())  # components
-    orig_var_vals = np.array(list(suffix_obj.values()))
+    orig_var_vals = np.array([pyo.value(v) for v in var_list])  # numeric var values
 
-    # Original values
+    # Print original values
     print("Original sigma values")
     print("----------------------")
-    suffix_obj.display()
+    print(orig_var_vals)
+
+    # Original values
+    # print("Original sigma values")
+    # print("----------------------")
+    # suffix_obj.pprint()
 
     # Update the suffix with new values
     new_vals = orig_var_vals + 0.5
+
+    print("New sigma values")
+    print("----------------")
+    print(new_vals)
 
     # Here we are updating the values of the unknown parameters
     # You must know the length of the list and order of the suffix items to update them correctly
@@ -52,10 +61,17 @@ def main():
     # Updated values
     print("Updated sigma values :")
     print("-----------------------")
-    suffix_obj.display()
+    new_var_vals = np.array([pyo.value(v) for v in var_list])
+    new_suffix_vals = np.array([tag for _, tag in suffix_obj.items()])
+    print(new_var_vals)
+
+    # suffix_values = list(suffix_obj.values())
+    # print("Updated suffix values :")
+    # print("-----------------------")
+    # print(suffix_values)
 
     # Return the suffix obj, original and new values for further use if needed
-    return suffix_obj, orig_var_vals, new_vals
+    return suffix_obj, new_vals, new_var_vals
 
 
 if __name__ == "__main__":

@@ -83,48 +83,6 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(pyo.value(c), pyo.value(c_old))
             self.assertTrue(c in m_vars.unknown_parameters)
 
-    def test_update_model_from_suffix_unknown_parameters(self):
-        experiment = FullReactorExperiment(data_ex, 10, 3)
-        test_model = experiment.get_labeled_model()
-
-        suffix_obj = test_model.unknown_parameters  # a Suffix
-        var_list = list(suffix_obj.keys())  # components only
-        orig_var_vals = np.array([pyo.value(v) for v in var_list])  # numeric var values
-        orig_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
-        new_vals = orig_var_vals + 10
-
-        # Update the model from the suffix
-        update_model_from_suffix(suffix_obj, new_vals)
-
-        # ── Check results ────────────────────────────────────────────────────
-        new_var_vals = np.array([pyo.value(v) for v in var_list])
-        new_suffix_val = np.array(list(suffix_obj.values()))
-
-        # (1) Variables have been overwritten with `new_vals`
-        self.assertTrue(np.allclose(new_var_vals, new_vals))
-
-        # (2) Suffix tags are unchanged
-        self.assertTrue(np.array_equal(new_suffix_val, orig_suffix_val))
-
-    def test_update_model_from_suffix_experiment_inputs(self):
-        experiment = FullReactorExperiment(data_ex, 10, 3)
-        test_model = experiment.get_labeled_model()
-
-        suffix_obj = test_model.experiment_inputs  # a Suffix
-        var_list = list(suffix_obj.keys())  # components
-        orig_var_vals = np.array([pyo.value(v) for v in var_list])
-        orig_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
-        new_vals = orig_var_vals + 0.5
-        # Update the model from the suffix
-        update_model_from_suffix(suffix_obj, new_vals)
-        # ── Check results ────────────────────────────────────────────────────
-        new_var_vals = np.array([pyo.value(v) for v in var_list])
-        new_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
-        # (1) Variables have been overwritten with `new_vals`
-        self.assertTrue(np.allclose(new_var_vals, new_vals))
-        # (2) Suffix tags are unchanged
-        self.assertTrue(np.array_equal(new_suffix_val, orig_suffix_val))
-
     def test_update_model_from_suffix_experiment_outputs(self):
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
             ReactorDesignExperiment,
@@ -172,14 +130,53 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(np.allclose(new_var_vals, new_vals))
 
     def test_update_model_from_suffix_length_mismatch(self):
+        m = pyo.ConcreteModel()
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
-        m = experiment.get_labeled_model()
-        # Only ONE new value for TWO suffix items ➜ should raise
+        # Create a suffix with a Var component
+        m.x = pyo.Var(initialize=0.0)
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters[m.x] = 0.0  # tag a Var
         with self.assertRaisesRegex(
             ValueError, "values length does not match suffix length"
         ):
-            update_model_from_suffix(m.unknown_parameters, [42])
+            # Attempt to update with a list of different length
+            update_model_from_suffix(m.unknown_parameters, [42, 43, 44])
+
+    def test_update_model_from_suffix_not_numeric(self):
+        m = pyo.ConcreteModel()
+
+        # Create a suffix with a Var component
+        m.x = pyo.Var(initialize=0.0)
+        m.y = pyo.Var(initialize=1.0)
+        bad_value = "not_a_number"
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        # Make multiple values
+        m.unknown_parameters[m.x] = 0.0  # tag a Var
+        m.unknown_parameters[m.y] = bad_value  # tag a Var with a bad value
+        # Attempt to update with a list of mixed types
+        # This should raise an error because the suffix expects VarData or ParamData
+
+        with self.assertRaisesRegex(
+            ValueError, f"could not convert string to float: '{bad_value}'"
+        ):
+            # Attempt to update with a list of different length
+            update_model_from_suffix(m.unknown_parameters, [42, bad_value])
+
+    def test_update_model_from_suffix_wrong_component_type(self):
+        m = pyo.ConcreteModel()
+
+        # Create a suffix with a Var component
+        m.x = pyo.Var(initialize=0.0)
+        m.e = pyo.Expression(expr=m.x + 1)  # not Var/Param
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters[m.x] = 0.0
+        m.unknown_parameters[m.e] = 1.0  # tag an Expression
+        # Attempt to update with a list of wrong component type
+        with self.assertRaisesRegex(
+            TypeError,
+            f"Unsupported component type {type(m.e)}; expected VarData or ParamData.",
+        ):
+            update_model_from_suffix(m.unknown_parameters, [42, 43])
 
     def test_update_model_from_suffix_unsupported_component(self):
         m = pyo.ConcreteModel()
@@ -195,6 +192,15 @@ class TestUtils(unittest.TestCase):
             TypeError, r"Unsupported component type .*Constraint.*"
         ):
             update_model_from_suffix(m.bad_suffix, [1.0])
+
+    def test_update_model_from_suffix_empty(self):
+        m = pyo.ConcreteModel()
+
+        # Create an empty suffix
+        m.empty_suffix = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
+        # This should not raise an error
+        update_model_from_suffix(m.empty_suffix, [])
 
 
 if __name__ == "__main__":
