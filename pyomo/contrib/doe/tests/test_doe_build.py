@@ -476,12 +476,10 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_update_suffix_items(self):
         """Test the reactor example with updating suffix items."""
-        from pyomo.contrib.doe.examples.update_suffix_doe_example import (
-            run_reactor_update_suffix_items,
-        )
+        from pyomo.contrib.doe.examples.update_suffix_doe_example import main
 
         # Run the reactor update suffix items example
-        suffix_obj, _, new_vals = run_reactor_update_suffix_items()
+        suffix_obj, _, new_vals = main()
 
         # Check that the suffix object has been updated correctly
         for i, v in enumerate(suffix_obj.values()):

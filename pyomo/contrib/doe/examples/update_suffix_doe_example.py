@@ -8,13 +8,14 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.common.dependencies import numpy as np, pathlib
+from pyomo.common.dependencies import numpy as np
 
 from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 from pyomo.contrib.doe import DesignOfExperiments
 from pyomo.contrib.doe import utils
 
 from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
+from os.path import join, abspath, dirname
 
 import pyomo.environ as pyo
 
@@ -22,11 +23,12 @@ import json
 
 
 # Example to run a DoE on the reactor
-def run_reactor_update_suffix_items():
+def main():
     # Read in file
-    DATA_DIR = pathlib.Path(__file__).parent
-    file_path = DATA_DIR / "result.json"
+    file_dirname = dirname(abspath(str(__file__)))
+    file_path = abspath(join(file_dirname, "result.json"))
 
+    # Read in data
     with open(file_path) as f:
         data_ex = json.load(f)
 
@@ -69,4 +71,4 @@ def run_reactor_update_suffix_items():
 
 
 if __name__ == "__main__":
-    run_reactor_update_suffix_items()
+    main()
