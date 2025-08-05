@@ -43,6 +43,7 @@ Pyomo 6.9.3   (6 Aug 2025)
   - Correctly handle HighsModelStatus.kSolutionLimit (#3634)
   - More robust GAMS results parsing (#3642)
   - Mark expected failures for BARON 25.7.16 (#3662, #3665)
+  - Bugfix for comparing results objects to other types (#3677)
 - Testing
   - Exclude gnu.org from the URL checker tests (#3674)
   - Remove Leftover Files After Testing (#3670)
