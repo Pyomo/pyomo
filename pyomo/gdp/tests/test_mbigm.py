@@ -15,6 +15,7 @@ from os.path import join, normpath
 import pickle
 import os
 
+from pyomo.common.dependencies import dill_available
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
@@ -912,6 +913,7 @@ class LinearModelDecisionTreeExample(CommonTests):
     # that we use each possible process spawning method for
     # multiprocessing
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
     def test_calculated_Ms_spawn(self):
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
@@ -936,6 +938,7 @@ class LinearModelDecisionTreeExample(CommonTests):
         self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
     @unittest.skipIf(os.name == 'nt', "'forkserver' is not available on Windows")
     def test_calculated_Ms_forkserver(self):
         m = self.make_model()
@@ -968,6 +971,7 @@ class LinearModelDecisionTreeExample(CommonTests):
 
     # Make sure we don't choke on a LegacySolverWrapper
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
     def test_calculated_Ms_legacy_solver_wrapper(self):
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
