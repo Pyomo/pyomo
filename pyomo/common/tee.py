@@ -42,9 +42,12 @@ _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
 try:
     if _mswindows:
-        from msvcrt import get_osfhandle
-        from win32pipe import PeekNamedPipe
+        from msvcrt import open_osfhandle
         from win32file import ReadFile
+        from win32pipe import CreatePipe, PeekNamedPipe, SetNamedPipeHandleState
+
+        # This constant from Microsoft SetNamedPipeHandleState documentation:
+        PIPE_NOWAIT = 1
     else:
         from select import select
     _peek_available = True
@@ -163,7 +166,7 @@ class redirect_fd(object):
         # inheritable if it is stdout/stderr
         os.dup2(out_fd, self.fd, inheritable=bool(self.std))
 
-        # We no longer need this original file descriptor
+        # We no longer need the original file descriptor
         if not isinstance(self.target, int):
             os.close(out_fd)
 
@@ -449,6 +452,9 @@ class capture_output(object):
                     'Captured output (%s) does not match sys.stderr (%s).'
                     % (self.tee._stdout, sys.stdout)
                 )
+        # Flush all streams
+        sys.stderr.flush()
+        sys.stdout.flush()
         # Exit all context managers.  This includes
         #  - Restore any file descriptors we commandeered
         #  - Close / join the TeeStream
@@ -492,7 +498,30 @@ class _StreamHandle(object):
         self.buffering = buffering
         self.newlines = newline
         self.flush = False
-        self.read_pipe, self.write_pipe = os.pipe()
+        if _peek_available and _mswindows:
+            # This is a re-implementation of os.pipe() on Windows so
+            # that we can explicitly request a larger pipe buffer (64k;
+            # matching *NIX).  Per the docs: on Windows, the pipe buffer
+            # should automatically grow if needed.  However, we have
+            # observed (see #3658) that if it happens, it can cause
+            # deadlock.  By explicitly requesting a larger buffer from
+            # the outset, we reduce the likelihood of needing to
+            # reallocate the buffer.
+            self.read_pyhandle, self.write_pyhandle = CreatePipe(None, 65536)
+            self.read_pipe = open_osfhandle(self.read_pyhandle.handle, os.O_RDONLY)
+            self.write_pipe = open_osfhandle(self.write_pyhandle.handle, os.O_WRONLY)
+            # Because reallocating the pipe buffer can cause deadlock
+            # (at least in the context in which we are using pipes
+            # here), we will set the write pipe to NOWAIT.  This will
+            # guarantee that we don't deadlock, but at the cost of
+            # possibly losing some output (the fprintf() to the FD will
+            # return a number of bytes written less than the string that
+            # was passed.  If the client is ignoring the return value,
+            # then *poof*: the output is truncated)
+            SetNamedPipeHandleState(self.write_pyhandle, PIPE_NOWAIT, None, None)
+        else:
+            self.read_pipe, self.write_pipe = os.pipe()
+
         if not buffering and 'b' not in mode:
             # While we support "unbuffered" behavior in text mode,
             # python does not
@@ -827,7 +856,7 @@ class TeeStream(object):
             if _mswindows:
                 for handle in list(handles):
                     try:
-                        pipe = get_osfhandle(handle.read_pipe)
+                        pipe = handle.read_pyhandle
                         numAvail = PeekNamedPipe(pipe, 0)[1]
                         if numAvail:
                             result, new_data = ReadFile(pipe, numAvail, None)
