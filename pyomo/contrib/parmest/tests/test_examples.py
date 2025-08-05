@@ -194,10 +194,10 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         datarec_example.main()
 
-    def test_updatesuffix_example(self):
-        from pyomo.contrib.parmest.examples.reactor_design import updatesuffix_example
+    def test_update_suffix_example(self):
+        from pyomo.contrib.parmest.examples.reactor_design import update_suffix_example
 
-        suffix_obj, new_vals, new_var_vals = updatesuffix_example.main()
+        suffix_obj, new_vals, new_var_vals = update_suffix_example.main()
 
         # Check that the suffix object has been updated correctly
         for i, v in enumerate(new_var_vals):

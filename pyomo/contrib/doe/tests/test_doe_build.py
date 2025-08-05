@@ -476,7 +476,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_update_suffix_items(self):
         """Test the reactor example with updating suffix items."""
-        from pyomo.contrib.doe.examples.updatesuffix_doe_example import (
+        from pyomo.contrib.doe.examples.update_suffix_doe_example import (
             run_reactor_update_suffix_items,
         )
 
