@@ -85,9 +85,7 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
 
                 # add experiment outputs
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.y[self.data['hour']], self.data['y'])]
-                )
+                m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
 
                 # add unknown parameters
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -97,14 +95,18 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
 
                 # add measurement error
                 m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.measurement_error.update([(m.y[self.data['hour']], self.measurement_error_std)])
+                m.measurement_error.update(
+                    [(m.y[self.data['hour']], self.measurement_error_std)]
+                )
 
                 return m
 
         # Create an experiment list
         exp_list = []
         for i in range(self.data.shape[0]):
-            exp_list.append(RooneyBieglerExperimentWSSE(self.data.loc[i, :], self.measurement_std))
+            exp_list.append(
+                RooneyBieglerExperimentWSSE(self.data.loc[i, :], self.measurement_std)
+            )
 
         self.exp_list = exp_list
 
@@ -458,8 +460,7 @@ class TestRooneyBiegler(unittest.TestCase):
         # Sum of squared error function
         def SSE(model):
             expr = (
-                model.experiment_outputs[model.y[model.hour]]
-                - model.y[model.hour]
+                model.experiment_outputs[model.y[model.hour]] - model.y[model.hour]
             ) ** 2
             return expr
 

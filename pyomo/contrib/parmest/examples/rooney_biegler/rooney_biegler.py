@@ -34,9 +34,7 @@ def rooney_biegler_model(data):
     model.response_function = pyo.Constraint(data.hour.tolist(), rule=response_rule)
 
     def SSE_rule(m):
-        return sum(
-            (data.y[i] - m.y[data.hour[i]]) ** 2 for i in data.index
-        )
+        return sum((data.y[i] - m.y[data.hour[i]]) ** 2 for i in data.index)
 
     model.SSE = pyo.Objective(rule=SSE_rule, sense=pyo.minimize)
 
@@ -59,9 +57,7 @@ class RooneyBieglerExperiment(Experiment):
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update(
-            [(m.y[self.data['hour']], self.data['y'])]
-        )
+        m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
