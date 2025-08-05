@@ -574,6 +574,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             disjunction: disjunction to set up the jobs for
             active_disjuncts: map from disjunctions to ComponentSets of active
                 disjuncts
+            transformed_constraints: set of already transformed Constraints
             arg_Ms: user-provided map from (constraint, disjunct) to M value
                 or tuple
             Ms: working map from (constraint, disjunct) to M tuples to update
