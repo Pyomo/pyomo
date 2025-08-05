@@ -110,5 +110,5 @@ e.g.,
 
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
     >>> obj_val, theta_val = pest.theta_est()
-    >>> cov_method = "automatic_differentiation_kaug"
+    >>> cov_method = "reduced_hessian"
     >>> cov = pest.cov_est(cov_n=num_data, method=cov_method)
