@@ -268,7 +268,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(obj.getCoeff(0), 1)
         self.assertIs(obj.getVar(0), x1)
 
-    def test_named_expressions(self):
+    def test_named_expression_quadratic(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
@@ -325,6 +325,66 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertIs(expr.getVar1(0), x)
         self.assertIs(expr.getVar2(0), x)
         self.assertEqual(expr.getCoeff(0), 1)
+
+        # objective
+        self.assertEqual(grb_model.ModelSense, 1)  # minimizing
+        obj = grb_model.getObjective()
+        self.assertEqual(obj.size(), 0)
+
+    def test_named_expression_nonlinear(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.e = Expression(expr=log(m.x)**2 + m.y)
+        m.c = Constraint(expr=m.e <= 7)
+        m.c2 = Constraint(expr=m.e + m.y**3 + log(m.x + m.y) >= -3)
+        m.obj = Objective(expr=0)
+
+        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
+            m, symbolic_solver_labels=True
+        )
+
+        self.assertEqual(len(var_map), 2)
+        x = var_map[id(m.x)]
+        y = var_map[id(m.y)]
+
+        self.assertEqual(grb_model.numVars, 4)
+        self.assertEqual(grb_model.numIntVars, 0)
+        self.assertEqual(grb_model.numBinVars, 0)
+
+        lin_constrs = grb_model.getConstrs()
+        self.assertEqual(len(lin_constrs), 2)
+        quad_constrs = grb_model.getQConstrs()
+        self.assertEqual(len(quad_constrs), 0)
+        nonlinear_constrs = grb_model.getGenConstrs()
+        self.assertEqual(len(nonlinear_constrs), 2)
+
+        # TODO: test the constraints
+        c1 = lin_constrs[0]
+        aux1 = grb_model.getRow(c1)
+        self.assertEqual(c1.RHS, 7)
+        self.assertEqual(c1.Sense, '<')
+        self.assertEqual(aux1.size(), 1)
+        self.assertEqual(aux1.getCoeff(0), 1)
+        self.assertEqual(aux1.getConstant(), 0)
+        aux1 = aux1.getVar(0)
+
+        c2 = lin_constrs[1]
+        aux2 = grb_model.getRow(c2)
+        self.assertEqual(c2.RHS, -3)
+        self.assertEqual(c2.Sense, '>')
+        self.assertEqual(aux2.size(), 1)
+        self.assertEqual(aux2.getCoeff(0), 1)
+        self.assertEqual(aux2.getConstant(), 0)
+        aux2 = aux2.getVar(0)
+        
+        g1 = nonlinear_constrs[0]
+        aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(g1)
+        self.assertIs(aux_var, aux1)
+        from pytest import set_trace
+        set_trace()
+        
+        g2 = nonlinear_constrs[1]
 
         # objective
         self.assertEqual(grb_model.ModelSense, 1)  # minimizing

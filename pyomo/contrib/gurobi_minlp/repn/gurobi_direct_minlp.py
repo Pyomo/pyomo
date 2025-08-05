@@ -113,6 +113,7 @@ the rule that you would want to specifically tell Gurobi *not* to expand the exp
 _CONSTANT = ExprType.CONSTANT
 _GENERAL = ExprType.GENERAL
 _LINEAR = ExprType.LINEAR
+_QUADRATIC = ExprType.QUADRATIC
 _VARIABLE = ExprType.VARIABLE
 
 _function_map = {}
@@ -199,10 +200,13 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_named_expression(visitor, child):
         _id = id(child)
+        print("before %s" % child.expr)
         if _id in visitor.subexpression_cache:
+            print("found it--don't descend")
             _type, expr = visitor.subexpression_cache[_id]
             return False, (_type, expr)
         else:
+            print("New Expression")
             return True, None
 
 
@@ -217,6 +221,9 @@ def _handle_node_with_eval_expr_visitor_invariant(visitor, node, data):
 def _handle_node_with_eval_expr_visitor_unknown(visitor, node, *data):
     # ESJ: Is this cheating?
     expr_type = max(map(itemgetter(0), data))
+    print("Handle unknown node")
+    print(node)
+    print(expr_type)
     return (
         expr_type,
         visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), data))),
@@ -237,12 +244,43 @@ def _handle_node_with_eval_expr_visitor_linear(visitor, node, *data):
     )
 
 
+def _handle_node_with_eval_expr_visitor_quadratic(visitor, node, *data):
+    return (
+        _QUADRATIC,
+        visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), data))),
+    )
+
+
 def _handle_node_with_eval_expr_visitor_nonlinear(visitor, node, *data):
     # ESJ: _apply_operation for DivisionExpression expects that result is indexed, so
     # I'm making it a tuple rather than a map.
     return (
         _GENERAL,
         visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), data))),
+    )
+
+
+def _handle_linear_constant_pow_expr(visitor, node, arg1, arg2):
+    print("handle linear constant pow: %s" % node)
+    expr_type = _GENERAL
+    if arg2[1] == 1:
+        expr_type = _LINEAR
+    if arg2[1] == 2:
+        print("It's quadratic")
+        expr_type = _QUADRATIC
+    return (
+        expr_type,
+        visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), (arg1, arg2)))),
+    )
+
+
+def _handle_quadratic_constant_pow_expr(visitor, node, arg1, arg2):
+    expr_type = _GENERAL
+    if arg2[1] == 1:
+        expr_type = _QUADRATIC
+    return (
+        expr_type,
+        visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), (arg1, arg2)))),
     )
 
 
@@ -258,6 +296,7 @@ def _handle_unary(visitor, node, data):
 
 def _handle_named_expression(visitor, node, arg1):
     # Record this common expression
+    print("caching %s" % arg1[1])
     visitor.subexpression_cache[id(node)] = arg1
     _type, arg1 = arg1
     return _type, arg1
@@ -302,9 +341,14 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         None: _handle_node_with_eval_expr_visitor_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_node_with_eval_expr_visitor_constant,
         (_CONSTANT, _LINEAR): _handle_node_with_eval_expr_visitor_linear,
-        (_LINEAR, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
+        (_CONSTANT, _QUADRATIC): _handle_node_with_eval_expr_visitor_quadratic,
         (_CONSTANT, _VARIABLE): _handle_node_with_eval_expr_visitor_linear,
+        (_LINEAR, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
+        (_LINEAR, _LINEAR): _handle_node_with_eval_expr_visitor_quadratic,
+        (_LINEAR, _VARIABLE): _handle_node_with_eval_expr_visitor_quadratic,
         (_VARIABLE, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
+        (_VARIABLE, _LINEAR): _handle_node_with_eval_expr_visitor_quadratic,
+        (_VARIABLE, _VARIABLE): _handle_node_with_eval_expr_visitor_quadratic,
     }
     _exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpression]
     _exit_node_handlers[DivisionExpression] = {
@@ -312,10 +356,14 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         (_CONSTANT, _CONSTANT): _handle_node_with_eval_expr_visitor_constant,
         (_LINEAR, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
         (_VARIABLE, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
+        (_QUADRATIC, _CONSTANT): _handle_node_with_eval_expr_visitor_quadratic,
     }
     _exit_node_handlers[PowExpression] = {
         None: _handle_node_with_eval_expr_visitor_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_node_with_eval_expr_visitor_constant,
+        (_VARIABLE, _CONSTANT): _handle_linear_constant_pow_expr,
+        (_LINEAR, _CONSTANT): _handle_linear_constant_pow_expr,
+        (_QUADRATIC, _CONSTANT): _handle_quadratic_constant_pow_expr,
     }
     _exit_node_handlers[UnaryFunctionExpression] = {None: _handle_unary}
 
@@ -362,6 +410,9 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
+        print("EXIT NODE")
+        print(node)
+        print(self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))])
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
@@ -427,15 +478,21 @@ class GurobiMINLPWriter():
         self, expr, src, src_index, grb_model, quadratic_visitor, grb_visitor
     ):
         """
-        Uses the quadratic walker to determine if the expression is a general
-        nonlinear (non-quadratic) expression, and returns a gurobipy representation
-        of the expression
+        Returns a gurobipy representation of the expression
         """
-        #repn = quadratic_visitor.walk_expression(expr)
         expr_type, grb_expr = grb_visitor.walk_expression(expr)
+        print(grb_expr)
         if expr_type is not _GENERAL:
+            print("not general: %s" % grb_expr)
             return grb_expr, False, None
         else:
+            #print("Is this the problem?")
+            # TODO: Yes, this is the problem. We should not be calling quadratics
+            # GENERAL first of all, because we don't want them to end up here.
+            # Second of all, for general nonlinear big E expressions, we should
+            # cache the auxiliary Var, I think. For other things, we should cache
+            # the gurobi expression itself.
+            print("general nonlinear")
             aux = grb_model.addVar()
             return grb_expr, True, aux
 
