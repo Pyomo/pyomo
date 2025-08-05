@@ -201,7 +201,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             "bound a single variable into a single constraint",
             doc="""
         Flag indicating whether or not to handle disjunctive
-        constraints that bound a single variable in a single (tighter)
+        constraints that bound a single variable in a single
         constraint, rather than one per Disjunct.
 
         Given the not-uncommon special structure:
