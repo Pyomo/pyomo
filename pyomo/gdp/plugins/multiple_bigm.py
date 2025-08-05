@@ -434,7 +434,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     )
 
                 # start doing transformation
-                disjunction_setup[t] = (transBlock, algebraic_constraint) = (
+                disjunction_setup[t] = (trans_block, algebraic_constraint) = (
                     self._setup_transform_disjunctionData(t, gdp_tree.root_disjunct(t))
                 )
                 # Unlike python set(), ComponentSet keeps a stable
@@ -447,7 +447,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 if self._config.reduce_bound_constraints:
                     transformed_constraints.update(
                         self._transform_bound_constraints(
-                            active_disjuncts[t], transBlock, arg_Ms
+                            active_disjuncts[t], trans_block, arg_Ms
                         )
                     )
                 # Get the jobs to calculate missing M values for this Disjunction. We
@@ -461,7 +461,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         arg_Ms,
                         Ms,
                         jobs,
-                        transBlock,
+                        trans_block,
                     )
         # (Now exiting the DisjunctionDatas loop)
         if jobs:
@@ -527,7 +527,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         M,
                         Ms[constraint, other_disjunct][1],
                     )
-                transBlock._mbm_values[constraint, other_disjunct] = Ms[
+                trans_block._mbm_values[constraint, other_disjunct] = Ms[
                     constraint, other_disjunct
                 ]
 
@@ -536,14 +536,14 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         # Iterate the Disjunctions again and actually transform them
         for disjunction, (
-            transBlock,
+            trans_block,
             algebraic_constraint,
         ) in disjunction_setup.items():
             or_expr = 0
             for disjunct in active_disjuncts[disjunction]:
                 or_expr += disjunct.indicator_var.get_associated_binary()
                 self._transform_disjunct(
-                    disjunct, transBlock, active_disjuncts[disjunction], Ms
+                    disjunct, trans_block, active_disjuncts[disjunction], Ms
                 )
             algebraic_constraint.add(disjunction.index(), or_expr == 1)
             # map the DisjunctionData to its XOR constraint to mark it as
@@ -561,11 +561,11 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         arg_Ms,
         Ms,
         jobs,
-        transBlock,
+        trans_block,
     ):
         """
         Do the inner work setting up or skipping M calculation jobs for a
-        disjunction. Mutate the parameters Ms, jobs, transBlock._mbm_values,
+        disjunction. Mutate the parameters Ms, jobs, trans_block._mbm_values,
         and self.used_args.
 
         Args:
@@ -579,8 +579,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             Ms: working map from (constraint, disjunct) to M tuples to update
             jobs: working list of (constraint, other_disjunct,
                 unsuccessful_solve_msg, is_upper) job tuples to update
-            transBlock: working transformation block. Update the
-                transBlock._mbigm_values map from (constraint, disjunct) to
+            trans_block: working transformation block. Update the
+                trans_block._mbigm_values map from (constraint, disjunct) to
                 M tuples
         """
         for disjunct, other_disjunct in itertools.product(
@@ -622,14 +622,14 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     )
 
                 Ms[constraint, other_disjunct] = (lower_M, upper_M)
-                transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
+                trans_block._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
 
-    def _transform_disjunct(self, obj, transBlock, active_disjuncts, Ms):
+    def _transform_disjunct(self, obj, trans_block, active_disjuncts, Ms):
         # We've already filtered out deactivated disjuncts, so we know obj is
         # active.
 
         # Make a relaxation block if we haven't already.
-        relaxationBlock = self._get_disjunct_transformation_block(obj, transBlock)
+        relaxation_block = self._get_disjunct_transformation_block(obj, trans_block)
 
         # Transform everything on the disjunct
         self._transform_block_components(obj, obj, active_disjuncts, Ms)
@@ -639,19 +639,19 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def _transform_constraint(self, obj, disjunct, active_disjuncts, Ms):
         # we will put a new transformed constraint on the relaxation block.
-        relaxationBlock = disjunct._transformation_block()
-        constraint_map = relaxationBlock.private_data('pyomo.gdp')
-        transBlock = relaxationBlock.parent_block()
+        relaxation_block = disjunct._transformation_block()
+        constraint_map = relaxation_block.private_data('pyomo.gdp')
+        trans_block = relaxation_block.parent_block()
 
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
         name = unique_component_name(
-            relaxationBlock, obj.getname(fully_qualified=False)
+            relaxation_block, obj.getname(fully_qualified=False)
         )
 
         newConstraint = Constraint(Any)
-        relaxationBlock.add_component(name, newConstraint)
+        relaxation_block.add_component(name, newConstraint)
 
         for i in sorted(obj.keys()):
             c = obj[i]
@@ -713,7 +713,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             # deactivate now that we have transformed
             c.deactivate()
 
-    def _transform_bound_constraints(self, active_disjuncts, transBlock, Ms):
+    def _transform_bound_constraints(self, active_disjuncts, trans_block, Ms):
         # first we're just going to find all of them
         bounds_cons = ComponentMap()
         lower_bound_constraints_by_var = ComponentMap()
@@ -756,7 +756,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         else:
                             upper_bound_constraints_by_var[v] = {(c, disj)}
                     # Add the M values to the dictionary
-                    transBlock._mbm_values[c, disj] = M
+                    trans_block._mbm_values[c, disj] = M
 
                     # We can't deactivate yet because we will still be solving
                     # this Disjunct when we calculate M values for non-bounds
@@ -767,16 +767,16 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # Now we actually construct the constraints. We do this separately so
         # that we can make sure that we have a term for every active disjunct in
         # the disjunction (falling back on the variable bounds if they are there
-        transformed = transBlock.transformed_bound_constraints
+        transformed = trans_block.transformed_bound_constraints
         offset = len(transformed)
         for i, (v, (lower_dict, upper_dict)) in enumerate(bounds_cons.items()):
             lower_rhs = 0
             upper_rhs = 0
             for disj in active_disjuncts:
-                relaxationBlock = self._get_disjunct_transformation_block(
-                    disj, transBlock
+                relaxation_block = self._get_disjunct_transformation_block(
+                    disj, trans_block
                 )
-                constraint_map = relaxationBlock.private_data('pyomo.gdp')
+                constraint_map = relaxation_block.private_data('pyomo.gdp')
                 if len(lower_dict) > 0:
                     M = lower_dict.get(disj, None)
                     if M is None:
@@ -877,15 +877,15 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         return pool
 
     def _add_transformation_block(self, to_block):
-        transBlock, new_block = super()._add_transformation_block(to_block)
+        trans_block, new_block = super()._add_transformation_block(to_block)
 
         if new_block:
             # Will store M values as we transform
-            transBlock._mbm_values = {}
-            transBlock.transformed_bound_constraints = Constraint(
+            trans_block._mbm_values = {}
+            trans_block.transformed_bound_constraints = Constraint(
                 NonNegativeIntegers, ['lb', 'ub']
             )
-        return transBlock, new_block
+        return trans_block, new_block
 
     def _warn_for_active_suffix(self, suffix, disjunct, active_disjuncts, Ms):
         if suffix.local_name == 'BigM':
@@ -941,11 +941,11 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             sort=SortComponents.deterministic,
         ):
             if disjunction.algebraic_constraint is not None:
-                transBlock = disjunction.algebraic_constraint.parent_block()
+                trans_block = disjunction.algebraic_constraint.parent_block()
                 # Don't necessarily assume all disjunctions were transformed
                 # with multiple bigm...
-                if hasattr(transBlock, "_mbm_values"):
-                    all_ms.update(transBlock._mbm_values)
+                if hasattr(trans_block, "_mbm_values"):
+                    all_ms.update(trans_block._mbm_values)
 
         return all_ms
 
