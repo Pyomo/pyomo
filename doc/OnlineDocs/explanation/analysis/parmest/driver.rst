@@ -70,27 +70,9 @@ Section.
     # Create an experiment list
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
 
-    class NewRooneyBieglerExperiment(RooneyBieglerExperiment):
-        def label_model(self):
-            m = self.model
-
-            # create the experiment outputs
-            m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-            m.experiment_outputs.update(
-                [(m.response_function[self.data['hour']], self.data['y'])]
-            )
-
-            # create the unknown parameters
-            m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-            m.unknown_parameters.update((k, pyo.value(k)) for k in [m.asymptote, m.rate_constant])
-
-            # create the measurement error
-            m.measurement_error = pyo.Suffix(direction = pyo.Suffix.LOCAL)
-            m.measurement_error.update([(m.response_function[self.data['hour']], None)])
-
     exp_list = []
     for i in range(data.shape[0]):
-        exp_list.append(NewRooneyBieglerExperiment(data.loc[i, :]))
+        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
 .. doctest::
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available

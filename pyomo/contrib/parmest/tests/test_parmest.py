@@ -64,67 +64,30 @@ _RANDOM_SEED_FOR_TESTING = 524
 class TestRooneyBieglerWSSE(unittest.TestCase):
 
     def setUp(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+            RooneyBieglerExperiment,
+        )
+
         self.data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=["hour", "y"],
         )
 
-        # create the Rooney-Biegler model
-        def rooney_biegler_model():
-            """
-            Formulates the Pyomo model of the Rooney-Biegler example
-
-            Returns:
-                m: Pyomo model
-            """
-            m = pyo.ConcreteModel()
-
-            m.asymptote = pyo.Var(within=pyo.NonNegativeReals, initialize=10)
-            m.rate_constant = pyo.Var(within=pyo.NonNegativeReals, initialize=0.2)
-
-            m.hour = pyo.Var(within=pyo.PositiveReals, initialize=0.1)
-            m.y = pyo.Var(within=pyo.NonNegativeReals)
-
-            @m.Constraint()
-            def response_rule(m):
-                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour))
-
-            return m
-
         # create the Experiment class
-        class RooneyBieglerExperimentWSSE(Experiment):
-            def __init__(self, hour, y, measurement_error_std):
-                self.y = y
-                self.hour = hour
+        class RooneyBieglerExperimentWSSE(RooneyBieglerExperiment):
+            def __init__(self, data, measurement_error_std):
+                self.data = data
                 self.model = None
                 self.measurement_error_std = measurement_error_std
-
-            def get_labeled_model(self):
-                self.create_model()
-                self.finalize_model()
-                self.label_model()
-
-                return self.model
-
-            def create_model(self):
-                m = self.model = rooney_biegler_model()
-
-                return m
-
-            def finalize_model(self):
-                m = self.model
-
-                # fix the input variable
-                m.hour.fix(self.hour)
-
-                return m
 
             def label_model(self):
                 m = self.model
 
                 # add experiment outputs
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.y, self.y)])
+                m.experiment_outputs.update(
+                    [(m.y[self.data['hour']], self.data['y'])]
+                )
 
                 # add unknown parameters
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -134,22 +97,14 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
 
                 # add measurement error
                 m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.measurement_error.update([(m.y, self.measurement_error_std)])
+                m.measurement_error.update([(m.y[self.data['hour']], self.measurement_error_std)])
 
                 return m
 
-        # extract the input and output variables
-        hour_data = self.data["hour"]
-        y_data = self.data["y"]
-
-        # create the experiments list
+        # Create an experiment list
         exp_list = []
         for i in range(self.data.shape[0]):
-            exp_list.append(
-                RooneyBieglerExperimentWSSE(
-                    hour_data[i], y_data[i], self.measurement_std
-                )
-            )
+            exp_list.append(RooneyBieglerExperimentWSSE(self.data.loc[i, :], self.measurement_std))
 
         self.exp_list = exp_list
 
@@ -503,8 +458,8 @@ class TestRooneyBiegler(unittest.TestCase):
         # Sum of squared error function
         def SSE(model):
             expr = (
-                model.experiment_outputs[model.y]
-                - model.response_function[model.experiment_outputs[model.hour]]
+                model.experiment_outputs[model.y[model.hour]]
+                - model.y[model.hour]
             ) ** 2
             return expr
 
@@ -697,16 +652,16 @@ class TestRooneyBiegler(unittest.TestCase):
 
         # Covariance matrix
         self.assertAlmostEqual(
-            cov["asymptote"]["asymptote"], 6.30579403, places=2
+            cov["asymptote"]["asymptote"], 6.155892, places=2
         )  # 6.22864 from paper
         self.assertAlmostEqual(
-            cov["asymptote"]["rate_constant"], -0.4395341, places=2
+            cov["asymptote"]["rate_constant"], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov["rate_constant"]["asymptote"], -0.4395341, places=2
+            cov["rate_constant"]["asymptote"], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov["rate_constant"]["rate_constant"], 0.04124, places=2
+            cov["rate_constant"]["rate_constant"], 0.040571, places=2
         )  # 0.04124 from paper
 
         """ Why does the covariance matrix from parmest not match the paper? Parmest is
@@ -853,6 +808,20 @@ class TestModelVariants(unittest.TestCase):
                 data_df = self.data.to_frame().transpose()
                 self.model = rooney_biegler_params(data_df)
 
+            def label_model(self):
+
+                m = self.model
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+                )
+
         rooney_biegler_params_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_params_exp_list.append(
@@ -930,6 +899,21 @@ class TestModelVariants(unittest.TestCase):
             def create_model(self):
                 data_df = self.data.to_frame().transpose()
                 self.model = rooney_biegler_vars(data_df)
+
+            def label_model(self):
+
+                m = self.model
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+                )
 
         rooney_biegler_vars_exp_list = []
         for i in range(self.data.shape[0]):
