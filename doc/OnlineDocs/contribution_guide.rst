@@ -336,7 +336,7 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
 ::
 
-  python setup.py develop
+  pip install -e .
 
 These commands register the cloned code with the active python environment
 (``pyomodev``). This way, your changes to the source code for ``pyomo`` are

@@ -83,21 +83,22 @@ class TestScalarObj(unittest.TestCase):
         #
         self.assertEqual(a._constructed, True)
         self.assertEqual(len(a), 0)
-        try:
+        with self.assertRaisesRegex(
+            ValueError,
+            "Evaluating the expression of ScalarObjective 'ScalarObjective' "
+            "before the Objective has been assigned a sense or expression "
+            r"\(there is currently no value to return\).",
+        ):
             a()
-            self.fail("Component is empty")
-        except ValueError:
-            pass
-        try:
-            a.expr
-            self.fail("Component is empty")
-        except ValueError:
-            pass
-        try:
+        self.assertIsNone(a.expr)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Accessing the sense of ScalarObjective 'ScalarObjective' "
+            "before the Objective has been assigned a sense or expression "
+            r"\(there is currently no value to return\).",
+        ):
             a.sense
-            self.fail("Component is empty")
-        except ValueError:
-            pass
+
         x = Var(initialize=1.0)
         x.construct()
         a.set_value(x + 1)
@@ -110,21 +111,24 @@ class TestScalarObj(unittest.TestCase):
         a = Objective()
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
-        try:
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Cannot access '__call__' on AbstractScalarObjective "
+            "'AbstractScalarObjective' before it has been constructed",
+        ):
             a()
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Cannot access property 'expr' on AbstractScalarObjective "
+            "'AbstractScalarObjective' before it has been constructed",
+        ):
             a.expr
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Cannot access property 'sense' on AbstractScalarObjective "
+            "'AbstractScalarObjective' before it has been constructed",
+        ):
             a.sense
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
         a.construct()
         a.set_sense(minimize)
         self.assertEqual(len(a), 1)
@@ -223,12 +227,11 @@ class TestScalarObj(unittest.TestCase):
         def rule(model):
             return 1
 
-        try:
+        with self.assertRaisesRegex(
+            TypeError,
+            "Cannot apply a Set operator to a non-Set ConcreteModel component",
+        ):
             model.obj = Objective(model, rule=rule)
-        except TypeError:
-            pass
-        else:
-            self.fail("Objective should only accept ScalarSets")
 
     def test_sense_option(self):
         """Test sense option"""
@@ -543,11 +546,10 @@ class Test2DArrayObj(unittest.TestCase):
         model.x = Var(model.B, initialize=2)
         model.obj = Objective(model.A, model.A, rule=f)
 
-        try:
+        with self.assertRaisesRegex(
+            TypeError, "'IndexedObjective' object is not callable"
+        ):
             self.assertEqual(model.obj(), None)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
 
         self.assertEqual(model.obj[1, 1](), 8)
         self.assertEqual(model.obj[2, 1](), 16)

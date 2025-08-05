@@ -93,7 +93,7 @@ List of experiment objects
 --------------------------
 
 The first argument is a list of experiment objects which is used to
-create one labeled model for each experiment.
+create one labeled model for each experiment. 
 The template :class:`~pyomo.contrib.parmest.experiment.Experiment` 
 can be used to generate a list of experiment objects.
 

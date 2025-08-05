@@ -13,7 +13,7 @@ from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import Any, Binary, ConcreteModel, log, Param, Var
-from pyomo.repn.parameterized_linear import ParameterizedLinearRepnVisitor
+from pyomo.repn.parameterized import ParameterizedLinearRepnVisitor
 from pyomo.repn.tests.test_linear import VisitorConfig
 from pyomo.repn.util import InvalidNumber
 
@@ -110,7 +110,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.constant, -3)
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(
-            self, repn.to_expression(visitor), m.y * m.x**2 + m.y * m.x - 3
+            self, repn.to_expression(visitor), m.y * m.x - 3 + m.y * m.x**2
         )
 
     def test_sum_nonlinear_to_nonlinear(self):
@@ -497,8 +497,8 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
-        self.assertIsNone(repn.nonlinear)
-        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(self, repn.nonlinear, (m.y**2) * 0)
+        assertExpressionsEqual(self, repn.constant, 0 * m.z)
 
     def test_0_mult_nan(self):
         m = self.make_model()
@@ -540,13 +540,10 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
 
         cfg = VisitorConfig()
         repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.x]).walk_expression(e)
-
-        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.y), repn.linear)
         self.assertIsInstance(repn.linear[id(m.y)], InvalidNumber)
         assertExpressionsEqual(self, repn.linear[id(m.y)].value, 0 * 3 * float('nan'))
-        self.assertIn(id(m.z), repn.linear)
-        self.assertEqual(repn.linear[id(m.z)], 0)
         self.assertEqual(repn.multiplier, 1)
         self.assertIsNone(repn.nonlinear)
         self.assertEqual(repn.constant, 0)
