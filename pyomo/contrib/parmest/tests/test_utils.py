@@ -154,12 +154,13 @@ class TestUtils(unittest.TestCase):
         m.unknown_parameters[m.x] = 0.0  # tag a Var
         m.unknown_parameters[m.y] = bad_value  # tag a Var with a bad value
         # Attempt to update with a list of mixed types
-        # This should raise an error because the suffix expects VarData or ParamData
+        # This should raise an error because this utility only allows numeric values
+        # in the model to be updated.
 
         with self.assertRaisesRegex(
             ValueError, f"could not convert string to float: '{bad_value}'"
         ):
-            # Attempt to update with a list of different length
+            # Attempt to update with a non-numeric value
             update_model_from_suffix(m.unknown_parameters, [42, bad_value])
 
     def test_update_model_from_suffix_wrong_component_type(self):

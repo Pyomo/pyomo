@@ -221,25 +221,25 @@ def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
 
     Notes
     -----
-    Measurement error is a special case: instead of updating the value of the
+    The measurement_error suffix is a special case: instead of updating the value of the
     keys (variables/parameters), it updates the value stored in the suffix itself.
     """
     # Check that the length of values matches the suffix length
-    items = list(suffix_obj.items())
-    if len(items) != len(values):
+    comps = list(suffix_obj.keys())
+    if len(comps) != len(values):
         raise ValueError("values length does not match suffix length")
 
     # Add a check for measurement error suffix
     is_me_err = "measurement_error" in suffix_obj.name
-    # Iterate through the items in the suffix and update their values
+    # Iterate through the keys in the suffix and update their values
     # First loop: check all values are the right type
-    for comp, _ in items:
+    for comp in comps:
         if not isinstance(comp, (VarData, ParamData)):
             raise TypeError(
                 f"Unsupported component type {type(comp)}; expected VarData or ParamData."
             )
     # Second loop: adjust the values
-    for (comp, _), new_val in zip(items, values):
+    for comp, new_val in zip(comps, values):
         if is_me_err:
             suffix_obj[comp] = float(new_val)
         else:
