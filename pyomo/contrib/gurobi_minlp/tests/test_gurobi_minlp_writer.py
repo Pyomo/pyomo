@@ -381,6 +381,7 @@ class TestGurobiMINLPWriter(CommonTest):
         g1 = nonlinear_constrs[0]
         aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(g1)
         self.assertIs(aux_var, aux1)
+        self.assertEqual(len(opcode), 6)
         from pytest import set_trace
         set_trace()
         

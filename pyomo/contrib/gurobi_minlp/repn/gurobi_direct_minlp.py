@@ -200,7 +200,6 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_named_expression(visitor, child):
         _id = id(child)
-        print("before %s" % child.expr)
         if _id in visitor.subexpression_cache:
             print("found it--don't descend")
             _type, expr = visitor.subexpression_cache[_id]
@@ -261,12 +260,10 @@ def _handle_node_with_eval_expr_visitor_nonlinear(visitor, node, *data):
 
 
 def _handle_linear_constant_pow_expr(visitor, node, arg1, arg2):
-    print("handle linear constant pow: %s" % node)
     expr_type = _GENERAL
     if arg2[1] == 1:
         expr_type = _LINEAR
     if arg2[1] == 2:
-        print("It's quadratic")
         expr_type = _QUADRATIC
     return (
         expr_type,
@@ -296,7 +293,6 @@ def _handle_unary(visitor, node, data):
 
 def _handle_named_expression(visitor, node, arg1):
     # Record this common expression
-    print("caching %s" % arg1[1])
     visitor.subexpression_cache[id(node)] = arg1
     _type, arg1 = arg1
     return _type, arg1
@@ -481,9 +477,7 @@ class GurobiMINLPWriter():
         Returns a gurobipy representation of the expression
         """
         expr_type, grb_expr = grb_visitor.walk_expression(expr)
-        print(grb_expr)
         if expr_type is not _GENERAL:
-            print("not general: %s" % grb_expr)
             return grb_expr, False, None
         else:
             #print("Is this the problem?")
@@ -492,7 +486,6 @@ class GurobiMINLPWriter():
             # Second of all, for general nonlinear big E expressions, we should
             # cache the auxiliary Var, I think. For other things, we should cache
             # the gurobi expression itself.
-            print("general nonlinear")
             aux = grb_model.addVar()
             return grb_expr, True, aux
 
