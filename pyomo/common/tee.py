@@ -38,12 +38,14 @@ _poll_rampup = 10
 _poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
 _poll_timeout_deadlock = 100  # seconds
 
+_WINDOWS_USE_CREATEPIPE = True
+
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
 try:
     if _mswindows:
         from msvcrt import open_osfhandle, get_osfhandle
-        from win32file import ReadFile
+        from win32file import CloseHandle, ReadFile
         from win32pipe import CreatePipe, PeekNamedPipe, SetNamedPipeHandleState
 
         # This constant from Microsoft SetNamedPipeHandleState documentation:
@@ -62,29 +64,44 @@ class _SignalFlush(object):
         super().__setattr__('_ostream', ostream)
         super().__setattr__('_handle', handle)
 
-    def flush(self):
-        while 1:
-            try:
-                self._ostream.flush()
-                break
-            except BlockingIOError:
-                time.sleep(0.01)
-        self._handle.flush = True
+    if _mswindows:
+        # Because we are setting the pipe to be non-blocking in Windows,
+        # it is possible that calls to flush() and write() will raise
+        # BlockingIOError.  We will catch and retry.  In addition, we
+        # will chunk the data into pieces that should be well below the
+        # pipe buffer size (so we should avoid deadlock)
 
-    def write(self, data):
-        chunksize = 4096
-        for i in range(0, len(data), chunksize):
-            chunk = data[i : i + chunksize]
+        def flush(self):
             while 1:
                 try:
-                    self._ostream.write(chunk)
+                    self._ostream.flush()
                     break
                 except BlockingIOError:
                     time.sleep(0.01)
+            self._handle.flush = True
 
-    def writelines(self, data):
-        for line in data:
-            self.write(line)
+        def write(self, data):
+            chunksize = 4096
+            if _WINDOWS_USE_CREATEPIPE:
+                chunksize *= 8
+            for i in range(0, len(data), chunksize):
+                chunk = data[i : i + chunksize]
+                while 1:
+                    try:
+                        self._ostream.write(chunk)
+                        break
+                    except BlockingIOError:
+                        time.sleep(0.01)
+
+        def writelines(self, data):
+            for line in data:
+                self.write(line)
+
+    else:
+
+        def flush(self):
+            self._ostream.flush()
+            self._handle.flush = True
 
     def __getattr__(self, attr):
         return getattr(self._ostream, attr)
@@ -94,13 +111,27 @@ class _SignalFlush(object):
 
 
 class _AutoFlush(_SignalFlush):
-    def write(self, data):
-        super().write(data)
-        self.flush()
+    if _mswindows:
+        # Because we define write() and writelines() under windows, we
+        # need to make sure that _AutoFlush calls them
 
-    def writelines(self, data):
-        super().writelines(data)
-        self.flush()
+        def write(self, data):
+            super().write(data)
+            self.flush()
+
+        def writelines(self, data):
+            super().writelines(data)
+            self.flush()
+
+    else:
+
+        def write(self, data):
+            self._ostream.write(data)
+            self.flush()
+
+        def writelines(self, data):
+            self._ostream.writelines(data)
+            self.flush()
 
 
 class _fd_closer(object):
@@ -306,7 +337,9 @@ class capture_output(object):
                 cm.__exit__(et, ev, tb)
             except:
                 _stack = self.context_stack
-                FAIL.append(f"{sys.exc_info()[1]} ({len(_stack)+1}: {cm}@{id(cm):x})")
+                FAIL.append(
+                    f"{sys.exc_info()[0].__name__}: {sys.exc_info()[1]} ({len(_stack)+1}: {cm}@{id(cm):x})"
+                )
         return FAIL
 
     def __enter__(self):
@@ -498,9 +531,6 @@ class capture_output(object):
         return self.__exit__(None, None, None)
 
 
-CREATE_WIN_PYHANDLE = False
-
-
 class _StreamHandle(object):
     """A stream handler object used by TeeStream
 
@@ -518,7 +548,7 @@ class _StreamHandle(object):
         self.buffering = buffering
         self.newlines = newline
         self.flush = False
-        if _peek_available and _mswindows and CREATE_WIN_PYHANDLE:
+        if _peek_available and _mswindows and _WINDOWS_USE_CREATEPIPE:
             # This is a re-implementation of os.pipe() on Windows so
             # that we can explicitly request a larger pipe buffer (64k;
             # matching *NIX).  Per the docs: on Windows, the pipe buffer
@@ -598,9 +628,16 @@ class _StreamHandle(object):
             self.write_file = None
 
         if self.write_pipe is not None:
-            # If someone else has closed the file descriptor, then
-            # python raises an OSError
+            # Note that we must explicitly close the pipe file
+            # descriptor (regardless of how we created it), as the
+            # reader thread is waiting for the EOF so that it can shut
+            # down.
+            #
+            # On Windows, this appears to remove the need to call
+            # CloseHandle on the corresponding write_pyhandle.
             try:
+                # If someone else has closed the file descriptor, then
+                # python raises an OSError
                 os.close(self.write_pipe)
             except OSError:
                 pass
@@ -613,7 +650,14 @@ class _StreamHandle(object):
         self.decodeIncomingBuffer()
         if ostreams:
             self.writeOutputBuffer(ostreams, True)
-        os.close(self.read_pipe)
+        # Close the read side of the pipe.  If we opened the pipe using
+        # win32pipe.CreatePipe, then we *must* close the read_pyhandle
+        # (otherwise we will get random "[Errno 9] Bad file descriptor"
+        # errors that can irrecoverably break stdout/stderr.
+        if _peek_available and _mswindows and _WINDOWS_USE_CREATEPIPE:
+            CloseHandle(self.read_pyhandle)
+        else:
+            os.close(self.read_pipe)
 
         if self.decoder_buffer:
             logger.error(
