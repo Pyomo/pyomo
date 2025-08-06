@@ -26,12 +26,12 @@ def rooney_biegler_model(data):
     model.asymptote = pyo.Var(initialize=15)
     model.rate_constant = pyo.Var(initialize=0.5)
 
-    model.y = pyo.Var(data.hour.tolist(), within=pyo.PositiveReals, initialize=5)
+    model.y = pyo.Var(data.hour, within=pyo.PositiveReals, initialize=5)
 
     def response_rule(m, h):
         return m.y[h] == m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
 
-    model.response_function = pyo.Constraint(data.hour.tolist(), rule=response_rule)
+    model.response_function = pyo.Constraint(data.hour, rule=response_rule)
 
     def SSE_rule(m):
         return sum((data.y[i] - m.y[data.hour[i]]) ** 2 for i in data.index)
@@ -58,7 +58,7 @@ class RooneyBieglerExperiment(Experiment):
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_outputs.update(
-            [(m.y[self.data['hour'].item()], self.data['y'].item())]
+            [(m.y[self.data['hour']], self.data['y'])]
         )
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -67,14 +67,14 @@ class RooneyBieglerExperiment(Experiment):
         )
 
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y[self.data['hour'].item()], None)])
+        m.measurement_error.update([(m.y[self.data['hour']], None)])
 
     def finalize_model(self):
 
         m = self.model
 
         # Experiment input values
-        m.hour = self.data['hour'].item()
+        m.hour = self.data['hour']
 
     def get_labeled_model(self):
         self.create_model()

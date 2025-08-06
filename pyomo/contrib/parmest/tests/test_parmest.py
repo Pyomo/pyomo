@@ -75,9 +75,12 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
 
         # create the Experiment class
         class RooneyBieglerExperimentWSSE(RooneyBieglerExperiment):
+            # def __init__(self, data, measurement_error_std):
+            #     self.data = data
+            #     self.model = None
+            #     self.measurement_error_std = measurement_error_std
             def __init__(self, data, measurement_error_std):
-                self.data = data
-                self.model = None
+                super().__init__(data)
                 self.measurement_error_std = measurement_error_std
 
             def label_model(self):
@@ -86,7 +89,7 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
                 # add experiment outputs
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.experiment_outputs.update(
-                    [(m.y[self.data['hour'].item()], self.data['y'].item())]
+                    [(m.y[self.data['hour']], self.data['y'])]
                 )
 
                 # add unknown parameters
@@ -98,7 +101,7 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
                 # add measurement error
                 m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.measurement_error.update(
-                    [(m.y[self.data['hour'].item()], self.measurement_error_std)]
+                    [(m.y[self.data['hour']], self.measurement_error_std)]
                 )
 
                 return m
