@@ -497,7 +497,9 @@ class capture_output(object):
     def reset(self):
         return self.__exit__(None, None, None)
 
+
 CREATE_WIN_PYHANDLE = False
+
 
 class _StreamHandle(object):
     """A stream handler object used by TeeStream
