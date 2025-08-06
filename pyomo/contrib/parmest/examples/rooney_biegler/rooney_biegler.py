@@ -57,7 +57,9 @@ class RooneyBieglerExperiment(Experiment):
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
+        m.experiment_outputs.update(
+            [(m.y[self.data['hour'].item()], self.data['y'].item())]
+        )
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
@@ -65,14 +67,14 @@ class RooneyBieglerExperiment(Experiment):
         )
 
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y[self.data['hour']], None)])
+        m.measurement_error.update([(m.y[self.data['hour'].item()], None)])
 
     def finalize_model(self):
 
         m = self.model
 
         # Experiment input values
-        m.hour = self.data['hour']
+        m.hour = self.data['hour'].item()
 
     def get_labeled_model(self):
         self.create_model()

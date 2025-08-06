@@ -85,7 +85,9 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
 
                 # add experiment outputs
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
+                m.experiment_outputs.update(
+                    [(m.y[self.data['hour'].item()], self.data['y'].item())]
+                )
 
                 # add unknown parameters
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -96,7 +98,7 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
                 # add measurement error
                 m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.measurement_error.update(
-                    [(m.y[self.data['hour']], self.measurement_error_std)]
+                    [(m.y[self.data['hour'].item()], self.measurement_error_std)]
                 )
 
                 return m
