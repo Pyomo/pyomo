@@ -293,15 +293,11 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m.x = Var()
         m.z = Var()
         m.y = Var()
-        # We will use the fixed value regardless of the fact that we aren't
-        # treating this as a Var.
         m.y.fix(1)
 
         expr = m.y + m.x + m.z + ((3 * m.z * m.x) / m.p) / m.y
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z]).walk_expression(
-            expr
-        )
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z]).walk_expression(expr)
 
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.constant, 1 + m.z)
@@ -330,17 +326,15 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
             "\texpression: 3*z*x/p\n",
         )
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(self, repn.constant, 1 + m.z)
+        assertExpressionsEqual(self, repn.constant, m.y + m.z)
         self.assertEqual(len(repn.linear), 1)
         self.assertIsInstance(repn.linear[id(m.x)], InvalidNumber)
-        assertExpressionsEqual(self, repn.linear[id(m.x)].value, 1 + float('nan'))
+        assertExpressionsEqual(self, repn.linear[id(m.x)].value, 1 + float('nan') / m.y)
         self.assertEqual(repn.nonlinear, None)
 
         m.y.fix(None)
         expr = m.z * log(m.y) + 3
-        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z]).walk_expression(
-            expr
-        )
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z]).walk_expression(expr)
         self.assertEqual(repn.multiplier, 1)
         self.assertIsInstance(repn.constant, InvalidNumber)
         assertExpressionsEqual(self, repn.constant.value, float('nan') * m.z + 3)
@@ -523,7 +517,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.p * (m.y**2)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -539,11 +533,11 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.p * (3 * m.x * m.y + m.z)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.x]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z]).walk_expression(e)
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.y), repn.linear)
         self.assertIsInstance(repn.linear[id(m.y)], InvalidNumber)
         assertExpressionsEqual(self, repn.linear[id(m.y)].value, 0 * 3 * float('nan'))
         self.assertEqual(repn.multiplier, 1)
         self.assertIsNone(repn.nonlinear)
-        self.assertEqual(repn.constant, 0)
+        assertExpressionsEqual(self, repn.constant, 0 * m.z)
