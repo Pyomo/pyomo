@@ -453,8 +453,16 @@ class capture_output(object):
                     % (self.tee._stdout, sys.stdout)
                 )
         # Flush all streams
-        sys.stderr.flush()
-        sys.stdout.flush()
+        try:
+            sys.stderr.flush()
+        except ValueError:
+            # I/O on a closed file
+            pass
+        try:
+            sys.stdout.flush()
+        except ValueError:
+            # I/O on a closed file
+            pass
         # Exit all context managers.  This includes
         #  - Restore any file descriptors we commandeered
         #  - Close / join the TeeStream
