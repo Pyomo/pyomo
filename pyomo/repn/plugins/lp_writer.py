@@ -19,6 +19,7 @@ from pyomo.common.config import (
     InEnum,
     document_kwargs_from_configdict,
 )
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
@@ -30,12 +31,10 @@ from pyomo.core.base import (
     Param,
     Expression,
     SOSConstraint,
-    SortComponents,
     Suffix,
     SymbolMap,
     minimize,
 )
-from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.label import LPFileLabeler, NumericLabeler
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
@@ -48,6 +47,7 @@ from pyomo.repn.util import (
     initialize_var_map_from_column_order,
     int_float,
     ordered_active_constraints,
+    row_order2row_map,
 )
 
 ### FIXME: Remove the following as soon as non-active components no
@@ -555,18 +555,16 @@ class _LPWriter_impl(object):
                     )
                 )
             if self.config.row_order:
-                # sort() is stable (per Python docs), so we can let
-                # all unspecified rows have a row number one bigger than
-                # the number of rows specified by the user ordering.
-                _n = len(row_order)
-                sos.sort(key=lambda x: _row_getter(x, _n))
+                row_map = row_order2row_map(self.config)
+                _n = len(row_map)
+                sos.sort(key=lambda x: row_map.get(id(x), _n))
 
             ostream.write("\nSOS\n")
             for soscon in sos:
                 ostream.write(f'\n{getSymbol(soscon)}: S{soscon.level}::\n')
                 for v, w in getattr(soscon, 'get_items', soscon.items)():
                     if w.__class__ not in int_float:
-                        w = float(f)
+                        w = float(w)
                     ostream.write(f"  {getSymbol(v)}:{w!s}\n")
 
         ostream.write("\nend\n")

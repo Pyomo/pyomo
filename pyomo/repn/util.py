@@ -748,17 +748,17 @@ def initialize_var_map_from_column_order(model, config, var_map):
     return var_map
 
 
-def ordered_active_constraints(model, config):
-    sorter = FileDeterminism_to_SortComponents(config.file_determinism)
-    constraints = model.component_data_objects(Constraint, active=True, sort=sorter)
-
+def row_order2row_map(config):
+    """Convert a row_order (list or ComponentMap) into a dict mapping
+    constraint id -> row index. Returns an empty dict if no ordering."""
     row_order = config.row_order
-    if row_order is None or row_order.__class__ is bool:
-        return constraints
-    elif isinstance(row_order, ComponentMap):
-        # The row order has historically also supported a ComponentMap of
-        # component to position in addition to the simple list of
-        # components.  Convert it to the simple list
+    if row_order is None or isinstance(row_order, bool):
+        return {}
+
+    sorter = FileDeterminism_to_SortComponents(config.file_determinism)
+
+    if isinstance(row_order, ComponentMap):
+        # Convert ComponentMap to sorted list based on its values
         row_order = sorted(row_order, key=row_order.__getitem__)
 
     row_map = {}
@@ -768,10 +768,18 @@ def ordered_active_constraints(model, config):
                 row_map[id(c)] = c
         else:
             row_map[id(con)] = con
+
+    # Map the implicit dict ordering to an explicit 0..n ordering
+    return {_id: i for i, _id in enumerate(row_map)}
+
+
+def ordered_active_constraints(model, config):
+    sorter = FileDeterminism_to_SortComponents(config.file_determinism)
+    constraints = model.component_data_objects(Constraint, active=True, sort=sorter)
+
+    row_map = row_order2row_map(config)
     if not row_map:
         return constraints
-    # map the implicit dict ordering to an explicit 0..n ordering
-    row_map = {_id: i for i, _id in enumerate(row_map)}
     # sorted() is stable (per Python docs), so we can let all
     # unspecified rows have a row number one bigger than the
     # number of rows specified by the user ordering.
