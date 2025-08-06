@@ -88,9 +88,7 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
 
                 # add experiment outputs
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.y[self.data['hour']], self.data['y'])]
-                )
+                m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
 
                 # add unknown parameters
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
