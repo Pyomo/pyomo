@@ -784,7 +784,7 @@ class Constraint(ActiveIndexedComponent):
     @deprecated(
         f"The 'Constraint.rule' attribute will be made "
         "read-only in a future Pyomo release.",
-        version='6.9.3.dev0',
+        version='6.9.3',
         remove_in='6.11',
     )
     def rule(self, rule):
