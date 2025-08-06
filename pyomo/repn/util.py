@@ -769,9 +769,6 @@ def row_order2row_map(config):
         else:
             row_map[id(con)] = con
 
-    if not row_map:
-        return {}
-
     # Map the implicit dict ordering to an explicit 0..n ordering
     return {_id: i for i, _id in enumerate(row_map)}
 
