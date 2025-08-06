@@ -531,14 +531,14 @@ class TestCapture(unittest.TestCase):
             self.assertEqual(len(T.context_stack), 2)
         T = tee.capture_output(capture_fd=True)
         # out & err point to something other than fd 1 and 2
-        sys.stdout = os.fdopen(os.dup(1), closefd=True)
-        sys.stderr = os.fdopen(os.dup(2), closefd=True)
+        sys.stdout = os.fdopen(os.dup(1), 'w', closefd=True)
+        sys.stderr = os.fdopen(os.dup(2), 'w', closefd=True)
         with sys.stdout, sys.stderr:
             with T:
                 self.assertEqual(len(T.context_stack), 8)
         # out & err point to fd 1 and 2
-        sys.stdout = os.fdopen(1, closefd=False)
-        sys.stderr = os.fdopen(2, closefd=False)
+        sys.stdout = os.fdopen(1, 'w', closefd=False)
+        sys.stderr = os.fdopen(2, 'w', closefd=False)
         with sys.stdout, sys.stderr:
             with T:
                 self.assertEqual(len(T.context_stack), 6)
