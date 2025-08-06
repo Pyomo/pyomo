@@ -628,13 +628,19 @@ class _StreamHandle(object):
             self.write_file = None
 
         if self.write_pipe is not None:
+            # Close the write side of the pipe.  If we opened the pipe using
+            # win32pipe.CreatePipe, then we *must* close the write_pyhandle
+            # (otherwise we will get random "[Errno 9] Bad file descriptor"
+            # errors that can irrecoverably break stdout/stderr.
+            if _mswindows and _peek_available and _WINDOWS_USE_CREATEPIPE:
+                try:
+                    CloseHandle(self.write_pyhandle)
+                except:
+                    pass
             # Note that we must explicitly close the pipe file
             # descriptor (regardless of how we created it), as the
             # reader thread is waiting for the EOF so that it can shut
             # down.
-            #
-            # On Windows, this appears to remove the need to call
-            # CloseHandle on the corresponding write_pyhandle.
             try:
                 # If someone else has closed the file descriptor, then
                 # python raises an OSError
