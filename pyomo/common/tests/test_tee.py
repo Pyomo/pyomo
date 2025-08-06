@@ -303,6 +303,7 @@ class TestTeeStream(unittest.TestCase):
 class TestCapture(unittest.TestCase):
     def setUp(self):
         self.streams = sys.stdout, sys.stderr
+        self.fd = [os.dup(stream.fileno()) for stream in self.streams]
         self.reenable_gc = gc.isenabled()
         gc.disable()
         gc.collect()
@@ -313,6 +314,8 @@ class TestCapture(unittest.TestCase):
 
     def tearDown(self):
         sys.stdout, sys.stderr = self.streams
+        os.dup2(self.fd[0], self.streams[0].fileno())
+        os.dup2(self.fd[1], self.streams[1].fileno())
         sys.setswitchinterval(self.switchinterval)
         if self.reenable_gc:
             gc.enable()
