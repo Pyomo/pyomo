@@ -42,7 +42,7 @@ _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
 try:
     if _mswindows:
-        from msvcrt import open_osfhandle
+        from msvcrt import open_osfhandle, get_osfhandle
         from win32file import ReadFile
         from win32pipe import CreatePipe, PeekNamedPipe, SetNamedPipeHandleState
 
@@ -63,8 +63,28 @@ class _SignalFlush(object):
         super().__setattr__('_handle', handle)
 
     def flush(self):
-        self._ostream.flush()
+        while 1:
+            try:
+                self._ostream.flush()
+                break
+            except BlockingIOError:
+                time.sleep(0.01)
         self._handle.flush = True
+
+    def write(self, data):
+        chunksize = 4096
+        for i in range(0, len(data), chunksize):
+            chunk = data[i : i + chunksize]
+            while 1:
+                try:
+                    self._ostream.write(chunk)
+                    break
+                except BlockingIOError:
+                    time.sleep(0.01)
+
+    def writelines(self, data):
+        for line in data:
+            self.write(line)
 
     def __getattr__(self, attr):
         return getattr(self._ostream, attr)
@@ -75,11 +95,11 @@ class _SignalFlush(object):
 
 class _AutoFlush(_SignalFlush):
     def write(self, data):
-        self._ostream.write(data)
+        super().write(data)
         self.flush()
 
     def writelines(self, data):
-        self._ostream.writelines(data)
+        super().writelines(data)
         self.flush()
 
 
@@ -477,6 +497,7 @@ class capture_output(object):
     def reset(self):
         return self.__exit__(None, None, None)
 
+CREATE_WIN_PYHANDLE = False
 
 class _StreamHandle(object):
     """A stream handler object used by TeeStream
@@ -495,7 +516,7 @@ class _StreamHandle(object):
         self.buffering = buffering
         self.newlines = newline
         self.flush = False
-        if _peek_available and _mswindows:
+        if _peek_available and _mswindows and CREATE_WIN_PYHANDLE:
             # This is a re-implementation of os.pipe() on Windows so
             # that we can explicitly request a larger pipe buffer (64k;
             # matching *NIX).  Per the docs: on Windows, the pipe buffer
@@ -519,6 +540,16 @@ class _StreamHandle(object):
             # return a number of bytes written less than the string that
             # was passed.  If the client is ignoring the return value,
             # then *poof*: the output is truncated)
+            SetNamedPipeHandleState(self.write_pyhandle, PIPE_NOWAIT, None, None)
+        elif _peek_available and _mswindows:
+            # This is a fall-back on using os.pipe on Windows.  This
+            # should behave well for Python clients, but can result in
+            # loss of data for clients that write directly to the file
+            # descriptor (due to a non-blocking write overflowing the
+            # file descriptor).
+            self.read_pipe, self.write_pipe = os.pipe()
+            self.read_pyhandle = get_osfhandle(self.read_pipe)
+            self.write_pyhandle = get_osfhandle(self.write_pipe)
             SetNamedPipeHandleState(self.write_pyhandle, PIPE_NOWAIT, None, None)
         else:
             self.read_pipe, self.write_pipe = os.pipe()
