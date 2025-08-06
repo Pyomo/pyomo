@@ -505,8 +505,8 @@ class _StreamHandle(object):
             # the outset, we reduce the likelihood of needing to
             # reallocate the buffer.
             self.read_pyhandle, self.write_pyhandle = CreatePipe(None, 65536)
-            self.read_pipe = open_osfhandle(self.read_pyhandle.handle, os.O_RDONLY)
-            self.write_pipe = open_osfhandle(self.write_pyhandle.handle, os.O_WRONLY)
+            self.read_pipe = open_osfhandle(self.read_pyhandle.handle, os.O_RDONLY | os.O_NOINHERIT)
+            self.write_pipe = open_osfhandle(self.write_pyhandle.handle, os.O_WRONLY | os.O_NOINHERIT)
             # Because reallocating the pipe buffer can cause deadlock
             # (at least in the context in which we are using pipes
             # here), we will set the write pipe to NOWAIT.  This will
