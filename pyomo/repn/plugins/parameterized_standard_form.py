@@ -274,7 +274,7 @@ class _CSCMatrix(_SparseMatrixBase):
         # Fix the row index pointer by inserting 0 at the beginning. The
         # row_index_ptr currently holds pointers to 1 past the last element of
         # each row, which is really the starting index for the next
-        # row. Inserting the 0 (the starting index for the firsst column)
+        # row. Inserting the 0 (the starting index for the first column)
         # shifts everything by one column, "converting" the vector to the
         # starting indices of each row, and extending the vector length to
         # num_rows + 1 (as is expected by the CSR matrix).

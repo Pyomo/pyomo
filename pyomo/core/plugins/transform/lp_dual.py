@@ -140,7 +140,7 @@ class LinearProgrammingDual(object):
                     # really expected here, so maybe we just scream? Or we leave
                     # the constraint in the model as it is written...
                     raise ValueError(
-                        f"The primal model contains a constraint that that the "
+                        f"The primal model contains a constraint that the "
                         f"parameterization makes trivial: '{primal_cons.name}'"
                         f"\nPlease deactivate it or declare it on another Block "
                         f"before taking the dual."
@@ -172,6 +172,7 @@ class LinearProgrammingDual(object):
 
             domain = primal.domain
             lb, ub = domain.bounds()
+            # Note: the following checks the domain for continuity and compactness:
             if not domain == RangeSet(*domain.bounds(), 0):
                 raise ValueError(
                     f"The domain of the primal variable '{primal.name}' "

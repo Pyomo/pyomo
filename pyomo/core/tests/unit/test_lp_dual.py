@@ -408,7 +408,7 @@ class TestLPDual(unittest.TestCase):
         lp_dual = TransformationFactory('core.lp_dual')
         with self.assertRaisesRegex(
             ValueError,
-            "The primal model contains a constraint that that the "
+            "The primal model contains a constraint that the "
             "parameterization makes trivial: 'budgetish'"
             "\nPlease deactivate it or declare it on another Block "
             "before taking the dual.",
