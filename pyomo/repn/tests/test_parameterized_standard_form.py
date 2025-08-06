@@ -51,6 +51,11 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(thing.indices == np.array([0, 1, 3, 2])))
         self.assertTrue(np.all(thing.indptr == np.array([0, 1, 3, 4, 4])))
 
+        should_be_A = thing.tocsr()
+        self.assertTrue(np.all(should_be_A.data == A.data))
+        self.assertTrue(np.all(should_be_A.indices == A.indices))
+        self.assertTrue(np.all(should_be_A.indptr == A.indptr))
+
     def test_csr_to_csc_pyomo_exprs(self):
         m = ConcreteModel()
         m.x = Var()
@@ -70,6 +75,15 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(thing.indices == np.array([0, 1, 3, 2])))
         self.assertTrue(np.all(thing.indptr == np.array([0, 1, 3, 4, 4])))
 
+        should_be_A = thing.tocsr()
+        self.assertEqual(should_be_A.data[0], 5)
+        assertExpressionsEqual(self, should_be_A.data[1], 8 * m.x)
+        assertExpressionsEqual(self, should_be_A.data[2], 3 * m.x * m.y**2)
+        self.assertEqual(should_be_A.data[3], 6)
+        self.assertEqual(should_be_A.data.shape, (4,))
+        self.assertTrue(np.all(should_be_A.indices == np.array([0, 1, 2, 1])))
+        self.assertTrue(np.all(should_be_A.indptr == np.array([0, 1, 2, 3, 4])))
+
     def test_csr_to_csc_empty_matrix(self):
         A = _CSRMatrix(([], [], [0]), [0, 4])
         thing = A.tocsc()
@@ -78,6 +92,12 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertEqual(thing.indices.size, 0)
         self.assertEqual(thing.shape, (0, 4))
         self.assertTrue(np.all(thing.indptr == np.zeros(5)))
+
+        should_be_A = thing.tocsr()
+        self.assertEqual(should_be_A.data.size, 0)
+        self.assertEqual(should_be_A.indices.size, 0)
+        self.assertEqual(should_be_A.shape, (0, 4))
+        self.assertTrue(np.all(should_be_A.indptr == np.zeros(5)))
 
     def test_todense(self):
         A = _CSRMatrix(([5, 8, 3, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4]), [4, 4])

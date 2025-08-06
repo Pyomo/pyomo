@@ -1059,9 +1059,7 @@ class TestParameterizedQuadratic(unittest.TestCase):
         )
 
         cfg = VisitorConfig()
-        # note: variable fixing takes precedence over inclusion in
-        # the `wrt` list; that is tested here
-        visitor = ParameterizedQuadraticRepnVisitor(**cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedQuadraticRepnVisitor(**cfg, wrt=[m.y])
         repn = visitor.walk_expression(expr)
 
         self.assertEqual(cfg.subexpr, {})
@@ -1391,7 +1389,7 @@ class TestParameterizedQuadratic(unittest.TestCase):
         expr = (1 + 2 * m.x + 3 * m.y) ** (m.z)
 
         cfg = VisitorConfig()
-        visitor = ParameterizedQuadraticRepnVisitor(**cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedQuadraticRepnVisitor(**cfg, wrt=[m.y])
         repn = visitor.walk_expression(expr)
 
         self.assertEqual(cfg.subexpr, {})

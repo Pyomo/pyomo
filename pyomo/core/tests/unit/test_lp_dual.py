@@ -17,9 +17,11 @@ from pyomo.environ import (
     Constraint,
     maximize,
     minimize,
+    NonNegativeIntegers,
     NonNegativeReals,
     NonPositiveReals,
     Objective,
+    Param,
     Reals,
     Suffix,
     TerminationCondition,
@@ -398,3 +400,45 @@ class TestLPDual(unittest.TestCase):
             "on model 'primal'",
         ):
             thing = lp_dual.get_dual_var(m, m.c_new)
+
+    def test_parameterization_makes_constraint_trivial(self):
+        m = self.get_bilevel_model()
+        m.budgetish = Constraint(expr=m.outer[2] + m.outer[3] == 1)
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        with self.assertRaisesRegex(
+            ValueError,
+            "The primal model contains a constraint that the "
+            "parameterization makes trivial: 'budgetish'"
+            "\nPlease deactivate it or declare it on another Block "
+            "before taking the dual.",
+        ):
+            dual = lp_dual.create_using(m, parameterize_wrt=m.outer)
+
+    def test_normal_trivial_constraint_error(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=3, mutable=True)
+        m.x = Var(bounds=(0, 9))
+        m.c = Constraint(expr=m.x * m.p <= 8)
+        m.x.fix(2)
+
+        m.obj = Objective(expr=m.x)
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        with self.assertRaisesRegex(
+            ValueError,
+            "Model 'unknown' has no variables in the active Constraints "
+            "or Objective.",
+        ):
+            dual = lp_dual.create_using(m)
+
+    def test_discrete_primal_var_error(self):
+        m = self.get_bilevel_model()
+        m.x.domain = NonNegativeIntegers
+
+        with self.assertRaisesRegex(
+            ValueError, "The domain of the primal variable 'x' is not continuous"
+        ):
+            dual = TransformationFactory('core.lp_dual').create_using(
+                m, parameterize_wrt=[m.outer, m.outer1]
+            )

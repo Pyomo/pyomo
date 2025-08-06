@@ -83,12 +83,12 @@ class ParameterizedBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
     def _before_var(visitor, child):
         _id = id(child)
         if _id not in visitor.var_map:
-            if child.fixed:
-                return False, (_CONSTANT, visitor.check_constant(child.value, child))
             if child in visitor.wrt:
-                # pseudo-constant
+                # pseudo-constant, and we need to leave it in even if it is fixed!
                 # We aren't treating this Var as a Var for the purposes of this walker
                 return False, (_FIXED, child)
+            if child.fixed:
+                return False, (_CONSTANT, visitor.check_constant(child.value, child))
             # This is a normal situation
             visitor.var_recorder.add(child)
         ans = visitor.Result()
