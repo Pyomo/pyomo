@@ -452,17 +452,6 @@ class capture_output(object):
                     'Captured output (%s) does not match sys.stderr (%s).'
                     % (self.tee._stdout, sys.stdout)
                 )
-        # Flush all streams
-        try:
-            sys.stderr.flush()
-        except ValueError:
-            # I/O on a closed file
-            pass
-        try:
-            sys.stdout.flush()
-        except ValueError:
-            # I/O on a closed file
-            pass
         # Exit all context managers.  This includes
         #  - Restore any file descriptors we commandeered
         #  - Close / join the TeeStream
@@ -587,10 +576,7 @@ class _StreamHandle(object):
         self.decodeIncomingBuffer()
         if ostreams:
             self.writeOutputBuffer(ostreams, True)
-        try:
-            os.close(self.read_pipe)
-        except OSError:
-            pass
+        os.close(self.read_pipe)
 
         if self.decoder_buffer:
             logger.error(
