@@ -51,6 +51,10 @@ gurobi_available = (
     SolverFactory('gurobi').available(exception_flag=False)
     and SolverFactory('gurobi').license_is_valid()
 )
+gurobi_direct_available = (
+    SolverFactory('gurobi_direct_v2').available(exception_flag=False)
+    and SolverFactory('gurobi_direct_v2').license_is_valid()
+)
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 
@@ -970,7 +974,7 @@ class LinearModelDecisionTreeExample(CommonTests):
         self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
 
     # Make sure we don't choke on a LegacySolverWrapper
-    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(gurobi_direct_available, "Gurobi direct is not available")
     @unittest.skipUnless(dill_available, "Dill is not available")
     def test_calculated_Ms_legacy_solver_wrapper(self):
         m = self.make_model()
