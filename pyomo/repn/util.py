@@ -787,7 +787,8 @@ def ordered_active_constraints(model, config):
     # unspecified rows have a row number one bigger than the
     # number of rows specified by the user ordering.
     _n = len(row_map)
-    return sorted(constraints, key=lambda x: row_map.get(id(x), _n))
+    _row_getter = row_map.get
+    return sorted(constraints, key=lambda x: _row_getter(id(x), _n))
 
 
 class VarRecorder(object):
