@@ -38,6 +38,13 @@ sys.path.insert(0, os.path.abspath('../..'))
 # our sphinx extensions
 sys.path.insert(0, os.path.abspath('ext'))
 
+# -- Mark that we are running Sphinx --------------------------------------
+import pyomo
+
+# Mark a "convenient" and reasonably unique global flag that we can use
+# elsewhere to reliably tell if Sphinx is building / testing the docs
+pyomo.__sphinx_build__ = True
+
 # -- Rebuild SPY files ----------------------------------------------------
 sys.path.insert(0, os.path.abspath('src'))
 try:
