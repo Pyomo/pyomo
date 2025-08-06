@@ -587,7 +587,10 @@ class _StreamHandle(object):
         self.decodeIncomingBuffer()
         if ostreams:
             self.writeOutputBuffer(ostreams, True)
-        os.close(self.read_pipe)
+        try:
+            os.close(self.read_pipe)
+        except OSError:
+            pass
 
         if self.decoder_buffer:
             logger.error(
