@@ -69,25 +69,30 @@ class _SignalFlush(object):
         # will chunk the data into pieces that should be well below the
         # pipe buffer size (so we should avoid deadlock)
 
-        def flush(self):
+        def _retry(self, fcn, *args, retries=10):
+            # Attempting to write to the pipe in the testing harness
+            # occasionally raises OSError ("No space left on disk") or
+            # BlockingIOError (when the write would be truncated).  We
+            # will re-try after a brief pause.
+            failCount = 0
             while 1:
                 try:
-                    self._ostream.flush()
+                    fcn(*args)
                     break
-                except BlockingIOError:
-                    time.sleep(0.01)
+                except (OSError, BlockingIOError):
+                    failCount += 1
+                    if failCount >= retries:
+                        raise
+                    time.sleep(_poll_rampup_limit / (retries - 1))
+
+        def flush(self):
+            self._retry(self._ostream.flush)
             self._handle.flush = True
 
         def write(self, data):
-            chunksize = 32768
+            chunksize = _pipe_buffersize >> 1  # 1/2 the buffer size
             for i in range(0, len(data), chunksize):
-                chunk = data[i : i + chunksize]
-                while 1:
-                    try:
-                        self._ostream.write(chunk)
-                        break
-                    except BlockingIOError:
-                        time.sleep(0.01)
+                self._retry(self._ostream.write, data[i : i + chunksize])
 
         def writelines(self, data):
             for line in data:
