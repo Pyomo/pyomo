@@ -784,8 +784,8 @@ class BufferTester(object):
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
-            # Note: bigger than the 64k buffer we allocate on Windows.
-            sys.stdout.write(f"{time.time()}" + ' ' * 1024 * 64 + "\n")
+            # Note: bigger than the buffer we allocate on Windows.
+            sys.stdout.write(f"{time.time()}" + ' ' * tee._pipe_buffersize + "\n")
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
