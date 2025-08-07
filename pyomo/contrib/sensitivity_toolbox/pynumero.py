@@ -15,8 +15,9 @@ from pyomo.common.dependencies import scipy, attempt_import
 import pyomo.environ as pyo
 
 # Use attempt_import here due to unguarded NumPy import in this file
-nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
+nlp = attempt_import("pyomo.contrib.pynumero.interfaces.pyomo_nlp")[0]
 from pyomo.common.collections import ComponentSet, ComponentMap
+import pyomo.core.expr.calculus.derivatives as derivatives
 
 
 def _coo_reorder_cols(mat, remap):
@@ -102,7 +103,7 @@ def get_dsdp_dfdp(model, theta):
     return dsdp, dfdp, row_map, column_map
 
 
-def get_dydp(y_list, dsdp, row_map):
+def get_dydp(y_list, dsdp, row_map, column_map=None):
     """Reduce the sensitivity matrix from get_dsdp_dfdp to only
     a specified set of state variables of interest.
 
@@ -114,6 +115,9 @@ def get_dydp(y_list, dsdp, row_map):
         A sensitivity matrix calculated by get_dsdp_dfdp
     row_map: ComponentMap
         A row map from get_dsdp_dfdp
+    column_map: ComponentMap
+        A column map from get_dsdp_dfdp, only needed if y_list
+        contains expressions
 
     Returns
     -------
@@ -121,9 +125,34 @@ def get_dydp(y_list, dsdp, row_map):
         dy/dp and a new row map with only y variables
 
     """
+    j = 0
     new_row_map = ComponentMap()
+    expr_row_map = ComponentMap()
     for i, v in enumerate(y_list):
         new_row_map[v] = i
-    rows = [row_map[v] for v in y_list]
-    dydp = dsdp[rows, :]
+        if v not in row_map:
+            expr_row_map[v] = j
+            j += 1
+
+    rows = [None] * len(y_list)
+    for i, v in enumerate(y_list):
+        if v not in expr_row_map:
+            rows[i] = dsdp[row_map[v], :]
+
+    if j > 0:
+        if column_map is None:
+            raise ValueError("If y_list contains Expression column_map arg required")
+        wrt_list = [s for s in row_map] + [p for p in column_map]
+        dedx = [None] * j
+        for v, i in expr_row_map.items():
+            dedx[i] = scipy.sparse.csc_matrix(
+                derivatives.differentiate(v, wrt_list=wrt_list)
+            )
+        dedx = scipy.sparse.vstack(dedx)
+        ns = len(row_map)
+        dedp = dedx[:, :ns] @ dsdp + dedx[:, ns:]
+        for v, i in expr_row_map.items():
+            rows[new_row_map[v]] = dedp[i, :]
+
+    dydp = scipy.sparse.vstack(rows)
     return dydp, new_row_map
