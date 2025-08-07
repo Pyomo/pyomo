@@ -307,7 +307,7 @@ class GAMSWriter(object):
         # representation generates (and disposes of) a large number of
         # small objects.
 
-        # NOTE: First pass write the model but needs variables/equations defition first
+        # NOTE: First pass write the model but needs variables/equations definition first
         with PauseGC():
             return _GMSWriter_impl(ostream, config).write(model)
 
