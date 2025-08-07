@@ -23,7 +23,8 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.results import Results
-from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs, get_objective
+from pyomo.contrib.solver.common.util import get_objective
+from .component_collector import collect_components_from_expr
 from pyomo.common.numeric_types import native_numeric_types
 
 
@@ -121,7 +122,7 @@ class AutoUpdateConfig(ConfigDict):
                 update_parameters_and_fixed_vars.""",
             ),
         )
-        self.update_parameters_and_fixed_vars: bool = self.declare(
+        self.update_parameters: bool = self.declare(
             'update_parameters',
             ConfigValue(
                 domain=bool,
@@ -181,7 +182,7 @@ class Observer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def set_objective(self, obj: ObjectiveData):
+    def set_objective(self, obj: Optional[ObjectiveData]):
         pass
 
     @abc.abstractmethod
@@ -205,18 +206,13 @@ class Observer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_parameters_and_fixed_variables(
-        self,
-        params: List[ParamData],
-        variables: List[VarData],
-    ):
+    def update_parameters(self, params: List[ParamData]):
         pass
 
 
 class ModelChangeDetector:
     def __init__(
         self, observers: Sequence[Observer], 
-        treat_fixed_vars_as_params=True, 
         **kwds,
     ):
         """
@@ -224,16 +220,6 @@ class ModelChangeDetector:
         ----------
         observers: Sequence[Observer]
             The objects to notify when changes are made to the model
-        treat_fixed_vars_as_params: bool
-            This is an advanced option that should only be used in special circumstances.
-            With the default setting of True, fixed variables will be treated like parameters.
-            This means that z == x*y will be linear if x or y is fixed and the constraint
-            can be written to an LP file. If the value of the fixed variable gets changed, we have
-            to completely reprocess all constraints using that variable. If
-            treat_fixed_vars_as_params is False, then constraints will be processed as if fixed
-            variables are not fixed, and the solver will be told the variable is fixed. This means
-            z == x*y could not be written to an LP file even if x and/or y is fixed. However,
-            updating the values of fixed variables is much faster this way.
         """
         self._observers: List[Observer] = list(observers)
         self._model = None
@@ -260,12 +246,11 @@ class ModelChangeDetector:
         self._params_referenced_by_con = {}
         self._params_referenced_by_obj = []
         self._expr_types = None
-        self._treat_fixed_vars_as_params = treat_fixed_vars_as_params
         self.config: AutoUpdateConfig = AutoUpdateConfig()(value=kwds, preserve_implicit=True)
 
     def set_instance(self, model):
         saved_config = self.config
-        self.__init__(observers=self._observers, treat_fixed_vars_as_params=self._treat_fixed_vars_as_params)
+        self.__init__(observers=self._observers)
         self.config = saved_config
         self._model = model
         self._add_block(model)
@@ -331,37 +316,38 @@ class ModelChangeDetector:
         self._remove_parameters(list(params_to_remove.values()))
 
     def _add_constraints(self, cons: List[ConstraintData]):
-        all_fixed_vars = {}
+        vars_to_check = []
+        params_to_check = []
         for con in cons:
             if con in self._active_constraints:
                 raise ValueError(f'Constraint {con.name} has already been added')
             self._active_constraints[con] = con.expr
-            tmp = collect_vars_and_named_exprs(con.expr)
-            named_exprs, variables, fixed_vars, parameters, external_functions = tmp
-            self._check_for_new_vars(variables)
-            self._check_for_new_params(parameters)
+            tmp = collect_components_from_expr(con.expr)
+            named_exprs, variables, parameters, external_functions = tmp
+            vars_to_check.extend(variables)
+            params_to_check.extend(parameters)
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[con] = external_functions
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = parameters
+        self._check_for_new_vars(vars_to_check)
+        self._check_for_new_params(params_to_check)
+        for con in cons:
+            variables = self._vars_referenced_by_con[con]
+            parameters = self._params_referenced_by_con[con]
             for v in variables:
                 self._referenced_variables[id(v)][0][con] = None
             for p in parameters:
                 self._referenced_params[id(p)][0][con] = None
-            if not self._treat_fixed_vars_as_params:
-                for v in fixed_vars:
-                    v.unfix()
-                    all_fixed_vars[id(v)] = v
         for obs in self._observers:
             obs.add_constraints(cons)
-        for v in all_fixed_vars.values():
-            v.fix()
 
     def _add_sos_constraints(self, cons: List[SOSConstraintData]):
-        all_fixed_vars = {}
+        vars_to_check = []
+        params_to_check = []
         for con in cons:
-            if con in self._vars_referenced_by_con:
+            if con in self._active_sos:
                 raise ValueError(f'Constraint {con.name} has already been added')
             sos_items = list(con.get_items())
             self._active_sos[con] = ([i[0] for i in sos_items], [i[1] for i in sos_items])
@@ -373,8 +359,8 @@ class ModelChangeDetector:
                     continue
                 if p.is_parameter_type():
                     params.append(p)
-            self._check_for_new_vars(variables)
-            self._check_for_new_params(params)
+            vars_to_check.extend(variables)
+            params_to_check.extend(params)
             self._named_expressions[con] = []
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = params
@@ -382,29 +368,28 @@ class ModelChangeDetector:
                 self._referenced_variables[id(v)][1][con] = None
             for p in params:
                 self._referenced_params[id(p)][1][con] = None
-            if not self._treat_fixed_vars_as_params:
-                for v in variables:
-                    if v.is_fixed():
-                        v.unfix()
-                        all_fixed_vars[id(v)] = v
+        self._check_for_new_vars(vars_to_check)
+        self._check_for_new_params(params_to_check)
         for obs in self._observers:
             obs.add_sos_constraints(cons)
-        for v in all_fixed_vars.values():
-            v.fix()
 
-    def _set_objective(self, obj: ObjectiveData):
+    def _set_objective(self, obj: Optional[ObjectiveData]):
+        vars_to_remove_check = []
+        params_to_remove_check = []
         if self._objective is not None:
             for v in self._vars_referenced_by_obj:
                 self._referenced_variables[id(v)][2] = None
-            self._check_to_remove_vars(self._vars_referenced_by_obj)
-            self._check_to_remove_params(self._params_referenced_by_obj)
+            for p in self._params_referenced_by_obj:
+                self._referenced_params[id(p)][2] = None
+            vars_to_remove_check.extend(self._vars_referenced_by_obj)
+            params_to_remove_check.extend(self._params_referenced_by_obj)
             self._external_functions.pop(self._objective, None)
         if obj is not None:
             self._objective = obj
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
-            tmp = collect_vars_and_named_exprs(obj.expr)
-            named_exprs, variables, fixed_vars, parameters, external_functions = tmp
+            tmp = collect_components_from_expr(obj.expr)
+            named_exprs, variables, parameters, external_functions = tmp
             self._check_for_new_vars(variables)
             self._check_for_new_params(parameters)
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
@@ -416,13 +401,6 @@ class ModelChangeDetector:
                 self._referenced_variables[id(v)][2] = obj
             for p in parameters:
                 self._referenced_params[id(p)][2] = obj
-            if not self._treat_fixed_vars_as_params:
-                for v in fixed_vars:
-                    v.unfix()
-            for obs in self._observers:
-                obs.set_objective(obj)
-            for v in fixed_vars:
-                v.fix()
         else:
             self._vars_referenced_by_obj = []
             self._params_referenced_by_obj = []
@@ -430,8 +408,10 @@ class ModelChangeDetector:
             self._objective_expr = None
             self._objective_sense = None
             self._obj_named_expressions = []
-            for obs in self._observers:
-                obs.set_objective(obj)
+        for obs in self._observers:
+            obs.set_objective(obj)
+        self._check_to_remove_vars(vars_to_remove_check)
+        self._check_to_remove_params(params_to_remove_check)
 
     def _add_block(self, block):
         self._add_constraints(
@@ -447,14 +427,15 @@ class ModelChangeDetector:
             )
         )
         obj = get_objective(block)
-        if obj is not None:
-            self._set_objective(obj)
+        self._set_objective(obj)
 
     def _remove_constraints(self, cons: List[ConstraintData]):
         for obs in self._observers:
             obs.remove_constraints(cons)
+        vars_to_check = []
+        params_to_check = []
         for con in cons:
-            if con not in self._named_expressions:
+            if con not in self._active_constraints:
                 raise ValueError(
                     f'Cannot remove constraint {con.name} - it was not added'
                 )
@@ -462,19 +443,23 @@ class ModelChangeDetector:
                 self._referenced_variables[id(v)][0].pop(con)
             for p in self._params_referenced_by_con[con]:
                 self._referenced_params[id(p)][0].pop(con)
-            self._check_to_remove_vars(self._vars_referenced_by_con[con])
-            self._check_to_remove_params(self._params_referenced_by_con[con])
+            vars_to_check.extend(self._vars_referenced_by_con[con])
+            params_to_check.extend(self._params_referenced_by_con[con])
             del self._active_constraints[con]
             del self._named_expressions[con]
             self._external_functions.pop(con, None)
             del self._vars_referenced_by_con[con]
             del self._params_referenced_by_con[con]
+        self._check_to_remove_vars(vars_to_check)
+        self._check_to_remove_params(params_to_check)
 
     def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         for obs in self._observers:
             obs.remove_sos_constraints(cons)
+        vars_to_check = []
+        params_to_check = []
         for con in cons:
-            if con not in self._vars_referenced_by_con:
+            if con not in self._active_sos:
                 raise ValueError(
                     f'Cannot remove constraint {con.name} - it was not added'
                 )
@@ -482,12 +467,14 @@ class ModelChangeDetector:
                 self._referenced_variables[id(v)][1].pop(con)
             for p in self._params_referenced_by_con[con]:
                 self._referenced_params[id(p)][1].pop(con)
-            self._check_to_remove_vars(self._vars_referenced_by_con[con])
-            self._check_to_remove_params(self._params_referenced_by_con[con])
+            vars_to_check.extend(self._vars_referenced_by_con[con])
+            params_to_check.extend(self._params_referenced_by_con[con])
             del self._active_sos[con]
             del self._named_expressions[con]
             del self._vars_referenced_by_con[con]
             del self._params_referenced_by_con[con]
+        self._check_to_remove_vars(vars_to_check)
+        self._check_to_remove_params(params_to_check)
 
     def _remove_variables(self, variables: List[VarData]):
         for obs in self._observers:
@@ -536,13 +523,11 @@ class ModelChangeDetector:
         for obs in self._observers:
             obs.update_variables(variables)
 
-    def _update_parameters_and_fixed_variables(self, params, variables):
+    def _update_parameters(self, params):
         for p in params:
             self._params[id(p)] = (p, p.value)
-        for v in variables:
-            self._vars[id(v)][5] = v.value
         for obs in self._observers:
-            obs.update_parameters_and_fixed_variables(params, variables)
+            obs.update_parameters(params)
 
     def _check_for_new_or_removed_sos(self):
         new_sos = []
@@ -617,15 +602,60 @@ class ModelChangeDetector:
         for vid, (v, _lb, _ub, _fixed, _domain_interval, _value) in self._vars.items():
             if v.fixed != _fixed:
                 vars_to_update.append(v)
-                if self._treat_fixed_vars_as_params:
-                    for c in self._referenced_variables[vid][0]:
-                        cons_to_update[c] = None
-
+                for c in self._referenced_variables[vid][0]:
+                    cons_to_update[c] = None
+                if self._referenced_variables[vid][2] is not None:
+                    update_obj = True
             elif v._lb is not _lb:
                 vars_to_update.append(v)
             elif v._ub is not _ub:
                 vars_to_update.append(v)
-            
+            elif _domain_interval != v.domain.get_interval():
+                vars_to_update.append(v)
+            elif v.value != _value:
+                vars_to_update.append(v)
+        cons_to_update = list(cons_to_update.keys())
+        return vars_to_update, cons_to_update, update_obj
+    
+    def _check_for_param_changes(self):
+        params_to_update = []
+        for pid, (p, val) in self._params.items():
+            if p.value != val:
+                params_to_update.append(p)
+        return params_to_update
+    
+    def _check_for_named_expression_changes(self):
+        cons_to_update = []
+        for con, ne_list in self._named_expressions.items():
+            for named_expr, old_expr in ne_list:
+                if named_expr.expr is not old_expr:
+                    cons_to_update.append(con)
+                    break
+        update_obj = False
+        ne_list = self._obj_named_expressions
+        for named_expr, old_expr in ne_list:
+            if named_expr.expr is not old_expr:
+                update_obj = True
+                break
+        return cons_to_update, update_obj
+
+    def _check_for_new_objective(self):
+        update_obj = False
+        new_obj = get_objective(self._model)
+        if new_obj is not self._objective:
+            update_obj = True
+        return new_obj, update_obj        
+
+    def _check_for_objective_changes(self):
+        update_obj = False
+        if self._objective is None:
+            return update_obj
+        if self._objective.expr is not self._objective_expr:
+            update_obj = True
+        elif self._objective.sense != self._objective_sense:
+            # we can definitely do something faster here than resetting the whole objective
+            update_obj = True
+        return update_obj
 
     def update(self, timer: Optional[HierarchicalTimer] = None, **kwds):
         if timer is None:
@@ -641,7 +671,7 @@ class ModelChangeDetector:
             self._add_sos_constraints(new_sos)
             self._remove_sos_constraints(old_sos)
             added_sos.update(new_sos)
-            timer.stop('cons')
+            timer.stop('sos')
             timer.start('cons')
             new_cons, old_cons = self._check_for_new_or_removed_constraints()
             self._add_constraints(new_cons)
@@ -665,115 +695,46 @@ class ModelChangeDetector:
 
         need_to_set_objective = False
 
-        timer.start('vars')
         if config.update_vars:
-            end_vars = {v_id: v_tuple[0] for v_id, v_tuple in self._vars.items()}
-            vars_to_check = [v for v_id, v in end_vars.items() if v_id in start_vars]
-        if config.update_vars:
-            vars_to_update = []
-            for v in vars_to_check:
-                _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
-                if (fixed != v.fixed) or (fixed and (value != v.value)):
-                    vars_to_update.append(v)
-                    if self._treat_fixed_vars_as_params:
-                        for c in self._referenced_variables[id(v)][0]:
-                            cons_to_remove_and_add[c] = None
-                        if self._referenced_variables[id(v)][2] is not None:
-                            need_to_set_objective = True
-                elif lb is not v._lb:
-                    vars_to_update.append(v)
-                elif ub is not v._ub:
-                    vars_to_update.append(v)
-                elif domain_interval != v.domain.get_interval():
-                    vars_to_update.append(v)
-            self.update_variables(vars_to_update)
-        timer.stop('vars')
-        timer.start('cons')
-        cons_to_remove_and_add = list(cons_to_remove_and_add.keys())
-        self.remove_constraints(cons_to_remove_and_add)
-        self.add_constraints(cons_to_remove_and_add)
-        timer.stop('cons')
-        timer.start('named expressions')
+            timer.start('vars')
+            vars_to_update, cons_to_update, update_obj = self._check_for_var_changes()
+            self._update_variables(vars_to_update)
+            cons_to_update = [i for i in cons_to_update if i not in added_cons]
+            self._remove_constraints(cons_to_update)
+            self._add_constraints(cons_to_update)
+            added_cons.update(cons_to_update)
+            if update_obj:
+                need_to_set_objective = True
+            timer.stop('vars')
+
         if config.update_named_expressions:
-            cons_to_update = []
-            for c, expr_list in self._named_expressions.items():
-                if c in new_cons_set:
-                    continue
-                for named_expr, old_expr in expr_list:
-                    if named_expr.expr is not old_expr:
-                        cons_to_update.append(c)
-                        break
-            self.remove_constraints(cons_to_update)
-            self.add_constraints(cons_to_update)
-            for named_expr, old_expr in self._obj_named_expressions:
-                if named_expr.expr is not old_expr:
-                    need_to_set_objective = True
-                    break
-        timer.stop('named expressions')
+            timer.start('named expressions')
+            cons_to_update, update_obj = self._check_for_named_expression_changes()
+            cons_to_update = [i for i in cons_to_update if i not in added_cons]
+            self._remove_constraints(cons_to_update)
+            self._add_constraints(cons_to_update)
+            added_cons.update(cons_to_update)
+            if update_obj:
+                need_to_set_objective = True
+            timer.stop('named expressions')
+        
         timer.start('objective')
-        if self._active_config.auto_updates.check_for_new_objective:
-            pyomo_obj = get_objective(self._model)
-            if pyomo_obj is not self._objective:
+        new_obj = self._objective
+        if config.check_for_new_objective:
+            new_obj, update_obj = self._check_for_new_objective()
+            if update_obj:
                 need_to_set_objective = True
-        else:
-            pyomo_obj = self._objective
-        if self._active_config.auto_updates.update_objective:
-            if pyomo_obj is not None and pyomo_obj.expr is not self._objective_expr:
+        if config.update_objective:
+            update_obj = self._check_for_objective_changes()
+            if update_obj:
                 need_to_set_objective = True
-            elif pyomo_obj is not None and pyomo_obj.sense is not self._objective_sense:
-                # we can definitely do something faster here than resetting the whole objective
-                need_to_set_objective = True
+
         if need_to_set_objective:
-            self.set_objective(pyomo_obj)
+            self._set_objective(new_obj)
         timer.stop('objective')
 
         if config.update_parameters:
             timer.start('params')
-            modified_params = []
-            for pid, (p, old_val) in self._params.items():
-                if p.value != old_val:
-                    modified_params.append(p)
-            modified_vars = []
-            for vid, (v, _lb, _ub, _fixed, _domain_interval, _val) in self._vars.items():
-                if _fixed and _val != v.value:
-                    modified_vars.append(v)
-            self._update_parameters_and_fixed_variables(modified_params, modified_vars)
+            params_to_update = self._check_for_param_changes()
+            self._update_parameters(params_to_update)
             timer.stop('params')
-
-
-class PersistentSolverMixin:
-    """
-    The `solve` method in Gurobi and Highs is exactly the same, so this Mixin
-    minimizes the duplicate code
-    """
-
-    def solve(self, model, **kwds) -> Results:
-        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
-        StaleFlagManager.mark_all_as_stale()
-
-        if self._last_results_object is not None:
-            self._last_results_object.solution_loader.invalidate()
-        if config.timer is None:
-            config.timer = HierarchicalTimer()
-        timer = config.timer
-
-        if model is not self._model:
-            timer.start('set_instance')
-            self.set_instance(model)
-            timer.stop('set_instance')
-        else:
-            timer.start('update')
-            self.update(timer=timer)
-            timer.stop('update')
-
-        res = self._solve()
-        self._last_results_object = res
-
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        res.timing_info.start_timestamp = start_timestamp
-        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
-        res.timing_info.timer = timer
-        self._active_config = self.config
-
-        return res

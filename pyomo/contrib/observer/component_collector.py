@@ -49,11 +49,12 @@ collector_handlers = {
 
 
 class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
-    def __init__(self):
+    def __init__(self, **kwds):
         self.named_expressions = {}
         self.variables = {}
         self.params = {}
         self.external_functions = {}
+        super().__init__(**kwds)
 
     def exitNode(self, node, data):
         nt = type(node)
