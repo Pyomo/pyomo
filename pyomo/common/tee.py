@@ -38,7 +38,7 @@ _poll_rampup = 10
 _poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
 _poll_timeout_deadlock = 100  # seconds
 
-_WINDOWS_USE_CREATEPIPE = True
+_WINDOWS_USE_CREATEPIPE = False
 
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
@@ -46,7 +46,7 @@ try:
     if _mswindows:
         from msvcrt import open_osfhandle, get_osfhandle
         from win32file import CloseHandle, ReadFile
-        from win32pipe import CreatePipe, PeekNamedPipe, SetNamedPipeHandleState
+        from win32pipe import CreatePipe, FdCreatePipe, PeekNamedPipe, SetNamedPipeHandleState
 
         # This constant from Microsoft SetNamedPipeHandleState documentation:
         PIPE_NOWAIT = 1
@@ -81,9 +81,7 @@ class _SignalFlush(object):
             self._handle.flush = True
 
         def write(self, data):
-            chunksize = 4096
-            if _WINDOWS_USE_CREATEPIPE:
-                chunksize *= 8
+            chunksize = 32768
             for i in range(0, len(data), chunksize):
                 chunk = data[i : i + chunksize]
                 while 1:
@@ -579,7 +577,7 @@ class _StreamHandle(object):
             # loss of data for clients that write directly to the file
             # descriptor (due to a non-blocking write overflowing the
             # file descriptor).
-            self.read_pipe, self.write_pipe = os.pipe()
+            self.read_pipe, self.write_pipe = FdCreatePipe(None, 65536, os.O_TEXT)
             self.read_pyhandle = get_osfhandle(self.read_pipe)
             self.write_pyhandle = get_osfhandle(self.write_pipe)
             SetNamedPipeHandleState(self.write_pyhandle, PIPE_NOWAIT, None, None)
