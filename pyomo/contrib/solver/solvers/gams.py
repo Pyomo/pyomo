@@ -17,7 +17,7 @@ import datetime
 from io import StringIO
 from typing import Mapping, Optional, Sequence
 from tempfile import mkdtemp
-import sys 
+import sys
 
 from pyomo.common import Executable
 from pyomo.common.dependencies import pathlib
@@ -28,15 +28,12 @@ from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
-from pyomo.opt.results import (
-    SolverStatus,
-    TerminationCondition,
-)
+from pyomo.opt.results import SolverStatus, TerminationCondition
 from pyomo.contrib.solver.common.results import (
     legacy_termination_condition_map,
     Results,
     SolutionStatus,
-)  
+)
 from pyomo.contrib.solver.solvers.gms_sol_reader import GMSSolutionLoader
 
 import pyomo.core.base.suffix
@@ -52,21 +49,26 @@ logger = logging.getLogger(__name__)
 from pyomo.common.dependencies import attempt_import
 import struct
 
+
 def _gams_importer():
     try:
         import gams.core.gdx as gdx
+
         return gdx
     except ImportError:
         try:
             # fall back to the pre-GAMS-45.0 API
             import gdxcc
+
             return gdxcc
         except:
             # suppress the error from the old API and reraise the current API import error
             pass
         raise
 
+
 gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer)
+
 
 class GAMSConfig(SolverConfig):
     def __init__(
@@ -84,7 +86,7 @@ class GAMSConfig(SolverConfig):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.executable : Executable = self.declare(
+        self.executable: Executable = self.declare(
             'executable',
             ConfigValue(
                 default=Executable('gams'),
@@ -92,41 +94,38 @@ class GAMSConfig(SolverConfig):
                 "``PATH`` for the first available ``gams``.",
             ),
         )
-        self.logfile : ConfigDict = self.declare(
+        self.logfile: ConfigDict = self.declare(
             'logfile',
             ConfigValue(
-                default=None,
-                description="Filename to output GAMS log to a file.",
+                default=None, description="Filename to output GAMS log to a file."
             ),
         )
         self.writer_config: ConfigDict = self.declare(
             'writer_config', GAMSWriter.CONFIG()
         )
 
+
 class GAMSResults(Results):
     def __init__(self):
         super().__init__()
-        self.return_code : ConfigDict = self.declare(
+        self.return_code: ConfigDict = self.declare(
             'return_code',
-            ConfigValue(
-                default=None,
-                description="Return code from the GAMS solver.",
-            ),
+            ConfigValue(default=None, description="Return code from the GAMS solver."),
         )
-        self.gams_termination_condition : ConfigDict = self.declare(
+        self.gams_termination_condition: ConfigDict = self.declare(
             'gams_termination_condition',
             ConfigValue(
                 default=None,
-                description="Include additional TerminationCondition domain."
+                description="Include additional TerminationCondition domain.",
             ),
-        )        
-        self.gams_solver_status : ConfigDict = self.declare(
+        )
+        self.gams_solver_status: ConfigDict = self.declare(
             'gams_solver_status',
             ConfigValue(
-                default=None,
-                description="Include additional SolverStatus domain."
+                default=None, description="Include additional SolverStatus domain."
             ),
-        )      
+        )
+
 
 class GAMS(SolverBase):
     CONFIG = GAMSConfig()
@@ -215,7 +214,7 @@ class GAMS(SolverBase):
                 version = subprocess_results.stdout.splitlines()[0]
                 version = [char for char in version.split(' ') if len(char) > 0][1]
                 self._version_cache = (pth, version)
-        
+
         return self._version_cache[1]
 
     def _rewrite_path_win8p3(self, path):
@@ -244,7 +243,6 @@ class GAMS(SolverBase):
             return buf.value
         return str(path)
 
-
     @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
         ####################################################################
@@ -263,7 +261,7 @@ class GAMS(SolverBase):
         else:
             timer = config.timer
         StaleFlagManager.mark_all_as_stale()
-        
+
         # Because GAMS changes the CWD when running the solver, we need
         # to convert user-provided file names to absolute paths
         # (relative to the current directory)
@@ -274,7 +272,7 @@ class GAMS(SolverBase):
 
         # local variable to hold the working directory name and flags
         newdir = False
-        dname = None 
+        dname = None
         lst = "output.lst"
         output_filename = None
         with TempfileManager.new_context() as tempfile:
@@ -294,24 +292,28 @@ class GAMS(SolverBase):
             basename = os.path.join(dname, model.name)
             output_filename = basename + '.gms'
             lst_filename = os.path.join(dname, lst)
-            with open(
-                output_filename, 'w', newline='\n', encoding='utf-8'
-            ) as gms_file:
+            with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
                 timer.start(f'write_{output_filename}_file')
                 self._writer.config.set_value(config.writer_config)
                 gms_info = self._writer.write(
                     model,
                     gms_file,
                     symbolic_solver_labels=config.symbolic_solver_labels,
-                    )
+                )
                 # NOTE: omit InfeasibleConstraintException for now
                 timer.stop(f'write_{output_filename}_file')
         if config.writer_config.put_results_format == 'gdx':
             results_filename = os.path.join(dname, f"{model.name}_p.gdx")
-            statresults_filename = os.path.join(dname, "%s_s.gdx" % (config.writer_config.put_results,))
+            statresults_filename = os.path.join(
+                dname, "%s_s.gdx" % (config.writer_config.put_results,)
+            )
         else:
-            results_filename = os.path.join(dname, "%s.dat" % (config.writer_config.put_results,))
-            statresults_filename = os.path.join(dname, "%sstat.dat" % (config.writer_config.put_results,))
+            results_filename = os.path.join(
+                dname, "%s.dat" % (config.writer_config.put_results,)
+            )
+            statresults_filename = os.path.join(
+                dname, "%sstat.dat" % (config.writer_config.put_results,)
+            )
 
         ####################################################################
         # Apply solver
@@ -338,7 +340,9 @@ class GAMS(SolverBase):
                 ostreams.append(sys.stdout)
             with TeeStream(*ostreams) as t:
                 timer.start('subprocess')
-                subprocess_result = subprocess.run(command, stdout=t.STDOUT, stderr=t.STDERR)
+                subprocess_result = subprocess.run(
+                    command, stdout=t.STDOUT, stderr=t.STDERR
+                )
                 timer.stop('subprocess')
             rc = subprocess_result.returncode
             txt = ostreams[0].getvalue()
@@ -380,24 +384,27 @@ class GAMS(SolverBase):
                 timer.stop('parse_dat')
         finally:
             if not config.working_dir:
-                print('Cleaning up temporary directory is handled by `release` from pyomo.common.tempfiles')
+                print(
+                    'Cleaning up temporary directory is handled by `release` from pyomo.common.tempfiles'
+                )
 
-        # NOTE: solve completion time 
+        # NOTE: solve completion time
 
         ####################################################################
         # Postsolve (WIP)
         ####################################################################
-        
+
         # Mapping between old and new contrib results
-        rev_legacy_termination_condition_map = {v: k for k, v in legacy_termination_condition_map.items()}
+        rev_legacy_termination_condition_map = {
+            v: k for k, v in legacy_termination_condition_map.items()
+        }
 
         model_suffixes = list(
-                name
-                for (
-                    name,
-                    comp,
-                ) in pyomo.core.base.suffix.active_import_suffix_generator(model)
+            name
+            for (name, comp) in pyomo.core.base.suffix.active_import_suffix_generator(
+                model
             )
+        )
         extract_dual = 'dual' in model_suffixes
         extract_rc = 'rc' in model_suffixes
         results = GAMSResults()
@@ -418,9 +425,7 @@ class GAMS(SolverBase):
             results.gams_termination_condition = TerminationCondition.maxEvaluations
         elif solvestat == 7:
             results.gams_solver_status = SolverStatus.aborted
-            results.gams_termination_condition = (
-                TerminationCondition.licensingProblems
-            )
+            results.gams_termination_condition = TerminationCondition.licensingProblems
         elif solvestat == 8:
             results.gams_solver_status = SolverStatus.aborted
             results.gams_termination_condition = TerminationCondition.userInterrupt
@@ -439,7 +444,7 @@ class GAMS(SolverBase):
             results.gams_solver_status = SolverStatus.error
         elif solvestat == 6:
             results.gams_solver_status = SolverStatus.unknown
-        
+
         modelstat = stat_vars["MODELSTAT"]
         if modelstat == 1:
             results.gams_termination_condition = TerminationCondition.optimal
@@ -453,7 +458,9 @@ class GAMS(SolverBase):
             results.solution_status = SolutionStatus.noSolution
 
         elif modelstat in [4, 5, 6, 10, 19]:
-            results.gams_termination_condition = TerminationCondition.infeasibleOrUnbounded
+            results.gams_termination_condition = (
+                TerminationCondition.infeasibleOrUnbounded
+            )
             results.solution_status = SolutionStatus.infeasible
         elif modelstat == 7:
             results.gams_termination_condition = TerminationCondition.feasible
@@ -499,14 +506,16 @@ class GAMS(SolverBase):
             results.solution_status = SolutionStatus.noSolution
 
         # ensure backward compatibility before feeding to contrib.solver
-        results.termination_condition = rev_legacy_termination_condition_map[results.gams_termination_condition]
+        results.termination_condition = rev_legacy_termination_condition_map[
+            results.gams_termination_condition
+        ]
         obj = list(model.component_data_objects(Objective, active=True))
         assert len(obj) == 1, 'Only one objective is allowed.'
-        if (
-            results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}
-        ):
-            results.solution_loader = GMSSolutionLoader(gdx_data=model_soln, gms_info=gms_info)
-    
+        if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
+            results.solution_loader = GMSSolutionLoader(
+                gdx_data=model_soln, gms_info=gms_info
+            )
+
             if config.load_solutions:
                 results.solution_loader.load_vars()
                 results.incumbent_objective = stat_vars["OBJVAL"]
@@ -522,7 +531,7 @@ class GAMS(SolverBase):
                     and model.rc.import_enabled()
                 ):
                     model.rc.update(results.solution_loader.get_reduced_costs())
-            
+
             else:
                 results.incumbent_objective = value(
                     replace_expressions(
@@ -567,15 +576,17 @@ class GAMS(SolverBase):
             ret = gdxcc.gdxOpenRead(pgdx, statresults_filename)
             if not ret[0]:
                 raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
-            
+
             specVals = gdxcc.doubleArray(gdxcc.GMS_SVIDX_MAX)
             rc = gdxcc.gdxGetSpecialValues(pgdx, specVals)
-            
+
             specVals[gdxcc.GMS_SVIDX_EPS] = sys.float_info.min
             specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
             specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
             specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
-            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(">d", bytes.fromhex("fffffffffffffffe"))[0]
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(
+                ">d", bytes.fromhex("fffffffffffffffe")
+            )[0]
             gdxcc.gdxSetSpecialValues(pgdx, specVals)
 
             i = 0
@@ -618,9 +629,11 @@ class GAMS(SolverBase):
             specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
             specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
             specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
-            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(">d", bytes.fromhex("fffffffffffffffe"))[0]
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(
+                ">d", bytes.fromhex("fffffffffffffffe")
+            )[0]
             gdxcc.gdxSetSpecialValues(pgdx, specVals)
-            
+
             i = 0
             while True:
                 i += 1
@@ -647,7 +660,7 @@ class GAMS(SolverBase):
         gdxcc.gdxFree(pgdx)
         gdxcc.gdxLibraryUnload()
         return model_soln, stat_vars
-    
+
     def _parse_dat_results(self, config, results_filename, statresults_filename):
         with open(statresults_filename, 'r') as statresults_file:
             statresults_text = statresults_file.read()
@@ -672,4 +685,3 @@ class GAMS(SolverBase):
             model_soln[items[0]] = (float(items[1]), float(items[2]))
 
         return model_soln, stat_vars
-    

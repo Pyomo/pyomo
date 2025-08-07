@@ -35,6 +35,6 @@ def load():
     SolverFactory.register(
         name='highs', legacy_name='highs', doc='Persistent interface to HiGHS'
     )(Highs)
-    SolverFactory.register(
-        name='gams', legacy_name='gams_v2', doc='Interface to GAMS'
-    )(GAMS)
+    SolverFactory.register(name='gams', legacy_name='gams_v2', doc='Interface to GAMS')(
+        GAMS
+    )

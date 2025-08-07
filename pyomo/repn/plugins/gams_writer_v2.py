@@ -39,6 +39,7 @@ from pyomo.core.base import (
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.label import NumericLabeler
 from pyomo.opt import WriterFactory
+
 # from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.util import (
@@ -76,7 +77,10 @@ class GAMSWriterInfo(object):
         self.var_symbol_map = var_symbol_map
         self.con_symbol_map = con_symbol_map
 
-@WriterFactory.register('gams_writer_v2', 'Generate the corresponding gms file (version 2).')
+
+@WriterFactory.register(
+    'gams_writer_v2', 'Generate the corresponding gms file (version 2).'
+)
 class GAMSWriter(object):
     CONFIG = ConfigBlock('gamswriter')
 
@@ -220,7 +224,7 @@ class GAMSWriter(object):
         ConfigValue(
             default='results',
             domain=str,
-            doc ="""
+            doc="""
             Filename for optionally writing solution values and
             marginals.  If put_results_format is 'gdx', then GAMS
             will write solution values and marginals to
@@ -229,7 +233,7 @@ class GAMSWriter(object):
             then solution values and marginals are written to
             (put_results).dat, and solver statuses to (put_results +
             'stat').dat.
-            """
+            """,
         ),
     )
     CONFIG.declare(
@@ -239,7 +243,7 @@ class GAMSWriter(object):
             description="Format used for put_results, one of 'gdx', 'dat'",
         ),
     )
-    # NOTE: Taken from the lp_writer 
+    # NOTE: Taken from the lp_writer
     CONFIG.declare(
         'allow_quadratic_objective',
         ConfigValue(
@@ -269,7 +273,7 @@ class GAMSWriter(object):
     def __init__(self):
         self.config = self.CONFIG()
 
-    def __call__(self, model, filename, solver_capability, io_options):        
+    def __call__(self, model, filename, solver_capability, io_options):
         if filename is None:
             filename = model.name + ".gms"
 
@@ -277,9 +281,9 @@ class GAMSWriter(object):
 
         with open(filename, 'w', newline='') as FILE:
             info = self.write(model, FILE, config=config)
-        
+
         return filename, info.symbol_map
-    
+
     @document_kwargs_from_configdict(CONFIG)
     def write(self, model, ostream, **options) -> GAMSWriterInfo:
         """Write a model in GMS format.
@@ -306,6 +310,7 @@ class GAMSWriter(object):
         # NOTE: First pass write the model but needs variables/equations defition first
         with PauseGC():
             return _GMSWriter_impl(ostream, config).write(model)
+
 
 class _GMSWriter_impl(object):
     def __init__(self, ostream, config):
@@ -379,7 +384,7 @@ class _GMSWriter_impl(object):
                 "'symbolic_solver_labels' and 'labeler' "
                 "I/O options is forbidden"
             )
-            
+
         if symbolic_solver_labels:
             # Note that the Var and Constraint labelers must use the
             # same labeler, so that we can correctly detect name
@@ -404,19 +409,20 @@ class _GMSWriter_impl(object):
         self.con_symbol_map = SymbolMap(con_labeler)
         self.var_order = {_id: i for i, _id in enumerate(self.var_map)}
         self.var_recorder = OrderedVarRecorder(self.var_map, self.var_order, sorter)
-        
+
         visitor = LinearRepnVisitor(
-            self.subexpression_cache,
-            var_recorder=self.var_recorder,
+            self.subexpression_cache, var_recorder=self.var_recorder
         )
-        
+
         #
         # Tabulate constraints
         #
         skip_trivial_constraints = self.config.skip_trivial_constraints
         have_nontrivial = False
         last_parent = None
-        con_list = {} # NOTE: Save the constraint representation and write it after variables/equations declare
+        con_list = (
+            {}
+        )  # NOTE: Save the constraint representation and write it after variables/equations declare
         for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
@@ -437,7 +443,7 @@ class _GMSWriter_impl(object):
                 raise ValueError(
                     f"Model constraint ({con.name}) contains nonlinear terms that is currently not supported in the new gams_writer"
                 )
-            
+
             # Pull out the constant: we will move it to the bounds
             offset = repn.constant
             repn.constant = 0
@@ -476,7 +482,7 @@ class _GMSWriter_impl(object):
                     raise NotImplementedError(
                         "Bounded constraints within the same expression is not supported"
                     )
-            
+
             elif ub is not None:
                 label = f'{con_symbol}_hi'
                 self.con_symbol_map.addSymbol(con, label)
@@ -513,7 +519,7 @@ class _GMSWriter_impl(object):
                 f"Model objective ({obj.name}) contains nonlinear terms that "
                 "is currently not supported in this new GAMSWriter"
             )
-        
+
         label = self.con_symbol_map.getSymbol(obj, con_labeler)
         declaration = f'\n{label}.. -GAMS_OBJECTIVE '
         definition = self.write_expression(ostream, repn)
@@ -529,17 +535,13 @@ class _GMSWriter_impl(object):
         var_bounds = {}
         getSymbolByObjectID = self.var_symbol_map.byObject.get
 
-        ostream.write(
-            "VARIABLES \n"
-        )
+        ostream.write("VARIABLES \n")
         for vid, v in self.var_map.items():
             v_symbol = getSymbolByObjectID(vid, None)
             if not v_symbol:
-                continue     
+                continue
             if v.is_continuous():
-                ostream.write(
-                f"\t{v_symbol} \n"
-                )
+                ostream.write(f"\t{v_symbol} \n")
                 lb, ub = v.bounds
                 var_bounds[v_symbol] = (lb, ub)
             elif v.is_binary():
@@ -549,14 +551,11 @@ class _GMSWriter_impl(object):
                 var_bounds[v_symbol] = (lb, ub)
                 integer_vars.append(v_symbol)
 
+        ostream.write(f"\tGAMS_OBJECTIVE;\n\n")
 
-        ostream.write(
-            f"\tGAMS_OBJECTIVE;\n\n"
-        )
-        
         if integer_vars:
             ostream.write("\nINTEGER VARIABLES\n\t")
-            ostream.write("\n\t".join(integer_vars)+ ';\n\n')
+            ostream.write("\n\t".join(integer_vars) + ';\n\n')
 
         if binary_vars:
             ostream.write("\nBINARY VARIABLES\n\t")
@@ -565,12 +564,10 @@ class _GMSWriter_impl(object):
         #
         # Writing out the equations/constraints
         #
-        ostream.write(
-            "EQUATIONS \n"
-        )
+        ostream.write("EQUATIONS \n")
         for id, cid in enumerate(self.con_symbol_map.byObject.keys()):
             c = self.con_symbol_map.byObject[cid]
-            if id != len(self.con_symbol_map.byObject.keys())-1:
+            if id != len(self.con_symbol_map.byObject.keys()) - 1:
                 ostream.write(f"\t{c}\n")
             else:
                 ostream.write(f"\t{c};\n\n")
@@ -580,7 +577,7 @@ class _GMSWriter_impl(object):
 
         #
         # Handling variable bounds
-        #          
+        #
         for v, (lb, ub) in var_bounds.items():
             ostream.write(f'{v}.lo = {lb};\n{v}.up = {ub};\n')
 
@@ -591,7 +588,7 @@ class _GMSWriter_impl(object):
         # CHECK FOR mtype flag based on variable domains - reals, integer
         if config.mtype is None:
             if binary_vars or integer_vars:
-                config.mtype = 'mip' # expand this to nlp, minlp
+                config.mtype = 'mip'  # expand this to nlp, minlp
             else:
                 config.mtype = 'lp'
 
@@ -614,9 +611,7 @@ class _GMSWriter_impl(object):
             'NUMNZ',
             'ETSOLVE',
         ]
-        ostream.write(
-            "\nScalars MODELSTAT 'model status', SOLVESTAT 'solve status';\n"
-        )
+        ostream.write("\nScalars MODELSTAT 'model status', SOLVESTAT 'solve status';\n")
         ostream.write("MODELSTAT = %s.modelstat;\n" % model.name)
         ostream.write("SOLVESTAT = %s.solvestat;\n\n" % model.name)
 
@@ -671,7 +666,6 @@ class _GMSWriter_impl(object):
                 for stat in stat_vars:
                     ostream.write("\nput '%s' ' ' %s /;\n" % (stat, stat))
 
-
         timer.toc("Finished writing .gsm file", level=logging.DEBUG)
 
         info = GAMSWriterInfo(self.var_symbol_map, self.con_symbol_map)
@@ -693,6 +687,6 @@ class _GMSWriter_impl(object):
                     expr_str += f'{coef!s}*{getSymbol(getVar(vid))} \n'
                 else:
                     # ostream.write(f'+{coef!s}*{getSymbol(getVar(vid))}')
-                    expr_str += f'+ {coef!s} * {getSymbol(getVar(vid))} \n' 
+                    expr_str += f'+ {coef!s} * {getSymbol(getVar(vid))} \n'
 
         return expr_str

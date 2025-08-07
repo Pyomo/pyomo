@@ -21,6 +21,7 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.gams_writer_v2 import GAMSWriterInfo
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
+
 class GDXFileData:
     """
     Defines the data types found within a .gdx file
@@ -40,6 +41,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
     """
     Loader for solvers that create .gms files (e.g., gams)
     """
+
     def __init__(self, gdx_data: GDXFileData, gms_info: GAMSWriterInfo) -> None:
         self._gdx_data = gdx_data
         self._gms_info = gms_info
@@ -56,7 +58,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
             for sym, obj in self._gms_info.var_symbol_map.bySymbol.items():
                 level = self._gdx_data[sym][0]
                 if obj.parent_component().ctype is Var:
-                    obj.set_value(level, skip_validation = True)
+                    obj.set_value(level, skip_validation=True)
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
@@ -105,10 +107,10 @@ class GMSSolutionLoader(SolutionLoaderBase):
             cons_to_load = set(cons_to_load)
         for sym, con in self._gms_info.con_symbol_map.bySymbol.items():
             if sym in cons_to_load and con.parent_component().ctype is not Objective:
-                res[con] = self._gdx_data[sym][1] 
+                res[con] = self._gdx_data[sym][1]
         return res
 
-    def get_reduced_costs(self, vars_to_load = None):
+    def get_reduced_costs(self, vars_to_load=None):
         if self._gms_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -119,7 +121,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
-        
+
         res = {}
 
         if vars_to_load is None:
@@ -128,5 +130,5 @@ class GMSSolutionLoader(SolutionLoaderBase):
             vars_to_load = set(vars_to_load)
         for sym, var in self._gms_info.var_symbol_map.bySymbol.items():
             if sym in vars_to_load and var.parent_component().ctype is Var:
-                res[var.name] = self._gdx_data[sym][1] 
+                res[var.name] = self._gdx_data[sym][1]
         return res
