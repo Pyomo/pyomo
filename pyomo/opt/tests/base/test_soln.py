@@ -615,6 +615,34 @@ J:
         self.assertIs(d.b, e.b)
         self.assertEqual(d.c, e.c)
 
+    def test_eq(self):
+        d = container.MapContainer()
+        d.declare('x', value=1)
+        d.declare('y', value='a')
+        d.declare('z', value=container.ListContainer(container.MapContainer))
+        self.assertFalse(d == container.MapContainer())
+        self.assertFalse(d == "Something else")
+
+        e = container.ListContainer(container.UndefinedData)
+        self.assertFalse(d == e)
+
+        dd = container.MapContainer()
+        dd.declare('x', value=1)
+        dd.declare('y', value=1)
+        dd.declare('z', value=container.ListContainer(container.UndefinedData))
+        self.assertFalse(d == dd)
+        d.y = 'b'
+        dd.y = 'b'
+        dd.declare('z', value=container.ListContainer(container.MapContainer))
+        self.assertTrue(d == dd)
+
+        d.z.add()
+        d.z[0].declare('a', value=0)
+        self.assertFalse(d == dd)
+        dd.z.add()
+        dd.z[0].declare('a', value=0)
+        self.assertTrue(d == dd)
+
 
 if __name__ == "__main__":
     unittest.main()

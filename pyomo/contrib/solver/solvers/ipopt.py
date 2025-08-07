@@ -21,7 +21,7 @@ from typing import Optional, Tuple, Union, Mapping, List, Dict, Any, Sequence
 from pyomo.common import Executable
 from pyomo.common.config import (
     ConfigValue,
-    document_kwargs_from_configdict,
+    document_class_CONFIG,
     ConfigDict,
     ADVANCED_OPTION,
 )
@@ -82,7 +82,8 @@ class IpoptConfig(SolverConfig):
         self.executable: Executable = self.declare(
             'executable',
             ConfigValue(
-                default=Executable('ipopt'),
+                domain=Executable,
+                default='ipopt',
                 description="Preferred executable for ipopt. Defaults to searching the "
                 "``PATH`` for the first available ``ipopt``.",
             ),
@@ -210,7 +211,12 @@ ipopt_command_line_options = {
 }
 
 
+@document_class_CONFIG(methods=['solve'])
 class Ipopt(SolverBase):
+    """Interface to the Ipopt NLP solver (NL file based)"""
+
+    #: Global class configuration;
+    #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
     CONFIG = IpoptConfig()
 
     def __init__(self, **kwds: Any) -> None:
@@ -219,6 +225,10 @@ class Ipopt(SolverBase):
         self._available_cache = None
         self._version_cache = None
         self._version_timeout = 2
+
+        #: Instance configuration;
+        #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
+        self.config = self.config
 
     def available(self, config: Optional[IpoptConfig] = None) -> Availability:
         if config is None:
@@ -309,7 +319,6 @@ class Ipopt(SolverBase):
                 cmd.append(str(k) + '=' + str(val))
         return cmd
 
-    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds) -> Results:
         "Solve a model using Ipopt"
         # Begin time tracking

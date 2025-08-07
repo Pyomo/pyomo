@@ -14,7 +14,7 @@ import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 
-from pyomo.common.deprecation import RenamedClass
+from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.enums import ObjectiveSense, minimize, maximize
 from pyomo.common.log import is_debug_set
@@ -26,6 +26,7 @@ from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.template_expr import templatize_rule
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
@@ -165,7 +166,34 @@ class _GeneralObjectiveData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class TemplateObjectiveData(ObjectiveData):
+class TemplateDataMixin(object):
+    __slots__ = ()
+
+    @property
+    def args(self):
+        # Note that it is faster to just generate the expression from
+        # scratch than it is to clone it and replace the IndexTemplate objects
+        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        return self._args_
+
+    def template_expr(self):
+        return self._args_
+
+    def set_value(self, expr):
+        # Setting a value will convert this instance from a templatized
+        # type to the original Data type (and call the original set_value()).
+        #
+        # Note: We assume that the templatized type is created by
+        # inheriting (TemplateDataMixin, <original data class>), and
+        # that this instance doesn't have additional multiple
+        # inheritance that could re-order the MRO.
+        self.__class__ = self.__class__.__mro__[
+            self.__class__.__mro__.index(TemplateDataMixin) + 1
+        ]
+        return self.set_value(expr)
+
+
+class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
     __slots__ = ()
 
     def __init__(self, template_info, component, index, sense):
@@ -185,15 +213,11 @@ class TemplateObjectiveData(ObjectiveData):
     def args(self):
         # Note that it is faster to just generate the expression from
         # scratch than it is to clone it and replace the IndexTemplate objects
-        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        self.set_value(self.parent_component()._rule(self.parent_block(), self.index()))
         return self._args_
 
     def template_expr(self):
         return self._args_
-
-    def set_value(self, expr):
-        self.__class__ = ObjectiveData
-        return self.set_value(expr)
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
@@ -249,11 +273,11 @@ class Objective(ActiveIndexedComponent):
 
     def __new__(cls, *args, **kwds):
         if cls != Objective:
-            return super(Objective, cls).__new__(cls)
+            return super().__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return ScalarObjective.__new__(ScalarObjective)
+            return super().__new__(AbstractScalarObjective)
         else:
-            return IndexedObjective.__new__(IndexedObjective)
+            return super().__new__(IndexedObjective)
 
     @overload
     def __init__(
@@ -267,7 +291,7 @@ class Objective(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
-        self.rule = Initializer(_init)
+        self._rule = Initializer(_init)
         self._init_sense = Initializer(_sense)
 
     def construct(self, data=None):
@@ -286,7 +310,7 @@ class Objective(ActiveIndexedComponent):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        rule = self.rule
+        rule = self._rule
         try:
             # We do not (currently) accept data for constructing Objectives
             index = None
@@ -320,13 +344,23 @@ class Objective(ActiveIndexedComponent):
                 if TEMPLATIZE_OBJECTIVES:
                     try:
                         template_info = templatize_rule(block, rule, self.index_set())
-                        comp = weakref_ref(self)
-                        self._data = {
-                            idx: TemplateObjectiveData(
-                                template_info, comp, idx, self._init_sense(block, index)
-                            )
-                            for idx in self.index_set()
-                        }
+                        if self.is_indexed():
+                            comp = weakref_ref(self)
+                            self._data = {
+                                idx: TemplateObjectiveData(
+                                    template_info,
+                                    comp,
+                                    idx,
+                                    self._init_sense(block, index),
+                                )
+                                for idx in self.index_set()
+                            }
+                        else:
+                            assert self.__class__ is ScalarObjective
+                            self.__class__ = TemplateScalarObjective
+                            self._expr = template_info
+                            self._data = {None: self}
+                            self.set_sense(self._init_sense(self, self.index()))
                         return
                     except TemplateExpressionError:
                         pass
@@ -348,11 +382,11 @@ class Objective(ActiveIndexedComponent):
             timer.report()
 
     def _getitem_when_not_present(self, index):
-        if self.rule is None:
+        if self._rule is None:
             raise KeyError(index)
 
         block = self.parent_block()
-        obj = self._setitem_when_not_present(index, self.rule(block, index))
+        obj = self._setitem_when_not_present(index, self._rule(block, index))
         if obj is None:
             raise KeyError(index)
         obj.set_sense(self._init_sense(block, index))
@@ -373,6 +407,20 @@ class Objective(ActiveIndexedComponent):
             ("Active", "Sense", "Expression"),
             lambda k, v: [v.active, v.sense, v.expr],
         )
+
+    @property
+    def rule(self):
+        return self._rule
+
+    @rule.setter
+    @deprecated(
+        f"The 'Objective.rule' attribute will be made "
+        "read-only in a future Pyomo release.",
+        version='6.9.3',
+        remove_in='6.11',
+    )
+    def rule(self, rule):
+        self._rule = rule
 
     def display(self, prefix="", ostream=None):
         """Provide a verbose display of this object"""
@@ -414,50 +462,27 @@ class ScalarObjective(ObjectiveData, Objective):
         Objective.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
-    #
-    # Override abstract interface methods to first check for
-    # construction
-    #
-
     def __call__(self, exception=NOTSET):
         exception = _type_check_exception_arg(self, exception)
-        if self._constructed:
-            if len(self._data) == 0:
-                raise ValueError(
-                    "Evaluating the expression of ScalarObjective "
-                    "'%s' before the Objective has been assigned "
-                    "a sense or expression (there is currently "
-                    "no value to return)." % (self.name)
-                )
-            return super().__call__(exception)
-        raise ValueError(
-            "Evaluating the expression of objective '%s' "
-            "before the Objective has been constructed (there "
-            "is currently no value to return)." % (self.name)
-        )
+        if not self._data:
+            raise ValueError(
+                "Evaluating the expression of ScalarObjective "
+                "'%s' before the Objective has been assigned "
+                "a sense or expression (there is currently "
+                "no value to return)." % (self.name)
+            )
+        return super().__call__(exception)
 
-    @property
-    def expr(self):
-        """Access the expression of this objective."""
-        if self._constructed:
-            if len(self._data) == 0:
-                raise ValueError(
-                    "Accessing the expression of ScalarObjective "
-                    "'%s' before the Objective has been assigned "
-                    "a sense or expression (there is currently "
-                    "no value to return)." % (self.name)
-                )
-            return ObjectiveData.expr.fget(self)
-        raise ValueError(
-            "Accessing the expression of objective '%s' "
-            "before the Objective has been constructed (there "
-            "is currently no value to return)." % (self.name)
-        )
-
-    @expr.setter
-    def expr(self, expr):
-        """Set the expression of this objective."""
-        self.set_value(expr)
+    #
+    # Singleton objectives are strange in that we want them to be
+    # both be constructed but have len() == 0 when not initialized with
+    # anything (at least according to the unit tests that are
+    # currently in place). So during initialization only, we will
+    # treat them as "indexed" objects where things like
+    # Objective.Skip are managed. But after that they will behave
+    # like ObjectiveData objects where set_value does not handle
+    # Objective.Skip but expects a valid expression or None
+    #
 
     @property
     def sense(self):
@@ -482,43 +507,20 @@ class ScalarObjective(ObjectiveData, Objective):
         """Set the sense (direction) of this objective."""
         self.set_sense(sense)
 
-    #
-    # Singleton objectives are strange in that we want them to be
-    # both be constructed but have len() == 0 when not initialized with
-    # anything (at least according to the unit tests that are
-    # currently in place). So during initialization only, we will
-    # treat them as "indexed" objects where things like
-    # Objective.Skip are managed. But after that they will behave
-    # like ObjectiveData objects where set_value does not handle
-    # Objective.Skip but expects a valid expression or None
-    #
-
     def clear(self):
         self._data = {}
 
     def set_value(self, expr):
         """Set the expression of this objective."""
-        if not self._constructed:
-            raise ValueError(
-                "Setting the value of objective '%s' "
-                "before the Objective has been constructed (there "
-                "is currently no object to set)." % (self.name)
-            )
         if not self._data:
             self._data[None] = self
         return super().set_value(expr)
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
-        if self._constructed:
-            if len(self._data) == 0:
-                self._data[None] = self
-            return ObjectiveData.set_sense(self, sense)
-        raise ValueError(
-            "Setting the sense of objective '%s' "
-            "before the Objective has been constructed (there "
-            "is currently no object to set)." % (self.name)
-        )
+        if len(self._data) == 0:
+            self._data[None] = self
+        return ObjectiveData.set_sense(self, sense)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -538,6 +540,15 @@ class ScalarObjective(ObjectiveData, Objective):
 class SimpleObjective(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarObjective
     __renamed__version__ = '6.0'
+
+
+@disable_methods({'__call__', 'add', 'expr', 'sense', 'set_sense', 'set_value'})
+class AbstractScalarObjective(ScalarObjective):
+    pass
+
+
+class TemplateScalarObjective(TemplateDataMixin, ScalarObjective):
+    pass
 
 
 class IndexedObjective(Objective):
@@ -573,12 +584,12 @@ class ObjectiveList(IndexedObjective):
 
         super().__init__(Set(dimen=1), **kwargs)
 
-        self.rule = Initializer(_rule, allow_generators=True)
+        self._rule = Initializer(_rule, allow_generators=True)
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
         # reliable.
-        if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(self, self.rule, self._starting_index)
+        if self._rule is not None and type(self._rule) is IndexedCallInitializer:
+            self._rule = CountedCallInitializer(self, self._rule, self._starting_index)
 
     def construct(self, data=None):
         """
@@ -595,8 +606,8 @@ class ObjectiveList(IndexedObjective):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        if self.rule is not None:
-            _rule = self.rule(self.parent_block(), ())
+        if self._rule is not None:
+            _rule = self._rule(self.parent_block(), ())
             for cc in iter(_rule):
                 if cc is ObjectiveList.End:
                     break
