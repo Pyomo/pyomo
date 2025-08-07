@@ -38,15 +38,13 @@ _poll_rampup = 10
 _poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
 _poll_timeout_deadlock = 100  # seconds
 
-_WINDOWS_USE_CREATEPIPE = False
-
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
 try:
     if _mswindows:
-        from msvcrt import open_osfhandle, get_osfhandle
-        from win32file import CloseHandle, ReadFile
-        from win32pipe import CreatePipe, FdCreatePipe, PeekNamedPipe, SetNamedPipeHandleState
+        from msvcrt import get_osfhandle
+        from win32file import ReadFile
+        from win32pipe import FdCreatePipe, PeekNamedPipe, SetNamedPipeHandleState
 
         # This constant from Microsoft SetNamedPipeHandleState documentation:
         PIPE_NOWAIT = 1
@@ -546,22 +544,21 @@ class _StreamHandle(object):
         self.buffering = buffering
         self.newlines = newline
         self.flush = False
-        if _peek_available and _mswindows and _WINDOWS_USE_CREATEPIPE:
+        if _peek_available and _mswindows:
             # This is a re-implementation of os.pipe() on Windows so
             # that we can explicitly request a larger pipe buffer (64k;
             # matching *NIX).  Per the docs: on Windows, the pipe buffer
             # should automatically grow if needed.  However, we have
             # observed (see #3658) that if it happens, it can cause
-            # deadlock.  By explicitly requesting a larger buffer from
-            # the outset, we reduce the likelihood of needing to
+            # deadlock when clients write directly to the underlying
+            # file descriptor.  By explicitly requesting a larger buffer
+            # from the outset, we reduce the likelihood of needing to
             # reallocate the buffer.
-            self.read_pyhandle, self.write_pyhandle = CreatePipe(None, 65536)
-            self.read_pipe = open_osfhandle(
-                self.read_pyhandle.handle, os.O_RDONLY | os.O_NOINHERIT
+            self.read_pipe, self.write_pipe = FdCreatePipe(
+                None, 65536, os.O_BINARY if 'b' in mode else os.O_TEXT
             )
-            self.write_pipe = open_osfhandle(
-                self.write_pyhandle.handle, os.O_WRONLY | os.O_NOINHERIT
-            )
+            self.read_pyhandle = get_osfhandle(self.read_pipe)
+            self.write_pyhandle = get_osfhandle(self.write_pipe)
             # Because reallocating the pipe buffer can cause deadlock
             # (at least in the context in which we are using pipes
             # here), we will set the write pipe to NOWAIT.  This will
@@ -570,16 +567,6 @@ class _StreamHandle(object):
             # return a number of bytes written less than the string that
             # was passed.  If the client is ignoring the return value,
             # then *poof*: the output is truncated)
-            SetNamedPipeHandleState(self.write_pyhandle, PIPE_NOWAIT, None, None)
-        elif _peek_available and _mswindows:
-            # This is a fall-back on using os.pipe on Windows.  This
-            # should behave well for Python clients, but can result in
-            # loss of data for clients that write directly to the file
-            # descriptor (due to a non-blocking write overflowing the
-            # file descriptor).
-            self.read_pipe, self.write_pipe = FdCreatePipe(None, 65536, os.O_TEXT)
-            self.read_pyhandle = get_osfhandle(self.read_pipe)
-            self.write_pyhandle = get_osfhandle(self.write_pipe)
             SetNamedPipeHandleState(self.write_pyhandle, PIPE_NOWAIT, None, None)
         else:
             self.read_pipe, self.write_pipe = os.pipe()
@@ -626,19 +613,8 @@ class _StreamHandle(object):
             self.write_file = None
 
         if self.write_pipe is not None:
-            # Close the write side of the pipe.  If we opened the pipe using
-            # win32pipe.CreatePipe, then we *must* close the write_pyhandle
-            # (otherwise we will get random "[Errno 9] Bad file descriptor"
-            # errors that can irrecoverably break stdout/stderr.
-            if _mswindows and _peek_available and _WINDOWS_USE_CREATEPIPE:
-                try:
-                    CloseHandle(self.write_pyhandle)
-                except:
-                    pass
-            # Note that we must explicitly close the pipe file
-            # descriptor (regardless of how we created it), as the
-            # reader thread is waiting for the EOF so that it can shut
-            # down.
+            # Close the write side of the pipe: the reader thread is
+            # waiting for the EOF so that it can shut down.
             try:
                 # If someone else has closed the file descriptor, then
                 # python raises an OSError
@@ -654,15 +630,8 @@ class _StreamHandle(object):
         self.decodeIncomingBuffer()
         if ostreams:
             self.writeOutputBuffer(ostreams, True)
-        # Close the read side of the pipe.  If we opened the pipe using
-        # win32pipe.CreatePipe, then we *must* close the read_pyhandle
-        # (otherwise we will get random "[Errno 9] Bad file descriptor"
-        # errors that can irrecoverably break stdout/stderr.
-        if _peek_available and _mswindows and _WINDOWS_USE_CREATEPIPE:
-            CloseHandle(self.read_pyhandle)
-        else:
-            os.close(self.read_pipe)
-
+        # Close the read side of the pipe.
+        os.close(self.read_pipe)
         if self.decoder_buffer:
             logger.error(
                 "Stream handle closed with un-decoded characters "
