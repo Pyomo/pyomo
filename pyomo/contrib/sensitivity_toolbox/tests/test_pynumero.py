@@ -109,12 +109,7 @@ class TestSeriesData(unittest.TestCase):
         theta = [m.p1, m.p2]
         dsdp, dfdp, rmap, cmap = pnsens.get_dsdp_dfdp(m, theta)
 
-        dydp, rmap = pnsens.get_dydp(
-            [m.e1, m.x1, m.e2, m.x2, m.e3],
-            dsdp,
-            rmap,
-            cmap,
-        )
+        dydp, rmap = pnsens.get_dydp([m.e1, m.x1, m.e2, m.x2, m.e3], dsdp, rmap, cmap)
 
         assert dydp.shape == (5, 2)
         np.testing.assert_almost_equal(dydp[rmap[m.x1], cmap[m.p1]], 40.0)

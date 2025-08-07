@@ -15,7 +15,7 @@ from pyomo.common.dependencies import scipy, attempt_import
 import pyomo.environ as pyo
 
 # Use attempt_import here due to unguarded NumPy import in this file
-nlp = attempt_import("pyomo.contrib.pynumero.interfaces.pyomo_nlp")[0]
+nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 from pyomo.common.collections import ComponentSet, ComponentMap
 import pyomo.core.expr.calculus.derivatives as derivatives
 
@@ -63,7 +63,7 @@ def get_dsdp_dfdp(model, theta):
     Returns
     -------
     scipy.sparse.csc_matrix, csc_matrix, ComponentMap, ComponentMap
-        ds/dp (ns + np by np), df/dp (1 by np), row map, column map.
+        ds/dp (ns by np), df/dp (1 by np), row map, column map.
         The column map maps Pyomo variables p to columns and the
         row map maps Pyomo variables s to rows.
     """
@@ -119,7 +119,7 @@ def get_dydp(y_list, dsdp, row_map, column_map=None):
     Parameters
     ----------
     y_list: list
-        A list of state variables of interest (a subset of s)
+        A list of state variables or named expressions
     dsdp: csc_matrix
         A sensitivity matrix calculated by get_dsdp_dfdp
     row_map: ComponentMap
@@ -137,29 +137,27 @@ def get_dydp(y_list, dsdp, row_map, column_map=None):
     j = 0
     new_row_map = ComponentMap()
     expr_row_map = ComponentMap()
+    rows = [None] * len(y_list)
     for i, v in enumerate(y_list):
         new_row_map[v] = i
         if v not in row_map:
             expr_row_map[v] = j
             j += 1
-
-    rows = [None] * len(y_list)
-    for i, v in enumerate(y_list):
-        if v not in expr_row_map:
+        else:
             rows[i] = dsdp[row_map[v], :]
 
     if j > 0:
         if column_map is None:
             raise ValueError("If y_list contains Expression column_map arg required")
-        wrt_list = [s for s in row_map] + [p for p in column_map]
+        wrt_list = [s for s in row_map]
         dedx = [None] * j
         for v, i in expr_row_map.items():
             dedx[i] = scipy.sparse.csc_matrix(
                 derivatives.differentiate(v, wrt_list=wrt_list)
             )
         dedx = scipy.sparse.vstack(dedx)
-        ns = len(row_map)
-        dedp = dedx[:, :ns] @ dsdp + dedx[:, ns:]
+        ns = len(row_map) - len(column_map)
+        dedp = dedx[:, :ns] @ dsdp[:ns, :] + dedx[:, ns:]
         for v, i in expr_row_map.items():
             rows[new_row_map[v]] = dedp[i, :]
 
