@@ -15,6 +15,7 @@ from .solvers.ipopt import Ipopt
 from .solvers.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi_direct import GurobiDirect
 from .solvers.highs import Highs
+from .solvers.gams import GAMS
 
 
 def load():
@@ -34,3 +35,6 @@ def load():
     SolverFactory.register(
         name='highs', legacy_name='highs', doc='Persistent interface to HiGHS'
     )(Highs)
+    SolverFactory.register(
+        name='gams', legacy_name='gams_v2', doc='Interface to GAMS'
+    )(GAMS)
