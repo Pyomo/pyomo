@@ -303,7 +303,7 @@ class GAMSWriter(object):
         # representation generates (and disposes of) a large number of
         # small objects.
 
-        # NOTE: First pass write the model but needs variables/equations definition first
+        # NOTE: First pass write the model but needs variables/equations defition first
         with PauseGC():
             return _GMSWriter_impl(ostream, config).write(model)
 
@@ -316,6 +316,7 @@ class _GMSWriter_impl(object):
 
         # Taken from nl_writer.py
         self.symbolic_solver_labels = config.symbolic_solver_labels
+        self.add_options = config.add_options
         self.subexpression_cache = {}
         self.subexpression_order = None  # set to [] later
         self.external_functions = {}
@@ -334,6 +335,7 @@ class _GMSWriter_impl(object):
 
         # Caching some frequently-used objects into the locals()
         symbolic_solver_labels = self.symbolic_solver_labels
+        add_options = self.add_options
         ostream = self.ostream
         config = self.config
         labeler = config.labeler
@@ -597,6 +599,12 @@ class _GMSWriter_impl(object):
 
         if config.put_results_format == 'gdx':
             ostream.write("option savepoint=1;\n")
+
+        if add_options is not None:
+            ostream.write("\n* START USER ADDITIONAL OPTIONS\n")
+            for line in add_options:
+                ostream.write('option ' + line + '\n')
+            ostream.write("\n\n* END USER ADDITIONAL OPTIONS\n\n")
 
         ostream.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n"
