@@ -316,39 +316,38 @@ class GAMS(SolverBase):
 
                 # NOTE: omit InfeasibleConstraintException for now
                 timer.stop(f'write_{output_filename}_file')
-        if config.writer_config.put_results_format == 'gdx':
-            results_filename = os.path.join(dname, f"{model.name}_p.gdx")
-            statresults_filename = os.path.join(
-                dname, "%s_s.gdx" % (config.writer_config.put_results,)
-            )
-        else:
-            results_filename = os.path.join(
-                dname, "%s.dat" % (config.writer_config.put_results,)
-            )
-            statresults_filename = os.path.join(
-                dname, "%sstat.dat" % (config.writer_config.put_results,)
-            )
+            if config.writer_config.put_results_format == 'gdx':
+                results_filename = os.path.join(dname, f"{model.name}_p.gdx")
+                statresults_filename = os.path.join(
+                    dname, "%s_s.gdx" % (config.writer_config.put_results,)
+                )
+            else:
+                results_filename = os.path.join(
+                    dname, "%s.dat" % (config.writer_config.put_results,)
+                )
+                statresults_filename = os.path.join(
+                    dname, "%sstat.dat" % (config.writer_config.put_results,)
+                )
 
-        ####################################################################
-        # Apply solver
-        ####################################################################
-        exe_path = config.executable.path()
-        command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
+            ####################################################################
+            # Apply solver
+            ####################################################################
+            exe_path = config.executable.path()
+            command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
 
-        if config.tee and not config.logfile:
-            # default behaviour of gams is to print to console, for
-            # compatibility with windows and *nix we want to explicitly log to
-            # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
-            command.append("lo=3")
-        elif not config.tee and not config.logfile:
-            command.append("lo=0")
-        elif not config.tee and config.logfile:
-            command.append("lo=2")
-        elif config.tee and config.logfile:
-            command.append("lo=4")
-        if config.logfile:
-            command.append(f"lf={self._rewrite_path_win8p3(config.logfile)}")
-        try:
+            if config.tee and not config.logfile:
+                # default behaviour of gams is to print to console, for
+                # compatibility with windows and *nix we want to explicitly log to
+                # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
+                command.append("lo=3")
+            elif not config.tee and not config.logfile:
+                command.append("lo=0")
+            elif not config.tee and config.logfile:
+                command.append("lo=2")
+            elif config.tee and config.logfile:
+                command.append("lo=4")
+            if config.logfile:
+                command.append(f"lf={self._rewrite_path_win8p3(config.logfile)}")
             ostreams = [StringIO()]
             if config.tee:
                 ostreams.append(sys.stdout)
@@ -396,173 +395,174 @@ class GAMS(SolverBase):
                     config, results_filename, statresults_filename
                 )
                 timer.stop('parse_dat')
-        finally:
-            if not config.working_dir:
-                print(
-                    'Cleaning up temporary directory is handled by `release` from pyomo.common.tempfiles'
-                )
 
-        ####################################################################
-        # Postsolve (WIP)
-        ####################################################################
+            ####################################################################
+            # Postsolve (WIP)
+            ####################################################################
 
-        # Mapping between old and new contrib results
-        rev_legacy_termination_condition_map = {
-            v: k for k, v in legacy_termination_condition_map.items()
-        }
+            # Mapping between old and new contrib results
+            rev_legacy_termination_condition_map = {
+                v: k for k, v in legacy_termination_condition_map.items()
+            }
 
-        model_suffixes = list(
-            name
-            for (name, comp) in pyomo.core.base.suffix.active_import_suffix_generator(
-                model
+            model_suffixes = list(
+                name
+                for (
+                    name,
+                    comp,
+                ) in pyomo.core.base.suffix.active_import_suffix_generator(model)
             )
-        )
-        extract_dual = 'dual' in model_suffixes
-        extract_rc = 'rc' in model_suffixes
-        results = GAMSResults()
-        results.solver_name = "GAMS "
-        results.solver_version = str(self.version())
+            extract_dual = 'dual' in model_suffixes
+            extract_rc = 'rc' in model_suffixes
+            results = GAMSResults()
+            results.solver_name = "GAMS "
+            results.solver_version = str(self.version())
 
-        solvestat = stat_vars["SOLVESTAT"]
-        if solvestat == 1:
-            results.gams_solver_status = SolverStatus.ok
-        elif solvestat == 2:
-            results.gams_solver_status = SolverStatus.ok
-            results.gams_termination_condition = TerminationCondition.maxIterations
-        elif solvestat == 3:
-            results.gams_solver_status = SolverStatus.ok
-            results.gams_termination_condition = TerminationCondition.maxTimeLimit
-        elif solvestat == 5:
-            results.gams_solver_status = SolverStatus.ok
-            results.gams_termination_condition = TerminationCondition.maxEvaluations
-        elif solvestat == 7:
-            results.gams_solver_status = SolverStatus.aborted
-            results.gams_termination_condition = TerminationCondition.licensingProblems
-        elif solvestat == 8:
-            results.gams_solver_status = SolverStatus.aborted
-            results.gams_termination_condition = TerminationCondition.userInterrupt
-        elif solvestat == 10:
-            results.gams_solver_status = SolverStatus.error
-            results.gams_termination_condition = TerminationCondition.solverFailure
-        elif solvestat == 11:
-            results.gams_solver_status = SolverStatus.error
-            results.gams_termination_condition = (
-                TerminationCondition.internalSolverError
-            )
-        elif solvestat == 4:
-            results.gams_solver_status = SolverStatus.warning
-            results.message = "Solver quit with a problem (see LST file)"
-        elif solvestat in (9, 12, 13):
-            results.gams_solver_status = SolverStatus.error
-        elif solvestat == 6:
-            results.gams_solver_status = SolverStatus.unknown
-
-        modelstat = stat_vars["MODELSTAT"]
-        if modelstat == 1:
-            results.gams_termination_condition = TerminationCondition.optimal
-            results.solution_status = SolutionStatus.optimal
-        elif modelstat == 2:
-            results.gams_termination_condition = TerminationCondition.locallyOptimal
-            results.solution_status = SolutionStatus.feasible
-        elif modelstat in [3, 18]:
-            results.gams_termination_condition = TerminationCondition.unbounded
-            # results.solution_status = SolutionStatus.unbounded
-            results.solution_status = SolutionStatus.noSolution
-
-        elif modelstat in [4, 5, 6, 10, 19]:
-            results.gams_termination_condition = (
-                TerminationCondition.infeasibleOrUnbounded
-            )
-            results.solution_status = SolutionStatus.infeasible
-        elif modelstat == 7:
-            results.gams_termination_condition = TerminationCondition.feasible
-            results.solution_status = SolutionStatus.feasible
-        elif modelstat == 8:
-            # 'Integer solution model found'
-            results.gams_termination_condition = TerminationCondition.optimal
-            results.solution_status = SolutionStatus.optimal
-        elif modelstat == 9:
-            results.gams_termination_condition = (
-                TerminationCondition.intermediateNonInteger
-            )
-            results.solution_status = SolutionStatus.noSolution
-        elif modelstat == 11:
-            # Should be handled above, if modelstat and solvestat both
-            # indicate a licensing problem
-            if results.gams_termination_condition is None:
+            solvestat = stat_vars["SOLVESTAT"]
+            if solvestat == 1:
+                results.gams_solver_status = SolverStatus.ok
+            elif solvestat == 2:
+                results.gams_solver_status = SolverStatus.ok
+                results.gams_termination_condition = TerminationCondition.maxIterations
+            elif solvestat == 3:
+                results.gams_solver_status = SolverStatus.ok
+                results.gams_termination_condition = TerminationCondition.maxTimeLimit
+            elif solvestat == 5:
+                results.gams_solver_status = SolverStatus.ok
+                results.gams_termination_condition = TerminationCondition.maxEvaluations
+            elif solvestat == 7:
+                results.gams_solver_status = SolverStatus.aborted
                 results.gams_termination_condition = (
                     TerminationCondition.licensingProblems
                 )
-            results.solution_status = SolutionStatus.noSolution
-            # results.solution_status = SolutionStatus.error
-
-        elif modelstat in [12, 13]:
-            if results.gams_termination_condition is None:
-                results.gams_termination_condition = TerminationCondition.error
-            results.solution_status = SolutionStatus.noSolution
-            # results.solution_status = SolutionStatus.error
-
-        elif modelstat == 14:
-            if results.gams_termination_condition is None:
-                results.gams_termination_condition = TerminationCondition.noSolution
-            results.solution_status = SolutionStatus.noSolution
-            # results.solution_status = SolutionStatus.unknown
-
-        elif modelstat in [15, 16, 17]:
-            # Having to do with CNS models,
-            # not sure what to make of status descriptions
-            results.gams_termination_condition = TerminationCondition.optimal
-            results.solution_status = SolutionStatus.noSolution
-        else:
-            # This is just a backup catch, all cases are handled above
-            results.solution_status = SolutionStatus.noSolution
-
-        # ensure backward compatibility before feeding to contrib.solver
-        results.termination_condition = rev_legacy_termination_condition_map[
-            results.gams_termination_condition
-        ]
-        obj = list(model.component_data_objects(Objective, active=True))
-        assert len(obj) == 1, 'Only one objective is allowed.'
-        if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
-            results.solution_loader = GMSSolutionLoader(
-                gdx_data=model_soln, gms_info=gms_info
-            )
-
-            if config.load_solutions:
-                results.solution_loader.load_vars()
-                results.incumbent_objective = stat_vars["OBJVAL"]
-                if (
-                    hasattr(model, 'dual')
-                    and isinstance(model.dual, Suffix)
-                    and model.dual.import_enabled()
-                ):
-                    model.dual.update(results.solution_loader.get_duals())
-                if (
-                    hasattr(model, 'rc')
-                    and isinstance(model.rc, Suffix)
-                    and model.rc.import_enabled()
-                ):
-                    model.rc.update(results.solution_loader.get_reduced_costs())
-
-            else:
-                results.incumbent_objective = value(
-                    replace_expressions(
-                        obj[0].expr,
-                        substitution_map={
-                            id(v): val
-                            for v, val in results.solution_loader.get_primals().items()
-                        },
-                        descend_into_named_expressions=True,
-                        remove_named_expressions=True,
-                    )
+            elif solvestat == 8:
+                results.gams_solver_status = SolverStatus.aborted
+                results.gams_termination_condition = TerminationCondition.userInterrupt
+            elif solvestat == 10:
+                results.gams_solver_status = SolverStatus.error
+                results.gams_termination_condition = TerminationCondition.solverFailure
+            elif solvestat == 11:
+                results.gams_solver_status = SolverStatus.error
+                results.gams_termination_condition = (
+                    TerminationCondition.internalSolverError
                 )
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        results.timing_info.start_timestamp = start_timestamp
-        results.timing_info.wall_time = (
-            end_timestamp - start_timestamp
-        ).total_seconds()
-        results.timing_info.timer = timer
-        return results
+            elif solvestat == 4:
+                results.gams_solver_status = SolverStatus.warning
+                results.message = "Solver quit with a problem (see LST file)"
+            elif solvestat in (9, 12, 13):
+                results.gams_solver_status = SolverStatus.error
+            elif solvestat == 6:
+                results.gams_solver_status = SolverStatus.unknown
+
+            modelstat = stat_vars["MODELSTAT"]
+            if modelstat == 1:
+                results.gams_termination_condition = TerminationCondition.optimal
+                results.solution_status = SolutionStatus.optimal
+            elif modelstat == 2:
+                results.gams_termination_condition = TerminationCondition.locallyOptimal
+                results.solution_status = SolutionStatus.feasible
+            elif modelstat in [3, 18]:
+                results.gams_termination_condition = TerminationCondition.unbounded
+                # results.solution_status = SolutionStatus.unbounded
+                results.solution_status = SolutionStatus.noSolution
+
+            elif modelstat in [4, 5, 6, 10, 19]:
+                results.gams_termination_condition = (
+                    TerminationCondition.infeasibleOrUnbounded
+                )
+                results.solution_status = SolutionStatus.infeasible
+            elif modelstat == 7:
+                results.gams_termination_condition = TerminationCondition.feasible
+                results.solution_status = SolutionStatus.feasible
+            elif modelstat == 8:
+                # 'Integer solution model found'
+                results.gams_termination_condition = TerminationCondition.optimal
+                results.solution_status = SolutionStatus.optimal
+            elif modelstat == 9:
+                results.gams_termination_condition = (
+                    TerminationCondition.intermediateNonInteger
+                )
+                results.solution_status = SolutionStatus.noSolution
+            elif modelstat == 11:
+                # Should be handled above, if modelstat and solvestat both
+                # indicate a licensing problem
+                if results.gams_termination_condition is None:
+                    results.gams_termination_condition = (
+                        TerminationCondition.licensingProblems
+                    )
+                results.solution_status = SolutionStatus.noSolution
+                # results.solution_status = SolutionStatus.error
+
+            elif modelstat in [12, 13]:
+                if results.gams_termination_condition is None:
+                    results.gams_termination_condition = TerminationCondition.error
+                results.solution_status = SolutionStatus.noSolution
+                # results.solution_status = SolutionStatus.error
+
+            elif modelstat == 14:
+                if results.gams_termination_condition is None:
+                    results.gams_termination_condition = TerminationCondition.noSolution
+                results.solution_status = SolutionStatus.noSolution
+                # results.solution_status = SolutionStatus.unknown
+
+            elif modelstat in [15, 16, 17]:
+                # Having to do with CNS models,
+                # not sure what to make of status descriptions
+                results.gams_termination_condition = TerminationCondition.optimal
+                results.solution_status = SolutionStatus.noSolution
+            else:
+                # This is just a backup catch, all cases are handled above
+                results.solution_status = SolutionStatus.noSolution
+
+            # ensure backward compatibility before feeding to contrib.solver
+            results.termination_condition = rev_legacy_termination_condition_map[
+                results.gams_termination_condition
+            ]
+            obj = list(model.component_data_objects(Objective, active=True))
+            assert len(obj) == 1, 'Only one objective is allowed.'
+            if results.solution_status in {
+                SolutionStatus.feasible,
+                SolutionStatus.optimal,
+            }:
+                results.solution_loader = GMSSolutionLoader(
+                    gdx_data=model_soln, gms_info=gms_info
+                )
+
+                if config.load_solutions:
+                    results.solution_loader.load_vars()
+                    results.incumbent_objective = stat_vars["OBJVAL"]
+                    if (
+                        hasattr(model, 'dual')
+                        and isinstance(model.dual, Suffix)
+                        and model.dual.import_enabled()
+                    ):
+                        model.dual.update(results.solution_loader.get_duals())
+                    if (
+                        hasattr(model, 'rc')
+                        and isinstance(model.rc, Suffix)
+                        and model.rc.import_enabled()
+                    ):
+                        model.rc.update(results.solution_loader.get_reduced_costs())
+
+                else:
+                    results.incumbent_objective = value(
+                        replace_expressions(
+                            obj[0].expr,
+                            substitution_map={
+                                id(v): val
+                                for v, val in results.solution_loader.get_primals().items()
+                            },
+                            descend_into_named_expressions=True,
+                            remove_named_expressions=True,
+                        )
+                    )
+            end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+            results.timing_info.start_timestamp = start_timestamp
+            results.timing_info.wall_time = (
+                end_timestamp - start_timestamp
+            ).total_seconds()
+            results.timing_info.timer = timer
+            return results
 
     def _parse_gdx_results(self, config, results_filename, statresults_filename):
         model_soln = dict()

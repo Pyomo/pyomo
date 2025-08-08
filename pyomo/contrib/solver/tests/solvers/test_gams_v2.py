@@ -107,6 +107,7 @@ class TestGAMSInterface(unittest.TestCase):
             'name',
             'solve',
             'version',
+            'license_is_valid',
         ]
         method_list = [method for method in dir(opt) if method.startswith('_') is False]
         self.assertEqual(sorted(expected_list), sorted(method_list))
@@ -195,10 +196,6 @@ class TestGAMS(unittest.TestCase):
         self.assertTrue(solver.config.executable.startswith('/path'))
 
         # Change value on a solve call
-        # config = gams.GAMSConfig()
-        with TempfileManager.new_context() as temp:
-            dname = temp.mkdtemp()
-            # if working_dir is not specified, the tmpdir is deleted before solve can happen
-            solver = SolverFactory('gams_v2', working_dir=dname)
-            model = self.create_model()
-            solver.solve(model, tee=False, load_solutions=False)
+        solver = SolverFactory('gams_v2')
+        model = self.create_model()
+        solver.solve(model, tee=False, load_solutions=False)
