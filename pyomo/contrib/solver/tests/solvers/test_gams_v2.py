@@ -153,7 +153,7 @@ class TestGAMSInterface(unittest.TestCase):
         # Pass it some options that ARE on the command line and create a .gms file
         # Currently solver_options is not implemented in the new interface
         solver_exec = config.executable.path()
-        opt = gams.GAMS(solver_options={'iterLim': 1})        
+        opt = gams.GAMS(solver_options={'iterLim': 1})
         with TempfileManager.new_context() as temp:
             dname = temp.mkdtemp()
             if not os.path.exists(dname):
@@ -166,14 +166,15 @@ class TestGAMSInterface(unittest.TestCase):
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            self.assertTrue(result.returncode==0)
+            self.assertTrue(result.returncode == 0)
             self.assertTrue(os.path.isfile(filename))
+
 
 class TestGAMS(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel('TestModel')
-        model.x = pyo.Var(initialize=1.5, bounds = (-5, 5))
-        model.y = pyo.Var(initialize=1.5, bounds = (-5, 5))
+        model.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        model.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
 
         def dummy_equation(m):
             return (1.0 - m.x) + 100.0 * (m.y - m.x)
@@ -200,4 +201,4 @@ class TestGAMS(unittest.TestCase):
             # if working_dir is not specified, the tmpdir is deleted before solve can happen
             solver = SolverFactory('gams_v2', working_dir=dname)
             model = self.create_model()
-            solver.solve(model, tee=False, load_solutions = False)
+            solver.solve(model, tee=False, load_solutions=False)
