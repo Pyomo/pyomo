@@ -42,6 +42,12 @@ class ObserverChecker(Observer):
                 self.counts[c] = make_count_dict()
             self.counts[c][key] += 1
 
+    def pprint(self):
+        for k, d in self.counts.items():
+            print(f'{k}:')
+            for a, v in d.items():
+                print(f'  {a}: {v}')
+
     def add_variables(self, variables: List[VarData]):
         for v in variables:
             assert v.is_variable_type()
@@ -179,6 +185,7 @@ class TestChangeDetector(unittest.TestCase):
         detector.set_instance(m)
         obs.check(expected)
 
+        m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=m.y >= (m.x - m.p)**2)
         detector.update()
         expected[m.x] = make_count_dict()
@@ -189,6 +196,27 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.p]['add'] += 1
         expected[m.c1] = make_count_dict()
         expected[m.c1]['add'] += 1
+        expected[m.obj] = make_count_dict()
+        expected[m.obj]['set'] += 1
+        obs.check(expected)
+
+        # now fix a variable and make sure the
+        # constraint gets removed and added
+        m.x.fix(1)
+        obs.pprint()
+        detector.update()
+        obs.pprint()
+        expected[m.c1]['remove'] += 1
+        expected[m.c1]['add'] += 1
+        # because x and p are only used in the 
+        # one constraint, they get removed when 
+        # the constraint is removed and then 
+        # added again when the constraint is added
+        expected[m.x]['update'] += 1
+        expected[m.x]['remove'] += 1
+        expected[m.x]['add'] += 1
+        expected[m.p]['remove'] += 1
+        expected[m.p]['add'] += 1
         obs.check(expected)
 
     def test_vars_and_params_elsewhere(self):
