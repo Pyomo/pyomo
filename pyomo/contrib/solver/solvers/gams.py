@@ -103,6 +103,17 @@ class GAMSConfig(SolverConfig):
         self.writer_config: ConfigDict = self.declare(
             'writer_config', GAMSWriter.CONFIG()
         )
+        self.add_options: ConfigDict = self.declare(
+            'add_options',
+            ConfigValue(
+                default=None,
+                doc="""
+                List of additional lines to write directly
+                into model file before the solve statement.
+                For model attributes, <model name> is GAMS_MODEL.
+                """,
+            ),
+        )
 
 
 class GAMSResults(Results):
@@ -160,6 +171,10 @@ class GAMS(SolverBase):
                 "GAMS solver functionality is not available."
             )
         return avail
+
+    def license_is_valid(self):
+        # New versions of the community license can run LPs up to 5k
+        return self._run_simple_model(5001)
 
     def _run_simple_model(self, config, n):
         solver_exec = config.executable.path()
@@ -271,7 +286,6 @@ class GAMS(SolverBase):
         config.writer_config.put_results_format = 'gdx' if gdxcc_available else 'dat'
 
         # local variable to hold the working directory name and flags
-        newdir = False
         dname = None
         lst = "output.lst"
         output_filename = None
@@ -283,10 +297,8 @@ class GAMS(SolverBase):
             # worry about the rest of the contents of that directory being deleted.
             if config.working_dir is None:
                 dname = tempfile.mkdtemp()
-                newdir = True
             else:
                 dname = config.working_dir
-                newdir = True
             if not os.path.exists(dname):
                 os.mkdir(dname)
             basename = os.path.join(dname, model.name)
@@ -299,7 +311,9 @@ class GAMS(SolverBase):
                     model,
                     gms_file,
                     symbolic_solver_labels=config.symbolic_solver_labels,
+                    add_options=config.add_options,
                 )
+
                 # NOTE: omit InfeasibleConstraintException for now
                 timer.stop(f'write_{output_filename}_file')
         if config.writer_config.put_results_format == 'gdx':
@@ -387,8 +401,6 @@ class GAMS(SolverBase):
                 print(
                     'Cleaning up temporary directory is handled by `release` from pyomo.common.tempfiles'
                 )
-
-        # NOTE: solve completion time
 
         ####################################################################
         # Postsolve (WIP)
