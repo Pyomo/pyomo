@@ -51,16 +51,16 @@ class timestamper:
 
     def check(self, *bases):
         """Map the recorded times to {0, 1} based on the range of times
-        recorded: anything in the first half of the range is mapped to
-        0, and anything in the second half is mapped to 1.  This
+        recorded: anything in the first two-thirds of the range is mapped to
+        0, and anything in the last third is mapped to 1.  This
         "discretizes" the times so that we can reliably compare to
         baselines.
 
         """
 
         n = list(itertools.chain(*self.buf))
-        mid = (min(n) + max(n)) / 2.0
-        result = [tuple(0 if i < mid else 1 for i in _) for _ in self.buf]
+        cutoff = min(n) + (max(n) - min(n)) * 2.0 / 3.0
+        result = [tuple(0 if i < cutoff else 1 for i in _) for _ in self.buf]
         if result not in bases:
             base = ' or '.join(str(_) for _ in bases)
             self.error = f"result {result} != baseline {base}\nRaw timing: {self.buf}"
