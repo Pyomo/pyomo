@@ -306,7 +306,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             self._solver_model.run()
             timer.stop('optimize')
 
-        return self._postsolve()
+        res = self._postsolve()
+        res.solver_log = ostreams[0].getvalue()
+        return res
 
     def _process_domain_and_bounds(self, var_id):
         _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[var_id]
