@@ -39,6 +39,7 @@ from pyomo.core.base import (
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.label import NumericLabeler
 from pyomo.opt import WriterFactory
+from pyomo.repn.util import ftoa
 
 # from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.linear import LinearRepnVisitor
@@ -345,6 +346,7 @@ class _GMSWriter_impl(object):
         config = self.config
         labeler = config.labeler
         var_labeler, con_labeler = None, None
+        warmstart = config.warmstart
 
         sorter = FileDeterminism_to_SortComponents(config.file_determinism)
 
@@ -420,7 +422,6 @@ class _GMSWriter_impl(object):
         # Tabulate constraints
         #
         skip_trivial_constraints = self.config.skip_trivial_constraints
-        have_nontrivial = False
         last_parent = None
         con_list = (
             {}
@@ -435,10 +436,7 @@ class _GMSWriter_impl(object):
             lb, body, ub = con.to_bounded_expression(True)
 
             if lb is None and ub is None:
-                # Note: you *cannot* output trivial (unbounded)
-                # constraints in LP format.  I suppose we could add a
-                # slack variable if skip_trivial_constraints is False,
-                # but that seems rather silly.
+                # WIP: handling unbounded variable
                 continue
             repn = visitor.walk_expression(body)
             if repn.nonlinear is not None:
@@ -451,7 +449,7 @@ class _GMSWriter_impl(object):
             repn.constant = 0
 
             if repn.linear or getattr(repn, 'quadratic', None):
-                have_nontrivial = True
+                pass
             else:
                 if (
                     skip_trivial_constraints
@@ -581,8 +579,13 @@ class _GMSWriter_impl(object):
         # Handling variable bounds
         #
         for v, (lb, ub) in var_bounds.items():
-            ostream.write(f'{v}.lo = {lb};\n{v}.up = {ub};\n')
-
+            pyomo_v = self.var_symbol_map.bySymbol[v]
+            if lb is not None:
+                ostream.write(f'{v}.lo = {lb};\n')
+            if ub is not None:
+                ostream.write(f'{v}.up = {ub};\n')
+            if warmstart and pyomo_v.value is not None:
+                ostream.write("%s.l = %s;\n" % (v, ftoa(pyomo_v.value, False)))
         ostream.write(f'\nModel {model.name} / all /;\n')
         ostream.write(f'{model.name}.limrow = 0;\n')
         ostream.write(f'{model.name}.limcol = 0;\n')
@@ -680,8 +683,6 @@ class _GMSWriter_impl(object):
         return info
 
     def write_expression(self, ostream, expr, is_objective=False):
-        save_eq = []
-
         if not is_objective:
             assert not expr.constant
         getSymbol = self.var_symbol_map.getSymbol
