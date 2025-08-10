@@ -20,13 +20,13 @@ import sphinx.locale
 
 from sphinx.application import Sphinx
 from sphinx.domains import ObjType
-from sphinx.domains.python import PyClasslike, PyAttribute, PyXRefRole
+from sphinx.domains.python import PyClasslike, PyXRefRole
 from sphinx.ext import autodoc, autosummary
 from sphinx.ext.autosummary import mangle_signature as _msig
 from sphinx.ext.autosummary.generate import generate_autosummary_content as _gac
 from sphinx.util.inspect import object_description
-from sphinx_toolbox.more_autodoc.typehints import format_annotation
-from typing import Type, Any, Dict, List, Tuple, Union
+from sphinx.util.typing import restify
+from typing import Any, Dict, List, Tuple
 
 _pre_re = re.compile(r'^( = )(.*)')
 
@@ -129,7 +129,7 @@ def _generate_autosummary_content(
                     for _base in mro[: mro.index(enum.Enum)]:
                         if not isinstance(_base, enum.EnumMeta):
                             ns['member_type'] = (
-                                f"Member type: {format_annotation(_base)}"
+                                f"Member type: {restify(_base, mode='smart')}"
                             )
                             break
                 return super().render(name, ns)

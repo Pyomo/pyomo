@@ -321,7 +321,7 @@ class LogicalConstraint(ActiveIndexedComponent):
     @rule.setter
     @deprecated(
         f"The 'LogicalConstraint.rule' attribute will be made read-only",
-        version='6.9.3.dev0',
+        version='6.9.3',
         remove_in='6.11',
     )
     def rule(self, rule):

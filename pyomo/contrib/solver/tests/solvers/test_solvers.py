@@ -53,13 +53,14 @@ all_solvers = [
     ('highs', Highs),
 ]
 mip_solvers = [
-    ('gurobi', GurobiPersistent),
+    ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('highs', Highs),
 ]
 nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi', GurobiPersistent), ('ipopt', Ipopt)]
-miqcqp_solvers = [('gurobi', GurobiPersistent)]
+qcp_solvers = [('gurobi_persistent', GurobiPersistent), ('ipopt', Ipopt)]
+qp_solvers = qcp_solvers + [("highs", Highs)]
+miqcqp_solvers = [('gurobi_persistent', GurobiPersistent)]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 
@@ -1098,7 +1099,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.0869525991355825, 4)
 
     @parameterized.expand(input=_load_tests(qcp_solvers))
-    def test_mutable_quadratic_objective(
+    def test_mutable_quadratic_objective_qcp(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
         opt: SolverBase = opt_class()
@@ -1128,6 +1129,81 @@ class TestSolvers(unittest.TestCase):
 
         self.assertAlmostEqual(m.x.value, 0.6962249634573562, 4)
         self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
+
+    @parameterized.expand(input=_load_tests(qp_solvers))
+    def test_mutable_quadratic_objective_qp(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
+        # test issue #3381
+        m = pyo.ConcreteModel()
+
+        m.x1 = pyo.Var()
+        m.x2 = pyo.Var()
+
+        m.p1 = pyo.Param(initialize=1, mutable=True)
+        m.p2 = pyo.Param(initialize=1, mutable=True)
+        m.p3 = pyo.Param(initialize=4, mutable=True)
+
+        m.obj = pyo.Objective(
+            expr=m.p1 * (m.x1 - 1) ** 2 + m.p2 * (m.x2 - 6) ** 2 - m.p3 * m.x2
+        )
+
+        m.con = pyo.Constraint(expr=m.x1 >= m.x2)
+
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x1.value, 4.5, places=4)
+        self.assertAlmostEqual(m.x2.value, 4.5, places=4)
+        self.assertAlmostEqual(results.incumbent_objective, -3.5, 4)
+
+        m.p2.value = 2.0
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x1.value, 5, places=4)
+        self.assertAlmostEqual(m.x2.value, 5, places=4)
+        self.assertAlmostEqual(results.incumbent_objective, -2, 4)
+
+        m.x3 = pyo.Var()
+        del m.obj
+        m.obj = pyo.Objective(
+            expr=m.p2 * (m.x2 - 6) ** 2 - m.p3 * m.x2 + m.p1 * (m.x3 - 1) ** 2
+        )
+        m.con2 = pyo.Constraint(expr=m.x3 >= m.x1)
+
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x1.value, 5, places=4)
+        self.assertAlmostEqual(m.x2.value, 5, places=4)
+        self.assertAlmostEqual(m.x3.value, 5, places=4)
+        self.assertAlmostEqual(results.incumbent_objective, -2, 4)
+
+        if opt_class is Highs:
+            # This assertions is not important by itself.
+            # We just need it to make sure that removing the
+            # variable below is actually testing what we think
+            # (which is that the mutable quadratic coefficients
+            # work correctly even when the column changes)
+            self.assertIn(opt._pyomo_var_to_solver_var_map[id(m.x1)], {0, 1})
+            self.assertIn(opt._pyomo_var_to_solver_var_map[id(m.x2)], {0, 1})
+            self.assertEqual(opt._pyomo_var_to_solver_var_map[id(m.x3)], 2)
+
+        del m.con
+        del m.con2
+        m.p1.value = 2
+        m.con = pyo.Constraint(expr=m.x3 >= m.x2)
+
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x2.value, 4, places=4)
+        self.assertAlmostEqual(m.x3.value, 4, places=4)
+        self.assertAlmostEqual(results.incumbent_objective, 10, 4)
+
+        if opt_class is Highs:
+            self.assertIn(opt._pyomo_var_to_solver_var_map[id(m.x3)], {0, 1})
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_fixed_vars(
