@@ -30,7 +30,7 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
-from pyomo.contrib.solver.common.base import PersistentSolverBase, SolverBase, Availability
+from pyomo.contrib.solver.common.base import PersistentSolverBase, Availability
 from pyomo.contrib.solver.common.results import (
     Results,
     TerminationCondition,
@@ -233,15 +233,44 @@ class _MutableQuadraticCoefficient:
         self.var2 = None
 
 
-class GurobiBase(SolverBase):
+class GurobiPersistent(
+    GurobiSolverMixin,
+    PersistentSolverMixin,
+    PersistentSolverUtils,
+    PersistentSolverBase,
+):
+    """
+    Interface to Gurobi persistent
+    """
+
     CONFIG = GurobiConfig()
     _gurobipy_available = gurobipy_available
 
     def __init__(self, **kwds):
-        super().__init__(**kwds)
+        treat_fixed_vars_as_params = kwds.pop('treat_fixed_vars_as_params', True)
+        PersistentSolverBase.__init__(self, **kwds)
+        PersistentSolverUtils.__init__(
+            self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
+        )
         self._register_env_client()
         self._solver_model = None
+        self._symbol_map = SymbolMap()
+        self._labeler = None
+        self._pyomo_var_to_solver_var_map = {}
+        self._pyomo_con_to_solver_con_map = {}
+        self._solver_con_to_pyomo_con_map = {}
+        self._pyomo_sos_to_solver_sos_map = {}
+        self._range_constraints = OrderedSet()
+        self._mutable_helpers = {}
+        self._mutable_bounds = {}
+        self._mutable_quadratic_helpers = {}
+        self._mutable_objective = None
+        self._needs_updated = True
         self._callback = None
+        self._callback_func = None
+        self._constraints_added_since_update = OrderedSet()
+        self._vars_added_since_update = ComponentSet()
+        self._last_results_object: Optional[Results] = None
 
     def release_license(self):
         self._reinit()
@@ -251,10 +280,12 @@ class GurobiBase(SolverBase):
         if not python_is_shutting_down():
             self._release_env_client()
 
-    def _mipstart(self):
-        raise NotImplementedError('should be implemented by derived classes')
+    @property
+    def symbol_map(self):
+        return self._symbol_map
 
-    def _solve(self, config):
+    def _solve(self):
+        config = self._active_config
         timer = config.timer
         ostreams = [io.StringIO()] + config.tee
 
@@ -273,7 +304,13 @@ class GurobiBase(SolverBase):
                 self._solver_model.setParam('MIPGapAbs', config.abs_gap)
 
             if config.use_mipstart:
-                self._mipstart()
+                for (
+                    pyomo_var_id,
+                    gurobi_var,
+                ) in self._pyomo_var_to_solver_var_map.items():
+                    pyomo_var = self._vars[pyomo_var_id][0]
+                    if pyomo_var.is_integer() and pyomo_var.value is not None:
+                        self.set_var_attr(pyomo_var, 'Start', pyomo_var.value)
 
             for key, option in options.items():
                 self._solver_model.setParam(key, option)
@@ -282,99 +319,18 @@ class GurobiBase(SolverBase):
             self._solver_model.optimize(self._callback)
             timer.stop('optimize')
 
+        self._needs_updated = False
         res = self._postsolve(timer)
         res.solver_config = config
         res.solver_name = 'Gurobi'
         res.solver_version = self.version()
         res.solver_log = ostreams[0].getvalue()
         return res
-    
-
-class GurobiDirect(GurobiBase):
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-    
-
-class GurobiQuadraticBase(GurobiBase):
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-        self._vars = {}  # from id(v) to v
-        self._symbol_map = SymbolMap()
-        self._labeler = None
-        self._pyomo_var_to_solver_var_map = {}
-        self._pyomo_con_to_solver_con_map = {}
-        self._pyomo_sos_to_solver_sos_map = {}
-
-    @property
-    def symbol_map(self):
-        return self._symbol_map
-
-    def _mipstart(self):
-        for (
-            pyomo_var_id,
-            gurobi_var,
-        ) in self._pyomo_var_to_solver_var_map.items():
-            pyomo_var = self._vars[pyomo_var_id]
-            if pyomo_var.is_integer() and pyomo_var.value is not None:
-                gurobi_var.setAttr('Start', pyomo_var.value)
-
-    def _proces_domain_and_bounds(self, var):
-        lb, ub, step = var.domain.get_interval()
-        if lb is None:
-            lb = -gurobipy.GRB.INFINITY
-        if ub is None:
-            ub = gurobipy.GRB.INFINITY
-        if step == 0:
-            vtype = gurobipy.GRB.CONTINUOUS
-        elif step == 1:
-            if lb == 0 and ub == 1:
-                vtype = gurobipy.GRB.BINARY
-            else:
-                vtype = gurobipy.GRB.INTEGER
-        else:
-            raise ValueError(
-                f'Unrecognized domain step: {step} (should be either 0 or 1)'
-            )
-        if var.fixed:
-            lb = var.value
-            ub = lb
-        else:
-            lb = max(lb, value(var._lb))
-            ub = min(ub, value(var._ub))
-        return lb, ub, vtype
-
-
-class GurobiDirectQuadratic(GurobiQuadraticBase):
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-
-
-class GurobiPersistentQuadratic(GurobiQuadraticBase):
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-        self._solver_con_to_pyomo_con_map = {}
-        self._mutable_helpers = {}
-        self._mutable_bounds = {}
-        self._mutable_quadratic_helpers = {}
-        self._mutable_objective = None
-        self._needs_updated = True
-        self._constraints_added_since_update = OrderedSet()
-        self._vars_added_since_update = ComponentSet()
-        self._callback_func = None
-        self._last_results_object: Optional[Results] = None
-
-    def _solve(self, config):
-        super()._solve(config)
-        self._needs_updated = False
 
     def _process_domain_and_bounds(
         self, var, var_id, mutable_lbs, mutable_ubs, ndx, gurobipy_var
     ):
-        _lb = var._lb
-        _ub = var._ub
-        _fixed = var.fixed
-        _domain_interval = var.domain.get_interval()
-        _value = var.value
+        _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[id(var)]
         lb, ub, step = _domain_interval
         if lb is None:
             lb = -gurobipy.GRB.INFINITY
@@ -415,24 +371,6 @@ class GurobiPersistentQuadratic(GurobiQuadraticBase):
                 ub = min(value(_ub), ub)
 
         return lb, ub, vtype
-
-
-class _GurobiPersistent(
-    GurobiSolverMixin,
-    PersistentSolverMixin,
-    PersistentSolverUtils,
-    PersistentSolverBase,
-):
-    """
-    Interface to Gurobi persistent
-    """
-
-
-    def __init__(self, **kwds):
-        PersistentSolverBase.__init__(self, **kwds)
-        PersistentSolverUtils.__init__(
-            self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
-        )
 
     def _add_variables(self, variables: List[VarData]):
         var_names = []
@@ -584,6 +522,7 @@ class _GurobiPersistent(
                     gurobipy_con = self._solver_model.addRange(
                         gurobi_expr, lhs_val, rhs_val, name=conname
                     )
+                    self._range_constraints.add(con)
                     if not is_constant(lhs_expr) or not is_constant(rhs_expr):
                         mutable_range_constant = _MutableRangeConstant()
                         mutable_range_constant.lhs_expr = lhs_expr
@@ -715,6 +654,7 @@ class _GurobiPersistent(
             self._symbol_map.removeSymbol(con)
             del self._pyomo_con_to_solver_con_map[con]
             del self._solver_con_to_pyomo_con_map[id(solver_con)]
+            self._range_constraints.discard(con)
             self._mutable_helpers.pop(con, None)
             self._mutable_quadratic_helpers.pop(con, None)
         self._needs_updated = True
