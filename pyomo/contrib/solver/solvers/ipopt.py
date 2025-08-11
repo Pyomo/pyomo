@@ -16,6 +16,7 @@ import datetime
 import io
 import re
 import sys
+import threading
 from typing import Optional, Tuple, Union, Mapping, List, Dict, Any, Sequence
 
 from pyomo.common import Executable
@@ -366,11 +367,22 @@ class Ipopt(SolverBase):
                 dname = config.working_dir
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            basename = os.path.join(dname, model.name)
-            if os.path.exists(basename + '.nl'):
-                raise RuntimeError(
-                    f"NL file with the same name {basename + '.nl'} already exists!"
-                )
+            basename = model.name
+            # Strip off quotes - the command line parser will re-add them
+            if basename[0] in "'\"" and basename[0] == basename[-1]:
+                basename = basename[1:-1]
+            # The base file name for this interface is "model_name + PID
+            # + thread id", so that this is reasonably unique in both
+            # parallel and threaded environments (even when working_dir
+            # is set to a persistent directory)
+            basename = os.path.join(
+                dname, f"{basename}.{os.getpid()}.{threading.get_ident()}"
+            )
+            for ext in ('.nl', '.row', '.col', '.sol', '.opt'):
+                if os.path.exists(basename + ext):
+                    raise RuntimeError(
+                        f"Solver interface file {basename + ext} already exists!"
+                    )
             # Note: the ASL has an issue where string constants written
             # to the NL file (e.g. arguments in external functions) MUST
             # be terminated with '\n' regardless of platform.  We will
