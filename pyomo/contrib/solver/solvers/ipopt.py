@@ -31,6 +31,7 @@ from pyomo.common.errors import (
     DeveloperError,
     InfeasibleConstraintException,
 )
+from pyomo.common.fileutils import to_legal_filename
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.var import VarData
@@ -368,7 +369,7 @@ class Ipopt(SolverBase):
                 dname = config.working_dir
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            basename = model.name
+            basename = to_legal_filename(model.name)
             # Strip off quotes - the command line parser will re-add them
             if basename[0] in "'\"" and basename[0] == basename[-1]:
                 basename = basename[1:-1]
