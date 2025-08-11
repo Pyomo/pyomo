@@ -523,7 +523,7 @@ def to_legal_filename(name, universal=False) -> str:
     universal : bool
 
         If True, this will attempt a form of "universal" standardization
-        that uses the mose restrictive set of character translations and
+        that uses the most restrictive set of character translations and
         rules.  Currently, ``universal=True`` is equivalent to running
         the Windows translations.
 
