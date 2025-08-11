@@ -19,6 +19,7 @@ from pyomo.common.errors import DeveloperError
 from pyomo.common.tee import capture_output
 import pyomo.contrib.solver.solvers.ipopt as ipopt
 from pyomo.contrib.solver.common.util import NoSolutionError
+from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.common import unittest, Executable
 from pyomo.common.tempfiles import TempfileManager
@@ -472,6 +473,8 @@ class TestIpopt(unittest.TestCase):
         # Gut check - does it solve?
         model = self.create_model()
         ipopt.Ipopt().solve(model)
+        self.assertAlmostEqual(model.x.value, 1)
+        self.assertAlmostEqual(model.y.value, 1)
 
     def test_ipopt_results(self):
         model = self.create_model()
@@ -513,3 +516,53 @@ class TestIpopt(unittest.TestCase):
         else:
             # Newer version of IPOPT
             self.assertIn('IPOPT', timing_info.keys())
+
+    def test_ipopt_options_file(self):
+        # Check that the options file is getting to Ipopt: if we give it
+        # an invalid option in the options file, ipopt will fail.  This
+        # is important, as ipopt will NOT fail if you pass if an
+        # option_file_name that does not exist.
+        model = self.create_model()
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        # If the model name contains a quote, then the name needs
+        # to be quoted
+        model.name = "test'model'"
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        model.name = 'test"model'
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        # If the model name contains single and double quotes, then we fail
+        model.name = 'test"\'model'
+        with self.assertRaisesRegex(ValueError, 'single and double'):
+            results = ipopt.Ipopt().solve(
+                model,
+                solver_options={'bogus_option': 5},
+                raise_exception_on_nonoptimal_result=False,
+                load_solutions=False,
+            )
