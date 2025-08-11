@@ -85,12 +85,14 @@ class GurobiDirectBase(SolverBase):
     _available = None
     _gurobipy_available = gurobipy_available
     _tc_map = None
+    _minimum_version = (0, 0, 0)
 
     CONFIG = GurobiConfig()
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._register_env_client()
+        self._callback = None
 
     def __del__(self):
         if not python_is_shutting_down():
@@ -111,6 +113,8 @@ class GurobiDirectBase(SolverBase):
                     self.__class__._available = Availability.NotFound
             else:
                 self.__class__._available = self._check_license()
+                if self.version() < self._minimum_version:
+                    self.__class__._available = Availability.BadVersion
         return self._available
 
     @staticmethod
@@ -169,7 +173,7 @@ class GurobiDirectBase(SolverBase):
         )
         return version
 
-    def _create_solver_model(self, pyomo_model, config):
+    def _create_solver_model(self, pyomo_model):
         # should return gurobi_model, solution_loader, has_objective
         raise NotImplementedError('should be implemented by derived classes')
 
@@ -184,29 +188,30 @@ class GurobiDirectBase(SolverBase):
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        config: GurobiConfig = self.config(
-            value=kwds, 
-            preserve_implicit=True,
-        )
-        if not self.available():
-            c = self.__class__
-            raise ApplicationError(
-                f'Solver {c.__module__}.{c.__qualname__} is not available '
-                f'({self.available()}).'
-            )
-        if config.timer is None:
-            config.timer = HierarchicalTimer()
-        timer = config.timer
-
-        StaleFlagManager.mark_all_as_stale()
-        ostreams = [io.StringIO()] + config.tee
-
+        orig_config = self.config
         orig_cwd = os.getcwd()
         try:
+            self.config = config = self.config(
+                value=kwds, 
+                preserve_implicit=True,
+            )
+            if not self.available():
+                c = self.__class__
+                raise ApplicationError(
+                    f'Solver {c.__module__}.{c.__qualname__} is not available '
+                    f'({self.available()}).'
+                )
+            if config.timer is None:
+                config.timer = HierarchicalTimer()
+            timer = config.timer
+
+            StaleFlagManager.mark_all_as_stale()
+            ostreams = [io.StringIO()] + config.tee
+
             if config.working_dir:
                 os.chdir(config.working_dir)
             with capture_output(TeeStream(*ostreams), capture_fd=False):
-                gurobi_model, solution_loader, has_obj = self._create_solver_model(model, config)
+                gurobi_model, solution_loader, has_obj = self._create_solver_model(model)
                 options = config.solver_options
 
                 gurobi_model.setParam('LogToConsole', 1)
@@ -227,15 +232,16 @@ class GurobiDirectBase(SolverBase):
                     gurobi_model.setParam(key, option)
 
                 timer.start('optimize')
-                gurobi_model.optimize()
+                gurobi_model.optimize(self._callback)
                 timer.stop('optimize')
+
+            res = self._postsolve(
+                grb_model=gurobi_model, 
+                has_obj=has_obj,
+            )
         finally:
             os.chdir(orig_cwd)
-
-        res = self._postsolve(
-            grb_model=gurobi_model, 
-            config=config,
-        )
+            self.config = orig_config
 
         res.solution_loader = solution_loader
         res.solver_log = ostreams[0].getvalue()
@@ -267,7 +273,7 @@ class GurobiDirectBase(SolverBase):
             }
         return GurobiDirectBase._tc_map
 
-    def _postsolve(self, grb_model, config, has_obj):
+    def _postsolve(self, grb_model, has_obj):
         status = grb_model.Status
 
         results = Results()
@@ -288,7 +294,7 @@ class GurobiDirectBase(SolverBase):
         if (
             results.termination_condition
             != TerminationCondition.convergenceCriteriaSatisfied
-            and config.raise_exception_on_nonoptimal_result
+            and self.config.raise_exception_on_nonoptimal_result
         ):
             raise NoOptimalSolutionError()
 
@@ -313,15 +319,19 @@ class GurobiDirectBase(SolverBase):
 
         results.iteration_count = grb_model.getAttr('IterCount')
 
-        config.timer.start('load solution')
-        if config.load_solutions:
+        self.config.timer.start('load solution')
+        if self.config.load_solutions:
             if grb_model.SolCount > 0:
                 results.solution_loader.load_vars()
             else:
                 raise NoFeasibleSolutionError()
-        config.timer.stop('load solution')
+        self.config.timer.stop('load solution')
 
-        results.solver_config = config
+        # self.config gets copied a the beginning of 
+        # solve and restored at the end, so modifying
+        # results.solver_config will not actually 
+        # modify self.config
+        results.solver_config = self.config
         results.solver_name = self.name
         results.solver_version = self.version()
 

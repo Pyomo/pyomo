@@ -24,6 +24,7 @@ from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
 from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import BranchAndBoundConfig
@@ -127,6 +128,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
 
 
 class GurobiDirect(GurobiDirectBase):
+    _minimum_version = (9, 0, 0)
+
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._gurobi_vars = None
@@ -135,8 +138,8 @@ class GurobiDirect(GurobiDirectBase):
     def _pyomo_gurobi_var_iter(self):
         return zip(self._pyomo_vars, self._gurobi_vars.tolist())
 
-    def _create_solver_model(self, pyomo_model, config):
-        timer = config.timer
+    def _create_solver_model(self, pyomo_model):
+        timer = self.config.timer
 
         timer.start('compile_model')
         repn = LinearStandardFormCompiler().write(
