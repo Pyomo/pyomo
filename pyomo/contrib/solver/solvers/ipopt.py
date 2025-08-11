@@ -38,6 +38,7 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import SolverConfig
+from pyomo.contrib.solver.common.factory import LegacySolverWrapper
 from pyomo.contrib.solver.common.results import (
     Results,
     TerminationCondition,
@@ -710,3 +711,15 @@ class Ipopt(SolverBase):
             )
 
         return res
+
+
+class LegacyIpoptSolver(LegacySolverWrapper, Ipopt):
+    def _verify_ipopt_options(self, config: IpoptConfig) -> None:
+        # The old Ipopt solver would map solver_options starting with
+        # "OF_" to the options file.  That is no longer needed, so we
+        # will strip off any "OF_" that we find
+        for opt, val in list(config.solver_options.items()):
+            if opt.startswith('OF_'):
+                config.solver_options[opt[3:]] = val
+                del config.solver_options[opt]
+        return super()._verify_ipopt_options(config)

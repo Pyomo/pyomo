@@ -566,3 +566,42 @@ class TestIpopt(unittest.TestCase):
                 raise_exception_on_nonoptimal_result=False,
                 load_solutions=False,
             )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class TestLegacyIpopt(unittest.TestCase):
+    def create_model(self):
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var(initialize=1.5)
+        model.y = pyo.Var(initialize=1.5)
+
+        @model.Objective(sense=pyo.minimize)
+        def rosenbrock(m):
+            return (1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2
+
+        return model
+
+    def test_map_OF_options(self):
+        model = self.create_model()
+
+        with capture_output() as LOG:
+            results = ipopt.LegacyIpoptSolver().solve(
+                model,
+                tee=True,
+                solver_options={'OF_bogus_option': 5},
+                load_solutions=False,
+            )
+        print(LOG.getvalue())
+        self.assertIn('OPTION_INVALID', LOG.getvalue())
+        # Note: OF_ is stripped
+        self.assertIn(
+            'Read Option: "bogus_option". It is not a valid option', LOG.getvalue()
+        )
+
+        with self.assertRaisesRegex(ValueError, "unallowed ipopt option 'wantsol'"):
+            results = ipopt.LegacyIpoptSolver().solve(
+                model,
+                tee=True,
+                solver_options={'OF_wantsol': False},
+                load_solutions=False,
+            )

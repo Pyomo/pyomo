@@ -24,15 +24,19 @@ class SolverFactoryClass(Factory):
         if legacy_name is None:
             legacy_name = name
 
-        def decorator(cls):
+        def decorator(cls, legacy_cls=None):
             self._cls[name] = cls
             self._doc[name] = doc
 
-            class LegacySolver(LegacySolverWrapper, cls):
-                pass
+            if legacy_cls is None:
+
+                class LegacySolver(LegacySolverWrapper, cls):
+                    pass
+
+                legacy_cls = LegacySolver
 
             LegacySolverFactory.register(legacy_name, doc + " (new interface)")(
-                LegacySolver
+                legacy_cls
             )
 
             # Preserve the preferred name, as registered in the Factory
