@@ -103,6 +103,76 @@ class GAMSConfig(SolverConfig):
         self.writer_config: ConfigDict = self.declare(
             'writer_config', GAMSWriter.CONFIG()
         )
+        # Share the same config as the writer, passes at the function call write
+        self.declare(
+            'warmstart',
+            ConfigValue(
+                default=True,
+                domain=bool,
+                description="Warmstart by initializing model's variables to their values.",
+            ),
+        )
+        self.declare(
+            'labeler',
+            ConfigValue(
+                default=None,
+                description='Callable to use to generate symbol names in gms file',
+            ),
+        )
+        self.declare(
+            'solver',
+            ConfigValue(
+                default=None,
+                description='If None, GAMS will use default solver for model type.',
+            ),
+        )
+        self.declare(
+            'mtype',
+            ConfigValue(
+                default=None,
+                description='Model type. If None, will chose from lp, mip. nlp and minlp will be implemented in the future.',
+            ),
+        )
+        self.declare(
+            'skip_trivial_constraints',
+            ConfigValue(
+                default=False,
+                domain=bool,
+                description='Skip writing constraints whose body is constant',
+            ),
+        )
+        self.declare(
+            'output_fixed_variables',
+            ConfigValue(
+                default=False,
+                domain=bool,
+                description='If True, output fixed variables as variables; otherwise,output numeric value',
+            ),
+        )
+        self.declare(
+            'put_results',
+            ConfigValue(
+                default='results',
+                domain=str,
+                doc="""
+                Filename for optionally writing solution values and
+                marginals.  If put_results_format is 'gdx', then GAMS
+                will write solution values and marginals to
+                GAMS_MODEL_p.gdx and solver statuses to
+                {put_results}_s.gdx.  If put_results_format is 'dat',
+                then solution values and marginals are written to
+                (put_results).dat, and solver statuses to (put_results +
+                'stat').dat.
+                """,
+            ),
+        )
+        self.declare(
+            'put_results_format',
+            ConfigValue(
+                default='gdx',
+                description="Format used for put_results, one of 'gdx', 'dat'",
+            ),
+        )
         self.add_options: ConfigDict = self.declare(
             'add_options',
             ConfigValue(
@@ -112,6 +182,16 @@ class GAMSConfig(SolverConfig):
                 into model file before the solve statement.
                 For model attributes, <model name> is GAMS_MODEL.
                 """,
+            ),
+        )
+        # NOTE: Taken from the lp_writer
+        self.declare(
+            'row_order',
+            ConfigValue(
+                default=None,
+                description='Preferred constraint ordering',
+                doc="""
+                To use with ordered_active_constraints function.""",
             ),
         )
 
@@ -307,12 +387,7 @@ class GAMS(SolverBase):
             with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
                 timer.start(f'write_{output_filename}_file')
                 self._writer.config.set_value(config.writer_config)
-                gms_info = self._writer.write(
-                    model,
-                    gms_file,
-                    symbolic_solver_labels=config.symbolic_solver_labels,
-                    add_options=config.add_options,
-                )
+                gms_info = self._writer.write(model, gms_file, **config.writer_config)
 
                 # NOTE: omit InfeasibleConstraintException for now
                 timer.stop(f'write_{output_filename}_file')

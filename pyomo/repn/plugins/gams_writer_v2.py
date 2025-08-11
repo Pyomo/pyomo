@@ -246,22 +246,6 @@ class GAMSWriter(object):
     )
     # NOTE: Taken from the lp_writer
     CONFIG.declare(
-        'allow_quadratic_objective',
-        ConfigValue(
-            default=True,
-            domain=bool,
-            description='If True, allow quadratic terms in the model objective',
-        ),
-    )
-    CONFIG.declare(
-        'allow_quadratic_constraint',
-        ConfigValue(
-            default=True,
-            domain=bool,
-            description='If True, allow quadratic terms in the model constraints',
-        ),
-    )
-    CONFIG.declare(
         'row_order',
         ConfigValue(
             default=None,
