@@ -210,6 +210,14 @@ ipopt_command_line_options = {
     'watchdog_shortened_iter_trigger',
 }
 
+unallowed_ipopt_options = {
+    'wantsol': 'The solver interface requires the sol file to be created',
+    'option_file_name': (
+        'Pyomo generates the ipopt options file as part of the `solve` '
+        'method.  Add all options to ipopt.config.solver_options instead.'
+    ),
+}
+
 
 @document_class_CONFIG(methods=['solve'])
 class Ipopt(SolverBase):
@@ -280,43 +288,52 @@ class Ipopt(SolverBase):
         )
         return 'running with linear solver' in results.solver_log
 
-    def _write_options_file(
-        self, filename: str, options: Mapping[str, Union[str, int, float]]
-    ) -> bool:
-        # First we need to determine if we even need to create a file.
-        # If options is empty, then we return False
-        opt_file_exists = False
-        if not options:
-            return False
-        # If it has options in it, parse them and write them to a file.
-        # If they are command line options, ignore them; they will be
-        # parsed during _create_command_line
-        for k, val in options.items():
-            if k not in ipopt_command_line_options:
-                opt_file_exists = True
-                with open(filename + '.opt', 'a+', encoding='utf-8') as opt_file:
-                    opt_file.write(str(k) + ' ' + str(val) + '\n')
-        return opt_file_exists
-
-    def _create_command_line(
-        self, basename: str, config: IpoptConfig, opt_file: bool
-    ) -> List[str]:
-        cmd = [str(config.executable), basename + '.nl', '-AMPL']
-        if opt_file:
-            cmd.append('option_file_name=' + basename + '.opt')
-        if 'option_file_name' in config.solver_options:
-            raise ValueError(
-                'Pyomo generates the ipopt options file as part of the `solve` method. '
-                'Add all options to ipopt.config.solver_options instead.'
-            )
+    def _verify_ipopt_options(self, config: IpoptConfig) -> None:
+        for key, msg in unallowed_ipopt_options.items():
+            if key in config.solver_options:
+                raise ValueError(f"unallowed ipopt option '{key}': {msg}")
+        # Map standard Pyomo solver options to Ipopt options
         if (
             config.time_limit is not None
             and 'max_cpu_time' not in config.solver_options
         ):
             config.solver_options['max_cpu_time'] = config.time_limit
-        for k, val in config.solver_options.items():
-            if k in ipopt_command_line_options:
-                cmd.append(str(k) + '=' + str(val))
+
+    def _write_options_file(
+        self, filename: str, options: Mapping[str, Union[str, int, float]]
+    ) -> None:
+        # Look through the solver options and write them to a file.
+        # If they are command line options, ignore them; they will be
+        # added to the command line.
+        options_file_options = [
+            opt for opt in options if opt not in ipopt_command_line_options
+        ]
+        if not options_file_options:
+            return
+        with open(filename, 'w', encoding='utf-8') as OPT_FILE:
+            OPT_FILE.writelines(
+                f"{opt} {options[opt]}\n" for opt in options_file_options
+            )
+        options['option_file_name'] = filename
+
+    def _create_command_line(self, basename: str, config: IpoptConfig) -> List[str]:
+        cmd = [str(config.executable), basename + '.nl', '-AMPL']
+        for opt, val in config.solver_options.items():
+            if opt not in ipopt_command_line_options:
+                continue
+            if isinstance(val, str):
+                if '"' not in val:
+                    cmd.append(f'{opt}="{val}"')
+                elif "'" not in val:
+                    cmd.append(f"{opt}='{val}'")
+                else:
+                    raise ValueError(
+                        f"solver_option '{opt}' contained value {val!r} with "
+                        "both single and double quotes.  Ipopt cannot parse "
+                        "command line options with escaped quote characters."
+                    )
+            else:
+                cmd.append(f'{opt}={val}')
         return cmd
 
     def solve(self, model, **kwds) -> Results:
@@ -385,15 +402,16 @@ class Ipopt(SolverBase):
                     env['AMPLFUNC'] = amplfunc_merge(
                         env, *nl_info.external_function_libraries
                     )
-                # Write the opt_file, if there should be one; return a bool to say
-                # whether or not we have one (so we can correctly build the command line)
-                opt_file = self._write_options_file(
-                    filename=basename, options=config.solver_options
+                self._verify_ipopt_options(config)
+                # Write the options file, if there should be one.  If
+                # the file was written, then 'options_file_name' was
+                # added to config.options (so we can correctly build the
+                # command line)
+                self._write_options_file(
+                    filename=basename + '.opt', options=config.solver_options
                 )
                 # Call ipopt - passing the files via the subprocess
-                cmd = self._create_command_line(
-                    basename=basename, config=config, opt_file=opt_file
-                )
+                cmd = self._create_command_line(basename=basename, config=config)
                 # this seems silly, but we have to give the subprocess slightly
                 # longer to finish than ipopt
                 if config.time_limit is not None:
