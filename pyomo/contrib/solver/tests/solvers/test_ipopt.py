@@ -318,15 +318,38 @@ Ipopt 3.14.17: Optimal Solution Found
             logs.output[0],
         )
 
+    def test_verify_ipopt_options(self):
+        opt = ipopt.Ipopt(solver_options={'max_iter': 4})
+        opt._verify_ipopt_options(opt.config)
+        self.assertEqual(opt.config.solver_options.value(), {'max_iter': 4})
+
+        opt = ipopt.Ipopt(solver_options={'max_iter': 4}, time_limit=10)
+        opt._verify_ipopt_options(opt.config)
+        self.assertEqual(
+            opt.config.solver_options.value(), {'max_iter': 4, 'max_cpu_time': 10}
+        )
+
+        # Finally, let's make sure it errors if someone tries to pass option_file_name
+        opt = ipopt.Ipopt(
+            solver_options={'max_iter': 4, 'option_file_name': 'myfile.opt'}
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r'Pyomo generates the ipopt options file as part of the `solve` '
+            r'method.  Add all options to ipopt.config.solver_options instead',
+        ):
+            opt._verify_ipopt_options(opt.config)
+
     def test_write_options_file(self):
-        # If we have no options, we should get false back
+        # If we have no options, nothing should happen (and no options
+        # file should be added tot he set of options)
         opt = ipopt.Ipopt()
-        result = opt._write_options_file('fakename', None)
-        self.assertFalse(result)
+        opt._write_options_file('fakename', opt.config.solver_options)
+        self.assertEqual(opt.config.solver_options.value(), {})
         # Pass it some options that ARE on the command line
         opt = ipopt.Ipopt(solver_options={'max_iter': 4})
-        result = opt._write_options_file('myfile', opt.config.solver_options)
-        self.assertFalse(result)
+        opt._write_options_file('myfile', opt.config.solver_options)
+        self.assertNotIn('option_file_name', opt.config.solver_options)
         self.assertFalse(os.path.isfile('myfile.opt'))
         # Now we are going to actually pass it some options that are NOT on
         # the command line
@@ -335,23 +358,25 @@ Ipopt 3.14.17: Optimal Solution Found
             dname = temp.mkdtemp()
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            filename = os.path.join(dname, 'myfile')
-            result = opt._write_options_file(filename, opt.config.solver_options)
-            self.assertTrue(result)
-            self.assertTrue(os.path.isfile(filename + '.opt'))
+            filename = os.path.join(dname, 'myfile.opt')
+            opt._write_options_file(filename, opt.config.solver_options)
+            self.assertIn('option_file_name', opt.config.solver_options)
+            self.assertTrue(os.path.isfile(filename))
         # Make sure all options are writing to the file
         opt = ipopt.Ipopt(solver_options={'custom_option_1': 4, 'custom_option_2': 3})
         with TempfileManager.new_context() as temp:
             dname = temp.mkdtemp()
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            filename = os.path.join(dname, 'myfile')
-            result = opt._write_options_file(filename, opt.config.solver_options)
-            self.assertTrue(result)
-            self.assertTrue(os.path.isfile(filename + '.opt'))
-            with open(filename + '.opt', 'r') as f:
+            filename = os.path.join(dname, 'myfile.opt')
+            opt._write_options_file(filename, opt.config.solver_options)
+            self.assertIn('option_file_name', opt.config.solver_options)
+            self.assertTrue(os.path.isfile(filename))
+            with open(filename, 'r') as f:
                 data = f.readlines()
-                self.assertEqual(len(data), len(list(opt.config.solver_options.keys())))
+                self.assertEqual(
+                    len(data) + 1, len(list(opt.config.solver_options.keys()))
+                )
 
     def test_has_linear_solver(self):
         opt = ipopt.Ipopt()
@@ -379,17 +404,18 @@ Ipopt 3.14.17: Optimal Solution Found
     def test_create_command_line(self):
         opt = ipopt.Ipopt()
         # No custom options, no file created. Plain and simple.
-        result = opt._create_command_line('myfile', opt.config, False)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(result, [str(opt.config.executable), 'myfile.nl', '-AMPL'])
         # Custom command line options
         opt = ipopt.Ipopt(solver_options={'max_iter': 4})
-        result = opt._create_command_line('myfile', opt.config, False)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result, [str(opt.config.executable), 'myfile.nl', '-AMPL', 'max_iter=4']
         )
         # Let's see if we correctly parse config.time_limit
         opt = ipopt.Ipopt(solver_options={'max_iter': 4}, time_limit=10)
-        result = opt._create_command_line('myfile', opt.config, False)
+        opt._verify_ipopt_options(opt.config)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result,
             [
@@ -402,7 +428,8 @@ Ipopt 3.14.17: Optimal Solution Found
         )
         # Now let's do multiple command line options
         opt = ipopt.Ipopt(solver_options={'max_iter': 4, 'max_cpu_time': 10})
-        result = opt._create_command_line('myfile', opt.config, False)
+        opt._verify_ipopt_options(opt.config)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result,
             [
@@ -413,25 +440,6 @@ Ipopt 3.14.17: Optimal Solution Found
                 'max_iter=4',
             ],
         )
-        # Let's now include if we "have" an options file
-        result = opt._create_command_line('myfile', opt.config, True)
-        self.assertEqual(
-            result,
-            [
-                str(opt.config.executable),
-                'myfile.nl',
-                '-AMPL',
-                'option_file_name=myfile.opt',
-                'max_cpu_time=10',
-                'max_iter=4',
-            ],
-        )
-        # Finally, let's make sure it errors if someone tries to pass option_file_name
-        opt = ipopt.Ipopt(
-            solver_options={'max_iter': 4, 'option_file_name': 'myfile.opt'}
-        )
-        with self.assertRaises(ValueError):
-            result = opt._create_command_line('myfile', opt.config, False)
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
