@@ -13,6 +13,7 @@ import os
 import subprocess
 
 import pyomo.environ as pyo
+from pyomo.common.envvar import is_windows
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict, ADVANCED_OPTION
 from pyomo.common.errors import DeveloperError
@@ -557,15 +558,34 @@ class TestIpopt(unittest.TestCase):
         self.assertEqual(results.solution_status, SolutionStatus.noSolution)
         self.assertIn('OPTION_INVALID', results.solver_log)
 
-        # If the model name contains single and double quotes, then we fail
+        # Because we are using universal=True for to_legal_filename,
+        # using both single and double quotes will be OK
         model.name = 'test"\'model'
-        with self.assertRaisesRegex(ValueError, 'single and double'):
-            results = ipopt.Ipopt().solve(
-                model,
-                solver_options={'bogus_option': 5},
-                raise_exception_on_nonoptimal_result=False,
-                load_solutions=False,
-            )
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        if not is_windows:
+            # This test is not valid on Windows, as {"} is not a valid
+            # character in a directory name.
+            with TempfileManager.new_context() as temp:
+                dname = temp.mkdtemp()
+                working_dir = os.path.join(dname, '"foo"')
+                os.mkdir(working_dir)
+                with self.assertRaisesRegex(ValueError, 'single and double'):
+                    results = ipopt.Ipopt().solve(
+                        model,
+                        working_dir=working_dir,
+                        solver_options={'bogus_option': 5},
+                        raise_exception_on_nonoptimal_result=False,
+                        load_solutions=False,
+                    )
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")

@@ -369,7 +369,14 @@ class Ipopt(SolverBase):
                 dname = config.working_dir
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            basename = to_legal_filename(model.name)
+            # Because we are just "making up" a file name, it is better
+            # to always generate a consistent and legal name, rather
+            # than blindly follow what the user gave us.  We will use
+            # `universal=True` here to make sure that double quotes are
+            # translated, thereby guaranteeing that we should always
+            # generate a legal base name (unless, of course, the user
+            # put double quotes somewhere else in the path)
+            basename = to_legal_filename(model.name, universal=True)
             # Strip off quotes - the command line parser will re-add them
             if basename[0] in "'\"" and basename[0] == basename[-1]:
                 basename = basename[1:-1]
