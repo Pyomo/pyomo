@@ -81,9 +81,16 @@ class UnknownSolver(object):
     def __exit__(self, t, v, traceback):
         pass
 
-    # There are now multiple API versions of solvers
     @classmethod
     def api_version(self):
+        """
+        Defines the API version for all V1 solvers.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            An solver API enum object
+        """
         return SolverAPIVersion.V1
 
     def available(self, exception_flag=True):
@@ -255,9 +262,16 @@ class OptSolver(object):
     def __exit__(self, t, v, traceback):
         pass
 
-    # There are now multiple API versions of solvers
     @classmethod
     def api_version(self):
+        """
+        Defines the API version for all V1 solvers.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            An solver API enum object
+        """
         return SolverAPIVersion.V1
 
     #

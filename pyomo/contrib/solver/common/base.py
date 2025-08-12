@@ -105,9 +105,16 @@ class SolverBase:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
 
-    # There are now multiple API versions of solvers
     @classmethod
     def api_version(self):
+        """
+        Defines the API version for all V2 solvers.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            An solver API enum object
+        """
         return SolverAPIVersion.V2
 
     def solve(self, model: BlockData, **kwargs) -> Results:

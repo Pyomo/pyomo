@@ -635,9 +635,16 @@ class Solver(abc.ABC):
             # preserve the previous behavior
             return self.name
 
-    # There are now multiple API versions of solvers
     @classmethod
     def api_version(self):
+        """
+        Defines the API version for all APPSI solvers.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            An solver API enum object
+        """
         return SolverAPIVersion.APPSI
 
     @abc.abstractmethod

@@ -216,9 +216,7 @@ class ObjectiveSense(NamedIntEnum):
 
 class SolverAPIVersion(NamedIntEnum):
     """
-    Helper enum that defines a common "generation" property
-    for solver interfaces since there are now multiple APIs across different
-    parts of Pyomo.
+    Enum identifying Pyomo solver API version
 
     The numeric values are intentionally a bit odd because APPSI came
     between the official V1 and V2. We still want it to be chronologically
