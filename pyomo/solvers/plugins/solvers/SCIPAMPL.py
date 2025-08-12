@@ -255,6 +255,7 @@ class SCIPAMPL(SystemCallSolver):
 
                     results.solver.time = log_dict['solving_time']
                     results.solver.gap = log_dict['gap']
+                    results.solver.nodes = log_dict['solving_nodes']
                     results.solver.primal_bound = log_dict['primal_bound']
                     results.solver.dual_bound = log_dict['dual_bound']
 
