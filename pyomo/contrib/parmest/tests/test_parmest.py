@@ -215,7 +215,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         self.pest.diagnostic_mode = False
 
-    @unittest.skip("Presently having trouble with mpiexec on appveyor")
+    @unittest.pytest.mark.mpi
     def test_parallel_parmest(self):
         """use mpiexec and mpi4py"""
         p = str(parmestbase.__path__)
@@ -229,7 +229,7 @@ class TestRooneyBiegler(unittest.TestCase):
             + os.sep
             + "rooney_biegler"
             + os.sep
-            + "rooney_biegler_parmest.py"
+            + "rooney_biegler.py"
         )
         rbpath = os.path.abspath(rbpath)  # paranoia strikes deep...
         rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", sys.executable, rbpath]
@@ -1279,7 +1279,7 @@ class TestRooneyBieglerDeprecated(unittest.TestCase):
 
         self.pest.diagnostic_mode = False
 
-    @unittest.skip("Presently having trouble with mpiexec on appveyor")
+    @unittest.pytest.mark.mpi
     def test_parallel_parmest(self):
         """use mpiexec and mpi4py"""
         p = str(parmestbase.__path__)
@@ -1293,7 +1293,7 @@ class TestRooneyBieglerDeprecated(unittest.TestCase):
             + os.sep
             + "rooney_biegler"
             + os.sep
-            + "rooney_biegler_parmest.py"
+            + "rooney_biegler.py"
         )
         rbpath = os.path.abspath(rbpath)  # paranoia strikes deep...
         rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", sys.executable, rbpath]
