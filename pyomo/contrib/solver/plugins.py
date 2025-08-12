@@ -13,7 +13,8 @@
 from .common.factory import SolverFactory
 from .solvers.ipopt import Ipopt
 from .solvers.gurobi_persistent import GurobiPersistent
-from .solvers.gurobi_direct import GurobiDirect
+from .solvers.gurobi.gurobi_direct import GurobiDirect
+from .solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic
 from .solvers.highs import Highs
 
 
@@ -30,6 +31,11 @@ def load():
         name='gurobi_direct',
         legacy_name='gurobi_direct_v2',
         doc='Direct (scipy-based) interface to Gurobi',
+    )(GurobiDirect)
+    SolverFactory.register(
+        name='gurobi_direct_quadratic',
+        legacy_name='gurobi_direct_quadratic_v2',
+        doc='Direct interface to Gurobi',
     )(GurobiDirect)
     SolverFactory.register(
         name='highs', legacy_name='highs', doc='Persistent interface to HiGHS'
