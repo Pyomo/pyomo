@@ -29,8 +29,8 @@ from pyomo.contrib.solver.common.util import IncompatibleModelError
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.core.staleflag import StaleFlagManager
 from .gurobi_direct_base import (
-    GurobiDirectBase, 
-    gurobipy, 
+    GurobiDirectBase,
+    gurobipy,
     _load_vars,
     _get_primals,
     _get_duals,
@@ -45,13 +45,7 @@ logger = logging.getLogger(__name__)
 
 class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
     def __init__(
-        self,
-        solver_model,
-        var_id_map,
-        var_map,
-        con_map,
-        linear_cons,
-        quadratic_cons,
+        self, solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons
     ) -> None:
         super().__init__()
         self._solver_model = solver_model
@@ -62,9 +56,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         self._quadratic_cons = quadratic_cons
 
     def load_vars(
-        self, 
-        vars_to_load: Optional[Sequence[VarData]] = None,
-        solution_id=0,
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
     ) -> None:
         if vars_to_load is None:
             vars_to_load = list(self._vars.values())
@@ -76,9 +68,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         )
 
     def get_primals(
-        self, 
-        vars_to_load: Optional[Sequence[VarData]] = None,
-        solution_id=0,
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
     ) -> Mapping[VarData, float]:
         if vars_to_load is None:
             vars_to_load = list(self._vars.values())
@@ -88,10 +78,9 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
             vars_to_load=vars_to_load,
             solution_number=solution_id,
         )
-    
+
     def get_reduced_costs(
-        self, 
-        vars_to_load: Optional[Sequence[VarData]] = None,
+        self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
         if vars_to_load is None:
             vars_to_load = list(self._vars.values())
@@ -100,10 +89,9 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
             var_map=self._var_map,
             vars_to_load=vars_to_load,
         )
-    
+
     def get_duals(
-        self, 
-        cons_to_load: Optional[Sequence[ConstraintData]] = None,
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Dict[ConstraintData, float]:
         if cons_to_load is None:
             cons_to_load = list(self._con_map.keys())
@@ -124,8 +112,12 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
 
 
 class GurobiPersistentSolutionLoader(GurobiDirectQuadraticSolutionLoader):
-    def __init__(self, solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons) -> None:
-        super().__init__(solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons)
+    def __init__(
+        self, solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons
+    ) -> None:
+        super().__init__(
+            solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons
+        )
         self._valid = True
 
     def invalidate(self):
@@ -135,19 +127,27 @@ class GurobiPersistentSolutionLoader(GurobiDirectQuadraticSolutionLoader):
         if not self._valid:
             raise RuntimeError('The results in the solver are no longer valid.')
 
-    def load_vars(self, vars_to_load: Sequence[VarData] | None = None, solution_id=0) -> None:
+    def load_vars(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
+    ) -> None:
         self._assert_solution_still_valid()
         return super().load_vars(vars_to_load, solution_id)
-    
-    def get_primals(self, vars_to_load: Sequence[VarData] | None = None, solution_id=0) -> Mapping[VarData, float]:
+
+    def get_primals(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
+    ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return super().get_primals(vars_to_load, solution_id)
 
-    def get_duals(self, cons_to_load: Sequence[ConstraintData] | None = None) -> Dict[ConstraintData, float]:
+    def get_duals(
+        self, cons_to_load: Sequence[ConstraintData] | None = None
+    ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return super().get_duals(cons_to_load)
-    
-    def get_reduced_costs(self, vars_to_load: Sequence[VarData] | None = None) -> Mapping[VarData, float]:
+
+    def get_reduced_costs(
+        self, vars_to_load: Sequence[VarData] | None = None
+    ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return super().get_reduced_costs(vars_to_load)
 
@@ -194,7 +194,9 @@ class _MutableLinearCoefficient:
 
 
 class _MutableRangeConstant:
-    def __init__(self, lhs_expr, rhs_expr, pyomo_con, con_map, slack_name, gurobi_model):
+    def __init__(
+        self, lhs_expr, rhs_expr, pyomo_con, con_map, slack_name, gurobi_model
+    ):
         self.lhs_expr = lhs_expr
         self.rhs_expr = rhs_expr
         self.pyomo_con = pyomo_con
@@ -268,7 +270,9 @@ class _MutableObjective:
         self.constant: _MutableConstant = constant
         self.linear_coefs: List[_MutableLinearCoefficient] = linear_coefs
         self.quadratic_coefs: List[_MutableQuadraticCoefficient] = quadratic_coefs
-        self.last_quadratic_coef_values: List[float] = [value(i.expr) for i in self.quadratic_coefs]
+        self.last_quadratic_coef_values: List[float] = [
+            value(i.expr) for i in self.quadratic_coefs
+        ]
 
     def get_updated_expression(self):
         for ndx, coef in enumerate(self.linear_coefs):
@@ -300,7 +304,7 @@ class _MutableQuadraticCoefficient:
     @property
     def var1(self):
         return self.var_map[self.v1id]
-    
+
     @property
     def var2(self):
         return self.var_map[self.v2id]
@@ -325,13 +329,21 @@ class GurobiDirectQuadratic(GurobiDirectBase):
         self._clear()
         self._solver_model = gurobipy.Model(env=self.env())
         timer.start('collect constraints')
-        cons = list(pyomo_model.component_data_objects(Constraint, descend_into=True, active=True))
+        cons = list(
+            pyomo_model.component_data_objects(
+                Constraint, descend_into=True, active=True
+            )
+        )
         timer.stop('collect constraints')
         timer.start('translate constraints')
         self._add_constraints(cons)
         timer.stop('translate constraints')
         timer.start('sos')
-        sos = list(pyomo_model.component_data_objects(SOSConstraint, descend_into=True, active=True))
+        sos = list(
+            pyomo_model.component_data_objects(
+                SOSConstraint, descend_into=True, active=True
+            )
+        )
         self._add_sos_constraints(sos)
         timer.stop('sos')
         timer.start('get objective')
@@ -351,7 +363,7 @@ class GurobiDirectQuadratic(GurobiDirectBase):
         )
         timer.stop('create gurobipy model')
         return self._solver_model, solution_loader, has_obj
-    
+
     def _clear(self):
         self._solver_model = None
         self._vars = {}
@@ -379,9 +391,7 @@ class GurobiDirectQuadratic(GurobiDirectBase):
             else:
                 vtype = gurobipy.GRB.INTEGER
         else:
-            raise ValueError(
-                f'Unrecognized domain: {var.domain}'
-            )
+            raise ValueError(f'Unrecognized domain: {var.domain}')
         if var.fixed:
             lb = var.value
             ub = lb
@@ -415,16 +425,13 @@ class GurobiDirectQuadratic(GurobiDirectBase):
             raise IncompatibleModelError(
                 f'GurobiDirectQuadratic only supports linear and quadratic expressions: {expr}.'
             )
-        
+
         if len(repn.linear_vars) > 0:
             missing_vars = [v for v in repn.linear_vars if id(v) not in self._vars]
             self._add_variables(missing_vars)
             coef_list = [value(i) for i in repn.linear_coefs]
             vlist = [self._pyomo_var_to_solver_var_map[id(v)] for v in repn.linear_vars]
-            new_expr = gurobipy.LinExpr(
-                coef_list,
-                vlist,
-            )
+            new_expr = gurobipy.LinExpr(coef_list, vlist)
         else:
             new_expr = 0.0
 
@@ -455,8 +462,7 @@ class GurobiDirectQuadratic(GurobiDirectBase):
             gurobi_expr = self._get_expr_from_pyomo_repn(repn)
             if lb is None and ub is None:
                 raise ValueError(
-                    "Constraint does not have a lower "
-                    f"or an upper bound: {con} \n"
+                    "Constraint does not have a lower " f"or an upper bound: {con} \n"
                 )
             elif lb is None:
                 gurobi_expr_list.append(gurobi_expr <= float(ub - repn.constant))
@@ -465,9 +471,14 @@ class GurobiDirectQuadratic(GurobiDirectBase):
             elif lb == ub:
                 gurobi_expr_list.append(gurobi_expr == float(lb - repn.constant))
             else:
-                gurobi_expr_list.append(gurobi_expr == [float(lb-repn.constant), float(ub-repn.constant)])
+                gurobi_expr_list.append(
+                    gurobi_expr
+                    == [float(lb - repn.constant), float(ub - repn.constant)]
+                )
 
-        gurobi_cons = self._solver_model.addConstrs((gurobi_expr_list[i] for i in range(len(gurobi_expr_list)))).values()
+        gurobi_cons = self._solver_model.addConstrs(
+            (gurobi_expr_list[i] for i in range(len(gurobi_expr_list)))
+        ).values()
         self._pyomo_con_to_solver_con_map.update(zip(cons, gurobi_cons))
 
     def _add_sos_constraints(self, cons: List[SOSConstraintData]):
@@ -485,7 +496,9 @@ class GurobiDirectQuadratic(GurobiDirectBase):
             gurobi_vars = []
             weights = []
 
-            missing_vars = {id(v): v for v, w in con.get_items() if id(v) not in self._vars}
+            missing_vars = {
+                id(v): v for v, w in con.get_items() if id(v) not in self._vars
+            }
             self._add_variables(list(missing_vars.values()))
 
             for v, w in con.get_items():
@@ -608,7 +621,7 @@ class GurobiPersistent(GurobiDirectQuadratic):
         )
         has_obj = self._objective is not None
         return self._solver_model, solution_loader, has_obj
-    
+
     def release_license(self):
         self._clear()
         self.__class__.release_license()
@@ -617,17 +630,21 @@ class GurobiPersistent(GurobiDirectQuadratic):
         res = super().solve(model, **kwds)
         self._needs_updated = False
         return res
-    
+
     def _process_domain_and_bounds(self, var):
         res = super()._process_domain_and_bounds(var)
         if not is_constant(var._lb):
-            mutable_lb = _MutableLowerBound(id(var), var.lower, self._pyomo_var_to_solver_var_map)
+            mutable_lb = _MutableLowerBound(
+                id(var), var.lower, self._pyomo_var_to_solver_var_map
+            )
             self._mutable_bounds[id(var), 'lb'] = (var, mutable_lb)
         if not is_constant(var._ub):
-            mutable_ub = _MutableUpperBound(id(var), var.upper, self._pyomo_var_to_solver_var_map)
+            mutable_ub = _MutableUpperBound(
+                id(var), var.upper, self._pyomo_var_to_solver_var_map
+            )
             self._mutable_bounds[id(var), 'ub'] = (var, mutable_ub)
         return res
-    
+
     def _add_variables(self, variables: List[VarData]):
         self._invalidate_last_results()
         super()._add_variables(variables)
@@ -673,37 +690,60 @@ class GurobiPersistent(GurobiDirectQuadratic):
             mutable_constant = None
             if lb is None and ub is None:
                 raise ValueError(
-                    "Constraint does not have a lower "
-                    f"or an upper bound: {con} \n"
+                    "Constraint does not have a lower " f"or an upper bound: {con} \n"
                 )
             elif lb is None:
                 rhs_expr = ub - repn.constant
                 gurobi_expr_list.append(gurobi_expr <= float(value(rhs_expr)))
                 if not is_constant(rhs_expr):
-                    mutable_constant = _MutableConstant(rhs_expr, con, self._pyomo_con_to_solver_con_map)
+                    mutable_constant = _MutableConstant(
+                        rhs_expr, con, self._pyomo_con_to_solver_con_map
+                    )
             elif ub is None:
                 rhs_expr = lb - repn.constant
                 gurobi_expr_list.append(float(value(rhs_expr)) <= gurobi_expr)
                 if not is_constant(rhs_expr):
-                    mutable_constant = _MutableConstant(rhs_expr, con, self._pyomo_con_to_solver_con_map)
+                    mutable_constant = _MutableConstant(
+                        rhs_expr, con, self._pyomo_con_to_solver_con_map
+                    )
             elif con.equality:
                 rhs_expr = lb - repn.constant
                 gurobi_expr_list.append(gurobi_expr == float(value(rhs_expr)))
                 if not is_constant(rhs_expr):
-                    mutable_constant = _MutableConstant(rhs_expr, con, self._pyomo_con_to_solver_con_map)
+                    mutable_constant = _MutableConstant(
+                        rhs_expr, con, self._pyomo_con_to_solver_con_map
+                    )
             else:
-                assert len(repn.quadratic_vars) == 0, "Quadratic range constraints are not supported"
+                assert (
+                    len(repn.quadratic_vars) == 0
+                ), "Quadratic range constraints are not supported"
                 lhs_expr = lb - repn.constant
                 rhs_expr = ub - repn.constant
-                gurobi_expr_list.append(gurobi_expr == [float(value(lhs_expr)), float(value(rhs_expr))])
+                gurobi_expr_list.append(
+                    gurobi_expr == [float(value(lhs_expr)), float(value(rhs_expr))]
+                )
                 if not is_constant(lhs_expr) or not is_constant(rhs_expr):
                     conname = f'c{self._constraint_ndx}[{ndx}]'
-                    mutable_constant = _MutableRangeConstant(lhs_expr, rhs_expr, con, self._pyomo_con_to_solver_con_map, 'Rg' + conname, self._solver_model)
+                    mutable_constant = _MutableRangeConstant(
+                        lhs_expr,
+                        rhs_expr,
+                        con,
+                        self._pyomo_con_to_solver_con_map,
+                        'Rg' + conname,
+                        self._solver_model,
+                    )
 
             mlc_list = []
             for c, v in zip(repn.linear_coefs, repn.linear_vars):
                 if not is_constant(c):
-                    mlc = _MutableLinearCoefficient(c, con, self._pyomo_con_to_solver_con_map, id(v), self._pyomo_var_to_solver_var_map, self._solver_model)
+                    mlc = _MutableLinearCoefficient(
+                        c,
+                        con,
+                        self._pyomo_con_to_solver_con_map,
+                        id(v),
+                        self._pyomo_var_to_solver_var_map,
+                        self._solver_model,
+                    )
                     mlc_list.append(mlc)
 
             if len(repn.quadratic_vars) == 0:
@@ -715,15 +755,19 @@ class GurobiPersistent(GurobiDirectQuadratic):
                     self._mutable_helpers[con].append(mutable_constant)
             else:
                 if mutable_constant is None:
-                    mutable_constant = _MutableConstant(rhs_expr, con, self._pyomo_con_to_solver_con_map)
+                    mutable_constant = _MutableConstant(
+                        rhs_expr, con, self._pyomo_con_to_solver_con_map
+                    )
                 mqc_list = []
                 for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
                     if not is_constant(coef):
-                        mqc = _MutableQuadraticCoefficient(coef, id(x), id(y), self._pyomo_var_to_solver_var_map)
+                        mqc = _MutableQuadraticCoefficient(
+                            coef, id(x), id(y), self._pyomo_var_to_solver_var_map
+                        )
                         mqc_list.append(mqc)
                 mqc = _MutableQuadraticConstraint(
                     self._solver_model,
-                    con, 
+                    con,
                     self._pyomo_con_to_solver_con_map,
                     mutable_constant,
                     mlc_list,
@@ -731,10 +775,12 @@ class GurobiPersistent(GurobiDirectQuadratic):
                 )
                 self._mutable_quadratic_helpers[con] = mqc
 
-        gurobi_cons = list(self._solver_model.addConstrs(
-            (gurobi_expr_list[i] for i in range(len(gurobi_expr_list))), 
-            name=f'c{self._constraint_ndx}'
-        ).values())
+        gurobi_cons = list(
+            self._solver_model.addConstrs(
+                (gurobi_expr_list[i] for i in range(len(gurobi_expr_list))),
+                name=f'c{self._constraint_ndx}',
+            ).values()
+        )
         self._constraint_ndx += 1
         self._pyomo_con_to_solver_con_map.update(zip(cons, gurobi_cons))
         self._constraints_added_since_update.update(cons)
@@ -761,7 +807,9 @@ class GurobiPersistent(GurobiDirectQuadratic):
             else:
                 raise ValueError(f'Objective sense is not recognized: {obj.sense}')
 
-            repn = generate_standard_repn(obj.expr, quadratic=True, compute_values=False)
+            repn = generate_standard_repn(
+                obj.expr, quadratic=True, compute_values=False
+            )
             repn_constant = value(repn.constant)
             gurobi_expr = self._get_expr_from_pyomo_repn(repn)
 
@@ -770,16 +818,27 @@ class GurobiPersistent(GurobiDirectQuadratic):
             mlc_list = []
             for c, v in zip(repn.linear_coefs, repn.linear_vars):
                 if not is_constant(c):
-                    mlc = _MutableLinearCoefficient(c, None, None, id(v), self._pyomo_var_to_solver_var_map, self._solver_model)
+                    mlc = _MutableLinearCoefficient(
+                        c,
+                        None,
+                        None,
+                        id(v),
+                        self._pyomo_var_to_solver_var_map,
+                        self._solver_model,
+                    )
                     mlc_list.append(mlc)
 
             mqc_list = []
             for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
                 if not is_constant(coef):
-                    mqc = _MutableQuadraticCoefficient(coef, id(x), id(y), self._pyomo_var_to_solver_var_map)
+                    mqc = _MutableQuadraticCoefficient(
+                        coef, id(x), id(y), self._pyomo_var_to_solver_var_map
+                    )
                     mqc_list.append(mqc)
 
-            self._mutable_objective = _MutableObjective(self._solver_model, mutable_constant, mlc_list, mqc_list)
+            self._mutable_objective = _MutableObjective(
+                self._solver_model, mutable_constant, mlc_list, mqc_list
+            )
 
         # hack
         # see PR #2454
@@ -865,9 +924,7 @@ class GurobiPersistent(GurobiDirectQuadratic):
             new_rhs = helper.get_updated_rhs()
             new_sense = gurobi_con.qcsense
             self._solver_model.remove(gurobi_con)
-            new_con = self._solver_model.addQConstr(
-                new_gurobi_expr, new_sense, new_rhs,
-            )
+            new_con = self._solver_model.addQConstr(new_gurobi_expr, new_sense, new_rhs)
             self._pyomo_con_to_solver_con_map[con] = new_con
             helper.pyomo_con = con
             self._constraints_added_since_update.add(con)
@@ -880,7 +937,7 @@ class GurobiPersistent(GurobiDirectQuadratic):
                 else:
                     sense = gurobipy.GRB.MAXIMIZE
                 # TODO: need a test for when part of the object is linear
-                #       and part of the objective is quadratic, but both 
+                #       and part of the objective is quadratic, but both
                 #       parts have mutable coefficients
                 self._solver_model.setObjective(new_gurobi_expr, sense=sense)
 

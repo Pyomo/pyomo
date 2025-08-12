@@ -87,9 +87,7 @@ def _load_suboptimal_mip_solution(solver_model, var_map, vars_to_load, solution_
         solver_model.getAttr('NumIntVars') == 0
         and solver_model.getAttr('NumBinVars') == 0
     ):
-        raise ValueError(
-            'Cannot obtain suboptimal solutions for a continuous model'
-        )
+        raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
     original_solution_number = solver_model.getParamInfo('SolutionNumber')[2]
     solver_model.setParam('SolutionNumber', solution_number)
     gurobi_vars_to_load = [var_map[id(v)] for v in vars_to_load]
@@ -112,7 +110,7 @@ def _load_vars(solver_model, var_map, vars_to_load, solution_number=0):
     for v, val in _get_primals(
         solver_model=solver_model,
         var_map=var_map,
-        vars_to_load=vars_to_load, 
+        vars_to_load=vars_to_load,
         solution_number=solution_number,
     ).items():
         v.set_value(val, skip_validation=True)
@@ -177,7 +175,7 @@ def _get_duals(solver_model, con_map, linear_cons_to_load, quadratic_cons_to_loa
     """
     if solver_model.Status != gurobipy.GRB.OPTIMAL:
         raise NoDualsError()
-    
+
     linear_gurobi_cons = [con_map[c] for c in linear_cons_to_load]
     quadratic_gurobi_cons = [con_map[c] for c in quadratic_cons_to_load]
     linear_vals = solver_model.getAttr("Pi", linear_gurobi_cons)
@@ -293,7 +291,7 @@ class GurobiDirectBase(SolverBase):
     def _pyomo_gurobi_var_iter(self):
         # generator of tuples (pyomo_var, gurobi_var)
         raise NotImplementedError('should be implemented by derived classes')
-    
+
     def _mipstart(self):
         for pyomo_var, gurobi_var in self._pyomo_gurobi_var_iter():
             if pyomo_var.is_integer() and pyomo_var.value is not None:
@@ -304,11 +302,8 @@ class GurobiDirectBase(SolverBase):
         orig_config = self.config
         orig_cwd = os.getcwd()
         try:
-            config = self.config(
-                value=kwds, 
-                preserve_implicit=True,
-            )
-            
+            config = self.config(value=kwds, preserve_implicit=True)
+
             # hack to work around legacy solver wrapper __setattr__
             # otherwise, this would just be self.config = config
             object.__setattr__(self, 'config', config)
@@ -329,7 +324,9 @@ class GurobiDirectBase(SolverBase):
             if config.working_dir:
                 os.chdir(config.working_dir)
             with capture_output(TeeStream(*ostreams), capture_fd=False):
-                gurobi_model, solution_loader, has_obj = self._create_solver_model(model)
+                gurobi_model, solution_loader, has_obj = self._create_solver_model(
+                    model
+                )
                 options = config.solver_options
 
                 gurobi_model.setParam('LogToConsole', 1)
@@ -354,9 +351,7 @@ class GurobiDirectBase(SolverBase):
                 timer.stop('optimize')
 
             res = self._postsolve(
-                grb_model=gurobi_model, 
-                solution_loader=solution_loader,
-                has_obj=has_obj,
+                grb_model=gurobi_model, solution_loader=solution_loader, has_obj=has_obj
             )
         finally:
             os.chdir(orig_cwd)
@@ -450,9 +445,9 @@ class GurobiDirectBase(SolverBase):
                 raise NoFeasibleSolutionError()
         self.config.timer.stop('load solution')
 
-        # self.config gets copied a the beginning of 
+        # self.config gets copied a the beginning of
         # solve and restored at the end, so modifying
-        # results.solver_config will not actually 
+        # results.solver_config will not actually
         # modify self.config
         results.solver_config = self.config
         results.solver_name = self.name
