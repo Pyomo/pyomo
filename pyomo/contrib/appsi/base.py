@@ -638,7 +638,7 @@ class Solver(abc.ABC):
     @classmethod
     def api_version(self):
         """
-        Defines the API version for all APPSI solvers.
+        Return the public API supported by this interface.
 
         Returns
         -------

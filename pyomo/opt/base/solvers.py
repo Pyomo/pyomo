@@ -84,7 +84,7 @@ class UnknownSolver(object):
     @classmethod
     def api_version(self):
         """
-        Defines the API version for all V1 solvers.
+        Return the public API supported by this interface.
 
         Returns
         -------
@@ -265,7 +265,7 @@ class OptSolver(object):
     @classmethod
     def api_version(self):
         """
-        Defines the API version for all V1 solvers.
+        Return the public API supported by this interface.
 
         Returns
         -------

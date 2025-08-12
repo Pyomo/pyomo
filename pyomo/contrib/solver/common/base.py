@@ -108,7 +108,7 @@ class SolverBase:
     @classmethod
     def api_version(self):
         """
-        Defines the API version for all V2 solvers.
+        Return the public API supported by this interface.
 
         Returns
         -------
