@@ -30,9 +30,8 @@ from pyomo.contrib.solver.common.util import (
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
-# from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct import GurobiDirect
-from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic
+from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic, GurobiPersistent
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
@@ -48,14 +47,14 @@ if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
 all_solvers = [
-    # ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('ipopt', Ipopt),
     ('highs', Highs),
 ]
 mip_solvers = [
-    # ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('highs', Highs),
@@ -64,13 +63,13 @@ nlp_solvers = [
     ('ipopt', Ipopt),
 ]
 qcp_solvers = [
-    # ('gurobi_persistent', GurobiPersistent), 
+    ('gurobi_persistent', GurobiPersistent), 
     ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('ipopt', Ipopt),
 ]
 qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [
-    # ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct_quadratic', GurobiDirectQuadratic),
 ]
 nl_solvers = [('ipopt', Ipopt)]

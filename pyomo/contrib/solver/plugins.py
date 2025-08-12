@@ -12,9 +12,8 @@
 
 from .common.factory import SolverFactory
 from .solvers.ipopt import Ipopt
-from .solvers.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi.gurobi_direct import GurobiDirect
-from .solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic
+from .solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic, GurobiPersistent
 from .solvers.highs import Highs
 
 

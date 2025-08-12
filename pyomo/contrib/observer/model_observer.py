@@ -162,9 +162,6 @@ class AutoUpdateConfig(ConfigDict):
 
 
 class Observer(abc.ABC):
-    def __init__(self):
-        pass
-
     @abc.abstractmethod
     def add_variables(self, variables: List[VarData]):
         pass
@@ -255,7 +252,7 @@ class ModelChangeDetector:
         self._model = model
         self._add_block(model)
 
-    def _add_variables(self, variables: List[VarData]):
+    def add_variables(self, variables: List[VarData]):
         for v in variables:
             if id(v) in self._referenced_variables:
                 raise ValueError(f'Variable {v.name} has already been added')
@@ -271,7 +268,7 @@ class ModelChangeDetector:
         for obs in self._observers:
             obs.add_variables(variables)
 
-    def _add_parameters(self, params: List[ParamData]):
+    def add_parameters(self, params: List[ParamData]):
         for p in params:
             pid = id(p)
             if pid in self._referenced_params:
@@ -287,7 +284,7 @@ class ModelChangeDetector:
             v_id = id(v)
             if v_id not in self._referenced_variables:
                 new_vars[v_id] = v
-        self._add_variables(list(new_vars.values()))
+        self.add_variables(list(new_vars.values()))
 
     def _check_to_remove_vars(self, variables: List[VarData]):
         vars_to_remove = {}
@@ -296,7 +293,7 @@ class ModelChangeDetector:
             ref_cons, ref_sos, ref_obj = self._referenced_variables[v_id]
             if len(ref_cons) == 0 and len(ref_sos) == 0 and ref_obj is None:
                 vars_to_remove[v_id] = v
-        self._remove_variables(list(vars_to_remove.values()))
+        self.remove_variables(list(vars_to_remove.values()))
 
     def _check_for_new_params(self, params: List[ParamData]):
         new_params = {}
@@ -304,7 +301,7 @@ class ModelChangeDetector:
             pid = id(p)
             if pid not in self._referenced_params:
                 new_params[pid] = p
-        self._add_parameters(list(new_params.values()))
+        self.add_parameters(list(new_params.values()))
 
     def _check_to_remove_params(self, params: List[ParamData]):
         params_to_remove = {}
@@ -313,9 +310,9 @@ class ModelChangeDetector:
             ref_cons, ref_sos, ref_obj = self._referenced_params[p_id]
             if len(ref_cons) == 0 and len(ref_sos) == 0 and ref_obj is None:
                 params_to_remove[p_id] = p
-        self._remove_parameters(list(params_to_remove.values()))
+        self.remove_parameters(list(params_to_remove.values()))
 
-    def _add_constraints(self, cons: List[ConstraintData]):
+    def add_constraints(self, cons: List[ConstraintData]):
         vars_to_check = []
         params_to_check = []
         for con in cons:
@@ -343,7 +340,7 @@ class ModelChangeDetector:
         for obs in self._observers:
             obs.add_constraints(cons)
 
-    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
+    def add_sos_constraints(self, cons: List[SOSConstraintData]):
         vars_to_check = []
         params_to_check = []
         for con in cons:
@@ -373,7 +370,7 @@ class ModelChangeDetector:
         for obs in self._observers:
             obs.add_sos_constraints(cons)
 
-    def _set_objective(self, obj: Optional[ObjectiveData]):
+    def set_objective(self, obj: Optional[ObjectiveData]):
         vars_to_remove_check = []
         params_to_remove_check = []
         if self._objective is not None:
@@ -414,12 +411,12 @@ class ModelChangeDetector:
         self._check_to_remove_params(params_to_remove_check)
 
     def _add_block(self, block):
-        self._add_constraints(
+        self.add_constraints(
             list(
                 block.component_data_objects(Constraint, descend_into=True, active=True)
             )
         )
-        self._add_sos_constraints(
+        self.add_sos_constraints(
             list(
                 block.component_data_objects(
                     SOSConstraint, descend_into=True, active=True
@@ -427,9 +424,9 @@ class ModelChangeDetector:
             )
         )
         obj = get_objective(block)
-        self._set_objective(obj)
+        self.set_objective(obj)
 
-    def _remove_constraints(self, cons: List[ConstraintData]):
+    def remove_constraints(self, cons: List[ConstraintData]):
         for obs in self._observers:
             obs.remove_constraints(cons)
         vars_to_check = []
@@ -453,7 +450,7 @@ class ModelChangeDetector:
         self._check_to_remove_vars(vars_to_check)
         self._check_to_remove_params(params_to_check)
 
-    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
+    def remove_sos_constraints(self, cons: List[SOSConstraintData]):
         for obs in self._observers:
             obs.remove_sos_constraints(cons)
         vars_to_check = []
@@ -476,7 +473,7 @@ class ModelChangeDetector:
         self._check_to_remove_vars(vars_to_check)
         self._check_to_remove_params(params_to_check)
 
-    def _remove_variables(self, variables: List[VarData]):
+    def remove_variables(self, variables: List[VarData]):
         for obs in self._observers:
             obs.remove_variables(variables)
         for v in variables:
@@ -493,7 +490,7 @@ class ModelChangeDetector:
             del self._referenced_variables[v_id]
             del self._vars[v_id]
 
-    def _remove_parameters(self, params: List[ParamData]):
+    def remove_parameters(self, params: List[ParamData]):
         for obs in self._observers:
             obs.remove_parameters(params)
         for p in params:
@@ -510,7 +507,7 @@ class ModelChangeDetector:
             del self._referenced_params[p_id]
             del self._params[p_id]
 
-    def _update_variables(self, variables: List[VarData]):
+    def update_variables(self, variables: List[VarData]):
         for v in variables:
             self._vars[id(v)] = (
                 v,
@@ -523,7 +520,7 @@ class ModelChangeDetector:
         for obs in self._observers:
             obs.update_variables(variables)
 
-    def _update_parameters(self, params):
+    def update_parameters(self, params):
         for p in params:
             self._params[id(p)] = (p, p.value)
         for obs in self._observers:
@@ -668,28 +665,28 @@ class ModelChangeDetector:
         if config.check_for_new_or_removed_constraints:
             timer.start('sos')
             new_sos, old_sos = self._check_for_new_or_removed_sos()
-            self._add_sos_constraints(new_sos)
-            self._remove_sos_constraints(old_sos)
+            self.add_sos_constraints(new_sos)
+            self.remove_sos_constraints(old_sos)
             added_sos.update(new_sos)
             timer.stop('sos')
             timer.start('cons')
             new_cons, old_cons = self._check_for_new_or_removed_constraints()
-            self._add_constraints(new_cons)
-            self._remove_constraints(old_cons)
+            self.add_constraints(new_cons)
+            self.remove_constraints(old_cons)
             added_cons.update(new_cons)
             timer.stop('cons')
 
         if config.update_constraints:
             timer.start('cons')
             cons_to_update = self._check_for_modified_constraints()
-            self._remove_constraints(cons_to_update)
-            self._add_constraints(cons_to_update)
+            self.remove_constraints(cons_to_update)
+            self.add_constraints(cons_to_update)
             added_cons.update(cons_to_update)
             timer.stop('cons')
             timer.start('sos')
             sos_to_update = self._check_for_modified_sos()
-            self._remove_sos_constraints(sos_to_update)
-            self._add_sos_constraints(sos_to_update)
+            self.remove_sos_constraints(sos_to_update)
+            self.add_sos_constraints(sos_to_update)
             added_sos.update(sos_to_update)
             timer.stop('sos')
 
@@ -698,10 +695,10 @@ class ModelChangeDetector:
         if config.update_vars:
             timer.start('vars')
             vars_to_update, cons_to_update, update_obj = self._check_for_var_changes()
-            self._update_variables(vars_to_update)
+            self.update_variables(vars_to_update)
             cons_to_update = [i for i in cons_to_update if i not in added_cons]
-            self._remove_constraints(cons_to_update)
-            self._add_constraints(cons_to_update)
+            self.remove_constraints(cons_to_update)
+            self.add_constraints(cons_to_update)
             added_cons.update(cons_to_update)
             if update_obj:
                 need_to_set_objective = True
@@ -711,8 +708,8 @@ class ModelChangeDetector:
             timer.start('named expressions')
             cons_to_update, update_obj = self._check_for_named_expression_changes()
             cons_to_update = [i for i in cons_to_update if i not in added_cons]
-            self._remove_constraints(cons_to_update)
-            self._add_constraints(cons_to_update)
+            self.remove_constraints(cons_to_update)
+            self.add_constraints(cons_to_update)
             added_cons.update(cons_to_update)
             if update_obj:
                 need_to_set_objective = True
@@ -730,11 +727,11 @@ class ModelChangeDetector:
                 need_to_set_objective = True
 
         if need_to_set_objective:
-            self._set_objective(new_obj)
+            self.set_objective(new_obj)
         timer.stop('objective')
 
         if config.update_parameters:
             timer.start('params')
             params_to_update = self._check_for_param_changes()
-            self._update_parameters(params_to_update)
+            self.update_parameters(params_to_update)
             timer.stop('params')
