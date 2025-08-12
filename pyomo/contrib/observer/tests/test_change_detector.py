@@ -6,7 +6,11 @@ from pyomo.core.base.var import VarData
 import pyomo.environ as pe
 from pyomo.common import unittest
 from typing import List
-from pyomo.contrib.observer.model_observer import Observer, ModelChangeDetector, AutoUpdateConfig
+from pyomo.contrib.observer.model_observer import (
+    Observer,
+    ModelChangeDetector,
+    AutoUpdateConfig,
+)
 from pyomo.common.collections import ComponentMap
 import logging
 
@@ -31,11 +35,9 @@ class ObserverChecker(Observer):
 
     def check(self, expected):
         unittest.assertStructuredAlmostEqual(
-            first=expected,
-            second=self.counts,
-            places=7,
+            first=expected, second=self.counts, places=7
         )
-    
+
     def _process(self, comps, key):
         for c in comps:
             if c not in self.counts:
@@ -120,7 +122,7 @@ class TestChangeDetector(unittest.TestCase):
         detector.set_instance(m)
         obs.check(expected)
 
-        m.obj = pe.Objective(expr=m.x**2 + m.p*m.y**2)
+        m.obj = pe.Objective(expr=m.x**2 + m.p * m.y**2)
         detector.update()
         expected[m.obj] = make_count_dict()
         expected[m.obj]['set'] += 1
@@ -131,7 +133,7 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.p] = make_count_dict()
         expected[m.p]['add'] += 1
         obs.check(expected)
-        
+
         m.y.setlb(0)
         detector.update()
         expected[m.y]['update'] += 1
@@ -161,7 +163,7 @@ class TestChangeDetector(unittest.TestCase):
         obs.check(expected)
 
         del m.obj
-        m.obj = pe.Objective(expr=m.p*m.x)
+        m.obj = pe.Objective(expr=m.p * m.x)
         detector.update()
         expected[m.p]['add'] += 1
         expected[m.y]['remove'] += 1
@@ -186,7 +188,7 @@ class TestChangeDetector(unittest.TestCase):
         obs.check(expected)
 
         m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= (m.x - m.p)**2)
+        m.c1 = pe.Constraint(expr=m.y >= (m.x - m.p) ** 2)
         detector.update()
         expected[m.x] = make_count_dict()
         expected[m.y] = make_count_dict()
@@ -208,9 +210,9 @@ class TestChangeDetector(unittest.TestCase):
         obs.pprint()
         expected[m.c1]['remove'] += 1
         expected[m.c1]['add'] += 1
-        # because x and p are only used in the 
-        # one constraint, they get removed when 
-        # the constraint is removed and then 
+        # because x and p are only used in the
+        # one constraint, they get removed when
+        # the constraint is removed and then
         # added again when the constraint is added
         expected[m.x]['update'] += 1
         expected[m.x]['remove'] += 1
