@@ -1037,8 +1037,8 @@ class TestLinear(unittest.TestCase):
         LE6 = MonomialTermExpression((6, m.x))
         NL = (
             2 * (7 * m.x**2)
-            + 4 * m.x**2 * (7 * m.x**2 + 6 * m.x + 5)
-            + (LE3) * (7 * m.x**2 + LE6)
+            + 5 * (4 * m.x**2)
+            + (4 * m.x**2 + LE3) * (7 * m.x**2 + LE6)
         )
 
         self.assertEqual(cfg.subexpr, {})
@@ -1674,7 +1674,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
-        self.assertIsNone(repn.nonlinear)
+        assertExpressionsEqual(self, repn.nonlinear, 0 * log(m.x[3]))
 
         m.p = Param(mutable=True, within=Any, initialize=None)
         e = m.p * m.x[0] + m.p * m.x[1] * m.x[2] + m.p * log(m.x[3])
@@ -1698,3 +1698,85 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {id(m.x[0]): InvalidNumber(None)})
         self.assertEqual(repn.nonlinear, InvalidNumber(None))
+
+        e = m.p * m.x[0] + m.p * m.x[1] + m.p * log(m.x[3])
+        f = 1 + m.x[0] + 0 * e
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(**cfg).walk_expression(f)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(
+            repn.linear,
+            {id(m.x[0]): InvalidNumber(None), id(m.x[1]): InvalidNumber(None)},
+        )
+        self.assertEqual(repn.nonlinear, InvalidNumber(None))
+
+        f = 1 + m.p + 0 * e
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(**cfg).walk_expression(f)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, InvalidNumber(None))
+        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(
+            repn.linear,
+            {id(m.x[0]): InvalidNumber(None), id(m.x[1]): InvalidNumber(None)},
+        )
+        self.assertEqual(repn.nonlinear, InvalidNumber(None))
+
+    def test_var_order(self):
+        m = ConcreteModel()
+        m.x = Var(range(4))
+
+        e = 2 * m.x[1] + m.x[0] + 4 * m.x[3] + 3 * m.x[2]
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(**cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear), 4)
+        self.assertEqual(
+            repn.linear, {id(m.x[0]): 1, id(m.x[1]): 2, id(m.x[2]): 3, id(m.x[3]): 4}
+        )
+        self.assertEqual(repn.nonlinear, None)

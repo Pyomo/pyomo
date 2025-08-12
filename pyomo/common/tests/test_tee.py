@@ -51,16 +51,16 @@ class timestamper:
 
     def check(self, *bases):
         """Map the recorded times to {0, 1} based on the range of times
-        recorded: anything in the first half of the range is mapped to
-        0, and anything in the second half is mapped to 1.  This
+        recorded: anything in the first two-thirds of the range is mapped to
+        0, and anything in the last third is mapped to 1.  This
         "discretizes" the times so that we can reliably compare to
         baselines.
 
         """
 
         n = list(itertools.chain(*self.buf))
-        mid = (min(n) + max(n)) / 2.0
-        result = [tuple(0 if i < mid else 1 for i in _) for _ in self.buf]
+        cutoff = min(n) + (max(n) - min(n)) * 2.0 / 3.0
+        result = [tuple(0 if i < cutoff else 1 for i in _) for _ in self.buf]
         if result not in bases:
             base = ' or '.join(str(_) for _ in bases)
             self.error = f"result {result} != baseline {base}\nRaw timing: {self.buf}"
@@ -303,6 +303,7 @@ class TestTeeStream(unittest.TestCase):
 class TestCapture(unittest.TestCase):
     def setUp(self):
         self.streams = sys.stdout, sys.stderr
+        self.fd = [os.dup(stream.fileno()) for stream in self.streams]
         self.reenable_gc = gc.isenabled()
         gc.disable()
         gc.collect()
@@ -313,6 +314,8 @@ class TestCapture(unittest.TestCase):
 
     def tearDown(self):
         sys.stdout, sys.stderr = self.streams
+        os.dup2(self.fd[0], self.streams[0].fileno())
+        os.dup2(self.fd[1], self.streams[1].fileno())
         sys.setswitchinterval(self.switchinterval)
         if self.reenable_gc:
             gc.enable()
@@ -531,14 +534,14 @@ class TestCapture(unittest.TestCase):
             self.assertEqual(len(T.context_stack), 2)
         T = tee.capture_output(capture_fd=True)
         # out & err point to something other than fd 1 and 2
-        sys.stdout = os.fdopen(os.dup(1), closefd=True)
-        sys.stderr = os.fdopen(os.dup(2), closefd=True)
+        sys.stdout = os.fdopen(os.dup(1), 'w', closefd=True)
+        sys.stderr = os.fdopen(os.dup(2), 'w', closefd=True)
         with sys.stdout, sys.stderr:
             with T:
                 self.assertEqual(len(T.context_stack), 8)
         # out & err point to fd 1 and 2
-        sys.stdout = os.fdopen(1, closefd=False)
-        sys.stderr = os.fdopen(2, closefd=False)
+        sys.stdout = os.fdopen(1, 'w', closefd=False)
+        sys.stderr = os.fdopen(2, 'w', closefd=False)
         with sys.stdout, sys.stderr:
             with T:
                 self.assertEqual(len(T.context_stack), 6)
@@ -781,7 +784,8 @@ class BufferTester(object):
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
-            sys.stdout.write(f"{time.time()}" + '    ' * 4096 + "\n")
+            # Note: bigger than the buffer we allocate on Windows.
+            sys.stdout.write(f"{time.time()}" + ' ' * tee._pipe_buffersize + "\n")
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):

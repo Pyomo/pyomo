@@ -2,6 +2,79 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.9.3   (6 Aug 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Typo corrections (#3675, #3652, #3615)
+  - Rework `ConfigDict` numpydoc generation support (#3667)
+  - Improve `TeeStream` robustness (#3583, #3588, #3601, #3633, #3640)
+  - Modernize infrastructure to use `pyproject.toml` (#3603, #3676)
+  - Numpy2 compatibility fixes (#3607, #3636)
+  - Allow custom messages in derived classes from `PyomoException` (#3596)
+  - Resolve Python 3.14 compatibility issues (#3643)
+  - Resolve an assortment of infrastructure errors (pkg_resources/GAMS) (#3644)
+  - Introduce retries into `download-extensions` (#3656)
+  - Add project-level default configuration for `black` (#3660)
+- Core
+  - Simplify declaration of custom blocks, support rule keyword args (#3570)
+  - Bugfix: Evaluate name in message (#3580)
+  - Map Constraint.Feasible/Infeasible to concrete constraints (#3546)
+  - Rewrite `core.relax_integer_vars` transformation (#3586, #3645)
+  - Disallow calling `del_component` with ComponentData arguments (#3440)
+  - Initialize IndexSet from scalar functions returning dict (#3664)
+  - Refactor linear/quadratic expression compilers (#3651)
+  - Bugfixes for `core.lp_dual` transformation (#3672)
+- Documentation
+  - Remove outdated references to `contrib.simplemodel` (#3666)
+  - Document and test dual sign convention (#3528)
+  - Remove references to projects.coin-or.org (#3612)
+  - Add solver information table to "Getting Started" (#3619)
+  - Rework logic in `building_documentation()` (#3680)
+- GDP
+  - Enable parallel big-M calculation for `gdp.mbigm` transformation (#3641)
+- Solver Interfaces
+  - NL writer: resolve model scaling bug writing `Expression` objects (#3673)
+  - Add qp support for HiGHS (#3531)
+  - Update supported NEOS solvers (#3576, #3582, #3653)
+  - Resolve GAMS/Windows logfile name issue (#3595)
+  - Ensure full test list of solvers (#3598)
+  - Suppress warmstart message from Xpress (#3599)
+  - Resolve issues copying and pickling `SolverResults` (#3597)
+  - Detailed IPOPT log parser in `ipopt_v2` (#3577)
+  - Fix how QUADOBJ section written to MPS files (#3609)
+  - Correctly handle HighsModelStatus.kSolutionLimit (#3634)
+  - More robust GAMS results parsing (#3642)
+  - Mark expected failures for BARON 25.7.16 (#3662, #3665)
+  - Bugfix for comparing results objects to other types (#3677)
+  - Bugfix for SOS constraints and `row_order` option in lp writer (#3678)
+- Testing
+  - Exclude gnu.org from the URL checker tests (#3674)
+  - Remove leftover files after testing (#3670)
+  - Relax test tolerances due to changes in Xpress 45.1.1 (#3584)
+  - Remove `__version__` requirement for performance test driver (#3617)
+  - Temporarily pinning scikit-learn version (#3625)
+- Contributed Packages
+  - APPSI: Remove debugging messages in `appsi_highs` (#3613)
+  - aslfunctions: Add external function library (#3648)
+  - cspline_external: Add utils to constrain parameter calculations (#3593)
+  - DoE: Various bugfixes (#3574)
+  - DoE: More verbose output for sensitivity analysis (#3525)
+  - DoE: Add update_model utility updating suffix values (#3650)
+  - mpc: Add time interpolation to data (#3559)
+  - parmest: Fix inconsistent results when using seed in examples (#3621)
+  - parmest: Bug fixes in main driver and example files (#3635)
+  - PyNumero: Improve BlockVector numpy2 compatibility (#3585)
+  - PyROS: Make exporting subproblems more customizable (#3649)
+  - PyROS: Update separation priority ordering interface (#3581)
+  - PyROS: Update uncertainty set validation methods (#3558)
+  - PyROS: Adjust handling of separation objective evaluation errors (#3646)
+  - sensitivity_toolbox: Pynumero: include independent variables (#3655)
+  - sensitivity_toolbox: Add PyNumero-based functions (#3561)
+  - simplification: Newer version of GiNaC - URL failure resolution (#3604)
+  - viewer: Update for PyQt6, improve load time (#3647)
+
+-------------------------------------------------------------------------------
 Pyomo 6.9.2   (16 Apr 2025)
 -------------------------------------------------------------------------------
 

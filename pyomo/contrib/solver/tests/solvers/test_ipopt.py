@@ -457,7 +457,8 @@ class TestIpopt(unittest.TestCase):
         # Test custom initialization
         solver = SolverFactory('ipopt', executable='/path/to/exe')
         self.assertFalse(solver.config.tee)
-        self.assertTrue(solver.config.executable.startswith('/path'))
+        self.assertIsNone(solver.config.executable.path())
+        self.assertTrue(solver.config.executable._registered_name.startswith('/path'))
 
     def test_ipopt_solve(self):
         # Gut check - does it solve?
