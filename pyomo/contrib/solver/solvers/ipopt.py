@@ -295,11 +295,9 @@ class Ipopt(SolverBase):
         for key, msg in unallowed_ipopt_options.items():
             if key in config.solver_options:
                 raise ValueError(f"unallowed ipopt option '{key}': {msg}")
-        # Map standard Pyomo solver options to Ipopt options
-        if (
-            config.time_limit is not None
-            and 'max_cpu_time' not in config.solver_options
-        ):
+        # Map standard Pyomo solver options to Ipopt options: standard
+        # options override ipopt-specific options.
+        if config.time_limit is not None:
             config.solver_options['max_cpu_time'] = config.time_limit
 
     def _write_options_file(
