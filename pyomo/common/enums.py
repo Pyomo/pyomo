@@ -223,8 +223,11 @@ class SolverAPIVersion(NamedIntEnum):
     in order without sacrificing the human-logic of v1 vs. v2.
     """
 
+    #: Original Coopr/Pyomo solver interface
     V1 = 10
+    #: Automatic Persistent Pyomo Solver Interface (experimental)
     APPSI = 15
+    #: Redesigned solver interface (circa 2024)
     V2 = 20
 
 

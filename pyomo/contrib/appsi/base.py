@@ -643,7 +643,7 @@ class Solver(abc.ABC):
         Returns
         -------
         ~pyomo.common.enums.SolverAPIVersion
-            An solver API enum object
+            A solver API enum object
         """
         return SolverAPIVersion.APPSI
 

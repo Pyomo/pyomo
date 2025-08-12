@@ -89,7 +89,7 @@ class UnknownSolver(object):
         Returns
         -------
         ~pyomo.common.enums.SolverAPIVersion
-            An solver API enum object
+            A solver API enum object
         """
         return SolverAPIVersion.V1
 
@@ -270,7 +270,7 @@ class OptSolver(object):
         Returns
         -------
         ~pyomo.common.enums.SolverAPIVersion
-            An solver API enum object
+            A solver API enum object
         """
         return SolverAPIVersion.V1
 
