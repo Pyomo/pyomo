@@ -109,9 +109,13 @@ class IpoptSolutionLoader(SolSolutionLoader):
             )
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, 
+        vars_to_load: Optional[Sequence[VarData]] = None,
+        solution_id=None,
     ) -> Mapping[VarData, float]:
         self._error_check()
+        if solution_id is not None:
+            raise ValueError('IpoptSolutionLoader does not support solution_id')
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
             obj_scale = 1
@@ -430,35 +434,35 @@ class Ipopt(SolverBase):
             if proven_infeasible:
                 results = Results()
                 results.termination_condition = TerminationCondition.provenInfeasible
-                results.solution_loader = SolSolutionLoader(None, None)
+                results.solution_loader = SolSolutionLoader(None, None, model)
                 results.iteration_count = 0
                 results.timing_info.total_seconds = 0
             elif len(nl_info.variables) == 0:
                 if len(nl_info.eliminated_vars) == 0:
                     results = Results()
                     results.termination_condition = TerminationCondition.emptyModel
-                    results.solution_loader = SolSolutionLoader(None, None)
+                    results.solution_loader = SolSolutionLoader(None, None, model)
                 else:
                     results = Results()
                     results.termination_condition = (
                         TerminationCondition.convergenceCriteriaSatisfied
                     )
                     results.solution_status = SolutionStatus.optimal
-                    results.solution_loader = SolSolutionLoader(None, nl_info=nl_info)
+                    results.solution_loader = SolSolutionLoader(None, nl_info=nl_info, pyomo_model=model)
                     results.iteration_count = 0
                     results.timing_info.total_seconds = 0
             else:
                 if os.path.isfile(basename + '.sol'):
                     with open(basename + '.sol', 'r', encoding='utf-8') as sol_file:
                         timer.start('parse_sol')
-                        results = self._parse_solution(sol_file, nl_info)
+                        results = self._parse_solution(sol_file, nl_info, model)
                         timer.stop('parse_sol')
                 else:
                     results = Results()
                 if process.returncode != 0:
                     results.extra_info.return_code = process.returncode
                     results.termination_condition = TerminationCondition.error
-                    results.solution_loader = SolSolutionLoader(None, None)
+                    results.solution_loader = SolSolutionLoader(None, None, model)
                 else:
                     try:
                         results.iteration_count = parsed_output_data.pop('iters')
@@ -490,19 +494,7 @@ class Ipopt(SolverBase):
         if config.load_solutions:
             if results.solution_status == SolutionStatus.noSolution:
                 raise NoFeasibleSolutionError()
-            results.solution_loader.load_vars()
-            if (
-                hasattr(model, 'dual')
-                and isinstance(model.dual, Suffix)
-                and model.dual.import_enabled()
-            ):
-                model.dual.update(results.solution_loader.get_duals())
-            if (
-                hasattr(model, 'rc')
-                and isinstance(model.rc, Suffix)
-                and model.rc.import_enabled()
-            ):
-                model.rc.update(results.solution_loader.get_reduced_costs())
+            results.solution_loader.load_solution()
 
         if (
             results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}
@@ -665,7 +657,7 @@ class Ipopt(SolverBase):
         return parsed_data
 
     def _parse_solution(
-        self, instream: io.TextIOBase, nl_info: NLWriterInfo
+        self, instream: io.TextIOBase, nl_info: NLWriterInfo, pyomo_model
     ) -> Results:
         results = Results()
         res, sol_data = parse_sol_file(
@@ -673,10 +665,10 @@ class Ipopt(SolverBase):
         )
 
         if res.solution_status == SolutionStatus.noSolution:
-            res.solution_loader = SolSolutionLoader(None, None)
+            res.solution_loader = SolSolutionLoader(None, None, pyomo_model=pyomo_model)
         else:
             res.solution_loader = IpoptSolutionLoader(
-                sol_data=sol_data, nl_info=nl_info
+                sol_data=sol_data, nl_info=nl_info, pyomo_model=pyomo_model,
             )
 
         return res

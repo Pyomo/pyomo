@@ -675,7 +675,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         status = highs.getModelStatus()
 
         results = Results()
-        results.solution_loader = PersistentSolutionLoader(self)
+        results.solution_loader = PersistentSolutionLoader(self, self._model)
         results.timing_info.highs_time = highs.getRunTime()
 
         self._sol = highs.getSolution()
@@ -751,7 +751,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         if config.load_solutions:
             if has_feasible_solution:
-                self._load_vars()
+                results.solution_loader.load_solution()
             else:
                 raise NoFeasibleSolutionError()
         timer.stop('load solution')

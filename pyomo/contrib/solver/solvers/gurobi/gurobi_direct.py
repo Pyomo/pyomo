@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import operator
+from typing import List
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.shutdown import python_is_shutting_down
@@ -22,17 +23,18 @@ from pyomo.contrib.solver.common.util import (
     NoSolutionError,
     IncompatibleModelError,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase, load_import_suffixes
 from .gurobi_direct_base import GurobiDirectBase, gurobipy
 
 
 class GurobiDirectSolutionLoader(SolutionLoaderBase):
-    def __init__(self, grb_model, grb_cons, grb_vars, pyo_cons, pyo_vars):
+    def __init__(self, grb_model, grb_cons, grb_vars, pyo_cons, pyo_vars, pyomo_model):
         self._grb_model = grb_model
         self._grb_cons = grb_cons
         self._grb_vars = grb_vars
         self._pyo_cons = pyo_cons
         self._pyo_vars = pyo_vars
+        self._pyomo_model = pyomo_model
         GurobiDirectBase._register_env_client()
 
     def __del__(self):
@@ -44,6 +46,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             self._grb_vars = None
             self._pyo_cons = None
             self._pyo_vars = None
+            self._pyomo_model = None
             # explicitly release the model
             self._grb_model.dispose()
             self._grb_model = None
@@ -52,8 +55,16 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         # interface)
         GurobiDirectBase._release_env_client()
 
-    def load_vars(self, vars_to_load=None, solution_number=0):
-        assert solution_number == 0
+    def get_number_of_solutions(self) -> int:
+        if self._grb_model.SolCount == 0:
+            return 0
+        return 1
+    
+    def get_solution_ids(self) -> List[Any]:
+        return [0]
+
+    def load_vars(self, vars_to_load=None, solution_id=0):
+        assert solution_id == 0
         if self._grb_model.SolCount == 0:
             raise NoSolutionError()
 
@@ -65,8 +76,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             p_var.set_value(g_var, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def get_primals(self, vars_to_load=None, solution_number=0):
-        assert solution_number == 0
+    def get_vars(self, vars_to_load=None, solution_id=0):
+        assert solution_id == 0
         if self._grb_model.SolCount == 0:
             raise NoSolutionError()
 
@@ -76,7 +87,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             iterator = filter(lambda var_val: var_val[0] in vars_to_load, iterator)
         return ComponentMap(iterator)
 
-    def get_duals(self, cons_to_load=None):
+    def get_duals(self, cons_to_load=None, solution_id=0):
+        assert solution_id == 0
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
             raise NoDualsError()
 
@@ -96,7 +108,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             )
         return {con_info[0]: dual for con_info, dual in iterator}
 
-    def get_reduced_costs(self, vars_to_load=None):
+    def get_reduced_costs(self, vars_to_load=None, solution_id=0):
+        assert solution_id == 0
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
             raise NoReducedCostsError()
 
@@ -105,6 +118,9 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             vars_to_load = ComponentSet(vars_to_load)
             iterator = filter(lambda var_rc: var_rc[0] in vars_to_load, iterator)
         return ComponentMap(iterator)
+    
+    def load_import_suffixes(self, solution_id=None):
+        load_import_suffixes(pyomo_model=self._pyomo_model, solution_loader=self, solution_id=solution_id)
 
 
 class GurobiDirect(GurobiDirectBase):

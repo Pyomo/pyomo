@@ -9,11 +9,32 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from __future__ import annotations
+
 from typing import Sequence, Dict, Optional, Mapping, List, Any
 
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.base.suffix import Suffix
+
+
+def load_import_suffixes(pyomo_model, solution_loader: SolutionLoaderBase, solution_id=None):
+    dual_suffix = None
+    rc_suffix = None
+    for suffix in pyomo_model.component_objects(Suffix, descend_into=True, active=True):
+        if not suffix.import_enabled():
+            continue
+        if suffix.local_name == 'dual':
+            dual_suffix = suffix
+        elif suffix.local_name == 'rc':
+            rc_suffix = suffix
+    if dual_suffix is not None:
+        for k, v in solution_loader.get_duals(solution_id=solution_id).items():
+            dual_suffix[k] = v
+    if rc_suffix is not None:
+        for k, v in solution_loader.get_reduced_costs(solution_id=solution_id).items():
+            rc_suffix[k] = v
 
 
 class SolutionLoaderBase:
@@ -178,29 +199,45 @@ class PersistentSolutionLoader(SolutionLoaderBase):
     Loader for persistent solvers
     """
 
-    def __init__(self, solver):
+    def __init__(self, solver, pyomo_model):
         self._solver = solver
         self._valid = True
+        self._pyomo_model = pyomo_model
 
     def _assert_solution_still_valid(self):
         if not self._valid:
             raise RuntimeError('The results in the solver are no longer valid.')
 
-    def get_primals(self, vars_to_load=None):
+    def get_solution_ids(self) -> List[Any]:
         self._assert_solution_still_valid()
-        return self._solver._get_primals(vars_to_load=vars_to_load)
+        return super().get_solution_ids()
+    
+    def get_number_of_solutions(self) -> int:
+        self._assert_solution_still_valid()
+        return super().get_number_of_solutions()
+
+    def get_vars(self, vars_to_load=None, solution_id=None):
+        self._assert_solution_still_valid()
+        return self._solver._get_primals(vars_to_load=vars_to_load, solution_id=solution_id)
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+        self, 
+        cons_to_load: Optional[Sequence[ConstraintData]] = None,
+        solution_id=None,
     ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return self._solver._get_duals(cons_to_load=cons_to_load)
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, 
+        vars_to_load: Optional[Sequence[VarData]] = None,
+        solution_id=None,
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return self._solver._get_reduced_costs(vars_to_load=vars_to_load)
+
+    def load_import_suffixes(self, solution_id=None):
+        load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
 
     def invalidate(self):
         self._valid = False
