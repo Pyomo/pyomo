@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Sequence, Mapping
 from collections.abc import Iterable
 
 from pyomo.common.collections import ComponentSet, OrderedSet
+from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.kernel.objective import minimize, maximize
@@ -54,6 +55,25 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         self._con_map = con_map
         self._linear_cons = linear_cons
         self._quadratic_cons = quadratic_cons
+        GurobiDirectBase._register_env_client()
+
+    def __del__(self):
+        if python_is_shutting_down():
+            return
+        # Free the associated model
+        if self._solver_model is not None:
+            self._vars = None
+            self._var_map = None
+            self._con_map = None
+            self._linear_cons = None
+            self._quadratic_cons = None
+            # explicitly release the model
+            self._solver_model.dispose()
+            self._solver_model = None
+        # Release the gurobi license if this is the last reference to
+        # the environment (either through a results object or solver
+        # interface)
+        GurobiDirectBase._release_env_client()
 
     def load_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
