@@ -472,7 +472,7 @@ class _GMSWriter_impl(object):
                 self.con_symbol_map.addSymbol(con, label)
                 declaration = f'\n{label}.. '
                 definition = self.write_expression(ostream, repn)
-                bounds = f' =L= {(lb - offset)!s};'
+                bounds = f' =L= {(ub - offset)!s};'
                 con_list[label] = declaration + definition + bounds
 
         #
