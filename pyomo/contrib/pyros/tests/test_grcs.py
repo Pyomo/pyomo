@@ -2844,9 +2844,9 @@ class TestAvoidUnitConsistencyChecks(unittest.TestCase):
     Test cases for models with unit-laden model components.
     """
 
-    @unittest.skipUnless(pint_available, "Package 'pint' is not available")
-    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     @parameterized.expand([[True], [False]])
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    @unittest.skipUnless(pint_available, "Package 'pint' is not available")
     def test_avoid_unit_consistency_checks(self, use_discrete):
         m = ConcreteModel()
         m.q = Param(initialize=0, mutable=True, units=units.s)
