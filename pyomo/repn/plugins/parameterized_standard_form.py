@@ -224,6 +224,64 @@ class _CSCMatrix(_SparseMatrixBase):
 
         return dense
 
+    def tocsr(self):
+        """Implements the same algorithm as scipy's csr_tocsc function from
+        sparsetools.
+        """
+        csc_data = self.data
+        row_index = self.indices
+        col_index_ptr = self.indptr
+        ncols = self.shape[1]
+
+        num_nonzeros = len(csc_data)
+        csr_data = np.empty(csc_data.shape[0], dtype=object)
+        col_index = np.empty(num_nonzeros, dtype=int)
+        # tally the nonzeros in each column
+        row_index_ptr = np.zeros(self.shape[0], dtype=int)
+        for i in row_index:
+            row_index_ptr[int(i)] += 1
+
+        # cumulative sum the tally to get the column index pointer
+        cum_sum = 0
+        for i, tally in enumerate(row_index_ptr):
+            row_index_ptr[i] = cum_sum
+            cum_sum += tally
+        # We have now initialized the row_index_ptr to the *starting* position
+        # of each column in the data vector.  Note that row_index_ptr is only
+        # num_rows long: we have ignored the last entry in the standard CSR
+        # row_index_ptr (the total number of nonzeros).  This will get resolved
+        # below when we shift this vector by one position.
+
+        # Now we are actually going to mess up what we just did while we
+        # construct the row index: We can imagine that row_index_ptr holds the
+        # position of the *next* nonzero in each column, so each time we move a
+        # data element into a column we will increment that row_index_ptr by
+        # one.  This is beautiful because by "messing up" the row_index_pointer,
+        # we are just transforming the vector of *starting* indices for each
+        # column to a vector of *ending* indices (actually 1 past the last
+        # index) of each column. Thank you, scipy.
+        for col in range(ncols):
+            for j in range(col_index_ptr[col], col_index_ptr[col + 1]):
+                row = row_index[j]
+                dest = row_index_ptr[row]
+                col_index[dest] = col
+                # Note that the data changes order because now we are looking
+                # for nonzeros through the columns rather than through the rows.
+                csr_data[dest] = csc_data[j]
+
+                row_index_ptr[row] += 1
+
+        # Fix the row index pointer by inserting 0 at the beginning. The
+        # row_index_ptr currently holds pointers to 1 past the last element of
+        # each row, which is really the starting index for the next
+        # row. Inserting the 0 (the starting index for the first column)
+        # shifts everything by one column, "converting" the vector to the
+        # starting indices of each row, and extending the vector length to
+        # num_rows + 1 (as is expected by the CSR matrix).
+        row_index_ptr = np.insert(row_index_ptr, 0, 0)
+
+        return _CSRMatrix((csr_data, col_index, row_index_ptr), self.shape)
+
     def sum_duplicates(self):
         """Implements the algorithm from scipy's csr_sum_duplicates function
         in sparsetools.

@@ -110,6 +110,7 @@ solver_dual_sign_convention['glpk'] = -1
 solver_dual_sign_convention['cbc'] = -1
 solver_dual_sign_convention['xpress_direct'] = -1
 solver_dual_sign_convention['xpress_persistent'] = -1
+solver_dual_sign_convention['highs'] = -1
 
 
 def _del_con(c):

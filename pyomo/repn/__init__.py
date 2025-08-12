@@ -19,14 +19,14 @@ moved_module(
     "pyomo.repn.parameterized",
     msg="The pyomo.repn.parameterized_linear module is deprecated.  "
     "Import the ParameterizedLinearRepnVisitor from pyomo.repn.parameterized",
-    version='6.9.3.dev0',
+    version='6.9.3',
 )
 moved_module(
     "pyomo.repn.parameterized_quadratic",
     "pyomo.repn.parameterized",
     msg="The pyomo.repn.parameterized_quadratic module is deprecated.  "
     "Import the ParameterizedQuadraticRepnVisitor from pyomo.repn.parameterized",
-    version='6.9.3.dev0',
+    version='6.9.3',
 )
 
 del moved_module

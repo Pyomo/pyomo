@@ -1411,7 +1411,7 @@ class UninitializedMixin(object):
     attempt to access the ``_data`` will trigger the initialization of the
     Config object from its ``_default`` value.  Setting the ``_data``
     attribute will also trigger resolution of the Config object, but
-    without processing the ``_default__``.
+    without processing the ``_default``.
 
     """
 
@@ -1449,7 +1449,7 @@ class UninitializedMixin(object):
         # recursively lookup the _data attribute and the second lookup
         # will resolve to normal attribute assignment).
         #
-        # We first encountered this issue for Config objects stores as
+        # We first encountered this issue for Config objects stored as
         # class attributes (i.e., the default Config for something like
         # a solver or writer) and multiple threads were simultaneously
         # creating instances of the class (each of which was resolving
@@ -1628,7 +1628,12 @@ class ConfigBase(object):
 
     def set_domain(self, domain):
         self._domain = domain
-        self.set_value(self.value(accessValue=False))
+        # Note that the domain is generally a callable (type, function,
+        # or functor).  However, ConfigDict can also have a str domain
+        # (because ConfigDict doesn't need/use an actual domain for
+        # validation, we re-use that slot to *document* the domain).
+        if domain.__class__ is not str:
+            self.set_value(self.value(accessValue=False))
 
     def _cast(self, value):
         if value is None:
