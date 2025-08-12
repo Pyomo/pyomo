@@ -24,6 +24,7 @@ from pyomo.common.errors import InvalidValueError
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.core.base.set_types import NonNegativeIntegers
+from pyomo.core.base.units_container import pint_available
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 import pyomo.repn.ampl as pyomo_ampl_repn
 from pyomo.common.dependencies import (
@@ -2843,6 +2844,7 @@ class TestAvoidUnitConsistencyChecks(unittest.TestCase):
     Test cases for models with unit-laden model components.
     """
 
+    @unittest.skipUnless(pint_available, "Package 'pint' is not available")
     @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     @parameterized.expand([[True], [False]])
     def test_avoid_unit_consistency_checks(self, use_discrete):
