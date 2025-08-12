@@ -15,6 +15,7 @@ import sys
 
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import numpy as np
 from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
@@ -33,7 +34,6 @@ from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
-import numpy as np
 import time
 
 logger = logging.getLogger("pyomo.solvers")
@@ -47,8 +47,16 @@ class CUOPTDirect(DirectSolver):
     def __init__(self, **kwds):
         kwds["type"] = "cuoptdirect"
         super(CUOPTDirect, self).__init__(**kwds)
-        self._version = tuple(int(k) for k in cuopt.__version__.split('.'))
-        self._python_api_exists = True
+        try:
+            import cuopt
+
+            self._version = tuple(int(k) for k in cuopt.__version__.split('.'))
+            self._python_api_exists = True
+        except ImportError:
+            self._python_api_exists = False
+        except Exception as e:
+            print("Import of cuopt failed - cuopt message=" + str(e) + "\n")
+            self._python_api_exists = False
         # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.integer = True
