@@ -28,7 +28,7 @@ from typing import (
 
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
 from pyomo.common.errors import ApplicationError
-from pyomo.common.enums import IntEnum
+from pyomo.common.enums import IntEnum, SolverAPIVersion
 from pyomo.common.factory import Factory
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.constraint import ConstraintData, Constraint
@@ -634,6 +634,11 @@ class Solver(abc.ABC):
             # specified in __format__.  We will override str() here to
             # preserve the previous behavior
             return self.name
+
+    # There are now multiple API versions of solvers
+    @classmethod
+    def api_version(self):
+        return SolverAPIVersion.APPSI
 
     @abc.abstractmethod
     def solve(self, model: BlockData, timer: HierarchicalTimer = None) -> Results:
