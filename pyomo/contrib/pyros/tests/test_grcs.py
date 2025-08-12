@@ -2851,6 +2851,8 @@ class TestAvoidUnitConsistencyChecks(unittest.TestCase):
         m.x = Var(bounds=[-2, 2], units=units.m)
         m.z = Var(bounds=[-2, 2])
         m.y = Var(units=units.m**2)
+        # notice: units/dimensions in the objective and constraint
+        #         expressions are inconsistent
         m.eq = Constraint(expr=m.y == m.x + m.z + m.q)
         m.con = Constraint(expr=m.x >= m.q)
         m.obj = Objective(expr=m.x + m.z)
