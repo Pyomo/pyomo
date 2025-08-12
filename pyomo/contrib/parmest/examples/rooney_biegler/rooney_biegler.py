@@ -43,9 +43,10 @@ def rooney_biegler_model(data):
 
 class RooneyBieglerExperiment(Experiment):
 
-    def __init__(self, data):
+    def __init__(self, data, measure_error=None):
         self.data = data
         self.model = None
+        self.measure_error = measure_error
 
     def create_model(self):
         # rooney_biegler_model expects a dataframe
@@ -65,7 +66,7 @@ class RooneyBieglerExperiment(Experiment):
         )
 
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y[self.data['hour']], None)])
+        m.measurement_error.update([(m.y[self.data['hour']], self.measure_error)])
 
     def finalize_model(self):
 

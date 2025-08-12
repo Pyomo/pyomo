@@ -73,42 +73,11 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
             columns=["hour", "y"],
         )
 
-        # create the Experiment class
-        class RooneyBieglerExperimentWSSE(RooneyBieglerExperiment):
-            # def __init__(self, data, measurement_error_std):
-            #     self.data = data
-            #     self.model = None
-            #     self.measurement_error_std = measurement_error_std
-            def __init__(self, data, measurement_error_std):
-                super().__init__(data)
-                self.measurement_error_std = measurement_error_std
-
-            def label_model(self):
-                m = self.model
-
-                # add experiment outputs
-                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
-
-                # add unknown parameters
-                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.unknown_parameters.update(
-                    (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
-                )
-
-                # add measurement error
-                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.measurement_error.update(
-                    [(m.y[self.data['hour']], self.measurement_error_std)]
-                )
-
-                return m
-
         # Create an experiment list
         exp_list = []
         for i in range(self.data.shape[0]):
             exp_list.append(
-                RooneyBieglerExperimentWSSE(self.data.loc[i, :], self.measurement_std)
+                RooneyBieglerExperiment(self.data.loc[i, :], self.measurement_std)
             )
 
         self.exp_list = exp_list
@@ -179,92 +148,74 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
             idx for idx, s in enumerate(cov_cols) if "rate_constant" in s
         ][0]
 
-        if measurement_error is None:
-            if obj_function == "SSE":
-                if (
-                    cov_method == "finite_difference"
-                    or cov_method == "automatic_differentiation_kaug"
-                ):
-                    self.assertAlmostEqual(
-                        cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
-                    )  # 6.22864 from paper
-                    self.assertAlmostEqual(
-                        cov.iloc[asymptote_index, rate_constant_index],
-                        -0.432265,
-                        places=2,
-                    )  # -0.4322 from paper
-                    self.assertAlmostEqual(
-                        cov.iloc[rate_constant_index, asymptote_index],
-                        -0.432265,
-                        places=2,
-                    )  # -0.4322 from paper
-                    self.assertAlmostEqual(
-                        cov.iloc[rate_constant_index, rate_constant_index],
-                        0.041242,
-                        places=2,
-                    )  # 0.04124 from paper
-                else:
-                    self.assertAlmostEqual(
-                        cov.iloc[asymptote_index, asymptote_index], 36.935351, places=2
-                    )  # 6.22864 from paper
-                    self.assertAlmostEqual(
-                        cov.iloc[asymptote_index, rate_constant_index],
-                        -2.551392,
-                        places=2,
-                    )  # -0.4322 from paper
-                    self.assertAlmostEqual(
-                        cov.iloc[rate_constant_index, asymptote_index],
-                        -2.551392,
-                        places=2,
-                    )  # -0.4322 from paper
-                    self.assertAlmostEqual(
-                        cov.iloc[rate_constant_index, rate_constant_index],
-                        0.243428,
-                        places=2,
-                    )  # 0.04124 from paper
-        else:
-            if obj_function == "SSE" or obj_function == "SSE_weighted":
-                if (
-                    cov_method == "finite_difference"
-                    or cov_method == "automatic_differentiation_kaug"
-                ):
-                    self.assertAlmostEqual(
-                        cov.iloc[asymptote_index, asymptote_index], 0.009588, places=4
-                    )
-                    self.assertAlmostEqual(
-                        cov.iloc[asymptote_index, rate_constant_index],
-                        -0.000665,
-                        places=4,
-                    )
-                    self.assertAlmostEqual(
-                        cov.iloc[rate_constant_index, asymptote_index],
-                        -0.000665,
-                        places=4,
-                    )
-                    self.assertAlmostEqual(
-                        cov.iloc[rate_constant_index, rate_constant_index],
-                        0.000063,
-                        places=4,
-                    )
-                else:
-                    self.assertAlmostEqual(
-                        cov.iloc[asymptote_index, asymptote_index], 0.056845, places=4
-                    )
-                    self.assertAlmostEqual(
-                        cov.iloc[asymptote_index, rate_constant_index],
-                        -0.003927,
-                        places=4,
-                    )
-                    self.assertAlmostEqual(
-                        cov.iloc[rate_constant_index, asymptote_index],
-                        -0.003927,
-                        places=4,
-                    )
-                    self.assertAlmostEqual(
-                        cov.iloc[rate_constant_index, rate_constant_index],
-                        0.000375,
-                        places=4,
-                    )
+        if measurement_error is None and obj_function == "SSE":
+            if (
+                cov_method == "finite_difference"
+                or cov_method == "automatic_differentiation_kaug"
+            ):
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.432265, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.432265, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index],
+                    0.041242,
+                    places=2,
+                )  # 0.04124 from paper
+            else:
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index],
+                    0.040571,
+                    places=2,
+                )  # 0.04124 from paper
+        elif measurement_error is not None and obj_function in ("SSE", "SSE_weighted"):
+            if (
+                cov_method == "finite_difference"
+                or cov_method == "automatic_differentiation_kaug"
+            ):
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 0.009588, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.000665, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.000665, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index],
+                    0.000063,
+                    places=4,
+                )
+            else:
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 0.009474, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.000654, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.000654, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index],
+                    0.000062,
+                    places=4,
+                )
 
     # test the covariance calculation of the three supported methods
     # added a 'unsupported_method' to test the error message when the method supplied
@@ -287,93 +238,54 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
                 Options - 'finite_difference', 'reduced_hessian',
                 and 'automatic_differentiation_kaug'
         """
-        if self.measurement_std is None:
-            if self.objective_function == "SSE":
+        valid_cov_methods = (
+            "finite_difference",
+            "automatic_differentiation_kaug",
+            "reduced_hessian",
+        )
 
-                # estimate the parameters
+        if self.measurement_std is None and self.objective_function == "SSE_weighted":
+            with pytest.raises(
+                ValueError,
+                match='One or more values are missing from '
+                '"measurement_error". All values of the measurement errors are '
+                'required for the "SSE_weighted" objective.',
+            ):
+                # we expect this error when estimating the parameters
                 obj_val, theta_vals = self.pest.theta_est()
+        elif self.objective_function != "incorrect_obj":
 
-                # check the parameter estimation result
-                self.check_rooney_biegler_parameters(
-                    obj_val,
-                    theta_vals,
+            # estimate the parameters
+            obj_val, theta_vals = self.pest.theta_est()
+
+            # check the parameter estimation result
+            self.check_rooney_biegler_parameters(
+                obj_val,
+                theta_vals,
+                obj_function=self.objective_function,
+                measurement_error=self.measurement_std,
+            )
+
+            # calculate the covariance matrix
+            if cov_method in valid_cov_methods:
+                cov = self.pest.cov_est(method=cov_method)
+
+                # check the covariance calculation results
+                self.check_rooney_biegler_covariance(
+                    cov,
+                    cov_method,
                     obj_function=self.objective_function,
                     measurement_error=self.measurement_std,
                 )
-
-                # calculate the covariance matrix
-                if cov_method in (
-                    "finite_difference",
-                    "automatic_differentiation_kaug",
-                    "reduced_hessian",
-                ):
-                    cov = self.pest.cov_est(cov_n=6, method=cov_method)
-
-                    # check the covariance calculation results
-                    self.check_rooney_biegler_covariance(
-                        cov,
-                        cov_method,
-                        obj_function=self.objective_function,
-                        measurement_error=self.measurement_std,
-                    )
-                else:
-                    with pytest.raises(
-                        ValueError,
-                        match=r"Invalid method: 'unsupported_method'\. Choose from: "
-                        r"\['finite_difference', "
-                        r"'automatic_differentiation_kaug', "
-                        r"'reduced_hessian'\]\.",
-                    ):
-                        cov = self.pest.cov_est(cov_n=6, method=cov_method)
-            elif self.objective_function == "SSE_weighted":
+            else:
                 with pytest.raises(
                     ValueError,
-                    match='One or more values are missing from '
-                    '"measurement_error". All values of the measurement errors are '
-                    'required for the "SSE_weighted" objective.',
+                    match=r"Invalid method: 'unsupported_method'\. Choose from: "
+                    r"\['finite_difference', "
+                    r"'automatic_differentiation_kaug', "
+                    r"'reduced_hessian'\]\.",
                 ):
-                    # we expect this error when estimating the parameters
-                    obj_val, theta_vals = self.pest.theta_est()
-        else:
-            if (
-                self.objective_function == "SSE"
-                or self.objective_function == "SSE_weighted"
-            ):
-                # estimate the parameters
-                obj_val, theta_vals = self.pest.theta_est()
-
-                # check the parameter estimation results
-                self.check_rooney_biegler_parameters(
-                    obj_val,
-                    theta_vals,
-                    obj_function=self.objective_function,
-                    measurement_error=self.measurement_std,
-                )
-
-                # calculate the covariance matrix
-                if cov_method in (
-                    "finite_difference",
-                    "automatic_differentiation_kaug",
-                    "reduced_hessian",
-                ):
-                    cov = self.pest.cov_est(cov_n=6, method=cov_method)
-
-                    # check the covariance calculation results
-                    self.check_rooney_biegler_covariance(
-                        cov,
-                        cov_method,
-                        obj_function=self.objective_function,
-                        measurement_error=self.measurement_std,
-                    )
-                else:
-                    with pytest.raises(
-                        ValueError,
-                        match=r"Invalid method: 'unsupported_method'\. Choose from: "
-                        r"\['finite_difference', "
-                        r"'automatic_differentiation_kaug', "
-                        r"'reduced_hessian'\]\.",
-                    ):
-                        cov = self.pest.cov_est(cov_n=6, method=cov_method)
+                    cov = self.pest.cov_est(method=cov_method)
 
     def test_cov_scipy_least_squares_comparison(self):
         """
@@ -481,6 +393,27 @@ class TestRooneyBiegler(unittest.TestCase):
         self.pest = parmest.Estimator(
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
+
+    def test_custom_covariance_exception(self):
+        """
+        Tests the error raised when a user attempts to calculate
+        the covariance matrix using a custom objective function
+        """
+
+        # estimate the parameters
+        obj_val, theta_vals = self.pest.theta_est()
+
+        # check the error raised when the user tries to calculate the
+        # covariance matrix using the custom objective function
+        with pytest.raises(
+            ValueError,
+            match=r"Invalid objective function for covariance calculation\. The "
+            r"covariance matrix can only be calculated using the built-in "
+            r"objective functions: \['SSE', 'SSE_weighted'\]\. Supply "
+            r"the Estimator object one of these built-in objectives and "
+            r"re-run the code\.",
+        ):
+            cov = self.pest.cov_est()
 
     def test_parmest_exception(self):
         """

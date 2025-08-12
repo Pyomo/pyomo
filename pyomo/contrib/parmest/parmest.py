@@ -340,6 +340,38 @@ def _get_labeled_model_helper(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
+def _count_total_experiments(exp_list):
+    """
+    Counts the number of data points in the list of experiments
+
+    Argument:
+        exp_list: list of experiments
+
+    Return:
+         total_number_exp: the total number of experiments in the list of experiments
+    """
+    total_number_exp = 0
+    for exp in exp_list:
+        # check if it's a dynamic experiment
+        try:
+            expected_data_column = "time"
+            if not hasattr(exp, "data"):
+                raise AttributeError('The experiment object must have a "data" object.')
+            elif not hasattr(exp.data, "time"):
+                raise KeyError(
+                    f'The "data" attribute does not contain a '
+                    f'"{expected_data_column}" column or key.'
+                )
+            else:
+                time_data = exp.data.time
+                total_number_exp += len(time_data)
+        except (AttributeError, KeyError):
+            # steady-state experiment
+            total_number_exp += 1
+
+    return total_number_exp
+
+
 class CovarianceMethod(Enum):
     finite_difference = "finite_difference"
     automatic_differentiation_kaug = "automatic_differentiation_kaug"
@@ -804,6 +836,9 @@ class Estimator(object):
         assert isinstance(experiment_list, list)
         self.exp_list = experiment_list
 
+        # get the number of experiments
+        self.number_exp = _count_total_experiments(self.exp_list)
+
         # check if the experiment has a ``get_labeled_model`` function
         model = _get_labeled_model_helper(self.exp_list[0])
 
@@ -1007,6 +1042,11 @@ class Estimator(object):
         else:
             scen_names = ["Scenario{}".format(i) for i in range(len(bootlist))]
 
+        # get the probability constant that is applied to the objective function
+        # parmest solves the estimation problem by applying equal probabilities to
+        # the objective function of all the scenarios from the experiment list
+        self.obj_probability_constant = len(scen_names)
+
         # tree_model.CallbackModule = None
         outer_cb_data = dict()
         outer_cb_data["callback"] = self._instance_creation_callback
@@ -1102,7 +1142,8 @@ class Estimator(object):
 
             obj_val = pyo.value(ef.EF_Obj)
 
-            # add the estimated theta to the class
+            # add the objective value and estimated theta to the class
+            self.obj_value = obj_val
             self.estimated_theta = theta_vals
 
             if kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
@@ -1196,7 +1237,7 @@ class Estimator(object):
         else:
             raise RuntimeError("Unknown solver in Q_Opt=" + solver)
 
-    def _cov_at_theta(self, method, solver, cov_n, step):
+    def _cov_at_theta(self, method, solver, step):
         """
         Covariance matrix calculation using all scenarios in the data
 
@@ -1204,8 +1245,6 @@ class Estimator(object):
             method: string ``method`` object specified by the user,
                 e.g., 'finite_difference'
             solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-            cov_n: integer, number of datapoints specified by the user which is used
-                in the objective function
             step: float used for relative perturbation of the parameters,
                 e.g., step=0.02 is a 2% perturbation
 
@@ -1232,7 +1271,7 @@ class Estimator(object):
             self.inv_red_hes = inv_red_hes
 
         # Number of data points considered
-        n = cov_n
+        n = self.number_exp
 
         # Extract the number of fitted parameters
         l = len(self.estimated_theta)
@@ -1274,7 +1313,12 @@ class Estimator(object):
             sse_val = pyo.value(sse_expr)
             sse_vals.append(sse_val)
 
-        sse = sum(sse_vals)  # total SSE
+        sse = sum(sse_vals)
+        logger.setLevel(level=self.logging_level)
+        if self.logging_level == logging.INFO:
+            logger.info(
+                f"The sum of squared errors at the estimated parameter(s) is: {sse}"
+            )
 
         """Calculate covariance assuming experimental observation errors are
         independent and follow a Gaussian distribution with constant variance.
@@ -1307,10 +1351,14 @@ class Estimator(object):
 
                 # check if the user supplied the values of the measurement errors
                 if all(item is None for item in meas_error):
-                    measurement_var = sse / (
-                        n - l
-                    )  # estimate of the measurement variance
                     if cov_method == CovarianceMethod.reduced_hessian:
+                        # in the "reduced_hessian" method, use the objective value
+                        # to calculate the measurement error variance because this
+                        # method scales the objective function by a probability constant
+                        # when computing the inverse of the reduced hessian
+                        measurement_var = self.obj_value / (
+                            n - l
+                        )  # estimate of the measurement error variance
                         cov = (
                             2 * measurement_var * self.inv_red_hes
                         )  # covariance matrix
@@ -1320,6 +1368,9 @@ class Estimator(object):
                             columns=self.estimated_theta.keys(),
                         )
                     else:
+                        measurement_var = sse / (
+                            n - l
+                        )  # estimate of the measurement error variance
                         cov = compute_covariance_matrix(
                             self.exp_list,
                             method,
@@ -1332,7 +1383,15 @@ class Estimator(object):
                         )
                 elif all(item is not None for item in meas_error):
                     if cov_method == CovarianceMethod.reduced_hessian:
-                        cov = 2 * (meas_error[0] ** 2) * self.inv_red_hes
+                        # in the "reduced_hessian" method, the measurement error
+                        # variance must be scaled by the probability constant that
+                        # was applied to the objective function when computing
+                        # the inverse of the reduced hessian
+                        cov = (
+                            2
+                            * (meas_error[0] ** 2 / self.obj_probability_constant)
+                            * self.inv_red_hes
+                        )
                         cov = pd.DataFrame(
                             cov,
                             index=self.estimated_theta.keys(),
@@ -1367,10 +1426,19 @@ class Estimator(object):
 
                 # check if the user supplied the values for the measurement errors
                 if all(item is not None for item in meas_error):
-                    if (
-                        cov_method == CovarianceMethod.finite_difference
-                        or cov_method == CovarianceMethod.automatic_differentiation_kaug
-                    ):
+                    if cov_method == CovarianceMethod.reduced_hessian:
+                        # in the "reduced_hessian" method, since the objective function
+                        # was scaled by a probability constant when computing the
+                        # inverse of the reduced hessian, the inverse of the reduced
+                        # hessian must be divided by the probability constant to obtain
+                        # the covariance matrix
+                        cov = (1 / self.obj_probability_constant) * self.inv_red_hes
+                        cov = pd.DataFrame(
+                            cov,
+                            index=self.estimated_theta.keys(),
+                            columns=self.estimated_theta.keys(),
+                        )
+                    else:
                         cov = compute_covariance_matrix(
                             self.exp_list,
                             method,
@@ -1379,13 +1447,6 @@ class Estimator(object):
                             solver=solver,
                             tee=self.tee,
                             logging_level=self.logging_level,
-                        )
-                    else:
-                        cov = self.inv_red_hes
-                        cov = pd.DataFrame(
-                            cov,
-                            index=self.estimated_theta.keys(),
-                            columns=self.estimated_theta.keys(),
                         )
                 else:
                     raise ValueError(
@@ -1678,9 +1739,7 @@ class Estimator(object):
             solver=solver, return_values=return_values, bootlist=None, **kwargs
         )
 
-    def cov_est(
-        self, method="finite_difference", solver="ipopt", cov_n=None, step=1e-3
-    ):
+    def cov_est(self, method="finite_difference", solver="ipopt", step=1e-3):
         """
         Covariance matrix calculation using all scenarios in the data
 
@@ -1691,8 +1750,6 @@ class Estimator(object):
             and 'automatic_differentiation_kaug'
         solver: string, optional
             E.g., 'ipopt'
-        cov_n: integer, required
-            Number of datapoints used in the covariance calculation
         step: float, optional
             The value used for relative perturbation of the parameters, e.g.,
             step=0.02 is a 2% perturbation
@@ -1711,9 +1768,9 @@ class Estimator(object):
                 "Expected a string for the method, e.g., 'finite_difference'"
             )
 
-        # check if the user-supplied number of datapoints is an integer
-        if not isinstance(cov_n, int):
-            raise TypeError("Expected an integer for the 'cov_n' argument.")
+        # check if the step input is a float
+        if not isinstance(step, float):
+            raise TypeError("Expected a float for the step, e.g., 1e-2")
 
         # number of unknown parameters
         num_unknowns = max(
@@ -1722,12 +1779,12 @@ class Estimator(object):
                 for experiment in self.exp_list
             ]
         )
-        assert cov_n > num_unknowns, (
+        assert self.number_exp > num_unknowns, (
             "The number of datapoints must be greater than the "
             "number of parameters to estimate."
         )
 
-        return self._cov_at_theta(method=method, solver=solver, cov_n=cov_n, step=step)
+        return self._cov_at_theta(method=method, solver=solver, step=step)
 
     def theta_est_bootstrap(
         self,

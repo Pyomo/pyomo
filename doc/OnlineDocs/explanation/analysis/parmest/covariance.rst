@@ -34,6 +34,9 @@ methods which have been implemented in parmest.
     points, :math:`l` is the number of fitted parameters, and :math:`e_i` is the
     residual for experiment :math:`i`.
 
+    In parmest, this method computes the inverse of the Hessian by scaling the
+    objective function (SSE or WSSE) with a constant probability factor.
+
 2. Finite Difference Method
 
     In this method, the covariance matrix, :math:`V_{\boldsymbol{\theta}}`, is
@@ -64,15 +67,14 @@ methods which have been implemented in parmest.
     However, this method uses the model optimality (KKT) condition to compute the
     Jacobian matrix, :math:`\mathbf{G}_{\text{kaug},\, i}`, for experiment :math:`i`.
 
-Covariance matrix calculation is only supported with the built-in objective functions
-"SSE" or "SSE_weighted".
+The covariance matrix calculation is only supported with the built-in objective
+functions "SSE" or "SSE_weighted".
 
 In parmest, the covariance matrix can be calculated after defining the
 :class:`~pyomo.contrib.parmest.parmest.Estimator` object and estimating the unknown
 parameters using :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`. To
-estimate the covariance matrix, call
-:class:`~pyomo.contrib.parmest.parmest.Estimator.cov_est` and pass it the number
-of data points, e.g.,
+estimate the covariance matrix, with the default method being "finite_difference", call
+the :class:`~pyomo.contrib.parmest.parmest.Estimator.cov_est` function, e.g.,
 
 .. testsetup:: *
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
@@ -84,7 +86,6 @@ of data points, e.g.,
               [4, 16.0], [5, 15.6], [7, 19.8]],
         columns=['hour', 'y'],
     )
-    num_data = len(data)
 
     # Create the Experiment class
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
@@ -99,7 +100,7 @@ of data points, e.g.,
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
     >>> obj_val, theta_val = pest.theta_est()
-    >>> cov = pest.cov_est(cov_n=num_data)
+    >>> cov = pest.cov_est()
 
 Optionally, one of the three methods; "reduced_hessian", "finite_difference",
 and "automatic_differentiation_kaug" can be supplied for the covariance calculation,
@@ -111,4 +112,4 @@ e.g.,
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
     >>> obj_val, theta_val = pest.theta_est()
     >>> cov_method = "reduced_hessian"
-    >>> cov = pest.cov_est(cov_n=num_data, method=cov_method)
+    >>> cov = pest.cov_est(method=cov_method)
