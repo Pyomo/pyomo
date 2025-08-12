@@ -16,9 +16,7 @@ from pyomo.contrib.solver.common.base import LegacySolverWrapper
 
 
 class SolverFactoryClass(Factory):
-    """ Factory class for generating instances of solver interfaces (API v2)
-
-    """
+    """Factory class for generating instances of solver interfaces (API v2)"""
 
     def register(self, name, legacy_name=None, doc=None):
         """Register a new solver with this solver factory
@@ -108,6 +106,7 @@ class SolverFactoryClass(Factory):
             return cls
 
         return decorator
+
 
 #: Global registry/factory for "v2" solver interfaces.
 SolverFactory: SolverFactoryClass = SolverFactoryClass()
