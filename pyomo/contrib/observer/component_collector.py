@@ -10,7 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
-from pyomo.core.expr.numeric_expr import ExternalFunctionExpression, NPV_ExternalFunctionExpression
+from pyomo.core.expr.numeric_expr import (
+    ExternalFunctionExpression,
+    NPV_ExternalFunctionExpression,
+)
 from pyomo.core.base.var import VarData, ScalarVar
 from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.base.expression import ExpressionData, ScalarExpression
