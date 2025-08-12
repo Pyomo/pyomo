@@ -39,10 +39,6 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
 )
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.solvers.gurobi_direct import (
-    GurobiConfigMixin,
-    GurobiSolverMixin,
-)
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
@@ -1328,7 +1324,7 @@ class GurobiPersistent(GurobiDirectQuadratic):
     def set_objective(self, obj):
         self._change_detector.set_objective(obj)
 
-    def remove_constrains(self, cons):
+    def remove_constraints(self, cons):
         self._change_detector.remove_constraints(cons)
 
     def remove_sos_constraints(self, cons):
