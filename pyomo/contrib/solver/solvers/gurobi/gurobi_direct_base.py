@@ -12,14 +12,13 @@
 import datetime
 import io
 import math
-import operator
 import os
 
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigValue
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
-from pyomo.common.errors import MouseTrap, ApplicationError
+from pyomo.common.errors import ApplicationError
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -33,14 +32,12 @@ from pyomo.contrib.solver.common.util import (
     NoDualsError,
     NoReducedCostsError,
     NoSolutionError,
-    IncompatibleModelError,
 )
 from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 import logging
 
 

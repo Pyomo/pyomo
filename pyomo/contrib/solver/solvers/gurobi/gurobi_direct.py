@@ -9,40 +9,20 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import datetime
-import io
-import math
 import operator
-import os
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import ConfigValue
-from pyomo.common.dependencies import attempt_import
-from pyomo.common.enums import ObjectiveSense
-from pyomo.common.errors import MouseTrap, ApplicationError
 from pyomo.common.shutdown import python_is_shutting_down
-from pyomo.common.tee import capture_output, TeeStream
-from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
-from pyomo.contrib.solver.common.base import SolverBase, Availability
-from pyomo.contrib.solver.common.config import BranchAndBoundConfig
 from pyomo.contrib.solver.common.util import (
-    NoFeasibleSolutionError,
-    NoOptimalSolutionError,
     NoDualsError,
     NoReducedCostsError,
     NoSolutionError,
     IncompatibleModelError,
 )
-from pyomo.contrib.solver.common.results import (
-    Results,
-    SolutionStatus,
-    TerminationCondition,
-)
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
-import logging
 from .gurobi_direct_base import GurobiDirectBase, gurobipy
 
 

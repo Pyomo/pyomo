@@ -10,61 +10,33 @@
 #  ___________________________________________________________________________
 
 from __future__ import annotations
-import io
 import logging
-import math
-from typing import Dict, List, NoReturn, Optional, Sequence, Mapping
+from typing import Dict, List, Optional, Sequence, Mapping
 from collections.abc import Iterable
 
-from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
-from pyomo.common.dependencies import attempt_import
-from pyomo.common.errors import ApplicationError
-from pyomo.common.tee import capture_output, TeeStream
+from pyomo.common.collections import ComponentSet, OrderedSet
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import VarData
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
-from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
-from pyomo.contrib.solver.common.base import PersistentSolverBase, Availability
-from pyomo.contrib.solver.common.results import (
-    Results,
-    TerminationCondition,
-    SolutionStatus,
-)
-from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.common.util import (
-    NoFeasibleSolutionError,
-    NoOptimalSolutionError,
-    NoDualsError,
-    NoReducedCostsError,
-    NoSolutionError,
-    IncompatibleModelError,
-)
-from pyomo.contrib.solver.common.persistent import (
-    PersistentSolverUtils,
-    PersistentSolverMixin,
-)
-from pyomo.contrib.solver.common.solution_loader import PersistentSolutionLoader, SolutionLoaderBase
+from pyomo.contrib.solver.common.results import Results
+from pyomo.contrib.solver.common.util import IncompatibleModelError
+from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.core.staleflag import StaleFlagManager
 from .gurobi_direct_base import (
-    GurobiConfig, 
     GurobiDirectBase, 
     gurobipy, 
-    _load_suboptimal_mip_solution,
     _load_vars,
     _get_primals,
     _get_duals,
     _get_reduced_costs,
 )
 from pyomo.contrib.solver.common.util import get_objective
-from pyomo.repn.quadratic import QuadraticRepn, QuadraticRepnVisitor
 from pyomo.contrib.observer.model_observer import Observer, ModelChangeDetector
 
 
