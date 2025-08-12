@@ -279,7 +279,7 @@ class _MutableQuadraticConstraint:
             incremental_coef_value = (
                 current_coef_value - self.last_linear_coef_values[ndx]
             )
-            gurobi_expr += incremental_coef_value * coef.var
+            gurobi_expr += incremental_coef_value * coef.gurobi_var
             self.last_linear_coef_values[ndx] = current_coef_value
         for ndx, coef in enumerate(self.quadratic_coefs):
             current_coef_value = value(coef.expr)
@@ -324,7 +324,7 @@ class _MutableObjective:
 
 class _MutableQuadraticCoefficient:
     def __init__(self, expr, v1id, v2id, var_map):
-        self.expr = None
+        self.expr = expr
         self.var_map = var_map
         self.v1id = v1id
         self.v2id = v2id
@@ -860,6 +860,7 @@ class GurobiPersistent(GurobiDirectQuadratic):
             solver_var = self._pyomo_var_to_solver_var_map[v_id]
             self._solver_model.remove(solver_var)
             del self._pyomo_var_to_solver_var_map[v_id]
+            del self._vars[v_id]
             self._mutable_bounds.pop(v_id, None)
         self._needs_updated = True
 

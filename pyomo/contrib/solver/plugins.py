@@ -35,7 +35,7 @@ def load():
         name='gurobi_direct_quadratic',
         legacy_name='gurobi_direct_quadratic_v2',
         doc='Direct interface to Gurobi',
-    )(GurobiDirect)
+    )(GurobiDirectQuadratic)
     SolverFactory.register(
-        name='highs', legacy_name='highs', doc='Persistent interface to HiGHS'
+        name='highs', legacy_name='highs_v2', doc='Persistent interface to HiGHS'
     )(Highs)
