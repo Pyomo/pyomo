@@ -38,20 +38,21 @@ import time
 
 logger = logging.getLogger("pyomo.solvers")
 
-cuopt, cuopt_available = attempt_import(
-    "cuopt",
-)
+
+cuopt, cuopt_available = attempt_import("cuopt")
 
 
-@SolverFactory.register("cuopt_direct", doc="Direct python interface to CUOPT")
+@SolverFactory.register("cuopt", doc="Direct python interface to CUOPT")
 class CUOPTDirect(DirectSolver):
     def __init__(self, **kwds):
         kwds["type"] = "cuoptdirect"
         super(CUOPTDirect, self).__init__(**kwds)
+        self._version = tuple(int(k) for k in cuopt.__version__.split('.'))
         self._python_api_exists = True
         # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.integer = True
+        self.referenced_vars = ComponentSet()
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
@@ -66,19 +67,46 @@ class CUOPTDirect(DirectSolver):
 
     def _add_constraint(self, constraints):
         c_lb, c_ub = [], []
-        matrix_data, matrix_indptr, matrix_indices = [], [0], []
-        for i, con in enumerate(constraints):
+        matrix_data = []
+        matrix_indptr = [0]
+        matrix_indices = []
+
+        con_idx = 0
+        for con in constraints:
+            if not con.active:
+                return None
+
+            if self._skip_trivial_constraints and is_fixed(con.body):
+                return None
+
+            if not con.has_lb() and not con.has_ub():
+                assert not con.equality
+                continue  # non-binding, so skip
+
+            conname = self._symbol_map.getSymbol(con, self._labeler)
+            self._pyomo_con_to_solver_con_map[con] = con_idx
+            con_idx += 0
             repn = generate_standard_repn(con.body, quadratic=False)
             matrix_data.extend(repn.linear_coefs)
             matrix_indices.extend(
                 [self.var_name_dict[str(i)] for i in repn.linear_vars]
             )
-            """for v, c in zip(con.body.linear_vars, con.body.linear_coefs):
-                matrix_data.append(value(c))
-                matrix_indices.append(self.var_name_dict[str(v)])"""
+            self.referenced_vars.update(repn.linear_vars)
             matrix_indptr.append(len(matrix_data))
-            c_lb.append(value(con.lower) if con.lower is not None else -np.inf)
-            c_ub.append(value(con.upper) if con.upper is not None else np.inf)
+            c_lb.append(
+                value(con.lower) - repn.constant if con.lower is not None else -np.inf
+            )
+            c_ub.append(
+                value(con.upper) - repn.constant if con.upper is not None else np.inf
+            )
+
+        if len(matrix_data) == 0:
+            matrix_data = [0]
+            matrix_indices = [0]
+            matrix_indptr = [0, 1]
+            c_lb = [0]
+            c_ub = [0]
+
         self._solver_model.set_csr_constraint_matrix(
             np.array(matrix_data), np.array(matrix_indices), np.array(matrix_indptr)
         )
@@ -86,22 +114,20 @@ class CUOPTDirect(DirectSolver):
         self._solver_model.set_constraint_upper_bounds(np.array(c_ub))
 
     def _add_var(self, variables):
-        # Map vriable to index and get var bounds
-        var_type_dict = {
-            "Integers": "I",
-            "Reals": "C",
-            "Binary": "I",
-        }  # NonNegativeReals ?
-
+        # Map variable to index and get var bounds
         self.var_name_dict = {}
         v_lb, v_ub, v_type = [], [], []
 
         for i, v in enumerate(variables):
-            v_type.append(var_type_dict[str(v.domain)])
-            if v.domain == "Binary":
-                v_lb.append(0)
-                v_ub.append(1)
+            if v.is_binary():
+                v_type.append("I")
+                v_lb.append(v.lb if v.lb is not None else 0)
+                v_ub.append(v.ub if v.ub is not None else 1)
             else:
+                if v.is_integer():
+                    v_type.append("I")
+                else:
+                    v_type.append("C")
                 v_lb.append(v.lb if v.lb is not None else -np.inf)
                 v_ub.append(v.ub if v.ub is not None else np.inf)
             self.var_name_dict[str(v)] = i
@@ -115,6 +141,8 @@ class CUOPTDirect(DirectSolver):
 
     def _set_objective(self, objective):
         repn = generate_standard_repn(objective.expr, quadratic=False)
+        self.referenced_vars.update(repn.linear_vars)
+
         obj_coeffs = [0] * len(self.var_name_dict)
         for i, coeff in enumerate(repn.linear_coefs):
             obj_coeffs[self.var_name_dict[str(repn.linear_vars[i])]] = coeff
@@ -145,13 +173,12 @@ class CUOPTDirect(DirectSolver):
                 ctype=Var, descend_into=True, active=True, sort=True
             )
         )
-
-        for sub_block in block.block_data_objects(descend_into=True, active=True):
-            self._add_constraint(
-                sub_block.component_data_objects(
-                    ctype=Constraint, descend_into=False, active=True, sort=True
-                )
+        self._add_constraint(
+            block.component_data_objects(
+                ctype=Constraint, descend_into=True, active=True, sort=True
             )
+        )
+        for sub_block in block.block_data_objects(descend_into=True, active=True):
             obj_counter = 0
             for obj in sub_block.component_data_objects(
                 ctype=Objective, descend_into=False, active=True
@@ -169,6 +196,9 @@ class CUOPTDirect(DirectSolver):
         extract_reduced_costs = False
         for suffix in self._suffixes:
             flag = False
+            if re.match(suffix, "dual"):
+                extract_duals = True
+                flag = True
             if re.match(suffix, "rc"):
                 extract_reduced_costs = True
                 flag = True
@@ -238,12 +268,40 @@ class CUOPTDirect(DirectSolver):
             pass
 
         var_map = self._pyomo_var_to_ndx_map
-        primal_solution = solution.get_primal_solution().tolist()
-        for i, pyomo_var in enumerate(var_map.keys()):
-            pyomo_var.set_value(primal_solution[i], skip_validation=True)
+        con_map = self._pyomo_con_to_solver_con_map
 
-        if extract_reduced_costs:
-            self._load_rc()
+        primal_solution = solution.get_primal_solution().tolist()
+        reduced_costs = None
+        dual_solution = None
+        if extract_reduced_costs and solution.get_problem_category() == 0:
+            reduced_costs = solution.get_reduced_cost()
+        if extract_duals and solution.get_problem_category() == 0:
+            dual_solution = solution.get_dual_solution()
+
+        if self._save_results:
+            soln_variables = soln.variable
+            soln_constraints = soln.constraint
+            for i, pyomo_var in enumerate(var_map.keys()):
+                if len(primal_solution) > 0 and pyomo_var in self.referenced_vars:
+                    name = self._symbol_map.getSymbol(pyomo_var, self._labeler)
+                    soln_variables[name] = {"Value": primal_solution[i]}
+                    if reduced_costs is not None:
+                        soln_variables[name]["Rc"] = reduced_costs[i]
+            for i, pyomo_con in enumerate(con_map.keys()):
+                if dual_solution is not None:
+                    con_name = self._symbol_map.getSymbol(pyomo_con, self._labeler)
+                    soln_constraints[con_name] = {"Dual": dual_solution[i]}
+
+        elif self._load_solutions:
+            if len(primal_solution) > 0:
+                for i, pyomo_var in enumerate(var_map.keys()):
+                    pyomo_var.set_value(primal_solution[i], skip_validation=True)
+
+                if reduced_costs is not None:
+                    self._load_rc()
+
+                if dual_solution is not None:
+                    self._load_duals()
 
         self.results.solution.insert(soln)
         return DirectOrPersistentSolver._postsolve(self)
@@ -258,11 +316,11 @@ class CUOPTDirect(DirectSolver):
         var_map = self._pyomo_var_to_ndx_map
         if vars_to_load is None:
             vars_to_load = var_map.keys()
-        reduced_costs = self.solution.get_reduced_costs()
+        reduced_costs = self.solution.get_reduced_cost()
         for pyomo_var in vars_to_load:
             rc[pyomo_var] = reduced_costs[var_map[pyomo_var]]
 
-    def load_rc(self, vars_to_load):
+    def load_rc(self, vars_to_load=None):
         """
         Load the reduced costs into the 'rc' suffix. The 'rc' suffix must live on the parent model.
 
@@ -271,3 +329,24 @@ class CUOPTDirect(DirectSolver):
         vars_to_load: list of Var
         """
         self._load_rc(vars_to_load)
+
+    def _load_duals(self, cons_to_load=None):
+        if not hasattr(self._pyomo_model, 'dual'):
+            self._pyomo_model.dual = Suffix(direction=Suffix.IMPORT)
+        dual = self._pyomo_model.dual
+        con_map = self._pyomo_con_to_solver_con_map
+        if cons_to_load is None:
+            cons_to_load = con_map.keys()
+        dual_solution = self.solution.get_reduced_cost()
+        for pyomo_con in cons_to_load:
+            dual[pyomo_con] = dual_solution[con_map[pyomo_con]]
+
+    def load_duals(self, cons_to_load=None):
+        """
+        Load the duals into the 'dual' suffix. The 'dual' suffix must live on the parent model.
+
+        Parameters
+        ----------
+        cons_to_load: list of Constraint
+        """
+        self._load_duals(cons_to_load)

@@ -422,18 +422,13 @@ def test_solver_cases(*args):
         #
         # CUOPT
         #
-        _cuopt_capabilities = set(
-            [
-                'linear',
-                'integer',
-            ]
-        )
+        _cuopt_capabilities = set(['linear', 'integer'])
 
-        _test_solver_cases['cuopt_direct', 'python'] = initialize(
-            name='cuopt_direct',
+        _test_solver_cases['cuopt', 'python'] = initialize(
+            name='cuopt',
             io='python',
             capabilities=_cuopt_capabilities,
-            import_suffixes=['rc'],
+            import_suffixes=['rc', 'dual'],
         )
 
         #
