@@ -59,18 +59,6 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         GurobiDirectBase._register_env_client()
 
     def __del__(self):
-        if python_is_shutting_down():
-            return
-        # Free the associated model
-        if self._solver_model is not None:
-            self._vars = None
-            self._var_map = None
-            self._con_map = None
-            self._linear_cons = None
-            self._quadratic_cons = None
-            # explicitly release the model
-            self._solver_model.dispose()
-            self._solver_model = None
         # Release the gurobi license if this is the last reference to
         # the environment (either through a results object or solver
         # interface)

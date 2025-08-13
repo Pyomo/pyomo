@@ -208,10 +208,7 @@ class Observer(abc.ABC):
 
 
 class ModelChangeDetector:
-    def __init__(
-        self, observers: Sequence[Observer], 
-        **kwds,
-    ):
+    def __init__(self, observers: Sequence[Observer], **kwds):
         """
         Parameters
         ----------
@@ -237,13 +234,15 @@ class ModelChangeDetector:
         )  # var_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
         self._referenced_params = (
             {}
-        ) # param_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
+        )  # param_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
         self._vars_referenced_by_con = {}
         self._vars_referenced_by_obj = []
         self._params_referenced_by_con = {}
         self._params_referenced_by_obj = []
         self._expr_types = None
-        self.config: AutoUpdateConfig = AutoUpdateConfig()(value=kwds, preserve_implicit=True)
+        self.config: AutoUpdateConfig = AutoUpdateConfig()(
+            value=kwds, preserve_implicit=True
+        )
 
     def set_instance(self, model):
         saved_config = self.config
@@ -347,7 +346,10 @@ class ModelChangeDetector:
             if con in self._active_sos:
                 raise ValueError(f'Constraint {con.name} has already been added')
             sos_items = list(con.get_items())
-            self._active_sos[con] = ([i[0] for i in sos_items], [i[1] for i in sos_items])
+            self._active_sos[con] = (
+                [i[0] for i in sos_items],
+                [i[1] for i in sos_items],
+            )
             variables = []
             params = []
             for v, p in sos_items:
@@ -616,14 +618,14 @@ class ModelChangeDetector:
                 vars_to_update.append(v)
         cons_to_update = list(cons_to_update.keys())
         return vars_to_update, cons_to_update, update_obj
-    
+
     def _check_for_param_changes(self):
         params_to_update = []
         for pid, (p, val) in self._params.items():
             if p.value != val:
                 params_to_update.append(p)
         return params_to_update
-    
+
     def _check_for_named_expression_changes(self):
         cons_to_update = []
         for con, ne_list in self._named_expressions.items():
@@ -644,7 +646,7 @@ class ModelChangeDetector:
         new_obj = get_objective(self._model)
         if new_obj is not self._objective:
             update_obj = True
-        return new_obj, update_obj        
+        return new_obj, update_obj
 
     def _check_for_objective_changes(self):
         update_obj = False
@@ -717,7 +719,7 @@ class ModelChangeDetector:
             if update_obj:
                 need_to_set_objective = True
             timer.stop('named expressions')
-        
+
         timer.start('objective')
         new_obj = self._objective
         if config.check_for_new_objective:
