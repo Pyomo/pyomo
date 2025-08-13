@@ -397,6 +397,8 @@ class LegacySolverWrapper:
     """
 
     class _all_true(object):
+        # A mockup of Bunch that returns True for all attribute lookups
+        # or containment tests.
         def __getattr__(self, name):
             return True
 
@@ -404,6 +406,8 @@ class LegacySolverWrapper:
             return True
 
     class UpdatableConfigDict(ConfigDict):
+        # The legacy solver interface used Option objects.  we will make
+        # the ConfigDict *look* like an Option by supporting update()
         __slots__ = ()
 
         def update(self, value):
@@ -427,10 +431,14 @@ class LegacySolverWrapper:
             kwargs['solver_options'] = _options
         super().__init__(**kwargs)
         # Make the legacy 'options' attribute an alias of the new
-        # config.solver_options
+        # config.solver_options; change its class so it behaves more
+        # like an old Bunch/Options object.
         self.options = self.config.solver_options
         self.options.__class__ = LegacySolverWrapper.UpdatableConfigDict
-        self._capabilities = LegacySolverWrapper._all_true()
+        # We will assume the solver interface supports all capabilities
+        # (unless a derived class actually set something
+        if not hasattr(self, '_capabilities'):
+            self._capabilities = LegacySolverWrapper._all_true()
 
     #
     # Support "with" statements
@@ -602,9 +610,11 @@ class LegacySolverWrapper:
                     legacy_soln.variable['Rc'] = val
 
         legacy_results.solution.insert(legacy_soln)
-        # Timing info was not originally on the legacy results, but we want
-        # to make it accessible to folks who are utilizing the backwards
-        # compatible version.
+        # Timing info was not originally on the legacy results, but we
+        # want to make it accessible to folks who are utilizing the
+        # backwards compatible version.  Note that embetting the
+        # ConfigDict broke pickling the legacy_results, so we will only
+        # return raw nested dicts
         legacy_results.timing_info = results.timing_info.value()
         if delete_legacy_soln:
             legacy_results.solution.delete(0)
