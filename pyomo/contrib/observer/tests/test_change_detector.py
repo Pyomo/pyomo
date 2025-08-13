@@ -24,7 +24,7 @@ class ObserverChecker(Observer):
         super().__init__()
         self.counts = ComponentMap()
         """
-        counts is be a mapping from component (e.g., variable) to another 
+        counts is a mapping from component (e.g., variable) to another 
         mapping from string ('add', 'remove', 'update', or 'set') to an int that 
         indicates the number of times the corresponding method has been called
         """
