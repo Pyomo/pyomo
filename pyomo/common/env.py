@@ -67,6 +67,11 @@ def _load_dll(name, timeout=10):
         return False, None
 
     if _load_dll.pool is None:
+        # Resolving the deferred multiprocessing import could change the
+        # local "multiprocessing" variable (replacing it with the
+        # imported module).  This can result in an UnboundLocalError.
+        # By explicitly declaring it "global" we can avoid the error.
+        global multiprocessing
         try:
             _load_dll.pool = multiprocessing.Pool(1)
         except AssertionError:
