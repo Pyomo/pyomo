@@ -131,9 +131,11 @@ class TestLegacySolverWrapper(unittest.TestCase):
         expected_list = [
             'available',
             'config_block',
+            'default_variable_value',
             'license_is_valid',
             'set_options',
             'solve',
+            'warm_start_capable',
         ]
         method_list = [
             method
