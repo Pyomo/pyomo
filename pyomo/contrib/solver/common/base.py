@@ -17,7 +17,7 @@ from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import Objective, ObjectiveData
-from pyomo.common.config import ConfigValue
+from pyomo.common.config import ConfigValue, ConfigDict
 from pyomo.common.enums import IntEnum
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
@@ -396,9 +396,23 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
+    class _all_true(object):
+        def __getattr__(self, name):
+            return True
+
+        def __contains__(self, name):
+            return True
+
+    class UpdatableConfigDict(ConfigDict):
+        __slots__ = ()
+
+        def update(self, value):
+            return self.set_value(value)
+
     def __init__(self, **kwargs):
-        if 'solver_io' in kwargs:
-            raise NotImplementedError('Still working on this')
+        solver_io = kwargs.pop('solver_io', None)
+        if solver_io:
+            raise NotImplementedError(f'Still working on this ({solver_io=})')
         # There is no reason for a user to be trying to mix both old
         # and new options. That is silly. So we will yell at them.
         _options = kwargs.pop('options', None)
@@ -415,6 +429,8 @@ class LegacySolverWrapper:
         # Make the legacy 'options' attribute an alias of the new
         # config.solver_options
         self.options = self.config.solver_options
+        self.options.__class__ = LegacySolverWrapper.UpdatableConfigDict
+        self._capabilities = LegacySolverWrapper._all_true()
 
     #
     # Support "with" statements
@@ -555,7 +571,7 @@ class LegacySolverWrapper:
         self, load_solutions, model, results, legacy_results, legacy_soln
     ):
         """Method to handle the preferred action for the solution"""
-        symbol_map = SymbolMap()
+        symbol_map = legacy_soln.symbol_map = SymbolMap()
         symbol_map.default_labeler = NumericLabeler('x')
         if not hasattr(model, 'solutions'):
             # This logic gets around Issue #2130 in which
@@ -564,6 +580,7 @@ class LegacySolverWrapper:
 
             setattr(model, 'solutions', ModelSolutions(model))
         model.solutions.add_symbol_map(symbol_map)
+        legacy_results._smap = symbol_map
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True
         if load_solutions:
@@ -699,3 +716,9 @@ class LegacySolverWrapper:
         opts = {k: v for k, v in options.value().items() if v is not None}
         if opts:
             self._map_config(**opts)
+
+    def warm_start_capable(self):
+        return False
+
+    def default_variable_value(self):
+        return None
