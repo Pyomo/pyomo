@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import operator
-from typing import List
+from typing import List, Any
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.shutdown import python_is_shutting_down
@@ -63,8 +63,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
     def get_solution_ids(self) -> List[Any]:
         return [0]
 
-    def load_vars(self, vars_to_load=None, solution_id=0):
-        assert solution_id == 0
+    def load_vars(self, vars_to_load=None, solution_id=None):
+        assert solution_id == None
         if self._grb_model.SolCount == 0:
             raise NoSolutionError()
 
@@ -76,8 +76,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             p_var.set_value(g_var, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def get_vars(self, vars_to_load=None, solution_id=0):
-        assert solution_id == 0
+    def get_vars(self, vars_to_load=None, solution_id=None):
+        assert solution_id == None
         if self._grb_model.SolCount == 0:
             raise NoSolutionError()
 
@@ -87,8 +87,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             iterator = filter(lambda var_val: var_val[0] in vars_to_load, iterator)
         return ComponentMap(iterator)
 
-    def get_duals(self, cons_to_load=None, solution_id=0):
-        assert solution_id == 0
+    def get_duals(self, cons_to_load=None, solution_id=None):
+        assert solution_id == None
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
             raise NoDualsError()
 
@@ -108,8 +108,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             )
         return {con_info[0]: dual for con_info, dual in iterator}
 
-    def get_reduced_costs(self, vars_to_load=None, solution_id=0):
-        assert solution_id == 0
+    def get_reduced_costs(self, vars_to_load=None, solution_id=None):
+        assert solution_id == None
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
             raise NoReducedCostsError()
 

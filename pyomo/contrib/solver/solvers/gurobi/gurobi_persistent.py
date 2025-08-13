@@ -33,7 +33,7 @@ from .gurobi_direct_base import (
     GurobiDirectBase,
     gurobipy,
     _load_vars,
-    _get_primals,
+    _get_vars,
     _get_duals,
     _get_reduced_costs,
 )
@@ -71,7 +71,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         return list(range(self.get_number_of_solutions()))
 
     def load_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> None:
         if vars_to_load is None:
             vars_to_load = list(self._vars.values())
@@ -83,11 +83,11 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         )
 
     def get_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
         if vars_to_load is None:
             vars_to_load = list(self._vars.values())
-        return _get_primals(
+        return _get_vars(
             solver_model=self._solver_model,
             var_map=self._var_map,
             vars_to_load=vars_to_load,
@@ -95,7 +95,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         )
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
         if vars_to_load is None:
             vars_to_load = list(self._vars.values())
@@ -106,7 +106,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         )
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=0
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> Dict[ConstraintData, float]:
         if cons_to_load is None:
             cons_to_load = list(self._con_map.keys())
@@ -146,25 +146,25 @@ class GurobiPersistentSolutionLoader(GurobiDirectQuadraticSolutionLoader):
             raise RuntimeError('The results in the solver are no longer valid.')
 
     def load_vars(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
     ) -> None:
         self._assert_solution_still_valid()
         return super().load_vars(vars_to_load, solution_id)
 
     def get_vars(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
-        return super().get_primals(vars_to_load, solution_id)
+        return super().get_vars(vars_to_load, solution_id)
 
     def get_duals(
-        self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=0,
+        self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=None,
     ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return super().get_duals(cons_to_load)
 
     def get_reduced_costs(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0,
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None,
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return super().get_reduced_costs(vars_to_load)

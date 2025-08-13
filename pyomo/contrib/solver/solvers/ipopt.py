@@ -508,7 +508,7 @@ class Ipopt(SolverBase):
                         nl_info.objectives[0].expr,
                         substitution_map={
                             id(v): val
-                            for v, val in results.solution_loader.get_primals().items()
+                            for v, val in results.solution_loader.get_vars().items()
                         },
                         descend_into_named_expressions=True,
                         remove_named_expressions=True,

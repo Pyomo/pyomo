@@ -99,7 +99,7 @@ def _load_suboptimal_mip_solution(solver_model, var_map, vars_to_load, solution_
     return res
 
 
-def _load_vars(solver_model, var_map, vars_to_load, solution_number=0):
+def _load_vars(solver_model, var_map, vars_to_load, solution_number=None):
     """
     solver_model: gurobipy.Model
     var_map: Dict[int, gurobipy.Var]
@@ -107,7 +107,7 @@ def _load_vars(solver_model, var_map, vars_to_load, solution_number=0):
     vars_to_load: List[VarData]
     solution_number: int
     """
-    for v, val in _get_primals(
+    for v, val in _get_vars(
         solver_model=solver_model,
         var_map=var_map,
         vars_to_load=vars_to_load,
@@ -117,7 +117,7 @@ def _load_vars(solver_model, var_map, vars_to_load, solution_number=0):
     StaleFlagManager.mark_all_as_stale(delayed=True)
 
 
-def _get_primals(solver_model, var_map, vars_to_load, solution_number=0):
+def _get_vars(solver_model, var_map, vars_to_load, solution_number=None):
     """
     solver_model: gurobipy.Model
     var_map: Dict[int, gurobipy.Var]
@@ -128,7 +128,7 @@ def _get_primals(solver_model, var_map, vars_to_load, solution_number=0):
     if solver_model.SolCount == 0:
         raise NoSolutionError()
 
-    if solution_number != 0:
+    if solution_number not in {0, None}:
         return _load_suboptimal_mip_solution(
             solver_model=solver_model,
             var_map=var_map,

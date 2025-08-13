@@ -570,7 +570,7 @@ class LegacySolverWrapper:
             results.solution_loader.load_import_suffixes()
         elif results.incumbent_objective is not None:
             delete_legacy_soln = False
-            for var, val in results.solution_loader.get_primals().items():
+            for var, val in results.solution_loader.get_vars().items():
                 legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for con, val in results.solution_loader.get_duals().items():
