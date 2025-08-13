@@ -97,9 +97,9 @@ class SolverFactoryClass(Factory):
 
                 legacy_cls = LegacySolver
 
-            LegacySolverFactory.register(legacy_name, doc + " (new interface)")(
-                legacy_cls
-            )
+            LegacySolverFactory.register(
+                legacy_name, doc + " (new interface)" if doc else doc
+            )(legacy_cls)
 
             # Preserve the preferred name, as registered in the Factory
             cls.name = name
