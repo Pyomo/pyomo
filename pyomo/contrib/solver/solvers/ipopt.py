@@ -349,7 +349,7 @@ class Ipopt(SolverBase):
                 dname = config.working_dir
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            basename = os.path.join(dname, model.name)
+            basename = os.path.join(dname, model.name or 'unknown')
             if os.path.exists(basename + '.nl'):
                 raise RuntimeError(
                     f"NL file with the same name {basename + '.nl'} already exists!"
