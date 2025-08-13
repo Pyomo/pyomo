@@ -741,11 +741,13 @@ class PathManager(object):
 
     def __call__(self, path):
         if path not in self._pathTo:
+            if isinstance(path, self._dataClass):
+                return path
             self._pathTo[path] = self._dataClass(self, path)
         return self._pathTo[path]
 
     def rehash(self):
-        """Requery the location of all registered executables
+        """Requery the location of all registered paths
 
         This method derives its name from the csh command of the same
         name, which rebuilds the hash table of executables reachable
@@ -759,8 +761,56 @@ class PathManager(object):
 #
 # Define singleton objects for Pyomo / Users to interact with
 #
-Executable = PathManager(find_executable, ExecutableData)
-Library = PathManager(find_library, PathData)
+class Executable(object):
+    """Singleton executable registry
+
+    This class cannot be instantiated.  Instead, calling this type will
+    perform lookups in the underlying singleton :class:`PathManager`
+    object and return instances of :class:`ExecutableData`.
+
+    """
+
+    _manager = PathManager(find_executable, ExecutableData)
+
+    def __new__(cls, path) -> ExecutableData:
+        return cls._manager(path)
+
+    @classmethod
+    def rehash(cls):
+        """Requery the location of all registered executable paths
+
+        This method derives its name from the csh command of the same
+        name, which rebuilds the hash table of executables reachable
+        through the PATH.
+
+        """
+        return cls._manager.rehash()
+
+
+class Library(object):
+    """Singleton library registry
+
+    This class cannot be instantiated.  Instead, calling this type will
+    perform lookups in the underlying singleton :class:`PathManager`
+    object and return instances of :class:`PathData`.
+
+    """
+
+    _manager = PathManager(find_library, PathData)
+
+    def __new__(cls, path) -> PathData:
+        return cls._manager(path)
+
+    @classmethod
+    def rehash(cls):
+        """Requery the location of all registered library paths
+
+        This method derives its name from the csh command of the same
+        name, which rebuilds the hash table of executables reachable
+        through the PATH.
+
+        """
+        return cls._manager.rehash()
 
 
 @deprecated(
