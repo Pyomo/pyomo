@@ -11,7 +11,7 @@
 
 import os
 
-from .dependencies import ctypes
+from .dependencies import ctypes, multiprocessing
 
 
 def _as_bytes(val):
@@ -65,8 +65,6 @@ def _load_dll(name, timeout=10):
     """
     if not ctypes.util.find_library(name):
         return False, None
-
-    import multiprocessing
 
     if _load_dll.pool is None:
         try:
