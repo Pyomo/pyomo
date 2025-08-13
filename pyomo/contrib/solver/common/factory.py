@@ -53,8 +53,8 @@ class SolverFactoryClass(Factory):
 
            SolverFactory.register("test_solver_2")(TestSolver2)
 
-        When called explicitly, you can pass a custom
-        LegacySolverInterface class:
+        When called explicitly, you can pass a custom class to register
+        with the :attr:`LegacySolverFactory`:
 
         .. testcode::
 
