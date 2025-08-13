@@ -101,7 +101,7 @@ class TestSolverAPIVersion(unittest.TestCase):
     def test_members(self):
         self.assertEqual(
             list(SolverAPIVersion),
-            (SolverAPIVersion.V1, SolverAPIVersion.APPSI, SolverAPIVersion.V2),
+            [SolverAPIVersion.V1, SolverAPIVersion.APPSI, SolverAPIVersion.V2],
         )
 
     def test_call(self):
