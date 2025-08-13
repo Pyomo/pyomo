@@ -405,7 +405,7 @@ class LegacySolverWrapper:
         def __contains__(self, name):
             return True
 
-    class UpdatableConfigDict(ConfigDict):
+    class _UpdatableConfigDict(ConfigDict):
         # The legacy solver interface used Option objects.  we will make
         # the ConfigDict *look* like an Option by supporting update()
         __slots__ = ()
@@ -434,7 +434,7 @@ class LegacySolverWrapper:
         # config.solver_options; change its class so it behaves more
         # like an old Bunch/Options object.
         self.options = self.config.solver_options
-        self.options.__class__ = LegacySolverWrapper.UpdatableConfigDict
+        self.options.__class__ = LegacySolverWrapper._UpdatableConfigDict
         # We will assume the solver interface supports all capabilities
         # (unless a derived class actually set something
         if not hasattr(self, '_capabilities'):
