@@ -52,7 +52,12 @@ _SUFFIX_API = (
 
 
 def suffix_generator(a_block, datatype=NOTSET, direction=NOTSET, active=None):
-    _iter = a_block.component_map(Suffix, active=active).items()
+    _iter = (
+        (s.name, s)
+        for s in a_block.component_data_objects(
+            Suffix, active=active, descend_into=False
+        )
+    )
     if direction is not NOTSET:
         direction = _SuffixDirectionDomain(direction)
         if not direction:
