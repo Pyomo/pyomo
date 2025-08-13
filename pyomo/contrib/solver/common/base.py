@@ -605,7 +605,7 @@ class LegacySolverWrapper:
         # Timing info was not originally on the legacy results, but we want
         # to make it accessible to folks who are utilizing the backwards
         # compatible version.
-        legacy_results.timing_info = results.timing_info
+        legacy_results.timing_info = results.timing_info.value()
         if delete_legacy_soln:
             legacy_results.solution.delete(0)
         return legacy_results
