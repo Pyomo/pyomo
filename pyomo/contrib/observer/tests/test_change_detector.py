@@ -363,4 +363,3 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.p]['remove'] += 1
         expected[m.p]['add'] += 1
         obs.check(expected)
-
