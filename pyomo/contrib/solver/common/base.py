@@ -612,7 +612,7 @@ class LegacySolverWrapper:
         legacy_results.solution.insert(legacy_soln)
         # Timing info was not originally on the legacy results, but we
         # want to make it accessible to folks who are utilizing the
-        # backwards compatible version.  Note that embetting the
+        # backwards compatible version.  Note that embedding the
         # ConfigDict broke pickling the legacy_results, so we will only
         # return raw nested dicts
         legacy_results.timing_info = results.timing_info.value()
