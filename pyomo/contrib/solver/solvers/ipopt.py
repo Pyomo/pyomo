@@ -381,7 +381,9 @@ class Ipopt(SolverBase):
             # The base file name for this interface is "model_name + PID
             # + thread id", so that this is reasonably unique in both
             # parallel and threaded environments (even when working_dir
-            # is set to a persistent directory)
+            # is set to a persistent directory).  Note that the Pyomo
+            # solver interfaces are not formally thread-safe (yet), so
+            # this is a bit of future-proofing.
             basename = os.path.join(
                 dname, f"{basename}.{os.getpid()}.{threading.get_ident()}"
             )
