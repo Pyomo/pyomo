@@ -53,7 +53,7 @@ _SUFFIX_API = (
 
 def suffix_generator(a_block, datatype=NOTSET, direction=NOTSET, active=None):
     _iter = (
-        (s.name, s)
+        (s.local_name, s)
         for s in a_block.component_data_objects(
             Suffix, active=active, descend_into=False
         )
