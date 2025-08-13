@@ -99,15 +99,16 @@ class GMSSolutionLoader(SolutionLoaderBase):
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
-        res = {}
+
+        res = ComponentMap()
 
         if cons_to_load is None:
             cons_to_load = set(self._gms_info.con_symbol_map.bySymbol.keys())
-        else:
-            cons_to_load = set(cons_to_load)
+
         for sym, con in self._gms_info.con_symbol_map.bySymbol.items():
             if sym in cons_to_load and con.parent_component().ctype is not Objective:
                 res[con] = self._gdx_data[sym][1]
+
         return res
 
     def get_reduced_costs(self, vars_to_load=None):
@@ -122,13 +123,11 @@ class GMSSolutionLoader(SolutionLoaderBase):
                 'check results.termination_condition and/or results.solution_status.'
             )
 
-        res = {}
-
+        res = ComponentMap()
         if vars_to_load is None:
-            vars_to_load = set(self._gms_info.var_symbol_map.bySymbol.keys())
-        else:
-            vars_to_load = set(vars_to_load)
-        for sym, var in self._gms_info.var_symbol_map.bySymbol.items():
-            if sym in vars_to_load and var.parent_component().ctype is Var:
-                res[var.name] = self._gdx_data[sym][1]
+            vars_to_load = self._gms_info.var_symbol_map.bySymbol.items()
+
+        for sym, obj in vars_to_load:
+            res[obj] = self._gdx_data[sym][1]
+
         return res
