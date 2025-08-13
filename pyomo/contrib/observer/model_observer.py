@@ -366,12 +366,15 @@ class ModelChangeDetector:
             self._named_expressions[con] = []
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = params
+        self._check_for_new_vars(vars_to_check)
+        self._check_for_new_params(params_to_check)
+        for con in cons:
+            variables = self._vars_referenced_by_con[con]
+            params = self._params_referenced_by_con[con]
             for v in variables:
                 self._referenced_variables[id(v)][1][con] = None
             for p in params:
                 self._referenced_params[id(p)][1][con] = None
-        self._check_for_new_vars(vars_to_check)
-        self._check_for_new_params(params_to_check)
         for obs in self._observers:
             obs.add_sos_constraints(cons)
 
