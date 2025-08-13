@@ -27,7 +27,7 @@ from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeri
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.solver.common.results import Results
 from pyomo.contrib.solver.common.util import IncompatibleModelError
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase, load_import_suffixes
 from pyomo.core.staleflag import StaleFlagManager
 from .gurobi_direct_base import (
     GurobiDirectBase,
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
     def __init__(
-        self, solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons
+        self, solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons, pyomo_model
     ) -> None:
         super().__init__()
         self._solver_model = solver_model
@@ -55,6 +55,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         self._con_map = con_map
         self._linear_cons = linear_cons
         self._quadratic_cons = quadratic_cons
+        self._pyomo_model = pyomo_model
         GurobiDirectBase._register_env_client()
 
     def __del__(self):
@@ -75,6 +76,12 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         # interface)
         GurobiDirectBase._release_env_client()
 
+    def get_number_of_solutions(self) -> int:
+        return self._solver_model.SolCount
+    
+    def get_solution_ids(self) -> List:
+        return list(range(self.get_number_of_solutions()))
+
     def load_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
     ) -> None:
@@ -87,7 +94,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
             solution_number=solution_id,
         )
 
-    def get_primals(
+    def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
     ) -> Mapping[VarData, float]:
         if vars_to_load is None:
@@ -100,7 +107,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         )
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
     ) -> Mapping[VarData, float]:
         if vars_to_load is None:
             vars_to_load = list(self._vars.values())
@@ -111,7 +118,7 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
         )
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=0
     ) -> Dict[ConstraintData, float]:
         if cons_to_load is None:
             cons_to_load = list(self._con_map.keys())
@@ -130,13 +137,16 @@ class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
             quadratic_cons_to_load=quadratic_cons_to_load,
         )
 
+    def load_import_suffixes(self, solution_id=None):
+        load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
+
 
 class GurobiPersistentSolutionLoader(GurobiDirectQuadraticSolutionLoader):
     def __init__(
-        self, solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons
+        self, solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons, pyomo_model
     ) -> None:
         super().__init__(
-            solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons
+            solver_model, var_id_map, var_map, con_map, linear_cons, quadratic_cons, pyomo_model
         )
         self._valid = True
 
@@ -153,23 +163,35 @@ class GurobiPersistentSolutionLoader(GurobiDirectQuadraticSolutionLoader):
         self._assert_solution_still_valid()
         return super().load_vars(vars_to_load, solution_id)
 
-    def get_primals(
+    def get_vars(
         self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return super().get_primals(vars_to_load, solution_id)
 
     def get_duals(
-        self, cons_to_load: Sequence[ConstraintData] | None = None
+        self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=0,
     ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return super().get_duals(cons_to_load)
 
     def get_reduced_costs(
-        self, vars_to_load: Sequence[VarData] | None = None
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0,
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return super().get_reduced_costs(vars_to_load)
+    
+    def get_number_of_solutions(self) -> int:
+        self._assert_solution_still_valid()
+        return super().get_number_of_solutions()
+    
+    def get_solution_ids(self) -> List:
+        self._assert_solution_still_valid()
+        return super().get_solution_ids()
+    
+    def load_import_suffixes(self, solution_id=None):
+        self._assert_solution_still_valid()
+        super().load_import_suffixes(solution_id)
 
 
 class _MutableLowerBound:
@@ -380,6 +402,7 @@ class GurobiDirectQuadratic(GurobiDirectBase):
             con_map=self._pyomo_con_to_solver_con_map,
             linear_cons=self._linear_cons,
             quadratic_cons=self._quadratic_cons,
+            pyomo_model=pyomo_model,
         )
         timer.stop('create gurobipy model')
         return self._solver_model, solution_loader, has_obj
@@ -638,6 +661,7 @@ class GurobiPersistent(GurobiDirectQuadratic):
             con_map=self._pyomo_con_to_solver_con_map,
             linear_cons=self._linear_cons,
             quadratic_cons=self._quadratic_cons,
+            pyomo_model=pyomo_model,
         )
         has_obj = self._objective is not None
         return self._solver_model, solution_loader, has_obj

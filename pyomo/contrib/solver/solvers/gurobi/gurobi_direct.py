@@ -193,7 +193,7 @@ class GurobiDirect(GurobiDirectBase):
         self._gurobi_vars = x
 
         solution_loader = GurobiDirectSolutionLoader(
-            gurobi_model, A, x, repn.rows, repn.columns
+            gurobi_model, A, x, repn.rows, repn.columns, pyomo_model
         )
         has_obj = len(repn.objectives) > 0
 
