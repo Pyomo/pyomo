@@ -24,6 +24,7 @@ Standard Enums:
 .. autosummary::
 
    ObjectiveSense
+   SolverAPIVersion
 
 """
 
@@ -211,6 +212,23 @@ class ObjectiveSense(NamedIntEnum):
     # need to do this.
     def __str__(self):
         return self.name
+
+
+class SolverAPIVersion(NamedIntEnum):
+    """
+    Enum identifying Pyomo solver API version
+
+    The numeric values are intentionally a bit odd because APPSI came
+    between the official V1 and V2. We still want it to be chronologically
+    in order without sacrificing the human-logic of v1 vs. v2.
+    """
+
+    #: Original Coopr/Pyomo solver interface
+    V1 = 10
+    #: Automatic Persistent Pyomo Solver Interface (experimental)
+    APPSI = 15
+    #: Redesigned solver interface (circa 2024)
+    V2 = 20
 
 
 minimize = ObjectiveSense.minimize

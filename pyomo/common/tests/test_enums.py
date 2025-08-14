@@ -13,7 +13,7 @@ import enum
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.enums import ExtendedEnumType, ObjectiveSense
+from pyomo.common.enums import ExtendedEnumType, ObjectiveSense, SolverAPIVersion
 
 
 class ProblemSense(enum.IntEnum, metaclass=ExtendedEnumType):
@@ -95,3 +95,25 @@ class TestObjectiveSense(unittest.TestCase):
     def test_str(self):
         self.assertEqual(str(ObjectiveSense.minimize), 'minimize')
         self.assertEqual(str(ObjectiveSense.maximize), 'maximize')
+
+
+class TestSolverAPIVersion(unittest.TestCase):
+    def test_members(self):
+        self.assertEqual(
+            list(SolverAPIVersion),
+            [SolverAPIVersion.V1, SolverAPIVersion.APPSI, SolverAPIVersion.V2],
+        )
+
+    def test_call(self):
+        self.assertIs(SolverAPIVersion(10), SolverAPIVersion.V1)
+        self.assertIs(SolverAPIVersion(15), SolverAPIVersion.APPSI)
+        self.assertIs(SolverAPIVersion(20), SolverAPIVersion.V2)
+
+        self.assertIs(SolverAPIVersion('V1'), SolverAPIVersion.V1)
+        self.assertIs(SolverAPIVersion('APPSI'), SolverAPIVersion.APPSI)
+        self.assertIs(SolverAPIVersion('V2'), SolverAPIVersion.V2)
+
+        with self.assertRaisesRegex(
+            ValueError, "'foo' is not a valid SolverAPIVersion"
+        ):
+            SolverAPIVersion('foo')
