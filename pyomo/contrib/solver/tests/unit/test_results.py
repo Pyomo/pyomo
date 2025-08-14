@@ -50,8 +50,7 @@ class SolutionLoaderExample(solution_loader.SolutionLoaderBase):
         self._reduced_costs = reduced_costs
 
     def get_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None,
-        solution_id=None,
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
         if self._primals is None:
             raise RuntimeError(
@@ -67,8 +66,7 @@ class SolutionLoaderExample(solution_loader.SolutionLoaderBase):
             return primals
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None,
-        solution_id=None,
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> Dict[ConstraintData, float]:
         if self._duals is None:
             raise RuntimeError(
@@ -85,8 +83,7 @@ class SolutionLoaderExample(solution_loader.SolutionLoaderBase):
         return duals
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None,
-        solution_id=None,
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
         if self._reduced_costs is None:
             raise RuntimeError(

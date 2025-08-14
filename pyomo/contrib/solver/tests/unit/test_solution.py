@@ -18,7 +18,16 @@ from pyomo.contrib.solver.common.solution_loader import (
 
 class TestSolutionLoaderBase(unittest.TestCase):
     def test_member_list(self):
-        expected_list = ['load_vars', 'get_vars', 'get_duals', 'get_reduced_costs', 'load_import_suffixes', 'get_number_of_solutions', 'get_solution_ids', 'load_solution']
+        expected_list = [
+            'load_vars',
+            'get_vars',
+            'get_duals',
+            'get_reduced_costs',
+            'load_import_suffixes',
+            'get_number_of_solutions',
+            'get_solution_ids',
+            'load_solution',
+        ]
         method_list = [
             method
             for method in dir(SolutionLoaderBase)
@@ -38,7 +47,16 @@ class TestSolSolutionLoader(unittest.TestCase):
     # I am currently unsure how to test this further because it relies heavily on
     # SolFileData and NLWriterInfo
     def test_member_list(self):
-        expected_list = ['load_vars', 'get_vars', 'get_duals', 'get_reduced_costs', 'load_import_suffixes', 'get_number_of_solutions', 'get_solution_ids', 'load_solution']
+        expected_list = [
+            'load_vars',
+            'get_vars',
+            'get_duals',
+            'get_reduced_costs',
+            'load_import_suffixes',
+            'get_number_of_solutions',
+            'get_solution_ids',
+            'load_solution',
+        ]
         method_list = [
             method
             for method in dir(SolutionLoaderBase)
@@ -58,7 +76,7 @@ class TestPersistentSolutionLoader(unittest.TestCase):
             'load_import_suffixes',
             'get_number_of_solutions',
             'get_solution_ids',
-            'load_solution'
+            'load_solution',
         ]
         method_list = [
             method

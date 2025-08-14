@@ -109,9 +109,7 @@ class IpoptSolutionLoader(SolSolutionLoader):
             )
 
     def get_reduced_costs(
-        self, 
-        vars_to_load: Optional[Sequence[VarData]] = None,
-        solution_id=None,
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
         self._error_check()
         if solution_id is not None:
@@ -448,7 +446,9 @@ class Ipopt(SolverBase):
                         TerminationCondition.convergenceCriteriaSatisfied
                     )
                     results.solution_status = SolutionStatus.optimal
-                    results.solution_loader = SolSolutionLoader(None, nl_info=nl_info, pyomo_model=model)
+                    results.solution_loader = SolSolutionLoader(
+                        None, nl_info=nl_info, pyomo_model=model
+                    )
                     results.iteration_count = 0
                     results.timing_info.total_seconds = 0
             else:
@@ -668,7 +668,7 @@ class Ipopt(SolverBase):
             res.solution_loader = SolSolutionLoader(None, None, pyomo_model=pyomo_model)
         else:
             res.solution_loader = IpoptSolutionLoader(
-                sol_data=sol_data, nl_info=nl_info, pyomo_model=pyomo_model,
+                sol_data=sol_data, nl_info=nl_info, pyomo_model=pyomo_model
             )
 
         return res
