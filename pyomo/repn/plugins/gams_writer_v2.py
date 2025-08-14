@@ -518,6 +518,11 @@ class _GMSWriter_impl(object):
         con_list[label] = declaration + definition + bounds
         self.var_symbol_map.addSymbol(obj, label)
 
+        # Write the GAMS model
+        ostream.write("$offlisting\n")
+        # $offdigit ignores extra precise digits instead of erroring
+        ostream.write("$offdigit\n\n")
+
         #
         # Write out variable declaration
         #
