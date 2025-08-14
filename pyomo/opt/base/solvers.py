@@ -178,7 +178,8 @@ class SolverFactoryClass(Factory):
         return opt
 
 
-LegacySolverFactory = SolverFactoryClass('solver type')
+#: Global registry/factory for "v1" solver interfaces.
+LegacySolverFactory: SolverFactoryClass = SolverFactoryClass('solver type')
 
 SolverFactory = SolverFactoryClass('solver type')
 SolverFactory._cls = LegacySolverFactory._cls
