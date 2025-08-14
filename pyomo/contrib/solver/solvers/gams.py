@@ -594,7 +594,13 @@ class GAMS(SolverBase):
                 results.gams_termination_condition
             ]
             obj = list(model.component_data_objects(Objective, active=True))
-            assert len(obj) == 1, 'Only one objective is allowed.'
+
+            # NOTE: How should gams handle when no objective is provided
+            # NOTE: pyomo/contrib/solver/tests/solvers/test_solvers.py::TestSolvers::test_no_objective
+            # NOTE: results.incumbent_objective = None
+            # NOTE: results.objective_bound = None
+            # assert len(obj) == 1, 'Only one objective is allowed.'
+
             if results.solution_status in {
                 SolutionStatus.feasible,
                 SolutionStatus.optimal,
@@ -605,7 +611,10 @@ class GAMS(SolverBase):
 
                 if config.load_solutions:
                     results.solution_loader.load_vars()
-                    results.incumbent_objective = stat_vars["OBJVAL"]
+                    if len(obj) == 1:
+                        results.incumbent_objective = stat_vars["OBJVAL"]
+                    else:
+                        results.incumbent_objective = None
                     if (
                         hasattr(model, 'dual')
                         and isinstance(model.dual, Suffix)

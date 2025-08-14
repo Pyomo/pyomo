@@ -30,26 +30,21 @@ from pyomo.core.base import (
     Param,
     Expression,
     SOSConstraint,
-    SortComponents,
     Suffix,
     SymbolMap,
     minimize,
     ShortNameLabeler,
 )
-from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.label import NumericLabeler
 from pyomo.opt import WriterFactory
 from pyomo.repn.util import ftoa
 
-# from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
     OrderedVarRecorder,
     categorize_valid_components,
-    initialize_var_map_from_column_order,
-    int_float,
     ordered_active_constraints,
 )
 
@@ -444,7 +439,6 @@ class _GMSWriter_impl(object):
 
             con_symbol = con_labeler(con)
             declaration, definition, bounds = None, None, None
-
             if lb is not None:
                 if ub is None:
                     label = f'{con_symbol}_lo'
@@ -463,10 +457,23 @@ class _GMSWriter_impl(object):
                     bounds = f' =E= {(lb - offset)!s};'
                     con_list[label] = declaration + definition + bounds
                 else:
-                    raise NotImplementedError(
-                        "Bounded constraints within the same expression is not supported"
-                    )
-
+                    # We will need the constraint body twice.
+                    # Procedure is taken from lp_writer.py
+                    label = f'{con_symbol}_lo'
+                    self.con_symbol_map.addSymbol(con, label)
+                    self.var_symbol_map.addSymbol(con, label)
+                    declaration = f'\n{label}.. '
+                    definition = self.write_expression(ostream, repn)
+                    bounds = f' =G= {(lb - offset)!s};'
+                    con_list[label] = declaration + definition + bounds
+                    #
+                    label = f'{con_symbol}_hi'
+                    self.con_symbol_map.alias(con, label)
+                    self.var_symbol_map.alias(con, label)
+                    declaration = f'\n{label}.. '
+                    definition = self.write_expression(ostream, repn)
+                    bounds = f' =L= {(ub - offset)!s};'
+                    con_list[label] = declaration + definition + bounds
             elif ub is not None:
                 label = f'{con_symbol}_hi'
                 self.con_symbol_map.addSymbol(con, label)
@@ -549,14 +556,13 @@ class _GMSWriter_impl(object):
         # Writing out the equations/constraints
         #
         ostream.write("EQUATIONS \n")
-        for id, cid in enumerate(self.con_symbol_map.byObject.keys()):
-            c = self.con_symbol_map.byObject[cid]
-            if id != len(self.con_symbol_map.byObject.keys()) - 1:
-                ostream.write(f"\t{c}\n")
+        for count, (sym, con) in enumerate(con_list.items()):
+            if count != len(con_list.keys()) - 1:
+                ostream.write(f"\t{sym}\n")
             else:
-                ostream.write(f"\t{c};\n\n")
+                ostream.write(f"\t{sym};\n\n")
 
-        for con_label, con in con_list.items():
+        for _, con in con_list.items():
             ostream.write(con)
 
         #

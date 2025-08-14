@@ -81,8 +81,11 @@ class GMSSolutionLoader(SolutionLoaderBase):
         if vars_to_load is None:
             vars_to_load = self._gms_info.var_symbol_map.bySymbol.items()
 
-        for sym, obj in vars_to_load:
-            res[obj] = val_map[id(obj)]
+            for sym, obj in vars_to_load:
+                res[obj] = val_map[id(obj)]
+        else:
+            for obj in vars_to_load:
+                res[obj] = val_map[id(obj)]
 
         return res
 
@@ -100,14 +103,22 @@ class GMSSolutionLoader(SolutionLoaderBase):
                 'check results.termination_condition and/or results.solution_status.'
             )
 
+        con_map = {}
+        if self._gdx_data is None:
+            assert len(self._gms_info.con_symbol_map.bySymbol) == 0
+        else:
+            for sym, obj in self._gms_info.con_symbol_map.bySymbol.items():
+                con_map[id(obj)] = self._gdx_data[sym][1]
+
         res = ComponentMap()
-
         if cons_to_load is None:
-            cons_to_load = set(self._gms_info.con_symbol_map.bySymbol.keys())
+            cons_to_load = self._gms_info.con_symbol_map.bySymbol.items()
 
-        for sym, con in self._gms_info.con_symbol_map.bySymbol.items():
-            if sym in cons_to_load and con.parent_component().ctype is not Objective:
-                res[con] = self._gdx_data[sym][1]
+            for sym, obj in cons_to_load:
+                res[obj] = con_map[id(obj)]
+        else:
+            for obj in cons_to_load:
+                res[obj] = con_map[id(obj)]
 
         return res
 
@@ -123,11 +134,21 @@ class GMSSolutionLoader(SolutionLoaderBase):
                 'check results.termination_condition and/or results.solution_status.'
             )
 
+        var_map = {}
+        if self._gdx_data is None:
+            assert len(self._gms_info.var_symbol_map.bySymbol) == 0
+        else:
+            for sym, obj in self._gms_info.var_symbol_map.bySymbol.items():
+                var_map[id(obj)] = self._gdx_data[sym][1]
+
         res = ComponentMap()
         if vars_to_load is None:
             vars_to_load = self._gms_info.var_symbol_map.bySymbol.items()
 
-        for sym, obj in vars_to_load:
-            res[obj] = self._gdx_data[sym][1]
+            for sym, obj in vars_to_load:
+                res[obj] = var_map[id(obj)]
+        else:
+            for obj in vars_to_load:
+                res[obj] = var_map[id(obj)]
 
         return res
