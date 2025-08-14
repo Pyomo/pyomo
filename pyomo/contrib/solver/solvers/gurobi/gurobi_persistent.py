@@ -488,7 +488,7 @@ class GurobiDirectQuadratic(GurobiDirectBase):
             vlist = [self._pyomo_var_to_solver_var_map[id(v)] for v in repn.linear_vars]
             new_expr = gurobipy.LinExpr(coef_list, vlist)
         else:
-            # this can't just be zero in case the constraint is a 
+            # this can't just be zero in case the constraint is a
             # trivial one
             new_expr = gurobipy.LinExpr()
 

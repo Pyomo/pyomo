@@ -35,7 +35,11 @@ from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import (
     GurobiDirectQuadratic,
     GurobiPersistent,
 )
-from pyomo.contrib.solver.common.util import NoSolutionError, NoFeasibleSolutionError, NoOptimalSolutionError
+from pyomo.contrib.solver.common.util import (
+    NoSolutionError,
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+)
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
@@ -1073,11 +1077,11 @@ class TestSolvers(unittest.TestCase):
         m.c1 = pyo.Constraint(expr=m.y >= m.x)
         m.c2 = pyo.Constraint(expr=m.y >= -m.x)
         m.c3 = pyo.Constraint(expr=m.x >= 0)
-        
+
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 0)
-        
+
         m.x.fix(1)
         opt.config.tee = True
         res = opt.solve(m)

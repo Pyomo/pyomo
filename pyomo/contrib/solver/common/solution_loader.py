@@ -194,25 +194,33 @@ class NoSolutionSolutionLoader(SolutionLoaderBase):
 
     def get_solution_ids(self) -> List[Any]:
         return []
-    
+
     def get_number_of_solutions(self) -> int:
         return 0
-    
+
     def load_solution(self, solution_id=None):
         raise NoSolutionError()
-    
-    def load_vars(self, vars_to_load: Sequence[VarData] | None = None, solution_id=None) -> None:
+
+    def load_vars(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
+    ) -> None:
         raise NoSolutionError()
-    
-    def get_vars(self, vars_to_load: Sequence[VarData] | None = None, solution_id=None) -> Mapping[VarData, float]:
+
+    def get_vars(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
+    ) -> Mapping[VarData, float]:
         raise NoSolutionError()
-    
-    def get_duals(self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=None) -> Dict[ConstraintData, float]:
+
+    def get_duals(
+        self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=None
+    ) -> Dict[ConstraintData, float]:
         raise NoSolutionError()
-    
-    def get_reduced_costs(self, vars_to_load: Sequence[VarData] | None = None, solution_id=None) -> Mapping[VarData, float]:
+
+    def get_reduced_costs(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
+    ) -> Mapping[VarData, float]:
         raise NoSolutionError()
-    
+
     def load_import_suffixes(self, solution_id=None):
         raise NoSolutionError()
 
