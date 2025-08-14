@@ -614,7 +614,7 @@ class ModelChangeDetector:
                 vars_to_update.append(v)
             elif _domain_interval != v.domain.get_interval():
                 vars_to_update.append(v)
-            elif v.value != _value:
+            elif v.fixed and v.value != _value:
                 vars_to_update.append(v)
         cons_to_update = list(cons_to_update.keys())
         return vars_to_update, cons_to_update, update_obj

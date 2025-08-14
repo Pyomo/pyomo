@@ -20,6 +20,7 @@ from pyomo.common.config import (
     InEnum,
     document_kwargs_from_configdict,
 )
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.common.dependencies import scipy, numpy as np
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.gc_manager import PauseGC
@@ -462,7 +463,7 @@ class _LinearStandardFormCompiler_impl(object):
                 # TODO: add a (configurable) feasibility tolerance
                 if (lb is None or lb <= offset) and (ub is None or ub >= offset):
                     continue
-                raise InfeasibleError(
+                raise InfeasibleConstraintException(
                     f"model contains a trivially infeasible constraint, '{con.name}'"
                 )
 

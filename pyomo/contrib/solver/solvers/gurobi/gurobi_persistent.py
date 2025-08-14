@@ -17,6 +17,7 @@ from collections.abc import Iterable
 from pyomo.common.collections import ComponentSet, OrderedSet
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.var import VarData
@@ -464,7 +465,9 @@ class GurobiDirectQuadratic(GurobiDirectBase):
             vlist = [self._pyomo_var_to_solver_var_map[id(v)] for v in repn.linear_vars]
             new_expr = gurobipy.LinExpr(coef_list, vlist)
         else:
-            new_expr = 0.0
+            # this can't just be zero in case the constraint is a 
+            # trivial one
+            new_expr = gurobipy.LinExpr()
 
         if len(repn.quadratic_vars) > 0:
             missing_vars = {}
@@ -714,6 +717,7 @@ class GurobiPersistent(GurobiDirectQuadratic):
         for ndx, con in enumerate(cons):
             lb, body, ub = con.to_bounded_expression(evaluate_bounds=False)
             repn = generate_standard_repn(body, quadratic=True, compute_values=False)
+
             if len(repn.quadratic_vars) > 0:
                 self._quadratic_cons.add(con)
             else:

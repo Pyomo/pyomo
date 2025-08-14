@@ -17,6 +17,7 @@ from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.base.suffix import Suffix
+from .util import NoSolutionError
 
 
 def load_import_suffixes(pyomo_model, solution_loader: SolutionLoaderBase, solution_id=None):
@@ -192,6 +193,35 @@ class SolutionLoaderBase:
             should be loaded. If None, the default solution will be used.
         """
         return NotImplemented
+
+
+class NoSolutionSolutionLoader(SolutionLoaderBase):
+    def __init__(self) -> None:
+        pass
+
+    def get_solution_ids(self) -> List[Any]:
+        return []
+    
+    def get_number_of_solutions(self) -> int:
+        return 0
+    
+    def load_solution(self, solution_id=None):
+        raise NoSolutionError()
+    
+    def load_vars(self, vars_to_load: Sequence[VarData] | None = None, solution_id=None) -> None:
+        raise NoSolutionError()
+    
+    def get_vars(self, vars_to_load: Sequence[VarData] | None = None, solution_id=None) -> Mapping[VarData, float]:
+        raise NoSolutionError()
+    
+    def get_duals(self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=None) -> Dict[ConstraintData, float]:
+        raise NoSolutionError()
+    
+    def get_reduced_costs(self, vars_to_load: Sequence[VarData] | None = None, solution_id=None) -> Mapping[VarData, float]:
+        raise NoSolutionError()
+    
+    def load_import_suffixes(self, solution_id=None):
+        raise NoSolutionError()
 
 
 class PersistentSolutionLoader(SolutionLoaderBase):
