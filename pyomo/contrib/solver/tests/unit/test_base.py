@@ -24,7 +24,7 @@ class TestSolverBase(unittest.TestCase):
     def test_class_method_list(self):
         expected_list = ['CONFIG', 'available', 'is_persistent', 'solve', 'version']
         method_list = [
-            method for method in dir(base.SolverBase) if method.startswith('_') is False
+            method for method in dir(base.SolverBase) if not method.startswith('_')
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 
@@ -83,7 +83,7 @@ class TestPersistentSolverBase(unittest.TestCase):
         method_list = [
             method
             for method in dir(base.PersistentSolverBase)
-            if (method.startswith('__') or method.startswith('_abc')) is False
+            if not (method.startswith('__') or method.startswith('_abc'))
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 
@@ -131,14 +131,16 @@ class TestLegacySolverWrapper(unittest.TestCase):
         expected_list = [
             'available',
             'config_block',
+            'default_variable_value',
             'license_is_valid',
             'set_options',
             'solve',
+            'warm_start_capable',
         ]
         method_list = [
             method
             for method in dir(base.LegacySolverWrapper)
-            if method.startswith('_') is False
+            if not method.startswith('_')
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 
