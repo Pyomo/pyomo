@@ -26,7 +26,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase, load_import_suffixes
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 
 
 class SolFileData:
@@ -49,7 +52,9 @@ class SolSolutionLoader(SolutionLoaderBase):
     Loader for solvers that create .sol files (e.g., ipopt)
     """
 
-    def __init__(self, sol_data: SolFileData, nl_info: NLWriterInfo, pyomo_model) -> None:
+    def __init__(
+        self, sol_data: SolFileData, nl_info: NLWriterInfo, pyomo_model
+    ) -> None:
         self._sol_data = sol_data
         self._nl_info = nl_info
         self._pyomo_model = pyomo_model
@@ -58,14 +63,16 @@ class SolSolutionLoader(SolutionLoaderBase):
         if self._nl_info is None:
             return 0
         return 1
-    
+
     def get_solution_ids(self) -> List[Any]:
         return [None]
 
     def load_import_suffixes(self, solution_id=None):
         load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None) -> NoReturn:
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> NoReturn:
         if solution_id is not None:
             raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if self._nl_info is None:
@@ -131,7 +138,7 @@ class SolSolutionLoader(SolutionLoaderBase):
         return res
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None,
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> Dict[ConstraintData, float]:
         if solution_id is not None:
             raise ValueError(f'{self.__class__.__name__} does not support solution_id')

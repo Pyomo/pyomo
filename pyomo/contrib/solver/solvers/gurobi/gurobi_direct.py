@@ -23,7 +23,10 @@ from pyomo.contrib.solver.common.util import (
     NoSolutionError,
     IncompatibleModelError,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase, load_import_suffixes
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 from .gurobi_direct_base import GurobiDirectBase, gurobipy
 
 
@@ -59,7 +62,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         if self._grb_model.SolCount == 0:
             return 0
         return 1
-    
+
     def get_solution_ids(self) -> List[Any]:
         return [0]
 
@@ -118,9 +121,11 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             vars_to_load = ComponentSet(vars_to_load)
             iterator = filter(lambda var_rc: var_rc[0] in vars_to_load, iterator)
         return ComponentMap(iterator)
-    
+
     def load_import_suffixes(self, solution_id=None):
-        load_import_suffixes(pyomo_model=self._pyomo_model, solution_loader=self, solution_id=solution_id)
+        load_import_suffixes(
+            pyomo_model=self._pyomo_model, solution_loader=self, solution_id=solution_id
+        )
 
 
 class GurobiDirect(GurobiDirectBase):
