@@ -12,43 +12,43 @@
 #
 # Imports
 #
-from pyomo.core import *
+import pyomo.environ as pyo
 
 #
 # Setup
 #
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
 # ***********************************
 
-model.PROD = Set(doc='products')
+model.PROD = pyo.Set(doc='products')
 
-model.ACT = Set(doc='activities')
+model.ACT = pyo.Set(doc='activities')
 
 # ***********************************
 
-model.cost = Param(
-    model.ACT, within=PositiveReals, doc='cost per unit of each activity'
+model.cost = pyo.Param(
+    model.ACT, within=pyo.PositiveReals, doc='cost per unit of each activity'
 )
 
-model.demand = Param(
-    model.PROD, within=NonNegativeReals, doc='units of demand for each product'
+model.demand = pyo.Param(
+    model.PROD, within=pyo.NonNegativeReals, doc='units of demand for each product'
 )
 
-model.io = Param(
+model.io = pyo.Param(
     model.PROD,
     model.ACT,
-    within=NonNegativeReals,
+    within=pyo.NonNegativeReals,
     doc='units of each product from 1 unit of each activity',
 )
 
-model.level_min = Param(
-    model.ACT, within=NonNegativeReals, doc='min allowed level for each activity'
+model.level_min = pyo.Param(
+    model.ACT, within=pyo.NonNegativeReals, doc='min allowed level for each activity'
 )
 
-model.level_max = Param(
-    model.ACT, within=NonNegativeReals, doc='max allowed level for each activity'
+model.level_max = pyo.Param(
+    model.ACT, within=pyo.NonNegativeReals, doc='max allowed level for each activity'
 )
 
 # ***********************************
@@ -58,16 +58,16 @@ def Level_bounds(model, i):
     return (model.level_min[i], model.level_max[i])
 
 
-model.Level = Var(model.ACT, bounds=Level_bounds, doc='level for each activity')
+model.Level = pyo.Var(model.ACT, bounds=Level_bounds, doc='level for each activity')
 
 # ***********************************
 
 
 def Total_Cost_rule(model):
-    return sum_product(model.cost, model.Level)
+    return pyo.sum_product(model.cost, model.Level)
 
 
-model.Total_Cost = Objective(rule=Total_Cost_rule, doc='minimize total cost')
+model.Total_Cost = pyo.Objective(rule=Total_Cost_rule, doc='minimize total cost')
 
 
 def Demand_rule(model, i):
@@ -77,6 +77,6 @@ def Demand_rule(model, i):
     return model.demand[i] < expr
 
 
-model.Demand = Constraint(
+model.Demand = pyo.Constraint(
     model.PROD, rule=Demand_rule, doc='total level for each activity exceeds demand'
 )

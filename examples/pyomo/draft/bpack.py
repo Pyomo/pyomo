@@ -10,21 +10,21 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 #
 # Parameter N
 #
-model.N = Param(within=Integers)
+model.N = pyo.Param(within=pyo.Integers)
 #
 # Set I
 #
-model.I = RangeSet(1, model.N)
+model.I = pyo.RangeSet(1, model.N)
 #
 # Variable b
 #
-model.b = Var(model.I, domain=Boolean)
+model.b = pyo.Var(model.I, domain=pyo.Boolean)
 
 
 #
@@ -38,8 +38,8 @@ def costrule(model):
     return ans
 
 
-# model.zot = Objective(rule=costrule)
-model.zot = Objective(rule=costrule, sense=maximize)
+# model.zot = pyo.Objective(rule=costrule)
+model.zot = pyo.Objective(rule=costrule, sense=pyo.maximize)
 
 
 #
@@ -59,19 +59,19 @@ def w_ind_rule(model):
     return ans
 
 
-model.w_ind = Set(initialize=w_ind_rule, dimen=2)
+model.w_ind = pyo.Set(initialize=w_ind_rule, dimen=2)
 #
 # Parameter w
 #
-model.w = Param(model.w_ind)
+model.w = pyo.Param(model.w_ind)
 #
 # Set rhs_ind
 #
-model.rhs_ind = RangeSet(1, model.N - 9)
+model.rhs_ind = pyo.RangeSet(1, model.N - 9)
 #
 # Parameter rhs
 #
-model.rhs = Param(model.rhs_ind)
+model.rhs = pyo.Param(model.rhs_ind)
 
 
 #
@@ -88,4 +88,4 @@ def bletch_rule(model, i):
     return ans
 
 
-model.bletch = Constraint(model.rhs_ind, rule=bletch_rule)
+model.bletch = pyo.Constraint(model.rhs_ind, rule=bletch_rule)

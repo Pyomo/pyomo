@@ -14,11 +14,12 @@
 #
 import re
 import math
-from pyomo.core import *
+import pyomo.environ as pyo
+from sc import pyomo_callback
 
 
 def pyomo_create_model(options=None, model_options=None):
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
     #
     # Read from the 'points' file
     #
@@ -38,22 +39,22 @@ def pyomo_create_model(options=None, model_options=None):
     #
     #
     # Number of points
-    model.N = Param(within=PositiveIntegers, initialize=N)
+    model.N = pyo.Param(within=pyo.PositiveIntegers, initialize=N)
     #
     # Index set for points
-    model.POINTS = RangeSet(1, model.N)
+    model.POINTS = pyo.RangeSet(1, model.N)
 
     #
     # (x,y) location
     def x_rule(model, i):
         return x[i - 1]
 
-    model.x = Param(model.POINTS)
+    model.x = pyo.Param(model.POINTS)
 
     def y_rule(model, i):
         return y[i - 1]
 
-    model.y = Param(model.POINTS)
+    model.y = pyo.Param(model.POINTS)
 
     #
     # Derived data
@@ -63,7 +64,7 @@ def pyomo_create_model(options=None, model_options=None):
     def LINKS_rule(model):
         return set([(i, j) for i in model.POINTS for j in model.POINTS if i < j])
 
-    model.LINKS = Set(dimen=2)
+    model.LINKS = pyo.Set(dimen=2)
 
     #
     # Distance between points
@@ -72,17 +73,17 @@ def pyomo_create_model(options=None, model_options=None):
             (model.x[i] - model.x[j]) ** 2 + (model.y[i] - model.y[j]) ** 2
         )
 
-    model.d = Param(model.LINKS)
+    model.d = pyo.Param(model.LINKS)
     #
     # Variables
     #
-    model.Z = Var(model.LINKS, within=Binary)
+    model.Z = pyo.Var(model.LINKS, within=pyo.Binary)
     #
     # Constraints
     #
     #
     # Minimize tour length
-    model.tour_length = Objective(expr=sum_product(model.d, model.Z))
+    model.tour_length = pyo.Objective(expr=pyo.sum_product(model.d, model.Z))
 
     #
     # Each vertex has degree 2
@@ -93,17 +94,17 @@ def pyomo_create_model(options=None, model_options=None):
             == 2
         )
 
-    model.Degrees = Constraint(model.POINTS)
+    model.Degrees = pyo.Constraint(model.POINTS)
 
     #
     # NOTE: subtour constraints are added dynamically
     #
     ## Number of subtour elimination cuts
-    # model.M = Param(within=PositiveIntegers)
+    # model.M = pyo.Param(within=pyo.PositiveIntegers)
     ## Number of subtour elimination cuts appended
-    # model.numcut = Param(within=NonNegativeIntegers)
-    # model.CUTINDICES = RangeSet(1,model.M)
-    # model.CUTSET = Set(model.CUTINDICES)
+    # model.numcut = pyo.Param(within=pyo.NonNegativeIntegers)
+    # model.CUTINDICES = pyo.RangeSet(1,model.M)
+    # model.CUTSET = pyo.Set(model.CUTINDICES)
     return model
 
 

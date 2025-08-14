@@ -21,16 +21,14 @@
 # on this system. This example was tested using Gurobi
 # Solver 5.0.0
 
-import pyomo.environ
-from pyomo.core import *
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ### Create the gurobi_ampl solver plugin using the ASL interface
 solver = 'gurobi_ampl'
 solver_io = 'nl'
 stream_solver = False  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 
 if opt is None:
     print("")
@@ -48,15 +46,15 @@ opt.options['outlev'] = 1
 opt.options['iisfind'] = 1  # tell gurobi to be verbose with output
 
 ### Create a trivial and infeasible example model
-model = ConcreteModel()
-model.x = Var(within=NonNegativeReals)
-model.obj = Objective(expr=model.x)
-model.con = Constraint(expr=model.x <= -1)
+model = pyo.ConcreteModel()
+model.x = pyo.Var(within=pyo.NonNegativeReals)
+model.obj = pyo.Objective(expr=model.x)
+model.con = pyo.Constraint(expr=model.x <= -1)
 ###
 
 # Create an IMPORT Suffix to store the iis information that will
 # be returned by gurobi_ampl
-model.iis = Suffix(direction=Suffix.IMPORT)
+model.iis = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
 ### Send the model to gurobi_ampl and collect the solution
 # The solver plugin will scan the model for all active suffixes

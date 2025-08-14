@@ -11,7 +11,7 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
-from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
+from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr, _before_child_handlers
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.fileutils import find_library
 from pyomo.common.log import LoggingIntercept
@@ -1363,3 +1363,30 @@ class TestFBBT(FbbtTestBase, unittest.TestCase):
         self.assertEqual(m.l.bounds, (2, 7))
         self.assertEqual(m.x.bounds, (3, 7))
         self.assertEqual(m.u.bounds, (3, 8))
+
+    @unittest.skipUnless(numpy_available, "Test requires numpy")
+    def test_numpy_leaves(self):
+        m = pyo.ConcreteModel()
+        m.l = pyo.Var(bounds=(2, None))
+        m.x = pyo.Var()
+        m.u = pyo.Var(bounds=(None, 8))
+        m.c = pyo.Constraint(
+            expr=pyo.inequality(m.l + np.int32(1), m.x, m.u - np.float64(1))
+        )
+
+        # Remove the numpy types so we can test that automatic numeric
+        # type registrations
+        old = [(t, _before_child_handlers.pop(t, None)) for t in (np.int32, np.float64)]
+
+        try:
+            self.tightener(m)
+            self.tightener(m)
+            self.assertEqual(m.l.bounds, (2, 6.0))
+            self.assertEqual(m.x.bounds, (3, 7.0))
+            self.assertEqual(m.u.bounds, (4, 8.0))
+        finally:
+            for t, fcn in old:
+                if fcn is None:
+                    _before_child_handlers.pop(t, None)
+                else:
+                    _before_child_handlers[t] = fcn

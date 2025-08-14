@@ -13,7 +13,7 @@ from pyomo.common import unittest
 
 from pyomo.common.dependencies import numpy as numpy, numpy_available
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 from pyomo.common.collections import ComponentSet
 
@@ -24,15 +24,15 @@ class TestAOSUtilsUnit(unittest.TestCase):
 
     def get_multiple_objective_model(self):
         """Create a simple model with three objectives."""
-        m = pe.ConcreteModel()
-        m.b1 = pe.Block()
-        m.b2 = pe.Block()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.b1.o = pe.Objective(expr=m.x)
-        m.b2.o = pe.Objective([0, 1])
-        m.b2.o[0] = pe.Objective(expr=m.y)
-        m.b2.o[1] = pe.Objective(expr=m.x + m.y)
+        m = pyo.ConcreteModel()
+        m.b1 = pyo.Block()
+        m.b2 = pyo.Block()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.b1.o = pyo.Objective(expr=m.x)
+        m.b2.o = pyo.Objective([0, 1])
+        m.b2.o[0] = pyo.Objective(expr=m.y)
+        m.b2.o[1] = pyo.Objective(expr=m.x + m.y)
         return m
 
     def test_multiple_objectives(self):
@@ -71,14 +71,14 @@ class TestAOSUtilsUnit(unittest.TestCase):
         block_name = "test_block"
         b = au._add_aos_block(m, block_name)
         self.assertEqual(b.name, block_name)
-        self.assertEqual(b.ctype, pe.Block)
+        self.assertEqual(b.ctype, pyo.Block)
 
-    def get_simple_model(self, sense=pe.minimize):
+    def get_simple_model(self, sense=pyo.minimize):
         """Create a simple 2d linear program with an objective."""
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.o = pe.Objective(expr=m.x + m.y, sense=sense)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.o = pyo.Objective(expr=m.x + m.y, sense=sense)
         return m
 
     def test_no_obj_constraint(self):
@@ -125,7 +125,7 @@ class TestAOSUtilsUnit(unittest.TestCase):
         Ensure that the correct relative and absolute objective constraints are
         added.
         """
-        m = self.get_simple_model(sense=pe.maximize)
+        m = self.get_simple_model(sense=pyo.maximize)
         cons = au._add_objective_constraint(m, m.o, -1, 0.3, 1)
         self.assertEqual(len(cons), 2)
         self.assertEqual(m.find_component("optimality_tol_rel"), cons[0])
@@ -140,7 +140,7 @@ class TestAOSUtilsUnit(unittest.TestCase):
         Ensure that the correct relative and absolute objective constraints are
         added.
         """
-        m = self.get_simple_model(sense=pe.maximize)
+        m = self.get_simple_model(sense=pyo.maximize)
         cons = au._add_objective_constraint(m, m.o, 20, 0.5, 11)
         self.assertEqual(len(cons), 2)
         self.assertEqual(m.find_component("optimality_tol_rel"), cons[0])
@@ -168,27 +168,27 @@ class TestAOSUtilsUnit(unittest.TestCase):
 
         indices = [0, 1, 2, 3]
 
-        m = pe.ConcreteModel()
+        m = pyo.ConcreteModel()
 
-        m.b1 = pe.Block()
-        m.b2 = pe.Block()
-        m.b1.sb1 = pe.Block()
-        m.b2.sb2 = pe.Block()
+        m.b1 = pyo.Block()
+        m.b2 = pyo.Block()
+        m.b1.sb1 = pyo.Block()
+        m.b2.sb2 = pyo.Block()
 
-        m.x = pe.Var(domain=pe.Reals)
-        m.b1.y = pe.Var(domain=pe.Binary)
-        m.b2.z = pe.Var(domain=pe.Integers)
+        m.x = pyo.Var(domain=pyo.Reals)
+        m.b1.y = pyo.Var(domain=pyo.Binary)
+        m.b2.z = pyo.Var(domain=pyo.Integers)
 
-        m.x_f = pe.Var(domain=pe.Reals)
-        m.b1.y_f = pe.Var(domain=pe.Binary)
-        m.b2.z_f = pe.Var(domain=pe.Integers)
+        m.x_f = pyo.Var(domain=pyo.Reals)
+        m.b1.y_f = pyo.Var(domain=pyo.Binary)
+        m.b2.z_f = pyo.Var(domain=pyo.Integers)
         m.x_f.fix(0)
         m.b1.y_f.fix(0)
         m.b2.z_f.fix(0)
 
-        m.b1.sb1.x_l = pe.Var(indices, domain=pe.Reals)
-        m.b1.sb1.y_l = pe.Var(indices, domain=pe.Binary)
-        m.b2.sb2.z_l = pe.Var(indices, domain=pe.Integers)
+        m.b1.sb1.x_l = pyo.Var(indices, domain=pyo.Reals)
+        m.b1.sb1.y_l = pyo.Var(indices, domain=pyo.Binary)
+        m.b2.sb2.z_l = pyo.Var(indices, domain=pyo.Integers)
 
         m.b1.sb1.x_l[3].fix(0)
         m.b1.sb1.y_l[3].fix(0)
@@ -201,10 +201,10 @@ class TestAOSUtilsUnit(unittest.TestCase):
             + [m.b2.sb2.z_l[i] for i in indices]
         )
 
-        m.con = pe.Constraint(expr=sum(v for v in vars_minus_x) <= 1)
-        m.b1.con = pe.Constraint(expr=m.b1.y <= 1)
-        m.b1.sb1.con = pe.Constraint(expr=m.b1.sb1.y_l[0] <= 1)
-        m.obj = pe.Objective(expr=m.x)
+        m.con = pyo.Constraint(expr=sum(v for v in vars_minus_x) <= 1)
+        m.b1.con = pyo.Constraint(expr=m.b1.y <= 1)
+        m.b1.sb1.con = pyo.Constraint(expr=m.b1.sb1.y_l[0] <= 1)
+        m.obj = pyo.Objective(expr=m.x)
 
         m.all_vars = ComponentSet([m.x] + vars_minus_x)
         m.unfixed_vars = ComponentSet([var for var in m.all_vars if not var.is_fixed()])

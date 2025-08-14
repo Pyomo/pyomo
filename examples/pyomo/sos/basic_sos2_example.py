@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
 # Problem borrowed from the lpsolve project documentation
 # http://lpsolve.sourceforge.net/5.0/SOS.htm
@@ -60,28 +60,28 @@ x5_constraint_rule = lambda M: M.x[5] <= 1
 ###############################################################################
 # Cruft above complete, now we actually create and tie the model together
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 M = model
 
-M.variable_set = RangeSet(1, 5)
-M.constraint_set = RangeSet(1, 2)
+M.variable_set = pyo.RangeSet(1, 5)
+M.constraint_set = pyo.RangeSet(1, 2)
 
-M.c = Param(M.variable_set, initialize=c_param_init)
+M.c = pyo.Param(M.variable_set, initialize=c_param_init)
 
-M.A = Param(M.constraint_set, M.variable_set, initialize=A_param_init)
-M.b = Param(M.constraint_set, initialize=b_param_init)
+M.A = pyo.Param(M.constraint_set, M.variable_set, initialize=A_param_init)
+M.b = pyo.Param(M.constraint_set, initialize=b_param_init)
 
-M.x = Var(M.variable_set, within=PositiveReals)
+M.x = pyo.Var(M.variable_set, within=pyo.PositiveReals)
 
-M.obj = Objective(rule=obj_rule, sense=minimize)  # min "c transpose" X
+M.obj = pyo.Objective(rule=obj_rule, sense=pyo.minimize)  # min "c transpose" X
 
 # At first, this is little more than a standard form Ax=b ...
-M.constraints = Constraint(M.constraint_set, rule=constraint_rule)
+M.constraints = pyo.Constraint(M.constraint_set, rule=constraint_rule)
 
 # ... with a couple of extra constraints ...
-M.x1_constraint = Constraint(rule=x1_constraint_rule)
-M.x2_constraint = Constraint(rule=x2_constraint_rule)
-M.x5_constraint = Constraint(rule=x5_constraint_rule)
+M.x1_constraint = pyo.Constraint(rule=x1_constraint_rule)
+M.x2_constraint = pyo.Constraint(rule=x2_constraint_rule)
+M.x5_constraint = pyo.Constraint(rule=x5_constraint_rule)
 
 # ... and finally, add the constraint for which this example was created
-M.x_sos_vars = SOSConstraint(var=M.x, sos=2)
+M.x_sos_vars = pyo.SOSConstraint(var=M.x, sos=2)

@@ -26,10 +26,14 @@ env:
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
+  PYOMO_WORKFLOW: branch
 
 jobs:
   lint:
     name: lint/style-and-typos
+    if: |
+      ${{ ! ( contains(github.event.pull_request.title, '[WIP]') ||
+            github.event.pull_request.draft ) }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
@@ -40,14 +44,16 @@ jobs:
         python-version: '3.10'
     - name: Black Formatting Check
       run: |
-        # Note v24.4.1 fails due to a bug in the parser
+        # Note v24.4.1 fails due to a bug in the parser. Project-level
+        # configuration is inherited from pyproject.toml.
         pip install 'black!=24.4.1'
-        black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
+        black . --check --diff
     - name: Spell Check
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
     - name: URL Checker
+      if: env.PYOMO_WORKFLOW == 'branch'
       uses: urlstechie/urlchecker-action@0.0.34
       with:
         # A comma-separated list of file types to cover in the URL checks
@@ -343,7 +349,7 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
-        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
+        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == 3.13* ]]; then
             # As of Nov 7, 2024, qtconsole is not compatible with python 3.13 on win
             EXCLUDE="qtconsole $EXCLUDE"
         fi
@@ -368,7 +374,7 @@ jobs:
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y $CONDA_DEPENDENCIES
+        conda install --update-deps -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
@@ -479,16 +485,13 @@ jobs:
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
         NEW_PYOMO_PATH="$IPOPT_DIR:$PYOMO_PATH"
         echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
-            if test "${{matrix.TARGET}}" == osx; then
-                echo "IDAES Ipopt not available on OSX"
-                exit 0
-            fi
             URL=https://github.com/IDAES/idaes-ext
             RELEASE=$(curl --max-time 150 --retry 8 \
                 -L -s -H 'Accept: application/json' ${URL}/releases/latest)
@@ -496,8 +499,12 @@ jobs:
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-ubuntu2004-x86_64.tar.gz \
-                    > $IPOPT_TAR
+                    -L $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz \
+                    -o $IPOPT_TAR
+            elif test "${{matrix.TARGET}}" == osx; then
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-darwin-aarch64.tar.gz \
+                    -o $IPOPT_TAR
             else
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-windows-x86_64.tar.gz \
@@ -505,7 +512,11 @@ jobs:
             fi
         fi
         cd $IPOPT_DIR
-        tar -xzi < $IPOPT_TAR
+        if test "${{matrix.TARGET}}" == win; then
+            tar -xzi < $IPOPT_TAR
+        else
+            tar -xzf $IPOPT_TAR
+        fi
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
@@ -524,9 +535,8 @@ jobs:
         echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
-        # We are pinning to 29.1.0 because a license is required for
-        # versions after this in order to run in demo mode.
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+        # Demo licenses are included for 5mo from the newest release
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/50.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
@@ -644,6 +654,7 @@ jobs:
 
     - name: Install Pyomo
       run: |
+        export PYOMO_SETUP_ARGS=${{ matrix.setup_options }}
         echo ""
         echo "Clone Pyomo-model-libraries..."
         URL=https://github.com/Pyomo/pyomo-model-libraries.git
@@ -651,7 +662,7 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        $PYTHON_EXE -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -780,7 +791,7 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        python setup.py develop
+        python -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -805,7 +816,8 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: ${{ false }} # turn off for branches
+    # run even if a build job fails, but not if canceled (except for branches)
+    if: ${{ false }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -857,13 +869,14 @@ jobs:
 
     - name: Install Pyomo
       run: |
+        export PYOMO_SETUP_ARGS=${{ matrix.setup_options }}
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        $PYTHON_EXE -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -875,26 +888,6 @@ jobs:
         # is generated before running "coverage xml"
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
-
-    - name: Update codecov uploader
-      run: |
-        set +e
-        CODECOV="${GITHUB_WORKSPACE}/codecov.sh"
-        echo "CODECOV=$CODECOV" >> $GITHUB_ENV
-        for i in `seq 3`; do
-            echo "Downloading current codecov script (attempt ${i})"
-            curl -L https://codecov.io/bash -o $CODECOV
-            if test $? == 0; then
-                break
-            fi
-            DELAY=$(( RANDOM % 30 + 30))
-            echo "Pausing $DELAY seconds before re-attempting download"
-            sleep $DELAY
-        done
-        if test ! -e $CODECOV; then
-            echo "Failed to download codecov.sh"
-            exit 1
-        fi
 
     - name: Combine coverage reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
@@ -934,7 +927,7 @@ jobs:
 
     - name: Upload codecov reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: coverage.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
@@ -946,7 +939,7 @@ jobs:
       if: |
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}

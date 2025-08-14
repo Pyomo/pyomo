@@ -9,27 +9,27 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.S_SI = Set(ordered=True)
+model.S_SI = pyo.Set(ordered=True)
 
-model.P_REP_CASES = Param(model.S_SI)
-model.P_POP = Param()
+model.P_REP_CASES = pyo.Param(model.S_SI)
+model.P_POP = pyo.Param()
 
-model.I = Var(model.S_SI, bounds=(0, model.P_POP), initialize=1)
-model.S = Var(model.S_SI, bounds=(0, model.P_POP), initialize=300)
-model.beta = Var(bounds=(0.05, 70))
-model.alpha = Var(bounds=(0.5, 1.5))
-model.eps_I = Var(model.S_SI, initialize=0.0)
+model.I = pyo.Var(model.S_SI, bounds=(0, model.P_POP), initialize=1)
+model.S = pyo.Var(model.S_SI, bounds=(0, model.P_POP), initialize=300)
+model.beta = pyo.Var(bounds=(0.05, 70))
+model.alpha = pyo.Var(bounds=(0.5, 1.5))
+model.eps_I = pyo.Var(model.S_SI, initialize=0.0)
 
 
 def _objective(model):
     return sum((model.eps_I[i]) ** 2 for i in model.S_SI)
 
 
-model.objective = Objective(rule=_objective, sense=minimize)
+model.objective = pyo.Objective(rule=_objective, sense=pyo.minimize)
 
 
 def _InfDynamics(model, i):
@@ -41,7 +41,7 @@ def _InfDynamics(model, i):
         )
 
 
-model.InfDynamics = Constraint(model.S_SI, rule=_InfDynamics)
+model.InfDynamics = pyo.Constraint(model.S_SI, rule=_InfDynamics)
 
 
 def _SusDynamics(model, i):
@@ -49,11 +49,11 @@ def _SusDynamics(model, i):
         return model.S[i] == model.S[i - 1] - model.I[i]
 
 
-model.SusDynamics = Constraint(model.S_SI, rule=_SusDynamics)
+model.SusDynamics = pyo.Constraint(model.S_SI, rule=_SusDynamics)
 
 
 def _Data(model, i):
     return model.P_REP_CASES[i] == model.I[i] + model.eps_I[i]
 
 
-model.Data = Constraint(model.S_SI, rule=_Data)
+model.Data = pyo.Constraint(model.S_SI, rule=_Data)

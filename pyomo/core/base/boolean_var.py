@@ -19,6 +19,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr import GetItemExpression
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -155,8 +156,9 @@ class BooleanVarData(ComponentData, BooleanValue):
     def clear(self):
         self.value = None
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of this variable."""
+        exception = _type_check_exception_arg(self, exception)
         return self.value
 
     @property

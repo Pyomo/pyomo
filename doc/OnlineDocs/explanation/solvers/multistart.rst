@@ -14,17 +14,17 @@ To use the multistart solver, define your Pyomo model as usual:
 .. doctest::
 
   Required import
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
 
   Create a simple model
-  >>> m = ConcreteModel()
-  >>> m.x = Var()
-  >>> m.y = Var()
-  >>> m.obj = Objective(expr=m.x**2 + m.y**2)
-  >>> m.c = Constraint(expr=m.y >= -2*m.x + 5)
+  >>> m = pyo.ConcreteModel()
+  >>> m.x = pyo.Var()
+  >>> m.y = pyo.Var()
+  >>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+  >>> m.c = pyo.Constraint(expr=m.y >= -2*m.x + 5)
 
   Invoke the multistart solver
-  >>> SolverFactory('multistart').solve(m)  # doctest: +SKIP
+  >>> pyo.SolverFactory('multistart').solve(m)  # doctest: +SKIP
 
 
 Multistart wrapper implementation and optional arguments

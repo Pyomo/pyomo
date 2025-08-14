@@ -14,44 +14,44 @@ David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for Expressions.rst in testable form
 """
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
 # @Buildup_expression_switch
 switch = 3
 
-model.A = RangeSet(1, 10)
-model.c = Param(model.A)
-model.d = Param()
-model.x = Var(model.A, domain=Boolean)
+model.A = pyo.RangeSet(1, 10)
+model.c = pyo.Param(model.A)
+model.d = pyo.Param()
+model.x = pyo.Var(model.A, domain=pyo.Boolean)
 
 
 def pi_rule(model):
-    accexpr = summation(model.c, model.x)
+    accexpr = pyo.summation(model.c, model.x)
     if switch >= 2:
         accexpr = accexpr - model.d
     return accexpr >= 0.5
 
 
-PieSlice = Constraint(rule=pi_rule)
+PieSlice = pyo.Constraint(rule=pi_rule)
 # @Buildup_expression_switch
 
 # @Abstract_wrong_usage
-model.A = RangeSet(1, 10)
-model.c = Param(model.A)
-model.d = Param()
-model.x = Var(model.A, domain=Boolean)
+model.A = pyo.RangeSet(1, 10)
+model.c = pyo.Param(model.A)
+model.d = pyo.Param()
+model.x = pyo.Var(model.A, domain=pyo.Boolean)
 
 
 def pi_rule(model):
-    accexpr = summation(model.c, model.x)
+    accexpr = pyo.summation(model.c, model.x)
     if model.d >= 2:  # NOT in an abstract model!!
         accexpr = accexpr - model.d
     return accexpr >= 0.5
 
 
-PieSlice = Constraint(rule=pi_rule)
+PieSlice = pyo.Constraint(rule=pi_rule)
 # @Abstract_wrong_usage
 
 # @Declare_piecewise_constraints
@@ -70,30 +70,35 @@ def f(model, j, x):
 
 
 # A nonlinear function
-f = lambda model, x: exp(x) + value(model.p)
+f = lambda model, x: pyo.exp(x) + pyo.value(model.p)
 
 # A step function
 f = [0, 0, 1, 1, 2, 2]
 # @f_rule_Function_examples
 
 # @Keyword_assignment_example
-kwds = {'pw_constr_type': 'EQ', 'pw_repn': 'SOS2', 'sense': maximize, 'force_pw': True}
+kwds = {
+    'pw_constr_type': 'EQ',
+    'pw_repn': 'SOS2',
+    'sense': pyo.maximize,
+    'force_pw': True,
+}
 # @Keyword_assignment_example
 
 # @Expression_objects_illustration
-model = ConcreteModel()
-model.x = Var(initialize=1.0)
+model = pyo.ConcreteModel()
+model.x = pyo.Var(initialize=1.0)
 
 
 def _e(m, i):
     return m.x * i
 
 
-model.e = Expression([1, 2, 3], rule=_e)
+model.e = pyo.Expression([1, 2, 3], rule=_e)
 
 instance = model.create_instance()
 
-print(value(instance.e[1]))  # -> 1.0
+print(pyo.value(instance.e[1]))  # -> 1.0
 print(instance.e[1]())  # -> 1.0
 print(instance.e[1].value)  # -> a pyomo expression object
 
@@ -104,7 +109,7 @@ instance.e[1].value = instance.x**2
 # ... load results
 
 # print the value of the expression given the loaded optimal solution
-print(value(instance.e[1]))
+print(pyo.value(instance.e[1]))
 # @Expression_objects_illustration
 
 
@@ -116,8 +121,8 @@ def f(x, p):
 # @Define_python_function
 
 # @Generate_new_expression
-model = ConcreteModel()
-model.x = Var()
+model = pyo.ConcreteModel()
+model.x = pyo.Var()
 
 # create a Pyomo expression
 e1 = model.x + 5

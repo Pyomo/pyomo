@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
-from pyomo.dae import *
 from path_constraint import m
 
 # Discretize model using Orthogonal Collocation

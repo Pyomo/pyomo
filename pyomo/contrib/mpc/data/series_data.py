@@ -15,7 +15,10 @@ from pyomo.contrib.mpc.data.find_nearest_index import find_nearest_index
 from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
 from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable, _DynamicDataBase
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
-
+from pyomo.contrib.mpc.data.interpolation import (
+    _get_time_index_vec,
+    _get_interp_expr_vec,
+)
 
 TimeSeriesTuple = namedtuple("TimeSeriesTuple", ["data", "time"])
 
@@ -151,6 +154,50 @@ class TimeSeriesData(_DynamicDataBase):
         if not is_iterable:
             indices = indices[0]
         return self.get_data_at_time_indices(indices)
+
+    def get_interpolated_data(self, time=None, tolerance=0.0):
+        """
+        Returns the data associated with the provided time point or points by
+        linear interpolation.
+
+        Parameters
+        ----------
+        time: Float or iterable
+            The time point or points corresponding to returned data.
+        tolerance: float
+            Tolerance used when checking if time points are inside the data
+            range.
+
+        Returns
+        -------
+        TimeSeriesData or ~scalar_data.ScalarData
+            TimeSeriesData containing only the specified time points
+            or dict mapping CUIDs to values at the specified scalar time
+            point.
+
+        """
+        if time is None:
+            # If time is not specified, assume we want the entire time
+            # set. Skip all the overhead, don't create a new object, and
+            # return self.
+            return self
+        is_iterable = _is_iterable(time)
+        if not is_iterable:
+            time = [time]
+        for t in time:
+            if t > self._time[-1] + tolerance or t < self._time[0] - tolerance:
+                raise RuntimeError("Requesting interpolation outside data range.")
+        idxs = _get_time_index_vec(time, self._time)
+        data = {}
+        for cuid in self._data:
+            v = _get_interp_expr_vec(time, self._time, self._data[cuid], idxs)
+            data[cuid] = v
+        if is_iterable:
+            return TimeSeriesData(data, list(time))
+        else:
+            for cuid in self._data:
+                data[cuid] = data[cuid][0]
+            return ScalarData(data)
 
     def to_serializable(self):
         """

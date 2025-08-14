@@ -12,19 +12,19 @@
 # a simple quadratic function of two variables - taken from the CPLEX file format reference manual.
 # optimal objective function value is 60. solution is x=10, y=0.
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.x = Var(within=NonNegativeReals)
-model.y = Var(within=NonNegativeReals)
+model.x = pyo.Var(within=pyo.NonNegativeReals)
+model.y = pyo.Var(within=pyo.NonNegativeReals)
 
 
 def constraint_rule(model):
     return model.x + model.y >= 10
 
 
-model.constraint = Constraint(rule=constraint_rule)
+model.constraint = pyo.Constraint(rule=constraint_rule)
 
 
 def objective_rule(model):
@@ -35,4 +35,4 @@ def objective_rule(model):
     )
 
 
-model.objective = Objective(rule=objective_rule, sense=minimize)
+model.objective = pyo.Objective(rule=objective_rule, sense=pyo.minimize)

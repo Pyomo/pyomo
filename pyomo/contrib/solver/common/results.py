@@ -21,8 +21,8 @@ from pyomo.common.config import (
     In,
     NonNegativeFloat,
     ADVANCED_OPTION,
+    DEVELOPER_OPTION,
 )
-from pyomo.common.deprecation import deprecation_warning
 from pyomo.opt.results.solution import SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
@@ -144,7 +144,8 @@ class Results(ConfigDict):
         self.solution_loader = self.declare(
             'solution_loader',
             ConfigValue(
-                description="Object for loading the solution back into the model."
+                description="Object for loading the solution back into the model.",
+                visibility=DEVELOPER_OPTION,
             ),
         )
         self.termination_condition: TerminationCondition = self.declare(
@@ -293,19 +294,6 @@ def legacy_solution_status_map(results):
     objects. Because we condensed results objects, some of the previous statuses
     are no longer clearly achievable.
     """
-    deprecation_warning(
-        """The new interface has condensed LegacySolverStatus,
-LegacyTerminationCondition, and LegacySolutionStatus into TerminationCondition
-and SolutionStatus to reduce complexity. As a result, several LegacySolutionStatus values
-are no longer achievable:
-    - `LegacySolutionStatus.other` -> `TerminationCondition.unknown`, `SolutionStatus.noSolution`
-    - `LegacySolutionStatus.unsure` -> `TerminationCondition.unknown`, `SolutionStatus.noSolution`
-    - `LegacySolutionStatus.locallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
-    - `LegacySolutionStatus.globallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
-    - `LegacySolutionStatus.bestSoFar` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.feasible`
-""",
-        version='6.9.1.dev0',
-    )
     if results.termination_condition in set(
         [
             TerminationCondition.maxTimeLimit,

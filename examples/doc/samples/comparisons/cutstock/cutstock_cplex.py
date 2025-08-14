@@ -10,7 +10,16 @@
 #  ___________________________________________________________________________
 
 import cplex
-from cutstock_util import *
+from cutstock_util import (
+    getCutCount,
+    getPatCount,
+    getCuts,
+    getPatterns,
+    getSheetsAvail,
+    getCutDemand,
+    getPriceSheetData,
+    getCutsInPattern,
+)
 from cplex.exceptions import CplexSolverError
 
 # Reading in Data using the cutstock_util

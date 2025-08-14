@@ -167,7 +167,7 @@ class IntervalVar(Block):
         length=None,
         optional=False,
         name=None,
-        doc=None
+        doc=None,
     ): ...
 
     def __init__(self, *args, **kwargs):

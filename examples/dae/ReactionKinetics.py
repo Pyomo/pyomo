@@ -15,17 +15,17 @@
 # reaction models based on "mass action kinetics".
 #
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 
 try:
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
 
-fdiff = TransformationFactory('dae.finite_difference')
-colloc = TransformationFactory('dae.collocation')
-solver = SolverFactory('ipopt')
+fdiff = pyo.TransformationFactory('dae.finite_difference')
+colloc = pyo.TransformationFactory('dae.collocation')
+solver = pyo.SolverFactory('ipopt')
 
 
 class Reaction(object):
@@ -127,12 +127,12 @@ def create_kinetic_model(rxnNet, time):
     """Generate the kinetic model for the specified reaction network on
     the time interval of [0, max(time)].  If time is a list, all time
     points in the list will be used as finite element boundaries."""
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
 
     model.rxnNetwork = rxnNet
 
-    model.SPECIES = Set(initialize=rxnNet.species())
-    model.REACTIONS = Set(initialize=rxnNet.reactions.keys())
+    model.SPECIES = pyo.Set(initialize=rxnNet.species())
+    model.REACTIONS = pyo.Set(initialize=rxnNet.reactions.keys())
     try:
         maxTime = max(time)
         times = time
@@ -141,11 +141,11 @@ def create_kinetic_model(rxnNet, time):
         times = [time]
     model.TIME = ContinuousSet(bounds=(0, maxTime), initialize=times)
 
-    model.c = Var(model.TIME, model.SPECIES, bounds=(0, None))
+    model.c = pyo.Var(model.TIME, model.SPECIES, bounds=(0, None))
     model.dcdt = DerivativeVar(model.c, wrt=model.TIME)
 
-    model.k = Var(model.REACTIONS, bounds=(0, None))
-    model.rate = Var(model.TIME, model.REACTIONS)
+    model.k = pyo.Var(model.REACTIONS, bounds=(0, None))
+    model.rate = pyo.Var(model.TIME, model.REACTIONS)
 
     def reaction_rate(m, t, r):
         rhs = m.k[r]
@@ -153,7 +153,9 @@ def create_kinetic_model(rxnNet, time):
             rhs *= m.c[t, s] ** coef
         return m.rate[t, r] == rhs
 
-    model.reaction_rate = Constraint(model.TIME, model.REACTIONS, rule=reaction_rate)
+    model.reaction_rate = pyo.Constraint(
+        model.TIME, model.REACTIONS, rule=reaction_rate
+    )
 
     def stoichiometry(m, t, s):
         rhs = 0
@@ -164,7 +166,7 @@ def create_kinetic_model(rxnNet, time):
                 rhs += m.rate[t, r] * m.rxnNetwork.reactions[r].products[s]
         return m.dcdt[t, s] == rhs
 
-    model.stoichiometry = Constraint(model.TIME, model.SPECIES, rule=stoichiometry)
+    model.stoichiometry = pyo.Constraint(model.TIME, model.SPECIES, rule=stoichiometry)
 
     return model
 
@@ -193,8 +195,8 @@ def simple_simulation_model():
     R = 8.314  # J / K*mol
     T = 330  # K
 
-    model.k['AtoB'].fix(A1 * exp(-Ea1 / (R * T)))
-    model.k['BtoC'].fix(A2 * exp(-Ea2 / (R * T)))
+    model.k['AtoB'].fix(A1 * pyo.exp(-Ea1 / (R * T)))
+    model.k['BtoC'].fix(A2 * pyo.exp(-Ea2 / (R * T)))
 
     model.c[0, 'A'].fix(1)
     model.c[0, 'B'].fix(0)
@@ -209,7 +211,7 @@ def simple_simulation_model():
         for _i, _x in enumerate('ABC'):
             plt.plot(
                 [x[0][0] for x in _tmp if x[0][1] == _x],
-                [value(x[1]) for x in _tmp if x[0][1] == _x],
+                [pyo.value(x[1]) for x in _tmp if x[0][1] == _x],
                 'bgr'[_i] + '*',
                 label=_x,
             )
@@ -240,13 +242,13 @@ def simple_optimization_model():
     Ea1 = 140000  # J/mol
     Ea2 = 100000  # J/mol
     R = 8.314  # J / K*mol
-    model.T = Var(bounds=(0, None), initialize=330)  # K
+    model.T = pyo.Var(bounds=(0, None), initialize=330)  # K
 
     def compute_k(m):
-        yield m.k['AtoB'] == A1 * exp(-Ea1 / (R * m.T))
-        yield m.k['BtoC'] == A2 * exp(-Ea2 / (R * m.T))
+        yield m.k['AtoB'] == A1 * pyo.exp(-Ea1 / (R * m.T))
+        yield m.k['BtoC'] == A2 * pyo.exp(-Ea2 / (R * m.T))
 
-    model.compute_k = ConstraintList(rule=compute_k)
+    model.compute_k = pyo.ConstraintList(rule=compute_k)
 
     # initial conditions
     model.c[0, 'A'].fix(1)
@@ -255,7 +257,7 @@ def simple_optimization_model():
 
     fdiff.apply_to(model, nfe=100)
 
-    model.obj = Objective(sense=maximize, expr=model.c[max(model.TIME), 'B'])
+    model.obj = pyo.Objective(sense=pyo.maximize, expr=model.c[max(model.TIME), 'B'])
 
     results = solver.solve(model, tee=True)
 
@@ -263,7 +265,7 @@ def simple_optimization_model():
         for _i, _x in enumerate('ABC'):
             plt.plot(
                 [x.index()[0] for x in model.c[:, _x]],
-                [value(x) for x in model.c[:, _x]],
+                [pyo.value(x) for x in model.c[:, _x]],
                 'bgr'[_i] + '*',
                 label=_x,
             )
@@ -282,10 +284,10 @@ def create_regression_model(b, t):
 
     model = create_kinetic_model(rxns, data.keys())
 
-    model.T = Param(initialize=t)
-    model.error = Var(bounds=(0, None))
+    model.T = pyo.Param(initialize=t)
+    model.error = pyo.Var(bounds=(0, None))
 
-    model.compute_error = Constraint(
+    model.compute_error = pyo.Constraint(
         expr=model.error
         == sum(
             ((model.c[t, key[i]] - x) / max(data[_t][i] for _t in data)) ** 2
@@ -309,7 +311,7 @@ def regression_model():
     # transesterification reaction by standard optimisation methods.
     # Hem. Ind. 68(2) 149–159 (2014).  doi:10.2298/HEMIND130118037A
     #
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
 
     model.key = key = ('MeOH', 'TG', 'DG', 'MG', 'FAME', 'Glycerol')
     model.data = data = {
@@ -344,10 +346,10 @@ def regression_model():
         },
     }
 
-    model.experiment = Block(data.keys(), rule=create_regression_model)
+    model.experiment = pyo.Block(data.keys(), rule=create_regression_model)
 
-    model.obj = Objective(
-        sense=minimize, expr=sum(b.error for b in model.experiment[:])
+    model.obj = pyo.Objective(
+        sense=pyo.minimize, expr=sum(b.error for b in model.experiment[:])
     )
     _experiments = list(model.experiment.values())
 
@@ -373,20 +375,20 @@ def regression_model():
     # independent regression as the starting point)
     regress_Ea = True
     if regress_Ea:
-        model.Kset = Set(initialize=['k_1', 'k_2', 'k_3'])
-        model.Ea = Var(model.Kset, bounds=(0, None), initialize=0)
-        model.A = Var(model.Kset, bounds=(0, None), initialize=0)
-        model.R = Param(initialize=8.314)
+        model.Kset = pyo.Set(initialize=['k_1', 'k_2', 'k_3'])
+        model.Ea = pyo.Var(model.Kset, bounds=(0, None), initialize=0)
+        model.A = pyo.Var(model.Kset, bounds=(0, None), initialize=0)
+        model.R = pyo.Param(initialize=8.314)
         for _e in _experiments:
             _e.k.fix()
 
             def compute_k(e, _k):
                 m = e.model()
                 # k11' == k_mt + k_11 * (C_DG + C_MG) / C_TG_0
-                # return e.k[_k] == m.A[_k] * exp( -m.Ea[_k] / ( m.R * e.T ) )
-                return log(e.k[_k]) == log(m.A[_k]) - m.Ea[_k] / (m.R * e.T)
+                # return e.k[_k] == m.A[_k] * pyo.exp( -m.Ea[_k] / ( m.R * e.T ) )
+                return pyo.log(e.k[_k]) == pyo.log(m.A[_k]) - m.Ea[_k] / (m.R * e.T)
 
-            _e.compute_k = Constraint(model.Kset, rule=compute_k)
+            _e.compute_k = pyo.Constraint(model.Kset, rule=compute_k)
         solver.solve(model, tee=True)
 
     for _e in _experiments:
@@ -411,7 +413,7 @@ def regression_model():
                 _ax = ax2 if _x == 'MeOH' else ax
                 _ax.plot(
                     [x.index()[0] for x in model.experiment[T].c[:, _x]],
-                    [value(x) for x in model.experiment[T].c[:, _x]],
+                    [pyo.value(x) for x in model.experiment[T].c[:, _x]],
                     'mkrgbc'[_i] + '-',
                 )
         plt.show()

@@ -9,21 +9,21 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 def create_model(N):
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
 
-    model.A = RangeSet(N)
-    model.x = Var(model.A, bounds=(1, 2))
+    model.A = pyo.RangeSet(N)
+    model.x = pyo.Var(model.A, bounds=(1, 2))
 
     expr = 0
     for i in model.A:
         if not (i + 1) in model.A:
             continue
         expr += i * (model.x[i] * model.x[i + 1] + 1)
-    model.obj = Objective(expr=expr)
+    model.obj = pyo.Objective(expr=expr)
 
     return model
 

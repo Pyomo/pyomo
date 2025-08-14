@@ -192,8 +192,7 @@ class TestResults(unittest.TestCase):
         res = results.Results()
         stream = StringIO()
         res.display(ostream=stream)
-        expected_print = """solution_loader: None
-termination_condition: TerminationCondition.unknown
+        expected_print = """termination_condition: TerminationCondition.unknown
 solution_status: SolutionStatus.noSolution
 incumbent_objective: None
 objective_bound: None

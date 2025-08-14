@@ -16,6 +16,8 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.numeric_types import value
+from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import is_fixed, ZeroConstant
 from pyomo.core.base.set_types import Any
 from pyomo.core.base import SortComponents, Var
@@ -468,10 +470,11 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     # possible
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """
         Compute the value of the body of this constraint.
         """
+        exception = _type_check_exception_arg(self, exception)
         comp = self.parent_component()
         index = self.index()
         prows = comp._prows

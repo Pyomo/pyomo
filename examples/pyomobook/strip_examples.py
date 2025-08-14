@@ -21,9 +21,10 @@ def f(file):
     if prefix.endswith('_strip'):
         return
 
-    with open(base + '/' + prefix + '_strip.py', 'w') as OUTPUT, open(
-        file, 'r'
-    ) as INPUT:
+    with (
+        open(base + '/' + prefix + '_strip.py', 'w') as OUTPUT,
+        open(file, 'r') as INPUT,
+    ):
         for line in INPUT:
             if line[0] == '#' and '@' in line:
                 continue

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.modeling import NOTSET
 from pyomo.core.expr.numvalue import (
     ZeroConstant,
     as_numeric,
@@ -16,7 +17,7 @@ from pyomo.core.expr.numvalue import (
     is_numeric_data,
     value,
 )
-from pyomo.core.expr.expr_common import ExpressionType
+from pyomo.core.expr.expr_common import ExpressionType, _type_check_exception_arg
 from pyomo.core.expr.relational_expr import (
     EqualityExpression,
     RangedExpression,
@@ -74,8 +75,9 @@ class IConstraint(ICategorizedObject):
     # Interface
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of the body of this constraint."""
+        exception = _type_check_exception_arg(self, exception)
         if exception and (self.body is None):
             raise ValueError("constraint body is None")
         elif self.body is None:
@@ -798,7 +800,8 @@ class linear_constraint(_MutableBoundsConstraintMixin, IConstraint):
     # to avoid building the body expression
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
+        exception = _type_check_exception_arg(self, exception)
         try:
             return sum(
                 value(c, exception=exception) * v(exception=exception)

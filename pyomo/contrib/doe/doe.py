@@ -32,12 +32,11 @@ import json
 import logging
 import math
 
-from pathlib import Path
-
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
     pandas as pd,
+    pathlib,
     matplotlib as plt,
 )
 from pyomo.common.modeling import unique_component_name
@@ -46,6 +45,11 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
+from pyomo.contrib.doe.utils import (
+    check_FIM,
+    compute_FIM_metrics,
+    _SMALL_TOLERANCE_DEFINITENESS,
+)
 
 from pyomo.opt import SolverStatus
 
@@ -230,7 +234,7 @@ class DesignOfExperiments:
         """
         # Check results file name
         if results_file is not None:
-            if type(results_file) not in [Path, str]:
+            if type(results_file) not in [pathlib.Path, str]:
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
@@ -309,7 +313,31 @@ class DesignOfExperiments:
                 (len(model.parameter_names), len(model.parameter_names))
             )
 
-            L_vals_sq = np.linalg.cholesky(fim_np)
+            # Need to compute the full FIM before initializing the Cholesky factorization
+            if self.only_compute_fim_lower:
+                fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
+
+            # Check if the FIM is positive definite
+            # If not, add jitter to the diagonal
+            # to ensure positive definiteness
+            min_eig = np.min(np.linalg.eigvals(fim_np))
+
+            if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
+                # Raise the minimum eigenvalue to at least _SMALL_TOLERANCE_DEFINITENESS
+                jitter = np.min(
+                    [
+                        -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
+                        _SMALL_TOLERANCE_DEFINITENESS,
+                    ]
+                )
+            else:
+                # No jitter needed
+                jitter = 0
+
+            # Add jitter to the diagonal to ensure positive definiteness
+            L_vals_sq = np.linalg.cholesky(
+                fim_np + jitter * np.eye(len(model.parameter_names))
+            )
             for i, c in enumerate(model.parameter_names):
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L_vals_sq[i, j]
@@ -542,7 +570,7 @@ class DesignOfExperiments:
 
             # Simulate the model
             try:
-                res = self.solver.solve(model)
+                res = self.solver.solve(model, tee=self.tee)
                 pyo.assert_optimal_termination(res)
             except:
                 # TODO: Make error message more verbose, i.e., add unknown parameter values so the
@@ -1083,7 +1111,16 @@ class DesignOfExperiments:
             pyo.ComponentUID(param, context=m.base_model).find_component_on(
                 b
             ).set_value(m.base_model.unknown_parameters[param] * (1 + diff))
+
+            # Fix experiment inputs before solve (enforce square solve)
+            for comp in b.experiment_inputs:
+                comp.fix()
+
             res = self.solver.solve(b, tee=self.tee)
+
+            # Unfix experiment inputs after square solve
+            for comp in b.experiment_inputs:
+                comp.unfix()
 
         model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
 
@@ -1338,7 +1375,12 @@ class DesignOfExperiments:
                 )
             )
 
-        self.logger.info("FIM provided matches expected dimensions from model.")
+        # Check FIM is positive definite and symmetric
+        check_FIM(FIM)
+
+        self.logger.info(
+            "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
+        )
 
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
@@ -1389,7 +1431,7 @@ class DesignOfExperiments:
 
         self.logger.info("FIM prior has been updated.")
 
-    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
+    # TODO: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
     def update_unknown_parameter_values(self, model=None, param_vals=None):
         raise NotImplementedError(
@@ -1408,12 +1450,37 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        model: model to perform the full factorial exploration on
-        design_ranges: dict of lists, of the form {<var_name>: [start, stop, numsteps]}
-        method: string to specify which method should be used
-                options are ``kaug`` and ``sequential``
+        model: DoE model, optional
+            model to perform the full factorial exploration on
+        design_ranges: dict
+            dictionary of lists, of the form {<var_name>: [start, stop, numsteps]}
+        method: str, optional
+            to specify which method should be used.
+            Options are ``kaug`` and ``sequential``
 
+        Returns
+        -------
+        fim_factorial_results: dict
+            A dictionary of the results with the following keys and their corresponding
+            values as a list:
+
+            - keys of model's experiment_inputs
+            - "log10 D-opt": list of log10(D-optimality)
+            - "log10 A-opt": list of log10(A-optimality)
+            - "log10 E-opt": list of log10(E-optimality)
+            - "log10 ME-opt": list of log10(ME-optimality)
+            - "eigval_min": list of minimum eigenvalues
+            - "eigval_max": list of maximum eigenvalues
+            - "det_FIM": list of determinants
+            - "trace_FIM": list of traces
+            - "solve_time": list of solve times
+
+        Raises
+        ------
+        ValueError
+            If the design_ranges' keys do not match the model's experiment_inputs' keys.
         """
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -1448,8 +1515,8 @@ class DesignOfExperiments:
                 "Design ranges keys must be a subset of experimental design names."
             )
 
-        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
-        # ToDo: Also, make this a result object, or more user friendly.
+        # TODO: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
+        # TODO: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
         fim_factorial_results.update(
             {
@@ -1457,6 +1524,10 @@ class DesignOfExperiments:
                 "log10 A-opt": [],
                 "log10 E-opt": [],
                 "log10 ME-opt": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_FIM": [],
                 "solve_time": [],
             }
         )
@@ -1518,24 +1589,9 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            # Compute and record metrics on FIM
-            D_opt = np.log10(np.linalg.det(FIM))
-            A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
-            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-            # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > 1e-8:
-                self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
-                )
-
-            # If the real value is less than or equal to zero, set the E_opt value to nan
-            if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan
-            else:
-                E_opt = np.log10(E_vals.real[E_ind])
-
-            ME_opt = np.log10(np.linalg.cond(FIM))
+            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+                compute_FIM_metrics(FIM)
+            )
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
@@ -1545,6 +1601,10 @@ class DesignOfExperiments:
             fim_factorial_results["log10 A-opt"].append(A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
+            fim_factorial_results["eigval_min"].append(E_vals.min())
+            fim_factorial_results["eigval_max"].append(E_vals.max())
+            fim_factorial_results["det_FIM"].append(det_FIM)
+            fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
         self.fim_factorial_results = fim_factorial_results
@@ -1769,7 +1829,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
             )
 
         # Draw D-optimality
@@ -1790,7 +1850,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
             )
 
         # Draw E-optimality
@@ -1811,7 +1871,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
             )
 
         # Draw Modified E-optimality
@@ -1832,7 +1892,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
             )
 
     def _heatmap(
@@ -1933,7 +1993,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
             )
 
         # D-optimality
@@ -1959,7 +2019,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
             )
 
         # E-optimality
@@ -1985,7 +2045,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
             )
 
         # Modified E-optimality
@@ -2011,7 +2071,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
             )
 
     # Gets the FIM from an existing model

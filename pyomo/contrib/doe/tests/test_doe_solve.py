@@ -23,8 +23,10 @@ from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 from pyomo.contrib.doe.examples.reactor_example import (
     ReactorExperiment as FullReactorExperiment,
+    run_reactor_doe,
 )
 from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     FullReactorExperimentBad,
@@ -37,7 +39,7 @@ from pyomo.opt import SolverFactory
 
 
 ipopt_available = SolverFactory("ipopt").available()
-k_aug_available = SolverFactory('k_aug', solver_io='nl', validate=False)
+k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
 
 currdir = this_file_dir()
 file_path = os.path.join(currdir, "..", "examples", "result.json")
@@ -100,21 +102,21 @@ def get_FIM_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args['experiment'] = experiment
-    args['fd_formula'] = fd_method
-    args['step'] = 1e-3
-    args['objective_option'] = obj_used
-    args['scale_constant_value'] = 1
-    args['scale_nominal_param_value'] = True
-    args['prior_FIM'] = None
-    args['jac_initial'] = None
-    args['fim_initial'] = None
-    args['L_diagonal_lower_bound'] = 1e-7
-    args['solver'] = None
-    args['tee'] = False
-    args['get_labeled_model_args'] = None
-    args['_Cholesky_option'] = True
-    args['_only_compute_fim_lower'] = True
+    args["experiment"] = experiment
+    args["fd_formula"] = fd_method
+    args["step"] = 1e-3
+    args["objective_option"] = obj_used
+    args["scale_constant_value"] = 1
+    args["scale_nominal_param_value"] = True
+    args["prior_FIM"] = None
+    args["jac_initial"] = None
+    args["fim_initial"] = None
+    args["L_diagonal_lower_bound"] = 1e-7
+    args["solver"] = None
+    args["tee"] = False
+    args["get_labeled_model_args"] = None
+    args["_Cholesky_option"] = True
+    args["_only_compute_fim_lower"] = True
     return args
 
 
@@ -195,17 +197,17 @@ class TestReactorExampleSolving(unittest.TestCase):
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args['scale_nominal_param_value'] = (
+        DoE_args["scale_nominal_param_value"] = (
             False  # Vanilla determinant solve needs this
         )
-        DoE_args['_Cholesky_option'] = False
-        DoE_args['_only_compute_fim_lower'] = False
+        DoE_args["_Cholesky_option"] = False
+        DoE_args["_only_compute_fim_lower"] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.run_doe()
 
-        self.assertEqual(doe_obj.results['Solver Status'], "ok")
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
     def test_reactor_obj_cholesky_solve(self):
         fd_method = "central"
@@ -214,6 +216,37 @@ class TestReactorExampleSolving(unittest.TestCase):
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        doe_obj.run_doe()
+
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
+
+        # assert that Q, F, and L are the same.
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
+
+        # Since Cholesky is used, there is comparison for FIM and L.T @ L
+        self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
+
+        # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
+        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+
+    def test_reactor_obj_cholesky_solve_bad_prior(self):
+
+        from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
+
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        # Specify a prior that is slightly negative definite
+        # Because it is less than the tolerance, it should be adjusted to be positive definite
+        # No error should be thrown
+        DoE_args["prior_FIM"] = -(_SMALL_TOLERANCE_DEFINITENESS / 100) * np.eye(4)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -335,7 +368,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         # Without parameter scaling
         DoE_args2 = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args2['scale_nominal_param_value'] = False
+        DoE_args2["scale_nominal_param_value"] = False
 
         doe_obj2 = DesignOfExperiments(**DoE_args2)
         # Run both problems
@@ -387,7 +420,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         experiment = FullReactorExperimentBad(data_ex, 10, 3)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args['logger_level'] = logging.ERROR
+        DoE_args["logger_level"] = logging.ERROR
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -409,6 +442,104 @@ class TestReactorExampleSolving(unittest.TestCase):
         self.assertTrue(
             (set(CA_vals).issuperset(set([1, 3, 5])))
             and (set(T_vals).issuperset(set([300, 500, 700])))
+        )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+class TestDoe(unittest.TestCase):
+    def test_doe_full_factorial(self):
+        log10_D_opt_expected = [
+            3.7734377852467524,
+            5.137792359070963,
+            5.182167857710023,
+            6.546522431509408,
+        ]
+
+        log10_A_opt_expected = [
+            3.5935726800929695,
+            3.6133186151486933,
+            3.945755198204365,
+            3.9655011332598367,
+        ]
+
+        log10_E_opt_expected = [
+            -1.7201873126109162,
+            -0.691340497355524,
+            -1.3680047944877138,
+            -0.3391579792516522,
+        ]
+
+        log10_ME_opt_expected = [
+            5.221185311075697,
+            4.244741560076784,
+            5.221185311062606,
+            4.244741560083524,
+        ]
+
+        eigval_min_expected = [
+            0.019046390638130666,
+            0.20354456134677426,
+            0.04285437893696232,
+            0.45797526302234304,
+        ]
+
+        eigval_max_expected = [
+            3169.552855492114,
+            3576.0292523637977,
+            7131.493924857995,
+            8046.0658178139165,
+        ]
+
+        det_FIM_expected = [
+            5935.233170586055,
+            137338.51875774842,
+            152113.5345070818,
+            3519836.021699428,
+        ]
+
+        trace_FIM_expected = [
+            3922.5878617108597,
+            4105.051549241871,
+            8825.822688850109,
+            9236.36598578955,
+        ]
+        ff = run_reactor_doe(
+            n_points_for_design=2,
+            compute_FIM_full_factorial=False,
+            plot_factorial_results=False,
+            save_plots=False,
+            run_optimal_doe=False,
+        )
+        ff.compute_FIM_full_factorial(
+            design_ranges={"CA[0]": [1, 1.5, 2], "T[0]": [350, 400, 2]}
+        )
+
+        ff_results = ff.fim_factorial_results
+
+        self.assertStructuredAlmostEqual(
+            ff_results["log10 D-opt"], log10_D_opt_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["log10 A-opt"], log10_A_opt_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["log10 E-opt"], log10_E_opt_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["log10 ME-opt"], log10_ME_opt_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["eigval_min"], eigval_min_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["eigval_max"], eigval_max_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["det_FIM"], det_FIM_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["trace_FIM"], trace_FIM_expected, abstol=1e-4
         )
 
 

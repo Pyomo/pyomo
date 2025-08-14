@@ -15,6 +15,7 @@ Tests for the PyROS solver.
 
 import logging
 import math
+import os
 import time
 
 import pyomo.common.unittest as unittest
@@ -32,8 +33,9 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import replace_expressions
-from pyomo.environ import maximize as pyo_max, units as u
+from pyomo.environ import assert_optimal_termination, maximize as pyo_max, units as u
 from pyomo.opt import (
     SolverResults,
     SolverStatus,
@@ -51,6 +53,7 @@ from pyomo.environ import (
     Objective,
     Param,
     SolverFactory,
+    Suffix,
     Var,
     exp,
     log,
@@ -1241,9 +1244,8 @@ class RegressionTest(unittest.TestCase):
     )
     def test_pyros_math_domain_error(self):
         """
-        Test PyROS on a two-stage problem, discrete
-        set type with a math domain error evaluating
-        second-stage inequality constraint expressions in separation.
+        Test PyROS behavior is as expected when there are errors
+        encountered while evaluating separation problem objectives.
         """
         m = ConcreteModel()
         m.q = Param(initialize=1, mutable=True)
@@ -1258,16 +1260,35 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         with self.assertRaisesRegex(
-            expected_exception=ArithmeticError,
-            expected_regex=(
-                "Evaluation of second-stage inequality constraint.*math domain error.*"
-            ),
-            msg="ValueError arising from math domain error not raised",
+            expected_exception=ValueError,
+            expected_regex="math domain error",
+            msg="Exception arising from math domain error not raised",
         ):
             # should raise math domain error:
             # (1) lower bounding constraint on x2 solved first
-            #     in separation, q = 0 in worst case
-            # (2) now tries to evaluate log(q), but q = 0
+            #     in separation. Solution has q = 0
+            # (2) upon solution of the first separation problem,
+            #     evaluation of x2 - log(q) at q = 0
+            #     results in exception
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.q],
+                uncertainty_set=box_set,
+                local_solver=local_solver,
+                global_solver=global_solver,
+                decision_rule_order=1,
+                tee=True,
+            )
+
+        # this should result in error stemming from division by zero
+        m.x2.setub(1 / m.q)
+        with self.assertRaisesRegex(
+            expected_exception=ZeroDivisionError,
+            expected_regex="float division by zero",
+            msg="Exception arising from math domain error not raised",
+        ):
             pyros_solver.solve(
                 model=m,
                 first_stage_variables=[m.x1],
@@ -1996,6 +2017,441 @@ class RegressionTest(unittest.TestCase):
             places=2,
         )
         self.assertEqual(m.x.value, 1)
+
+    @parameterized.expand([[True, 1], [True, 2], [False, 1], [False, 2]])
+    def test_two_stage_set_nonstatic_dr_robust_opt(self, use_discrete_set, dr_order):
+        """
+        Test problems that are sensitive to the DR order efficiency.
+
+        If the efficiency is not switched off properly, then
+        PyROS may terminate prematurely with a(n inaccurate)
+        robust infeasibility status.
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=[-2, 2], initialize=0)
+        m.z = Var(bounds=[-10, 10], initialize=0)
+        m.q = Param(initialize=2, mutable=True)
+        m.obj = Objective(expr=m.x + m.z, sense=maximize)
+        # when uncertainty set is discrete, the
+        # preprocessor should write out this constraint for
+        # each scenario as a first-stage constraint
+        # otherwise, coefficient matching constraint
+        # requires only the affine DR coefficient be nonzero
+        m.xz_con = Constraint(expr=m.z == m.q)
+
+        uncertainty_set = (
+            DiscreteScenarioSet([[2], [3]]) if use_discrete_set else BoxSet([[2, 3]])
+        )
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=m.z,
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            decision_rule_order=dr_order,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            # DR efficiency should have been switched off due to
+            # DR-dependent equalities, so robust optimal
+            # if the DR efficiency was not switched off, then
+            # robust infeasibililty would have been prematurely reported
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+        )
+        self.assertEqual(res.iterations, 1)
+        # optimal solution evaluated under worst-case scenario
+        self.assertAlmostEqual(res.final_objective_value, 4, places=4)
+        self.assertAlmostEqual(m.x.value, 2, places=4)
+        self.assertAlmostEqual(m.z.value, 2, places=4)
+
+
+@unittest.skipUnless(ipopt_available, "IPOPT not available.")
+class TestPyROSSeparationPriorityOrder(unittest.TestCase):
+    """
+    Test PyROS solver behavior with respect to specification
+    of separation priorities.
+    """
+
+    def test_priority_nominal_only_eq(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=0, mutable=True)
+        m.x = Var(bounds=[-2, 2])
+        m.z = Var(bounds=(None, m.q))
+        m.eq_con = Constraint(expr=m.z == m.q**2)
+        m.obj = Objective(expr=m.x + m.z, sense=minimize)
+        m.pyros_separation_priority = Suffix()
+        # enforce equality  only nominally, or else model would be
+        # robust infeasible with [0, 1] interval uncertainty set
+        # due to coefficient matching of the equality
+        m.pyros_separation_priority[m.eq_con] = None
+        pyros_solver = SolverFactory("pyros")
+        ipopt = SolverFactory("ipopt")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[m.z],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            solve_master_globally=True,
+            decision_rule_order=0,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(m.x.value, -2)
+        self.assertEqual(m.z.value, 0)
+        self.assertAlmostEqual(res.final_objective_value, -2, places=4)
+        # z is essentially fixed due to the equality,
+        # and x not involved in any constraints, so:
+        self.assertEqual(res.iterations, 1)
+
+    def test_priority_nominal_only_var_bounds(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=0, mutable=True)
+        m.x = Var(bounds=[-2, 2])
+        m.y = Var(bounds=(m.q, None))
+        m.eq_con = Constraint(expr=m.y == m.q**2)
+        m.obj = Objective(expr=m.x + m.y, sense=minimize)
+        m.pyros_separation_priority = Suffix()
+        # enforce bounds only nominally, or else model is robust
+        # infeasible with [0, 1] interval uncertainty set
+        m.pyros_separation_priority[m.y] = None
+        pyros_solver = SolverFactory("pyros")
+        ipopt = SolverFactory("ipopt")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            solve_master_globally=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(m.x.value, -2)
+        self.assertEqual(m.y.value, 1)
+        # epigraph constraint is separated (due to worst-case focus),
+        # need only one more iteration to achieve robustness
+        self.assertEqual(res.iterations, 2)
+
+    def test_priority_nominal_only_ineq(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=0, mutable=True)
+        m.x = Var(bounds=[-2, 2])
+        m.y = Var()
+        m.con = Constraint(expr=m.y >= m.q)
+        m.eq_con = Constraint(expr=m.y == m.q**2)
+        m.obj = Objective(expr=m.x + m.y, sense=minimize)
+        m.pyros_separation_priority = Suffix()
+        # enforce inequality only nominally, or else model is robust
+        # infeasible with [0, 1] interval uncertainty set
+        m.pyros_separation_priority[m.con] = None
+        pyros_solver = SolverFactory("pyros")
+        ipopt = SolverFactory("ipopt")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            solve_master_globally=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(m.x.value, -2)
+        self.assertEqual(m.y.value, 1)
+
+    def test_priority_skip_all_separation(self):
+        m = build_leyffer_two_cons()
+        m_det = m.clone()
+        m.pyros_separation_priority = Suffix()
+        m.pyros_separation_priority[None] = None
+        interval = BoxSet(bounds=[(0.25, 2)])
+        pyros_solver = SolverFactory("pyros")
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("ipopt")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            # note: this gets overridden by the priority suffix,
+            #       and is therefore ignored
+            separation_priority_order={"con1": 2},
+            decision_rule_order=1,
+        )
+
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
+        self.assertEqual(res.iterations, 1)
+        assert_optimal_termination(local_subsolver.solve(m_det))
+        # when all separation problems bypassed, PyROS reduces to a
+        # solving the deterministic model
+        self.assertAlmostEqual(m.x1.value, m_det.x1.value, places=4)
+        self.assertAlmostEqual(m.x2.value, m_det.x2.value, places=4)
+        self.assertAlmostEqual(m.x3.value, m_det.x3.value, places=4)
+        self.assertAlmostEqual(value(m.obj), value(m_det.obj), places=4)
+        self.assertAlmostEqual(res.final_objective_value, value(m_det.obj), places=4)
+
+    def test_priority_order_invariant(self):
+        m = build_leyffer_two_cons()
+        m2 = m.clone()
+        interval = BoxSet(bounds=[(0.25, 2)])
+        pyros_solver = SolverFactory("pyros")
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("ipopt")
+        res1 = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            separation_priority_order={"con1": 2},
+        )
+        self.assertEqual(
+            res1.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
+
+        m2.pyros_separation_priority = Suffix()
+        m2.pyros_separation_priority[m2.con1] = 2
+        res2 = pyros_solver.solve(
+            model=m2,
+            first_stage_variables=[m2.x1],
+            second_stage_variables=[m2.x2],
+            uncertain_params=[m2.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+        )
+        self.assertEqual(
+            res2.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
+
+        # confirm results are identical
+        self.assertEqual(res2.iterations, res1.iterations)
+        self.assertEqual(res2.final_objective_value, res1.final_objective_value)
+        self.assertEqual(m.x1.value, m2.x1.value)
+        self.assertEqual(m.x2.value, m2.x2.value)
+        self.assertEqual(m.x3.value, m2.x3.value)
+
+
+@unittest.skipUnless(baron_available, "BARON not available")
+class TestReformulateSecondStageEqualitiesDiscrete(unittest.TestCase):
+    """
+    Test behavior of PyROS solver when the uncertainty set is
+    discrete and there are second-stage
+    equality constraints that are state-variable independent,
+    and therefore, subject to reformulation.
+    """
+
+    def build_single_stage_model(self):
+        m = ConcreteModel()
+        m.x = Var(range(3), bounds=[-2, 2], initialize=0)
+        m.q = Param(range(3), initialize=0, mutable=True)
+        m.c = Param(range(3), initialize={0: 1, 1: 0, 2: 1})
+        m.obj = Objective(expr=sum(m.x[i] * m.c[i] for i in m.x), sense=maximize)
+        # when uncertainty set is discrete, the
+        # preprocessor should write out this constraint for
+        # each scenario as a first-stage constraint
+        m.xq_con = Constraint(expr=sum(m.x[i] * m.q[i] for i in m.x) == 0)
+        return m
+
+    def build_two_stage_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=[None, None], initialize=0)
+        m.z = Var(bounds=[-2, 2], initialize=0)
+        m.q = Param(initialize=2, mutable=True)
+        m.obj = Objective(expr=m.x + m.z, sense=maximize)
+        # when uncertainty set is discrete, the
+        # preprocessor should write out this constraint for
+        # each scenario as a first-stage constraint
+        m.xz_con = Constraint(expr=m.x + m.q * m.z == 0)
+        return m
+
+    def test_single_stage_discrete_set_fullrank(self):
+        m = self.build_single_stage_model()
+        uncertainty_set = DiscreteScenarioSet(
+            # reformulating second-stage equality for these scenarios
+            # should result in first-stage equalities finally being
+            # (full-column-rank matrix) @ (x) == 0
+            # so x=0 is sole robust feasible solution
+            scenarios=[
+                [0] * len(m.q),
+                [1] * len(m.q),
+                list(range(1, len(m.q) + 1)),
+                [(idx + 1) ** 2 for idx in m.q],
+            ]
+        )
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 0, places=4)
+        self.assertAlmostEqual(m.x[0].value, 0, places=4)
+        self.assertAlmostEqual(m.x[1].value, 0, places=4)
+        self.assertAlmostEqual(m.x[2].value, 0, places=4)
+
+    def test_single_stage_discrete_set_rank2(self):
+        m = self.build_single_stage_model()
+        uncertainty_set = DiscreteScenarioSet(
+            # reformulating second-stage equality for these scenarios
+            # should make the optimal solution unique
+            scenarios=[[0] * len(m.q), [1] * len(m.q), [(idx + 1) ** 2 for idx in m.q]]
+        )
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 2, places=4)
+        # optimal solution is unique
+        self.assertAlmostEqual(m.x[0].value, 5 / 4, places=4)
+        self.assertAlmostEqual(m.x[1].value, -2, places=4)
+        self.assertAlmostEqual(m.x[2].value, 3 / 4, places=4)
+
+    def test_single_stage_discrete_set_rank1(self):
+        m = self.build_single_stage_model()
+        uncertainty_set = DiscreteScenarioSet(
+            scenarios=[[0] * len(m.q), [2] * len(m.q), [3] * len(m.q)]
+        )
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 2, places=4)
+        # subject to these scenarios, the optimal solution is non-unique,
+        # but should satisfy this check
+        self.assertAlmostEqual(m.x[1].value, -2, places=4)
+
+    def test_two_stage_discrete_set_rank2_affine_dr(self):
+        m = self.build_two_stage_model()
+        uncertainty_set = DiscreteScenarioSet([[2], [3]])
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=m.z,
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            decision_rule_order=1,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 2, places=4)
+        self.assertAlmostEqual(m.x.value, 4, places=4)
+        self.assertAlmostEqual(m.z.value, -2, places=4)
+
+    def test_two_stage_discrete_set_fullrank_affine_dr(self):
+        m = self.build_two_stage_model()
+        uncertainty_set = DiscreteScenarioSet([[2], [3], [4]])
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=m.z,
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            decision_rule_order=1,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 0, places=4)
+        # the second-stage equalities are a full rank linear system
+        # in x and the DR variables, with RHS 0, so all
+        # variables must be 0
+        self.assertAlmostEqual(m.x.value, 0, places=4)
+        self.assertAlmostEqual(m.z.value, 0, places=4)
 
 
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
@@ -2963,6 +3419,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
             " backup_local_solvers=[]\n"
             " backup_global_solvers=[]\n"
             " subproblem_file_directory=None\n"
+            " subproblem_format_options={'bar': {'symbolic_solver_labels': True}}\n"
             " bypass_local_separation=False\n"
             " bypass_global_separation=False\n"
             " p_robustness={}\n" + "-" * 78 + "\n"
@@ -3247,6 +3704,93 @@ class SimpleTestSolver:
         res.solver.termination_condition = TerminationCondition.unknown
 
         return res
+
+
+class TestPyROSSubproblemWriter(unittest.TestCase):
+    """
+    Test PyROS subproblem writers behave as expected when
+    solution of a subproblem fails.
+    """
+
+    @unittest.skipUnless(baron_available, "BARON not available.")
+    def test_pyros_write_master_problem(self):
+        m = build_leyffer()
+
+        with TempfileManager.new_context() as TMP:
+            tmpdir = TMP.create_tempdir()
+            res = SolverFactory("pyros").solve(
+                model=m,
+                first_stage_variables=[m.x1, m.x2],
+                second_stage_variables=[],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet([[1, 2]]),
+                local_solver=SimpleTestSolver(),
+                global_solver=SolverFactory("baron"),
+                solve_master_globally=False,
+                keepfiles=True,
+                subproblem_file_directory=tmpdir,
+                subproblem_format_options={
+                    "bar": {},
+                    "gams": {"symbolic_solver_labels": True},
+                },
+            )
+            expected_subproblem_file = os.path.join(tmpdir, "box_unknown_master_0")
+            format_files_exist_dict = {
+                "bar": os.path.exists(f"{expected_subproblem_file}.bar"),
+                "gams": os.path.exists(f"{expected_subproblem_file}.gams"),
+            }
+
+        self.assertTrue(format_files_exist_dict["bar"])
+        self.assertTrue(format_files_exist_dict["gams"])
+        self.assertEqual(res.iterations, 1)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.subsolver_error
+        )
+
+    @unittest.skipUnless(baron_available, "BARON not available.")
+    def test_pyros_write_separation_problem(self):
+        m = build_leyffer()
+        subproblem_format_options = {
+            "bar": {},
+            "gams": {"symbolic_solver_labels": True},
+        }
+
+        with TempfileManager.new_context() as TMP:
+            tmpdir = TMP.create_tempdir()
+            expected_subproblem_filenames = [
+                os.path.join(
+                    tmpdir, f"box_unknown_separation_0_obj_separation_obj_0.{fmt}"
+                )
+                for fmt in subproblem_format_options.keys()
+            ]
+
+            res = SolverFactory("pyros").solve(
+                model=m,
+                first_stage_variables=[m.x1, m.x2],
+                second_stage_variables=[],
+                uncertain_params=[m.u],
+                uncertainty_set=BoxSet([[1, 2]]),
+                local_solver=SimpleTestSolver(),
+                global_solver=SolverFactory("baron"),
+                solve_master_globally=True,
+                bypass_global_separation=True,
+                keepfiles=True,
+                subproblem_file_directory=tmpdir,
+                subproblem_format_options=subproblem_format_options,
+            )
+
+            subproblem_files_created = {
+                fname: os.path.exists(fname) for fname in expected_subproblem_filenames
+            }
+
+        for fname, file_created in subproblem_files_created.items():
+            self.assertTrue(
+                file_created, msg=f"Subproblem was not written to file {fname}."
+            )
+        self.assertEqual(res.iterations, 1)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.subsolver_error
+        )
 
 
 class TestPyROSSolverAdvancedValidation(unittest.TestCase):

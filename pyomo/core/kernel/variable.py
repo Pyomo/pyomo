@@ -8,8 +8,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.modeling import NOTSET
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue, is_numeric_data, value
 from pyomo.core.kernel.base import ICategorizedObject, _abstract_readwrite_property
 from pyomo.core.kernel.container_utils import define_simple_containers
@@ -123,13 +124,13 @@ class IVariable(ICategorizedObject, NumericValue):
     def ub(self, val):
         self.upper = val
 
-    def fix(self, value=NoArgumentGiven):
+    def fix(self, value=NOTSET):
         """
         Fix the variable. Sets the fixed indicator to
         :const:`True`. An optional value argument will
         update the variable's value before fixing.
         """
-        if value is not NoArgumentGiven:
+        if value is not NOTSET:
             self.value = value
 
         self.fixed = True
@@ -270,8 +271,9 @@ class IVariable(ICategorizedObject, NumericValue):
             return 0
         return 1
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Return the value of this variable."""
+        exception = _type_check_exception_arg(self, exception)
         if exception and (self.value is None):
             raise ValueError("value is None")
         return self.value

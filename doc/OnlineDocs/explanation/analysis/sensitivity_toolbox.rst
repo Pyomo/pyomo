@@ -3,7 +3,7 @@ Sensitivity Toolbox
 
 The sensitivity toolbox provides a Pyomo interface to sIPOPT and k_aug to very quickly compute approximate solutions to nonlinear programs with a small perturbation in model parameters.
 
-See the `sIPOPT documentation <https://projects.coin-or.org/Ipopt/wiki/sIpopt>`_ or the `following paper <https://link.springer.com/article/10.1007/s12532-012-0043-2>`_ for additional details:
+See the `sIPOPT documentation <https://coin-or.github.io/Ipopt/SPECIALS.html#SIPOPT>`_ or the `following paper <https://link.springer.com/article/10.1007/s12532-012-0043-2>`_ for additional details:
 
   H. Pirnay, R. Lopez-Negrete, and L.T. Biegler, Optimal Sensitivity based on IPOPT, Math. Prog. Comp., 4(4):307--331, 2012.
 
@@ -31,25 +31,25 @@ Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while 
 .. doctest:: python
 
     # Import Pyomo and the sensitivity toolbox
-    >>> from pyomo.environ import *
+    >>> import pyomo.environ as pyo
     >>> from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
     # Create a concrete model
-    >>> m = ConcreteModel()
+    >>> m = pyo.ConcreteModel()
 
     # Define the variables with bounds and initial values
-    >>> m.x1 = Var(initialize = 0.15, within=NonNegativeReals)
-    >>> m.x2 = Var(initialize = 0.15, within=NonNegativeReals)
-    >>> m.x3 = Var(initialize = 0.0, within=NonNegativeReals)
+    >>> m.x1 = pyo.Var(initialize = 0.15, within=pyo.NonNegativeReals)
+    >>> m.x2 = pyo.Var(initialize = 0.15, within=pyo.NonNegativeReals)
+    >>> m.x3 = pyo.Var(initialize = 0.0, within=pyo.NonNegativeReals)
 
     # Define the parameters
-    >>> m.eta1 = Param(initialize=4.5,mutable=True)
-    >>> m.eta2 = Param(initialize=1.0,mutable=True)
+    >>> m.eta1 = pyo.Param(initialize=4.5,mutable=True)
+    >>> m.eta2 = pyo.Param(initialize=1.0,mutable=True)
 
     # Define the constraints and objective
-    >>> m.const1 = Constraint(expr=6*m.x1+3*m.x2+2*m.x3-m.eta1 ==0)
-    >>> m.const2 = Constraint(expr=m.eta2*m.x1+m.x2-m.x3-1 ==0)
-    >>> m.cost = Objective(expr=m.x1**2+m.x2**2+m.x3**2)
+    >>> m.const1 = pyo.Constraint(expr=6*m.x1+3*m.x2+2*m.x3-m.eta1 ==0)
+    >>> m.const2 = pyo.Constraint(expr=m.eta2*m.x1+m.x2-m.x3-1 ==0)
+    >>> m.cost = pyo.Objective(expr=m.x1**2+m.x2**2+m.x3**2)
 
 
 The solution of this optimization problem is :math:`x_1^* = 0.5`, :math:`x_2^* = 0.5`, and :math:`x_3^* = 0.0`. But what if we change the parameter values to :math:`\hat{p}_1 = 4.0` and :math:`\hat{p}_2 = 1.0`? Is there a quick way to approximate the new solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`? Yes! This is the main functionality of sIPOPT and k_aug.
@@ -58,8 +58,8 @@ Next we define the perturbed parameter values :math:`\hat{p}_1` and :math:`\hat{
 
 .. doctest:: python
 
-    >>> m.perturbed_eta1 = Param(initialize = 4.0)
-    >>> m.perturbed_eta2 = Param(initialize = 1.0)
+    >>> m.perturbed_eta1 = pyo.Param(initialize = 4.0)
+    >>> m.perturbed_eta2 = pyo.Param(initialize = 1.0)
 
 And finally we call sIPOPT or k_aug:
 
@@ -185,7 +185,7 @@ Installing sIPOPT and k_aug
 The sensitivity toolbox requires either sIPOPT or k_aug to be installed and available in your system PATH. See the sIPOPT and k_aug documentation for detailed instructions:
 
 * https://coin-or.github.io/Ipopt/INSTALL.html
-* https://projects.coin-or.org/Ipopt/wiki/sIpopt
+* https://coin-or.github.io/Ipopt/SPECIALS.html#SIPOPT
 * https://coin-or.github.io/coinbrew/
 * https://github.com/dthierry/k_aug
 

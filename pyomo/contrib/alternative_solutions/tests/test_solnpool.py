@@ -17,7 +17,6 @@ from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
 from pyomo.contrib.appsi.solvers import Gurobi
 
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
-import pyomo.environ as pe
 
 gurobipy_available = Gurobi().available()
 

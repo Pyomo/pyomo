@@ -24,16 +24,16 @@
 DOMAIN_PTS = [0.0, 1.0, 1.0, 2.0, 2.0, 3.0]
 RANGE_PTS = [0.0, 0.0, 2.0, 2.0, 0.5, 0.5]
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
-model.X = Var(bounds=(0, 3))
-model.Z = Var()
+model.X = pyo.Var(bounds=(0, 3))
+model.Z = pyo.Var()
 
 # See documentation on Piecewise component by typing
 # help(Piecewise) in a python terminal after importing pyomo.core
-model.con = Piecewise(
+model.con = pyo.Piecewise(
     model.Z,
     model.X,  # range and domain variables
     pw_pts=DOMAIN_PTS,
@@ -45,4 +45,4 @@ model.con = Piecewise(
 #           not work with step functions are:
 #           BIGM_SOS1, BIGM_BIN, and MC
 
-model.obj = Objective(expr=model.Z + model.X, sense=maximize)
+model.obj = pyo.Objective(expr=model.Z + model.X, sense=pyo.maximize)

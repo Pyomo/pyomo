@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-import pyomo.environ as pe
 from pyomo.core.base import ConcreteModel, Var, Constraint, Objective
 from pyomo.common.dependencies import attempt_import
 

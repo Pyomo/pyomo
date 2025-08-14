@@ -9,25 +9,25 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
-model.d = Param(default=10)
+model.d = pyo.Param(default=10)
 
 
 def A_rule(model):
-    return range(0, value(model.d))
+    return range(0, pyo.value(model.d))
 
 
-model.A = Set()
+model.A = pyo.Set()
 
 
 def B_rule(model):
-    return range(1, value(model.d) + 1)
+    return range(1, pyo.value(model.d) + 1)
 
 
-model.B = Set()
+model.B = pyo.Set()
 
 if 1 > 0:
     model.X1 = model.A * model.B
@@ -36,7 +36,7 @@ if 1 > 0:
     model.X4 = model.B - model.A
     model.X5 = model.B & model.A
 
-model.Y = Set(initialize=model.B - model.A)
+model.Y = pyo.Set(initialize=model.B - model.A)
 model.Y.add('foo')
 
 if 1 > 0:

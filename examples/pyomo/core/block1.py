@@ -9,12 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = ConcreteModel()
-model.x = Var()
+model = pyo.ConcreteModel()
+model.x = pyo.Var()
 
-model.b = Block()
-model.b.x = Var()
+model.b = pyo.Block()
+model.b.x = pyo.Var()
 
-model.o = Objective(expr=(model.x - 1.0) ** 2 + (model.b.x - 2.0) ** 2)
+model.o = pyo.Objective(expr=(model.x - 1.0) ** 2 + (model.b.x - 2.0) ** 2)

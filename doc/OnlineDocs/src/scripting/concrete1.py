@@ -9,12 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
-model.x = Var([1, 2], domain=NonNegativeReals)
+model.x = pyo.Var([1, 2], domain=pyo.NonNegativeReals)
 
-model.OBJ = Objective(expr=2 * model.x[1] + 3 * model.x[2])
+model.OBJ = pyo.Objective(expr=2 * model.x[1] + 3 * model.x[2])
 
-model.Constraint1 = Constraint(expr=3 * model.x[1] + 4 * model.x[2] >= 1)
+model.Constraint1 = pyo.Constraint(expr=3 * model.x[1] + 4 * model.x[2] >= 1)

@@ -14,30 +14,30 @@ David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for Constraints.rst in testable form
 """
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 # @Inequality_constraints_2expressions
-model.x = Var()
+model.x = pyo.Var()
 
 
 def aRule(model):
     return model.x >= 2
 
 
-model.Boundx = Constraint(rule=aRule)
+model.Boundx = pyo.Constraint(rule=aRule)
 
 
 def bRule(model):
     return (2, model.x, None)
 
 
-model.boundx = Constraint(rule=bRule)
+model.boundx = pyo.Constraint(rule=bRule)
 # @Inequality_constraints_2expressions
 
-model = ConcreteModel()
-model.J = Set(initialize=['butter', 'scones'])
-model.x = Var(model.J)
+model = pyo.ConcreteModel()
+model.J = pyo.Set(initialize=['butter', 'scones'])
+model.x = pyo.Var(model.J)
 
 
 # @Constraint_example
@@ -45,18 +45,18 @@ def teaOKrule(model):
     return model.x['butter'] + model.x['scones'] == 3
 
 
-model.TeaConst = Constraint(rule=teaOKrule)
+model.TeaConst = pyo.Constraint(rule=teaOKrule)
 # @Constraint_example
 
 # @Passing_elements_crossproduct
-model.A = RangeSet(1, 10)
-model.a = Param(model.A, within=PositiveReals)
-model.ToBuy = Var(model.A)
+model.A = pyo.RangeSet(1, 10)
+model.a = pyo.Param(model.A, within=pyo.PositiveReals)
+model.ToBuy = pyo.Var(model.A)
 
 
 def bud_rule(model, i):
     return model.a[i] * model.ToBuy[i] <= i
 
 
-aBudget = Constraint(model.A, rule=bud_rule)
+aBudget = pyo.Constraint(model.A, rule=bud_rule)
 # @Passing_elements_crossproduct

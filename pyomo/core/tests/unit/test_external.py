@@ -586,6 +586,38 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertAlmostEqual(value(model.x), 0.1, 5)
 
     @unittest.skipIf(
+        not check_available_solvers('ipopt_v2'),
+        "The 'ipopt_v2' solver is not available",
+    )
+    def test_solve_gsl_function(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        model = ConcreteModel()
+        model.z_func = ExternalFunction(library=DLL, function="gsl_sf_gamma")
+        model.x = Var(initialize=3, bounds=(1e-5, None))
+        model.o = Objective(expr=model.z_func(model.x))
+        opt = SolverFactory('ipopt_v2')
+        res = opt.solve(model, tee=True)
+        self.assertAlmostEqual(value(model.o), 0.885603194411, 7)
+
+    @unittest.skipIf(
+        not check_available_solvers('ipopt_v2'),
+        "The 'ipopt_v2' solver is not available",
+    )
+    def test_solve_gsl_function_const_arg(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        model = ConcreteModel()
+        model.z_func = ExternalFunction(library=DLL, function="gsl_sf_beta")
+        model.x = Var(initialize=1, bounds=(0.1, None))
+        model.o = Objective(expr=-model.z_func(1, model.x))
+        opt = SolverFactory('ipopt_v2')
+        res = opt.solve(model, tee=True)
+        self.assertAlmostEqual(value(model.x), 0.1, 5)
+
+    @unittest.skipIf(
         not check_available_solvers('ipopt'), "The 'ipopt' solver is not available"
     )
     def test_clone_gsl_function(self):

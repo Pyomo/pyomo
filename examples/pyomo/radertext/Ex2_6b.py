@@ -13,26 +13,25 @@
 # Example 2.6b - Allen Holder
 #
 
-from pyomo.core import *
-from pyomo.opt import *
+import pyomo.environ as pyo
 
 # Instantiate the model
-model = AbstractModel()
+model = pyo.AbstractModel()
 
 # Sets and Set Parameters
-model.NumSensors = Param(within=NonNegativeIntegers)
-model.Sensor = RangeSet(1, model.NumSensors)
+model.NumSensors = pyo.Param(within=pyo.NonNegativeIntegers)
+model.Sensor = pyo.RangeSet(1, model.NumSensors)
 
 # Parameters
-model.xPos = Param(model.Sensor, within=NonNegativeIntegers)
-model.yPos = Param(model.Sensor, within=NonNegativeIntegers)
+model.xPos = pyo.Param(model.Sensor, within=pyo.NonNegativeIntegers)
+model.yPos = pyo.Param(model.Sensor, within=pyo.NonNegativeIntegers)
 
 # Variables
-model.xCentralSensor = Var(within=NonNegativeIntegers)
-model.yCentralSensor = Var(within=NonNegativeIntegers)
-model.xMax = Var(model.Sensor, within=NonNegativeReals)
-model.yMax = Var(model.Sensor, within=NonNegativeReals)
-model.Max = Var(within=NonNegativeReals)
+model.xCentralSensor = pyo.Var(within=pyo.NonNegativeIntegers)
+model.yCentralSensor = pyo.Var(within=pyo.NonNegativeIntegers)
+model.xMax = pyo.Var(model.Sensor, within=pyo.NonNegativeReals)
+model.yMax = pyo.Var(model.Sensor, within=pyo.NonNegativeReals)
+model.Max = pyo.Var(within=pyo.NonNegativeReals)
 
 
 # Objective
@@ -40,7 +39,7 @@ def CalcDist(M):
     return M.Max
 
 
-model.Dist = Objective(rule=CalcDist, sense=minimize)
+model.Dist = pyo.Objective(rule=CalcDist, sense=pyo.minimize)
 
 # Constraints
 
@@ -49,32 +48,32 @@ def xEnsureUp(M, s):
     return M.xCentralSensor - M.xPos[s] <= M.xMax[s]
 
 
-model.xUpBound = Constraint(model.Sensor, rule=xEnsureUp)
+model.xUpBound = pyo.Constraint(model.Sensor, rule=xEnsureUp)
 
 
 def xEnsureLow(M, s):
     return M.xCentralSensor - M.xPos[s] >= -M.xMax[s]
 
 
-model.xLowBound = Constraint(model.Sensor, rule=xEnsureLow)
+model.xLowBound = pyo.Constraint(model.Sensor, rule=xEnsureLow)
 
 
 def yEnsureUp(M, s):
     return M.yCentralSensor - M.yPos[s] <= M.yMax[s]
 
 
-model.yUpBound = Constraint(model.Sensor, rule=yEnsureUp)
+model.yUpBound = pyo.Constraint(model.Sensor, rule=yEnsureUp)
 
 
 def yEnsureLow(M, s):
     return M.yCentralSensor - M.yPos[s] >= -M.yMax[s]
 
 
-model.yLowBound = Constraint(model.Sensor, rule=yEnsureLow)
+model.yLowBound = pyo.Constraint(model.Sensor, rule=yEnsureLow)
 
 
 def EnsureSensorBound(M, s):
     return M.xMax[s] + M.yMax[s] <= M.Max
 
 
-model.MaxDist = Constraint(model.Sensor, rule=EnsureSensorBound)
+model.MaxDist = pyo.Constraint(model.Sensor, rule=EnsureSensorBound)

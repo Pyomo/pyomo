@@ -17,7 +17,7 @@ from pyomo.common.dependencies import attempt_import
 
 gurobipy, gurobi_available = attempt_import("gurobipy")
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import pyomo.common.errors
 from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, solution
 from pyomo.contrib import appsi
@@ -137,7 +137,7 @@ def enumerate_linear_solutions_soln_pool(
                 f"The enumerate_linear_solutions_soln_pool() function cannot be used with models that contain discrete variables"
             )
 
-    opt = pe.SolverFactory("gurobi")
+    opt = pyo.SolverFactory("gurobi")
     if not opt.available(exception_flag=False):
         raise ValueError(solver + " is not available")
     for parameter, value in solver_options.items():
@@ -147,7 +147,7 @@ def enumerate_linear_solutions_soln_pool(
     results = opt.solve(model, tee=tee)
     status = results.solver.status
     condition = results.solver.termination_condition
-    if condition != pe.TerminationCondition.optimal:
+    if condition != pyo.TerminationCondition.optimal:
         raise Exception(
             (
                 "Model could not be solve. LP enumeration analysis "
@@ -157,7 +157,7 @@ def enumerate_linear_solutions_soln_pool(
         )
 
     orig_objective = aos_utils.get_active_objective(model)
-    orig_objective_value = pe.value(orig_objective)
+    orig_objective_value = pyo.value(orig_objective)
     logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
 
     aos_block = aos_utils._add_aos_block(model, name="_lp_enum")
@@ -172,9 +172,9 @@ def enumerate_linear_solutions_soln_pool(
     upper_index = list(cb.var_upper.keys())
 
     # w variables
-    cb.basic_lower = pe.Var(lower_index, domain=pe.Binary)
-    cb.basic_upper = pe.Var(upper_index, domain=pe.Binary)
-    cb.basic_slack = pe.Var(cb.slack_index, domain=pe.Binary)
+    cb.basic_lower = pyo.Var(lower_index, domain=pyo.Binary)
+    cb.basic_upper = pyo.Var(upper_index, domain=pyo.Binary)
+    cb.basic_slack = pyo.Var(cb.slack_index, domain=pyo.Binary)
 
     # w upper bounds constraints
     def bound_lower_rule(m, var_index):
@@ -183,7 +183,7 @@ def enumerate_linear_solutions_soln_pool(
             <= m.var_lower[var_index].ub * m.basic_lower[var_index]
         )
 
-    cb.bound_lower = pe.Constraint(lower_index, rule=bound_lower_rule)
+    cb.bound_lower = pyo.Constraint(lower_index, rule=bound_lower_rule)
 
     def bound_upper_rule(m, var_index):
         return (
@@ -191,7 +191,7 @@ def enumerate_linear_solutions_soln_pool(
             <= m.var_upper[var_index].ub * m.basic_upper[var_index]
         )
 
-    cb.bound_upper = pe.Constraint(upper_index, rule=bound_upper_rule)
+    cb.bound_upper = pyo.Constraint(upper_index, rule=bound_upper_rule)
 
     def bound_slack_rule(m, var_index):
         return (
@@ -199,9 +199,9 @@ def enumerate_linear_solutions_soln_pool(
             <= m.slack_vars[var_index].ub * m.basic_slack[var_index]
         )
 
-    cb.bound_slack = pe.Constraint(cb.slack_index, rule=bound_slack_rule)
+    cb.bound_slack = pyo.Constraint(cb.slack_index, rule=bound_slack_rule)
 
-    cb.cl = pe.ConstraintList()
+    cb.cl = pyo.ConstraintList()
 
     # TODO: If we go the mixed binary route we also want to list the binary variables
     variable_groups = [

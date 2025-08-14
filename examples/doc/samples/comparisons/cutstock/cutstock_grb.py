@@ -10,7 +10,16 @@
 #  ___________________________________________________________________________
 
 from gurobipy import *
-from cutstock_util import *
+from cutstock_util import (
+    getCutCount,
+    getPatCount,
+    getCuts,
+    getPatterns,
+    getSheetsAvail,
+    getCutDemand,
+    getPriceSheetData,
+    getCutsInPattern,
+)
 
 # Reading in Data using the cutstock_util
 cutcount = getCutCount()

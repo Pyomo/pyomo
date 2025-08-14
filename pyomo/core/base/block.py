@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 import copy
+import functools
 import logging
 import sys
 import weakref
@@ -34,6 +35,7 @@ from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
     Component,
+    ComponentData,
     ActiveComponentData,
     ModelComponentFactory,
 )
@@ -1125,16 +1127,36 @@ component, use the block del_component() and add_component() methods.
         """
         Delete a component from this block.
         """
-        obj = self.component(name_or_object)
-        # FIXME: Is this necessary?  Should this raise an exception?
-        if obj is None:
-            return
-
-        # FIXME: Is this necessary?  Should this raise an exception?
-        # if name not in self._decl:
-        #    return
+        # in-lining self.component(name_or_object) so that we can add the
+        # additional check of whether or not name_or_object is a ComponentData
+        obj = None
+        if isinstance(name_or_object, str):
+            if name_or_object in self._decl:
+                obj = self._decl_order[self._decl[name_or_object]][0]
+            else:
+                # Maintaining current behavior, but perhaps this should raise an
+                # exception?
+                return
+        else:
+            try:
+                obj = name_or_object.parent_component()
+            except AttributeError:
+                # Maintaining current behavior, but perhaps this should raise an
+                # exception?
+                return
+            if obj is not name_or_object:
+                raise ValueError(
+                    "Argument '%s' to del_component is a ComponentData object. "
+                    "Please use the Python 'del' function to delete members of "
+                    "indexed Pyomo components. The del_component function can "
+                    "only be used to delete IndexedComponents and "
+                    "ScalarComponents." % name_or_object.local_name
+                )
+            if obj.parent_block() is not self:
+                return
 
         name = obj.local_name
+
         if name in self._Block_reserved_words:
             raise ValueError(
                 "Attempting to delete a reserved block component:\n\t%s" % (obj.name,)
@@ -1243,8 +1265,83 @@ component, use the block del_component() and add_component() methods.
             self._decl_order[idx] = (obj, tmp)
 
     def clone(self, memo=None):
-        """
-        TODO
+        """Make a copy of this block (and all components contained in it).
+
+        Pyomo models use :py:class:`Block` components to define a
+        hierarchical structure and provide model scoping.  When modeling
+        :py:class:`~pyomo.core.base.component.Component` objects are
+        assigned to a block, they are automatically added to that block's
+        scope.
+
+        :py:meth:`clone()` implements a specialization of
+        :py:func:`copy.deepcopy` that will deep copy the
+        :py:class:`BlockData` using that block's scope: that is, copy
+        the :py:class:`BlockData` and (recursively) all
+        :py:class:`Component` objects attached to it (including any
+        sub-blocks).  Pyomo
+        :py:class:`~pyomo.core.base.component.Component` /
+        :py:class:`~pyomo.core.base.component.ComponentData` objects
+        that are referenced through objects on this block but are not in
+        this block scope (i.e., are not owned by this block or a
+        subblock of this block) are not duplicated.
+
+        Parameters
+        ----------
+        memo : dict
+            A user-defined memo dictionary.  The dictionary will be
+            updated by :py:meth:`clone` and :py:func:`copy.deepcopy`.
+            See :py:meth:`object.__deepcopy__` for more information.
+
+        Examples
+        --------
+        Given the following model:
+
+        >>> m = pyo.ConcreteModel()
+        >>> m.I = pyo.RangeSet(3)
+        >>> m.x = pyo.Var()
+        >>> m.b1 = pyo.Block()
+        >>> m.b1.J = pyo.RangeSet(3)
+        >>> m.b1.y = pyo.Var(domain=pyo.Reals)
+        >>> m.b1.z = pyo.Var(m.I)
+        >>> m.b1.c = pyo.Constraint(expr=m.x >= m.b1.y + sum(m.b1.z[:]))
+        >>> m.b1.b2 = pyo.Block()
+        >>> m.b1.b2.w = pyo.Var(m.b1.J)
+        >>> m.b1.d = pyo.Constraint(expr=m.b1.y + sum(m.b1.b2.w[:]) == 5)
+
+        If we clone a block:
+
+        >>> i = m.b1.clone()
+
+        All local components are copied:
+
+        >>> assert m.b1 is not i
+        >>> assert m.b1.J is not i.J
+        >>> assert m.b1.y is not i.y
+        >>> assert m.b1.z is not i.z
+        >>> assert m.b1.b2 is not i.b2
+        >>> assert m.b1.b2.w is not i.b2.w
+
+        References to local components (in this case, Sets) are copied
+        and updated:
+
+        >>> assert m.b1.b2.w.index_set() is not i.b2.w.index_set()
+
+        But references to out-of-scope Sets (either global or in a
+        different block scope) are preserved:
+
+        >>> assert m.b1.y.index_set() is i.y.index_set()
+        >>> assert m.b1.z.index_set() is i.z.index_set()
+        >>> assert m.b1.y.domain is i.y.domain
+
+        Expressions are also updated in a similar manner: the new
+        expression will reference the new (copied) components for any
+        components in scope, but references to out-of-scope components
+        will be preserved:
+
+        >>> from pyomo.core.expr.compare import compare_expressions
+        >>> assert compare_expressions(i.c.expr, m.x >= i.y + sum(i.z[:]))
+        >>> assert compare_expressions(i.d.expr, i.y + sum(i.b2.w[:]) == 5)
+
         """
         # FYI: we used to remove all _parent() weakrefs before
         # deepcopying and then restore them on the original and cloned
@@ -2024,7 +2121,6 @@ class Block(ActiveIndexedComponent):
         # initializer
         self._dense = kwargs.pop('dense', True)
         kwargs.setdefault('ctype', Block)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _options is not None:
             deprecation_warning(
                 "The Block 'options=' keyword is deprecated.  "
@@ -2033,19 +2129,10 @@ class Block(ActiveIndexedComponent):
                 "the function arguments",
                 version='5.7.2',
             )
-            if self.is_indexed():
-
-                def rule_wrapper(model, *_idx):
-                    return _rule(model, *_idx, **_options)
-
-            else:
-
-                def rule_wrapper(model):
-                    return _rule(model, **_options)
-
-            self._rule = Initializer(rule_wrapper)
+            self._rule = Initializer(functools.partial(_rule, **_options))
         else:
             self._rule = Initializer(_rule)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _concrete:
             # Call self.construct() as opposed to just setting the _constructed
             # flag so that the base class construction procedure fires (this
@@ -2330,6 +2417,7 @@ class CustomBlock(Block):
     def __init__(self, *args, **kwargs):
         if self._default_ctype is not None:
             kwargs.setdefault('ctype', self._default_ctype)
+        kwargs.setdefault("rule", getattr(self, '_default_rule', None))
         Block.__init__(self, *args, **kwargs)
 
     def __new__(cls, *args, **kwargs):
@@ -2350,13 +2438,56 @@ class CustomBlock(Block):
             return super().__new__(cls._indexed_custom_block, *args, **kwargs)
 
 
-def declare_custom_block(name, new_ctype=None):
+class _custom_block_rule_redirect(object):
+    """Functor to redirect the default rule to a BlockData method"""
+
+    def __init__(self, cls, name):
+        self.cls = cls
+        self.name = name
+
+    def __call__(self, block, *args, **kwargs):
+        return getattr(self.cls, self.name)(block, *args, **kwargs)
+
+
+def declare_custom_block(name, new_ctype=None, rule=None):
     """Decorator to declare components for a custom block data class
+
+    This decorator simplifies the definition of custom derived Block
+    classes.  With this decorator, developers must only implement the
+    derived "Data" class.  The decorator automatically creates the
+    derived containers using the provided name, and adds them to the
+    current module:
 
     >>> @declare_custom_block(name="FooBlock")
     ... class FooBlockData(BlockData):
-    ...    # custom block data class
     ...    pass
+
+    >>> s = FooBlock()
+    >>> type(s)
+    <class 'ScalarFooBlock'>
+
+    >>> s = FooBlock([1,2])
+    >>> type(s)
+    <class 'IndexedFooBlock'>
+
+    It is frequently desirable for the custom class to have a default
+    ``rule`` for constructing and populating new instances.  The default
+    rule can be provided either as an explicit function or a string.  If
+    a string, the rule is obtained by attribute lookup on the derived
+    Data class:
+
+    >>> @declare_custom_block(name="BarBlock", rule="build")
+    ... class BarBlockData(BlockData):
+    ...    def build(self, *args):
+    ...        self.x = Var(initialize=5)
+
+    >>> m = pyo.ConcreteModel()
+    >>> m.b = BarBlock([1,2])
+    >>> print(m.b[1].x.value)
+    5
+    >>> print(m.b[2].x.value)
+    5
+
     """
 
     def block_data_decorator(block_data):
@@ -2380,8 +2511,15 @@ def declare_custom_block(name, new_ctype=None):
                 "_ComponentDataClass": block_data,
                 # By default this new block does not declare a new ctype
                 "_default_ctype": None,
+                # Define the default rule (may be None)
+                "_default_rule": rule,
             },
         )
+
+        # If the default rule is a string, then replace it with a
+        # function that will look up the attribute on the data class.
+        if type(rule) is str:
+            comp._default_rule = _custom_block_rule_redirect(block_data, rule)
 
         if new_ctype is not None:
             if new_ctype is True:

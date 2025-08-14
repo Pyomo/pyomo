@@ -21,6 +21,7 @@
 import inspect
 import io
 import logging
+import os
 import re
 import sys
 import textwrap
@@ -72,11 +73,10 @@ elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
         """
         if logger.manager.disable >= _DEBUG:
             return False
-        _level = logger.getEffectiveLevel()
         # Filter out NOTSET and higher levels
-        return _NOTSET < _level <= _DEBUG
+        return _NOTSET < logger.getEffectiveLevel() <= _DEBUG
 
-else:
+elif sys.version_info[:3] < (3, 13, 4):
     # This is inefficient (it indirectly checks effective level twice),
     # but is included for [as yet unknown] platforms that ONLY implement
     # the API documented in the logging library
@@ -84,6 +84,15 @@ else:
         if not logger.isEnabledFor(_DEBUG):
             return False
         return logger.getEffectiveLevel() > _NOTSET
+
+else:
+    # Python 3.14 (and backported to python 3.13.4) changed the behavior
+    # of isEnabledFor() so that it always returns False when called
+    # while a log record is in flight (learned this from
+    # https://github.com/hynek/structlog/pull/723).  In newer versions
+    # of Python, we will only rely on getEffectiveLevel().
+    def is_debug_set(logger):
+        return _NOTSET < logger.getEffectiveLevel() <= _DEBUG
 
 
 class WrappingFormatter(logging.Formatter):
@@ -207,13 +216,25 @@ class LegacyPyomoFormatter(logging.Formatter):
 class StdoutHandler(logging.StreamHandler):
     """A logging handler that emits to the current value of sys.stdout"""
 
+    def __init__(self):
+        super().__init__()
+        self.stream = None
+
     def flush(self):
-        self.stream = sys.stdout
-        super(StdoutHandler, self).flush()
+        try:
+            orig = self.stream
+            self.stream = sys.stdout
+            super(StdoutHandler, self).flush()
+        finally:
+            self.stream = orig
 
     def emit(self, record):
-        self.stream = sys.stdout
-        super(StdoutHandler, self).emit(record)
+        try:
+            orig = self.stream
+            self.stream = sys.stdout
+            super(StdoutHandler, self).emit(record)
+        finally:
+            self.stream = orig
 
 
 class Preformatted(object):
@@ -247,9 +268,9 @@ class _GlobalLogFilter(object):
 # debugging.  It has been updated to suppress output if any handlers
 # have been defined at the root level.
 pyomo_logger = logging.getLogger('pyomo')
-pyomo_handler = StdoutHandler()
+pyomo_handler = logging.StreamHandler(sys.stdout)
 pyomo_formatter = LegacyPyomoFormatter(
-    base=PYOMO_ROOT_DIR, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG)
+    base=PYOMO_ROOT_DIR, verbosity=lambda: is_debug_set(pyomo_logger)
 )
 pyomo_handler.setFormatter(pyomo_formatter)
 pyomo_handler.addFilter(_GlobalLogFilter())
@@ -286,13 +307,21 @@ class LoggingIntercept(object):
     ----------
     output: io.TextIOBase
         the file stream to send log messages to
+
     module: str
-        the target logger name to intercept
+        the target logger name to intercept. `logger` and `module` are
+        mutually exclusive.
+
     level: int
         the logging level to intercept
+
     formatter: logging.Formatter
         the formatter to use when rendering the log messages.  If not
         specified, uses `'%(message)s'`
+
+    logger: logging.Logger
+        the target logger to intercept. `logger` and `module` are
+        mutually exclusive.
 
     Examples
     --------
@@ -306,10 +335,24 @@ class LoggingIntercept(object):
 
     """
 
-    def __init__(self, output=None, module=None, level=logging.WARNING, formatter=None):
+    def __init__(
+        self,
+        output=None,
+        module=None,
+        level=logging.WARNING,
+        formatter=None,
+        logger=None,
+    ):
         self.handler = None
         self.output = output
-        self.module = module
+        if logger is not None:
+            if module is not None:
+                raise ValueError(
+                    "LoggingIntercept: only one of 'module' and 'logger' is allowed"
+                )
+            self._logger = logger
+        else:
+            self._logger = logging.getLogger(module)
         self._level = level
         if formatter is None:
             formatter = logging.Formatter('%(message)s')
@@ -317,6 +360,11 @@ class LoggingIntercept(object):
         self._save = None
 
     def __enter__(self):
+        # Get the logger for the scope we will be overriding
+        logger = self._logger
+        self._save = logger.level, logger.propagate, logger.handlers
+        if self._level is None:
+            self._level = logger.getEffectiveLevel()
         # Set up the handler
         output = self.output
         if output is None:
@@ -326,22 +374,24 @@ class LoggingIntercept(object):
         self.handler.setFormatter(self._formatter)
         self.handler.setLevel(self._level)
         # Register the handler with the appropriate module scope
-        logger = logging.getLogger(self.module)
-        self._save = logger.level, logger.propagate, logger.handlers
         logger.handlers = []
-        logger.propagate = 0
+        logger.propagate = False
         logger.setLevel(self.handler.level)
         logger.addHandler(self.handler)
         return output
 
     def __exit__(self, et, ev, tb):
-        logger = logging.getLogger(self.module)
+        logger = self._logger
         logger.removeHandler(self.handler)
         self.handler = None
         logger.setLevel(self._save[0])
         logger.propagate = self._save[1]
         assert not logger.handlers
         logger.handlers.extend(self._save[2])
+
+    @property
+    def module(self):
+        return self._logger.name
 
 
 class LogStream(io.TextIOBase):
@@ -357,6 +407,8 @@ class LogStream(io.TextIOBase):
         self._buffer = ''
 
     def write(self, s: str) -> int:
+        if not s:
+            return 0
         res = len(s)
         if self._buffer:
             s = self._buffer + s
@@ -369,3 +421,94 @@ class LogStream(io.TextIOBase):
     def flush(self):
         if self._buffer:
             self.write('\n')
+
+    def redirect_streams(self, redirects):
+        """Redirect StreamHandler objects to the original file descriptors
+
+        This utility method for py:class:`~pyomo.common.tee.capture_output`
+        locates any StreamHandlers that would process messages from the
+        logger assigned to this :py:class:`LogStream` that would write
+        to the file descriptors redirected by `capture_output` and
+        yields context managers that will redirect those StreamHandlers
+        back to duplicates of the original file descriptors.
+
+        """
+        found = 0
+        logger = self._logger
+        while isinstance(logger, logging.LoggerAdapter):
+            logger = logger.logger
+        while logger:
+            for handler in logger.handlers:
+                found += 1
+                if not isinstance(handler, logging.StreamHandler):
+                    continue
+                try:
+                    fd = handler.stream.fileno()
+                except (AttributeError, OSError):
+                    fd = None
+                if fd not in redirects:
+                    continue
+                yield _StreamRedirector(handler, redirects[fd].original_fd)
+            if not logger.propagate:
+                break
+            else:
+                logger = logger.parent
+        if not found:
+            fd = logging.lastResort.stream.fileno()
+            if not redirects:
+                yield _LastResortRedirector(fd)
+            elif fd in redirects:
+                yield _LastResortRedirector(redirects[fd].original_fd)
+
+
+class _StreamRedirector(object):
+    def __init__(self, handler, fd):
+        self.handler = handler
+        self.fd = fd
+        self.local_fd = None
+        self.orig_stream = None
+
+    def __enter__(self):
+        assert self.local_fd is None
+        self.orig_stream = self.handler.stream
+        # Note: ideally, we would use closefd=True and let Python handle
+        # closing the local file descriptor that we are about to create.
+        # However, it appears that closefd is ignored on Windows (see
+        # #3587), so we will just handle it explicitly ourselves.
+        self.local_fd = os.dup(self.fd)
+        self.handler.stream = os.fdopen(
+            self.local_fd, mode="w", closefd=False
+        ).__enter__()
+
+    def __exit__(self, et, ev, tb):
+        try:
+            self.handler.stream.__exit__(et, ev, tb)
+            os.close(self.local_fd)
+        finally:
+            self.handler.stream = self.orig_stream
+
+
+class _LastResortRedirector(object):
+    def __init__(self, fd):
+        self.fd = fd
+        self.local_fd = None
+        self.orig_stream = None
+
+    def __enter__(self):
+        assert self.local_fd is None
+        self.orig = logging.lastResort
+        # Note: ideally, we would use closefd=True and let Python handle
+        # closing the local file descriptor that we are about to create.
+        # However, it appears that closefd is ignored on Windows (see
+        # #3587), so we will just handle it explicitly ourselves.
+        self.local_fd = os.dup(self.fd)
+        logging.lastResort = logging.StreamHandler(
+            os.fdopen(self.local_fd, mode="w", closefd=False).__enter__()
+        )
+
+    def __exit__(self, et, ev, tb):
+        try:
+            logging.lastResort.stream.close()
+            os.close(self.local_fd)
+        finally:
+            logging.lastResort = self.orig

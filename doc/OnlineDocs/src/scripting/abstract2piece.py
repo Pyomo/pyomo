@@ -12,22 +12,22 @@
 # abstract2piece.py
 # Similar to abstract2.py, but the objective is now c times x to the fourth power
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.I = Set()
-model.J = Set()
+model.I = pyo.Set()
+model.J = pyo.Set()
 
 Topx = 6.1  # range of x variables
 
-model.a = Param(model.I, model.J)
-model.b = Param(model.I)
-model.c = Param(model.J)
+model.a = pyo.Param(model.I, model.J)
+model.b = pyo.Param(model.I)
+model.c = pyo.Param(model.J)
 
 # the next line declares a variable indexed by the set J
-model.x = Var(model.J, domain=NonNegativeReals, bounds=(0, Topx))
-model.y = Var(model.J, domain=NonNegativeReals)
+model.x = pyo.Var(model.J, domain=pyo.NonNegativeReals, bounds=(0, Topx))
+model.y = pyo.Var(model.J, domain=pyo.NonNegativeReals)
 
 # to avoid warnings, we set breakpoints at or beyond the bounds
 PieceCnt = 100
@@ -41,16 +41,16 @@ def f4(model, j, xp):
     return xp**4
 
 
-model.ComputeObj = Piecewise(
+model.ComputeObj = pyo.Piecewise(
     model.J, model.y, model.x, pw_pts=bpts, pw_constr_type='EQ', f_rule=f4
 )
 
 
 def obj_expression(model):
-    return summation(model.c, model.y)
+    return pyo.summation(model.c, model.y)
 
 
-model.OBJ = Objective(rule=obj_expression)
+model.OBJ = pyo.Objective(rule=obj_expression)
 
 
 def ax_constraint_rule(model, i):
@@ -59,4 +59,4 @@ def ax_constraint_rule(model, i):
 
 
 # the next line creates one constraint for each member of the set model.I
-model.AxbConstraint = Constraint(model.I, rule=ax_constraint_rule)
+model.AxbConstraint = pyo.Constraint(model.I, rule=ax_constraint_rule)

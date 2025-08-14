@@ -10,9 +10,9 @@
 #  ___________________________________________________________________________
 
 # Imports from Pyomo
-from pyomo.core import *
-from pyomo.common.plugin_base import *
-from pyomo.opt import *
+import pyomo.environ as pyo
+from pyomo.common.plugin_base import alias, implements
+from pyomo.opt import SolverStatus, SolutionStatus, ProblemSense
 import random
 import copy
 
@@ -29,9 +29,9 @@ class MySolver(object):
     def solve(self, instance, **kwds):
         print("Starting random heuristic")
         val, sol = self._random(instance)
-        n = value(instance.N)
+        n = pyo.value(instance.N)
         # Setup results
-        results = SolverResults()
+        results = pyo.SolverResults()
         results.problem.name = instance.name
         results.problem.sense = ProblemSense.minimize
         results.problem.num_constraints = 1
@@ -41,7 +41,7 @@ class MySolver(object):
         soln = results.solution.add()
         soln.value = val
         soln.status = SolutionStatus.feasible
-        for j in sequence(n):
+        for j in pyo.sequence(n):
             soln.variable[instance.y[j].name] = {"Value": sol[j - 1], "Id": j}
         # Return results
         return results
@@ -58,11 +58,11 @@ class MySolver(object):
             random.shuffle(sol)
             # Compute value
             val = 0.0
-            for j in sequence(instance.M.value):
+            for j in pyo.sequence(instance.M.value):
                 val += min(
                     [
                         instance.d[i, j].value
-                        for i in sequence(instance.N.value)
+                        for i in pyo.sequence(instance.N.value)
                         if sol[i - 1] == 1
                     ]
                 )

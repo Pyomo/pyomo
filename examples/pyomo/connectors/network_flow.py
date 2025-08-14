@@ -10,63 +10,67 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
 
 def pipe_rule(pipe, i):
     m = pipe.model()
-    pipe.flow = Var()
-    pipe.pIn = Var(within=NonNegativeReals)
-    pipe.pOut = Var(within=NonNegativeReals)
-    pipe.pDrop = Constraint(
+    pipe.flow = pyo.Var()
+    pipe.pIn = pyo.Var(within=pyo.NonNegativeReals)
+    pipe.pOut = pyo.Var(within=pyo.NonNegativeReals)
+    pipe.pDrop = pyo.Constraint(
         expr=pipe.pIn - pipe.pOut == m.friction * m.pipe_length[i] * pipe.flow
     )
 
-    pipe.IN = Connector()
+    pipe.IN = pyo.Connector()
     pipe.IN.add(-pipe.flow, "flow")
     pipe.IN.add(pipe.pIn, "pressure")
 
-    pipe.OUT = Connector()
+    pipe.OUT = pyo.Connector()
     pipe.OUT.add(pipe.flow)
     pipe.OUT.add(pipe.pOut, "pressure")
 
 
 def node_rule(node, i):
     def _mass_balance(node, flows):
-        return node.model().demands[i] == sum_product(flows)
+        return node.model().demands[i] == pyo.sum_product(flows)
 
-    node.flow = VarList()
-    node.pressure = Var(within=NonNegativeReals)
-    node.port = Connector()
+    node.flow = pyo.VarList()
+    node.pressure = pyo.Var(within=pyo.NonNegativeReals)
+    node.port = pyo.Connector()
     # node.port.add(node.flow,
-    #              aggregate=lambda n,v: n.model().demands[id] == sum_product(v))
+    #              aggregate=lambda n,v: n.model().demands[id] == pyo.sum_product(v))
     node.port.add(node.flow, aggregate=_mass_balance)
     node.port.add(node.pressure)
 
 
 def _src_rule(model, pipe):
-    return model.nodes[value(model.pipe_links[pipe, 0])].port == model.pipes[pipe].IN
+    return (
+        model.nodes[pyo.value(model.pipe_links[pipe, 0])].port == model.pipes[pipe].IN
+    )
 
 
 def _sink_rule(model, pipe):
-    return model.nodes[value(model.pipe_links[pipe, 1])].port == model.pipes[pipe].OUT
+    return (
+        model.nodes[pyo.value(model.pipe_links[pipe, 1])].port == model.pipes[pipe].OUT
+    )
 
 
-model = AbstractModel()
-model.PIPES = Set()
-model.NODES = Set()
+model = pyo.AbstractModel()
+model.PIPES = pyo.Set()
+model.NODES = pyo.Set()
 
-model.friction = Param(within=NonNegativeReals)
-model.pipe_length = Param(model.PIPES, within=NonNegativeReals)
-model.pipe_links = Param(model.PIPES, [0, 1])
-model.demands = Param(model.NODES, within=Reals, default=0)
+model.friction = pyo.Param(within=pyo.NonNegativeReals)
+model.pipe_length = pyo.Param(model.PIPES, within=pyo.NonNegativeReals)
+model.pipe_links = pyo.Param(model.PIPES, [0, 1])
+model.demands = pyo.Param(model.NODES, within=pyo.Reals, default=0)
 
-model.pipes = Block(model.PIPES, rule=pipe_rule)
-model.nodes = Block(model.NODES, rule=node_rule)
+model.pipes = pyo.Block(model.PIPES, rule=pipe_rule)
+model.nodes = pyo.Block(model.NODES, rule=node_rule)
 
 # Connect the network
-model.network_src = Constraint(model.PIPES, rule=_src_rule)
-model.network_sink = Constraint(model.PIPES, rule=_sink_rule)
+model.network_src = pyo.Constraint(model.PIPES, rule=_src_rule)
+model.network_sink = pyo.Constraint(model.PIPES, rule=_sink_rule)
 
 
 # Solve so the minimum pressure in the network is 0
@@ -74,4 +78,4 @@ def _obj(model):
     return sum(model.nodes[n].pressure for n in model.NODES)
 
 
-model.obj = Objective(rule=_obj)
+model.obj = pyo.Objective(rule=_obj)

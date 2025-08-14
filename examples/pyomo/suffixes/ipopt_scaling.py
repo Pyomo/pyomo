@@ -19,16 +19,14 @@
 # on this system. This example was tested using Ipopt
 # version 3.10.2
 
-import pyomo.environ
-from pyomo.core import *
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ### Create the ipopt solver plugin using the ASL interface
 solver = 'ipopt'
 solver_io = 'nl'
 stream_solver = False  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 
 if opt is None:
     print("")
@@ -45,23 +43,23 @@ opt.options['nlp_scaling_method'] = 'user-scaling'
 ###
 
 ### Create the example model
-model = ConcreteModel()
-model.s = Set(initialize=[1, 2, 3])
-model.y = Var(bounds=(1, 5), initialize=1.0)
-model.x = Var(model.s, bounds=(1, 5), initialize=5.0)
-model.obj = Objective(
+model = pyo.ConcreteModel()
+model.s = pyo.Set(initialize=[1, 2, 3])
+model.y = pyo.Var(bounds=(1, 5), initialize=1.0)
+model.x = pyo.Var(model.s, bounds=(1, 5), initialize=5.0)
+model.obj = pyo.Objective(
     expr=model.y * model.x[3] * (model.y + model.x[1] + model.x[2]) + model.x[2]
 )
-model.inequality = Constraint(
+model.inequality = pyo.Constraint(
     expr=model.y * model.x[1] * model.x[2] * model.x[3] >= 25.0
 )
-model.equality = Constraint(
+model.equality = pyo.Constraint(
     expr=model.y**2 + model.x[1] ** 2 + model.x[2] ** 2 + model.x[3] ** 2 == 40.0
 )
 ###
 
 ### Declare the scaling_factor suffix
-model.scaling_factor = Suffix(direction=Suffix.EXPORT)
+model.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 # set objective scaling factor
 model.scaling_factor[model.obj] = 4.23
 # set variable scaling factor

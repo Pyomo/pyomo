@@ -12,41 +12,41 @@
 #
 # Imports
 #
-from pyomo.core import *
+import pyomo.environ as pyo
 
 #
 # Setup
 #
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.PROD = Set()
+model.PROD = pyo.Set()
 
-model.STAGE = Set()
+model.STAGE = pyo.Set()
 
-model.rate = Param(model.PROD, model.STAGE, within=PositiveReals)
+model.rate = pyo.Param(model.PROD, model.STAGE, within=pyo.PositiveReals)
 
-model.avail = Param(model.STAGE, within=NonNegativeReals)
+model.avail = pyo.Param(model.STAGE, within=pyo.NonNegativeReals)
 
-model.profit = Param(model.PROD)
+model.profit = pyo.Param(model.PROD)
 
-model.commit = Param(model.PROD, within=NonNegativeReals)
+model.commit = pyo.Param(model.PROD, within=pyo.NonNegativeReals)
 
-model.market = Param(model.PROD, within=NonNegativeReals)
+model.market = pyo.Param(model.PROD, within=pyo.NonNegativeReals)
 
 
 def Make_bounds(model, i):
     return (model.commit[i], model.market[i])
 
 
-model.Make = Var(model.PROD, bounds=Make_bounds)
+model.Make = pyo.Var(model.PROD, bounds=Make_bounds)
 
 
 def Objective_rule(model):
-    return sum_product(model.profit, model.Make)
+    return pyo.sum_product(model.profit, model.Make)
 
 
-model.Total_Profit = Objective(rule=Objective_rule, sense=maximize)
+model.Total_Profit = pyo.Objective(rule=Objective_rule, sense=pyo.maximize)
 
 
 def Timelim_rule(model, s):
@@ -56,4 +56,4 @@ def Timelim_rule(model, s):
     return timeexpr < model.avail[s]
 
 
-model.Time = Constraint(model.STAGE, rule=Timelim_rule)
+model.Time = pyo.Constraint(model.STAGE, rule=Timelim_rule)

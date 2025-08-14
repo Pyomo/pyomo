@@ -1221,6 +1221,17 @@ class MiscParamTests(unittest.TestCase):
         model.a = Param(initialize={None: 3.3})
         instance = model.create_instance()
 
+    def test_rule_args(self):
+        m = ConcreteModel()
+
+        @m.Param([1, 2, 3], multiplier=5)
+        def p(m, i, multiplier):
+            return i * multiplier
+
+        self.assertEqual(m.p[1], 5)
+        self.assertEqual(m.p[2], 10)
+        self.assertEqual(m.p[3], 15)
+
     def test_empty_index(self):
         # Verify that we can initialize a parameter with an empty set.
         model = ConcreteModel()
@@ -1624,6 +1635,24 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             "      a :     3\n"
             "     bb :     4\n",
         )
+
+    def test_invalid_exception_argument(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=7, mutable=True)
+        m.indexed = Param([1, 2], initialize={1: 3, 2: 4}, mutable=True)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Param 'p' was called with a non-bool argument for 'exception': "
+            r"p \+ 2",
+        ):
+            m.p(m.p + 2)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Param 'indexed\[1\]' was called with a non-bool argument for "
+            r"'exception': 3.2",
+        ):
+            m.indexed[1](3.2)
 
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):

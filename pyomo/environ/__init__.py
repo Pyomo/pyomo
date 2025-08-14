@@ -39,6 +39,7 @@ _packages = [
     'pyomo.contrib.appsi',
     'pyomo.contrib.community_detection',
     'pyomo.contrib.cp',
+    'pyomo.contrib.cspline_external',
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
     'pyomo.contrib.gdp_bounds',

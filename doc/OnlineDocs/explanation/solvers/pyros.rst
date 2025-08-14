@@ -906,13 +906,13 @@ Observe that the log contains the following information:
   information, (UTC) time at which the solver was invoked,
   and, if available, information on the local Git branch and
   commit hash.
-* **Summary of solver options** (lines 19--38).
-* **Preprocessing information** (lines 39--41).
+* **Summary of solver options** (lines 19--40).
+* **Preprocessing information** (lines 41--43).
   Wall time required for preprocessing
   the deterministic model and associated components,
   i.e., standardizing model components and adding the decision rule
   variables and equations.
-* **Model component statistics** (lines 42--58).
+* **Model component statistics** (lines 44--61).
   Breakdown of model component statistics.
   Includes components added by PyROS, such as the decision rule variables
   and equations.
@@ -927,7 +927,7 @@ Observe that the log contains the following information:
   The number of truly uncertain parameters detected during preprocessing
   is also noted in parentheses
   (in which "eff." is an abbreviation for "effective").
-* **Iteration log table** (lines 59--69).
+* **Iteration log table** (lines 62--69).
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
   :ref:`the table following the snippet <table-iteration-log-columns>`.
@@ -953,21 +953,20 @@ Observe that the log contains the following information:
 
 * **Termination statistics** (lines 89--94). Summary of statistics related to the
   iterate at which PyROS terminates.
-* **Exit message** (lines 95--96).
+* **Exit message** (lines 95--97).
 
 
 .. _solver-log-snippet:
 
 .. code-block:: text
-
    :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.6.
-          Pyomo version: 6.9.2.dev0 (devel {pyros-effective-uncertain-params})
-          Commit hash: 41cd797e0
-          Invoked at UTC 2025-03-13T16:20:31.105320+00:00
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.9.
+          Pyomo version: 6.9.3dev0
+          Commit hash: unknown
+          Invoked at UTC 2025-07-21T00:00:00.000000+00:00
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -978,7 +977,7 @@ Observe that the log contains the following information:
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
    ================================= DISCLAIMER =================================
-   PyROS is still under development. 
+   PyROS is still under development.
    Please provide feedback and/or report any issues by creating a ticket at
    https://github.com/Pyomo/pyomo/issues/new/choose
    ==============================================================================
@@ -999,6 +998,7 @@ Observe that the log contains the following information:
     backup_local_solvers=[]
     backup_global_solvers=[]
     subproblem_file_directory=None
+    subproblem_format_options={'bar': {'symbolic_solver_labels': True}}
     bypass_local_separation=False
     bypass_global_separation=False
     p_robustness={}
@@ -1026,34 +1026,34 @@ Observe that the log contains the following information:
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   0.693        
-   1     3.5838e+07  1.2289e-09   1.5876e-12   5       3.7762e+04   1.514        
-   2     3.6129e+07  2.7244e-01   3.6878e-01   3       1.1093e+02   2.486        
-   3     3.6269e+07  3.7352e-01   4.3227e-01   1       2.7711e+01   3.667        
-   4     3.6285e+07  7.6526e-01   2.8426e-11   0       4.3364e-05g  6.291        
+   0     3.5838e+07  -            -            5       1.8832e+04   0.611
+   1     3.5838e+07  1.2289e-09   1.5886e-12   5       2.8919e+02   1.702
+   2     3.6269e+07  3.1647e-01   1.0432e-01   4       2.9020e+02   3.407
+   3     3.6285e+07  7.6526e-01   1.4596e-04   7       7.5966e+03   5.919
+   4     3.6285e+07  1.1608e-11   2.2270e-01   0       1.5084e-12g  8.823
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Timing breakdown:
-   
+
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1     6.291     6.291  100.0
+   main                           1     8.824     8.824  100.0
         ------------------------------------------------------
-        dr_polishing              4     0.334     0.083    5.3
-        global_separation        27     0.954     0.035   15.2
-        local_separation        135     3.046     0.023   48.4
-        master                    5     1.027     0.205   16.3
-        master_feasibility        4     0.133     0.033    2.1
+        dr_polishing              4     0.547     0.137    6.2
+        global_separation        27     0.978     0.036   11.1
+        local_separation        135     4.645     0.034   52.6
+        master                    5     1.720     0.344   19.5
+        master_feasibility        4     0.239     0.060    2.7
         preprocessing             1     0.013     0.013    0.2
-        other                   n/a     0.785       n/a   12.5
+        other                   n/a     0.681       n/a    7.7
         ======================================================
    ===========================================================
-   
+
    ------------------------------------------------------------------------------
    Termination stats:
     Iterations            : 5
-    Solve time (wall s)   : 6.291
+    Solve time (wall s)   : 8.824
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
@@ -1132,6 +1132,58 @@ The constituent columns are defined in the
    * - Wall time (s)
      - Total time elapsed by the solver, in seconds, up to the end of the
        current iteration.
+
+
+Separation Priority Ordering 
+----------------------------
+The PyROS solver supports custom prioritization of
+the separation subproblems (and, thus, the constraints)
+that are automatically derived from
+a given model for robust optimization.
+Users may specify separation priorities through:
+
+- (Recommended) :class:`~pyomo.core.base.suffix.Suffix` components
+  with local name ``pyros_separation_priority``,
+  declared on the model or any of its sub-blocks.
+  Each entry of every such
+  :class:`~pyomo.core.base.suffix.Suffix`
+  should map a
+  :class:`~pyomo.core.base.var.Var`
+  or :class:`~pyomo.core.base.constraint.Constraint`
+  component to a value that specifies the separation
+  priority of all constraints derived from that component
+- The optional argument ``separation_priority_order``
+  to the PyROS :py:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
+  method. The argument should be castable to a :py:obj:`dict`,
+  of which each entry maps the full name of a
+  :class:`~pyomo.core.base.var.Var`
+  or :class:`~pyomo.core.base.constraint.Constraint`
+  component to a value that specifies the
+  separation priority of all constraints
+  derived from that component
+
+Specification via :class:`~pyomo.core.base.suffix.Suffix` components
+takes precedence over specification via the solver argument
+``separation_priority_order``.
+Moreover, the precedence ordering among
+:class:`~pyomo.core.base.suffix.Suffix`
+components is handled by the Pyomo
+:class:`~pyomo.core.base.suffix.SuffixFinder` utility.
+
+A separation priority can be either
+a (real) number (i.e., of type :py:class:`int`, :py:class:`float`, etc.)
+or :py:obj:`None`.
+A higher number indicates a higher priority.
+The default priority for all constraints is 0.
+Therefore a constraint can be prioritized [or deprioritized]
+over the default by mapping the constraint to a positive [or negative] number.
+In practice, critical or dominant constraints are often
+prioritized over algorithmic or implied constraints.
+
+Constraints that have been assigned a priority of :py:obj:`None`
+are enforced subject to only the nominal uncertain parameter realization
+provided by the user. Therefore, these constraints are not imposed robustly
+and, in particular, are excluded from the separation problems.
 
 
 Feedback and Reporting Issues

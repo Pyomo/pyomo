@@ -16,45 +16,45 @@
 # 		X2_dot = X1^2 + u^2		X2(0) = 0
 # 		tf = 1
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 
-m = ConcreteModel()
+m = pyo.ConcreteModel()
 
 m.t = ContinuousSet(bounds=(0, 1))
 
-m.x1 = Var(m.t, bounds=(0, 1))
-m.x2 = Var(m.t, bounds=(0, 1))
-m.u = Var(m.t, initialize=0)
+m.x1 = pyo.Var(m.t, bounds=(0, 1))
+m.x2 = pyo.Var(m.t, bounds=(0, 1))
+m.u = pyo.Var(m.t, initialize=0)
 
 m.x1dot = DerivativeVar(m.x1)
 m.x2dot = DerivativeVar(m.x2)
 
-m.obj = Objective(expr=m.x2[1])
+m.obj = pyo.Objective(expr=m.x2[1])
 
 
 def _x1dot(M, i):
     if i == 0:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return M.x1dot[i] == M.u[i]
 
 
-m.x1dotcon = Constraint(m.t, rule=_x1dot)
+m.x1dotcon = pyo.Constraint(m.t, rule=_x1dot)
 
 
 def _x2dot(M, i):
     if i == 0:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return M.x2dot[i] == M.x1[i] ** 2 + M.u[i] ** 2
 
 
-m.x2dotcon = Constraint(m.t, rule=_x2dot)
+m.x2dotcon = pyo.Constraint(m.t, rule=_x2dot)
 
 
 def _init(M):
     yield M.x1[0] == 1
     yield M.x2[0] == 0
-    yield ConstraintList.End
+    yield pyo.ConstraintList.End
 
 
-m.init_conditions = ConstraintList(rule=_init)
+m.init_conditions = pyo.ConstraintList(rule=_init)

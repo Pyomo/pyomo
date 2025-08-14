@@ -24,16 +24,16 @@ Using Persistent Solvers
 The first step in using a persistent solver is to create a Pyomo model
 as usual.
 
->>> import pyomo.environ as pe
->>> m = pe.ConcreteModel()
->>> m.x = pe.Var()
->>> m.y = pe.Var()
->>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
->>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
+>>> import pyomo.environ as pyo
+>>> m = pyo.ConcreteModel()
+>>> m.x = pyo.Var()
+>>> m.y = pyo.Var()
+>>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+>>> m.c = pyo.Constraint(expr=m.y >= -2*m.x + 5)
 
 You can create an instance of a persistent solver through the SolverFactory.
 
->>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
+>>> opt = pyo.SolverFactory('gurobi_persistent')  # doctest: +SKIP
 
 This returns an instance of :py:class:`GurobiPersistent`. Now we need
 to tell the solver about our model.
@@ -48,7 +48,7 @@ variables and constraints. We can now solve the model.
 We can also add or remove variables, constraints, blocks, and
 objectives. For example,
 
->>> m.c2 = pe.Constraint(expr=m.y >= m.x)  # doctest: +SKIP
+>>> m.c2 = pyo.Constraint(expr=m.y >= m.x)  # doctest: +SKIP
 >>> opt.add_constraint(m.c2)  # doctest: +SKIP
 
 This tells the solver to add one new constraint but otherwise leave
@@ -69,29 +69,29 @@ code will run without error, but the solver will have an extra
 constraint. The solver will have both y >= -2*x + 5 and y <= x, which
 is not what was intended!
 
->>> m = pe.ConcreteModel()  # doctest: +SKIP
->>> m.x = pe.Var()  # doctest: +SKIP
->>> m.y = pe.Var()  # doctest: +SKIP
->>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)  # doctest: +SKIP
->>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
+>>> m = pyo.ConcreteModel()  # doctest: +SKIP
+>>> m.x = pyo.Var()  # doctest: +SKIP
+>>> m.y = pyo.Var()  # doctest: +SKIP
+>>> m.c = pyo.Constraint(expr=m.y >= -2*m.x + 5)  # doctest: +SKIP
+>>> opt = pyo.SolverFactory('gurobi_persistent')  # doctest: +SKIP
 >>> opt.set_instance(m)  # doctest: +SKIP
 >>> # WRONG:
 >>> del m.c  # doctest: +SKIP
->>> m.c = pe.Constraint(expr=m.y <= m.x)  # doctest: +SKIP
+>>> m.c = pyo.Constraint(expr=m.y <= m.x)  # doctest: +SKIP
 >>> opt.add_constraint(m.c)  # doctest: +SKIP
 
 The correct way to do this is:
 
->>> m = pe.ConcreteModel()  # doctest: +SKIP
->>> m.x = pe.Var()  # doctest: +SKIP
->>> m.y = pe.Var()  # doctest: +SKIP
->>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)  # doctest: +SKIP
->>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
+>>> m = pyo.ConcreteModel()  # doctest: +SKIP
+>>> m.x = pyo.Var()  # doctest: +SKIP
+>>> m.y = pyo.Var()  # doctest: +SKIP
+>>> m.c = pyo.Constraint(expr=m.y >= -2*m.x + 5)  # doctest: +SKIP
+>>> opt = pyo.SolverFactory('gurobi_persistent')  # doctest: +SKIP
 >>> opt.set_instance(m)  # doctest: +SKIP
 >>> # Correct:
 >>> opt.remove_constraint(m.c)  # doctest: +SKIP
 >>> del m.c  # doctest: +SKIP
->>> m.c = pe.Constraint(expr=m.y <= m.x)  # doctest: +SKIP
+>>> m.c = pyo.Constraint(expr=m.y <= m.x)  # doctest: +SKIP
 >>> opt.add_constraint(m.c)  # doctest: +SKIP
 
 .. warning:: Components removed from a pyomo model must be removed
@@ -100,14 +100,14 @@ The correct way to do this is:
 Additionally, unexpected behavior may result if a component is
 modified before being removed.
 
->>> m = pe.ConcreteModel()  # doctest: +SKIP
->>> m.b = pe.Block()  # doctest: +SKIP
->>> m.b.x = pe.Var()  # doctest: +SKIP
->>> m.b.y = pe.Var()  # doctest: +SKIP
->>> m.b.c = pe.Constraint(expr=m.b.y >= -2*m.b.x + 5)  # doctest: +SKIP
->>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
+>>> m = pyo.ConcreteModel()  # doctest: +SKIP
+>>> m.b = pyo.Block()  # doctest: +SKIP
+>>> m.b.x = pyo.Var()  # doctest: +SKIP
+>>> m.b.y = pyo.Var()  # doctest: +SKIP
+>>> m.b.c = pyo.Constraint(expr=m.b.y >= -2*m.b.x + 5)  # doctest: +SKIP
+>>> opt = pyo.SolverFactory('gurobi_persistent')  # doctest: +SKIP
 >>> opt.set_instance(m)  # doctest: +SKIP
->>> m.b.c2 = pe.Constraint(expr=m.b.y <= m.b.x)  # doctest: +SKIP
+>>> m.b.c2 = pyo.Constraint(expr=m.b.y <= m.b.x)  # doctest: +SKIP
 >>> # ERROR: The constraint referenced by m.b.c2 does not
 >>> # exist in the solver model.
 >>> opt.remove_block(m.b)  # doctest: +SKIP 
@@ -117,12 +117,12 @@ the solver instance, modify it with Pyomo, and then add it back to the
 solver instance. The only exception is with variables. Variables may
 be modified and then updated with with solver:
 
->>> m = pe.ConcreteModel()  # doctest: +SKIP
->>> m.x = pe.Var()  # doctest: +SKIP
->>> m.y = pe.Var()  # doctest: +SKIP
->>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)  # doctest: +SKIP
->>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)  # doctest: +SKIP
->>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
+>>> m = pyo.ConcreteModel()  # doctest: +SKIP
+>>> m.x = pyo.Var()  # doctest: +SKIP
+>>> m.y = pyo.Var()  # doctest: +SKIP
+>>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)  # doctest: +SKIP
+>>> m.c = pyo.Constraint(expr=m.y >= -2*m.x + 5)  # doctest: +SKIP
+>>> opt = pyo.SolverFactory('gurobi_persistent')  # doctest: +SKIP
 >>> opt.set_instance(m)  # doctest: +SKIP
 >>> m.x.setlb(1.0)  # doctest: +SKIP
 >>> opt.update_var(m.x)  # doctest: +SKIP
@@ -160,13 +160,13 @@ Persistent Solver Performance
 In order to get the best performance out of the persistent solvers, use the
 "save_results" flag:
 
->>> import pyomo.environ as pe
->>> m = pe.ConcreteModel()
->>> m.x = pe.Var()
->>> m.y = pe.Var()
->>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
->>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
->>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
+>>> import pyomo.environ as pyo
+>>> m = pyo.ConcreteModel()
+>>> m.x = pyo.Var()
+>>> m.y = pyo.Var()
+>>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+>>> m.c = pyo.Constraint(expr=m.y >= -2*m.x + 5)
+>>> opt = pyo.SolverFactory('gurobi_persistent')  # doctest: +SKIP
 >>> opt.set_instance(m)  # doctest: +SKIP
 >>> results = opt.solve(save_results=False)  # doctest: +SKIP
 

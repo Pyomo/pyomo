@@ -15,7 +15,7 @@ from pyomo.contrib.pynumero.linalg.ma27_interface import MA27
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import numpy as np
 from scipy.sparse import tril
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo import dae
 from pyomo.common.timing import TicTocTimer
 import time
@@ -47,65 +47,65 @@ def build_burgers_model(nfe_x=100, nfe_t=200, start_t=0, end_t=1):
     end_x = 1
     dx = (end_x - start_x) / float(nfe_x)
 
-    m = pe.Block(concrete=True)
-    m.omega = pe.Param(initialize=0.02)
-    m.v = pe.Param(initialize=0.01)
-    m.r = pe.Param(initialize=0)
+    m = pyo.Block(concrete=True)
+    m.omega = pyo.Param(initialize=0.02)
+    m.v = pyo.Param(initialize=0.01)
+    m.r = pyo.Param(initialize=0)
 
     m.x = dae.ContinuousSet(bounds=(start_x, end_x))
     m.t = dae.ContinuousSet(bounds=(start_t, end_t))
 
-    m.y = pe.Var(m.x, m.t)
+    m.y = pyo.Var(m.x, m.t)
     m.dydt = dae.DerivativeVar(m.y, wrt=m.t)
     m.dydx = dae.DerivativeVar(m.y, wrt=m.x)
     m.dydx2 = dae.DerivativeVar(m.y, wrt=(m.x, m.x))
 
-    m.u = pe.Var(m.x, m.t)
+    m.u = pyo.Var(m.x, m.t)
 
     def _y_init_rule(m, x):
         if x <= 0.5 * end_x:
             return 1
         return 0
 
-    m.y0 = pe.Param(m.x, default=_y_init_rule)
+    m.y0 = pyo.Param(m.x, default=_y_init_rule)
 
     def _upper_x_bound(m, t):
         return m.y[end_x, t] == 0
 
-    m.upper_x_bound = pe.Constraint(m.t, rule=_upper_x_bound)
+    m.upper_x_bound = pyo.Constraint(m.t, rule=_upper_x_bound)
 
     def _lower_x_bound(m, t):
         return m.y[start_x, t] == 0
 
-    m.lower_x_bound = pe.Constraint(m.t, rule=_lower_x_bound)
+    m.lower_x_bound = pyo.Constraint(m.t, rule=_lower_x_bound)
 
     def _upper_x_ubound(m, t):
         return m.u[end_x, t] == 0
 
-    m.upper_x_ubound = pe.Constraint(m.t, rule=_upper_x_ubound)
+    m.upper_x_ubound = pyo.Constraint(m.t, rule=_upper_x_ubound)
 
     def _lower_x_ubound(m, t):
         return m.u[start_x, t] == 0
 
-    m.lower_x_ubound = pe.Constraint(m.t, rule=_lower_x_ubound)
+    m.lower_x_ubound = pyo.Constraint(m.t, rule=_lower_x_ubound)
 
     def _lower_t_bound(m, x):
         if x == start_x or x == end_x:
-            return pe.Constraint.Skip
+            return pyo.Constraint.Skip
         return m.y[x, start_t] == m.y0[x]
 
     def _lower_t_ubound(m, x):
         if x == start_x or x == end_x:
-            return pe.Constraint.Skip
+            return pyo.Constraint.Skip
         return m.u[x, start_t] == 0
 
-    m.lower_t_bound = pe.Constraint(m.x, rule=_lower_t_bound)
-    m.lower_t_ubound = pe.Constraint(m.x, rule=_lower_t_ubound)
+    m.lower_t_bound = pyo.Constraint(m.x, rule=_lower_t_bound)
+    m.lower_t_ubound = pyo.Constraint(m.x, rule=_lower_t_ubound)
 
     # PDE
     def _pde(m, x, t):
         if t == start_t or x == end_x or x == start_x:
-            e = pe.Constraint.Skip
+            e = pyo.Constraint.Skip
         else:
             # print(foo.last_t, t-dt, abs(foo.last_t - (t-dt)))
             # assert math.isclose(foo.last_t, t - dt, abs_tol=1e-6)
@@ -115,10 +115,10 @@ def build_burgers_model(nfe_x=100, nfe_t=200, start_t=0, end_t=1):
             )
         return e
 
-    m.pde = pe.Constraint(m.x, m.t, rule=_pde)
+    m.pde = pyo.Constraint(m.x, m.t, rule=_pde)
 
     # Discretize Model
-    disc = pe.TransformationFactory('dae.finite_difference')
+    disc = pyo.TransformationFactory('dae.finite_difference')
     disc.apply_to(m, nfe=nfe_t, wrt=m.t, scheme='BACKWARD')
     disc.apply_to(m, nfe=nfe_x, wrt=m.x, scheme='CENTRAL')
 
@@ -142,7 +142,7 @@ def build_burgers_model(nfe_x=100, nfe_t=200, start_t=0, end_t=1):
                 e += 0.5 * 0.5 * dx * dt * m.omega * m.u[x, start_t] ** 2
         return e
 
-    m.obj = pe.Objective(rule=_obj)
+    m.obj = pyo.Objective(rule=_obj)
 
     return m
 
@@ -210,7 +210,7 @@ def sqp(
         z += delta
 
 
-def load_solution(m: pe.ConcreteModel(), nlp: PyomoNLP):
+def load_solution(m: pyo.ConcreteModel(), nlp: PyomoNLP):
     primals = nlp.get_primals()
     pyomo_vars = nlp.get_pyomo_variables()
     for v, val in zip(pyomo_vars, primals):
@@ -222,7 +222,7 @@ def main(linear_solver, nfe_x=100, nfe_t=200):
     nlp = PyomoNLP(m)
     sqp(nlp, linear_solver)
     load_solution(m, nlp)
-    return pe.value(m.obj)
+    return pyo.value(m.obj)
 
 
 if __name__ == '__main__':

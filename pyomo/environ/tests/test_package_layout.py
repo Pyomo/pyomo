@@ -38,6 +38,7 @@ _FAST_TEST = False
 _NON_MODULE_DIRS = {
     join('contrib', 'ampl_function_demo', 'src'),
     join('contrib', 'appsi', 'cmodel', 'src'),
+    join('contrib', 'cspline_external', 'src'),
     join('contrib', 'simplification', 'ginac', 'src'),
     join('contrib', 'pynumero', 'src'),
     join('core', 'tests', 'data', 'baselines'),

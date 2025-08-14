@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 class Bus:
@@ -97,9 +97,9 @@ for i in range(nbranch):
     assert b.to >= 0 and b.to < nbus
 
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
-model.bus_voltage = Var(
+model.bus_voltage = pyo.Var(
     range(nbus),
     bounds=lambda model, i: (
         bus_voltage_min[bus[i].bustype],
@@ -107,17 +107,17 @@ model.bus_voltage = Var(
     ),
     initialize=1,
 )
-model.bus_b_shunt = Var(
+model.bus_b_shunt = pyo.Var(
     range(nbus),
     bounds=lambda model, i: (bus[i].b_shunt_min, bus[i].b_shunt_max),
     initialize=lambda model, i: bus[i].b_shunt0,
 )
-model.bus_angle = Var(range(nbus), initialize=0)
+model.bus_angle = pyo.Var(range(nbus), initialize=0)
 
-model.branch_tap = Var(
+model.branch_tap = pyo.Var(
     range(nbranch), bounds=(branch_tap_min, branch_tap_max), initialize=1
 )
-model.branch_def = Var(
+model.branch_def = pyo.Var(
     range(nbranch),
     bounds=lambda model, i: (branch[i].def_min, branch[i].def_max),
     initialize=lambda model, i: branch[i].def0,
@@ -134,13 +134,15 @@ def Gself(k):
 
 def Gout(i):
     return (
-        -branch[i].g * cos(model.branch_def[i]) + branch[i].b * sin(model.branch_def[i])
+        -branch[i].g * pyo.cos(model.branch_def[i])
+        + branch[i].b * pyo.sin(model.branch_def[i])
     ) * model.branch_tap[i]
 
 
 def Gin(i):
     return (
-        -branch[i].g * cos(model.branch_def[i]) - branch[i].b * sin(model.branch_def[i])
+        -branch[i].g * pyo.cos(model.branch_def[i])
+        - branch[i].b * pyo.sin(model.branch_def[i])
     ) * model.branch_tap[i]
 
 
@@ -157,17 +159,19 @@ def Bself(k):
 
 def Bin(i):
     return (
-        branch[i].g * sin(model.branch_def[i]) - branch[i].b * cos(model.branch_def[i])
+        branch[i].g * pyo.sin(model.branch_def[i])
+        - branch[i].b * pyo.cos(model.branch_def[i])
     ) * model.branch_tap[i]
 
 
 def Bout(i):
     return (
-        -branch[i].g * sin(model.branch_def[i]) - branch[i].b * cos(model.branch_def[i])
+        -branch[i].g * pyo.sin(model.branch_def[i])
+        - branch[i].b * pyo.cos(model.branch_def[i])
     ) * model.branch_tap[i]
 
 
-model.obj = Objective(
+model.obj = pyo.Objective(
     expr=sum(
         (
             bus[k].p_load
@@ -175,8 +179,10 @@ model.obj = Objective(
                 model.bus_voltage[k]
                 * model.bus_voltage[branch[i].frm]
                 * (
-                    Gin(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
-                    + Bin(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                    Gin(i)
+                    * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                    + Bin(i)
+                    * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
                 )
                 for i in in_lines[k]
             )
@@ -184,8 +190,10 @@ model.obj = Objective(
                 model.bus_voltage[k]
                 * model.bus_voltage[branch[i].to]
                 * (
-                    Gout(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
-                    + Bout(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                    Gout(i)
+                    * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                    + Bout(i)
+                    * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
                 )
                 for i in out_lines[k]
             )
@@ -200,7 +208,7 @@ model.obj = Objective(
 
 def p_load_rule(model, k):
     if bus[k].bustype != 0:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
 
     return (
         bus[k].p_gen
@@ -209,8 +217,8 @@ def p_load_rule(model, k):
             model.bus_voltage[k]
             * model.bus_voltage[branch[i].frm]
             * (
-                Gin(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
-                + Bin(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                Gin(i) * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                + Bin(i) * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
             )
             for i in in_lines[k]
         )
@@ -218,8 +226,8 @@ def p_load_rule(model, k):
             model.bus_voltage[k]
             * model.bus_voltage[branch[i].to]
             * (
-                Gout(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
-                + Bout(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                Gout(i) * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                + Bout(i) * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
             )
             for i in out_lines[k]
         )
@@ -228,12 +236,12 @@ def p_load_rule(model, k):
     )
 
 
-model.p_load_constr = Constraint(range(nbus), rule=p_load_rule)
+model.p_load_constr = pyo.Constraint(range(nbus), rule=p_load_rule)
 
 
 def q_load_rule(model, k):
     if bus[k].bustype != 0:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
 
     return (
         bus[k].q_gen
@@ -242,8 +250,8 @@ def q_load_rule(model, k):
             model.bus_voltage[k]
             * model.bus_voltage[branch[i].frm]
             * (
-                Gin(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
-                - Bin(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                Gin(i) * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                - Bin(i) * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
             )
             for i in in_lines[k]
         )
@@ -251,8 +259,8 @@ def q_load_rule(model, k):
             model.bus_voltage[k]
             * model.bus_voltage[branch[i].to]
             * (
-                Gout(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
-                - Bout(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                Gout(i) * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                - Bout(i) * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
             )
             for i in out_lines[k]
         )
@@ -261,12 +269,12 @@ def q_load_rule(model, k):
     )
 
 
-model.q_load_constr = Constraint(range(nbus), rule=q_load_rule)
+model.q_load_constr = pyo.Constraint(range(nbus), rule=q_load_rule)
 
 
 def q_inj_rule(model, k):
     if not (bus[k].bustype == 2 or bus[k].bustype == 3):
-        return Constraint.Skip
+        return pyo.Constraint.Skip
 
     return (
         bus[k].q_min,
@@ -275,8 +283,8 @@ def q_inj_rule(model, k):
             model.bus_voltage[k]
             * model.bus_voltage[branch[i].frm]
             * (
-                Gin(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
-                - Bin(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                Gin(i) * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                - Bin(i) * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
             )
             for i in in_lines[k]
         )
@@ -284,8 +292,8 @@ def q_inj_rule(model, k):
             model.bus_voltage[k]
             * model.bus_voltage[branch[i].to]
             * (
-                Gout(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
-                - Bout(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                Gout(i) * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                - Bout(i) * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
             )
             for i in out_lines[k]
         )
@@ -294,12 +302,12 @@ def q_inj_rule(model, k):
     )
 
 
-model.q_inj_rule = Constraint(range(nbus), rule=q_inj_rule)
+model.q_inj_rule = pyo.Constraint(range(nbus), rule=q_inj_rule)
 
 
 def p_inj_rule(model, k):
     if not (bus[k].bustype == 2 or bus[k].bustype == 3):
-        return Constraint.Skip
+        return pyo.Constraint.Skip
 
     return (
         0,
@@ -308,8 +316,8 @@ def p_inj_rule(model, k):
             model.bus_voltage[k]
             * model.bus_voltage[branch[i].frm]
             * (
-                Gin(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
-                + Bin(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                Gin(i) * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].frm])
+                + Bin(i) * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].frm])
             )
             for i in in_lines[k]
         )
@@ -317,8 +325,8 @@ def p_inj_rule(model, k):
             model.bus_voltage[k]
             * model.bus_voltage[branch[i].to]
             * (
-                Gout(i) * cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
-                + Bout(i) * sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                Gout(i) * pyo.cos(model.bus_angle[k] - model.bus_angle[branch[i].to])
+                + Bout(i) * pyo.sin(model.bus_angle[k] - model.bus_angle[branch[i].to])
             )
             for i in out_lines[k]
         )
@@ -327,7 +335,7 @@ def p_inj_rule(model, k):
     )
 
 
-model.p_inj_rule = Constraint(range(nbus), rule=p_inj_rule)
+model.p_inj_rule = pyo.Constraint(range(nbus), rule=p_inj_rule)
 
 
 for i in range(nbus):

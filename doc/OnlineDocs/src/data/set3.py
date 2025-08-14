@@ -9,15 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
 # @decl
-model.A = Set()
-model.B = Set(model.A)
+model.A = pyo.Set()
+model.B = pyo.Set(model.A)
 # @decl
-# model.C = Set(model.A,model.A)
+# model.C = pyo.Set(model.A,model.A)
 
 instance = model.create_instance('set3.dat')
 

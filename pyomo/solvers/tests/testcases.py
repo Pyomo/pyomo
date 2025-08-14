@@ -280,13 +280,36 @@ for prob in ('LP_unbounded', 'LP_unbounded_kernel'):
         lambda v: v[:3] == (22, 1, 19),
         'BARON 22.1.19 reports model as optimal',
     )
+for prob in (
+    'LP_block',
+    'LP_duals_maximize',
+    'LP_duals_minimize',
+    'LP_inactive_index',
+    'LP_simple',
+    'LP_trivial_constraints',
+    'QCP_simple',
+    'QP_simple',
+):
+    ExpectedFailures['baron', 'bar', prob] = (
+        lambda v: (25, 7, 10) <= v[:3] <= (25, 7, 16),
+        "BARON 25.7.16 returns 0 for duals/rc for models solved in preprocessing",
+    )
 
 
 #
 # KNITROAMPL
 #
-# NO EXPECTED FAILURES
-#
+for prob in ('LP_trivial_constraints', 'LP_trivial_constraints_kernel'):
+    ExpectedFailures['knitroampl', 'nl', prob] = (
+        lambda v: True,
+        'Knitro does not consider tight trivial constraints to have zero dual value',
+    )
+
+for prob in ('MILP_unbounded', 'MILP_unbounded_kernel'):
+    ExpectedFailures['knitroampl', 'nl', prob] = (
+        lambda v: v[:2] <= (14, 2),
+        'Unbounded MILP detection not operational in Knitro, fixed in 15.0',
+    )
 
 
 def generate_scenarios(arg=None):

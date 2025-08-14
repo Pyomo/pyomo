@@ -40,16 +40,16 @@ transformation on a concrete Pyomo model:
 
 .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> m = ConcreteModel()
-    >>> m.v1 = Var(initialize=1, bounds=(1, 8))
-    >>> m.v2 = Var(initialize=2, bounds=(0, 3))
-    >>> m.v3 = Var(initialize=3, bounds=(-7, 4))
-    >>> m.v4 = Var(initialize=4, bounds=(2, 6))
-    >>> m.c1 = Constraint(expr=m.v1 == m.v2)
-    >>> m.c2 = Constraint(expr=m.v2 == m.v3)
-    >>> m.c3 = Constraint(expr=m.v3 == m.v4)
-    >>> TransformationFactory('contrib.aggregate_vars').apply_to(m)
+    >>> import pyomo.environ as pyo
+    >>> m = pyo.ConcreteModel()
+    >>> m.v1 = pyo.Var(initialize=1, bounds=(1, 8))
+    >>> m.v2 = pyo.Var(initialize=2, bounds=(0, 3))
+    >>> m.v3 = pyo.Var(initialize=3, bounds=(-7, 4))
+    >>> m.v4 = pyo.Var(initialize=4, bounds=(2, 6))
+    >>> m.c1 = pyo.Constraint(expr=m.v1 == m.v2)
+    >>> m.c2 = pyo.Constraint(expr=m.v2 == m.v3)
+    >>> m.c3 = pyo.Constraint(expr=m.v3 == m.v4)
+    >>> pyo.TransformationFactory('contrib.aggregate_vars').apply_to(m)
 
 To see the results of the transformation, you could then use the command
 
@@ -67,15 +67,15 @@ Explicit Constraints to Variable Bounds
 
 .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> m = ConcreteModel()
-    >>> m.v1 = Var(initialize=1)
-    >>> m.v2 = Var(initialize=2)
-    >>> m.v3 = Var(initialize=3)
-    >>> m.c1 = Constraint(expr=m.v1 == 2)
-    >>> m.c2 = Constraint(expr=m.v2 >= -2)
-    >>> m.c3 = Constraint(expr=m.v3 <= 5)
-    >>> TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
+    >>> import pyomo.environ as pyo
+    >>> m = pyo.ConcreteModel()
+    >>> m.v1 = pyo.Var(initialize=1)
+    >>> m.v2 = pyo.Var(initialize=2)
+    >>> m.v3 = pyo.Var(initialize=3)
+    >>> m.c1 = pyo.Constraint(expr=m.v1 == 2)
+    >>> m.c2 = pyo.Constraint(expr=m.v2 >= -2)
+    >>> m.c3 = pyo.Constraint(expr=m.v3 <= 5)
+    >>> pyo.TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.ConstraintToVarBoundTransform
     :noindex:

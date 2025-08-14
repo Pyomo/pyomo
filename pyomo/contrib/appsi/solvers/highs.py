@@ -14,6 +14,7 @@ from typing import List, Dict, Optional
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
+from pyomo.common.flags import NOTSET
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.tee import TeeStream, capture_output
@@ -272,7 +273,6 @@ class Highs(PersistentBase, PersistentSolver):
             if config.warmstart:
                 self._warm_start()
             timer.start('optimize')
-            ostreams[-1].write("RUN!\n")
             if self.version()[:2] >= (1, 8):
                 self._solver_model.HandleKeyboardInterrupt = True
             self._solver_model.run()
@@ -685,9 +685,13 @@ class Highs(PersistentBase, PersistentSolver):
             results.termination_condition = TerminationCondition.maxTimeLimit
         elif status == highspy.HighsModelStatus.kIterationLimit:
             results.termination_condition = TerminationCondition.maxIterations
+        elif status == getattr(highspy.HighsModelStatus, "kSolutionLimit", NOTSET):
+            # kSolutionLimit was introduced in HiGHS v1.5.3 for MIP-related limits
+            results.termination_condition = TerminationCondition.maxIterations
         elif status == highspy.HighsModelStatus.kUnknown:
             results.termination_condition = TerminationCondition.unknown
         else:
+            logger.warning(f'Received unhandled {status=} from solver HiGHS.')
             results.termination_condition = TerminationCondition.unknown
 
         timer.start('load solution')

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import Bunch
-from pyomo.core import *
+import pyomo.environ as pyo
 import math
 import random
 
@@ -138,11 +138,11 @@ def pyomo_create_model(options=None, model_options=None):
     #
     # CREATE MODEL
     #
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
     #
     # (i,j) in S if element i in set j
     #
-    model.S = Set(dimen=2, initialize=S_rule)
+    model.S = pyo.Set(dimen=2, initialize=S_rule)
 
     #
     # Dynamically create the I and J index sets, since
@@ -151,28 +151,28 @@ def pyomo_create_model(options=None, model_options=None):
     def I_rule(model):
         return set((i for (i, j) in model.S))
 
-    model.I = Set(initialize=I_rule)
+    model.I = pyo.Set(initialize=I_rule)
 
     def J_rule(model):
         return set((j for (i, j) in model.S))
 
-    model.J = Set(initialize=J_rule)
+    model.J = pyo.Set(initialize=J_rule)
     #
     # Weights
     #
-    model.w = Param(model.J, within=NonNegativeReals, initialize=1.0)
+    model.w = pyo.Param(model.J, within=pyo.NonNegativeReals, initialize=1.0)
     #
     # Set selection binary variables
     #
-    model.x = Var(model.J, within=Binary)
+    model.x = pyo.Var(model.J, within=pyo.Binary)
 
     #
     # Objective
     #
     def cost_rule(model):
-        return sum_product(model.w, model.x)
+        return pyo.sum_product(model.w, model.x)
 
-    model.cost = Objective(rule=cost_rule)
+    model.cost = pyo.Objective(rule=cost_rule)
 
     #
     # Constraint
@@ -189,7 +189,7 @@ def pyomo_create_model(options=None, model_options=None):
         # return Constraint.Skip
         return expr >= 1
 
-    model.cover = Constraint(model.I, rule=cover_rule)
+    model.cover = pyo.Constraint(model.I, rule=cover_rule)
 
     #
     print_model_stats(model_options, model)

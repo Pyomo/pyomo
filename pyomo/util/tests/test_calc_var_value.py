@@ -459,3 +459,13 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(
                 m.x, m.c, diff_mode=differentiate.Modes.sympy
             )
+
+    def test_linea_search_overflow(self):
+        # This tests the example from #3540
+        m = ConcreteModel()
+        m.x = Var(initialize=5)
+        m.y = Var(initialize=1)
+        m.con = Constraint(expr=m.y == 10 ** (-m.x))
+
+        calculate_variable_from_constraint(m.x, m.con)
+        self.assertAlmostEqual(value(m.x), 0)

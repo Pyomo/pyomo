@@ -22,7 +22,7 @@
 # solver is in the current search path for executables
 # on this system. This example was tested using
 # gurobi_ampl version 6.5.0.
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 #
@@ -32,7 +32,7 @@ solver = 'gurobi_ampl'
 solver_io = 'nl'
 stream_solver = True  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 if opt is None:
     print("")
     print(
@@ -61,11 +61,11 @@ opt.options['method'] = 0
 #
 # Create a trivial example model
 #
-model = ConcreteModel()
-model.s = Set(initialize=[1, 2, 3])
-model.x = Var(model.s, within=NonNegativeReals)
-model.obj = Objective(expr=sum_product(model.x))
-model.con = Constraint(model.s, rule=lambda model, i: model.x[i] >= i - 1)
+model = pyo.ConcreteModel()
+model.s = pyo.Set(initialize=[1, 2, 3])
+model.x = pyo.Var(model.s, within=pyo.NonNegativeReals)
+model.obj = pyo.Objective(expr=pyo.sum_product(model.x))
+model.con = pyo.Constraint(model.s, rule=lambda model, i: model.x[i] >= i - 1)
 ###
 
 #
@@ -81,8 +81,8 @@ model.con = Constraint(model.s, rule=lambda model, i: model.x[i] >= i - 1)
 #  - 5: nonbasic at equal lower and upper bounds
 #  - 6: nonbasic between bounds
 
-model.sstatus = Suffix(direction=Suffix.IMPORT_EXPORT, datatype=Suffix.INT)
-model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
+model.sstatus = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT, datatype=pyo.Suffix.INT)
+model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
 
 
 #

@@ -17,7 +17,7 @@ from pyomo.core.expr.compare import assertExpressionsEqual, compare_expressions
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 from pyomo.core.expr.sympy_tools import sympy_available
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 
 
 class SimplificationMixin:
@@ -30,9 +30,9 @@ class SimplificationMixin:
         self.assertTrue(success)
 
     def test_simplify(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var(bounds=(0, None))
-        e = x * pe.log(x)
+        m = pyo.ConcreteModel()
+        x = m.x = pyo.Var(bounds=(0, None))
+        e = x * pyo.log(x)
         der1 = reverse_sd(e)[x]
         der2 = reverse_sd(der1)[x]
         der2_simp = self.simp.simplify(der2)
@@ -40,40 +40,40 @@ class SimplificationMixin:
         assertExpressionsEqual(self, expected, der2_simp)
 
     def test_mul(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var()
+        m = pyo.ConcreteModel()
+        x = m.x = pyo.Var()
         e = 2 * x
         e2 = self.simp.simplify(e)
         expected = 2.0 * x
         assertExpressionsEqual(self, expected, e2)
 
     def test_sum(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var()
+        m = pyo.ConcreteModel()
+        x = m.x = pyo.Var()
         e = 2 + x
         e2 = self.simp.simplify(e)
         self.compare_against_possible_results(e2, [2.0 + x, x + 2.0])
 
     def test_neg(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var()
-        e = -pe.log(x)
+        m = pyo.ConcreteModel()
+        x = m.x = pyo.Var()
+        e = -pyo.log(x)
         e2 = self.simp.simplify(e)
         self.compare_against_possible_results(
-            e2, [(-1.0) * pe.log(x), pe.log(x) * (-1.0), -pe.log(x)]
+            e2, [(-1.0) * pyo.log(x), pyo.log(x) * (-1.0), -pyo.log(x)]
         )
 
     def test_pow(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var()
+        m = pyo.ConcreteModel()
+        x = m.x = pyo.Var()
         e = x**2.0
         e2 = self.simp.simplify(e)
         assertExpressionsEqual(self, e, e2)
 
     def test_div(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var()
-        y = m.y = pe.Var()
+        m = pyo.ConcreteModel()
+        x = m.x = pyo.Var()
+        y = m.y = pyo.Var()
         e = x / y + y / x - x / y
         e2 = self.simp.simplify(e)
         self.compare_against_possible_results(
@@ -81,18 +81,18 @@ class SimplificationMixin:
         )
 
     def test_unary(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var()
-        func_list = [pe.log, pe.sin, pe.cos, pe.tan, pe.asin, pe.acos, pe.atan]
+        m = pyo.ConcreteModel()
+        x = m.x = pyo.Var()
+        func_list = [pyo.log, pyo.sin, pyo.cos, pyo.tan, pyo.asin, pyo.acos, pyo.atan]
         for func in func_list:
             e = func(x)
             e2 = self.simp.simplify(e)
             assertExpressionsEqual(self, e, e2)
 
     def test_param(self):
-        m = pe.ConcreteModel()
-        x = m.x = pe.Var()
-        p = m.p = pe.Param(mutable=True)
+        m = pyo.ConcreteModel()
+        x = m.x = pyo.Var()
+        p = m.p = pyo.Param(mutable=True)
         e1 = p * x**2 + p * x + p * x**2
         e2 = self.simp.simplify(e1)
         self.compare_against_possible_results(
