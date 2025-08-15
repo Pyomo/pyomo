@@ -198,11 +198,23 @@ def test_scip_some_more():
     list_extra_data_expected = [
         (),  # problem_lp_unbounded(),
         (),  # problem_lp_infeasible(),
-        ('Time', 'Gap', 'Primal bound', 'Dual bound'),  # problem_lp_optimal(),
+        ('Time', 'Gap', 'Nodes', 'Primal bound', 'Dual bound'),  # problem_lp_optimal(),
         (),  # problem_milp_unbounded(),
         (),  # problem_milp_infeasible(),
-        ('Time', 'Gap', 'Primal bound', 'Dual bound'),  # problem_milp_optimal(),
-        ('Time', 'Gap', 'Primal bound', 'Dual bound'),  # problem_milp_feasible()
+        (
+            'Time',
+            'Gap',
+            'Nodes',
+            'Primal bound',
+            'Dual bound',
+        ),  # problem_milp_optimal(),
+        (
+            'Time',
+            'Gap',
+            'Nodes',
+            'Primal bound',
+            'Dual bound',
+        ),  # problem_milp_feasible()
     ]
 
     # **************************************************************************
