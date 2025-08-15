@@ -69,7 +69,7 @@ from pyomo.common.tee import capture_output, TeeStream
 logger = logging.getLogger(__name__)
 
 
-scip, scip_available = attempt_import('pyscipyopt')
+scip, scip_available = attempt_import('pyscipopt')
 
 
 class ScipConfig(BranchAndBoundConfig):
@@ -360,9 +360,9 @@ class SCIPDirect(SolverBase):
         return self._available
     
     def version(self) -> Tuple:
-        return tuple(int(i) for i in scip.__version__)
+        return tuple(int(i) for i in scip.__version__.split('.'))
 
-    def solve(self, model: BlockData, **kwargs) -> Results:
+    def solve(self, model: BlockData, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         orig_config = self.config
         if not self.available():
@@ -470,7 +470,7 @@ class SCIPDirect(SolverBase):
             val = var.value
             return val, val
 
-        lb, ub = var.bounds()
+        lb, ub = var.bounds
 
         if lb is None:
             lb = -self._solver_model.infinity()

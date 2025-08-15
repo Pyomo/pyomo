@@ -31,8 +31,6 @@ from pyomo.solvers.plugins.solvers import (
     mosek_persistent,
     xpress_direct,
     xpress_persistent,
-    scip_direct,
-    scip_persistent,
     SAS,
     KNITROAMPL,
 )
