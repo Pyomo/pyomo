@@ -12,7 +12,6 @@
 import itertools
 import logging
 import math
-import multiprocessing
 import os
 import threading
 import enum
@@ -27,7 +26,7 @@ from pyomo.common.config import (
 )
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.dependencies import dill, dill_available
+from pyomo.common.dependencies import dill, dill_available, multiprocessing
 
 from pyomo.core import (
     Block,
