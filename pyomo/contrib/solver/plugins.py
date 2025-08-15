@@ -44,4 +44,4 @@ def load():
         name='scip_direct', 
         legacy_name='scip_direct_v2', 
         doc='Direct interface pyscipopt',
-    )
+    )(SCIPDirect)

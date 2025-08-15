@@ -16,6 +16,7 @@ import math
 from typing import Tuple, List, Optional, Sequence, Mapping, Dict
 
 from pyomo.common.collections import ComponentMap
+from pyomo.core.expr.numvalue import is_constant
 from pyomo.common.numeric_types import native_numeric_types
 from pyomo.common.errors import InfeasibleConstraintException, ApplicationError
 from pyomo.common.timing import HierarchicalTimer
@@ -67,6 +68,8 @@ from pyomo.contrib.solver.common.solution_loader import (
 )
 from pyomo.common.config import ConfigValue
 from pyomo.common.tee import capture_output, TeeStream
+from pyomo.core.base.units_container import _PyomoUnit
+from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 
 
 logger = logging.getLogger(__name__)
@@ -132,7 +135,15 @@ def _handle_negation(node, data, opt):
 
 
 def _handle_pow(node, data, opt):
-    return data[0] ** data[1]
+    x, y = data  # x ** y = exp(log(x**y)) = exp(y*log(x))
+    if is_constant(node.args[1]):
+        return x**y
+    else:
+        xlb, xub = compute_bounds_on_expr(node.args[0])
+        if xlb > 0:
+            return scip.exp(y*scip.log(x))
+        else:
+            return x**y  # scip will probably raise an error here
 
 
 def _handle_product(node, data, opt):
@@ -210,6 +221,10 @@ def _handle_named_expression(node, data, opt):
     return data[0]
 
 
+def _handle_unit(node, data, opt):
+    return node.value
+
+
 _operator_map = {
     NegationExpression: _handle_negation,
     PowExpression: _handle_pow,
@@ -237,6 +252,7 @@ _operator_map = {
     float: _handle_float,
     int: _handle_float,
     AutoLinkedBinaryVar: _handle_var,
+    _PyomoUnit: _handle_unit,
 }
 
 
