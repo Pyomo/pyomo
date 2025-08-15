@@ -33,6 +33,7 @@ from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
 from pyomo.contrib.solver.solvers.highs import Highs
+from pyomo.contrib.solver.solvers.gams import GAMS
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
@@ -51,6 +52,7 @@ all_solvers = [
     ('gurobi_direct', GurobiDirect),
     ('ipopt', Ipopt),
     ('highs', Highs),
+    ('gams', GAMS),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
