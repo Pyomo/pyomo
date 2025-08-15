@@ -15,6 +15,7 @@ from .solvers.ipopt import Ipopt
 from .solvers.gurobi.gurobi_direct import GurobiDirect
 from .solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic, GurobiPersistent
 from .solvers.highs import Highs
+from .solvers.scip.scip_direct import SCIPDirect
 
 
 def load():
@@ -39,3 +40,8 @@ def load():
     SolverFactory.register(
         name='highs', legacy_name='highs_v2', doc='Persistent interface to HiGHS'
     )(Highs)
+    SolverFactory.register(
+        name='scip_direct', 
+        legacy_name='scip_direct_v2', 
+        doc='Direct interface pyscipopt',
+    )
