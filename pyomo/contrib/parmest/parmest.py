@@ -348,28 +348,13 @@ def _count_total_experiments(exp_list):
         exp_list: list of experiments
 
     Return:
-         total_number_exp: the total number of experiments in the list of experiments
+         total_number_data: the total number of data points in the list of experiments
     """
-    total_number_exp = 0
+    total_number_data = 0
     for exp in exp_list:
-        # check if it's a dynamic experiment
-        try:
-            expected_data_column = "time"
-            if not hasattr(exp, "data"):
-                raise AttributeError('The experiment object must have a "data" object.')
-            elif not hasattr(exp.data, "time"):
-                raise KeyError(
-                    f'The "data" attribute does not contain a '
-                    f'"{expected_data_column}" column or key.'
-                )
-            else:
-                time_data = exp.data.time
-                total_number_exp += len(time_data)
-        except (AttributeError, KeyError):
-            # steady-state experiment
-            total_number_exp += 1
+        total_number_data += len(exp.get_labeled_model().experiment_outputs)
 
-    return total_number_exp
+    return total_number_data
 
 
 class CovarianceMethod(Enum):
