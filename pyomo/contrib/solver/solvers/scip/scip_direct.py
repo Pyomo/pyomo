@@ -12,6 +12,7 @@
 import datetime
 import io
 import logging
+import math
 from typing import Tuple, List, Optional, Sequence, Mapping, Dict
 
 from pyomo.common.collections import ComponentMap
@@ -40,6 +41,7 @@ from pyomo.core.expr.numeric_expr import (
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,
 )
+from pyomo.gdp.disjunct import AutoLinkedBinaryVar
 from pyomo.core.base.expression import ExpressionData, ScalarExpression
 from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression, RangedExpression
 from pyomo.core.staleflag import StaleFlagManager
@@ -50,6 +52,7 @@ from pyomo.contrib.solver.common.config import BranchAndBoundConfig
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
+    NoSolutionError,
 )
 from pyomo.contrib.solver.common.util import get_objective
 from pyomo.contrib.solver.common.solution_loader import NoSolutionSolutionLoader
@@ -109,6 +112,8 @@ def _handle_var(node, data, opt):
 
 
 def _handle_param(node, data, opt):
+    if not opt.is_persistent():
+        return node.value
     if not node.mutable:
         return node.value
     if id(node) not in opt._pyomo_param_to_solver_param_map:
@@ -231,6 +236,7 @@ _operator_map = {
     ScalarParam: _handle_param,
     float: _handle_float,
     int: _handle_float,
+    AutoLinkedBinaryVar: _handle_var,
 }
 
 
@@ -287,6 +293,8 @@ class ScipDirectSolutionLoader(SolutionLoaderBase):
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
+        if self.get_number_of_solutions() == 0:
+            raise NoSolutionError()
         if vars_to_load is None:
             vars_to_load = list(self._vars.values())
         if solution_id is None:
@@ -403,7 +411,7 @@ class SCIPDirect(SolverBase):
                 scip_model.setParam(key, option)
 
             timer.start('optimize')
-            with capture_output(TeeStream(*ostreams), capture_fd=False):
+            with capture_output(TeeStream(*ostreams), capture_fd=True):
                 scip_model.optimize()
             timer.stop('optimize')
 
@@ -619,17 +627,20 @@ class SCIPDirect(SolverBase):
 
         if obj is None:
             scip_expr = 0
+            sense = "minimize"
         else:
             scip_expr = self._expr_visitor.walk_expression(obj.expr)
+            if obj.sense == minimize:
+                sense = "minimize"
+            elif obj.sense == maximize:
+                sense = "maximize"
+            else:
+                raise ValueError(f"Objective sense is not recognized: {obj.sense}")
 
-        if obj.sense == minimize:
-            sense = "minimize"
+        if sense == "minimize":
             self._obj_con = self._solver_model.addCons(self._obj_var >= scip_expr)
-        elif obj.sense == maximize:
-            sense = "maximize"
-            self._obj_con = self._solver_model.addCons(self._obj_var <= scip_expr)
         else:
-            raise ValueError(f"Objective sense is not recognized: {obj.sense}")
+            self._obj_con = self._solver_model.addCons(self._obj_var <= scip_expr)
 
         self._solver_model.setObjective(self._obj_var, sense=sense)
         self._objective = obj

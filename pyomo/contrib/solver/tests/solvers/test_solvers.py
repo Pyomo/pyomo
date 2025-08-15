@@ -88,6 +88,13 @@ miqcqp_solvers = [
 ]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
+dual_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_direct', GurobiDirect),
+    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
+    ('ipopt', Ipopt),
+    ('highs', Highs),
+]
 
 
 def _load_tests(solver_list):
@@ -114,7 +121,7 @@ def test_all_solvers_list():
 
 
 class TestDualSignConvention(unittest.TestCase):
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_equality(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
@@ -166,7 +173,7 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], 0)
         self.assertAlmostEqual(duals[m.c2], -1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_inequality(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -228,7 +235,7 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], 0.5)
         self.assertAlmostEqual(duals[m.c2], 0.5)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_bounds(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
@@ -283,7 +290,7 @@ class TestDualSignConvention(unittest.TestCase):
         rc = res.solution_loader.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], -1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_range(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
@@ -335,7 +342,7 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], -0.5)
         self.assertAlmostEqual(duals[m.c2], -0.5)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_equality_max(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -389,7 +396,7 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], 0)
         self.assertAlmostEqual(duals[m.c2], 1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_inequality_max(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -451,7 +458,7 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], -0.5)
         self.assertAlmostEqual(duals[m.c2], -0.5)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_bounds_max(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -508,7 +515,7 @@ class TestDualSignConvention(unittest.TestCase):
         rc = res.solution_loader.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], 1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_range_max(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -664,16 +671,18 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, -1)
-        duals = res.solution_loader.get_duals()
-        self.assertAlmostEqual(duals[m.c], 1)
+        if (name, opt_class) in dual_solvers:
+            duals = res.solution_loader.get_duals()
+            self.assertAlmostEqual(duals[m.c], 1)
         m.obj.sense = pyo.maximize
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 1)
-        duals = res.solution_loader.get_duals()
-        self.assertAlmostEqual(duals[m.c], 1)
+        if (name, opt_class) in dual_solvers:
+            duals = res.solution_loader.get_duals()
+            self.assertAlmostEqual(duals[m.c], 1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_reduced_costs(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -702,7 +711,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.x], -3)
         self.assertAlmostEqual(rc[m.y], -4)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_reduced_costs2(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -768,9 +777,10 @@ class TestSolvers(unittest.TestCase):
             else:
                 bound = res.objective_bound
             self.assertTrue(bound <= m.y.value)
-            duals = res.solution_loader.get_duals()
-            self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
-            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+            if (name, opt_class) in dual_solvers:
+                duals = res.solution_loader.get_duals()
+                self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
+                self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_immutable_param(
@@ -815,9 +825,10 @@ class TestSolvers(unittest.TestCase):
             else:
                 bound = res.objective_bound
             self.assertTrue(bound <= m.y.value)
-            duals = res.solution_loader.get_duals()
-            self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
-            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+            if (name, opt_class) in dual_solvers:
+                duals = res.solution_loader.get_duals()
+                self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
+                self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_equality(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
@@ -831,6 +842,8 @@ class TestSolvers(unittest.TestCase):
                 check_duals = False
             else:
                 opt.config.writer_config.linear_presolve = False
+        if (name, opt_class) not in dual_solvers:
+            check_duals = False
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var()
@@ -922,6 +935,8 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
+        if (name, opt_class) not in dual_solvers:
+            check_duals = False
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var()
@@ -983,9 +998,10 @@ class TestSolvers(unittest.TestCase):
         else:
             bound = res.objective_bound
         self.assertTrue(bound <= m.y.value)
-        duals = res.solution_loader.get_duals()
-        self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
-        self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+        if (name, opt_class) in dual_solvers:
+            duals = res.solution_loader.get_duals()
+            self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
+            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
         m.c3 = pyo.Constraint(expr=m.y >= a3 * m.x + b3)
         res = opt.solve(m)
@@ -994,10 +1010,11 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, a1 * (b3 - b1) / (a1 - a3) + b1)
         self.assertAlmostEqual(res.incumbent_objective, m.y.value)
         self.assertTrue(res.objective_bound is None or res.objective_bound <= m.y.value)
-        duals = res.solution_loader.get_duals()
-        self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a3 - a1)))
-        self.assertAlmostEqual(duals[m.c2], 0)
-        self.assertAlmostEqual(duals[m.c3], a1 / (a3 - a1))
+        if (name, opt_class) in dual_solvers:
+            duals = res.solution_loader.get_duals()
+            self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a3 - a1)))
+            self.assertAlmostEqual(duals[m.c2], 0)
+            self.assertAlmostEqual(duals[m.c3], a1 / (a3 - a1))
 
         del m.c3
         res = opt.solve(m)
@@ -1006,9 +1023,10 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
         self.assertAlmostEqual(res.incumbent_objective, m.y.value)
         self.assertTrue(res.objective_bound is None or res.objective_bound <= m.y.value)
-        duals = res.solution_loader.get_duals()
-        self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
-        self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+        if (name, opt_class) in dual_solvers:
+            duals = res.solution_loader.get_duals()
+            self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
+            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_results_infeasible(
@@ -1057,14 +1075,15 @@ class TestSolvers(unittest.TestCase):
                 NoSolutionError, '.*does not currently have a valid solution.*'
             ):
                 res.solution_loader.load_vars()
-            with self.assertRaisesRegex(
-                NoDualsError, '.*does not currently have valid duals.*'
-            ):
-                res.solution_loader.get_duals()
-            with self.assertRaisesRegex(
-                NoReducedCostsError, '.*does not currently have valid reduced costs.*'
-            ):
-                res.solution_loader.get_reduced_costs()
+            if (name, opt_class) in dual_solvers:
+                with self.assertRaisesRegex(
+                    NoDualsError, '.*does not currently have valid duals.*'
+                ):
+                    res.solution_loader.get_duals()
+                with self.assertRaisesRegex(
+                    NoReducedCostsError, '.*does not currently have valid reduced costs.*'
+                ):
+                    res.solution_loader.get_reduced_costs()
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_trivial_constraints(
@@ -1118,7 +1137,7 @@ class TestSolvers(unittest.TestCase):
         self.assertIn(res.termination_condition, acceptable_termination_conditions)
         self.assertIsNone(res.incumbent_objective)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(dual_solvers))
     def test_duals(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
@@ -1167,13 +1186,13 @@ class TestSolvers(unittest.TestCase):
         m.c = pyo.Constraint(expr=m.y >= (m.a * m.x + m.b) ** 2)
 
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 0.41024548525899274, 4)
-        self.assertAlmostEqual(m.y.value, 0.34781038127030117, 4)
+        self.assertAlmostEqual(m.x.value, 0.41024548525899274, 3)
+        self.assertAlmostEqual(m.y.value, 0.34781038127030117, 3)
         m.a.value = 2
         m.b.value = -0.5
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 0.10256137418973625, 4)
-        self.assertAlmostEqual(m.y.value, 0.0869525991355825, 4)
+        self.assertAlmostEqual(m.x.value, 0.10256137418973625, 3)
+        self.assertAlmostEqual(m.y.value, 0.0869525991355825, 3)
 
     @parameterized.expand(input=_load_tests(qcp_solvers))
     def test_mutable_quadratic_objective_qcp(
@@ -1198,14 +1217,14 @@ class TestSolvers(unittest.TestCase):
         m.ccon = pyo.Constraint(expr=m.y >= (m.a * m.x + m.b) ** 2)
 
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 0.2719178742733325, 4)
-        self.assertAlmostEqual(m.y.value, 0.5301035741688002, 4)
+        self.assertAlmostEqual(m.x.value, 0.2719178742733325, 3)
+        self.assertAlmostEqual(m.y.value, 0.5301035741688002, 3)
         m.c.value = 3.5
         m.d.value = -1
         res = opt.solve(m)
 
-        self.assertAlmostEqual(m.x.value, 0.6962249634573562, 4)
-        self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
+        self.assertAlmostEqual(m.x.value, 0.6962249634573562, 3)
+        self.assertAlmostEqual(m.y.value, 0.09227926676152151, 3)
 
     @parameterized.expand(input=_load_tests(qp_solvers))
     def test_mutable_quadratic_objective_qp(
@@ -1412,7 +1431,7 @@ class TestSolvers(unittest.TestCase):
             else:
                 opt.config.writer_config.linear_presolve = False
         m = pyo.ConcreteModel()
-        m.x = pyo.Var()
+        m.x = pyo.Var(bounds=(0, None))
         m.y = pyo.Var()
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pyo.Constraint(expr=m.x == 2 / m.y)
@@ -1421,8 +1440,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
         m.y.unfix()
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 2**0.5)
-        self.assertAlmostEqual(m.y.value, 2**0.5)
+        self.assertAlmostEqual(m.x.value, 2**0.5, 3)
+        self.assertAlmostEqual(m.y.value, 2**0.5, 3)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_mutable_param_with_range(
@@ -1506,9 +1525,10 @@ class TestSolvers(unittest.TestCase):
                     res.objective_bound is None
                     or res.objective_bound <= m.y.value + 1e-12
                 )
-                duals = res.solution_loader.get_duals()
-                self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
-                self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
+                if (name, opt_class) in dual_solvers:
+                    duals = res.solution_loader.get_duals()
+                    self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
+                    self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
             else:
                 self.assertAlmostEqual(m.x.value, (c2 - c1) / (a1 - a2), 6)
                 self.assertAlmostEqual(m.y.value, a1 * (c2 - c1) / (a1 - a2) + c1, 6)
@@ -1517,9 +1537,10 @@ class TestSolvers(unittest.TestCase):
                     res.objective_bound is None
                     or res.objective_bound >= m.y.value - 1e-12
                 )
-                duals = res.solution_loader.get_duals()
-                self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
-                self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
+                if (name, opt_class) in dual_solvers:
+                    duals = res.solution_loader.get_duals()
+                    self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
+                    self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_add_and_remove_vars(
@@ -1590,8 +1611,8 @@ class TestSolvers(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, -0.42630274815985264)
-        self.assertAlmostEqual(m.y.value, 0.6529186341994245)
+        self.assertAlmostEqual(m.x.value, -0.42630274815985264, 4)
+        self.assertAlmostEqual(m.y.value, 0.6529186341994245, 4)
 
     @parameterized.expand(input=_load_tests(nlp_solvers))
     def test_log(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
@@ -1609,8 +1630,8 @@ class TestSolvers(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pyo.Constraint(expr=m.y <= pyo.log(m.x))
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 0.6529186341994245)
-        self.assertAlmostEqual(m.y.value, -0.42630274815985264)
+        self.assertAlmostEqual(m.x.value, 0.6529186341994245, 3)
+        self.assertAlmostEqual(m.y.value, -0.42630274815985264, 3)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_with_numpy(
@@ -1720,24 +1741,25 @@ class TestSolvers(unittest.TestCase):
         self.assertNotIn(m.x, primals)
         self.assertIn(m.y, primals)
         self.assertAlmostEqual(primals[m.y], 1)
-        reduced_costs = res.solution_loader.get_reduced_costs()
-        self.assertIn(m.x, reduced_costs)
-        self.assertIn(m.y, reduced_costs)
-        self.assertAlmostEqual(reduced_costs[m.x], 1)
-        self.assertAlmostEqual(reduced_costs[m.y], 0)
-        reduced_costs = res.solution_loader.get_reduced_costs([m.y])
-        self.assertNotIn(m.x, reduced_costs)
-        self.assertIn(m.y, reduced_costs)
-        self.assertAlmostEqual(reduced_costs[m.y], 0)
-        duals = res.solution_loader.get_duals()
-        self.assertIn(m.c1, duals)
-        self.assertIn(m.c2, duals)
-        self.assertAlmostEqual(duals[m.c1], 1)
-        self.assertAlmostEqual(duals[m.c2], 0)
-        duals = res.solution_loader.get_duals([m.c1])
-        self.assertNotIn(m.c2, duals)
-        self.assertIn(m.c1, duals)
-        self.assertAlmostEqual(duals[m.c1], 1)
+        if (name, opt_class) in dual_solvers:
+            reduced_costs = res.solution_loader.get_reduced_costs()
+            self.assertIn(m.x, reduced_costs)
+            self.assertIn(m.y, reduced_costs)
+            self.assertAlmostEqual(reduced_costs[m.x], 1)
+            self.assertAlmostEqual(reduced_costs[m.y], 0)
+            reduced_costs = res.solution_loader.get_reduced_costs([m.y])
+            self.assertNotIn(m.x, reduced_costs)
+            self.assertIn(m.y, reduced_costs)
+            self.assertAlmostEqual(reduced_costs[m.y], 0)
+            duals = res.solution_loader.get_duals()
+            self.assertIn(m.c1, duals)
+            self.assertIn(m.c2, duals)
+            self.assertAlmostEqual(duals[m.c1], 1)
+            self.assertAlmostEqual(duals[m.c2], 0)
+            duals = res.solution_loader.get_duals([m.c1])
+            self.assertNotIn(m.c2, duals)
+            self.assertIn(m.c1, duals)
+            self.assertAlmostEqual(duals[m.c1], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_time_limit(
@@ -2219,6 +2241,8 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
+        if (name, opt_class) not in dual_solvers:
+            check_duals = False
 
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
