@@ -18,6 +18,10 @@ from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.base.suffix import Suffix
 from .util import NoSolutionError
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def load_import_suffixes(
@@ -33,11 +37,19 @@ def load_import_suffixes(
         elif suffix.local_name == 'rc':
             rc_suffix = suffix
     if dual_suffix is not None:
-        for k, v in solution_loader.get_duals(solution_id=solution_id).items():
-            dual_suffix[k] = v
+        duals = solution_loader.get_duals(solution_id=solution_id)
+        if duals is NotImplemented:
+            logger.warning(f'Cannot load duals into suffix')
+        else:
+            for k, v in duals.items():
+                dual_suffix[k] = v
     if rc_suffix is not None:
-        for k, v in solution_loader.get_reduced_costs(solution_id=solution_id).items():
-            rc_suffix[k] = v
+        rc = solution_loader.get_reduced_costs(solution_id=solution_id)
+        if rc is NotImplemented:
+            logger.warning(f'cannot load duals into suffix')
+        else:
+            for k, v in rc.items():
+                rc_suffix[k] = v
 
 
 class SolutionLoaderBase:

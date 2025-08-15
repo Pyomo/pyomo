@@ -9,392 +9,578 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import datetime
+import io
 import logging
-import sys
+from typing import Tuple, List, Optional, Sequence, Mapping, Dict
 
-from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
-from pyomo.common.tempfiles import TempfileManager
-from pyomo.core import Var
-from pyomo.core.expr.numeric_expr import (
-    SumExpression,
-    ProductExpression,
-    UnaryFunctionExpression,
-    PowExpression,
-    DivisionExpression,
-)
-from pyomo.core.expr.numvalue import is_fixed
-from pyomo.core.expr.numvalue import value
-from pyomo.core.staleflag import StaleFlagManager
-from pyomo.repn import generate_standard_repn
-from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
-from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
-    DirectOrPersistentSolver,
-)
+from pyomo.common.collections import ComponentMap
+from pyomo.common.numeric_types import native_numeric_types
+from pyomo.common.errors import InfeasibleConstraintException, ApplicationError
+from pyomo.common.timing import HierarchicalTimer
+from pyomo.core.base.block import BlockData
+from pyomo.core.base.var import VarData, ScalarVar
+from pyomo.core.base.param import ParamData, ScalarParam
+from pyomo.core.base.constraint import Constraint, ConstraintData
+from pyomo.core.base.sos import SOSConstraint, SOSConstraintData
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.opt.results.results_ import SolverResults
-from pyomo.opt.results.solution import Solution, SolutionStatus
-from pyomo.opt.results.solver import TerminationCondition, SolverStatus
-from pyomo.opt.base import SolverFactory
+from pyomo.core.expr.numeric_expr import (
+    NegationExpression,
+    PowExpression,
+    ProductExpression,
+    MonomialTermExpression,
+    DivisionExpression,
+    SumExpression,
+    LinearExpression,
+    UnaryFunctionExpression,
+    NPV_NegationExpression,
+    NPV_PowExpression,
+    NPV_ProductExpression,
+    NPV_DivisionExpression,
+    NPV_SumExpression,
+    NPV_UnaryFunctionExpression,
+)
+from pyomo.core.base.expression import ExpressionData, ScalarExpression
+from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression, RangedExpression
+from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.common.dependencies import attempt_import
+from pyomo.contrib.solver.common.base import SolverBase, Availability
+from pyomo.contrib.solver.common.config import BranchAndBoundConfig
+from pyomo.contrib.solver.common.util import (
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+)
+from pyomo.contrib.solver.common.util import get_objective
+from pyomo.contrib.solver.common.solution_loader import NoSolutionSolutionLoader
+from pyomo.contrib.solver.common.results import (
+    Results,
+    SolutionStatus,
+    TerminationCondition,
+)
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
+from pyomo.common.config import ConfigValue
+from pyomo.common.tee import capture_output, TeeStream
+
+
+logger = logging.getLogger(__name__)
+
+
+scip, scip_available = attempt_import('pyscipyopt')
+
+
+class ScipConfig(BranchAndBoundConfig):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        BranchAndBoundConfig.__init__(
+            self,
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+        self.use_mipstart: bool = self.declare(
+            'use_mipstart',
+            ConfigValue(
+                default=False,
+                domain=bool,
+                description="If True, the current values of the integer variables "
+                "will be passed to Scip.",
+            ),
+        )
+
+
+def _handle_var(node, data, opt):
+    if id(node) not in opt._pyomo_var_to_solver_var_map:
+        scip_var = opt._add_var(node)
+    else:
+        scip_var = opt._pyomo_var_to_solver_var_map[id(node)]
+    return scip_var
+
+
+def _handle_param(node, data, opt):
+    if not node.mutable:
+        return node.value
+    if id(node) not in opt._pyomo_param_to_solver_param_map:
+        scip_param = opt._add_param(node)
+    else:
+        scip_param = opt._pyomo_param_to_solver_param_map[id(node)]
+    return scip_param
+
+
+def _handle_float(node, data, opt):
+    return float(node)
+
+
+def _handle_negation(node, data, opt):
+    return -data[0]
+
+
+def _handle_pow(node, data, opt):
+    return data[0] ** data[1]
+
+
+def _handle_product(node, data, opt):
+    assert len(data) == 2
+    return data[0] * data[1]
+
+
+def _handle_division(node, data, opt):
+    return data[0] / data[1]
+
+
+def _handle_sum(node, data, opt):
+    return sum(data)
+
+
+def _handle_exp(node, data, opt):
+    return scip.exp(data[0])
+
+
+def _handle_log(node, data, opt):
+    return scip.log(data[0])
+
+
+def _handle_sin(node, data, opt):
+    return scip.sin(data[0])
+
+
+def _handle_cos(node, data, opt):
+    return scip.cos(data[0])
+
+
+def _handle_sqrt(node, data, opt):
+    return scip.sqrt(data[0])
+
+
+def _handle_abs(node, data, opt):
+    return abs(data[0])
+
+
+def _handle_tan(node, data, opt):
+    return scip.sin(data[0]) / scip.cos(data[0])
+
+
+_unary_map = {
+    'exp': _handle_exp,
+    'log': _handle_log,
+    'sin': _handle_sin,
+    'cos': _handle_cos,
+    'sqrt': _handle_sqrt,
+    'abs': _handle_abs,
+    'tan': _handle_tan,
+}
+
+
+def _handle_unary(node, data, opt):
+    if node.getname() in _unary_map:
+        return _unary_map[node.getname()](node, data, opt)
+    else:
+        raise NotImplementedError(f'unable to handle unary expression: {str(node)}')
+
+
+def _handle_equality(node, data, opt):
+    return data[0] == data[1]
+
+
+def _handle_ranged(node, data, opt):
+    return data[0] <= (data[1] <= data[2])
+
+
+def _handle_inequality(node, data, opt):
+    return data[0] <= data[1]
+
+
+def _handle_named_expression(node, data, opt):
+    return data[0]
+
+
+_operator_map = {
+    NegationExpression: _handle_negation,
+    PowExpression: _handle_pow,
+    ProductExpression: _handle_product,
+    MonomialTermExpression: _handle_product,
+    DivisionExpression: _handle_division,
+    SumExpression: _handle_sum,
+    LinearExpression: _handle_sum,
+    UnaryFunctionExpression: _handle_unary,
+    NPV_NegationExpression: _handle_negation,
+    NPV_PowExpression: _handle_pow,
+    NPV_ProductExpression: _handle_product,
+    NPV_DivisionExpression: _handle_division,
+    NPV_SumExpression: _handle_sum,
+    NPV_UnaryFunctionExpression: _handle_unary,
+    EqualityExpression: _handle_equality,
+    RangedExpression: _handle_ranged,
+    InequalityExpression: _handle_inequality,
+    ScalarExpression: _handle_named_expression,
+    ExpressionData: _handle_named_expression,
+    VarData: _handle_var,
+    ScalarVar: _handle_var,
+    ParamData: _handle_param,
+    ScalarParam: _handle_param,
+    float: _handle_float,
+    int: _handle_float,
+}
+
+
+class _PyomoToScipVisitor(StreamBasedExpressionVisitor):
+    def __init__(self, solver, **kwds):
+        super().__init__(**kwds)
+        self.solver = solver
+
+    def exitNode(self, node, data):
+        nt = type(node)
+        if nt in _operator_map:
+            return _operator_map[nt](node, data, self.solver)
+        elif nt in native_numeric_types:
+            _operator_map[nt] = _handle_float
+            return _handle_float(node, data, self.solver)
+        else:
+            raise NotImplementedError(f'unrecognized expression type: {nt}')
 
 
 logger = logging.getLogger("pyomo.solvers")
 
 
-class DegreeError(ValueError):
-    pass
+class ScipDirectSolutionLoader(SolutionLoaderBase):
+    def __init__(
+        self,
+        solver_model,
+        var_id_map,
+        var_map,
+        con_map,
+        pyomo_model,
+        opt,
+    ) -> None:
+        super().__init__()
+        self._solver_model = solver_model
+        self._vars = var_id_map
+        self._var_map = var_map
+        self._con_map = con_map
+        self._pyomo_model = pyomo_model
+        # make sure the scip model does not get freed until the solution loader is garbage collected
+        self._opt = opt
+
+    def get_number_of_solutions(self) -> int:
+        return self._solver_model.getNSols()
+
+    def get_solution_ids(self) -> List:
+        return list(range(self.get_number_of_solutions()))
+
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> None:
+        for v, val in self.get_vars(vars_to_load=vars_to_load, solution_id=solution_id).items():
+            v.value = val
+
+    def get_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> Mapping[VarData, float]:
+        if vars_to_load is None:
+            vars_to_load = list(self._vars.values())
+        if solution_id is None:
+            solution_id = 0
+        sol = self._solver_model.getSols()[solution_id]
+        res = ComponentMap()
+        for v in vars_to_load:
+            sv = self._var_map[id(v)]
+            res[v] = sol[sv]
+        return res
+
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> Mapping[VarData, float]:
+        return NotImplemented
+
+    def get_duals(
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
+    ) -> Dict[ConstraintData, float]:
+        return NotImplemented
+
+    def load_import_suffixes(self, solution_id=None):
+        load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
 
 
-def _is_numeric(x):
-    try:
-        float(x)
-    except ValueError:
-        return False
-    return True
+class SCIPDirect(SolverBase):
 
+    _available = None
+    _tc_map = None
+    _minimum_version = (5, 5, 0)  # this is probably conservative
 
-@SolverFactory.register("scip_direct", doc="Direct python interface to SCIP")
-class SCIPDirect(DirectSolver):
+    CONFIG = ScipConfig()
 
     def __init__(self, **kwds):
-        kwds["type"] = "scipdirect"
-        DirectSolver.__init__(self, **kwds)
-        self._init()
+        super().__init__(**kwds)
         self._solver_model = None
+        self._vars = {}  # var id to var
+        self._params = {}  # param id to param
+        self._pyomo_var_to_solver_var_map = {}  # var id to scip var
+        self._pyomo_con_to_solver_con_map = {}
+        self._pyomo_param_to_solver_param_map = {}  # param id to scip var with equal bounds
+        self._pyomo_sos_to_solver_sos_map = {}
+        self._expr_visitor = _PyomoToScipVisitor(self)
+        self._objective = None  # pyomo objective
+        self._obj_var = None  # a scip variable because the objective cannot be nonlinear
+        self._obj_con = None  # a scip constraint (obj_var >= obj_expr)
 
-    def _init(self):
+    def _clear(self):
+        self._solver_model = None
+        self._vars = {}
+        self._params = {}
+        self._pyomo_var_to_solver_var_map = {}
+        self._pyomo_con_to_solver_con_map = {}
+        self._pyomo_param_to_solver_param_map = {}
+        self._pyomo_sos_to_solver_sos_map = {}
+        self._objective = None
+        self._obj_var = None
+        self._obj_con = None
+
+    def available(self) -> Availability:
+        if self._available is not None:
+            return self._available
+        
+        if not scip_available:
+            SCIPDirect._available = Availability.NotFound
+        elif self.version() < self._minimum_version:
+            SCIPDirect._available = Availability.BadVersion
+        else:
+            SCIPDirect._available = Availability.FullLicense
+
+        return self._available
+    
+    def version(self) -> Tuple:
+        return tuple(int(i) for i in scip.__version__)
+
+    def solve(self, model: BlockData, **kwargs) -> Results:
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        orig_config = self.config
+        if not self.available():
+            raise ApplicationError(
+                f'{self.name} is not available: {self.available()}'
+            )
         try:
-            import pyscipopt
+            config = self.config(value=kwds, preserve_implicit=True)
 
-            self._scip = pyscipopt
-            self._python_api_exists = True
-            self._version = tuple(
-                int(k) for k in str(self._scip.Model().version()).split(".")
-            )
-            self._version_major = self._version[0]
-        except ImportError:
-            self._python_api_exists = False
-        except Exception as e:
-            print(f"Import of pyscipopt failed - SCIP message={str(e)}\n")
-            self._python_api_exists = False
+            # hack to work around legacy solver wrapper __setattr__
+            # otherwise, this would just be self.config = config
+            object.__setattr__(self, 'config', config)
 
-        # Note: Undefined capabilities default to None
-        self._max_constraint_degree = None
-        self._max_obj_degree = 1
-        self._capabilities.linear = True
-        self._capabilities.quadratic_objective = False
-        self._capabilities.quadratic_constraint = True
-        self._capabilities.integer = True
-        self._capabilities.sos1 = True
-        self._capabilities.sos2 = True
-        self._skip_trivial_constraints = True
+            StaleFlagManager.mark_all_as_stale()
 
-        # Dictionary used exclusively for SCIP, as we want the constraint expressions
-        self._pyomo_var_to_solver_var_expr_map = ComponentMap()
-        self._pyomo_con_to_solver_con_expr_map = dict()
+            if config.timer is None:
+                config.timer = HierarchicalTimer()
+            timer = config.timer
 
-    def _apply_solver(self):
-        StaleFlagManager.mark_all_as_stale()
+            ostreams = [io.StringIO()] + config.tee
 
-        # Suppress solver output if requested
-        if self._tee:
-            self._solver_model.hideOutput(quiet=False)
-        else:
-            self._solver_model.hideOutput(quiet=True)
+            scip_model, solution_loader, has_obj = self._create_solver_model(model)
 
-        # Redirect solver output to a logfile if requested
-        if self._keepfiles:
-            # Only save log file when the user wants to keep it.
-            self._solver_model.setLogfile(self._log_file)
-            print(f"Solver log file: {self._log_file}")
+            scip_model.hideOutput(quiet=False)
+            if config.threads is not None:
+                scip_model.setParam('lp/threads', config.threads)
+            if config.time_limit is not None:
+                scip_model.setParam('limits/time', config.time_limit)
+            if config.rel_gap is not None:
+                scip_model.setParam('limits/gap', config.rel_gap)
+            if config.abs_gap is not None:
+                scip_model.setParam('limits/absgap', config.abs_gap)
 
-        # Set user specified parameters
-        for key, option in self.options.items():
-            try:
-                key_type = type(self._solver_model.getParam(key))
-            except KeyError:
-                raise ValueError(f"Key {key} is an invalid parameter for SCIP")
+            if config.use_mipstart:
+                self._mipstart()
 
-            if key_type == str:
-                self._solver_model.setParam(key, option)
-            else:
-                if not _is_numeric(option):
-                    raise ValueError(
-                        f"Value {option} for parameter {key} is not a string and can't be converted to float"
-                    )
-                self._solver_model.setParam(key, float(option))
+            for key, option in config.solver_options.items():
+                scip_model.setParam(key, option)
 
-        self._solver_model.optimize()
+            timer.start('optimize')
+            with capture_output(TeeStream(*ostreams), capture_fd=False):
+                scip_model.optimize()
+            timer.stop('optimize')
 
-        # TODO: Check if this is even needed, or if it is sufficient to close the open file
-        # if self._keepfiles:
-        #     self._solver_model.setLogfile(None)
+            results = self._postsolve(scip_model, solution_loader, has_obj)
+        except InfeasibleConstraintException:
+            results = self._get_infeasible_results()
+        finally:
+            # hack to work around legacy solver wrapper __setattr__
+            # otherwise, this would just be self.config = orig_config
+            object.__setattr__(self, 'config', orig_config)
 
-        # FIXME: can we get a return code indicating if SCIP had a significant failure?
-        return Bunch(rc=None, log=None)
+        results.solver_log = ostreams[0].getvalue()
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        results.timing_info.start_timestamp = start_timestamp
+        results.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        results.timing_info.timer = timer
+        return results
 
-    def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
-        referenced_vars = ComponentSet()
+    def _get_tc_map(self):
+        if SCIPDirect._tc_map is None:
+            tc = TerminationCondition
+            SCIPDirect._tc_map = {
+                "unknown": tc.unknown,
+                "userinterrupt": tc.interrupted,
+                "nodelimit": tc.iterationLimit,
+                "totalnodelimit": tc.iterationLimit,
+                "stallnodelimit": tc.iterationLimit,
+                "timelimit": tc.maxTimeLimit,
+                "memlimit": tc.unknown,
+                "gaplimit": tc.convergenceCriteriaSatisfied,  # TODO: check this
+                "primallimit": tc.objectiveLimit,
+                "duallimit": tc.objectiveLimit,
+                "sollimit": tc.unknown,
+                "bestsollimit": tc.unknown,
+                "restartlimit": tc.unknown,
+                "optimal": tc.convergenceCriteriaSatisfied,
+                "infeasible": tc.provenInfeasible,
+                "unbounded": tc.unbounded,
+                "inforunbd": tc.infeasibleOrUnbounded,
+                "terminate": tc.unknown,
+            }
+        return SCIPDirect._tc_map
 
-        degree = repn.polynomial_degree()
-        if (max_degree is not None) and (degree > max_degree):
-            raise DegreeError(
-                "While SCIP supports general non-linear constraints, the objective must be linear. "
-                "Please reformulate the objective by introducing a new variable. "
-                "For min problems: min z s.t z >= f(x). For max problems: max z s.t z <= f(x). "
-                "f(x) is the original non-linear objective."
-            )
-
-        new_expr = repn.constant
-
-        if len(repn.linear_vars) > 0:
-            referenced_vars.update(repn.linear_vars)
-            new_expr += sum(
-                repn.linear_coefs[i] * self._pyomo_var_to_solver_var_expr_map[var]
-                for i, var in enumerate(repn.linear_vars)
-            )
-
-        for i, v in enumerate(repn.quadratic_vars):
-            x, y = v
-            new_expr += (
-                repn.quadratic_coefs[i]
-                * self._pyomo_var_to_solver_var_expr_map[x]
-                * self._pyomo_var_to_solver_var_expr_map[y]
-            )
-            referenced_vars.add(x)
-            referenced_vars.add(y)
-
-        if repn.nonlinear_expr is not None:
-
-            def get_nl_expr_recursively(pyomo_expr):
-                if not hasattr(pyomo_expr, "args"):
-                    if not isinstance(pyomo_expr, Var):
-                        return float(pyomo_expr)
-                    else:
-                        referenced_vars.add(pyomo_expr)
-                        return self._pyomo_var_to_solver_var_expr_map[pyomo_expr]
-                scip_expr_list = [0 for i in range(pyomo_expr.nargs())]
-                for i in range(pyomo_expr.nargs()):
-                    scip_expr_list[i] = get_nl_expr_recursively(pyomo_expr.args[i])
-                if isinstance(pyomo_expr, PowExpression):
-                    if len(scip_expr_list) != 2:
-                        raise ValueError(
-                            f"PowExpression has {len(scip_expr_list)} many terms instead of two!"
-                        )
-                    return scip_expr_list[0] ** (scip_expr_list[1])
-                elif isinstance(pyomo_expr, ProductExpression):
-                    return self._scip.quickprod(scip_expr_list)
-                elif isinstance(pyomo_expr, SumExpression):
-                    return self._scip.quicksum(scip_expr_list)
-                elif isinstance(pyomo_expr, DivisionExpression):
-                    if len(scip_expr_list) != 2:
-                        raise ValueError(
-                            f"DivisionExpression has {len(scip_expr_list)} many terms instead of two!"
-                        )
-                    return scip_expr_list[0] / scip_expr_list[1]
-                elif isinstance(pyomo_expr, UnaryFunctionExpression):
-                    if len(scip_expr_list) != 1:
-                        raise ValueError(
-                            f"UnaryExpression has {len(scip_expr_list)} many terms instead of one!"
-                        )
-                    if pyomo_expr.name == "sin":
-                        return self._scip.sin(scip_expr_list[0])
-                    elif pyomo_expr.name == "cos":
-                        return self._scip.cos(scip_expr_list[0])
-                    elif pyomo_expr.name == "exp":
-                        return self._scip.exp(scip_expr_list[0])
-                    elif pyomo_expr.name == "log":
-                        return self._scip.log(scip_expr_list[0])
-                    else:
-                        raise NotImplementedError(
-                            f"PySCIPOpt through Pyomo does not support the unary function {pyomo_expr.name}"
-                        )
-                else:
-                    raise NotImplementedError(
-                        f"PySCIPOpt through Pyomo does not yet support expression type {type(pyomo_expr)}"
-                    )
-
-            new_expr += get_nl_expr_recursively(repn.nonlinear_expr)
-
-        return new_expr, referenced_vars
-
-    def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
-        if max_degree is None or max_degree >= 2:
-            repn = generate_standard_repn(expr, quadratic=True)
-        else:
-            repn = generate_standard_repn(expr, quadratic=False)
-
-        scip_expr, referenced_vars = self._get_expr_from_pyomo_repn(repn, max_degree)
-
-        return scip_expr, referenced_vars
+    def _get_infeasible_results(self):
+        res = Results()
+        res.solution_loader = NoSolutionSolutionLoader()
+        res.solution_status = SolutionStatus.noSolution
+        res.termination_condition = TerminationCondition.provenInfeasible
+        res.incumbent_objective = None
+        res.objective_bound = None
+        res.iteration_count = None
+        res.timing_info.scip_time = None
+        res.solver_config = self.config
+        res.solver_name = self.name
+        res.solver_version = self.version()
+        if self.config.raise_exception_on_nonoptimal_result:
+            raise NoOptimalSolutionError()
+        if self.config.load_solutions:
+            raise NoFeasibleSolutionError()
+        return res
 
     def _scip_lb_ub_from_var(self, var):
         if var.is_fixed():
             val = var.value
             return val, val
-        if var.has_lb():
-            lb = value(var.lb)
-        else:
+
+        lb, ub = var.bounds()
+
+        if lb is None:
             lb = -self._solver_model.infinity()
-        if var.has_ub():
-            ub = value(var.ub)
-        else:
+        if ub is None:
             ub = self._solver_model.infinity()
 
         return lb, ub
 
     def _add_var(self, var):
-        varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._scip_vtype_from_var(var)
         lb, ub = self._scip_lb_ub_from_var(var)
 
-        scip_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
+        scip_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype)
 
-        self._pyomo_var_to_solver_var_expr_map[var] = scip_var
-        self._pyomo_var_to_solver_var_map[var] = scip_var.name
-        self._solver_var_to_pyomo_var_map[varname] = var
-        self._referenced_variables[var] = 0
+        self._vars[id(var)] = var
+        self._pyomo_var_to_solver_var_map[id(var)] = scip_var
+        return scip_var
+    
+    def _add_param(self, p):
+        vtype = "C"
+        lb = ub = p.value
+        scip_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype)
+        self._params[id(p)] = p
+        self._pyomo_param_to_solver_param_map[id(p)] = scip_var
+        return scip_var
 
-    def close(self):
+    def __del__(self):
         """Frees SCIP resources used by this solver instance."""
-
         if self._solver_model is not None:
             self._solver_model.freeProb()
             self._solver_model = None
 
-    def __exit__(self, t, v, traceback):
-        super().__exit__(t, v, traceback)
-        self.close()
+    def _add_constraints(self, cons: List[ConstraintData]):
+        for con in cons:
+            self._add_constraint(con)
 
-    def _set_instance(self, model, kwds={}):
-        DirectOrPersistentSolver._set_instance(self, model, kwds)
-        self.available()
-        try:
-            self._solver_model = self._scip.Model()
-        except Exception:
-            e = sys.exc_info()[1]
-            msg = (
-                "Unable to create SCIP model. "
-                f"Have you installed PySCIPOpt correctly?\n\n\t Error message: {e}"
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
+        for on in cons:
+            self._add_sos_constraint(con)
+
+    def _create_solver_model(self, model):
+        timer = self.config.timer
+        timer.start('create scip model')
+        self._clear()
+        self._solver_model = scip.Model()
+        timer.start('collect constraints')
+        cons = list(
+            model.component_data_objects(
+                Constraint, descend_into=True, active=True
             )
-            raise Exception(msg)
-
-        self._add_block(model)
-
-        for var, n_ref in self._referenced_variables.items():
-            if n_ref != 0:
-                if var.fixed:
-                    if not self._output_fixed_variable_bounds:
-                        raise ValueError(
-                            f"Encountered a fixed variable {var.name} inside "
-                            "an active objective or constraint "
-                            f"expression on model {self._pyomo_model.name}, which is usually "
-                            "indicative of a preprocessing error. Use "
-                            "the IO-option 'output_fixed_variable_bounds=True' "
-                            "to suppress this error and fix the variable "
-                            "by overwriting its bounds in the SCIP instance."
-                        )
-
-    def _add_block(self, block):
-        DirectOrPersistentSolver._add_block(self, block)
+        )
+        timer.stop('collect constraints')
+        timer.start('translate constraints')
+        self._add_constraints(cons)
+        timer.stop('translate constraints')
+        timer.start('sos')
+        sos = list(
+            model.component_data_objects(
+                SOSConstraint, descend_into=True, active=True
+            )
+        )
+        self._add_sos_constraints(sos)
+        timer.stop('sos')
+        timer.start('get objective')
+        obj = get_objective(model)
+        timer.stop('get objective')
+        timer.start('translate objective')
+        self._set_objective(obj)
+        timer.stop('translate objective')
+        has_obj = obj is not None
+        solution_loader = ScipDirectSolutionLoader(
+            solver_model=self._solver_model,
+            var_id_map=self._vars,
+            var_map=self._pyomo_var_to_solver_var_map,
+            con_map=self._pyomo_con_to_solver_con_map,
+            pyomo_model=model,
+            opt=self,
+        )
+        timer.stop('create scip model')
+        return self._solver_model, solution_loader, has_obj
 
     def _add_constraint(self, con):
-        if not con.active:
-            return None
-
-        if is_fixed(con.body) and self._skip_trivial_constraints:
-            return None
-
-        conname = self._symbol_map.getSymbol(con, self._labeler)
-
-        if con._linear_canonical_form:
-            scip_expr, referenced_vars = self._get_expr_from_pyomo_repn(
-                con.canonical_form(), self._max_constraint_degree
-            )
-        else:
-            scip_expr, referenced_vars = self._get_expr_from_pyomo_expr(
-                con.body, self._max_constraint_degree
-            )
-
-        if con.has_lb():
-            if not is_fixed(con.lower):
-                raise ValueError(f"Lower bound of constraint {con} is not constant.")
-            con_lower = value(con.lower)
-            if type(con_lower) != float and type(con_lower) != int:
-                logger.warning(
-                    f"Constraint {conname} has LHS type {type(value(con.lower))}. "
-                    f"Converting to float as SCIP fails otherwise."
-                )
-                con_lower = float(con_lower)
-        if con.has_ub():
-            if not is_fixed(con.upper):
-                raise ValueError(f"Upper bound of constraint {con} is not constant.")
-            con_upper = value(con.upper)
-
-        if con.equality:
-            scip_cons = self._solver_model.addCons(scip_expr == con_lower, name=conname)
-        elif con.has_lb() and con.has_ub():
-            scip_cons = self._solver_model.addCons(con_lower <= scip_expr, name=conname)
-            rhs = con_upper
-            if hasattr(con.body, "constant"):
-                con_constant = value(con.body.constant)
-                if not isinstance(con_constant, (float, int)):
-                    con_constant = float(con_constant)
-                rhs -= con_constant
-            self._solver_model.chgRhs(scip_cons, rhs)
-        elif con.has_lb():
-            scip_cons = self._solver_model.addCons(con_lower <= scip_expr, name=conname)
-        elif con.has_ub():
-            scip_cons = self._solver_model.addCons(scip_expr <= con_upper, name=conname)
-        else:
-            raise ValueError(
-                f"Constraint does not have a lower or an upper bound: {con} \n"
-            )
-
-        for var in referenced_vars:
-            self._referenced_variables[var] += 1
-        self._vars_referenced_by_con[con] = referenced_vars
-        self._pyomo_con_to_solver_con_expr_map[con] = scip_cons
-        self._pyomo_con_to_solver_con_map[con] = scip_cons.name
-        self._solver_con_to_pyomo_con_map[conname] = con
+        scip_expr = self._expr_visitor.walk_expression(con.expr)
+        scip_con = self._solver_model.addCons(scip_expr)
+        self._pyomo_con_to_solver_con_map[con] = scip_con
 
     def _add_sos_constraint(self, con):
-        if not con.active:
-            return None
-
-        conname = self._symbol_map.getSymbol(con, self._labeler)
         level = con.level
         if level not in [1, 2]:
-            raise ValueError(f"Solver does not support SOS level {level} constraints")
+            raise ValueError(f"{self.name} does not support SOS level {level} constraints")
 
         scip_vars = []
         weights = []
 
-        self._vars_referenced_by_con[con] = ComponentSet()
-
-        if hasattr(con, "get_items"):
-            # aml sos constraint
-            sos_items = list(con.get_items())
-        else:
-            # kernel sos constraint
-            sos_items = list(con.items())
-
-        for v, w in sos_items:
-            self._vars_referenced_by_con[con].add(v)
-            scip_vars.append(self._pyomo_var_to_solver_var_expr_map[v])
-            self._referenced_variables[v] += 1
+        for v, w in con.get_items():
+            vid = id(v)
+            if vid not in self._pyomo_var_to_solver_var_map:
+                self._add_var(v)
+            scip_vars.append(self._pyomo_var_to_solver_var_map[vid])
             weights.append(w)
 
         if level == 1:
             scip_cons = self._solver_model.addConsSOS1(
-                scip_vars, weights=weights, name=conname
+                scip_vars, weights=weights
             )
         else:
             scip_cons = self._solver_model.addConsSOS2(
-                scip_vars, weights=weights, name=conname
+                scip_vars, weights=weights
             )
-        self._pyomo_con_to_solver_con_expr_map[con] = scip_cons
-        self._pyomo_con_to_solver_con_map[con] = scip_cons.name
-        self._solver_con_to_pyomo_con_map[conname] = con
+        self._pyomo_con_to_solver_con_map[con] = scip_cons
 
     def _scip_vtype_from_var(self, var):
         """
@@ -421,342 +607,104 @@ class SCIPDirect(DirectSolver):
         return vtype
 
     def _set_objective(self, obj):
-        if self._objective is not None:
-            for var in self._vars_referenced_by_obj:
-                self._referenced_variables[var] -= 1
-            self._vars_referenced_by_obj = ComponentSet()
-            self._objective = None
+        if self._obj_var is None:
+            self._obj_var = self._solver_model.addVar(
+                lb=-self._solver_model.infinity(), 
+                ub=self._solver_model.infinity(), 
+                vtype="C"
+            )
 
-        if obj.active is False:
-            raise ValueError("Cannot add inactive objective to solver.")
+        if self._objective is not None:
+            self._solver_model.delCons(self._obj_con)
+
+        if obj is None:
+            scip_expr = 0
+        else:
+            scip_expr = self._expr_visitor.walk_expression(obj.expr)
 
         if obj.sense == minimize:
             sense = "minimize"
+            self._obj_con = self._solver_model.addCons(self._obj_var >= scip_expr)
         elif obj.sense == maximize:
             sense = "maximize"
+            self._obj_con = self._solver_model.addCons(self._obj_var <= scip_expr)
         else:
             raise ValueError(f"Objective sense is not recognized: {obj.sense}")
 
-        scip_expr, referenced_vars = self._get_expr_from_pyomo_expr(
-            obj.expr, self._max_obj_degree
-        )
-
-        for var in referenced_vars:
-            self._referenced_variables[var] += 1
-
-        self._solver_model.setObjective(scip_expr, sense=sense)
+        self._solver_model.setObjective(self._obj_var, sense=sense)
         self._objective = obj
-        self._vars_referenced_by_obj = referenced_vars
 
-    def _get_solver_solution_status(self, scip, soln):
-        """ """
-        # Get the status of the SCIP Model currently
-        status = scip.getStatus()
+    def _postsolve(
+        self, 
+        scip_model, 
+        solution_loader: ScipDirectSolutionLoader, 
+        has_obj
+    ):
 
-        # Go through each potential case and update appropriately
-        if scip.getStage() == 1:  # SCIP Model is created but not yet optimized
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Model is loaded, but no solution information is available."
-            )
-            self.results.solver.termination_condition = TerminationCondition.error
-            soln.status = SolutionStatus.unknown
-        elif status == "optimal":  # optimal
-            self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message = (
-                "Model was solved to optimality (subject to tolerances), "
-                "and an optimal solution is available."
-            )
-            self.results.solver.termination_condition = TerminationCondition.optimal
-            soln.status = SolutionStatus.optimal
-        elif status == "infeasible":
-            self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message = (
-                "Model was proven to be infeasible"
-            )
-            self.results.solver.termination_condition = TerminationCondition.infeasible
-            soln.status = SolutionStatus.infeasible
-        elif status == "inforunbd":
-            self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message = (
-                "Problem proven to be infeasible or unbounded."
-            )
-            self.results.solver.termination_condition = (
-                TerminationCondition.infeasibleOrUnbounded
-            )
-            soln.status = SolutionStatus.unsure
-        elif status == "unbounded":
-            self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message = (
-                "Model was proven to be unbounded."
-            )
-            self.results.solver.termination_condition = TerminationCondition.unbounded
-            soln.status = SolutionStatus.unbounded
-        elif status == "gaplimit":
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Optimization terminated because the gap dropped below "
-                "the value specified in the "
-                "limits/gap parameter."
-            )
-            self.results.solver.termination_condition = TerminationCondition.unknown
-            soln.status = SolutionStatus.stoppedByLimit
-        elif status == "stallnodelimit":
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Optimization terminated because the stalling node limit "
-                "exceeded the value specified in the "
-                "limits/stallnodes parameter."
-            )
-            self.results.solver.termination_condition = TerminationCondition.unknown
-            soln.status = SolutionStatus.stoppedByLimit
-        elif status == "restartlimit":
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Optimization terminated because the total number of restarts "
-                "exceeded the value specified in the "
-                "limits/restarts parameter."
-            )
-            self.results.solver.termination_condition = TerminationCondition.unknown
-            soln.status = SolutionStatus.stoppedByLimit
-        elif status == "nodelimit" or status == "totalnodelimit":
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Optimization terminated because the number of "
-                "branch-and-cut nodes explored exceeded the limits specified "
-                "in the limits/nodes or limits/totalnodes parameter"
-            )
-            self.results.solver.termination_condition = (
-                TerminationCondition.maxEvaluations
-            )
-            soln.status = SolutionStatus.stoppedByLimit
-        elif status == "timelimit":
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Optimization terminated because the time expended exceeded "
-                "the value specified in the limits/time parameter."
-            )
-            self.results.solver.termination_condition = (
-                TerminationCondition.maxTimeLimit
-            )
-            soln.status = SolutionStatus.stoppedByLimit
-        elif status == "sollimit" or status == "bestsollimit":
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Optimization terminated because the number of solutions found "
-                "reached the value specified in the limits/solutions or"
-                "limits/bestsol parameter."
-            )
-            self.results.solver.termination_condition = TerminationCondition.unknown
-            soln.status = SolutionStatus.stoppedByLimit
-        elif status == "memlimit":
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Optimization terminated because the memory used exceeded "
-                "the value specified in the limits/memory parameter."
-            )
-            self.results.solver.termination_condition = TerminationCondition.unknown
-            soln.status = SolutionStatus.stoppedByLimit
-        elif status == "userinterrupt":
-            self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = (
-                "Optimization was terminated by the user."
-            )
-            self.results.solver.termination_condition = TerminationCondition.error
-            soln.status = SolutionStatus.error
-        else:
-            self.results.solver.status = SolverStatus.error
-            self.results.solver.termination_message = (
-                f"Unhandled SCIP status ({str(status)})"
-            )
-            self.results.solver.termination_condition = TerminationCondition.error
-            soln.status = SolutionStatus.error
-        return soln
-
-    def _postsolve(self):
-        # Constraint duals and variable
-        # reduced-costs were removed as in SCIP they contain
-        # too many caveats. Slacks were removed as later
-        # planned interfaces do not intend to support.
-        # Scan through the solver suffix list
-        # and throw an exception if the user has specified
-        # any others.
-        for suffix in self._suffixes:
-            raise RuntimeError(
-                f"***The scip_direct solver plugin cannot extract solution suffix={suffix}"
-            )
-
-        scip = self._solver_model
-        status = scip.getStatus()
-        scip_vars = scip.getVars()
-        n_bin_vars = sum([scip_var.vtype() == "BINARY" for scip_var in scip_vars])
-        n_int_vars = sum([scip_var.vtype() == "INTEGER" for scip_var in scip_vars])
-        n_con_vars = sum([scip_var.vtype() == "CONTINUOUS" for scip_var in scip_vars])
-
-        self.results = SolverResults()
-        soln = Solution()
-
-        self.results.solver.name = f"SCIP{self._version}"
-        self.results.solver.wallclock_time = scip.getSolvingTime()
-
-        soln = self._get_solver_solution_status(scip, soln)
-
-        self.results.problem.name = scip.getProbName()
-
-        self.results.problem.upper_bound = None
-        self.results.problem.lower_bound = None
-        if scip.getNSols() > 0:
-            scip_has_sol = True
-        else:
-            scip_has_sol = False
-        if not scip_has_sol and (status == "inforunbd" or status == "infeasible"):
-            pass
-        else:
-            if n_bin_vars + n_int_vars == 0:
-                self.results.problem.upper_bound = scip.getObjVal()
-                self.results.problem.lower_bound = scip.getObjVal()
-            elif scip.getObjectiveSense() == "minimize":  # minimizing
-                if scip_has_sol:
-                    self.results.problem.upper_bound = scip.getObjVal()
-                else:
-                    self.results.problem.upper_bound = scip.infinity()
-                self.results.problem.lower_bound = scip.getDualbound()
-            else:  # maximizing
-                self.results.problem.upper_bound = scip.getDualbound()
-                if scip_has_sol:
-                    self.results.problem.lower_bound = scip.getObjVal()
-                else:
-                    self.results.problem.lower_bound = -scip.infinity()
-
-            try:
-                soln.gap = (
-                    self.results.problem.upper_bound - self.results.problem.lower_bound
-                )
-            except TypeError:
-                soln.gap = None
-
-        self.results.problem.number_of_constraints = scip.getNConss(transformed=False)
-        self.results.problem.number_of_variables = scip.getNVars(transformed=False)
-        self.results.problem.number_of_binary_variables = n_bin_vars
-        self.results.problem.number_of_integer_variables = n_int_vars
-        self.results.problem.number_of_continuous_variables = n_con_vars
-        self.results.problem.number_of_objectives = 1
-        self.results.problem.number_of_solutions = scip.getNSols()
-
-        # if a solve was stopped by a limit, we still need to check to
-        # see if there is a solution available - this may not always
-        # be the case, both in LP and MIP contexts.
-        if self._save_results:
-            """
-            This code in this if statement is only needed for backwards compatibility. It is more efficient to set
-            _save_results to False and use load_vars, load_duals, etc.
-            """
-
-            if scip.getNSols() > 0:
-                soln_variables = soln.variable
-
-                scip_vars = scip.getVars()
-                scip_var_names = [scip_var.name for scip_var in scip_vars]
-                var_names = set(self._solver_var_to_pyomo_var_map.keys())
-                assert set(scip_var_names) == var_names
-                var_vals = [scip.getVal(scip_var) for scip_var in scip_vars]
-
-                for scip_var, val, name in zip(scip_vars, var_vals, scip_var_names):
-                    pyomo_var = self._solver_var_to_pyomo_var_map[name]
-                    if self._referenced_variables[pyomo_var] > 0:
-                        soln_variables[name] = {"Value": val}
-
-        elif self._load_solutions:
-            if scip.getNSols() > 0:
-                self.load_vars()
-
-        self.results.solution.insert(soln)
-
-        # finally, clean any temporary files registered with the temp file
-        # manager, created populated *directly* by this plugin.
-        TempfileManager.pop(remove=not self._keepfiles)
-
-        return DirectOrPersistentSolver._postsolve(self)
-
-    def warm_start_capable(self):
-        return True
-
-    def _warm_start(self):
-        partial_sol = False
-        for pyomo_var in self._pyomo_var_to_solver_var_expr_map:
-            if pyomo_var.value is None:
-                partial_sol = True
-                break
-        if partial_sol:
-            scip_sol = self._solver_model.createPartialSol()
-        else:
-            scip_sol = self._solver_model.createSol()
-        for pyomo_var, scip_var in self._pyomo_var_to_solver_var_expr_map.items():
-            if pyomo_var.value is not None:
-                scip_sol[scip_var] = value(pyomo_var)
-        if partial_sol:
-            self._solver_model.addSol(scip_sol)
-        else:
-            feasible = self._solver_model.checkSol(scip_sol, printreason=not self._tee)
-            if feasible:
-                self._solver_model.addSol(scip_sol)
+        results = Results()
+        results.solution_loader = solution_loader
+        results.timing_info.scip_time = scip_model.getSolvingTime()        
+        results.termination_condition = self._get_tc_map().get(scip_model.getStatus(), TerminationCondition.unknown)
+        
+        if solution_loader.get_number_of_solutions() > 0:
+            if results.termination_condition == TerminationCondition.convergenceCriteriaSatisfied:
+                results.solution_status = SolutionStatus.optimal
             else:
-                logger.warning("Warm start solution was not accepted by SCIP")
-                self._solver_model.freeSol(scip_sol)
+                results.solution_status = SolutionStatus.feasible
+        else:
+            results.solution_status = SolutionStatus.noSolution
 
-    def _load_vars(self, vars_to_load=None):
-        var_map = self._pyomo_var_to_solver_var_expr_map
-        ref_vars = self._referenced_variables
-        if vars_to_load is None:
-            vars_to_load = var_map.keys()
+        if (
+            results.termination_condition 
+            != TerminationCondition.convergenceCriteriaSatisfied
+            and self.config.raise_exception_on_nonoptimal_result
+        ):
+            raise NoOptimalSolutionError()
+        
+        if has_obj:
+            try:
+                if scip_model.getObjVal() < scip_model.infinity():
+                    results.incumbent_objective = scip_model.getObjVal()
+                else:
+                    results.incumbent_objective = None
+            except:
+                results.incumbent_objective = None
+            try:
+                results.objective_bound = scip_model.getDualbound()
+                if results.objective_bound <= -scip_model.infinity():
+                    results.objective_bound = -math.inf
+                if results.objective_bound >= scip_model.infinity():
+                    results.objective_bound = math.inf
+            except:
+                if self._objective.sense == minimize:
+                    results.objective_bound = -math.inf
+                else:
+                    results.objective_bound = math.inf
+        else:
+            results.incumbent_objective = None
+            results.objective_bound = None
 
-        scip_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
-        vals = [self._solver_model.getVal(scip_var) for scip_var in scip_vars_to_load]
+        self.config.timer.start('load solution')
+        if self.config.load_solutions:
+            if solution_loader.get_number_of_solutions() > 0:
+                solution_loader.load_solution()
+            else:
+                raise NoFeasibleSolutionError()
+        self.config.timer.stop('load solution')
 
-        for var, val in zip(vars_to_load, vals):
-            if ref_vars[var] > 0:
-                var.set_value(val, skip_validation=True)
+        results.iteration_count = scip_model.getNNodes()
+        results.solver_config = self.config
+        results.solver_name = self.name
+        results.solver_version = self.version()
 
-    def _load_rc(self, vars_to_load=None):
-        raise NotImplementedError(
-            "SCIP via Pyomo does not support reduced cost loading."
-        )
+        return results
 
-    def _load_duals(self, cons_to_load=None):
-        raise NotImplementedError(
-            "SCIP via Pyomo does not support dual solution loading"
-        )
-
-    def _load_slacks(self, cons_to_load=None):
-        raise NotImplementedError("SCIP via Pyomo does not support slack loading")
-
-    def load_duals(self, cons_to_load=None):
-        """
-        Load the duals into the 'dual' suffix. The 'dual' suffix must live on the parent model.
-
-        Parameters
-        ----------
-        cons_to_load: list of Constraint
-        """
-        self._load_duals(cons_to_load)
-
-    def load_rc(self, vars_to_load):
-        """
-        Load the reduced costs into the 'rc' suffix. The 'rc' suffix must live on the parent model.
-
-        Parameters
-        ----------
-        vars_to_load: list of Var
-        """
-        self._load_rc(vars_to_load)
-
-    def load_slacks(self, cons_to_load=None):
-        """
-        Load the values of the slack variables into the 'slack' suffix. The 'slack' suffix must live on the parent
-        model.
-
-        Parameters
-        ----------
-        cons_to_load: list of Constraint
-        """
-        self._load_slacks(cons_to_load)
+    def _mipstart(self):
+        # TODO: it is also possible to specify continuous variables, but 
+        #       I think we should have a differnt option for that
+        sol = self._solver_model.createPartialSol()
+        for vid, scip_var in self._pyomo_var_to_solver_var_map.items():
+            pyomo_var = self._vars[vid]
+            if pyomo_var.is_integer():
+                sol[scip_var] = pyomo_var.value
+        self._solver_model.addSol(sol)

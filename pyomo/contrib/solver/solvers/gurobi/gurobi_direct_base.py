@@ -362,7 +362,6 @@ class GurobiDirectBase(SolverBase):
             # hack to work around legacy solver wrapper __setattr__
             # otherwise, this would just be self.config = orig_config
             object.__setattr__(self, 'config', orig_config)
-            self.config = orig_config
 
         res.solver_log = ostreams[0].getvalue()
         end_timestamp = datetime.datetime.now(datetime.timezone.utc)
