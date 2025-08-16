@@ -644,6 +644,7 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         self._observer = _GurobiObserver(self)
         self._change_detector = ModelChangeDetector(observers=[self._observer])
         self._constraint_ndx = 0
+        self._should_update_parameters = False
 
     @property
     def auto_updates(self):
@@ -733,6 +734,8 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         if self._needs_updated:
             self._update_gurobi_model()
         self._change_detector.update(timer=timer)
+        if self._should_update_parameters:
+            self._update_parameters([])
         timer.stop('update')
 
     def _add_constraints(self, cons: List[ConstraintData]):
@@ -966,6 +969,8 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
             gurobipy_var.setAttr('lb', lb)
             gurobipy_var.setAttr('ub', ub)
             gurobipy_var.setAttr('vtype', vtype)
+            if var.fixed:
+                self._should_update_parameters = True
         self._needs_updated = True
 
     def _update_parameters(self, params: List[ParamData]):
@@ -1000,6 +1005,8 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
                 #       and part of the objective is quadratic, but both
                 #       parts have mutable coefficients
                 self._solver_model.setObjective(new_gurobi_expr, sense=sense)
+
+        self._should_update_parameters = False
 
     def _invalidate_last_results(self):
         if self._last_results_object is not None:
