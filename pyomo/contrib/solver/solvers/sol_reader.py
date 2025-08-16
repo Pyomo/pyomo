@@ -26,7 +26,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 
 
 class SolFileData:
@@ -49,11 +52,29 @@ class SolSolutionLoader(SolutionLoaderBase):
     Loader for solvers that create .sol files (e.g., ipopt)
     """
 
-    def __init__(self, sol_data: SolFileData, nl_info: NLWriterInfo) -> None:
+    def __init__(
+        self, sol_data: SolFileData, nl_info: NLWriterInfo, pyomo_model
+    ) -> None:
         self._sol_data = sol_data
         self._nl_info = nl_info
+        self._pyomo_model = pyomo_model
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
+    def get_number_of_solutions(self) -> int:
+        if self._nl_info is None:
+            return 0
+        return 1
+
+    def get_solution_ids(self) -> List[Any]:
+        return [None]
+
+    def load_import_suffixes(self, solution_id=None):
+        load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
+
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> NoReturn:
+        if solution_id is not None:
+            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -78,9 +99,11 @@ class SolSolutionLoader(SolutionLoaderBase):
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+    def get_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
+        if solution_id is not None:
+            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -115,8 +138,10 @@ class SolSolutionLoader(SolutionLoaderBase):
         return res
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> Dict[ConstraintData, float]:
+        if solution_id is not None:
+            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
