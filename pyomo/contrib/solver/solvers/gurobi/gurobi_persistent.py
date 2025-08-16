@@ -32,6 +32,7 @@ from pyomo.contrib.solver.common.solution_loader import (
     SolutionLoaderBase,
     load_import_suffixes,
 )
+from pyomo.contrib.solver.common.base import PersistentSolverBase
 from pyomo.core.staleflag import StaleFlagManager
 from .gurobi_direct_base import (
     GurobiDirectBase,
@@ -624,7 +625,7 @@ class _GurobiObserver(Observer):
         self.opt._update_parameters(params)
 
 
-class GurobiPersistent(GurobiDirectQuadratic):
+class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
     _minimum_version = (7, 0, 0)
 
     def __init__(self, **kwds):
