@@ -28,6 +28,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.contrib.solver.common.results import Results
 from pyomo.contrib.solver.common.util import IncompatibleModelError
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.base import PersistentSolverBase
 from pyomo.core.staleflag import StaleFlagManager
 from .gurobi_direct_base import (
     GurobiDirectBase,
@@ -575,7 +576,7 @@ class _GurobiObserver(Observer):
         self.opt._update_parameters(params)
 
 
-class GurobiPersistent(GurobiDirectQuadratic):
+class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
     _minimum_version = (7, 0, 0)
 
     def __init__(self, **kwds):
