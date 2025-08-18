@@ -47,7 +47,7 @@ def enumerate_linear_solutions(
     model : ConcreteModel
         A concrete Pyomo model
     num_solutions : int
-        The maximum number of solutions to generate.
+        The maximum number of solutions to generate. Must be positive
     rel_opt_gap : float or None
         The relative optimality gap for the original objective for which
         variable bounds will be found. None indicates that a relative gap
@@ -82,6 +82,10 @@ def enumerate_linear_solutions(
         A PyomoPoolManager object
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS")
+
+    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if num_solutions == 1:
+        logger.warning("Running alternative_solutions method to find only 1 solution!")
 
     assert search_mode in [
         "optimal",

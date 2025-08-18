@@ -42,6 +42,16 @@ class TestLPEnum:
         except pyomo.common.errors.ApplicationError as e:
             pass
 
+    def test_non_positive_num_solutions(self, mip_solver):
+        """
+        Confirm that an exception is thrown with a non-positive num solutions
+        """
+        m = tc.get_3d_polyhedron_problem()
+        try:
+            lp_enum.enumerate_linear_solutions(m, num_solutions=-1, solver=mip_solver)
+        except AssertionError as e:
+            pass
+
     @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
     def test_no_time(self, mip_solver):
         """
