@@ -79,6 +79,33 @@ def test_get_max_pool_sizes():
     }, "Should only be {'pool_1': None, 'pool_2': 1}"
 
 
+def test_get_pool_sizes():
+    pm = PoolManager()
+    pm.add_pool("pool_1", policy="keep_all")
+
+    retval = pm.add(soln(0, 0))
+    assert retval is not None
+    assert len(pm) == 1
+
+    retval = pm.add(soln(0, 1))
+    assert retval is not None
+    assert len(pm) == 2
+
+    retval = pm.add(soln(1, 1))
+    assert retval is not None
+    assert len(pm) == 3
+
+    pm.add_pool("pool_2", policy="keep_latest", max_pool_size=1)
+    retval = pm.add(soln(0, 0))
+    assert len(pm) == 1
+    retval = pm.add(soln(0, 1))
+
+    assert pm.get_pool_sizes() == {
+        "pool_1": 3,
+        "pool_2": 1,
+    }, "Should be {'pool_1' :3, 'pool_2' : 1}"
+
+
 def test_multiple_pools():
     pm = PoolManager()
     pm.add_pool("pool_1", policy="keep_all")

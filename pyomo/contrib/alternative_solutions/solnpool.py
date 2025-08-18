@@ -414,6 +414,8 @@ class PoolManager:
         }
 
     # method for len of all pools
+    def get_pool_sizes(self):
+        return {k: len(self._pool[k]) for k in self._pool.keys()}
 
     def write(self, json_filename, indent=None, sort_keys=True):
         with open(json_filename, "w") as OUTPUT:
