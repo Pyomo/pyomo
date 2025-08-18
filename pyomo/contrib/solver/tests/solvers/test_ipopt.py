@@ -62,7 +62,7 @@ class TestIpoptSolverConfig(unittest.TestCase):
 
 class TestIpoptSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
-        loader = ipopt.IpoptSolutionLoader(None, None)
+        loader = ipopt.IpoptSolutionLoader(None, None, None)
         with self.assertRaises(NoSolutionError):
             loader.get_reduced_costs()
 
