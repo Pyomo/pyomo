@@ -95,6 +95,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 class SolutionPool_KeepLatest(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
+        assert max_pool_size >= 1, "max_pool_size must be positive integer"
         super().__init__(name, as_solution, counter)
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
@@ -126,6 +127,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
+        assert max_pool_size >= 1, "max_pool_size must be positive integer"
         super().__init__(name, as_solution, counter)
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
@@ -186,6 +188,9 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         best_value=nan,
     ):
         super().__init__(name, as_solution, counter)
+        assert (max_pool_size is None) or (
+            max_pool_size >= 1
+        ), "max_pool_size must be None or positive integer"
         self.max_pool_size = max_pool_size
         self.objective = 0 if objective is None else objective
         self.abs_tolerance = abs_tolerance

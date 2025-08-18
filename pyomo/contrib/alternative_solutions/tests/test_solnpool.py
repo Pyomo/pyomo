@@ -92,6 +92,14 @@ def test_keepall_add():
     }
 
 
+def test_keeplatest_bad_max_pool_size():
+    pm = PoolManager()
+    try:
+        pm.add_pool("pool", policy="keep_latest", max_pool_size=-2)
+    except AssertionError as e:
+        pass
+
+
 def test_keeplatest_add():
     pm = PoolManager()
     pm.add_pool("pool", policy="keep_latest", max_pool_size=2)
@@ -152,6 +160,14 @@ def test_keeplatest_add():
     }
 
 
+def test_keeplatestunique_bad_max_pool_size():
+    pm = PoolManager()
+    try:
+        pm.add_pool("pool", policy="keep_latest_unique", max_pool_size=-2)
+    except AssertionError as e:
+        pass
+
+
 def test_keeplatestunique_add():
     pm = PoolManager()
     pm.add_pool("pool", policy="keep_latest_unique", max_pool_size=2)
@@ -210,6 +226,14 @@ def test_keeplatestunique_add():
             },
         }
     }
+
+
+def test_keepbest_bad_max_pool_size():
+    pm = PoolManager()
+    try:
+        pm.add_pool("pool", policy="keep_best", max_pool_size=-2)
+    except AssertionError as e:
+        pass
 
 
 def test_keepbest_add1():
