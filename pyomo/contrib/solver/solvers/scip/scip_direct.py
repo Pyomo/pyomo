@@ -42,6 +42,7 @@ from pyomo.core.expr.numeric_expr import (
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,
 )
+from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.gdp.disjunct import AutoLinkedBinaryVar
 from pyomo.core.base.expression import ExpressionData, ScalarExpression
 from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression, RangedExpression
@@ -126,6 +127,10 @@ def _handle_param(node, data, opt):
     return scip_param
 
 
+def _handle_constant(node, data, opt):
+    return node.value
+
+
 def _handle_float(node, data, opt):
     return float(node)
 
@@ -167,6 +172,10 @@ def _handle_log(node, data, opt):
     return scip.log(data[0])
 
 
+def _handle_log10(node, data, opt):
+    return scip.log(data[0]) / math.log(10)
+
+
 def _handle_sin(node, data, opt):
     return scip.sin(data[0])
 
@@ -187,6 +196,12 @@ def _handle_tan(node, data, opt):
     return scip.sin(data[0]) / scip.cos(data[0])
 
 
+def _handle_tanh(node, data, opt):
+    x = data[0]
+    _exp = scip.exp
+    return (_exp(x) - _exp(-x)) / (_exp(x) + _exp(-x))
+
+
 _unary_map = {
     'exp': _handle_exp,
     'log': _handle_log,
@@ -195,6 +210,8 @@ _unary_map = {
     'sqrt': _handle_sqrt,
     'abs': _handle_abs,
     'tan': _handle_tan,
+    'log10': _handle_log10,
+    'tanh': _handle_tanh,
 }
 
 
@@ -253,6 +270,7 @@ _operator_map = {
     int: _handle_float,
     AutoLinkedBinaryVar: _handle_var,
     _PyomoUnit: _handle_unit,
+    NumericConstant: _handle_constant,
 }
 
 
@@ -427,7 +445,7 @@ class SCIPDirect(SolverBase):
                 scip_model.setParam(key, option)
 
             timer.start('optimize')
-            with capture_output(TeeStream(*ostreams), capture_fd=True):
+            with capture_output(TeeStream(*ostreams), capture_fd=False):
                 scip_model.optimize()
             timer.stop('optimize')
 
@@ -690,7 +708,7 @@ class SCIPDirect(SolverBase):
         
         if has_obj:
             try:
-                if scip_model.getObjVal() < scip_model.infinity():
+                if scip_model.getNSols() > 0 and scip_model.getObjVal() < scip_model.infinity():
                     results.incumbent_objective = scip_model.getObjVal()
                 else:
                     results.incumbent_objective = None
