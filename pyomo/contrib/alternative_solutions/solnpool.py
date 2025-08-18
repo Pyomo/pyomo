@@ -303,7 +303,7 @@ class PoolManager:
 
     def __init__(self):
         self._name = None
-        self._pool = {}
+        self._pools = {}
         self.add_pool(self._name)
         self._solution_counter = 0
 
@@ -314,31 +314,31 @@ class PoolManager:
 
     @property
     def metadata(self):
-        return self.pool.metadata
+        return self.active_pool.metadata
 
     @property
     def solutions(self):
-        return self.pool.solutions.values()
+        return self.active_pool.solutions.values()
 
     @property
     def last_solution(self):
-        return self.pool.last_solution
+        return self.active_pool.last_solution
 
     def __iter__(self):
-        for soln in self.pool.solutions:
+        for soln in self.active_pool.solutions:
             yield soln
 
     def __len__(self):
-        return len(self.pool)
+        return len(self.active_pool)
 
     def __getitem__(self, soln_id):
-        return self._pool[self._name][soln_id]
+        return self._pools[self._name][soln_id]
 
     def add(self, *args, **kwargs):
-        return self.pool.add(*args, **kwargs)
+        return self.active_pool.add(*args, **kwargs)
 
     def to_dict(self):
-        return {k: v.to_dict() for k, v in self._pool.items()}
+        return {k: v.to_dict() for k, v in self._pools.items()}
 
     #
     # The following methods support the management of multiple
@@ -346,36 +346,36 @@ class PoolManager:
     #
 
     @property
-    def pool(self):
-        assert self._name in self._pool, f"Unknown pool '{self._name}'"
-        return self._pool[self._name]
+    def active_pool(self):
+        assert self._name in self._pools, f"Unknown pool '{self._name}'"
+        return self._pools[self._name]
 
     def add_pool(self, name, *, policy="keep_best", as_solution=None, **kwds):
-        if name not in self._pool:
+        if name not in self._pools:
             # Delete the 'None' pool if it isn't being used
-            if name is not None and None in self._pool and len(self._pool[None]) == 0:
-                del self._pool[None]
+            if name is not None and None in self._pools and len(self._pools[None]) == 0:
+                del self._pools[None]
 
             if policy == "keep_all":
-                self._pool[name] = SolutionPool_KeepAll(
+                self._pools[name] = SolutionPool_KeepAll(
                     name=name, as_solution=as_solution, counter=weakref.proxy(self)
                 )
             elif policy == "keep_best":
-                self._pool[name] = SolutionPool_KeepBest(
+                self._pools[name] = SolutionPool_KeepBest(
                     name=name,
                     as_solution=as_solution,
                     counter=weakref.proxy(self),
                     **kwds,
                 )
             elif policy == "keep_latest":
-                self._pool[name] = SolutionPool_KeepLatest(
+                self._pools[name] = SolutionPool_KeepLatest(
                     name=name,
                     as_solution=as_solution,
                     counter=weakref.proxy(self),
                     **kwds,
                 )
             elif policy == "keep_latest_unique":
-                self._pool[name] = SolutionPool_KeepLatestUnique(
+                self._pools[name] = SolutionPool_KeepLatestUnique(
                     name=name,
                     as_solution=as_solution,
                     counter=weakref.proxy(self),
@@ -387,7 +387,7 @@ class PoolManager:
         return self.metadata
 
     def activate(self, name):
-        assert name in self._pool, f"Unknown pool '{name}'"
+        assert name in self._pools, f"Unknown pool '{name}'"
         self._name = name
         return self.metadata
 
@@ -395,25 +395,25 @@ class PoolManager:
         return self._name
 
     def get_active_pool_policy(self):
-        return self.pool.policy
+        return self.active_pool.policy
 
     def get_pool_names(self):
-        return list(self._pool.keys())
+        return list(self._pools.keys())
 
     def get_pool_policies(self):
-        return {k: v.policy for k, v in self._pool.items()}
+        return {k: v.policy for k, v in self._pools.items()}
 
     # method for max_pool_size for current pool
     def get_max_pool_size(self):
-        return getattr(self.pool, "max_pool_size", None)
+        return getattr(self.active_pool, "max_pool_size", None)
 
     # method for max_pool_size for all pools
     def get_max_pool_sizes(self):
-        return {k: getattr(v, "max_pool_size", None) for k, v in self._pool.items()}
+        return {k: getattr(v, "max_pool_size", None) for k, v in self._pools.items()}
 
     # method for len of all pools
     def get_pool_sizes(self):
-        return {k: len(v) for k, v in self._pool.items()}
+        return {k: len(v) for k, v in self._pools.items()}
 
     def write(self, json_filename, indent=None, sort_keys=True):
         with open(json_filename, "w") as OUTPUT:
@@ -428,7 +428,7 @@ class PoolManager:
                 data = json.load(INPUT)
             except ValueError as e:
                 raise ValueError(f"Invalid JSON in file '{json_filename}': {e}")
-            self._pool = data.solutions
+            self._pools = data.solutions
 
     #
     # The following methods treat the PoolManager as a PoolCounter.
