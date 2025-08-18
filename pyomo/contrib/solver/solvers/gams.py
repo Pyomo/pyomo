@@ -103,87 +103,7 @@ class GAMSConfig(SolverConfig):
         self.writer_config: ConfigDict = self.declare(
             'writer_config', GAMSWriter.CONFIG()
         )
-        # Share the same config as the writer, passes at the function call write
-        self.declare(
-            'warmstart',
-            ConfigValue(
-                default=True,
-                domain=bool,
-                description="Warmstart by initializing model's variables to their values.",
-            ),
-        )
-        self.declare(
-            'labeler',
-            ConfigValue(
-                default=None,
-                description='Callable to use to generate symbol names in gms file',
-            ),
-        )
-        self.declare(
-            'solver',
-            ConfigValue(
-                default=None,
-                description='If None, GAMS will use default solver for model type.',
-            ),
-        )
-        self.declare(
-            'mtype',
-            ConfigValue(
-                default=None,
-                description='Model type. If None, will chose from lp, mip. nlp and minlp will be implemented in the future.',
-            ),
-        )
-        self.declare(
-            'skip_trivial_constraints',
-            ConfigValue(
-                default=False,
-                domain=bool,
-                description='Skip writing constraints whose body is constant',
-            ),
-        )
-        self.declare(
-            'output_fixed_variables',
-            ConfigValue(
-                default=False,
-                domain=bool,
-                description='If True, output fixed variables as variables; otherwise,output numeric value',
-            ),
-        )
-        self.declare(
-            'put_results',
-            ConfigValue(
-                default='results',
-                domain=str,
-                doc="""
-                Filename for optionally writing solution values and
-                marginals.  If put_results_format is 'gdx', then GAMS
-                will write solution values and marginals to
-                GAMS_MODEL_p.gdx and solver statuses to
-                {put_results}_s.gdx.  If put_results_format is 'dat',
-                then solution values and marginals are written to
-                (put_results).dat, and solver statuses to (put_results +
-                'stat').dat.
-                """,
-            ),
-        )
-        self.declare(
-            'put_results_format',
-            ConfigValue(
-                default='gdx',
-                description="Format used for put_results, one of 'gdx', 'dat'",
-            ),
-        )
-        self.add_options: ConfigDict = self.declare(
-            'add_options',
-            ConfigValue(
-                default=None,
-                doc="""
-                List of additional lines to write directly
-                into model file before the solve statement.
-                For model attributes, <model name> is GAMS_MODEL.
-                """,
-            ),
-        )
+
         # NOTE: Taken from the lp_writer
         self.declare(
             'row_order',
@@ -347,7 +267,8 @@ class GAMS(SolverBase):
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
 
         # Update configuration options, based on keywords passed to solve
-        config: GAMSConfig = self.config(value=kwds)
+        # preserve_implicit=True is required to extract solver_options ConfigDict
+        config: GAMSConfig = self.config(value=kwds, preserve_implicit=True)
 
         # Check if solver is available, unavailable solver error will be raised in available()
         self.available(config)
@@ -387,7 +308,18 @@ class GAMS(SolverBase):
             with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
                 timer.start(f'write_{output_filename}_file')
                 self._writer.config.set_value(config.writer_config)
-                gms_info = self._writer.write(model, gms_file, **config.writer_config)
+
+                # update the writer config if any of the overlapping keys exists in the solver_options
+                non_solver_config = {}
+                for key in config.solver_options.keys():
+                    if key in self._writer.config:
+                        self._writer.config[key] = config.solver_options[key]
+                    else:
+                        non_solver_config[key] = config.solver_options[key]
+
+                self._writer.config['add_options'] = non_solver_config
+
+                gms_info = self._writer.write(model, gms_file, **self._writer.config)
 
                 # NOTE: omit InfeasibleConstraintException for now
                 timer.stop(f'write_{output_filename}_file')

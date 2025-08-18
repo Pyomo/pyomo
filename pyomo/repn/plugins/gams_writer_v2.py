@@ -592,9 +592,10 @@ class _GMSWriter_impl(object):
 
         if add_options is not None:
             ostream.write("\n* START USER ADDITIONAL OPTIONS\n")
-            for line in add_options:
-                ostream.write('option ' + line + '\n')
-            ostream.write("\n\n* END USER ADDITIONAL OPTIONS\n\n")
+            for options, val in add_options.items():
+                # ostream.write('option ' + line + '\n')
+                ostream.write(f'option {options}={val};\n')
+            ostream.write("* END USER ADDITIONAL OPTIONS\n\n")
 
         ostream.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n"
