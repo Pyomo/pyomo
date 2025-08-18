@@ -401,7 +401,7 @@ class PoolManager:
         return list(self._pool.keys())
 
     def get_pool_policies(self):
-        return {k: self._pool[k].policy for k in self._pool.keys()}
+        return {k: v.policy for k, v in self._pool.items()}
 
     # method for max_pool_size for current pool
     def get_max_pool_size(self):
@@ -409,13 +409,11 @@ class PoolManager:
 
     # method for max_pool_size for all pools
     def get_max_pool_sizes(self):
-        return {
-            k: getattr(self._pool[k], "max_pool_size", None) for k in self._pool.keys()
-        }
+        return {k: getattr(v, "max_pool_size", None) for k, v in self._pool.items()}
 
     # method for len of all pools
     def get_pool_sizes(self):
-        return {k: len(self._pool[k]) for k in self._pool.keys()}
+        return {k: len(v) for k, v in self._pool.items()}
 
     def write(self, json_filename, indent=None, sort_keys=True):
         with open(json_filename, "w") as OUTPUT:
