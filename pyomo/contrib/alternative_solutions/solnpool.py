@@ -388,6 +388,19 @@ class PoolManager:
         self._name = name
         return self.metadata
 
+    def get_active_name(self):
+        return self._name
+
+    def get_pool_names(self):
+        return list(self._pool.keys())
+
+    # def get_pool_policies(self):
+    #    return {}
+
+    # method for max_pool_size for current pool
+    # method for max_pool_size for all pools
+    # method for len of all pools
+
     def write(self, json_filename, indent=None, sort_keys=True):
         with open(json_filename, "w") as OUTPUT:
             json.dump(self.to_dict(), OUTPUT, indent=indent, sort_keys=sort_keys)

@@ -15,6 +15,131 @@ def soln(value, objective):
     )
 
 
+def test_pool_active_name():
+    pm = PoolManager()
+    assert pm.get_active_name() == None, "Should only have the None pool"
+    pm.add_pool("pool_1", policy="keep_all")
+    assert pm.get_active_name() == "pool_1", "Should only have 'pool_1'"
+
+
+def test_get_pool_names():
+    pm = PoolManager()
+    assert pm.get_pool_names() == [None], "Should only be [None]"
+    pm.add_pool("pool_1", policy="keep_all")
+    assert pm.get_pool_names() == ["pool_1"], "Should only be ['pool_1']"
+    pm.add_pool("pool_2", policy="keep_latest", max_pool_size=1)
+    assert pm.get_pool_names() == ["pool_1", "pool_2"], "Should be ['pool_1', 'pool_2']"
+
+
+def test_multiple_pools():
+    pm = PoolManager()
+    pm.add_pool("pool_1", policy="keep_all")
+
+    retval = pm.add(soln(0, 0))
+    assert retval is not None
+    assert len(pm) == 1
+
+    retval = pm.add(soln(0, 1))
+    assert retval is not None
+    assert len(pm) == 2
+
+    retval = pm.add(soln(1, 1))
+    assert retval is not None
+    assert len(pm) == 3
+
+    assert pm.to_dict() == {
+        "pool_1": {
+            "metadata": {"context_name": "pool_1"},
+            "pool_config": {"policy": "keep_all"},
+            "solutions": {
+                0: {
+                    "id": 0,
+                    "objectives": [
+                        {"index": None, "name": None, "suffix": {}, "value": 0}
+                    ],
+                    "suffix": {},
+                    "variables": [
+                        {
+                            "discrete": False,
+                            "fixed": False,
+                            "index": None,
+                            "name": None,
+                            "suffix": {},
+                            "value": 0,
+                        }
+                    ],
+                },
+                1: {
+                    "id": 1,
+                    "objectives": [
+                        {"index": None, "name": None, "suffix": {}, "value": 1}
+                    ],
+                    "suffix": {},
+                    "variables": [
+                        {
+                            "discrete": False,
+                            "fixed": False,
+                            "index": None,
+                            "name": None,
+                            "suffix": {},
+                            "value": 0,
+                        }
+                    ],
+                },
+                2: {
+                    "id": 2,
+                    "objectives": [
+                        {"index": None, "name": None, "suffix": {}, "value": 1}
+                    ],
+                    "suffix": {},
+                    "variables": [
+                        {
+                            "discrete": False,
+                            "fixed": False,
+                            "index": None,
+                            "name": None,
+                            "suffix": {},
+                            "value": 1,
+                        }
+                    ],
+                },
+            },
+        }
+    }
+
+    pm.add_pool("pool_2", policy="keep_latest", max_pool_size=1)
+
+    retval = pm.add(soln(0, 0))
+    assert len(pm) == 1
+    # assert pm.to_dict() == {
+    #     "pool_2": {
+    #         "metadata": {"context_name": "pool_2"},
+    #         "pool_config": {"max_pool_size": 1, "policy": "keep_latest"},
+    #         "solutions": {
+    #             0: {
+    #                 "id": 0,
+    #                 "objectives": [
+    #                     {"index": None, "name": None, "suffix": {}, "value": 0}
+    #                 ],
+    #                 "suffix": {},
+    #                 "variables": [
+    #                     {
+    #                         "discrete": False,
+    #                         "fixed": False,
+    #                         "index": None,
+    #                         "name": None,
+    #                         "suffix": {},
+    #                         "value": 0,
+    #                     }
+    #                 ],
+    #             },
+    #         },
+    #     },
+    # }
+    retval = pm.add(soln(0, 1))
+    assert len(pm) == 1
+
+
 def test_keepall_add():
     pm = PoolManager()
     pm.add_pool("pool", policy="keep_all")
