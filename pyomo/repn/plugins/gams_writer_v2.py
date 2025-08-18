@@ -653,6 +653,8 @@ class _GMSWriter_impl(object):
                         ostream.write("\nput %s ' ' %s.l ' ' %s.m /;" % (sym, sym, sym))
                 for con in self.con_symbol_map.bySymbol.keys():
                     ostream.write("\nput %s ' ' %s.l ' ' %s.m /;" % (con, con, con))
+                for con in self.con_symbol_map.aliases.keys():
+                    ostream.write("\nput %s ' ' %s.l ' ' %s.m /;" % (con, con, con))
                 ostream.write(
                     "\nput GAMS_OBJECTIVE ' ' GAMS_OBJECTIVE.l "
                     "' ' GAMS_OBJECTIVE.m;\n"
