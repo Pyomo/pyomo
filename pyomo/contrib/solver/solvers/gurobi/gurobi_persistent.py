@@ -479,7 +479,7 @@ class GurobiDirectQuadratic(GurobiDirectBase):
     def _get_expr_from_pyomo_repn(self, repn):
         if repn.nonlinear_expr is not None:
             raise IncompatibleModelError(
-                f'GurobiDirectQuadratic only supports linear and quadratic expressions: {expr}.'
+                f'GurobiDirectQuadratic only supports linear and quadratic expressions: {repn}.'
             )
 
         if len(repn.linear_vars) > 0:
