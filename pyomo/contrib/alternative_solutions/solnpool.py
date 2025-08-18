@@ -31,9 +31,10 @@ class PoolCounter:
 
 class SolutionPoolBase:
 
-    def __init__(self, name, as_solution, counter):
+    def __init__(self, name, as_solution, counter, policy="unspecified"):
         self.metadata = MyMunch(context_name=name)
         self._solutions = {}
+        self._policy = policy
         if as_solution is None:
             self._as_solution = _as_solution
         else:
@@ -51,6 +52,10 @@ class SolutionPoolBase:
     def last_solution(self):
         index = next(reversed(self._solutions.keys()))
         return self._solutions[index]
+
+    @property
+    def policy(self):
+        return self._policy
 
     def __iter__(self):
         for soln in self._solutions.values():
@@ -71,7 +76,7 @@ class SolutionPoolBase:
 class SolutionPool_KeepAll(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None):
-        super().__init__(name, as_solution, counter)
+        super().__init__(name, as_solution, counter, policy="keep_all")
 
     def add(self, *args, **kwargs):
         soln = self._as_solution(*args, **kwargs)
@@ -88,7 +93,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
         return dict(
             metadata=_to_dict(self.metadata),
             solutions=_to_dict(self._solutions),
-            pool_config=dict(policy="keep_all"),
+            pool_config=dict(policy=self._policy),
         )
 
 
@@ -96,7 +101,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
         assert max_pool_size >= 1, "max_pool_size must be positive integer"
-        super().__init__(name, as_solution, counter)
+        super().__init__(name, as_solution, counter, policy="keep_latest")
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
 
@@ -120,7 +125,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         return dict(
             metadata=_to_dict(self.metadata),
             solutions=_to_dict(self._solutions),
-            pool_config=dict(policy="keep_latest", max_pool_size=self.max_pool_size),
+            pool_config=dict(policy=self._policy, max_pool_size=self.max_pool_size),
         )
 
 
@@ -128,7 +133,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
         assert max_pool_size >= 1, "max_pool_size must be positive integer"
-        super().__init__(name, as_solution, counter)
+        super().__init__(name, as_solution, counter, policy="keep_latest_unique")
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
         self.unique_solutions = set()
@@ -160,9 +165,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         return dict(
             metadata=_to_dict(self.metadata),
             solutions=_to_dict(self._solutions),
-            pool_config=dict(
-                policy="keep_latest_unique", max_pool_size=self.max_pool_size
-            ),
+            pool_config=dict(policy=self._policy, max_pool_size=self.max_pool_size),
         )
 
 
@@ -187,7 +190,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         keep_min=True,
         best_value=nan,
     ):
-        super().__init__(name, as_solution, counter)
+        super().__init__(name, as_solution, counter, policy="keep_best")
         assert (max_pool_size is None) or (
             max_pool_size >= 1
         ), "max_pool_size must be None or positive integer"
@@ -287,7 +290,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             metadata=_to_dict(self.metadata),
             solutions=_to_dict(self._solutions),
             pool_config=dict(
-                policy="keep_best",
+                policy=self._policy,
                 max_pool_size=self.max_pool_size,
                 objective=self.objective,
                 abs_tolerance=self.abs_tolerance,
@@ -388,14 +391,14 @@ class PoolManager:
         self._name = name
         return self.metadata
 
-    def get_active_name(self):
+    def get_active_pool_name(self):
         return self._name
 
     def get_pool_names(self):
         return list(self._pool.keys())
 
-    # def get_pool_policies(self):
-    #    return {}
+    def get_pool_policies(self):
+        return {}
 
     # method for max_pool_size for current pool
     # method for max_pool_size for all pools
