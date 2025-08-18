@@ -30,8 +30,16 @@ from pyomo.contrib.solver.common.util import (
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
-from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
-from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import (
+    GurobiDirectQuadratic,
+    GurobiPersistent,
+)
+from pyomo.contrib.solver.common.util import (
+    NoSolutionError,
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+)
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
@@ -49,18 +57,27 @@ if not param_available:
 all_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
+    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('ipopt', Ipopt),
     ('highs', Highs),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
+    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('highs', Highs),
 ]
 nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi_persistent', GurobiPersistent), ('ipopt', Ipopt)]
+qcp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
+    ('ipopt', Ipopt),
+]
 qp_solvers = qcp_solvers + [("highs", Highs)]
-miqcqp_solvers = [('gurobi_persistent', GurobiPersistent)]
+miqcqp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
+]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 
@@ -1042,6 +1059,58 @@ class TestSolvers(unittest.TestCase):
                 res.solution_loader.get_reduced_costs()
 
     @parameterized.expand(input=_load_tests(all_solvers))
+    def test_trivial_constraints(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x)
+        m.c3 = pyo.Constraint(expr=m.x >= 0)
+
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 0)
+
+        m.x.fix(1)
+        opt.config.tee = True
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 1)
+        self.assertAlmostEqual(m.y.value, 1)
+
+        m.x.fix(-1)
+        with self.assertRaises(NoOptimalSolutionError):
+            res = opt.solve(m)
+
+        opt.config.load_solutions = False
+        opt.config.raise_exception_on_nonoptimal_result = False
+        res = opt.solve(m)
+        self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
+        if isinstance(opt, Ipopt):
+            acceptable_termination_conditions = {
+                TerminationCondition.locallyInfeasible,
+                TerminationCondition.unbounded,
+                TerminationCondition.provenInfeasible,
+            }
+        else:
+            acceptable_termination_conditions = {
+                TerminationCondition.provenInfeasible,
+                TerminationCondition.infeasibleOrUnbounded,
+            }
+        self.assertIn(res.termination_condition, acceptable_termination_conditions)
+        self.assertIsNone(res.incumbent_objective)
+
+    @parameterized.expand(input=_load_tests(all_solvers))
     def test_duals(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
@@ -1209,55 +1278,50 @@ class TestSolvers(unittest.TestCase):
     def test_fixed_vars(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
-        for treat_fixed_vars_as_params in [True, False]:
-            opt: SolverBase = opt_class()
-            if opt.is_persistent():
-                opt = opt_class(treat_fixed_vars_as_params=treat_fixed_vars_as_params)
-            if not opt.available():
-                raise unittest.SkipTest(f'Solver {opt.name} not available.')
-            if any(name.startswith(i) for i in nl_solvers_set):
-                if use_presolve:
-                    opt.config.writer_config.linear_presolve = True
-                else:
-                    opt.config.writer_config.linear_presolve = False
-            m = pyo.ConcreteModel()
-            m.x = pyo.Var()
-            m.x.fix(0)
-            m.y = pyo.Var()
-            a1 = 1
-            a2 = -1
-            b1 = 1
-            b2 = 2
-            m.obj = pyo.Objective(expr=m.y)
-            m.c1 = pyo.Constraint(expr=m.y >= a1 * m.x + b1)
-            m.c2 = pyo.Constraint(expr=m.y >= a2 * m.x + b2)
-            res = opt.solve(m)
-            self.assertAlmostEqual(m.x.value, 0)
-            self.assertAlmostEqual(m.y.value, 2)
-            m.x.unfix()
-            res = opt.solve(m)
-            self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
-            self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            m.x.fix(0)
-            res = opt.solve(m)
-            self.assertAlmostEqual(m.x.value, 0)
-            self.assertAlmostEqual(m.y.value, 2)
-            m.x.value = 2
-            res = opt.solve(m)
-            self.assertAlmostEqual(m.x.value, 2)
-            self.assertAlmostEqual(m.y.value, 3)
-            m.x.value = 0
-            res = opt.solve(m)
-            self.assertAlmostEqual(m.x.value, 0)
-            self.assertAlmostEqual(m.y.value, 2)
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.x.fix(0)
+        m.y = pyo.Var()
+        a1 = 1
+        a2 = -1
+        b1 = 1
+        b2 = 2
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= a1 * m.x + b1)
+        m.c2 = pyo.Constraint(expr=m.y >= a2 * m.x + b2)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+        m.x.unfix()
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+        self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+        m.x.fix(0)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+        m.x.value = 2
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 2)
+        self.assertAlmostEqual(m.y.value, 3)
+        m.x.value = 0
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_fixed_vars_2(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
         opt: SolverBase = opt_class()
-        if opt.is_persistent():
-            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -1301,8 +1365,6 @@ class TestSolvers(unittest.TestCase):
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
         opt: SolverBase = opt_class()
-        if opt.is_persistent():
-            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -1325,8 +1387,6 @@ class TestSolvers(unittest.TestCase):
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
         opt: SolverBase = opt_class()
-        if opt.is_persistent():
-            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -1634,12 +1694,12 @@ class TestSolvers(unittest.TestCase):
         m.y.value = None
         res.solution_loader.load_vars([m.y])
         self.assertAlmostEqual(m.y.value, 1)
-        primals = res.solution_loader.get_primals()
+        primals = res.solution_loader.get_vars()
         self.assertIn(m.x, primals)
         self.assertIn(m.y, primals)
         self.assertAlmostEqual(primals[m.x], 1)
         self.assertAlmostEqual(primals[m.y], 1)
-        primals = res.solution_loader.get_primals([m.y])
+        primals = res.solution_loader.get_vars([m.y])
         self.assertNotIn(m.x, primals)
         self.assertIn(m.y, primals)
         self.assertAlmostEqual(primals[m.y], 1)
@@ -1880,10 +1940,7 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
 
-        if opt.is_persistent():
-            opt: SolverBase = opt_class(treat_fixed_vars_as_params=False)
-        else:
-            opt = opt_class()
+        opt = opt_class()
         m.x.fix(0)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
@@ -1988,7 +2045,7 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(res.incumbent_objective, 1)
-        sol = res.solution_loader.get_primals()
+        sol = res.solution_loader.get_vars()
         self.assertIn(m.x, sol)
         self.assertIn(m.y, sol)
         self.assertIn(m.z, sol)
@@ -1998,7 +2055,7 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(res.incumbent_objective, 0)
-        sol = res.solution_loader.get_primals()
+        sol = res.solution_loader.get_vars()
         self.assertIn(m.x, sol)
         self.assertIn(m.y, sol)
         self.assertNotIn(m.z, sol)
@@ -2037,33 +2094,30 @@ class TestSolvers(unittest.TestCase):
         This test is for a bug where an objective containing a fixed variable does
         not get updated properly when the variable is unfixed.
         """
-        for fixed_var_option in [True, False]:
-            opt: SolverBase = opt_class()
-            if opt.is_persistent():
-                opt = opt_class(treat_fixed_vars_as_params=fixed_var_option)
-            if not opt.available():
-                raise unittest.SkipTest(f'Solver {opt.name} not available.')
-            if any(name.startswith(i) for i in nl_solvers_set):
-                if use_presolve:
-                    opt.config.writer_config.linear_presolve = True
-                else:
-                    opt.config.writer_config.linear_presolve = False
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
 
-            m = pyo.ConcreteModel()
-            m.x = pyo.Var(bounds=(-10, 10))
-            m.y = pyo.Var()
-            m.obj = pyo.Objective(expr=3 * m.y - m.x)
-            m.c = pyo.Constraint(expr=m.y >= m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-10, 10))
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=3 * m.y - m.x)
+        m.c = pyo.Constraint(expr=m.y >= m.x)
 
-            m.x.fix(1)
-            res = opt.solve(m)
-            self.assertAlmostEqual(res.incumbent_objective, 2, 5)
+        m.x.fix(1)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.incumbent_objective, 2, 5)
 
-            m.x.unfix()
-            m.x.setlb(-9)
-            m.x.setub(9)
-            res = opt.solve(m)
-            self.assertAlmostEqual(res.incumbent_objective, -18, 5)
+        m.x.unfix()
+        m.x.setlb(-9)
+        m.x.setub(9)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.incumbent_objective, -18, 5)
 
     @parameterized.expand(input=_load_tests(nl_solvers))
     def test_presolve_with_zero_coef(
@@ -2160,7 +2214,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.incumbent_objective, 1)
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, 1)
-        primals = res.solution_loader.get_primals()
+        primals = res.solution_loader.get_vars()
         self.assertAlmostEqual(primals[m.x], 1)
         self.assertAlmostEqual(primals[m.y], 1)
         if check_duals:
@@ -2176,7 +2230,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.incumbent_objective, 2)
         self.assertAlmostEqual(m.x.value, 2)
         self.assertAlmostEqual(m.y.value, 2)
-        primals = res.solution_loader.get_primals()
+        primals = res.solution_loader.get_vars()
         self.assertAlmostEqual(primals[m.x], 2)
         self.assertAlmostEqual(primals[m.y], 2)
         if check_duals:
