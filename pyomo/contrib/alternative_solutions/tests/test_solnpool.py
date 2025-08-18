@@ -92,6 +92,22 @@ def test_keepall_add():
     }
 
 
+def test_invalid_policy_1():
+    pm = PoolManager()
+    try:
+        pm.add_pool("pool", policy="invalid_policy")
+    except ValueError as e:
+        pass
+
+
+def test_invalid_policy_2():
+    pm = PoolManager()
+    try:
+        pm.add_pool("pool", policy="invalid_policy", max_pool_size=-2)
+    except ValueError as e:
+        pass
+
+
 def test_keeplatest_bad_max_pool_size():
     pm = PoolManager()
     try:
