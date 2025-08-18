@@ -443,7 +443,6 @@ class _GMSWriter_impl(object):
                 if ub is None:
                     label = f'{con_symbol}_lo'
                     self.con_symbol_map.addSymbol(con, label)
-                    self.var_symbol_map.addSymbol(con, label)
                     declaration = f'\n{label}.. '
                     definition = self.write_expression(ostream, repn)
                     bounds = f' =G= {(lb - offset)!s};'
@@ -451,7 +450,6 @@ class _GMSWriter_impl(object):
                 elif lb == ub:
                     label = f'{con_symbol}'
                     self.con_symbol_map.addSymbol(con, label)
-                    self.var_symbol_map.addSymbol(con, label)
                     declaration = f'\n{label}.. '
                     definition = self.write_expression(ostream, repn)
                     bounds = f' =E= {(lb - offset)!s};'
@@ -461,7 +459,6 @@ class _GMSWriter_impl(object):
                     # Procedure is taken from lp_writer.py
                     label = f'{con_symbol}_lo'
                     self.con_symbol_map.addSymbol(con, label)
-                    self.var_symbol_map.addSymbol(con, label)
                     declaration = f'\n{label}.. '
                     definition = self.write_expression(ostream, repn)
                     bounds = f' =G= {(lb - offset)!s};'
@@ -469,7 +466,6 @@ class _GMSWriter_impl(object):
                     #
                     label = f'{con_symbol}_hi'
                     self.con_symbol_map.alias(con, label)
-                    self.var_symbol_map.alias(con, label)
                     declaration = f'\n{label}.. '
                     definition = self.write_expression(ostream, repn)
                     bounds = f' =L= {(ub - offset)!s};'
@@ -516,7 +512,6 @@ class _GMSWriter_impl(object):
         definition = self.write_expression(ostream, repn, True)
         bounds = f' =E= {(-repn.constant)!s};\n\n'
         con_list[label] = declaration + definition + bounds
-        self.var_symbol_map.addSymbol(obj, label)
 
         # Write the GAMS model
         ostream.write("$offlisting\n")

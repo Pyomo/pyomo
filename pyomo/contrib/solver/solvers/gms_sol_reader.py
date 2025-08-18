@@ -109,6 +109,9 @@ class GMSSolutionLoader(SolutionLoaderBase):
         else:
             for sym, obj in self._gms_info.con_symbol_map.bySymbol.items():
                 con_map[id(obj)] = self._gdx_data[sym][1]
+            for sym, obj in self._gms_info.con_symbol_map.aliases.items():
+                if self._gdx_data[sym][1] != 0:
+                    con_map[id(obj)] = self._gdx_data[sym][1]
 
         res = ComponentMap()
         if cons_to_load is None:
