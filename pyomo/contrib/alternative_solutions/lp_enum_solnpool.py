@@ -104,7 +104,7 @@ def enumerate_linear_solutions_soln_pool(
     model : ConcreteModel
         A concrete Pyomo model
     num_solutions : int
-        The maximum number of solutions to generate.
+        The maximum number of solutions to generate. Must be positive.
     variables: None or a collection of Pyomo _GeneralVarData variables
         The variables for which bounds will be generated. None indicates
         that all variables will be included. Alternatively, a collection of
@@ -133,6 +133,10 @@ def enumerate_linear_solutions_soln_pool(
         A PyomoPoolManager object
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
+
+    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if num_solutions == 1:
+        logger.warning("Running alternative_solutions method to find only 1 solution!")
 
     if poolmanager is None:
         poolmanager = PyomoPoolManager()

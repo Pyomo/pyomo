@@ -32,6 +32,16 @@ gurobi_available = len(check_available_solvers("gurobi", "appsi_gurobi")) == 2
 @unittest.skipUnless(numpy_available, "NumPy not found")
 class TestLPEnumSolnpool(unittest.TestCase):
 
+    def test_non_positive_num_solutions(self):
+        """
+        Confirm that an exception is thrown with a non-positive num solutions
+        """
+        n = tc.get_pentagonal_pyramid_mip()
+        try:
+            lp_enum.enumerate_linear_solutions(n, num_solutions=-1)
+        except AssertionError as e:
+            pass
+
     def test_here(self):
         n = tc.get_pentagonal_pyramid_mip()
         n.x.domain = pyo.Reals
