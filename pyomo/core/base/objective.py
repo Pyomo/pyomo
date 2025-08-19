@@ -209,16 +209,6 @@ class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
         self._args_ = template_info
         self._sense = sense
 
-    @property
-    def args(self):
-        # Note that it is faster to just generate the expression from
-        # scratch than it is to clone it and replace the IndexTemplate objects
-        self.set_value(self.parent_component()._rule(self.parent_block(), self.index()))
-        return self._args_
-
-    def template_expr(self):
-        return self._args_
-
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
