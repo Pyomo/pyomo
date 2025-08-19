@@ -348,7 +348,7 @@ class Objective(ActiveIndexedComponent):
                         else:
                             assert self.__class__ is ScalarObjective
                             self.__class__ = TemplateScalarObjective
-                            self._expr = template_info
+                            self._args_ = template_info
                             self._data = {None: self}
                             self.set_sense(self._init_sense(self, self.index()))
                         return
