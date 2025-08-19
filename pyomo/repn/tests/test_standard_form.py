@@ -95,6 +95,27 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertEqual(repn.rows, [(m.d, 1), (m.c, -1)])
         self.assertEqual(repn.columns, [m.y[3], m.x, m.y[1]])
 
+    def test_linear_model_fixed_vars(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var([1, 2, 3, 4, 5])
+        m.o = pyo.Objective(expr=5 * m.x + 3 * m.y[5] + 1)
+        m.c = pyo.Constraint(expr=m.x + 2 * m.y[1] >= 3)
+        m.d = pyo.Constraint(expr=m.y[1] + 4 * m.y[3] <= 5)
+
+        m.y[3].fix(10)
+        m.y[4].fix(100)
+        m.y[5].fix(1000)
+
+        repn = LinearStandardFormCompiler().write(m)
+
+        self.assertTrue(np.all(repn.c == np.array([5, 0])))
+        self.assertEqual(repn.c_offset, 3001)
+        self.assertTrue(np.all(repn.A == np.array([[-1, -2], [0, 1]])))
+        self.assertTrue(np.all(repn.rhs == np.array([-3, -35])))
+        self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1)])
+        self.assertEqual(repn.columns, [m.x, m.y[1]])
+
     def test_suffix_warning(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
