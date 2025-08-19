@@ -569,7 +569,7 @@ class _LinearStandardFormCompiler_impl(object):
         # removing the fixed columns, we only want to go through that
         # hassle for columns with actual nonzero entries.
         fixed_vars = (
-            np.array([v.fixed for v in columns], dtype=np.bool) & active_var_mask
+            np.array([v.fixed for v in columns], dtype=np.bool_) & active_var_mask
         )
         if any(fixed_vars):
             x = np.array([columns[i].value for i, f in enumerate(fixed_vars) if f])
