@@ -578,8 +578,8 @@ class _LinearStandardFormCompiler_impl(object):
             # Update the active variable mask to exclude the fixed_vars
             # (that we just moved to the RHS)
             active_var_mask &= ~fixed_vars
-            c = c[:, active_vars]
-            A = A[:, active_vars]
+            c = c[:, active_var_mask]
+            A = A[:, active_var_mask]
             columns = [v for k, v in zip(active_vars, columns) if k]
             n_cols = len(columns)
         else:
