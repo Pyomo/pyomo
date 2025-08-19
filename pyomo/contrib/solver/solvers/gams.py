@@ -15,18 +15,24 @@ import shutil
 import subprocess
 import datetime
 from io import StringIO
-from typing import Mapping, Optional, Sequence
-from tempfile import mkdtemp
+from typing import Mapping, Optional, Sequence, Tuple
 import sys
 
-from pyomo.common import Executable
+from pyomo.common.fileutils import Executable, ExecutableData
 from pyomo.common.dependencies import pathlib
-from pyomo.common.config import ConfigValue, document_kwargs_from_configdict, ConfigDict
+from pyomo.common.config import (
+    ConfigValue,
+    ConfigDict,
+    document_configdict,
+    Path,
+    document_class_CONFIG,
+)
+from pyomo.common.modeling import NOTSET
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.opt.results import SolverStatus, TerminationCondition
 from pyomo.contrib.solver.common.results import (
@@ -41,6 +47,11 @@ from pyomo.common.tee import TeeStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
+from pyomo.common.errors import (
+    ApplicationError,
+    DeveloperError,
+    InfeasibleConstraintException,
+)
 
 from pyomo.repn.plugins.gams_writer_v2 import GAMSWriterInfo, GAMSWriter
 
@@ -70,6 +81,7 @@ def _gams_importer():
 gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer)
 
 
+@document_configdict()
 class GAMSConfig(SolverConfig):
     def __init__(
         self,
@@ -86,18 +98,21 @@ class GAMSConfig(SolverConfig):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.executable: Executable = self.declare(
+        self.executable: ExecutableData = self.declare(
             'executable',
             ConfigValue(
-                default=Executable('gams'),
+                domain=Executable,
+                default='gams',
                 description="Executable for gams. Defaults to searching the "
                 "``PATH`` for the first available ``gams``.",
             ),
         )
-        self.logfile: ConfigDict = self.declare(
+        self.logfile: str = self.declare(
             'logfile',
             ConfigValue(
-                default=None, description="Filename to output GAMS log to a file."
+                domain=Path(),
+                default=None,
+                description="Filename to output GAMS log to a file.",
             ),
         )
         self.writer_config: ConfigDict = self.declare(
@@ -138,50 +153,35 @@ class GAMSResults(Results):
         )
 
 
+@document_class_CONFIG(methods=['solve'])
 class GAMS(SolverBase):
     CONFIG = GAMSConfig()
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._writer = GAMSWriter()
-        self._available_cache = None
-        self._version_cache = None
+        self._available_cache = NOTSET
+        self._version_cache = NOTSET
 
-    def available(self, config=None, exception_flag=True):
-        if config is None:
-            config = self.config
-
-        """True if the solver is available."""
-        exe = config.executable
-
-        if not exe.available():
-            if not exception_flag:
-                return False
-            raise NameError(
-                "No 'gams' command found on system PATH - GAMS shell "
-                "solver functionality is not available."
-            )
-        # New versions of GAMS require a license to run anything.
-        # Instead of parsing the output, we will try solving a trivial
-        # model.
-        avail = self._run_simple_model(config, 1)
-        if not avail and exception_flag:
-            raise NameError(
-                "'gams' command failed to solve a simple model - "
-                "GAMS solver functionality is not available."
-            )
-        return avail
-
-    def license_is_valid(self):
-        # New versions of the community license can run LPs up to 5k
-        return self._run_simple_model(5001)
+    def available(self, rehash: bool = False) -> Availability:
+        pth = self.config.executable.path()
+        if pth is None:
+            self._available_cache = (None, Availability.NotFound)
+        else:
+            self._available_cache = (pth, Availability.FullLicense)
+        if self._available_cache is not NOTSET and rehash == False:
+            return self._available_cache[1]
+        else:
+            raise NotImplementedError('feature for rehash is WIP')
+            # Executable(pth).available()
+            # Executable(pth).rehash()
 
     def _run_simple_model(self, config, n):
         solver_exec = config.executable.path()
         if solver_exec is None:
             return False
-        tmpdir = mkdtemp()
-        try:
+        with TempfileManager.new_context() as tempfile:
+            tmpdir = tempfile.mkdtemp()
             test = os.path.join(tmpdir, 'test.gms')
             with open(test, 'w') as FILE:
                 FILE.write(self._simple_model(n))
@@ -191,9 +191,6 @@ class GAMS(SolverBase):
                 stderr=subprocess.DEVNULL,
             )
             return not result.returncode
-        finally:
-            shutil.rmtree(tmpdir)
-        return False
 
     def _simple_model(self, n):
         return """
@@ -211,26 +208,29 @@ class GAMS(SolverBase):
             n,
         )
 
-    def version(self, config=None):
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-        if self._version_cache is None or self._version_cache[0] != pth:
-            if pth is None:
-                self._version_cache = (None, None)
-            else:
-                cmd = [pth, "audit", "lo=3"]
-                subprocess_results = subprocess.run(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True,
-                )
-                version = subprocess_results.stdout.splitlines()[0]
-                version = [char for char in version.split(' ') if len(char) > 0][1]
-                self._version_cache = (pth, version)
+    def version(self, rehash: bool = False) -> Optional[Tuple[int, int, int]]:
+        pth = self.config.executable.path()
+        if pth is None:
+            self._version_cache = (None, None)
+        else:
+            cmd = [pth, "audit", "lo=3"]
+            subprocess_results = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                check=False,
+            )
+            version = subprocess_results.stdout.splitlines()[0]
+            version = [char for char in version.split(' ') if len(char) > 0][1]
+            version = tuple(int(i) for i in version.split('.'))
+            self._version_cache = (pth, version)
 
-        return self._version_cache[1]
+        if self._version_cache is not NOTSET and rehash == False:
+            return self._version_cache[1]
+
+        else:
+            raise NotImplementedError('feature for rehash is WIP')
 
     def _rewrite_path_win8p3(self, path):
         """
@@ -258,7 +258,6 @@ class GAMS(SolverBase):
             return buf.value
         return str(path)
 
-    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
         ####################################################################
         # Presolve
@@ -270,21 +269,23 @@ class GAMS(SolverBase):
         # preserve_implicit=True is required to extract solver_options ConfigDict
         config: GAMSConfig = self.config(value=kwds, preserve_implicit=True)
 
-        # Check if solver is available, unavailable solver error will be raised in available()
-        self.available(config)
+        # Check if solver is available
+        avail = self.available()
+
+        if not avail:
+            raise ApplicationError(
+                f'Solver {self.__class__} is not available ({avail}).'
+            )
+
         if config.timer is None:
             timer = HierarchicalTimer()
         else:
             timer = config.timer
         StaleFlagManager.mark_all_as_stale()
 
-        # Because GAMS changes the CWD when running the solver, we need
-        # to convert user-provided file names to absolute paths
-        # (relative to the current directory)
-        if config.logfile is not None:
-            config.logfile = os.path.abspath(config.logfile)
-
-        config.writer_config.put_results_format = 'gdx' if gdxcc_available else 'dat'
+        config.writer_config.setdefault(
+            "put_results_format", 'gdx' if gdxcc_available else 'dat'
+        )
 
         # local variable to hold the working directory name and flags
         dname = None
@@ -423,7 +424,7 @@ class GAMS(SolverBase):
             extract_rc = 'rc' in model_suffixes
             results = GAMSResults()
             results.solver_name = "GAMS "
-            results.solver_version = str(self.version())
+            results.solver_version = self.version()
 
             solvestat = stat_vars["SOLVESTAT"]
             if solvestat == 1:
@@ -478,6 +479,7 @@ class GAMS(SolverBase):
                     TerminationCondition.infeasibleOrUnbounded
                 )
                 results.solution_status = SolutionStatus.infeasible
+                raise InfeasibleConstraintException('Solver status returns infeasible')
             elif modelstat == 7:
                 results.gams_termination_condition = TerminationCondition.feasible
                 results.solution_status = SolutionStatus.feasible
