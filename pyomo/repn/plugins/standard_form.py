@@ -568,10 +568,12 @@ class _LinearStandardFormCompiler_impl(object):
         # Note: since we are doing matrix multiplication and then
         # removing the fixed columns, we only want to go through that
         # hassle for columns with actual nonzero entries.
-        fixed_vars = np.array([v.fixed for v in columns]) & active_var_mask
+        fixed_vars = (
+            np.array([v.fixed for v in columns], dtype=np.bool) & active_var_mask
+        )
         if any(fixed_vars):
             x = np.array([columns[i].value for i, f in enumerate(fixed_vars) if f])
-            obj_offset += c[:, fixed_vars] @ x
+            obj_offset = obj_offset + c[:, fixed_vars] @ x
             rhs = np.array(rhs) - A[:, fixed_vars] @ x
             # Update the active variable mask to exclude the fixed_vars
             # (that we just moved to the RHS)
