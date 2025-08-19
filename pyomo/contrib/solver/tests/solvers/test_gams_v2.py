@@ -107,7 +107,7 @@ class TestGAMSInterface(unittest.TestCase):
             'name',
             'solve',
             'version',
-            'license_is_valid',
+            # 'license_is_valid', # DEPRECATED
         ]
         method_list = [method for method in dir(opt) if method.startswith('_') is False]
         self.assertEqual(sorted(expected_list), sorted(method_list))
@@ -128,6 +128,9 @@ class TestGAMSInterface(unittest.TestCase):
             self.assertEqual(opt.CONFIG, opt.config)
             self.assertTrue(opt.available())
 
+    @unittest.skip(
+        "deprecated: available() is deprecated. available_cache is intended to replace this"
+    )
     def test_available(self):
         opt = gams.GAMS()
         self.assertTrue(opt.available())
@@ -140,6 +143,9 @@ class TestGAMSInterface(unittest.TestCase):
         # _run_simple_model will return False because of the invalid path
         self.assertFalse(opt._run_simple_model(config, 1))
 
+    @unittest.skip(
+        "deprecated: test_version() is deprecated. test_version_cache is intended to replace this"
+    )
     def test_version(self):
         opt = gams.GAMS()
         self.assertIsNotNone(opt.version())
@@ -170,6 +176,30 @@ class TestGAMSInterface(unittest.TestCase):
             self.assertTrue(result.returncode == 0)
             self.assertTrue(os.path.isfile(filename))
 
+    def test_available_cache(self):
+        opt = gams.GAMS()
+        opt.available()
+        self.assertTrue(opt._available_cache[1])
+        self.assertIsNotNone(opt._available_cache[0])
+        # Now we will try with a custom config that has a fake path
+        config = gams.GAMSConfig()
+        config.executable = Executable('/a/bogus/path')
+        opt.available(config=config)
+        self.assertFalse(opt._available_cache[1])
+        self.assertIsNone(opt._available_cache[0])
+
+    def test_version_cache(self):
+        opt = gams.GAMS()
+        opt.version()
+        self.assertIsNotNone(opt._version_cache[0])
+        self.assertIsNotNone(opt._version_cache[1])
+        # Now we will try with a custom config that has a fake path
+        config = gams.GAMSConfig()
+        config.executable = Executable('/a/bogus/path')
+        opt.version(config=config)
+        self.assertIsNone(opt._version_cache[0])
+        self.assertIsNone(opt._version_cache[1])
+
 
 class TestGAMS(unittest.TestCase):
     def create_model(self):
@@ -193,9 +223,10 @@ class TestGAMS(unittest.TestCase):
         # Test custom initialization
         solver = SolverFactory('gams_v2', executable='/path/to/exe')
         self.assertFalse(solver.config.tee)
-        self.assertTrue(solver.config.executable.startswith('/path'))
+        self.assertIsNone(solver.config.executable.path())
+        self.assertTrue(solver.config.executable._registered_name.startswith('/path'))
 
-        # Change value on a solve call
-        solver = SolverFactory('gams_v2')
+    def test_gams_solve(self):
+        # Gut check - does it solve?
         model = self.create_model()
-        solver.solve(model, tee=False, load_solutions=False)
+        gams.GAMS().solve(model)

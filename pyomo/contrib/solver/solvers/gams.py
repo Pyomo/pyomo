@@ -163,8 +163,14 @@ class GAMS(SolverBase):
         self._available_cache = NOTSET
         self._version_cache = NOTSET
 
-    def available(self, rehash: bool = False) -> Availability:
-        pth = self.config.executable.path()
+    def available(
+        self, config: Optional[GAMSConfig] = None, rehash: bool = False
+    ) -> Availability:
+        if config is None:
+            config = self.config
+
+        pth = config.executable.path()
+
         if pth is None:
             self._available_cache = (None, Availability.NotFound)
         else:
@@ -208,8 +214,14 @@ class GAMS(SolverBase):
             n,
         )
 
-    def version(self, rehash: bool = False) -> Optional[Tuple[int, int, int]]:
-        pth = self.config.executable.path()
+    def version(
+        self, config: Optional[GAMSConfig] = None, rehash: bool = False
+    ) -> Optional[Tuple[int, int, int]]:
+
+        if config is None:
+            config = self.config
+        pth = config.executable.path()
+
         if pth is None:
             self._version_cache = (None, None)
         else:
