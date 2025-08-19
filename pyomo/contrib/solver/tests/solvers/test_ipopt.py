@@ -104,6 +104,7 @@ class TestIpoptInterface(unittest.TestCase):
         expected_list = [
             'CONFIG',
             'config',
+            'api_version',
             'available',
             'has_linear_solver',
             'is_persistent',

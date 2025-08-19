@@ -16,6 +16,7 @@ import logging
 import shlex
 
 from pyomo.common import Factory
+from pyomo.common.enums import SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 
@@ -79,6 +80,18 @@ class UnknownSolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
+
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1
 
     def available(self, exception_flag=True):
         """Determine if this optimizer is available."""
@@ -249,6 +262,18 @@ class OptSolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
+
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1
 
     #
     # Adding to help track down invalid code after making
