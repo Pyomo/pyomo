@@ -580,7 +580,7 @@ class _LinearStandardFormCompiler_impl(object):
             active_var_mask &= ~fixed_vars
             c = c[:, active_var_mask]
             A = A[:, active_var_mask]
-            columns = [v for k, v in zip(active_vars, columns) if k]
+            columns = [v for k, v in zip(active_var_mask, columns) if k]
             n_cols = len(columns)
         else:
             # Masks on NumPy arrays are very fast.  Build the reduced A
