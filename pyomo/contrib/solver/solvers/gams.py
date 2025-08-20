@@ -47,12 +47,12 @@ from pyomo.common.tee import TeeStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
-from pyomo.common.errors import (
-    ApplicationError,
-    DeveloperError,
-    InfeasibleConstraintException,
+from pyomo.common.errors import ApplicationError
+from pyomo.contrib.solver.common.util import (
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+    NoSolutionError,
 )
-
 from pyomo.repn.plugins.gams_writer_v2 import GAMSWriterInfo, GAMSWriter
 
 logger = logging.getLogger(__name__)
@@ -295,12 +295,6 @@ class GAMS(SolverBase):
             timer = config.timer
         StaleFlagManager.mark_all_as_stale()
 
-        # SANITY CHECK - If setdefault is the bug
-        # config.writer_config.setdefault(
-        #     "put_results_format", 'gdx' if gdxcc_available else 'dat'
-        # )
-        config.writer_config.put_results_format = 'gdx' if gdxcc_available else 'dat'
-
         # local variable to hold the working directory name and flags
         dname = None
         lst = "output.lst"
@@ -323,6 +317,9 @@ class GAMS(SolverBase):
             with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
                 timer.start(f'write_{output_filename}_file')
                 self._writer.config.set_value(config.writer_config)
+                self._writer.config.put_results_format = (
+                    'gdx' if gdxcc_available else 'dat'
+                )
 
                 # update the writer config if any of the overlapping keys exists in the solver_options
                 non_solver_config = {}
@@ -338,17 +335,17 @@ class GAMS(SolverBase):
 
                 # NOTE: omit InfeasibleConstraintException for now
                 timer.stop(f'write_{output_filename}_file')
-            if config.writer_config.put_results_format == 'gdx':
+            if self._writer.config.put_results_format == 'gdx':
                 results_filename = os.path.join(dname, f"{model.name}_p.gdx")
                 statresults_filename = os.path.join(
-                    dname, "%s_s.gdx" % (config.writer_config.put_results,)
+                    dname, "%s_s.gdx" % (self._writer.config.put_results,)
                 )
             else:
                 results_filename = os.path.join(
-                    dname, "%s.dat" % (config.writer_config.put_results,)
+                    dname, "%s.dat" % (self._writer.config.put_results,)
                 )
                 statresults_filename = os.path.join(
-                    dname, "%sstat.dat" % (config.writer_config.put_results,)
+                    dname, "%sstat.dat" % (self._writer.config.put_results,)
                 )
 
             ####################################################################
@@ -404,7 +401,7 @@ class GAMS(SolverBase):
                     "GAMS encountered an error during solve. "
                     "Check listing file for details."
                 )
-            if config.writer_config.put_results_format == 'gdx':
+            if self._writer.config.put_results_format == 'gdx':
                 timer.start('parse_gdx')
                 model_soln, stat_vars = self._parse_gdx_results(
                     config, results_filename, statresults_filename
@@ -493,7 +490,6 @@ class GAMS(SolverBase):
                     TerminationCondition.infeasibleOrUnbounded
                 )
                 results.solution_status = SolutionStatus.infeasible
-                raise InfeasibleConstraintException('Solver status returns infeasible')
             elif modelstat == 7:
                 results.gams_termination_condition = TerminationCondition.feasible
                 results.solution_status = SolutionStatus.feasible
@@ -541,6 +537,14 @@ class GAMS(SolverBase):
             results.termination_condition = rev_legacy_termination_condition_map[
                 results.gams_termination_condition
             ]
+
+            # Taken from ipopt.py
+            if (
+                config.raise_exception_on_nonoptimal_result
+                and results.solution_status != SolutionStatus.optimal
+            ):
+                raise NoOptimalSolutionError()
+
             obj = list(model.component_data_objects(Objective, active=True))
 
             # NOTE: How should gams handle when no objective is provided
