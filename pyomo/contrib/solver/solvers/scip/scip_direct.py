@@ -445,7 +445,7 @@ class SCIPDirect(SolverBase):
                 scip_model.setParam(key, option)
 
             timer.start('optimize')
-            with capture_output(TeeStream(*ostreams), capture_fd=False):
+            with capture_output(TeeStream(*ostreams), capture_fd=True):
                 scip_model.optimize()
             timer.stop('optimize')
 
