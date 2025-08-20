@@ -61,7 +61,7 @@ _RANDOM_SEED_FOR_TESTING = 524
         (0.1, "incorrect_obj"),
     ],
 )
-class TestRooneyBieglerWSSE(unittest.TestCase):
+class TestParmestCovEst(unittest.TestCase):
 
     def setUp(self):
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
