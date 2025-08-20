@@ -18,7 +18,7 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.common.config import ConfigValue
-from pyomo.common.enums import IntEnum
+from pyomo.common.enums import IntEnum, SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import NOTSET
@@ -104,6 +104,18 @@ class SolverBase:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
+
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V2
 
     def solve(self, model: BlockData, **kwargs) -> Results:
         """Solve a Pyomo model.
