@@ -522,9 +522,8 @@ def compute_covariance_matrix(
     if method == CovarianceMethod.finite_difference.value:
         # store the FIM of all experiments
         FIM_all_exp = []
-        for (
-            experiment
-        ) in experiment_list:  # loop through the experiments and compute the FIM
+        # loop through the experiments and compute the FIM
+        for experiment in experiment_list:
             FIM_all_exp.append(
                 _finite_difference_FIM(
                     experiment,
