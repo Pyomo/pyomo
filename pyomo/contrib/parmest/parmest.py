@@ -848,10 +848,7 @@ class Estimator(object):
                     f"Choose from: {[e.value for e in ObjectiveType]}."
                 )
         else:
-            if obj_function is None:
-                self.obj_function = obj_function
-            else:
-                self.obj_function = obj_function
+            self.obj_function = obj_function
 
         self.tee = tee
         self.logging_level = logging_level
