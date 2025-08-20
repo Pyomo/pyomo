@@ -1078,7 +1078,7 @@ class Estimator(object):
                     "You're using a deprecated call to the `theta_est()` function "
                     "with the `calc_cov` and `cov_n` arguments. This usage will be "
                     "removed in a future release. Please update to the new parmest "
-                    "interface using `cov_est()` function for covariance calculation.",
+                    "interface using the `cov_est()` function for covariance calculation.",
                     version="6.9.4.dev0",
                 )
 
