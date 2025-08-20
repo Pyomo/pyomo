@@ -166,10 +166,15 @@ class GAMS(SolverBase):
     def available(
         self, config: Optional[GAMSConfig] = None, rehash: bool = False
     ) -> Availability:
+
         if config is None:
             config = self.config
 
         pth = config.executable.path()
+
+        if rehash:
+            Executable(pth).rehash()
+            rehash = False
 
         if pth is None:
             self._available_cache = (None, Availability.NotFound)
@@ -177,10 +182,6 @@ class GAMS(SolverBase):
             self._available_cache = (pth, Availability.FullLicense)
         if self._available_cache is not NOTSET and rehash == False:
             return self._available_cache[1]
-        else:
-            raise NotImplementedError('feature for rehash is WIP')
-            # Executable(pth).available()
-            # Executable(pth).rehash()
 
     def _run_simple_model(self, config, n):
         solver_exec = config.executable.path()
@@ -222,6 +223,10 @@ class GAMS(SolverBase):
             config = self.config
         pth = config.executable.path()
 
+        if rehash:
+            Executable(pth).rehash()
+            rehash = False
+
         if pth is None:
             self._version_cache = (None, None)
         else:
@@ -240,9 +245,6 @@ class GAMS(SolverBase):
 
         if self._version_cache is not NOTSET and rehash == False:
             return self._version_cache[1]
-
-        else:
-            raise NotImplementedError('feature for rehash is WIP')
 
     def _rewrite_path_win8p3(self, path):
         """
@@ -282,7 +284,7 @@ class GAMS(SolverBase):
         config: GAMSConfig = self.config(value=kwds, preserve_implicit=True)
 
         # Check if solver is available
-        avail = self.available()
+        avail = self.available(config)
 
         if not avail:
             raise ApplicationError(
@@ -490,6 +492,7 @@ class GAMS(SolverBase):
                     TerminationCondition.infeasibleOrUnbounded
                 )
                 results.solution_status = SolutionStatus.infeasible
+                results.solution_loader = GMSSolutionLoader(None, None)
             elif modelstat == 7:
                 results.gams_termination_condition = TerminationCondition.feasible
                 results.solution_status = SolutionStatus.feasible

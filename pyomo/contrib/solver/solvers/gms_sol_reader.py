@@ -20,6 +20,11 @@ from pyomo.common.collections import ComponentMap
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.gams_writer_v2 import GAMSWriterInfo
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.util import (
+    NoDualsError,
+    NoSolutionError,
+    NoReducedCostsError,
+)
 
 
 class GDXFileData:
@@ -48,7 +53,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
 
     def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
         if self._gms_info is None:
-            raise RuntimeError(
+            raise NoSolutionError(
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
@@ -93,12 +98,12 @@ class GMSSolutionLoader(SolutionLoaderBase):
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Dict[ConstraintData, float]:
         if self._gms_info is None:
-            raise RuntimeError(
+            raise NoDualsError(
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
         if self._gdx_data is None:
-            raise RuntimeError(
+            raise NoDualsError(
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
@@ -127,12 +132,12 @@ class GMSSolutionLoader(SolutionLoaderBase):
 
     def get_reduced_costs(self, vars_to_load=None):
         if self._gms_info is None:
-            raise RuntimeError(
+            raise NoReducedCostsError(
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
         if self._gdx_data is None:
-            raise RuntimeError(
+            raise NoReducedCostsError(
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
