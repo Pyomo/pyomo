@@ -492,23 +492,32 @@ def compute_covariance_matrix(
     Computes the covariance matrix of the estimated parameters using
     'finite_difference' and 'automatic_differentiation_kaug' methods
 
-    Arguments:
-        experiment_list: list of Estimator class objects containing the Pyomo model
-            for different experimental conditions
-        method: string ``method`` object specified by the user,
-            e.g., 'finite_difference'
-        theta_vals: dictionary containing the estimates of the unknown parameters
-        step: float used for relative perturbation of the parameters,
-            e.g., step=0.02 is a 2% perturbation
-        solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-        tee: boolean solver option to be passed for verbose output
-        logging_level: logging level specified by the user, e.g., logging.INFO
-        estimated_var: value of the estimated variance of the measurement error
-            in cases where the user does not supply the
-            measurement error standard deviation
+    Parameters
+    ----------
+    experiment_list : list of Estimator class objects
+        list of Estimator class objects containing the Pyomo model
+        for different experimental conditions
+    method : string 
+        ``method`` object specified by the user, e.g., 'finite_difference'
+    theta_vals : dictionary 
+        Dictionary containing the estimates of the unknown parameters
+    step : float 
+        Float used for relative perturbation of the parameters,
+        e.g., step=0.02 is a 2% perturbation
+    solver : string 
+        Solver name specified by the user, e.g., 'ipopt'
+    tee : bool
+        Boolean solver option to be passed for verbose output
+    logging_level
+        Logging level specified by the user, e.g., logging.INFO
+    estimated_var
+        Value of the estimated variance of the measurement error
+        in cases where the user does not supply the
+        measurement error standard deviation
 
-    Returns:
-        cov: covariance matrix of the estimated parameters
+    Returns
+    --------
+    cov: covariance matrix of the estimated parameters
     """
     if method == CovarianceMethod.finite_difference.value:
         # store the FIM of all experiments
