@@ -182,6 +182,17 @@ class GAMSWriter(object):
         ),
     )
     CONFIG.declare(
+        'gams_solver_options',
+        ConfigValue(
+            default=None,
+            doc="""
+            List of additional lines to write directly
+            into model file before the solve statement.
+            Specifically for solvers.
+            """,
+        ),
+    )
+    CONFIG.declare(
         'skip_trivial_constraints',
         ConfigValue(
             default=False,
@@ -255,7 +266,7 @@ class GAMSWriter(object):
 
     def __call__(self, model, filename, solver_capability, io_options):
         if filename is None:
-            filename = model.name + ".gms"
+            filename = 'GAMS_MODEL' + ".gms"
 
         config = self.config(io_options)
 
@@ -302,6 +313,8 @@ class _GMSWriter_impl(object):
         # Taken from nl_writer.py
         self.symbolic_solver_labels = config.symbolic_solver_labels
         self.add_options = config.add_options
+        self.gams_solver_options = config.gams_solver_options
+
         self.subexpression_cache = {}
         self.subexpression_order = None  # set to [] later
         self.external_functions = {}
@@ -319,8 +332,10 @@ class _GMSWriter_impl(object):
         )
 
         # Caching some frequently-used objects into the locals()
+        model_name = "GAMS_MODEL"
         symbolic_solver_labels = self.symbolic_solver_labels
         add_options = self.add_options
+        gams_solver_options = self.gams_solver_options
         ostream = self.ostream
         config = self.config
         labeler = config.labeler
@@ -351,7 +366,7 @@ class _GMSWriter_impl(object):
         if unknown:
             raise ValueError(
                 "The model ('%s') contains the following active components "
-                "that the LP writer does not know how to process:\n\t%s"
+                "that the gams writer does not know how to process:\n\t%s"
                 % (
                     model.name,
                     "\n\t".join(
@@ -495,7 +510,7 @@ class _GMSWriter_impl(object):
         if len(objectives) > 1:
             raise ValueError(
                 "More than one active objective defined for input model '%s'; "
-                "Cannot write legal LP file\nObjectives: %s"
+                "Cannot write legal gms file\nObjectives: %s"
                 % (model.name, ' '.join(obj.name for obj in objectives))
             )
 
@@ -576,9 +591,9 @@ class _GMSWriter_impl(object):
                 ostream.write(f'{v}.up = {ub};\n')
             if warmstart and pyomo_v.value is not None:
                 ostream.write("%s.l = %s;\n" % (v, ftoa(pyomo_v.value, False)))
-        ostream.write(f'\nModel {model.name} / all /;\n')
-        ostream.write(f'{model.name}.limrow = 0;\n')
-        ostream.write(f'{model.name}.limcol = 0;\n')
+        ostream.write(f'\nModel {model_name} / all /;\n')
+        ostream.write(f'{model_name}.limrow = 0;\n')
+        ostream.write(f'{model_name}.limcol = 0;\n')
 
         # CHECK FOR mtype flag based on variable domains - reals, integer
         if config.mtype is None:
@@ -590,16 +605,20 @@ class _GMSWriter_impl(object):
         if config.put_results_format == 'gdx':
             ostream.write("option savepoint=1;\n")
 
+        ostream.write("\n* START USER ADDITIONAL OPTIONS\n")
         if add_options is not None:
-            ostream.write("\n* START USER ADDITIONAL OPTIONS\n")
             for options, val in add_options.items():
                 # ostream.write('option ' + line + '\n')
                 ostream.write(f'option {options}={val};\n')
-            ostream.write("* END USER ADDITIONAL OPTIONS\n\n")
+
+        if gams_solver_options is not None:
+            for options in gams_solver_options:
+                ostream.write(f'{options}\n')
+        ostream.write("* END USER ADDITIONAL OPTIONS\n\n")
 
         ostream.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n"
-            % (model.name, config.mtype, 'min' if obj.sense == minimize else 'max')
+            % (model_name, config.mtype, 'min' if obj.sense == minimize else 'max')
         )
         # Set variables to store certain statuses and attributes
         stat_vars = [
@@ -614,27 +633,27 @@ class _GMSWriter_impl(object):
             'ETSOLVE',
         ]
         ostream.write("\nScalars MODELSTAT 'model status', SOLVESTAT 'solve status';\n")
-        ostream.write("MODELSTAT = %s.modelstat;\n" % model.name)
-        ostream.write("SOLVESTAT = %s.solvestat;\n\n" % model.name)
+        ostream.write("MODELSTAT = %s.modelstat;\n" % model_name)
+        ostream.write("SOLVESTAT = %s.solvestat;\n\n" % model_name)
 
         ostream.write("Scalar OBJEST 'best objective', OBJVAL 'objective value';\n")
-        ostream.write("OBJEST = %s.objest;\n" % model.name)
-        ostream.write("OBJVAL = %s.objval;\n\n" % model.name)
+        ostream.write("OBJEST = %s.objest;\n" % model_name)
+        ostream.write("OBJVAL = %s.objval;\n\n" % model_name)
 
         ostream.write("Scalar NUMVAR 'number of variables';\n")
-        ostream.write("NUMVAR = %s.numvar\n\n" % model.name)
+        ostream.write("NUMVAR = %s.numvar\n\n" % model_name)
 
         ostream.write("Scalar NUMEQU 'number of equations';\n")
-        ostream.write("NUMEQU = %s.numequ\n\n" % model.name)
+        ostream.write("NUMEQU = %s.numequ\n\n" % model_name)
 
         ostream.write("Scalar NUMDVAR 'number of discrete variables';\n")
-        ostream.write("NUMDVAR = %s.numdvar\n\n" % model.name)
+        ostream.write("NUMDVAR = %s.numdvar\n\n" % model_name)
 
         ostream.write("Scalar NUMNZ 'number of nonzeros';\n")
-        ostream.write("NUMNZ = %s.numnz\n\n" % model.name)
+        ostream.write("NUMNZ = %s.numnz\n\n" % model_name)
 
         ostream.write("Scalar ETSOLVE 'time to execute solve statement';\n")
-        ostream.write("ETSOLVE = %s.etsolve\n\n" % model.name)
+        ostream.write("ETSOLVE = %s.etsolve\n\n" % model_name)
 
         if config.put_results is not None:
             if config.put_results_format == 'gdx':
