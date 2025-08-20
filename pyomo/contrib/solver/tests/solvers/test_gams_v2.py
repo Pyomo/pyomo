@@ -19,7 +19,11 @@ from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict
 from pyomo.common.errors import DeveloperError
 import pyomo.contrib.solver.solvers.gams as gams
-from pyomo.contrib.solver.common.util import NoSolutionError
+from pyomo.contrib.solver.common.util import (
+    NoSolutionError,
+    NoDualsError,
+    NoReducedCostsError,
+)
 from pyomo.opt.base import SolverFactory
 from pyomo.common import unittest, Executable
 from pyomo.common.tempfiles import TempfileManager
@@ -72,7 +76,9 @@ class TestGAMSSolutionLoader(unittest.TestCase):
         loader = gams.GMSSolutionLoader(None, None)
         with self.assertRaises(RuntimeError):
             loader.get_primals()
+        with self.assertRaises(NoDualsError):
             loader.get_duals()
+        with self.assertRaises(NoReducedCostsError):
             loader.get_reduced_costs()
 
         # Set _gms_info to something completely bogus but is not None
@@ -91,7 +97,7 @@ class TestGAMSSolutionLoader(unittest.TestCase):
         loader.get_primals()
 
         # if the model is infeasible, no dual information is returned
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(NoDualsError):
             loader.get_duals()
 
 

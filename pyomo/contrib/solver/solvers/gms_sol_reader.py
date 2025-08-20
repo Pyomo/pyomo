@@ -99,12 +99,12 @@ class GMSSolutionLoader(SolutionLoaderBase):
     ) -> Dict[ConstraintData, float]:
         if self._gms_info is None:
             raise NoDualsError(
-                'Solution loader does not currently have a valid solution. Please '
+                'Solution loader does not currently have valid duals. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
         if self._gdx_data is None:
             raise NoDualsError(
-                'Solution loader does not currently have a valid solution. Please '
+                'Solution loader does not currently have valid duals. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
 
@@ -133,12 +133,12 @@ class GMSSolutionLoader(SolutionLoaderBase):
     def get_reduced_costs(self, vars_to_load=None):
         if self._gms_info is None:
             raise NoReducedCostsError(
-                'Solution loader does not currently have a valid solution. Please '
+                'Solution loader does not currently have valid reduced costs. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
         if self._gdx_data is None:
             raise NoReducedCostsError(
-                'Solution loader does not currently have a valid solution. Please '
+                'Solution loader does not currently have valid reduced costs. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
 
