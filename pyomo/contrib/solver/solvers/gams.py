@@ -324,6 +324,8 @@ class GAMS(SolverBase):
                 )
 
                 # update the writer config if any of the overlapping keys exists in the solver_options
+                if config.time_limit is not None:
+                    config.solver_options['resLim'] = config.time_limit
                 non_solver_config = {}
                 for key in config.solver_options.keys():
                     if key in self._writer.config:
@@ -488,9 +490,10 @@ class GAMS(SolverBase):
                 results.solution_status = SolutionStatus.noSolution
 
             elif modelstat in [4, 5, 6, 10, 19]:
-                results.gams_termination_condition = (
-                    TerminationCondition.infeasibleOrUnbounded
-                )
+                if results.gams_termination_condition is None:
+                    results.gams_termination_condition = (
+                        TerminationCondition.infeasibleOrUnbounded
+                    )
                 results.solution_status = SolutionStatus.infeasible
                 results.solution_loader = GMSSolutionLoader(None, None)
             elif modelstat == 7:
