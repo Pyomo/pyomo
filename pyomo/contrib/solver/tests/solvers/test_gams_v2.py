@@ -103,6 +103,7 @@ class TestGAMSInterface(unittest.TestCase):
             'CONFIG',
             'available',
             'config',
+            'api_version',
             'is_persistent',
             'name',
             'solve',
@@ -230,3 +231,5 @@ class TestGAMS(unittest.TestCase):
         # Gut check - does it solve?
         model = self.create_model()
         gams.GAMS().solve(model)
+        self.assertAlmostEqual(model.x.value, 5)
+        self.assertAlmostEqual(model.y.value, -5)

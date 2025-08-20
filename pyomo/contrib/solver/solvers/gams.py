@@ -295,9 +295,11 @@ class GAMS(SolverBase):
             timer = config.timer
         StaleFlagManager.mark_all_as_stale()
 
-        config.writer_config.setdefault(
-            "put_results_format", 'gdx' if gdxcc_available else 'dat'
-        )
+        # SANITY CHECK - If setdefault is the bug
+        # config.writer_config.setdefault(
+        #     "put_results_format", 'gdx' if gdxcc_available else 'dat'
+        # )
+        config.writer_config.put_results_format = 'gdx' if gdxcc_available else 'dat'
 
         # local variable to hold the working directory name and flags
         dname = None
