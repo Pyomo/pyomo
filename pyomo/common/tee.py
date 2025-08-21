@@ -765,7 +765,8 @@ class TeeStream(object):
         # Note that is it VERY important to close file handles in the
         # same thread that opens it.  If you don't you can see deadlocks
         # and a peculiar error ("libgcc_s.so.1 must be installed for
-        # pthread_cancel to work"; see https://bugs.python.org/issue18748)
+        # pthread_cancel to work"; see
+        # https://github.com/python/cpython/issues/62948)
         #
         # To accomplish this, we will keep two handle lists: one is the
         # set of "active" handles that the (merged reader) thread is
