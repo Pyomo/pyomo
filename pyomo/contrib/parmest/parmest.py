@@ -61,6 +61,7 @@ import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
+from pyomo.opt import TerminationCondition
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
@@ -235,8 +236,10 @@ def SSE(model):
     Returns an expression that is used to compute the sum of squared errors
     ('SSE') objective, assuming Gaussian i.i.d. errors
 
-    Argument:
-        model: annotated Pyomo model
+    Parameters
+    ----------
+    model : Pyomo ConcreteModel
+        Annotated Pyomo model
     """
     # check if the model has all the required suffixes
     _check_model_labels_helper(model, logging_level=logging.ERROR)
@@ -252,8 +255,10 @@ def SSE_weighted(model):
     assuming Gaussian i.i.d. errors, with measurement error standard deviation
     defined in the annotated Pyomo model
 
-    Argument:
-        model: annotated Pyomo model
+    Parameters
+    ----------
+    model : Pyomo ConcreteModel
+        Annotated Pyomo model
     """
     # check if the model has all the required suffixes
     _check_model_labels_helper(model, logging_level=logging.ERROR)
@@ -297,9 +302,12 @@ def _check_model_labels_helper(model, logging_level):
     """
     Checks if the annotated Pyomo model contains the necessary suffixes
 
-    Argument:
-        model: annotated Pyomo model for suffix checking
-        logging_level: logging level specified by the user, e.g., logging.INFO
+    Parameters
+    ----------
+    model : Pyomo ConcreteModel
+        Annotated Pyomo model
+    logging_level : int
+        Logging level specified by the user, e.g., logging.INFO
     """
     required_attrs = ("experiment_outputs", "unknown_parameters")
 
@@ -313,21 +321,20 @@ def _check_model_labels_helper(model, logging_level):
 
     # set the logging
     logger.setLevel(level=logging_level)
-    if logging_level == logging.INFO:
-        logger.info("Model has expected labels.")
+    logger.info("Model has expected labels.")
 
 
 def _get_labeled_model_helper(experiment):
     """
-    Checks if the Experiment class object has a "get_labeled_model" function
+    Returns the annotated Pyomo model
 
-    Argument:
-        experiment: Estimator class object that contains the Pyomo model
-            for a particular experimental condition
-
-    Returns:
-        Annotated Pyomo model
+    Parameters
+    ----------
+    experiment : class
+        Estimator class object that contains the Pyomo model
+        for a particular experimental condition
     """
+    # checks if the Experiment class has a "get_labeled_model" function
     get_model = getattr(experiment, "get_labeled_model", None)
     if not callable(get_model):
         raise AttributeError(
@@ -340,19 +347,42 @@ def _get_labeled_model_helper(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
-def _count_total_experiments(exp_list):
+def _check_solver_termination_result(model, solver_result):
+    """
+    Checks if the Pyomo model solves to optimality
+    """
+    if solver_result.solver.termination_condition == TerminationCondition.optimal:
+        model.solutions.load_from(solver_result)
+    else:
+        logger.error(
+            "Solution is not optimal. Termination condition: %s, Status: %s",
+            solver_result.solver.termination_condition,
+            solver_result.solver.status,
+        )
+        raise RuntimeError(
+            f"Model from experiment did not solve appropriately. "
+            f"Make sure the model is well-posed."
+        )
+
+
+def _count_total_experiments(experiment_list):
     """
     Counts the number of data points in the list of experiments
 
-    Argument:
-        exp_list: list of experiments
+    Parameters
+    ----------
+    experiment_list : list
+        List of Estimator class objects containing the Pyomo model
+        for the different experimental conditions
 
-    Return:
-         total_number_data: the total number of data points in the list of experiments
+    Returns
+    -------
+    total_number_data : int
+        The total number of data points in the list of experiments
     """
     total_number_data = 0
-    for exp in exp_list:
-        total_number_data += len(exp.get_labeled_model().experiment_outputs)
+    for experiment in experiment_list:
+        total_number_data += len(experiment.get_labeled_model().experiment_outputs)
 
     return total_number_data
 
@@ -374,29 +404,33 @@ class UnsupportedArgs(Enum):
 
 
 # Compute the Jacobian matrix of measured variables with respect to the parameters
-def _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level):
+def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     """
     Computes the Jacobian matrix of the measured variables with respect to the
     parameters using the central finite difference scheme
 
-    Arguments:
-        experiment: Estimator class object that contains the Pyomo model
-            for a particular experimental condition
-        theta_vals: dictionary containing the estimates of the unknown parameters
-        step: float used for relative perturbation of the parameters,
-            e.g., step=0.02 is a 2% perturbation
-        solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-        tee: boolean solver option to be passed for verbose output
-        logging_level: logging level specified by the user, e.g., logging.INFO
+    Parameters
+    ----------
+    experiment : class
+        Estimator class object that contains the Pyomo model
+        for a particular experimental condition
+    theta_vals : dict
+        Dictionary containing the estimates of the unknown parameters
+    step : float
+        Float used for relative perturbation of the parameters,
+        e.g., step=0.02 is a 2% perturbation
+    solver : str
+        Solver name specified by the user, e.g., 'ipopt'
+    tee : bool
+        Boolean solver option to be passed for verbose output
 
-    Returns:
-        J: Jacobian matrix
+    Returns
+    -------
+    J : numpy.ndarray
+        Jacobian matrix of the measured variables
     """
     # grab the model
     model = _get_labeled_model_helper(experiment)
-
-    # check if the model has all the required suffixes
-    _check_model_labels_helper(model, logging_level)
 
     # fix the value of the unknown parameters to the estimated values
     params = [k for k, v in model.unknown_parameters.items()]
@@ -404,14 +438,9 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level):
         param.fix(theta_vals[param.name])
 
     # re-solve the model with the estimated parameters
-    try:
-        solver = pyo.SolverFactory(solver)
-        solver.solve(model, tee=tee)
-    except Exception as e:
-        raise RuntimeError(
-            f"Model from experiment did not solve appropriately. Make sure the "
-            f"model is well-posed. The original error was {e}."
-        )
+    solver = pyo.SolverFactory(solver)
+    results = solver.solve(model, tee=tee, load_solutions=False)
+    _check_solver_termination_result(model, results)
 
     # get the measured variables
     y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
@@ -423,7 +452,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level):
     n_params = len(param_values)
     n_outputs = len(y_hat_list)
 
-    # compute the sensitivity of measured variables to the parameters (Jacobian)
+    # compute the sensitivity of the measured variables w.r.t the parameters
     J = np.zeros((n_outputs, n_params))
 
     for i, param in enumerate(params):
@@ -437,13 +466,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level):
         param.fix(orig_value + relative_perturbation)
 
         # solve the model
-        try:
-            solver.solve(model, tee=tee)
-        except Exception as e:
-            raise RuntimeError(
-                f"Model from experiment did not solve appropriately. Make sure the "
-                f"model is well-posed. The original error was {e}."
-            )
+        results = solver.solve(model, tee=tee, load_solutions=False)
+        _check_solver_termination_result(model, results)
 
         # forward perturbation measured variables
         y_hat_plus = [pyo.value(y_hat) for y_hat, y in model.experiment_outputs.items()]
@@ -452,13 +476,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level):
         param.fix(orig_value - relative_perturbation)
 
         # re-solve the model
-        try:
-            solver.solve(model, tee=tee)
-        except Exception as e:
-            raise RuntimeError(
-                f"Model from experiment did not solve appropriately. Make sure the "
-                f"model is well-posed. The original error was {e}."
-            )
+        results = solver.solve(model, tee=tee, load_solutions=False)
+        _check_solver_termination_result(model, results)
 
         # backward perturbation measured variables
         y_hat_minus = [
@@ -481,11 +500,11 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level):
 def compute_covariance_matrix(
     experiment_list,
     method,
+    obj_function,
     theta_vals,
     step,
     solver,
     tee,
-    logging_level,
     estimated_var=None,
 ):
     """
@@ -494,34 +513,37 @@ def compute_covariance_matrix(
 
     Parameters
     ----------
-    experiment_list : list of Estimator class objects
-        list of Estimator class objects containing the Pyomo model
-        for different experimental conditions
-    method : string 
-        ``method`` object specified by the user, e.g., 'finite_difference'
-    theta_vals : dictionary 
+    experiment_list : list
+        List of Estimator class objects containing the Pyomo model
+        for the different experimental conditions
+    method : str
+        Covariance calculation method specified by the user,
+        e.g., 'finite_difference'
+    obj_function: callable
+        Built-in objective function selected by the user, e.g., `SSE`
+    theta_vals : dict
         Dictionary containing the estimates of the unknown parameters
-    step : float 
+    step : float
         Float used for relative perturbation of the parameters,
         e.g., step=0.02 is a 2% perturbation
-    solver : string 
+    solver : str
         Solver name specified by the user, e.g., 'ipopt'
     tee : bool
         Boolean solver option to be passed for verbose output
-    logging_level
-        Logging level specified by the user, e.g., logging.INFO
-    estimated_var
+    estimated_var: float, optional
         Value of the estimated variance of the measurement error
         in cases where the user does not supply the
         measurement error standard deviation
 
     Returns
-    --------
-    cov: covariance matrix of the estimated parameters
+    -------
+    cov : pd.DataFrame
+        Covariance matrix of the estimated parameters
     """
+    # store the FIM of all the experiments
+    FIM_all_exp = []
+
     if method == CovarianceMethod.finite_difference.value:
-        # store the FIM of all experiments
-        FIM_all_exp = []
         # loop through the experiments and compute the FIM
         for experiment in experiment_list:
             FIM_all_exp.append(
@@ -531,33 +553,16 @@ def compute_covariance_matrix(
                     step=step,
                     solver=solver,
                     tee=tee,
-                    logging_level=logging_level,
                     estimated_var=estimated_var,
                 )
             )
-
-        FIM = np.sum(FIM_all_exp, axis=0)
-
-        # covariance matrix
-        try:
-            cov = np.linalg.inv(FIM)
-        except np.linalg.LinAlgError:
-            cov = np.linalg.pinv(FIM)
-            if logging_level == logging.INFO:
-                logger.info("The FIM is singular. Using pseudo-inverse instead.")
-            else:
-                print("The FIM is singular. Using pseudo-inverse instead.")
-
-        cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
     elif method == CovarianceMethod.automatic_differentiation_kaug.value:
-        # store the FIM of all experiments
-        FIM_all_exp = []
-        for (
-            experiment
-        ) in experiment_list:  # loop through the experiments and compute the FIM
+        # loop through the experiments and compute the FIM
+        for experiment in experiment_list:
             FIM_all_exp.append(
                 _kaug_FIM(
                     experiment,
+                    obj_function=obj_function,
                     theta_vals=theta_vals,
                     solver=solver,
                     tee=tee,
@@ -565,19 +570,16 @@ def compute_covariance_matrix(
                 )
             )
 
-        FIM = np.sum(FIM_all_exp, axis=0)
+    FIM = np.sum(FIM_all_exp, axis=0)
 
-        # covariance matrix
-        try:
-            cov = np.linalg.inv(FIM)
-        except np.linalg.LinAlgError:
-            cov = np.linalg.pinv(FIM)
-            if logging_level == logging.INFO:
-                logger.info("The FIM is singular. Using pseudo-inverse instead.")
-            else:
-                print("The FIM is singular. Using pseudo-inverse instead.")
+    # calculate the covariance matrix
+    try:
+        cov = np.linalg.inv(FIM)
+    except np.linalg.LinAlgError:
+        cov = np.linalg.pinv(FIM)
+        logger.warning("The FIM is singular. Using pseudo-inverse instead.")
 
-        cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
+    cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
 
     return cov
 
@@ -585,35 +587,42 @@ def compute_covariance_matrix(
 # compute the Fisher information matrix of the estimated parameters using
 # 'finite_difference'
 def _finite_difference_FIM(
-    experiment, theta_vals, step, solver, tee, logging_level, estimated_var=None
+    experiment, theta_vals, step, solver, tee, estimated_var=None
 ):
     """
     Computes the Fisher information matrix from 'finite_difference' Jacobian matrix
     and measurement errors standard deviation defined in the annotated Pyomo model
 
-    Arguments:
-        experiment: Estimator class object that contains the Pyomo model
-            for a particular experimental condition
-        theta_vals: dictionary containing the estimates of the unknown parameters
-        step: float used for relative perturbation of the parameters,
-            e.g., step=0.02 is a 2% perturbation
-        solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-        tee: boolean solver option to be passed for verbose output
-        logging_level: logging level specified by the user, e.g., logging.INFO
-        estimated_var: value of the estimated variance of the measurement error in
-            cases where the user does not supply the
-            measurement error standard deviation
+    Parameters
+    ----------
+    experiment : class
+        Estimator class object that contains the Pyomo model
+        for a particular experimental condition
+    theta_vals : dict
+        Dictionary containing the estimates of the unknown parameters
+    step : float
+        Float used for relative perturbation of the parameters,
+        e.g., step=0.02 is a 2% perturbation
+    solver : str
+        Solver name specified by the user, e.g., 'ipopt'
+    tee : bool
+        Boolean solver option to be passed for verbose output
+    estimated_var: float or int, optional
+        Value of the estimated variance of the measurement error
+        in cases where the user does not supply the
+        measurement error standard deviation
 
-    Returns:
-        FIM: Fisher information matrix about the parameters
+    Returns
+    -------
+    FIM : numpy.ndarray
+        Fisher information matrix of the estimated parameters
     """
     # compute the Jacobian matrix using finite difference
-    J = _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level)
+    J = _compute_jacobian(experiment, theta_vals, step, solver, tee)
 
     # computing the condition number of the Jacobian matrix
     cond_number_jac = np.linalg.cond(J)
-    if logging_level == logging.INFO:
-        logger.info(f"The condition number of the Jacobian matrix is {cond_number_jac}")
+    logger.info(f"The condition number of the Jacobian matrix is {cond_number_jac}")
 
     # grab the model
     model = _get_labeled_model_helper(experiment)
@@ -666,7 +675,7 @@ def _finite_difference_FIM(
 
 # compute the Fisher information matrix of the estimated parameters using
 # 'automatic_differentiation_kaug'
-def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
+def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=None):
     """
     Computes the FIM using 'automatic_differentiation_kaug', a sensitivity-based
     approach that uses the annotated Pyomo model optimality condition and
@@ -674,42 +683,47 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
 
     Disclaimer - code adopted from the kaug function implemented in Pyomo.DoE
 
-    Arguments:
-        experiment: Estimator class object that contains the Pyomo model
-            for a particular experimental condition
-        theta_vals: dictionary containing the estimates of the unknown parameters
-        solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-        tee: boolean solver option to be passed for verbose output
-        estimated_var: value of the estimated variance of the measurement error in
-            cases where the user does not supply the
-            measurement error standard deviation
+    Parameters
+    ----------
+    experiment : class
+        Estimator class object that contains the Pyomo model
+        for a particular experimental condition
+    obj_function: callable
+        Built-in objective function selected by the user, e.g., `SSE`
+    theta_vals : dict
+        Dictionary containing the estimates of the unknown parameters
+    solver : str
+        Solver name specified by the user, e.g., 'ipopt'
+    tee : bool
+        Boolean solver option to be passed for verbose output
+    estimated_var: float or int, optional
+        Value of the estimated variance of the measurement error
+        in cases where the user does not supply the
+        measurement error standard deviation
 
-    Returns:
-        FIM: Fisher information matrix about the parameters
+    Returns
+    -------
+    FIM : numpy.ndarray
+        Fisher information matrix of the estimated parameters
     """
     # grab the model
     model = _get_labeled_model_helper(experiment)
+
+    # deactivate any existing objective functions
+    for obj in model.component_objects(pyo.Objective):
+        obj.deactivate()
+
+    # add the built-in objective function selected by the user
+    model.objective = pyo.Objective(expr=obj_function, sense=pyo.minimize)
 
     # fix the parameter values to the estimated values
     params = [k for k, v in model.unknown_parameters.items()]
     for param in params:
         param.fix(theta_vals[param.name])
 
-    # re-solve the model with the estimated parameters
-    try:
-        solver = pyo.SolverFactory(solver)
-        solver.solve(model, tee=tee)
-    except Exception as e:
-        raise RuntimeError(
-            f"Model from experiment did not solve appropriately. Make sure the "
-            f"model is well-posed. The original error was {e}."
-        )
-
-    # add zero (dummy/placeholder) objective function
-    if not hasattr(model, "objective"):
-        model.objective = pyo.Objective(expr=0, sense=pyo.minimize)
-
-    solver.solve(model, tee=tee)
+    solver = pyo.SolverFactory(solver)
+    results = solver.solve(model, tee=tee, load_solutions=False)
+    _check_solver_termination_result(model, results)
 
     # Probe the solved model for dsdp results (sensitivities s.t. parameters)
     params_dict = {k.name: v for k, v in model.unknown_parameters.items()}
@@ -734,9 +748,9 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
             measurement_index.append(kaug_no)
             # get right line of dsdp
             dsdp_extract.append(dsdp_array[kaug_no])
-        except:
+        except ValueError:
             # k_aug does not provide value for fixed variables
-            logging.getLogger(__name__).debug("The variable is fixed:  %s", name)
+            logger.debug("The variable is fixed:  %s", name)
             # produce the sensitivity for fixed variables
             zero_sens = np.zeros(len(params_names))
             # for fixed variables, the sensitivity are a zero vector
@@ -800,7 +814,8 @@ class Estimator(object):
         Default is None.
     tee: bool, optional
         If True, print the solver output to the screen. Default is False.
-    logging_level: logging level, optional
+    logging_level : int, optional
+        Logging level specified by the user,
         e.g., logging.INFO. Default is logging.ERROR.
     diagnostic_mode: bool, optional
         If True, print diagnostics from the solver. Default is False.
@@ -985,6 +1000,7 @@ class Estimator(object):
                     second_stage_rule = SSE
                 else:
                     second_stage_rule = SSE_weighted
+                self.covariance_objective = second_stage_rule
             else:
                 # A custom function uses model.experiment_outputs as data
                 second_stage_rule = self.obj_function
@@ -1078,6 +1094,7 @@ class Estimator(object):
                         solver.options[key] = self.solver_options[key]
 
                 solve_result = solver.solve(self.ef_instance, tee=self.tee)
+                _check_solver_termination_result(self.ef_instance, solve_result)
             elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
                 deprecation_warning(
                     "You're using a deprecated call to the `theta_est()` function "
@@ -1231,15 +1248,21 @@ class Estimator(object):
         """
         Covariance matrix calculation using all scenarios in the data
 
-        Argument:
-            method: string ``method`` object specified by the user,
-                e.g., 'finite_difference'
-            solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-            step: float used for relative perturbation of the parameters,
-                e.g., step=0.02 is a 2% perturbation
+        Parameters
+        ----------
+        method : str
+            Covariance calculation method specified by the user,
+            e.g., 'finite_difference'
+        solver : str
+            Solver name specified by the user, e.g., 'ipopt'
+        step : float
+            Float used for relative perturbation of the parameters,
+            e.g., step=0.02 is a 2% perturbation
 
-        Returns:
-            cov: pd.DataFrame, covariance matrix of the estimated parameters
+        Returns
+        -------
+        cov : pd.DataFrame
+            Covariance matrix of the estimated parameters
         """
         if method == CovarianceMethod.reduced_hessian.value:
             # compute the inverse reduced hessian to be used
@@ -1277,13 +1300,10 @@ class Estimator(object):
                 param.fix(self.estimated_theta[param.name])
 
             # re-solve the model with the estimated parameters
-            try:
-                pyo.SolverFactory(solver).solve(model, tee=self.tee)
-            except Exception as e:
-                raise RuntimeError(
-                    f"Model from experiment did not solve appropriately. Make sure the "
-                    f"model is well-posed. The original error was {e}."
-                )
+            results = pyo.SolverFactory(solver).solve(
+                model, tee=self.tee, load_solutions=False
+            )
+            _check_solver_termination_result(model, results)
 
             # choose and evaluate the sum of squared errors expression
             if self.obj_function == ObjectiveType.SSE:
@@ -1305,10 +1325,9 @@ class Estimator(object):
 
         sse = sum(sse_vals)
         logger.setLevel(level=self.logging_level)
-        if self.logging_level == logging.INFO:
-            logger.info(
-                f"The sum of squared errors at the estimated parameter(s) is: {sse}"
-            )
+        logger.info(
+            f"The sum of squared errors at the estimated parameter(s) is: {sse}"
+        )
 
         """Calculate covariance assuming experimental observation errors are
         independent and follow a Gaussian distribution with constant variance.
@@ -1364,11 +1383,11 @@ class Estimator(object):
                         cov = compute_covariance_matrix(
                             self.exp_list,
                             method,
+                            obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
                             solver=solver,
                             step=step,
                             tee=self.tee,
-                            logging_level=self.logging_level,
                             estimated_var=measurement_var,
                         )
                 elif all(item is not None for item in meas_error):
@@ -1391,11 +1410,11 @@ class Estimator(object):
                         cov = compute_covariance_matrix(
                             self.exp_list,
                             method,
+                            obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
                             solver=solver,
                             step=step,
                             tee=self.tee,
-                            logging_level=self.logging_level,
                         )
                 else:
                     raise ValueError(
@@ -1432,11 +1451,11 @@ class Estimator(object):
                         cov = compute_covariance_matrix(
                             self.exp_list,
                             method,
+                            obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
                             step=step,
                             solver=solver,
                             tee=self.tee,
-                            logging_level=self.logging_level,
                         )
                 else:
                     raise ValueError(
@@ -1691,19 +1710,21 @@ class Estimator(object):
 
         Parameters
         ----------
-        solver: string, optional
+        solver: str, optional
             Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         return_values: list, optional
-            List of Variable names, used to return values from the model for data reconciliation
+            List of Variable names, used to return values from the model
+            for data reconciliation
 
         Returns
         -------
-        objectiveval: float
+        obj_val: float
             The objective function value
         theta_vals: pd.Series
             Estimated values for theta
-        variable values: pd.DataFrame
-            Variable values for each variable name in return_values (only for solver='ef_ipopt')
+        var_values: pd.DataFrame
+            Variable values for each variable name in
+            return_values (only for solver='ef_ipopt')
         """
 
         # check if we are using deprecated parmest
@@ -1733,20 +1754,20 @@ class Estimator(object):
         """
         Covariance matrix calculation using all scenarios in the data
 
-        Parameters
-        ----------
-        method: string, optional
-            Options - 'finite_difference', 'reduced_hessian',
+        method : str, optional
+            Covariance calculation method specified by the user,
+            options - 'finite_difference', 'reduced_hessian',
             and 'automatic_differentiation_kaug'
-        solver: string, optional
-            E.g., 'ipopt'
-        step: float, optional
-            The value used for relative perturbation of the parameters, e.g.,
-            step=0.02 is a 2% perturbation
+        solver : str, optional
+            Solver name specified by the user, e.g., 'ipopt'
+        step : float, optional
+            Float used for relative perturbation of the parameters,
+            e.g., step=0.02 is a 2% perturbation
 
         Returns
         -------
-        cov: pd.DataFrame, covariance matrix of the estimated parameters
+        cov : pd.DataFrame
+            Covariance matrix of the estimated parameters
         """
         # check if the solver input is a string
         if not isinstance(solver, str):

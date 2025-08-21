@@ -9,15 +9,19 @@ methods which have been implemented in parmest.
 
 1. Reduced Hessian Method
 
-    When the objective function is the sum of squared errors (SSE) between the
-    observed and predicted values of the measured variables, the covariance matrix is:
+    When the objective function is the sum of squared errors (SSE):
+    :math:`\text{SSE} = \sum_{i = 1}^n \left(y_{i} - \hat{y}_{i}\right)^2`,
+    the covariance matrix is:
 
     .. math::
        V_{\boldsymbol{\theta}} = 2 \sigma^2 \left(\frac{\partial^2 \text{SSE}}
         {\partial \boldsymbol{\theta} \partial \boldsymbol{\theta}}\right)^{-1}_{\boldsymbol{\theta}
         = \boldsymbol{\theta}^*}
 
-    When the objective function is the weighted SSE (WSSE), the covariance matrix is:
+    When the objective function is the weighted SSE (WSSE):
+    :math:`\text{WSSE} = \frac{1}{2} \left(\mathbf{y} - f(\mathbf{x};\boldsymbol{\theta})\right)^\text{T}
+    \mathbf{W} \left(\mathbf{y} - f(\mathbf{x};\boldsymbol{\theta})\right)`,
+    the covariance matrix is:
 
     .. math::
        V_{\boldsymbol{\theta}} = \left(\frac{\partial^2 \text{WSSE}}
@@ -25,14 +29,16 @@ methods which have been implemented in parmest.
         = \boldsymbol{\theta}^*}
 
     Where :math:`V_{\boldsymbol{\theta}}` is the covariance matrix of the estimated
-    parameters, :math:`\boldsymbol{\theta}` are the unknown parameters,
-    :math:`\boldsymbol{\theta^*}` are the estimates of the unknown parameters, and
-    :math:`\sigma^2` is the variance of the measurement error. When the standard
+    parameters, :math:`y` are the observed measured variables, :math:`\hat{y}` are the
+    predicted measured variables, :math:`n` is the number of data points,
+    :math:`\boldsymbol{\theta}` are the unknown parameters, :math:`\boldsymbol{\theta^*}`
+    are the estimates of the unknown parameters, :math:`\mathbf{x}` are the decision
+    variables, and :math:`\mathbf{W}` is a diagonal matrix containing the inverse of the
+    variance of the measurement error, :math:`\sigma^2`. When the standard
     deviation of the measurement error is not supplied by the user, parmest
     approximates the variance of the measurement error as
-    :math:`\sigma^2 = \frac{1}{n-l} \sum e_i^2` where :math:`n` is the number of data
-    points, :math:`l` is the number of fitted parameters, and :math:`e_i` is the
-    residual for experiment :math:`i`.
+    :math:`\sigma^2 = \frac{1}{n-l} \sum e_i^2` where :math:`l` is the number of
+    fitted parameters, and :math:`e_i` is the residual for experiment :math:`i`.
 
     In parmest, this method computes the inverse of the Hessian by scaling the
     objective function (SSE or WSSE) with a constant probability factor.
