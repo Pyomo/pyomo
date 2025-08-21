@@ -137,8 +137,16 @@ class GAMSResults(Results):
             'return_code',
             ConfigValue(default=None, description="Return code from the GAMS solver."),
         )
-        self.gams_termination_condition: ConfigDict = self.declare(
-            'gams_termination_condition',
+        self.gams_solver_termination_condition: ConfigDict = self.declare(
+            'gams_solver_termination_condition',
+            ConfigValue(
+                default=None,
+                description="Include additional TerminationCondition domain."
+                "Take precedence over model_termination_condition if interruption occur",
+            ),
+        )
+        self.gams_model_termination_condition: ConfigDict = self.declare(
+            'gams_model_termination_condition',
             ConfigValue(
                 default=None,
                 description="Include additional TerminationCondition domain.",
@@ -423,7 +431,7 @@ class GAMS(SolverBase):
             ####################################################################
             # Postsolve (WIP)
             """
-            If solver is interrupted either from user input or resources, skip checking the modelstat
+            If solver is interrupted either from user input or resources, skip checking the modelstat termination condition
             """
             ####################################################################
 
@@ -450,27 +458,37 @@ class GAMS(SolverBase):
                 results.gams_solver_status = SolverStatus.ok
             elif solvestat == 2:
                 results.gams_solver_status = SolverStatus.ok
-                results.gams_termination_condition = TerminationCondition.maxIterations
+                results.gams_solver_termination_condition = (
+                    TerminationCondition.maxIterations
+                )
             elif solvestat == 3:
                 results.gams_solver_status = SolverStatus.ok
-                results.gams_termination_condition = TerminationCondition.maxTimeLimit
+                results.gams_solver_termination_condition = (
+                    TerminationCondition.maxTimeLimit
+                )
             elif solvestat == 5:
                 results.gams_solver_status = SolverStatus.ok
-                results.gams_termination_condition = TerminationCondition.maxEvaluations
+                results.gams_solver_termination_condition = (
+                    TerminationCondition.maxEvaluations
+                )
             elif solvestat == 7:
                 results.gams_solver_status = SolverStatus.aborted
-                results.gams_termination_condition = (
+                results.gams_solver_termination_condition = (
                     TerminationCondition.licensingProblems
                 )
             elif solvestat == 8:
                 results.gams_solver_status = SolverStatus.aborted
-                results.gams_termination_condition = TerminationCondition.userInterrupt
+                results.gams_solver_termination_condition = (
+                    TerminationCondition.userInterrupt
+                )
             elif solvestat == 10:
                 results.gams_solver_status = SolverStatus.error
-                results.gams_termination_condition = TerminationCondition.solverFailure
+                results.gams_solver_termination_condition = (
+                    TerminationCondition.solverFailure
+                )
             elif solvestat == 11:
                 results.gams_solver_status = SolverStatus.error
-                results.gams_termination_condition = (
+                results.gams_solver_termination_condition = (
                     TerminationCondition.internalSolverError
                 )
             elif solvestat == 4:
@@ -482,74 +500,83 @@ class GAMS(SolverBase):
                 results.gams_solver_status = SolverStatus.unknown
 
             modelstat = stat_vars["MODELSTAT"]
-            if solvestat == 1:
-                if modelstat == 1:
-                    results.gams_termination_condition = TerminationCondition.optimal
-                    results.solution_status = SolutionStatus.optimal
-                elif modelstat == 2:
-                    results.gams_termination_condition = (
-                        TerminationCondition.locallyOptimal
+            if modelstat == 1:
+                results.gams_model_termination_condition = TerminationCondition.optimal
+                results.solution_status = SolutionStatus.optimal
+            elif modelstat == 2:
+                results.gams_model_termination_condition = (
+                    TerminationCondition.locallyOptimal
+                )
+                results.solution_status = SolutionStatus.feasible
+            elif modelstat in [3, 18]:
+                results.gams_model_termination_condition = (
+                    TerminationCondition.unbounded
+                )
+                # results.solution_status = SolutionStatus.unbounded
+                results.solution_status = SolutionStatus.noSolution
+
+            elif modelstat in [4, 5, 6, 10, 19]:
+                results.gams_model_termination_condition = (
+                    TerminationCondition.infeasibleOrUnbounded
+                )
+                results.solution_status = SolutionStatus.infeasible
+                results.solution_loader = GMSSolutionLoader(None, None)
+            elif modelstat == 7:
+                results.gams_model_termination_condition = TerminationCondition.feasible
+                results.solution_status = SolutionStatus.feasible
+            elif modelstat == 8:
+                # 'Integer solution model found'
+                results.gams_model_termination_condition = TerminationCondition.optimal
+                results.solution_status = SolutionStatus.optimal
+            elif modelstat == 9:
+                results.gams_model_termination_condition = (
+                    TerminationCondition.intermediateNonInteger
+                )
+                results.solution_status = SolutionStatus.noSolution
+            elif modelstat == 11:
+                # Should be handled above, if modelstat and solvestat both
+                # indicate a licensing problem
+                if results.gams_model_termination_condition is None:
+                    results.gams_model_termination_condition = (
+                        TerminationCondition.licensingProblems
                     )
-                    results.solution_status = SolutionStatus.feasible
-                elif modelstat in [3, 18]:
-                    results.gams_termination_condition = TerminationCondition.unbounded
-                    # results.solution_status = SolutionStatus.unbounded
-                    results.solution_status = SolutionStatus.noSolution
+                results.solution_status = SolutionStatus.noSolution
+                # results.solution_status = SolutionStatus.error
 
-                elif modelstat in [4, 5, 6, 10, 19]:
-                    results.gams_termination_condition = (
-                        TerminationCondition.infeasibleOrUnbounded
+            elif modelstat in [12, 13]:
+                if results.gams_model_termination_condition is None:
+                    results.gams_model_termination_condition = (
+                        TerminationCondition.error
                     )
-                    results.solution_status = SolutionStatus.infeasible
-                    results.solution_loader = GMSSolutionLoader(None, None)
-                elif modelstat == 7:
-                    results.gams_termination_condition = TerminationCondition.feasible
-                    results.solution_status = SolutionStatus.feasible
-                elif modelstat == 8:
-                    # 'Integer solution model found'
-                    results.gams_termination_condition = TerminationCondition.optimal
-                    results.solution_status = SolutionStatus.optimal
-                elif modelstat == 9:
-                    results.gams_termination_condition = (
-                        TerminationCondition.intermediateNonInteger
-                    )
-                    results.solution_status = SolutionStatus.noSolution
-                elif modelstat == 11:
-                    # Should be handled above, if modelstat and solvestat both
-                    # indicate a licensing problem
-                    if results.gams_termination_condition is None:
-                        results.gams_termination_condition = (
-                            TerminationCondition.licensingProblems
-                        )
-                    results.solution_status = SolutionStatus.noSolution
-                    # results.solution_status = SolutionStatus.error
+                results.solution_status = SolutionStatus.noSolution
+                # results.solution_status = SolutionStatus.error
 
-                elif modelstat in [12, 13]:
-                    if results.gams_termination_condition is None:
-                        results.gams_termination_condition = TerminationCondition.error
-                    results.solution_status = SolutionStatus.noSolution
-                    # results.solution_status = SolutionStatus.error
+            elif modelstat == 14:
+                results.gams_model_termination_condition = (
+                    TerminationCondition.noSolution
+                )
+                results.solution_status = SolutionStatus.noSolution
+                # results.solution_status = SolutionStatus.unknown
 
-                elif modelstat == 14:
-                    if results.gams_termination_condition is None:
-                        results.gams_termination_condition = (
-                            TerminationCondition.noSolution
-                        )
-                    results.solution_status = SolutionStatus.noSolution
-                    # results.solution_status = SolutionStatus.unknown
+            elif modelstat in [15, 16, 17]:
+                # Having to do with CNS models,
+                # not sure what to make of status descriptions
+                results.gams_model_termination_condition = TerminationCondition.optimal
+                results.solution_status = SolutionStatus.noSolution
+            else:
+                # This is just a backup catch, all cases are handled above
+                results.solution_status = SolutionStatus.noSolution
 
-                elif modelstat in [15, 16, 17]:
-                    # Having to do with CNS models,
-                    # not sure what to make of status descriptions
-                    results.gams_termination_condition = TerminationCondition.optimal
-                    results.solution_status = SolutionStatus.noSolution
-                else:
-                    # This is just a backup catch, all cases are handled above
-                    results.solution_status = SolutionStatus.noSolution
+            # prioritize solver termination condition if interruption occur
+            termination_condition_key = (
+                results.gams_solver_termination_condition
+                if solvestat != 1
+                else results.gams_model_termination_condition
+            )
 
             # ensure backward compatibility before feeding to contrib.solver
             results.termination_condition = rev_legacy_termination_condition_map[
-                results.gams_termination_condition
+                termination_condition_key
             ]
 
             # Taken from ipopt.py
