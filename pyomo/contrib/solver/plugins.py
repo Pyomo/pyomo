@@ -15,22 +15,24 @@ from .solvers.ipopt import Ipopt, LegacyIpoptSolver
 from .solvers.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi_direct import GurobiDirect
 from .solvers.highs import Highs
+from .solvers.knitro import load as load_knitro
 
 
 def load():
     SolverFactory.register(
-        name='ipopt', legacy_name='ipopt_v2', doc='The IPOPT NLP solver'
+        name="ipopt", legacy_name="ipopt_v2", doc="The IPOPT NLP solver"
     )(Ipopt, LegacyIpoptSolver)
     SolverFactory.register(
-        name='gurobi_persistent',
-        legacy_name='gurobi_persistent_v2',
-        doc='Persistent interface to Gurobi',
+        name="gurobi_persistent",
+        legacy_name="gurobi_persistent_v2",
+        doc="Persistent interface to Gurobi",
     )(GurobiPersistent)
     SolverFactory.register(
-        name='gurobi_direct',
-        legacy_name='gurobi_direct_v2',
-        doc='Direct (scipy-based) interface to Gurobi',
+        name="gurobi_direct",
+        legacy_name="gurobi_direct_v2",
+        doc="Direct (scipy-based) interface to Gurobi",
     )(GurobiDirect)
     SolverFactory.register(
-        name='highs', legacy_name='highs', doc='Persistent interface to HiGHS'
+        name="highs", legacy_name="highs", doc="Persistent interface to HiGHS"
     )(Highs)
+    load_knitro()
