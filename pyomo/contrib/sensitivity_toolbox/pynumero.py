@@ -148,7 +148,7 @@ def get_dydp(y_list, dsdp, row_map, column_map=None):
 
     if j > 0:
         if column_map is None:
-            raise ValueError("If y_list contains Expression column_map arg required")
+            raise ValueError("A column_map must be provided if y_list contains named expressions.")
         wrt_list = [s for s in row_map]
         dedx = [None] * j
         for v, i in expr_row_map.items():
