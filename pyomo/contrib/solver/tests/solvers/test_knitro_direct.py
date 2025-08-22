@@ -88,8 +88,7 @@ class TestKnitroDirectSolver(unittest.TestCase):
         m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
         m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
         m.obj = pyo.Objective(
-            expr=(1.0 - m.x) + 100.0 * (m.y - m.x),
-            sense=pyo.minimize,
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x), sense=pyo.minimize
         )
         res = self.opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, -1004)
@@ -101,8 +100,7 @@ class TestKnitroDirectSolver(unittest.TestCase):
         m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
         m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
         m.obj = pyo.Objective(
-            expr=(1.0 - m.x) + 100.0 * (m.y - m.x) ** 2,
-            sense=pyo.minimize,
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x) ** 2, sense=pyo.minimize
         )
         results = self.opt.solve(m)
         self.assertAlmostEqual(results.incumbent_objective, -4.0, 3)
@@ -113,10 +111,7 @@ class TestKnitroDirectSolver(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
         m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
-        m.obj = pyo.Objective(
-            expr=(m.y - m.x) ** 2,
-            sense=pyo.minimize,
-        )
+        m.obj = pyo.Objective(expr=(m.y - m.x) ** 2, sense=pyo.minimize)
         m.c1 = pyo.Constraint(expr=m.x**2 + m.y**2 <= 4)
         results = self.opt.solve(m)
         self.assertAlmostEqual(results.incumbent_objective, 0.0)
