@@ -400,6 +400,9 @@ class KnitroProblemContext:
         idx_cons = [self.con_map.get(id(con)) for con in cons]
         return self._execute(knitro.KN_get_con_dual_values, idx_cons)
 
+    def get_obj_value(self) -> Optional[float]:
+        return self._execute(knitro.KN_get_obj_value)
+
     def set_options(self, **options):
         for param, val in options.items():
             param_id = self._execute(knitro.KN_get_param_id, param)
@@ -546,6 +549,8 @@ class KnitroDirectSolver(SolverBase):
             != TerminationCondition.convergenceCriteriaSatisfied
         ):
             raise NoOptimalSolutionError()
+        results.timing_info.solve_time = problem.get_solve_time()
+        results.incumbent_objective = problem.get_obj_value()
 
         results.solution_loader = KnitroDirectSolutionLoader(problem, model_repn)
         if config.load_solutions:
@@ -553,5 +558,4 @@ class KnitroDirectSolver(SolverBase):
             results.solution_loader.load_vars()
             timer.stop("load_solutions")
 
-        results.timing_info.solve_time = problem.get_solve_time()
         return results
