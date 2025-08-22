@@ -208,6 +208,7 @@ class TestGAMSInterface(unittest.TestCase):
         self.assertIsNone(opt._version_cache[1])
 
 
+@unittest.skipIf(not gams_available, "The 'gams' command is not available")
 class TestGAMS(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel('TestModel')
