@@ -102,6 +102,21 @@ class TestKnitroDirectSolver(unittest.TestCase):
         model.obj = pyo.Objective(rule=dummy_qp_equation, sense=pyo.minimize)
         return model
 
+    def create_qcp_model(self):
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        model.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+
+        def dummy_qcp_equation(m):
+            return (m.y - m.x) ** 2
+
+        def dummy_qcp_constraint(m):
+            return m.x**2 + m.y**2 <= 4
+
+        model.obj = pyo.Objective(rule=dummy_qcp_equation, sense=pyo.minimize)
+        model.c1 = pyo.Constraint(rule=dummy_qcp_constraint)
+        return model
+
     def test_solve(self):
         model = self.create_model()
         opt = knitro.KnitroDirectSolver()
@@ -116,3 +131,9 @@ class TestKnitroDirectSolver(unittest.TestCase):
         self.assertAlmostEqual(results.incumbent_objective, -4.0, 3)
         self.assertAlmostEqual(model.x.value, 5.0, 3)
         self.assertAlmostEqual(model.y.value, 5.0, 3)
+
+    def test_qcp_solve(self):
+        model = self.create_qcp_model()
+        opt = knitro.KnitroDirectSolver()
+        results = opt.solve(model)
+        self.assertAlmostEqual(results.incumbent_objective, 0.0)
