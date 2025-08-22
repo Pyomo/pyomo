@@ -11,11 +11,10 @@
 
 
 import io
-
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from typing import Any, List, Optional, Tuple
 
-from pyomo.common.collections.component_map import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import ApplicationError
 from pyomo.common.flags import NOTSET
 from pyomo.common.numeric_types import value
@@ -43,7 +42,7 @@ from pyomo.core.plugins.transform.util import partial
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
 
-from .api import knitro, KNITRO_AVAILABLE, KNITRO_VERSION
+from .api import KNITRO_AVAILABLE, KNITRO_VERSION, knitro
 from .config import KnitroConfig
 
 
