@@ -60,7 +60,7 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
         opt = knitro.KnitroDirectSolver()
         self.assertFalse(opt.is_persistent())
         self.assertIsNotNone(opt.version())
-        self.assertEqual(opt.name, "knitrodirectsolver")
+        self.assertEqual(opt.name, "knitro_direct")
         self.assertEqual(opt.CONFIG, opt.config)
         self.assertTrue(opt.available())
 
@@ -68,7 +68,7 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
         with knitro.KnitroDirectSolver() as opt:
             self.assertFalse(opt.is_persistent())
             self.assertIsNotNone(opt.version())
-            self.assertEqual(opt.name, "knitrodirectsolver")
+            self.assertEqual(opt.name, "knitro_direct")
             self.assertEqual(opt.CONFIG, opt.config)
             self.assertTrue(opt.available())
 
@@ -94,7 +94,6 @@ class TestKnitroDirectSolver(unittest.TestCase):
     def test_solve(self):
         model = self.create_model()
         opt = knitro.KnitroDirectSolver()
-        results = opt.solve(model)
-        results.solution_loader.load_vars()
+        opt.solve(model)
         self.assertAlmostEqual(model.x.value, 5)
         self.assertAlmostEqual(model.y.value, -5)
