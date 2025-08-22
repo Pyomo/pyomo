@@ -91,9 +91,28 @@ class TestKnitroDirectSolver(unittest.TestCase):
         model.obj = pyo.Objective(rule=dummy_equation, sense=pyo.minimize)
         return model
 
+    def create_qp_model(self):
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        model.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+
+        def dummy_qp_equation(m):
+            return (1.0 - m.x) + 100.0 * (m.y - m.x) ** 2
+
+        model.obj = pyo.Objective(rule=dummy_qp_equation, sense=pyo.minimize)
+        return model
+
     def test_solve(self):
         model = self.create_model()
         opt = knitro.KnitroDirectSolver()
         opt.solve(model)
         self.assertAlmostEqual(model.x.value, 5)
         self.assertAlmostEqual(model.y.value, -5)
+
+    def test_qp_solve(self):
+        model = self.create_qp_model()
+        opt = knitro.KnitroDirectSolver()
+        results = opt.solve(model)
+        self.assertAlmostEqual(results.incumbent_objective, -4.0, 3)
+        self.assertAlmostEqual(model.x.value, 5.0, 3)
+        self.assertAlmostEqual(model.y.value, 5.0, 3)
