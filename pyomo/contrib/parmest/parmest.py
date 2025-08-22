@@ -326,7 +326,7 @@ def _check_model_labels_helper(model, logging_level):
 
 def _get_labeled_model_helper(experiment):
     """
-    Returns the annotated Pyomo model
+    Returns the annotated Pyomo model from the Experiment class
 
     Parameters
     ----------
@@ -334,7 +334,7 @@ def _get_labeled_model_helper(experiment):
         Estimator class object that contains the Pyomo model
         for a particular experimental condition
     """
-    # checks if the Experiment class has a "get_labeled_model" function
+    # check if the Experiment class has a "get_labeled_model" function
     get_model = getattr(experiment, "get_labeled_model", None)
     if not callable(get_model):
         raise AttributeError(
@@ -1754,15 +1754,17 @@ class Estimator(object):
         """
         Covariance matrix calculation using all scenarios in the data
 
+        Parameters
+        ----------
         method : str, optional
-            Covariance calculation method specified by the user,
-            options - 'finite_difference', 'reduced_hessian',
-            and 'automatic_differentiation_kaug'
+            Covariance calculation method. Options - 'finite_difference',
+            'reduced_hessian', and 'automatic_differentiation_kaug'.
+            Default is 'finite_difference'
         solver : str, optional
-            Solver name specified by the user, e.g., 'ipopt'
+            Solver name, e.g., 'ipopt'. Default is 'ipopt'
         step : float, optional
             Float used for relative perturbation of the parameters,
-            e.g., step=0.02 is a 2% perturbation
+            e.g., step=0.02 is a 2% perturbation. Default is 1e-3
 
         Returns
         -------
