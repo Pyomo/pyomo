@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from __future__ import annotations
 import datetime
 import io
 import logging
@@ -49,7 +50,7 @@ from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpres
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.solver.common.base import SolverBase, Availability
+from pyomo.contrib.solver.common.base import SolverBase, Availability, PersistentSolverBase
 from pyomo.contrib.solver.common.config import BranchAndBoundConfig
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
@@ -71,6 +72,7 @@ from pyomo.common.config import ConfigValue
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.core.base.units_container import _PyomoUnit
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from pyomo.contrib.observer.model_observer import Observer, ModelChangeDetector
 
 
 logger = logging.getLogger(__name__)
@@ -354,7 +356,72 @@ class ScipDirectSolutionLoader(SolutionLoaderBase):
         load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
 
 
-class SCIPDirect(SolverBase):
+class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
+    def __init__(
+        self,
+        solver_model,
+        var_id_map,
+        var_map,
+        con_map,
+        pyomo_model,
+        opt,
+    ) -> None:
+        super().__init__(
+            solver_model,
+            var_id_map,
+            var_map,
+            con_map,
+            pyomo_model,
+            opt,
+        )
+        self._valid = False
+
+    def invalidate(self):
+        self._valid = False
+
+    def _assert_solution_still_valid(self):
+        if not self._valid:
+            raise RuntimeError('The results in the solver are no longer valid.')
+        
+    def load_vars(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
+    ) -> None:
+        self._assert_solution_still_valid()
+        return super().load_vars(vars_to_load, solution_id)
+
+    def get_vars(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
+    ) -> Mapping[VarData, float]:
+        self._assert_solution_still_valid()
+        return super().get_vars(vars_to_load, solution_id)
+
+    def get_duals(
+        self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=None
+    ) -> Dict[ConstraintData, float]:
+        self._assert_solution_still_valid()
+        return super().get_duals(cons_to_load)
+
+    def get_reduced_costs(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
+    ) -> Mapping[VarData, float]:
+        self._assert_solution_still_valid()
+        return super().get_reduced_costs(vars_to_load)
+
+    def get_number_of_solutions(self) -> int:
+        self._assert_solution_still_valid()
+        return super().get_number_of_solutions()
+
+    def get_solution_ids(self) -> List:
+        self._assert_solution_still_valid()
+        return super().get_solution_ids()
+
+    def load_import_suffixes(self, solution_id=None):
+        self._assert_solution_still_valid()
+        super().load_import_suffixes(solution_id)
+
+
+
+class ScipDirect(SolverBase):
 
     _available = None
     _tc_map = None
@@ -393,11 +460,11 @@ class SCIPDirect(SolverBase):
             return self._available
         
         if not scip_available:
-            SCIPDirect._available = Availability.NotFound
+            ScipDirect._available = Availability.NotFound
         elif self.version() < self._minimum_version:
-            SCIPDirect._available = Availability.BadVersion
+            ScipDirect._available = Availability.BadVersion
         else:
-            SCIPDirect._available = Availability.FullLicense
+            ScipDirect._available = Availability.FullLicense
 
         return self._available
     
@@ -465,9 +532,9 @@ class SCIPDirect(SolverBase):
         return results
 
     def _get_tc_map(self):
-        if SCIPDirect._tc_map is None:
+        if ScipDirect._tc_map is None:
             tc = TerminationCondition
-            SCIPDirect._tc_map = {
+            ScipDirect._tc_map = {
                 "unknown": tc.unknown,
                 "userinterrupt": tc.interrupted,
                 "nodelimit": tc.iterationLimit,
@@ -487,7 +554,7 @@ class SCIPDirect(SolverBase):
                 "inforunbd": tc.infeasibleOrUnbounded,
                 "terminate": tc.unknown,
             }
-        return SCIPDirect._tc_map
+        return ScipDirect._tc_map
 
     def _get_infeasible_results(self):
         res = Results()
@@ -753,3 +820,81 @@ class SCIPDirect(SolverBase):
             if pyomo_var.is_integer():
                 sol[scip_var] = pyomo_var.value
         self._solver_model.addSol(sol)
+
+
+class _SCIPObserver(Observer):
+    def __init__(self, opt: ScipPersistent) -> None:
+        self.opt = opt
+
+    def add_variables(self, variables: List[VarData]):
+        self.opt._add_variables(variables)
+
+    def add_parameters(self, params: List[ParamData]):
+        pass
+
+    def add_constraints(self, cons: List[ConstraintData]):
+        self.opt._add_constraints(cons)
+
+    def add_sos_constraints(self, cons: List[SOSConstraintData]):
+        self.opt._add_sos_constraints(cons)
+
+    def set_objective(self, obj: ObjectiveData | None):
+        self.opt._set_objective(obj)
+
+    def remove_constraints(self, cons: List[ConstraintData]):
+        self.opt._remove_constraints(cons)
+
+    def remove_sos_constraints(self, cons: List[SOSConstraintData]):
+        self.opt._remove_sos_constraints(cons)
+
+    def remove_variables(self, variables: List[VarData]):
+        self.opt._remove_variables(variables)
+
+    def remove_parameters(self, params: List[ParamData]):
+        pass
+
+    def update_variables(self, variables: List[VarData]):
+        self.opt._update_variables(variables)
+
+    def update_parameters(self, params: List[ParamData]):
+        self.opt._update_parameters(params)
+
+
+class ScipPersistent(ScipDirect, PersistentSolverBase):
+    _minimum_version = (5, 5, 0)  # this is probably conservative
+
+    CONFIG = ScipConfig()
+
+    def __init__(self, **kwds):
+        super().__init__(**kwds)
+        self._pyomo_model = None
+        self._objective = None
+        self._observer = _SCIPObserver(self)
+        self._change_detector = ModelChangeDetector(observers=[self._observer])
+
+    @property
+    def auto_updates(self):
+        return self._change_detector.config
+    
+    def _clear(self):
+        super()._clear()
+        self._pyomo_model = None
+        self._objective = None
+
+    def _create_solver_model(self, model):
+        if model is self._pyomo_model:
+            self.update()
+        else:
+            self.set_instance(model=model)
+
+        solution_loader = ScipPersistentSolutionLoader(
+            solver_model=self._solver_model,
+            var_id_map=self._vars,
+            var_map=self._pyomo_var_to_solver_var_map,
+            con_map=self._pyomo_con_to_solver_con_map,
+            pyomo_model=model,
+            opt=self,
+        )
+
+        has_obj = self._objective is not None:
+        return self._solver_model, solution_loader, has_obj
