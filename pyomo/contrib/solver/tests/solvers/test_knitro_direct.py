@@ -80,60 +80,63 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
 
 
 class TestKnitroDirectSolver(unittest.TestCase):
-    def create_model(self):
-        model = pyo.ConcreteModel()
-        model.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
-        model.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
-
-        def dummy_equation(m):
-            return (1.0 - m.x) + 100.0 * (m.y - m.x)
-
-        model.obj = pyo.Objective(rule=dummy_equation, sense=pyo.minimize)
-        return model
-
-    def create_qp_model(self):
-        model = pyo.ConcreteModel()
-        model.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
-        model.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
-
-        def dummy_qp_equation(m):
-            return (1.0 - m.x) + 100.0 * (m.y - m.x) ** 2
-
-        model.obj = pyo.Objective(rule=dummy_qp_equation, sense=pyo.minimize)
-        return model
-
-    def create_qcp_model(self):
-        model = pyo.ConcreteModel()
-        model.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
-        model.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
-
-        def dummy_qcp_equation(m):
-            return (m.y - m.x) ** 2
-
-        def dummy_qcp_constraint(m):
-            return m.x**2 + m.y**2 <= 4
-
-        model.obj = pyo.Objective(rule=dummy_qcp_equation, sense=pyo.minimize)
-        model.c1 = pyo.Constraint(rule=dummy_qcp_constraint)
-        return model
+    def setUp(self):
+        self.opt = knitro.KnitroDirectSolver()
 
     def test_solve(self):
-        model = self.create_model()
-        opt = knitro.KnitroDirectSolver()
-        opt.solve(model)
-        self.assertAlmostEqual(model.x.value, 5)
-        self.assertAlmostEqual(model.y.value, -5)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x),
+            sense=pyo.minimize,
+        )
+        res = self.opt.solve(m)
+        self.assertAlmostEqual(res.incumbent_objective, -1004)
+        self.assertAlmostEqual(m.x.value, 5)
+        self.assertAlmostEqual(m.y.value, -5)
 
     def test_qp_solve(self):
-        model = self.create_qp_model()
-        opt = knitro.KnitroDirectSolver()
-        results = opt.solve(model)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x) ** 2,
+            sense=pyo.minimize,
+        )
+        results = self.opt.solve(m)
         self.assertAlmostEqual(results.incumbent_objective, -4.0, 3)
-        self.assertAlmostEqual(model.x.value, 5.0, 3)
-        self.assertAlmostEqual(model.y.value, 5.0, 3)
+        self.assertAlmostEqual(m.x.value, 5.0, 3)
+        self.assertAlmostEqual(m.y.value, 5.0, 3)
 
     def test_qcp_solve(self):
-        model = self.create_qcp_model()
-        opt = knitro.KnitroDirectSolver()
-        results = opt.solve(model)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(m.y - m.x) ** 2,
+            sense=pyo.minimize,
+        )
+        m.c1 = pyo.Constraint(expr=m.x**2 + m.y**2 <= 4)
+        results = self.opt.solve(m)
         self.assertAlmostEqual(results.incumbent_objective, 0.0)
+
+    def test_solve_exp(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
+        self.opt.solve(m)
+        self.assertAlmostEqual(m.x.value, -0.42630274815985264)
+        self.assertAlmostEqual(m.y.value, 0.6529186341994245)
+
+    def test_solve_log(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1)
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y <= pyo.log(m.x))
+        self.opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0.6529186341994245)
+        self.assertAlmostEqual(m.y.value, -0.42630274815985264)
