@@ -443,6 +443,10 @@ class KnitroDirectSolutionLoader(SolutionLoaderBase):
             return NoSolutionError()
         return ComponentMap([(var, x[i]) for i, var in enumerate(vars_to_load)])
 
+    # TODO: remove this when the solution loader is fixed.
+    def get_primals(self, vars_to_load=None):
+        return self.get_vars(vars_to_load)
+
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Mapping[ConstraintData, float]:
