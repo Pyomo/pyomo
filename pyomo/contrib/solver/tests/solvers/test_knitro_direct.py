@@ -10,8 +10,9 @@
 #  ___________________________________________________________________________
 
 import unittest
-import pyomo.environ as pyo
+
 import pyomo.contrib.solver.solvers.knitro as knitro
+import pyomo.environ as pyo
 
 avail = knitro.KnitroDirectSolver().available()
 
