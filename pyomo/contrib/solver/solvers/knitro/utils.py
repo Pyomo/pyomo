@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, MutableMapping
 from typing import Any, List, Optional
 
 from pyomo.common.numeric_types import value
@@ -53,7 +53,7 @@ def get_active_constraints(block: BlockData) -> List[ConstraintData]:
     return list(generator)
 
 
-class ProblemData:
+class Problem:
     """
     Intermediate representation of a Pyomo model for KNITRO.
 
@@ -69,22 +69,41 @@ class ProblemData:
     objs: List[ObjectiveData]
     cons: List[ConstraintData]
     variables: List[VarData]
+    _var_map: MutableMapping[int, VarData]
 
-    def __init__(self, block: BlockData):
-        self.objs = get_active_objectives(block)
-        self.cons = get_active_constraints(block)
+    def __init__(self, block: Optional[BlockData] = None):
+        self._var_map = {}
+        self.objs = []
+        self.cons = []
+        self.variables = []
+        if block is not None:
+            self.add_block(block)
 
-        # Collect all referenced variables using a dictionary to ensure uniqueness.
-        var_map = {}
-        for obj in self.objs:
+    def clear(self):
+        self.objs.clear()
+        self.cons.clear()
+        self.variables.clear()
+        self._var_map.clear()
+
+    def set_block(self, block: BlockData):
+        self.clear()
+        self.add_block(block)
+
+    def add_block(self, block: BlockData):
+        new_objs = get_active_objectives(block)
+        new_cons = get_active_constraints(block)
+        self.objs.extend(new_objs)
+        self.cons.extend(new_cons)
+
+        for obj in new_objs:
             _, variables, _, _ = collect_vars_and_named_exprs(obj.expr)
             for v in variables:
-                var_map[id(v)] = v
-        for con in self.cons:
+                self._var_map[id(v)] = v
+        for con in new_cons:
             _, variables, _, _ = collect_vars_and_named_exprs(con.body)
             for v in variables:
-                var_map[id(v)] = v
-        self.variables = list(var_map.values())
+                self._var_map[id(v)] = v
+        self.variables.extend(self._var_map.values())
 
 
 class NonlinearExpressionData:

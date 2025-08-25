@@ -18,7 +18,7 @@ from pyomo.contrib.solver.common.base import Availability
 from .api import KNITRO_AVAILABLE, KNITRO_VERSION, knitro
 
 
-class License:
+class Package:
     """
     Manages the global KNITRO license context and provides utility methods for license handling.
 
@@ -36,18 +36,18 @@ class License:
         Returns:
             The KNITRO license context object.
         """
-        if License._license_context is None:
-            License._license_context = knitro.KN_checkout_license()
-        return License._license_context
+        if Package._license_context is None:
+            Package._license_context = knitro.KN_checkout_license()
+        return Package._license_context
 
     @staticmethod
     def release_license():
         """
         Release the global KNITRO license context if it exists.
         """
-        if License._license_context is not None:
-            knitro.KN_release_license(License._license_context)
-            License._license_context = None
+        if Package._license_context is not None:
+            knitro.KN_release_license(Package._license_context)
+            Package._license_context = None
 
     @staticmethod
     def create_context():
@@ -57,7 +57,7 @@ class License:
         Returns:
             The new KNITRO context object.
         """
-        lmc = License.initialize_license()
+        lmc = Package.initialize_license()
         return knitro.KN_new_lm(lmc)
 
     @staticmethod
@@ -83,7 +83,7 @@ class License:
         try:
             stream = io.StringIO()
             with capture_output(TeeStream(stream), capture_fd=1):
-                kc = License.create_context()
+                kc = Package.create_context()
                 knitro.KN_free(kc)
             # TODO: parse the stream to check the license type.
             return Availability.FullLicense
@@ -91,7 +91,7 @@ class License:
             return Availability.BadLicense
 
 
-class SolverMixin:
+class AvailabilityChecker:
     _available_cache: Availability
 
     def __init__(self):
@@ -99,8 +99,8 @@ class SolverMixin:
 
     def available(self) -> Availability:
         if self._available_cache is None:
-            self._available_cache = License.check_availability()
+            self._available_cache = Package.check_availability()
         return self._available_cache
 
     def version(self):
-        return License.get_version()
+        return Package.get_version()
