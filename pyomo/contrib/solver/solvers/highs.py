@@ -306,7 +306,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             self._solver_model.run()
             timer.stop('optimize')
 
-        return self._postsolve()
+        return self._postsolve(ostreams[0])
 
     def _process_domain_and_bounds(self, var_id):
         _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[var_id]
@@ -664,7 +664,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         )
         self._mutable_objective.update()
 
-    def _postsolve(self):
+    def _postsolve(self, stream: io.StringIO):
         config = self._active_config
         timer = config.timer
         timer.start('load solution')
@@ -677,6 +677,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         results.solver_name = self.name
         results.solver_version = self.version()
         results.solver_config = config
+        results.solver_log = stream.getvalue()
         results.timing_info.highs_time = highs.getRunTime()
 
         self._sol = highs.getSolution()

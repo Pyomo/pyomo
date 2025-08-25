@@ -609,6 +609,11 @@ class TestSolvers(unittest.TestCase):
         # Should have a copy of the config used
         self.assertIsInstance(res.solver_config, SolverConfig)
 
+        # All solvers should be implementing some sort of TeeStream,
+        # so they should be able to capture anything logged to the console
+        self.assertIsNotNone(res.solver_log)
+        self.assertIsInstance(res.solver_log, str)
+
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_remove_variable_and_objective(
         self, name: str, opt_class: Type[SolverBase], use_presolve
