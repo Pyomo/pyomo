@@ -1,0 +1,106 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2025
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+import io
+from typing import Tuple
+
+from pyomo.common.tee import TeeStream, capture_output
+from pyomo.contrib.solver.common.base import Availability
+
+from .api import KNITRO_AVAILABLE, KNITRO_VERSION, knitro
+
+
+class License:
+    """
+    Manages the global KNITRO license context and provides utility methods for license handling.
+
+    This class handles license initialization, release, context creation, version reporting,
+    and license availability checks for the KNITRO solver.
+    """
+
+    _license_context = None
+
+    @staticmethod
+    def initialize_license():
+        """
+        Initialize the global KNITRO license context if not already initialized.
+
+        Returns:
+            The KNITRO license context object.
+        """
+        if License._license_context is None:
+            License._license_context = knitro.KN_checkout_license()
+        return License._license_context
+
+    @staticmethod
+    def release_license():
+        """
+        Release the global KNITRO license context if it exists.
+        """
+        if License._license_context is not None:
+            knitro.KN_release_license(License._license_context)
+            License._license_context = None
+
+    @staticmethod
+    def create_context():
+        """
+        Create a new KNITRO context using the global license context.
+
+        Returns:
+            The new KNITRO context object.
+        """
+        lmc = License.initialize_license()
+        return knitro.KN_new_lm(lmc)
+
+    @staticmethod
+    def get_version() -> Tuple[int, int, int]:
+        """
+        Get the version of the KNITRO solver as a tuple.
+
+        Returns:
+            Tuple[int, int, int]: The (major, minor, patch) version of KNITRO.
+        """
+        return tuple(int(x) for x in KNITRO_VERSION.split("."))
+
+    @staticmethod
+    def check_availability() -> Availability:
+        """
+        Check if the KNITRO solver and license are available.
+
+        Returns:
+            Availability: The availability status (FullLicense, BadLicense, NotFound).
+        """
+        if not KNITRO_AVAILABLE:
+            return Availability.NotFound
+        try:
+            stream = io.StringIO()
+            with capture_output(TeeStream(stream), capture_fd=1):
+                kc = License.create_context()
+                knitro.KN_free(kc)
+            # TODO: parse the stream to check the license type.
+            return Availability.FullLicense
+        except Exception:
+            return Availability.BadLicense
+
+
+class SolverMixin:
+    _available_cache: Availability
+
+    def __init__(self):
+        self._available_cache = None
+
+    def available(self) -> Availability:
+        if self._available_cache is None:
+            self._available_cache = License.check_availability()
+        return self._available_cache
+
+    def version(self):
+        return License.get_version()
