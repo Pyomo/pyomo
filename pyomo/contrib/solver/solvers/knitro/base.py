@@ -11,10 +11,12 @@
 
 
 from abc import abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import datetime, timezone
 from io import StringIO
+from typing import Optional
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.timing import HierarchicalTimer
@@ -24,7 +26,12 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.util import IncompatibleModelError
+from pyomo.contrib.solver.common.util import (
+    IncompatibleModelError,
+    NoDualsError,
+    NoOptimalSolutionError,
+    NoSolutionError,
+)
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
@@ -35,9 +42,10 @@ from .config import Config
 from .engine import Engine
 from .package import PackageChecker
 from .utils import Problem
+from .solution import SolutionLoader, SolutionProvider
 
 
-class SolverBase(PackageChecker, base.SolverBase):
+class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
     CONFIG = Config()
     config: Config
 
@@ -45,7 +53,7 @@ class SolverBase(PackageChecker, base.SolverBase):
     _problem: Problem
     _stream: StringIO
 
-    def __init__(self, **kwds):
+    def __init__(self, **kwds) -> None:
         PackageChecker.__init__(self)
         base.SolverBase.__init__(self, **kwds)
         self._engine = Engine()
@@ -79,23 +87,23 @@ class SolverBase(PackageChecker, base.SolverBase):
     def _build_config(self, **kwds) -> Config:
         return self.config(value=kwds, preserve_implicit=True)
 
-    def _validate_problem(self):
+    def _validate_problem(self) -> None:
         if len(self._problem.objs) > 1:
             msg = f"{self.name} does not support multiple objectives."
             raise IncompatibleModelError(msg)
 
-    def _check_available(self):
+    def _check_available(self) -> None:
         avail = self.available()
         if not avail:
             msg = f"Solver {self.name} is not available: {avail}."
             raise ApplicationError(msg)
 
     @abstractmethod
-    def _presolve(self, model: BlockData, config: Config, timer: HierarchicalTimer):
+    def _presolve(self, model: BlockData, config: Config, timer: HierarchicalTimer) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def _solve(self, config: Config, timer: HierarchicalTimer) -> int:
+    def _solve(self, config: Config, timer: HierarchicalTimer) -> None:
         raise NotImplementedError
 
     def _postsolve(self, config: Config, timer: HierarchicalTimer) -> Results:
@@ -111,22 +119,47 @@ class SolverBase(PackageChecker, base.SolverBase):
         results.iteration_count = self._engine.get_num_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
+
+        if (
+            config.raise_exception_on_nonoptimal_result
+            and results.termination_condition
+            != TerminationCondition.convergenceCriteriaSatisfied
+        ):
+            raise NoOptimalSolutionError()
+
+        results.solution_loader = SolutionLoader(self)
+        if config.load_solutions:
+            timer.start("load_solutions")
+            results.solution_loader.load_vars()
+            timer.stop("load_solutions")
+
         return results
 
     def get_vars(self):
         return self._problem.variables
 
-    def get_objs(self):
+    def get_objectives(self):
         return self._problem.objs
 
     def get_cons(self):
         return self._problem.cons
 
-    def get_primals(self, vars_to_load: Iterable[VarData]):
-        return self._engine.get_primals(vars_to_load)
+    def get_primals(self, vars_to_load: Optional[Sequence[VarData]] = None):
+        if vars_to_load is None:
+            vars_to_load = self.get_vars()
 
-    def get_duals(self, cons_to_load: Iterable[ConstraintData]):
-        return self._engine.get_duals(cons_to_load)
+        x = self._engine.get_primals(vars_to_load)
+        if x is None:
+            return NoSolutionError()
+        return ComponentMap([(var, x[i]) for i, var in enumerate(vars_to_load)])
+
+    def get_duals(self, cons_to_load: Optional[Sequence[ConstraintData]] = None):
+        if cons_to_load is None:
+            cons_to_load = self.get_cons()
+        y = self._engine.get_duals(cons_to_load)
+        if y is None:
+            return NoDualsError()
+        return ComponentMap([(con, y[i]) for i, con in enumerate(cons_to_load)])
 
     def get_num_solutions(self):
         return self._engine.get_num_solutions()

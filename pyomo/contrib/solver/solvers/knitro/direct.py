@@ -17,7 +17,7 @@ from pyomo.core.base.block import BlockData
 
 from .base import SolverBase
 from .config import Config
-from .loaders import SolutionLoader
+from .solution import SolutionLoader
 
 
 class Solver(SolverBase):
@@ -55,19 +55,3 @@ class Solver(SolverBase):
         timer.start("solve")
         self._engine.solve()
         timer.stop("solve")
-
-    def _postsolve(self, config: Config, timer: HierarchicalTimer):
-        results = super()._postsolve(config, timer)
-        if (
-            config.raise_exception_on_nonoptimal_result
-            and results.termination_condition
-            != TerminationCondition.convergenceCriteriaSatisfied
-        ):
-            raise NoOptimalSolutionError()
-
-        results.solution_loader = SolutionLoader(self)
-        if config.load_solutions:
-            timer.start("load_solutions")
-            results.solution_loader.load_vars()
-            timer.stop("load_solutions")
-        return results
