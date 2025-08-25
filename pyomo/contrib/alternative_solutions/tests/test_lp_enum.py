@@ -62,7 +62,7 @@ class TestLPEnum:
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
         assert len(sols) == 2
         for s in sols:
-            assert s.objective_value == unittest.pytest.approx(4)
+            assert s.objective().value == unittest.pytest.approx(4)
 
     def test_3d_polyhedron(self, mip_solver):
         m = tc.get_3d_polyhedron_problem()
@@ -72,9 +72,9 @@ class TestLPEnum:
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
         assert len(sols) == 2
         for s in sols:
-            assert s.objective_value == unittest.pytest.approx(
+            assert s.objective().value == unittest.pytest.approx(
                 9
-            ) or s.objective_value == unittest.pytest.approx(10)
+            ) or s.objective().value == unittest.pytest.approx(10)
 
     def test_2d_diamond_problem(self, mip_solver):
         m = tc.get_2d_diamond_problem()
@@ -82,8 +82,8 @@ class TestLPEnum:
         assert len(sols) == 2
         for s in sols:
             print(s)
-        assert sols[0].objective_value == unittest.pytest.approx(6.789473684210527)
-        assert sols[1].objective_value == unittest.pytest.approx(3.6923076923076916)
+        assert sols[0].objective().value == unittest.pytest.approx(6.789473684210527)
+        assert sols[1].objective().value == unittest.pytest.approx(3.6923076923076916)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_pentagonal_pyramid(self, mip_solver):
