@@ -13,7 +13,6 @@ from collections.abc import Callable, Iterable, MutableMapping
 from typing import List, Optional
 
 from pyomo.common.numeric_types import value
-from pyomo.contrib.solver.common.results import SolutionStatus, TerminationCondition
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.var import VarData
@@ -154,6 +153,10 @@ class Engine:
         self._register_callback()
         return self._execute(knitro.KN_solve)
 
+    def get_status(self) -> int:
+        status, _, _, _ = self._execute(knitro.KN_get_solution)
+        return status
+
     def get_num_iters(self) -> int:
         return self._execute(knitro.KN_get_number_iters)
 
@@ -195,58 +198,6 @@ class Engine:
 
     def set_num_threads(self, nthreads: int):
         self.set_options(threads=nthreads)
-
-    @staticmethod
-    def get_solution_status(status: int) -> SolutionStatus:
-        if (
-            status == knitro.KN_RC_OPTIMAL
-            or status == knitro.KN_RC_OPTIMAL_OR_SATISFACTORY
-            or status == knitro.KN_RC_NEAR_OPT
-        ):
-            return SolutionStatus.optimal
-        elif status == knitro.KN_RC_FEAS_NO_IMPROVE:
-            return SolutionStatus.feasible
-        elif (
-            status == knitro.KN_RC_INFEASIBLE
-            or status == knitro.KN_RC_INFEAS_CON_BOUNDS
-            or status == knitro.KN_RC_INFEAS_VAR_BOUNDS
-            or status == knitro.KN_RC_INFEAS_NO_IMPROVE
-        ):
-            return SolutionStatus.infeasible
-        else:
-            return SolutionStatus.noSolution
-
-    @staticmethod
-    def get_termination_condition(status: int) -> TerminationCondition:
-        if (
-            status == knitro.KN_RC_OPTIMAL
-            or status == knitro.KN_RC_OPTIMAL_OR_SATISFACTORY
-            or status == knitro.KN_RC_NEAR_OPT
-        ):
-            return TerminationCondition.convergenceCriteriaSatisfied
-        elif status == knitro.KN_RC_INFEAS_NO_IMPROVE:
-            return TerminationCondition.locallyInfeasible
-        elif status == knitro.KN_RC_INFEASIBLE:
-            return TerminationCondition.provenInfeasible
-        elif (
-            status == knitro.KN_RC_UNBOUNDED_OR_INFEAS
-            or status == knitro.KN_RC_UNBOUNDED
-        ):
-            return TerminationCondition.infeasibleOrUnbounded
-        elif (
-            status == knitro.KN_RC_ITER_LIMIT_FEAS
-            or status == knitro.KN_RC_ITER_LIMIT_INFEAS
-        ):
-            return TerminationCondition.iterationLimit
-        elif (
-            status == knitro.KN_RC_TIME_LIMIT_FEAS
-            or status == knitro.KN_RC_TIME_LIMIT_INFEAS
-        ):
-            return TerminationCondition.maxTimeLimit
-        elif status == knitro.KN_RC_USER_TERMINATION:
-            return TerminationCondition.interrupted
-        else:
-            return TerminationCondition.unknown
 
     # ----------------- Private methods -------------------------
 

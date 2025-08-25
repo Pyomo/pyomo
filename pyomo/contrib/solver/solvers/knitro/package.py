@@ -91,7 +91,7 @@ class Package:
             return Availability.BadLicense
 
 
-class AvailabilityChecker:
+class PackageChecker:
     _available_cache: Availability
 
     def __init__(self):

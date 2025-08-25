@@ -10,8 +10,6 @@
 #  ___________________________________________________________________________
 
 
-from io import StringIO
-
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.results import TerminationCondition
 from pyomo.contrib.solver.common.util import NoOptimalSolutionError
@@ -19,23 +17,16 @@ from pyomo.core.base.block import BlockData
 
 from .base import SolverBase
 from .config import Config
-from .package import AvailabilityChecker
-from .solution_loader import SolutionLoader
+from .loaders import SolutionLoader
 
 
-class Solver(AvailabilityChecker, SolverBase):
-
-    def __init__(self, **kwds):
-        AvailabilityChecker.__init__(self)
-        SolverBase.__init__(self, **kwds)
-
+class Solver(SolverBase):
     def _presolve(self, model: BlockData, config: Config, timer: HierarchicalTimer):
         timer.start("build_problem")
         self._problem.set_block(model)
         timer.stop("build_problem")
 
-
-    def _solve(self, config: Config, timer: HierarchicalTimer) -> int:
+    def _solve(self, config: Config, timer: HierarchicalTimer) -> None:
         self._engine.renew()
 
         timer.start("add_vars")
@@ -62,15 +53,11 @@ class Solver(AvailabilityChecker, SolverBase):
         timer.stop("load_options")
 
         timer.start("solve")
-        status = self._engine.solve()
+        self._engine.solve()
         timer.stop("solve")
 
-        return status
-
-    def _postsolve(
-        self, stream: StringIO, config: Config, timer: HierarchicalTimer, status: int
-    ):
-        results = super()._postsolve(stream, config, timer, status)
+    def _postsolve(self, config: Config, timer: HierarchicalTimer):
+        results = super()._postsolve(config, timer)
         if (
             config.raise_exception_on_nonoptimal_result
             and results.termination_condition
@@ -83,5 +70,4 @@ class Solver(AvailabilityChecker, SolverBase):
             timer.start("load_solutions")
             results.solution_loader.load_vars()
             timer.stop("load_solutions")
-
         return results
