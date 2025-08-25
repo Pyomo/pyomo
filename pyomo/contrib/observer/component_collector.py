@@ -63,8 +63,7 @@ class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
         nt = type(node)
         if nt in collector_handlers:
             return collector_handlers[nt](node, self)
-        else:
-            return None
+        return None
 
 
 _visitor = _ComponentFromExprCollector()

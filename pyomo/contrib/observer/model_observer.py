@@ -10,21 +10,18 @@
 #  __________________________________________________________________________
 
 import abc
-import datetime
 from typing import List, Sequence, Optional
 
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData
-from pyomo.core.base.param import ParamData, Param
+from pyomo.core.base.param import ParamData
 from pyomo.core.base.objective import ObjectiveData
-from pyomo.core.staleflag import StaleFlagManager
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.contrib.solver.common.results import Results
 from pyomo.contrib.solver.common.util import get_objective
-from .component_collector import collect_components_from_expr
+from pyomo.contrib.observer.component_collector import collect_components_from_expr
 from pyomo.common.numeric_types import native_numeric_types
 
 
@@ -624,7 +621,7 @@ class ModelChangeDetector:
 
     def _check_for_param_changes(self):
         params_to_update = []
-        for pid, (p, val) in self._params.items():
+        for _, (p, val) in self._params.items():
             if p.value != val:
                 params_to_update.append(p)
         return params_to_update

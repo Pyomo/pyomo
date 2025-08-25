@@ -9,21 +9,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+from typing import List
+
+import pyomo.environ as pyo
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.sos import SOSConstraintData
 from pyomo.core.base.var import VarData
-import pyomo.environ as pyo
 from pyomo.common import unittest
-from typing import List
 from pyomo.contrib.observer.model_observer import (
     Observer,
     ModelChangeDetector,
     AutoUpdateConfig,
 )
 from pyomo.common.collections import ComponentMap
-import logging
 
 
 logger = logging.getLogger(__name__)
