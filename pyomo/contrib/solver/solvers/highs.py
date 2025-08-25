@@ -674,6 +674,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         results = Results()
         results.solution_loader = PersistentSolutionLoader(self)
+        results.solver_name = self.name
+        results.solver_version = self.version()
+        results.solver_config = config
         results.timing_info.highs_time = highs.getRunTime()
 
         self._sol = highs.getSolution()
@@ -746,6 +749,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     results.objective_bound = None
             else:
                 results.objective_bound = info.mip_dual_bound
+            results.iteration_count = info.simplex_iteration_count
 
         if config.load_solutions:
             if has_feasible_solution:
