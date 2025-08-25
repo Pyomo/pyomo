@@ -41,23 +41,32 @@ that for most experiments, only small parts of :math:`x` will change
 from one experiment to the next.
 
 The following least squares objective can be used to estimate parameter
-values, where data points are indexed by :math:`s=1,\ldots,S`
+values assuming Gaussian independent and identically distributed measurement
+errors, where data points are indexed by :math:`s=1,\ldots,S`
 
 .. math::
 
    \min_{{\theta}} Q({\theta};{\tilde{x}}, {\tilde{y}}) \equiv \sum_{s=1}^{S}q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) \;\;
 
-where
+where :math:`q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s})` can be:
 
-.. math::
+1. Sum of squared errors
 
-   q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) = \sum_{i=1}^{m}w_{i}\left[{\tilde{y}}_{si} - g_{i}({\tilde{x}}_{s};{\theta})\right]^{2}, 
+    .. math::
+
+       q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) =
+        \sum_{i=1}^{m}\left({\tilde{y}}_{s,i} - g_{i}({\tilde{x}}_{s};{\theta})\right)^{2}
+
+2. Weighted sum of squared errors
+
+    .. math::
+
+       q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) =
+        \sum_{i=1}^{m}\left(\frac{{\tilde{y}}_{s,i} - g_{i}({\tilde{x}}_{s};{\theta})}{w_i}\right)^{2}
 
 i.e., the contribution of sample :math:`s` to :math:`Q`, where :math:`w
-\in \Re^{m}` is a vector of weights for the responses. For
-multi-dimensional :math:`y`, this is the squared weighted :math:`L_{2}`
-norm and for univariate :math:`y` the weighted squared deviation.
-Custom objectives can also be defined for parameter estimation.
+\in \Re^{m}` is a vector containing the standard deviation of the measurement
+errors of :math:`y`. Custom objectives can also be defined for parameter estimation.
 
 In the applications of interest to us, the function :math:`g(\cdot)` is
 usually defined as an optimization problem with a large number of
