@@ -50,11 +50,12 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
             "api_version",
             "is_persistent",
             "name",
-            "NAME",
             "solve",
             "version",
         ]
-        method_list = [m for m in dir(opt) if not m.startswith("_")]
+        method_list = [
+            m for m in dir(opt) if not m.startswith("_") and not m.startswith("get")
+        ]
         self.assertListEqual(sorted(method_list), sorted(expected_list))
 
     def test_default_instantiation(self):

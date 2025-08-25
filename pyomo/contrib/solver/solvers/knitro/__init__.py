@@ -11,7 +11,7 @@
 
 from pyomo.contrib.solver.common.factory import SolverFactory
 
-from .config import KnitroConfig
+from .config import Config as KnitroConfig
 from .direct import Solver as KnitroDirectSolver
 
 __all__ = ["KnitroConfig", "KnitroDirectSolver"]

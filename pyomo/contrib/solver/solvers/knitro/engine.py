@@ -21,7 +21,7 @@ from pyomo.core.plugins.transform.util import partial
 from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
 
 from .api import knitro
-from .mixin import License
+from .package import Package
 from .utils import NonlinearExpressionData
 
 
@@ -51,7 +51,7 @@ class Engine:
 
     def renew(self):
         self.close()
-        self._kc = License.create_context()
+        self._kc = Package.create_context()
 
     def close(self):
         if hasattr(self, "_kc") and self._kc is not None:
