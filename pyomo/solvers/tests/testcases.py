@@ -311,6 +311,19 @@ for prob in ('MILP_unbounded', 'MILP_unbounded_kernel'):
         'Unbounded MILP detection not operational in Knitro, fixed in 15.0',
     )
 
+#
+# CUOPT
+#
+SkipTests['cuopt', 'python', 'LP_duals_maximize'] = (
+    lambda v: True,
+    "cuopt fails on RC for maximization",
+)
+for _test in ('MILP_unbounded', 'MILP_unbounded_kernel'):
+    SkipTests['cuopt', 'python', _test] = (
+        lambda v: True,
+        "cuopt does not differentiate between unbounded and infeasible status",
+    )
+
 
 def generate_scenarios(arg=None):
     """
