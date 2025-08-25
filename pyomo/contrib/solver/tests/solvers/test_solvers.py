@@ -551,7 +551,6 @@ class TestSolvers(unittest.TestCase):
     def test_results_object_populated(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
-        # this test is for issue #2888
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
