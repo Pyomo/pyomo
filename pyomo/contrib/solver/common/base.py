@@ -17,8 +17,8 @@ from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import Objective, ObjectiveData
-from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
-from pyomo.common.enums import IntEnum
+from pyomo.common.config import ConfigValue
+from pyomo.common.enums import IntEnum, SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import NOTSET
@@ -63,19 +63,29 @@ class Availability(IntEnum):
 
 
 class SolverBase:
-    """
-    This base class defines the methods required for all solvers:
-        - available: Determines whether the solver is able to be run,
-                     combining both whether it can be found on the system and if the license is valid.
-        - solve: The main method of every solver
-        - version: The version of the solver
-        - is_persistent: Set to false for all non-persistent solvers.
+    """The base class for "new-style" Pyomo solver interfaces.
 
-    Additionally, solvers should have a :attr:`CONFIG<SolverBase.CONFIG>` attribute that
-    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.common.config.SolverConfig>`,
-    :class:`BranchAndBoundConfig<pyomo.contrib.solver.common.config.BranchAndBoundConfig>`,
-    :class:`PersistentSolverConfig<pyomo.contrib.solver.common.config.PersistentSolverConfig>`, or
-    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.common.config.PersistentBranchAndBoundConfig>`.
+    This base class defines the methods all derived solvers are expected
+    to implement:
+
+      - :py:meth:`available`
+      - :py:meth:`is_persistent`
+      - :py:meth:`solve`
+      - :py:meth:`version`
+
+    **Class Configuration**
+
+    All derived concrete implementations of this class must define a
+    class attribute ``CONFIG`` containing the :class:`ConfigDict` that
+    specifies the solver's configuration options.  By convention, the
+    ``CONFIG`` should derive from (or implement a superset of the
+    options from) one of the following:
+
+    - :class:`~pyomo.contrib.solver.common.config.SolverConfig`
+    - :class:`~pyomo.contrib.solver.common.config.BranchAndBoundConfig`
+    - :class:`~pyomo.contrib.solver.common.config.PersistentSolverConfig`
+    - :class:`~pyomo.contrib.solver.common.config.PersistentBranchAndBoundConfig`
+
     """
 
     CONFIG = SolverConfig()
@@ -85,6 +95,8 @@ class SolverBase:
             self.name = kwds.pop('name')
         elif not hasattr(self, 'name'):
             self.name = type(self).__name__.lower()
+
+        #: Instance configuration; see CONFIG documentation on derived class
         self.config = self.CONFIG(value=kwds)
 
     def __enter__(self):
@@ -93,10 +105,20 @@ class SolverBase:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
 
-    @document_kwargs_from_configdict(CONFIG)
-    def solve(self, model: BlockData, **kwargs) -> Results:
+    @classmethod
+    def api_version(self):
         """
-        Solve a Pyomo model.
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V2
+
+    def solve(self, model: BlockData, **kwargs) -> Results:
+        """Solve a Pyomo model.
 
         Parameters
         ----------
@@ -110,6 +132,7 @@ class SolverBase:
         -------
         results: :class:`Results<pyomo.contrib.solver.common.results.Results>`
             A results object
+
         """
         raise NotImplementedError(
             f"Derived class {self.__class__.__name__} failed to implement required method 'solve'."
@@ -143,7 +166,8 @@ class SolverBase:
         )
 
     def version(self) -> Tuple:
-        """
+        """Return the solver version found on the system.
+
         Returns
         -------
         version: tuple
@@ -154,7 +178,8 @@ class SolverBase:
         )
 
     def is_persistent(self) -> bool:
-        """
+        """``True`` if this supports a persistent interface to the solver.
+
         Returns
         -------
         is_persistent: bool
@@ -178,7 +203,6 @@ class PersistentSolverBase(SolverBase):
         super().__init__(**kwds)
         self._active_config = self.config
 
-    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model: BlockData, **kwargs) -> Results:
         """
         Solve a Pyomo model.
