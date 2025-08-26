@@ -62,6 +62,7 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
 from pyomo.opt import TerminationCondition
+from pyomo.opt.results.solver import assert_optimal_termination
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
@@ -347,24 +348,6 @@ def _get_labeled_model_helper(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
-def _check_solver_termination_result(model, solver_result):
-    """
-    Checks if the Pyomo model solves to optimality
-    """
-    if solver_result.solver.termination_condition == TerminationCondition.optimal:
-        model.solutions.load_from(solver_result)
-    else:
-        logger.error(
-            "Solution is not optimal. Termination condition: %s, Status: %s",
-            solver_result.solver.termination_condition,
-            solver_result.solver.status,
-        )
-        raise RuntimeError(
-            f"Model from experiment did not solve appropriately. "
-            f"Make sure the model is well-posed."
-        )
-
-
 def _count_total_experiments(experiment_list):
     """
     Counts the number of data points in the list of experiments
@@ -439,8 +422,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
 
     # re-solve the model with the estimated parameters
     solver = pyo.SolverFactory(solver)
-    results = solver.solve(model, tee=tee, load_solutions=False)
-    _check_solver_termination_result(model, results)
+    results = solver.solve(model, tee=tee)
+    assert_optimal_termination(results)
 
     # get the measured variables
     y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
@@ -466,8 +449,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
         param.fix(orig_value + relative_perturbation)
 
         # solve the model
-        results = solver.solve(model, tee=tee, load_solutions=False)
-        _check_solver_termination_result(model, results)
+        results = solver.solve(model, tee=tee)
+        assert_optimal_termination(results)
 
         # forward perturbation measured variables
         y_hat_plus = [pyo.value(y_hat) for y_hat, y in model.experiment_outputs.items()]
@@ -476,8 +459,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
         param.fix(orig_value - relative_perturbation)
 
         # re-solve the model
-        results = solver.solve(model, tee=tee, load_solutions=False)
-        _check_solver_termination_result(model, results)
+        results = solver.solve(model, tee=tee)
+        assert_optimal_termination(results)
 
         # backward perturbation measured variables
         y_hat_minus = [
@@ -722,8 +705,8 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
         param.fix(theta_vals[param.name])
 
     solver = pyo.SolverFactory(solver)
-    results = solver.solve(model, tee=tee, load_solutions=False)
-    _check_solver_termination_result(model, results)
+    results = solver.solve(model, tee=tee)
+    assert_optimal_termination(results)
 
     # Probe the solved model for dsdp results (sensitivities s.t. parameters)
     params_dict = {k.name: v for k, v in model.unknown_parameters.items()}
@@ -1094,7 +1077,7 @@ class Estimator(object):
                         solver.options[key] = self.solver_options[key]
 
                 solve_result = solver.solve(self.ef_instance, tee=self.tee)
-                _check_solver_termination_result(self.ef_instance, solve_result)
+                assert_optimal_termination(solve_result)
             elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
                 deprecation_warning(
                     "You're using a deprecated call to the `theta_est()` function "
@@ -1300,10 +1283,8 @@ class Estimator(object):
                 param.fix(self.estimated_theta[param.name])
 
             # re-solve the model with the estimated parameters
-            results = pyo.SolverFactory(solver).solve(
-                model, tee=self.tee, load_solutions=False
-            )
-            _check_solver_termination_result(model, results)
+            results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
+            assert_optimal_termination(results)
 
             # choose and evaluate the sum of squared errors expression
             if self.obj_function == ObjectiveType.SSE:

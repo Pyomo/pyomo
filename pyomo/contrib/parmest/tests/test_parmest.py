@@ -14,7 +14,7 @@ import os
 import subprocess
 from itertools import product
 
-import pytest
+from pyomo.common.unittest import pytest
 from parameterized import parameterized, parameterized_class
 import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
@@ -782,7 +782,6 @@ class TestModelVariants(unittest.TestCase):
                     [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
                 )
 
-                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
