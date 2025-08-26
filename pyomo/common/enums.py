@@ -42,6 +42,8 @@ if sys.version_info[:2] < (3, 11):
 else:
     _EnumType = enum.EnumType
 if sys.version_info[:2] < (3, 13):
+    import inspect
+
     # prior to 3.13 the int.{to,from}_bytes docstrings had LaTeX-like
     # "`..'" quotations, which Sphinx can't parse correctly.
     def _fix_doc(ref):
@@ -53,7 +55,8 @@ if sys.version_info[:2] < (3, 13):
 
     class IntEnum(enum.IntEnum):
         __doc__ = (
-            """A compatibility wrapper around :class:`enum.IntEnum`
+            inspect.cleandoc(
+                """A compatibility wrapper around :class:`enum.IntEnum`
 
         This wrapper class updates the :meth:`to_bytes` and
         :meth:`from_bytes` docstrings in Python <= 3.12 to suppress
@@ -62,7 +65,9 @@ if sys.version_info[:2] < (3, 13):
         .. rubric:: IntEnum
 
         """
-            + enum.IntEnum.__doc__
+            )
+            + "\n\n"
+            + inspect.cleandoc(getattr(enum.IntEnum, "__doc__", "") or "")
         )
 
         @_fix_doc(enum.IntEnum.to_bytes)
