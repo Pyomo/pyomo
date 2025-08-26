@@ -13,6 +13,7 @@ import os
 
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
+from pyomo.common.enums import SolverAPIVersion
 from pyomo.contrib.solver.common import base
 
 
@@ -22,7 +23,14 @@ class _LegacyWrappedSolverBase(base.LegacySolverWrapper, base.SolverBase):
 
 class TestSolverBase(unittest.TestCase):
     def test_class_method_list(self):
-        expected_list = ['CONFIG', 'available', 'is_persistent', 'solve', 'version']
+        expected_list = [
+            'CONFIG',
+            'api_version',
+            'available',
+            'is_persistent',
+            'solve',
+            'version',
+        ]
         method_list = [
             method for method in dir(base.SolverBase) if method.startswith('_') is False
         ]
@@ -32,6 +40,7 @@ class TestSolverBase(unittest.TestCase):
         instance = base.SolverBase()
         self.assertFalse(instance.is_persistent())
         self.assertEqual(instance.name, 'solverbase')
+        self.assertEqual(instance.api_version().name, 'V2')
         self.assertEqual(instance.CONFIG, instance.config)
         with self.assertRaises(NotImplementedError):
             self.assertEqual(instance.version(), None)
@@ -67,6 +76,7 @@ class TestPersistentSolverBase(unittest.TestCase):
             'add_constraints',
             'add_parameters',
             'add_variables',
+            'api_version',
             'available',
             'is_persistent',
             'remove_block',
@@ -90,6 +100,7 @@ class TestPersistentSolverBase(unittest.TestCase):
     def test_init(self):
         instance = base.PersistentSolverBase()
         self.assertTrue(instance.is_persistent())
+        self.assertEqual(instance.api_version(), SolverAPIVersion.V2)
         with self.assertRaises(NotImplementedError):
             self.assertEqual(instance.set_instance(None), None)
         with self.assertRaises(NotImplementedError):
