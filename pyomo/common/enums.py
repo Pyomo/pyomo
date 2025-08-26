@@ -67,6 +67,7 @@ if sys.version_info[:2] < (3, 13):
         """
             )
             + "\n\n"
+            # There are environments where IntEnum.__doc__ is None (see #3710)
             + inspect.cleandoc(getattr(enum.IntEnum, "__doc__", "") or "")
         )
 
