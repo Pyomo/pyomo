@@ -11,13 +11,14 @@
 
 
 from abc import abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from io import StringIO
 from typing import Optional
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import ApplicationError
+from pyomo.common.numeric_types import value
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common import base
@@ -52,6 +53,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
     _engine: Engine
     _problem: Problem
     _stream: StringIO
+    _saved_var_values: Mapping[int, float]
 
     def __init__(self, **kwds) -> None:
         PackageChecker.__init__(self)
@@ -73,8 +75,14 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         self._validate_problem()
 
         self._stream = StringIO()
+        if config.restore_variable_values_after_solve:
+            self._save_var_values()
+
         with capture_output(TeeStream(self._stream, *config.tee), capture_fd=False):
             self._solve(config, timer)
+
+        if config.restore_variable_values_after_solve:
+            self._restore_var_values()
 
         results = self._postsolve(config, timer)
 
@@ -98,8 +106,18 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
             msg = f"Solver {self.name} is not available: {avail}."
             raise ApplicationError(msg)
 
+    def _save_var_values(self) -> None:
+        self._saved_var_values = {id(var): value(var.value) for var in self.get_vars()}
+
+    def _restore_var_values(self) -> None:
+        for var in self.get_vars():
+            if id(var) in self._saved_var_values:
+                var.set_value(self._saved_var_values[id(var)])
+
     @abstractmethod
-    def _presolve(self, model: BlockData, config: Config, timer: HierarchicalTimer) -> None:
+    def _presolve(
+        self, model: BlockData, config: Config, timer: HierarchicalTimer
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod

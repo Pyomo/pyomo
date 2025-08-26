@@ -226,20 +226,21 @@ class Engine:
             add_quad_fn(idx_quad_vars1, idx_quad_vars2, list(repn.quadratic_coefs))
 
     def _build_callback(self):
-        if self.obj_nl_expr is None and not self.con_nl_expr_map:
-            return None
-
         obj_eval = (
             self.obj_nl_expr.create_evaluator(self.var_map)
             if self.obj_nl_expr is not None
             else None
         )
+
         con_eval_map = {
             i: nl_expr.create_evaluator(self.var_map)
             for i, nl_expr in self.con_nl_expr_map.items()
         }
 
-        def _callback(_, cb, req, res, data=None):
+        if obj_eval is not None and not con_eval_map:
+            return None, None
+
+        def _callback_eval(_, cb, req, res, data=None):
             if req.type != knitro.KN_RC_EVALFC:
                 return -1
             x = req.x
@@ -249,11 +250,61 @@ class Engine:
                 res.c[i] = con_eval(x)
             return 0
 
-        return _callback
+        obj_grad = (
+            self.obj_nl_expr.create_gradient_evaluator(self.var_map)
+            if self.obj_nl_expr is not None and self.obj_nl_expr.grad is not None
+            else None
+        )
+        con_grad_map = {
+            i: nl_expr.create_gradient_evaluator(self.var_map)
+            for i, nl_expr in self.con_nl_expr_map.items()
+            if nl_expr.grad is not None
+        }
+
+        if obj_grad is None and not con_grad_map:
+            return _callback_eval, None
+
+        def _callback_grad(_, cb, req, res, data=None):
+            if req.type != knitro.KN_RC_EVALGA:
+                return -1
+            x = req.x
+            if obj_grad is not None:
+                obj_g = obj_grad(x)
+                for j, g in enumerate(obj_g):
+                    res.objGrad[j] = g
+            k = 0
+            for con_grad in con_grad_map.values():
+                con_g = con_grad(x)
+                for g in con_g:
+                    res.jac[k] = g
+                    k += 1
+            return 0
+
+        return _callback_eval, _callback_grad
 
     def _register_callback(self):
-        callback_fn = self._build_callback()
-        if callback_fn is not None:
+        f, grad = self._build_callback()
+        if f is not None:
             eval_obj = self.obj_nl_expr is not None
             idx_cons = list(self.con_nl_expr_map.keys())
-            self._execute(knitro.KN_add_eval_callback, eval_obj, idx_cons, callback_fn)
+            cb = self._execute(knitro.KN_add_eval_callback, eval_obj, idx_cons, f)
+            if grad is not None:
+                obj_var_idxs = (
+                    [self.var_map[id(v)] for v in self.obj_nl_expr.variables]
+                    if self.obj_nl_expr is not None
+                    else None
+                )
+                jac_idx_cons, jac_idx_vars = [], []
+                for i, con_nl_expr in self.con_nl_expr_map.items():
+                    idx_vars = [self.var_map[id(v)] for v in con_nl_expr.variables]
+                    n_vars = len(idx_vars)
+                    jac_idx_cons.extend([i] * n_vars)
+                    jac_idx_vars.extend(idx_vars)
+                self._execute(
+                    knitro.KN_set_cb_grad,
+                    cb,
+                    obj_var_idxs,
+                    jac_idx_cons,
+                    jac_idx_vars,
+                    grad,
+                )

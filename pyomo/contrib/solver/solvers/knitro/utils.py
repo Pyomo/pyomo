@@ -19,6 +19,7 @@ from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintData
 from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.core.base.var import VarData
+from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 
 
 def get_active_objectives(block: BlockData) -> List[ObjectiveData]:
@@ -113,14 +114,26 @@ class NonlinearExpressionData:
     Attributes:
         body (Optional[Any]): The Pyomo expression representing the non-linear body.
         variables (List[VarData]): List of variables referenced in the expression.
+        grad (Optional[Mapping[VarData, Any]]): Gradient information for the non-linear expression.
     """
 
     body: Optional[Any]
     variables: List[VarData]
+    grad: Optional[Mapping[VarData, Any]]
 
-    def __init__(self, expr: Optional[Any], variables: Iterable[VarData]):
+    def __init__(
+        self,
+        expr: Optional[Any],
+        variables: Iterable[VarData],
+        *,
+        compute_grad: bool = True,
+    ):
         self.body = expr
         self.variables = list(variables)
+        if compute_grad:
+            self.grad = reverse_sd(self.body)
+        else:
+            self.grad = None
 
     def create_evaluator(self, vmap: Mapping[int, int]):
         """
@@ -142,3 +155,31 @@ class NonlinearExpressionData:
             return value(self.body)
 
         return _fn
+
+    def create_gradient_evaluator(self, vmap: Mapping[int, int]):
+        """
+        Create a callable gradient evaluator for the non-linear expression.
+
+        Args:
+            vmap (Mapping[int, int]): A mapping from variable id to index in the solver's variable vector.
+
+        Returns:
+            Callable[[List[float]], List[float]]: A function that takes a list of variable values (x)
+            and returns the gradient of the expression with respect to its variables.
+
+        Raises:
+            ValueError: If gradient information is not available for this expression.
+        """
+
+        if self.grad is None:
+            msg = "Gradient information is not available for this expression."
+            raise ValueError(msg)
+
+        def _grad(x: List[float]) -> List[float]:
+            # Set the values of the Pyomo variables from the solver's vector `x`
+            for var in self.variables:
+                i = vmap[id(var)]
+                var.set_value(x[i])
+            return [value(self.grad.get(var, 0.0)) for var in self.variables]
+
+        return _grad
