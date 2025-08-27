@@ -60,7 +60,8 @@ class Hasher(defaultdict):
         self[cls] = self._hashable if hashable else self._unhashable
 
 
-# The global 'hasher' instance manages
-# registered hashing functions for different
-# types.
+#: The global 'hasher' instance for managing "universal" hashing
+#:
+#: This instance of the :class:`Hasher` is used by :class:`ComponentMap` and
+#: :class:`ComponentSet` for generating hashes for all Python and Pyomo types.
 hasher = Hasher()
