@@ -13,15 +13,17 @@ from collections import defaultdict
 
 
 class Hasher(defaultdict):
-    """
-    Hasher is a dictionary-like class that provides a consistent hashing for Python objects.
+    """Dispatch table for generating "universal" hashing of all Python objects.
 
-    This class allows registration of custom hashing functions for specific types. When an object is passed to the Hasher, it determines the appropriate hashing strategy based on the object's type:
+    This class manages a dispatch table for providing hash functions for all Python 
+    types.  When an object is passed to the Hasher, it determines the appropriate
+    hashing strategy based on the object's type:
     - If a custom hashing function is registered for the type, it is used.
     - If the object is natively hashable, the default hash is used.
     - If the object is unhashable, the object's `id()` is used as a fallback.
 
-    The Hasher also includes a special handling for tuples by recursively applying the appropriate hashing strategy to each element within the tuple.
+    The Hasher also includes a special handling for tuples by recursively applying the
+    appropriate hashing strategy to each element within the tuple.
     """
 
     def __init__(self, *args, **kwargs):
