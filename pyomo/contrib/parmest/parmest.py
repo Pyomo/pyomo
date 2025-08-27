@@ -258,7 +258,7 @@ def SSE_weighted(model):
 
     Parameters
     ----------
-    model : Pyomo ConcreteModel
+    model : ConcreteModel
         Annotated Pyomo model
     """
     # check if the model has all the required suffixes
