@@ -985,8 +985,18 @@ class Estimator(object):
         values as well as the objective function value.
 
         """
-        if calc_cov is not NOTSET and not isinstance(calc_cov, bool):
-            raise TypeError("Expected a boolean for the 'calc_cov' argument.")
+        if calc_cov is not NOTSET:
+            deprecation_warning(
+                "theta_est_leaveNout(): `calc_cov` and `cov_n` are deprecated options and "
+                "will be removed in the future. Please use the `cov_est()` function "
+                "for covariance calculation.",
+                version="6.9.4.dev0",
+            )
+        else:
+            calc_cov = False
+
+        if cov_n is NOTSET:
+            cov_n = 0
 
         if solver == "k_aug":
             raise RuntimeError("k_aug no longer supported.")
@@ -1035,7 +1045,7 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            if calc_cov is NOTSET or not calc_cov:
+            if not calc_cov:
                 # Do not calculate the reduced hessian
 
                 solver = SolverFactory('ipopt')
@@ -1045,7 +1055,7 @@ class Estimator(object):
 
                 solve_result = solver.solve(self.ef_instance, tee=self.tee)
                 assert_optimal_termination(solve_result)
-            elif calc_cov is not NOTSET and calc_cov:
+            else:
                 # parmest makes the fitted parameters stage 1 variables
                 ind_vars = []
                 for nd_name, Var, sol_val in ef_nonants(ef):
@@ -1078,11 +1088,13 @@ class Estimator(object):
             self.obj_value = obj_val
             self.estimated_theta = theta_vals
 
-            if calc_cov is not NOTSET and calc_cov:
+            if calc_cov:
                 # Calculate the covariance matrix
 
                 if not isinstance(cov_n, int):
-                    raise TypeError("Expected an integer for the 'cov_n' argument.")
+                    raise TypeError(
+                        f"Expected an integer for the 'cov_n' argument. Got {type(cov_n)}."
+                    )
                 num_unknowns = max(
                     [
                         len(experiment.get_labeled_model().unknown_parameters)
@@ -1150,14 +1162,14 @@ class Estimator(object):
                     if len(vals) > 0:
                         var_values.append(vals)
                 var_values = pd.DataFrame(var_values)
-                if calc_cov is not NOTSET and calc_cov:
+                if calc_cov:
                     return obj_val, theta_vals, var_values, cov
-                elif calc_cov is NOTSET or not calc_cov:
+                else:
                     return obj_val, theta_vals, var_values
 
-            if calc_cov is not NOTSET and calc_cov:
+            if calc_cov:
                 return obj_val, theta_vals, cov
-            elif calc_cov is NOTSET or not calc_cov:
+            else:
                 return obj_val, theta_vals
 
         else:
@@ -1628,9 +1640,13 @@ class Estimator(object):
             List of Variable names, used to return values from the model
             for data reconciliation
         calc_cov: boolean, optional
+            DEPRECATED.
+
             If True, calculate and return the covariance matrix
             (only for "ef_ipopt" solver). Default is NOTSET
         cov_n: int, optional
+            DEPRECATED.
+
             If calc_cov=True, then the user needs to supply the number of datapoints
             that are used in the objective function. Default is NOTSET
 
@@ -1647,13 +1663,18 @@ class Estimator(object):
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
 
-        if calc_cov is not NOTSET or cov_n is not NOTSET:
+        if calc_cov is not NOTSET:
             deprecation_warning(
                 "theta_est(): `calc_cov` and `cov_n` are deprecated options and "
                 "will be removed in the future. Please use the `cov_est()` function "
                 "for covariance calculation.",
                 version="6.9.4.dev0",
             )
+        else:
+            calc_cov = False
+
+        if cov_n is NOTSET:
+            cov_n = 0
 
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None and calc_cov:
@@ -2841,7 +2862,7 @@ class _DeprecatedEstimator(object):
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
-        assert isinstance(calc_cov, bool)
+        assert (calc_cov is NOTSET) or isinstance(calc_cov, bool)
         if calc_cov:
             assert isinstance(
                 cov_n, int

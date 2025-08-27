@@ -471,6 +471,7 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertEqual(bootstrap_theta.shape[0], 3)  # bootstrap for sample 1
         self.assertEqual(bootstrap_theta[1.0].sum(), 3)  # all true
 
+    @pytest.mark.expensive
     def test_diagnostic_mode(self):
         self.pest.diagnostic_mode = True
 
