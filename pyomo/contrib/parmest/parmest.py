@@ -1032,7 +1032,7 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            if not calc_cov:
+            if calc_cov is NOTSET or not calc_cov:
                 # Do not calculate the reduced hessian
 
                 solver = SolverFactory('ipopt')
@@ -1042,7 +1042,7 @@ class Estimator(object):
 
                 solve_result = solver.solve(self.ef_instance, tee=self.tee)
                 assert_optimal_termination(solve_result)
-            else:
+            elif calc_cov is not NOTSET and calc_cov:
                 # parmest makes the fitted parameters stage 1 variables
                 ind_vars = []
                 for nd_name, Var, sol_val in ef_nonants(ef):
@@ -1075,7 +1075,7 @@ class Estimator(object):
             self.obj_value = obj_val
             self.estimated_theta = theta_vals
 
-            if calc_cov:
+            if calc_cov is not NOTSET and calc_cov:
                 # Calculate the covariance matrix
 
                 if not isinstance(cov_n, int):
@@ -1150,14 +1150,14 @@ class Estimator(object):
                     if len(vals) > 0:
                         var_values.append(vals)
                 var_values = pd.DataFrame(var_values)
-                if calc_cov:
+                if calc_cov is not NOTSET and calc_cov:
                     return obj_val, theta_vals, var_values, cov
-                else:
+                elif calc_cov is NOTSET or not calc_cov:
                     return obj_val, theta_vals, var_values
 
-            if calc_cov:
+            if calc_cov is not NOTSET and calc_cov:
                 return obj_val, theta_vals, cov
-            else:
+            elif calc_cov is NOTSET or not calc_cov:
                 return obj_val, theta_vals
 
         else:
