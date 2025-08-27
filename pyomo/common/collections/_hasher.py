@@ -15,7 +15,7 @@ from collections import defaultdict
 class Hasher(defaultdict):
     """Dispatch table for generating "universal" hashing of all Python objects.
 
-    This class manages a dispatch table for providing hash functions for all Python 
+    This class manages a dispatch table for providing hash functions for all Python
     types.  When an object is passed to the Hasher, it determines the appropriate
     hashing strategy based on the object's type:
     - If a custom hashing function is registered for the type, it is used.
