@@ -985,19 +985,6 @@ class Estimator(object):
         values as well as the objective function value.
 
         """
-        if calc_cov is not NOTSET:
-            deprecation_warning(
-                "theta_est_leaveNout(): `calc_cov` and `cov_n` are deprecated options and "
-                "will be removed in the future. Please use the `cov_est()` function "
-                "for covariance calculation.",
-                version="6.9.4.dev0",
-            )
-        else:
-            calc_cov = False
-
-        if cov_n is NOTSET:
-            cov_n = 0
-
         if solver == "k_aug":
             raise RuntimeError("k_aug no longer supported.")
 
@@ -1093,7 +1080,8 @@ class Estimator(object):
 
                 if not isinstance(cov_n, int):
                     raise TypeError(
-                        f"Expected an integer for the 'cov_n' argument. Got {type(cov_n)}."
+                        f"Expected an integer for the 'cov_n' argument. "
+                        f"Got {type(cov_n)}."
                     )
                 num_unknowns = max(
                     [
@@ -1662,6 +1650,7 @@ class Estimator(object):
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
+        assert (calc_cov is NOTSET) or isinstance(calc_cov, bool)
 
         if calc_cov is not NOTSET:
             deprecation_warning(
@@ -1672,9 +1661,6 @@ class Estimator(object):
             )
         else:
             calc_cov = False
-
-        if cov_n is NOTSET:
-            cov_n = 0
 
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None and calc_cov:
