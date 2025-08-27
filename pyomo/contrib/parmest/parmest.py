@@ -1685,7 +1685,7 @@ class Estimator(object):
 
         return samplelist
 
-    def theta_est(self, solver="ef_ipopt", return_values=[], **kwargs):
+    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET:
         """
         Parameter estimation using all scenarios in the data
 
