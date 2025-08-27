@@ -416,7 +416,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     assert_optimal_termination(results)
 
     # get the estimated parameter values
-    param_values = [p.value for p in params]
+    param_values = [p.value for p in model.unknown_parameters]
 
     # get the number of parameters and measured variables
     n_params = len(param_values)
@@ -425,7 +425,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     # compute the sensitivity of the measured variables w.r.t the parameters
     J = np.zeros((n_outputs, n_params))
 
-    for i, param in enumerate(params):
+    for i, param in enumerate(model.unknown_parameters):
         # store original value of the parameter
         orig_value = param_values[i]
 
