@@ -61,8 +61,8 @@ import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
-from pyomo.opt import TerminationCondition
 from pyomo.opt.results.solver import assert_optimal_termination
+from pyomo.common.flags import NOTSET
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
@@ -243,7 +243,7 @@ def SSE(model):
         Annotated Pyomo model
     """
     # check if the model has all the required suffixes
-    _check_model_labels_helper(model, logging_level=logging.ERROR)
+    _check_model_labels(model)
 
     # SSE between the prediction and observation of the measured variables
     expr = sum((y - y_hat) ** 2 for y_hat, y in model.experiment_outputs.items())
@@ -262,7 +262,7 @@ def SSE_weighted(model):
         Annotated Pyomo model
     """
     # check if the model has all the required suffixes
-    _check_model_labels_helper(model, logging_level=logging.ERROR)
+    _check_model_labels(model)
 
     # Check that measurement errors exist
     if not hasattr(model, "measurement_error"):
@@ -299,16 +299,14 @@ def SSE_weighted(model):
         )
 
 
-def _check_model_labels(model, logging_level):
+def _check_model_labels(model):
     """
     Checks if the annotated Pyomo model contains the necessary suffixes
 
     Parameters
     ----------
-    model : Pyomo ConcreteModel
+    model : ConcreteModel
         Annotated Pyomo model
-    logging_level : int
-        Logging level specified by the user, e.g., logging.INFO
     """
     required_attrs = ("experiment_outputs", "unknown_parameters")
 
@@ -320,19 +318,17 @@ def _check_model_labels(model, logging_level):
             f"Experiment model is missing required attribute(s): {missing_str}"
         )
 
-    # set the logging
-    logger.setLevel(level=logging_level)
     logger.info("Model has expected labels.")
 
 
-def _get_labeled_model_helper(experiment):
+def _get_labeled_model(experiment):
     """
     Returns the annotated Pyomo model from the Experiment class
 
     Parameters
     ----------
-    experiment : class
-        Estimator class object that contains the Pyomo model
+    experiment : Experiment class
+        Experiment class object that contains the Pyomo model
         for a particular experimental condition
     """
     # check if the Experiment class has a "get_labeled_model" function
@@ -355,7 +351,7 @@ def _count_total_experiments(experiment_list):
     Parameters
     ----------
     experiment_list : list
-        List of Estimator class objects containing the Pyomo model
+        List of Experiment class objects containing the Pyomo model
         for the different experimental conditions
 
     Returns
@@ -381,11 +377,6 @@ class ObjectiveType(Enum):
     SSE_weighted = "SSE_weighted"
 
 
-class UnsupportedArgs(Enum):
-    calc_cov = "calc_cov"
-    cov_n = "cov_n"
-
-
 # Compute the Jacobian matrix of measured variables with respect to the parameters
 def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     """
@@ -394,8 +385,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
 
     Parameters
     ----------
-    experiment : class
-        Estimator class object that contains the Pyomo model
+    experiment : Experiment class
+        Experiment class object that contains the Pyomo model
         for a particular experimental condition
     theta_vals : dict
         Dictionary containing the estimates of the unknown parameters
@@ -413,7 +404,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
         Jacobian matrix of the measured variables
     """
     # grab the model
-    model = _get_labeled_model_helper(experiment)
+    model = _get_labeled_model(experiment)
 
     # fix the value of the unknown parameters to the estimated values
     params = [k for k, v in model.unknown_parameters.items()]
@@ -497,7 +488,7 @@ def compute_covariance_matrix(
     Parameters
     ----------
     experiment_list : list
-        List of Estimator class objects containing the Pyomo model
+        List of Experiment class objects containing the Pyomo model
         for the different experimental conditions
     method : str
         Covariance calculation method specified by the user,
@@ -578,8 +569,8 @@ def _finite_difference_FIM(
 
     Parameters
     ----------
-    experiment : class
-        Estimator class object that contains the Pyomo model
+    experiment : Experiment class
+        Experiment class object that contains the Pyomo model
         for a particular experimental condition
     theta_vals : dict
         Dictionary containing the estimates of the unknown parameters
@@ -608,7 +599,7 @@ def _finite_difference_FIM(
     logger.info(f"The condition number of the Jacobian matrix is {cond_number_jac}")
 
     # grab the model
-    model = _get_labeled_model_helper(experiment)
+    model = _get_labeled_model(experiment)
 
     # extract the measured variables and measurement errors
     y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
@@ -624,28 +615,16 @@ def _finite_difference_FIM(
             model.measurement_error[y_hat] for y_hat in model.experiment_outputs
         ]
 
-        # compute the matrix of the inverse of the measurement error variance
-        # the following assumes independent and identically distributed
-        # measurement errors
-        try:
-            W = np.diag([1 / (err**2) for err in error_list])
-        except ZeroDivisionError:
-            raise ValueError(
-                'Division by zero encountered in computing the covariance matrix. '
-                'One or more values of the measurement error are zero.'
-            )
-
-        # check if the error list is consistent
-        if len(error_list) == 0 or len(y_hat_list) == 0:
-            raise ValueError(
-                "Experiment outputs and measurement errors cannot be empty."
-            )
-
         # check if the dimension of error_list is the same with that of y_hat_list
         if len(error_list) != len(y_hat_list):
             raise ValueError(
                 "Experiment outputs and measurement errors are not the same length."
             )
+
+        # compute the matrix of the inverse of the measurement error variance
+        # the following assumes independent and identically distributed
+        # measurement errors
+        W = np.diag([1 / (err**2) for err in error_list])
 
         # calculate the FIM using the formula in our future paper
         # Lilonfe et al. (2025)
@@ -668,8 +647,8 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
 
     Parameters
     ----------
-    experiment : class
-        Estimator class object that contains the Pyomo model
+    experiment : Experiment class
+        Experiment class object that contains the Pyomo model
         for a particular experimental condition
     obj_function: callable
         Built-in objective function selected by the user, e.g., `SSE`
@@ -690,7 +669,7 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
         Fisher information matrix of the estimated parameters
     """
     # grab the model
-    model = _get_labeled_model_helper(experiment)
+    model = _get_labeled_model(experiment)
 
     # deactivate any existing objective functions
     for obj in model.component_objects(pyo.Objective):
@@ -763,13 +742,7 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
     count = 0
     for k, v in model.measurement_error.items():
         if all_known_errors:
-            try:
-                W[count, count] = 1 / (v**2)
-            except ZeroDivisionError:
-                raise ValueError(
-                    'Division by zero encountered in computing the covariance matrix. '
-                    'One or more values of the measurement error are zero.'
-                )
+            W[count, count] = 1 / (v**2)
         else:
             W[count, count] = 1 / estimated_var
         count += 1
@@ -830,11 +803,14 @@ class Estimator(object):
         # get the number of experiments
         self.number_exp = _count_total_experiments(self.exp_list)
 
+        # set the logging
+        logger.setLevel(level=logging_level)
+
         # check if the experiment has a ``get_labeled_model`` function
-        model = _get_labeled_model_helper(self.exp_list[0])
+        model = _get_labeled_model(self.exp_list[0])
 
         # check if the model has all the required suffixes
-        _check_model_labels_helper(model, logging_level)
+        _check_model_labels(model)
 
         # populate keyword argument options
         if isinstance(obj_function, str):
@@ -849,7 +825,6 @@ class Estimator(object):
             self.obj_function = obj_function
 
         self.tee = tee
-        self.logging_level = logging_level
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
 
@@ -860,7 +835,7 @@ class Estimator(object):
         # We could collect the union (or intersect?) of thetas when the models are built
         theta_names = []
         for experiment in self.exp_list:
-            model = _get_labeled_model_helper(experiment)
+            model = _get_labeled_model(experiment)
             theta_names.extend([k.name for k, v in model.unknown_parameters.items()])
         # Utilize list(dict.fromkeys(theta_names)) to preserve parameter
         # order compared with list(set(theta_names)), which had
@@ -953,7 +928,7 @@ class Estimator(object):
         Modify the Pyomo model for parameter estimation
         """
 
-        model = _get_labeled_model_helper(self.exp_list[experiment_number])
+        model = _get_labeled_model(self.exp_list[experiment_number])
 
         if len(model.unknown_parameters) == 0:
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
@@ -1014,13 +989,17 @@ class Estimator(object):
         solver="ef_ipopt",
         return_values=[],
         bootlist=None,
-        **kwargs,
+        calc_cov=NOTSET,
+        cov_n=NOTSET,
     ):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
 
         """
+        if calc_cov is not NOTSET and not isinstance(calc_cov, bool):
+            raise TypeError("Expected a boolean for the 'calc_cov' argument.")
+
         if solver == "k_aug":
             raise RuntimeError("k_aug no longer supported.")
 
@@ -1068,7 +1047,7 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            if not kwargs:
+            if calc_cov is NOTSET or calc_cov is False:
                 # Do not calculate the reduced hessian
 
                 solver = SolverFactory('ipopt')
@@ -1078,43 +1057,20 @@ class Estimator(object):
 
                 solve_result = solver.solve(self.ef_instance, tee=self.tee)
                 assert_optimal_termination(solve_result)
-            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
-                deprecation_warning(
-                    "You're using a deprecated call to the `theta_est()` function "
-                    "with the `calc_cov` and `cov_n` arguments. This usage will be "
-                    "removed in a future release. Please update to the new parmest "
-                    "interface using the `cov_est()` function for covariance calculation.",
-                    version="6.9.4.dev0",
-                )
-
-                calc_cov = kwargs[UnsupportedArgs.calc_cov.value]
-                cov_n = kwargs[UnsupportedArgs.cov_n.value]
-                if not isinstance(calc_cov, bool):
-                    raise TypeError("Expected a boolean for 'calc_cov' argument.")
-
-                if not calc_cov:
-                    # Do not calculate the reduced hessian
-
-                    solver = SolverFactory('ipopt')
-                    if self.solver_options is not None:
-                        for key in self.solver_options:
-                            solver.options[key] = self.solver_options[key]
-
-                    solve_result = solver.solve(self.ef_instance, tee=self.tee)
-                else:
-                    # parmest makes the fitted parameters stage 1 variables
-                    ind_vars = []
-                    for nd_name, Var, sol_val in ef_nonants(ef):
-                        ind_vars.append(Var)
-                    # calculate the reduced hessian
-                    (solve_result, inv_red_hes) = (
-                        inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                            self.ef_instance,
-                            independent_variables=ind_vars,
-                            solver_options=self.solver_options,
-                            tee=self.tee,
-                        )
+            elif calc_cov is not NOTSET and calc_cov is True:
+                # parmest makes the fitted parameters stage 1 variables
+                ind_vars = []
+                for nd_name, Var, sol_val in ef_nonants(ef):
+                    ind_vars.append(Var)
+                # calculate the reduced hessian
+                (solve_result, inv_red_hes) = (
+                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                        self.ef_instance,
+                        independent_variables=ind_vars,
+                        solver_options=self.solver_options,
+                        tee=self.tee,
                     )
+                )
 
             if self.diagnostic_mode:
                 print(
@@ -1131,51 +1087,50 @@ class Estimator(object):
                 theta_vals[var_name] = sol_val
 
             obj_val = pyo.value(ef.EF_Obj)
-
-            # add the objective value and estimated theta to the class
             self.obj_value = obj_val
             self.estimated_theta = theta_vals
 
-            if kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
-                if calc_cov:
-                    if not isinstance(cov_n, int):
-                        raise TypeError("Expected an integer for 'cov_n' argument.")
-                    num_unknowns = max(
-                        [
-                            len(experiment.get_labeled_model().unknown_parameters)
-                            for experiment in self.exp_list
-                        ]
-                    )
-                    assert cov_n > num_unknowns, (
-                        "The number of datapoints must be greater than the "
-                        "number of parameters to estimate"
-                    )
+            if calc_cov is not NOTSET and calc_cov is True:
+                # Calculate the covariance matrix
 
-                    # Number of data points considered
-                    n = cov_n
+                if not isinstance(cov_n, int):
+                    raise TypeError("Expected an integer for the 'cov_n' argument.")
+                num_unknowns = max(
+                    [
+                        len(experiment.get_labeled_model().unknown_parameters)
+                        for experiment in self.exp_list
+                    ]
+                )
+                assert cov_n > num_unknowns, (
+                    "The number of datapoints must be greater than the "
+                    "number of parameters to estimate."
+                )
 
-                    # Extract number of fitted parameters
-                    l = len(theta_vals)
+                # Number of data points considered
+                n = cov_n
 
-                    # Assumption: Objective value is sum of squared errors
-                    sse = obj_val
+                # Extract number of fitted parameters
+                l = len(theta_vals)
 
-                    '''Calculate covariance assuming experimental observation errors 
-                    are independent and follow a Gaussian distribution 
-                    with constant variance.
+                # Assumption: Objective value is sum of squared errors
+                sse = obj_val
 
-                    The formula used in parmest was verified against equations 
-                    (7-5-15) and (7-5-16) in "Nonlinear Parameter Estimation", 
-                    Y. Bard, 1974.
+                '''Calculate covariance assuming experimental observation errors 
+                are independent and follow a Gaussian distribution 
+                with constant variance.
 
-                    This formula is also applicable if the objective is scaled by a 
-                    constant; the constant cancels out. 
-                    (was scaled by 1/n because it computes an expected value.)
-                    '''
-                    cov = 2 * sse / (n - l) * inv_red_hes
-                    cov = pd.DataFrame(
-                        cov, index=theta_vals.keys(), columns=theta_vals.keys()
-                    )
+                The formula used in parmest was verified against equations 
+                (7-5-15) and (7-5-16) in "Nonlinear Parameter Estimation", 
+                Y. Bard, 1974.
+
+                This formula is also applicable if the objective is scaled by a 
+                constant; the constant cancels out. 
+                (was scaled by 1/n because it computes an expected value.)
+                '''
+                cov = 2 * sse / (n - l) * inv_red_hes
+                cov = pd.DataFrame(
+                    cov, index=theta_vals.keys(), columns=theta_vals.keys()
+                )
 
             theta_vals = pd.Series(theta_vals)
 
@@ -1207,22 +1162,15 @@ class Estimator(object):
                     if len(vals) > 0:
                         var_values.append(vals)
                 var_values = pd.DataFrame(var_values)
-
-                if not kwargs:
+                if calc_cov is not NOTSET and calc_cov is True:
+                    return obj_val, theta_vals, var_values, cov
+                elif calc_cov is NOTSET or calc_cov is False:
                     return obj_val, theta_vals, var_values
-                elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
-                    if calc_cov:
-                        return obj_val, theta_vals, var_values, cov
-                    else:
-                        return obj_val, theta_vals, var_values
 
-            if not kwargs:
+            if calc_cov is not NOTSET and calc_cov is True:
+                return obj_val, theta_vals, cov
+            elif calc_cov is NOTSET or calc_cov is False:
                 return obj_val, theta_vals
-            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
-                if calc_cov:
-                    return obj_val, theta_vals, cov
-                else:
-                    return obj_val, theta_vals
 
         else:
             raise RuntimeError("Unknown solver in Q_Opt=" + solver)
@@ -1275,7 +1223,7 @@ class Estimator(object):
         # calculate the sum of squared errors at the estimated parameter values
         sse_vals = []
         for experiment in self.exp_list:
-            model = _get_labeled_model_helper(experiment)
+            model = _get_labeled_model(experiment)
 
             # fix the value of the unknown parameters to the estimated values
             params = [k for k, v in model.unknown_parameters.items()]
@@ -1305,7 +1253,6 @@ class Estimator(object):
             sse_vals.append(sse_val)
 
         sse = sum(sse_vals)
-        logger.setLevel(level=self.logging_level)
         logger.info(
             f"The sum of squared errors at the estimated parameter(s) is: {sse}"
         )
@@ -1685,7 +1632,9 @@ class Estimator(object):
 
         return samplelist
 
-    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET:
+    def theta_est(
+        self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
+    ):
         """
         Parameter estimation using all scenarios in the data
 
@@ -1696,6 +1645,12 @@ class Estimator(object):
         return_values: list, optional
             List of Variable names, used to return values from the model
             for data reconciliation
+        calc_cov: boolean, optional
+            If True, calculate and return the covariance matrix
+            (only for "ef_ipopt" solver). Default is NOTSET
+        cov_n: int, optional
+            If calc_cov=True, then the user needs to supply the number of datapoints
+            that are used in the objective function. Default is NOTSET
 
         Returns
         -------
@@ -1707,28 +1662,36 @@ class Estimator(object):
             Variable values for each variable name in
             return_values (only for solver='ef_ipopt')
         """
-
-        # check if we are using deprecated parmest
-        if self.pest_deprecated is not None:
-            if not kwargs:
-                return self.pest_deprecated.theta_est(
-                    solver=solver, return_values=return_values
-                )
-            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
-                calc_cov = kwargs[UnsupportedArgs.calc_cov.value]
-                cov_n = kwargs[UnsupportedArgs.cov_n.value]
-                return self.pest_deprecated.theta_est(
-                    solver=solver,
-                    return_values=return_values,
-                    calc_cov=calc_cov,
-                    cov_n=cov_n,
-                )
-
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
 
+        if calc_cov is not NOTSET or cov_n is not NOTSET:
+            deprecation_warning(
+                "theta_est(): `calc_cov` and `cov_n` are deprecated options and "
+                "will be removed in the future. Please use the `cov_est()` function "
+                "for covariance calculation.",
+                version="6.9.4.dev0",
+            )
+
+        # check if we are using deprecated parmest
+        if self.pest_deprecated is not None and calc_cov is True:
+            return self.pest_deprecated.theta_est(
+                solver=solver,
+                return_values=return_values,
+                calc_cov=calc_cov,
+                cov_n=cov_n,
+            )
+        elif self.pest_deprecated is not None and calc_cov is not True:
+            return self.pest_deprecated.theta_est(
+                solver=solver, return_values=return_values
+            )
+
         return self._Q_opt(
-            solver=solver, return_values=return_values, bootlist=None, **kwargs
+            solver=solver,
+            return_values=return_values,
+            bootlist=None,
+            calc_cov=calc_cov,
+            cov_n=cov_n,
         )
 
     def cov_est(self, method="finite_difference", solver="ipopt", step=1e-3):
