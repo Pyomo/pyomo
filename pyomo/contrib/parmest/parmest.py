@@ -783,7 +783,6 @@ class Estimator(object):
         experiment_list,
         obj_function=None,
         tee=False,
-        logging_level=logging.ERROR,
         diagnostic_mode=False,
         solver_options=None,
     ):
@@ -1039,7 +1038,7 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            if calc_cov is NOTSET or calc_cov is False:
+            if calc_cov is NOTSET or not calc_cov:
                 # Do not calculate the reduced hessian
 
                 solver = SolverFactory('ipopt')
@@ -1049,7 +1048,7 @@ class Estimator(object):
 
                 solve_result = solver.solve(self.ef_instance, tee=self.tee)
                 assert_optimal_termination(solve_result)
-            elif calc_cov is not NOTSET and calc_cov is True:
+            elif calc_cov is not NOTSET and calc_cov:
                 # parmest makes the fitted parameters stage 1 variables
                 ind_vars = []
                 for nd_name, Var, sol_val in ef_nonants(ef):
@@ -1082,7 +1081,7 @@ class Estimator(object):
             self.obj_value = obj_val
             self.estimated_theta = theta_vals
 
-            if calc_cov is not NOTSET and calc_cov is True:
+            if calc_cov is not NOTSET and calc_cov:
                 # Calculate the covariance matrix
 
                 if not isinstance(cov_n, int):
@@ -1154,14 +1153,14 @@ class Estimator(object):
                     if len(vals) > 0:
                         var_values.append(vals)
                 var_values = pd.DataFrame(var_values)
-                if calc_cov is not NOTSET and calc_cov is True:
+                if calc_cov is not NOTSET and calc_cov:
                     return obj_val, theta_vals, var_values, cov
-                elif calc_cov is NOTSET or calc_cov is False:
+                elif calc_cov is NOTSET or not calc_cov:
                     return obj_val, theta_vals, var_values
 
-            if calc_cov is not NOTSET and calc_cov is True:
+            if calc_cov is not NOTSET and calc_cov:
                 return obj_val, theta_vals, cov
-            elif calc_cov is NOTSET or calc_cov is False:
+            elif calc_cov is NOTSET or not calc_cov:
                 return obj_val, theta_vals
 
         else:
@@ -1660,14 +1659,14 @@ class Estimator(object):
             )
 
         # check if we are using deprecated parmest
-        if self.pest_deprecated is not None and calc_cov is True:
+        if self.pest_deprecated is not None and calc_cov:
             return self.pest_deprecated.theta_est(
                 solver=solver,
                 return_values=return_values,
                 calc_cov=calc_cov,
                 cov_n=cov_n,
             )
-        elif self.pest_deprecated is not None and calc_cov is not True:
+        elif self.pest_deprecated is not None and not calc_cov:
             return self.pest_deprecated.theta_est(
                 solver=solver, return_values=return_values
             )
