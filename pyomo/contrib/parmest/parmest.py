@@ -952,12 +952,10 @@ class Estimator(object):
 
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
-            if isinstance(self.obj_function, Enum):
-                if self.obj_function == ObjectiveType.SSE:
-                    second_stage_rule = SSE
-                else:
-                    second_stage_rule = SSE_weighted
-                self.covariance_objective = second_stage_rule
+            if self.obj_function is ObjectiveType.SSE:
+                second_stage_rule = SSE_weighted
+            elif self.obj_function is ObjectiveType.SSE_weighted:
+                second_stage_rule = SSE_weighted
             else:
                 # A custom function uses model.experiment_outputs as data
                 second_stage_rule = self.obj_function
