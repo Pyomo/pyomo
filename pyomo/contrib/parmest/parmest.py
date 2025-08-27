@@ -679,8 +679,7 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
     model.objective = pyo.Objective(expr=obj_function, sense=pyo.minimize)
 
     # fix the parameter values to the estimated values
-    params = [k for k, v in model.unknown_parameters.items()]
-    for param in params:
+    for param in model.unknown_parameters:
         param.fix(theta_vals[param.name])
 
     solver = pyo.SolverFactory(solver)
