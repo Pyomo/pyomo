@@ -299,7 +299,7 @@ def SSE_weighted(model):
         )
 
 
-def _check_model_labels_helper(model, logging_level):
+def _check_model_labels(model, logging_level):
     """
     Checks if the annotated Pyomo model contains the necessary suffixes
 
