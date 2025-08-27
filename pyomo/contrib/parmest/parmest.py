@@ -407,8 +407,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     model = _get_labeled_model(experiment)
 
     # fix the value of the unknown parameters to the estimated values
-    params = [k for k, v in model.unknown_parameters.items()]
-    for param in params:
+    for param in model.unknown_parameters:
         param.fix(theta_vals[param.name])
 
     # re-solve the model with the estimated parameters
