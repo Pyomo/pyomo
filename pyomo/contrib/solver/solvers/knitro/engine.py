@@ -38,12 +38,15 @@ class Engine:
     obj_nl_expr: Optional[NonlinearExpressionData]
     con_nl_expr_map: MutableMapping[int, NonlinearExpressionData]
 
+    _status: Optional[int]
+
     def __init__(self):
-        self._kc = None
         self.var_map = {}
         self.con_map = {}
         self.obj_nl_expr = None
         self.con_nl_expr_map = {}
+        self._kc = None
+        self._status = None
 
     def __del__(self):
         self.close()
@@ -53,7 +56,7 @@ class Engine:
         self._kc = Package.create_context()
 
     def close(self):
-        if hasattr(self, "_kc") and self._kc is not None:
+        if self._kc is not None:
             self._execute(knitro.KN_free)
             self._kc = None
 
@@ -151,11 +154,14 @@ class Engine:
 
     def solve(self) -> int:
         self._register_callback()
-        return self._execute(knitro.KN_solve)
+        self._status = self._execute(knitro.KN_solve)
+        return self._status
 
     def get_status(self) -> int:
-        status, _, _, _ = self._execute(knitro.KN_get_solution)
-        return status
+        if self._status is None:
+            msg = "Solver has not been run yet. Since the solver has not been executed, no status is available."
+            raise RuntimeError(msg)
+        return self._status
 
     def get_num_iters(self) -> int:
         return self._execute(knitro.KN_get_number_iters)
