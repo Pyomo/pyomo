@@ -794,9 +794,6 @@ class Estimator(object):
         # get the number of experiments
         self.number_exp = _count_total_experiments(self.exp_list)
 
-        # set the logging
-        logger.setLevel(level=logging_level)
-
         # check if the experiment has a ``get_labeled_model`` function
         model = _get_labeled_model(self.exp_list[0])
 
