@@ -51,4 +51,5 @@ The following example returns model values from a Pyomo Expression.
 
    >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=None)
    >>> obj, theta, var_values = pest.theta_est(return_values=['response_function'])
+   WARNING: DEPRECATED: ...
    >>> #print(var_values)

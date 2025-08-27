@@ -105,7 +105,8 @@ the :class:`~pyomo.contrib.parmest.parmest.Estimator.cov_est` function, e.g.,
 
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
-    >>> obj_val, theta_val = pest.theta_est() # doctest: +IGNORE_WARNINGS
+    >>> obj_val, theta_val = pest.theta_est()
+    WARNING: DEPRECATED: ...
     >>> cov = pest.cov_est()
 
 Optionally, one of the three methods; "reduced_hessian", "finite_difference",
@@ -116,6 +117,7 @@ e.g.,
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
-    >>> obj_val, theta_val = pest.theta_est() # doctest: +IGNORE_WARNINGS
+    >>> obj_val, theta_val = pest.theta_est()
+    WARNING: DEPRECATED: ...
     >>> cov_method = "reduced_hessian"
     >>> cov = pest.cov_est(method=cov_method)
