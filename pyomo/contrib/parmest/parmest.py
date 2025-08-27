@@ -483,7 +483,7 @@ def compute_covariance_matrix(
 ):
     """
     Computes the covariance matrix of the estimated parameters using
-    'finite_difference' and 'automatic_differentiation_kaug' methods
+    'finite_difference' or 'automatic_differentiation_kaug' methods
 
     Parameters
     ----------
