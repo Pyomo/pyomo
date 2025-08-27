@@ -416,15 +416,12 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     results = solver.solve(model, tee=tee)
     assert_optimal_termination(results)
 
-    # get the measured variables
-    y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
-
     # get the estimated parameter values
     param_values = [p.value for p in params]
 
     # get the number of parameters and measured variables
     n_params = len(param_values)
-    n_outputs = len(y_hat_list)
+    n_outputs = len(model.experiment_outputs)
 
     # compute the sensitivity of the measured variables w.r.t the parameters
     J = np.zeros((n_outputs, n_params))
@@ -769,9 +766,6 @@ class Estimator(object):
         Default is None.
     tee: bool, optional
         If True, print the solver output to the screen. Default is False.
-    logging_level : int, optional
-        Logging level specified by the user,
-        e.g., logging.INFO. Default is logging.ERROR.
     diagnostic_mode: bool, optional
         If True, print diagnostics from the solver. Default is False.
     solver_options: dict, optional
@@ -953,9 +947,11 @@ class Estimator(object):
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
             if self.obj_function is ObjectiveType.SSE:
-                second_stage_rule = SSE_weighted
+                second_stage_rule = SSE
+                self.covariance_objective = second_stage_rule
             elif self.obj_function is ObjectiveType.SSE_weighted:
                 second_stage_rule = SSE_weighted
+                self.covariance_objective = second_stage_rule
             else:
                 # A custom function uses model.experiment_outputs as data
                 second_stage_rule = self.obj_function
@@ -1223,8 +1219,7 @@ class Estimator(object):
             model = _get_labeled_model(experiment)
 
             # fix the value of the unknown parameters to the estimated values
-            params = [k for k, v in model.unknown_parameters.items()]
-            for param in params:
+            for param in model.unknown_parameters:
                 param.fix(self.estimated_theta[param.name])
 
             # re-solve the model with the estimated parameters
@@ -1392,11 +1387,6 @@ class Estimator(object):
                 raise AttributeError(
                     'Experiment model does not have suffix "measurement_error".'
                 )
-        else:
-            raise NotImplementedError(
-                'Covariance calculation is only supported for "SSE" and '
-                '"SSE_weighted" objectives.'
-            )
 
         return cov
 
