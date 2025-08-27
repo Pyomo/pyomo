@@ -9,11 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections.abc import MutableSet as collections_MutableSet
-from collections.abc import Set as collections_Set
+from collections.abc import MutableSet, Set
 
 from pyomo.common.autoslots import AutoSlots
-from pyomo.common.collections.component_map import _hasher
+
+from ._hasher import hasher
 
 
 def _rehash_keys(encode, val):
@@ -32,10 +32,10 @@ def _rehash_keys(encode, val):
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
-        return {_hasher[obj.__class__](obj): obj for obj in val.values()}
+        return {hasher[obj.__class__](obj): obj for obj in val.values()}
 
 
-class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
+class ComponentSet(AutoSlots.Mixin, MutableSet):
     """
     This class is a replacement for set that allows Pyomo
     modeling components to be used as entries. The
@@ -60,9 +60,9 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
     """
 
     __slots__ = ("_data",)
-    __autoslot_mappers__ = {'_data': _rehash_keys}
+    __autoslot_mappers__ = {"_data": _rehash_keys}
     # Expose a "public" interface to the global _hasher dict
-    hasher = _hasher
+    hasher = hasher
 
     def __init__(self, iterable=None):
         # maps id_hash(obj) -> obj
@@ -80,14 +80,14 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
         if isinstance(iterable, ComponentSet):
             self._data.update(iterable._data)
         else:
-            self._data.update((_hasher[val.__class__](val), val) for val in iterable)
+            self._data.update((hasher[val.__class__](val), val) for val in iterable)
 
     #
     # Implement MutableSet abstract methods
     #
 
     def __contains__(self, val):
-        return _hasher[val.__class__](val) in self._data
+        return hasher[val.__class__](val) in self._data
 
     def __iter__(self):
         return iter(self._data.values())
@@ -97,11 +97,11 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
 
     def add(self, val):
         """Add an element."""
-        self._data[_hasher[val.__class__](val)] = val
+        self._data[hasher[val.__class__](val)] = val
 
     def discard(self, val):
         """Remove an element. Do not raise an exception if absent."""
-        _id = _hasher[val.__class__](val)
+        _id = hasher[val.__class__](val)
         if _id in self._data:
             del self._data[_id]
 
@@ -112,10 +112,10 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
     def __eq__(self, other):
         if self is other:
             return True
-        if not isinstance(other, collections_Set):
+        if not isinstance(other, Set):
             return False
         return len(self) == len(other) and all(
-            _hasher[val.__class__](val) in self._data for val in other
+            hasher[val.__class__](val) in self._data for val in other
         )
 
     def __ne__(self, other):
@@ -133,7 +133,7 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
     def remove(self, val):
         """Remove an element. If not a member, raise a KeyError."""
         try:
-            del self._data[_hasher[val.__class__](val)]
+            del self._data[hasher[val.__class__](val)]
         except KeyError:
-            _id = _hasher[val.__class__](val)
+            _id = hasher[val.__class__](val)
             raise KeyError(f"{val} (key={_id})") from None
