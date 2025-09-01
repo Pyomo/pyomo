@@ -311,7 +311,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object y'
+            ValueError, 'No value for uninitialized ScalarVar object y'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y**x")
@@ -429,7 +429,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 2)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object y'
+            ValueError, 'No value for uninitialized ScalarVar object y'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
@@ -441,7 +441,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 0)
         self.assertEqual(is_fixed(e), True)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object y'
+            ValueError, 'No value for uninitialized ScalarVar object y'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
@@ -452,7 +452,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 1)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object y'
+            ValueError, 'No value for uninitialized ScalarVar object y'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
@@ -464,7 +464,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object x'
+            ValueError, 'No value for uninitialized ScalarVar object x'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "1/y*x")

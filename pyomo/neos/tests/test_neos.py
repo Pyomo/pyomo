@@ -20,13 +20,14 @@
 import os
 import json
 import os.path
+import tempfile
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 
 from pyomo.scripting.pyomo_main import main
 from pyomo.scripting.util import cleanup
-from pyomo.neos.kestrel import kestrelAMPL
+from pyomo.neos.kestrel import kestrelAMPL, xmlrpclib
 import pyomo.neos
 
 import pyomo.environ as pyo
@@ -64,6 +65,110 @@ def _model(sense):
 
     model.obj = pyo.Objective(expr=model.y, sense=sense)
     return model
+
+
+class _MockedServer:
+    def __init__(self, *, ping_err=None, list_err=None, final_results=b"OK"):
+        self._ping_err = ping_err
+        self._list_err = list_err or (0, None)
+        self._list_calls = 0
+        self._final_results = final_results
+        self.kill_args = None
+
+    def ping(self):
+        if self._ping_err:
+            raise self._ping_err
+        return "avail"
+
+    def listSolversInCategory(self, cat):
+        self._list_calls += 1
+        if self._list_calls <= self._list_err[0]:
+            raise self._list_err[1]
+        return ["ipopt:AMPL", "cbc:AMPL", "baron:GAMS"]
+
+    def killJob(self, job, pw):
+        self.kill_args = (job, pw)
+        return "killed"
+
+    def getFinalResults(self, *_):
+        return self._final_results
+
+
+class TestNEOSInterface(unittest.TestCase):
+    """
+    This uses a mocked server to test basic functionality from kestrel;
+    can run all the time, not necessary to have a real connection
+    """
+
+    def _uninit_kestrel(self):
+        """Return an un-initialized kestrelAMPL"""
+        return object.__new__(kestrelAMPL)
+
+    def test_tempfile_env_set_and_unset(self):
+        k = self._uninit_kestrel()
+
+        # ampl_id unset  -> unknown
+        os.environ.pop("ampl_id", None)
+        self.assertTrue(kestrelAMPL.tempfile(k).endswith("atunknown.jobs"))
+
+        # ampl_id present
+        os.environ["ampl_id"] = "123"
+        self.assertTrue(kestrelAMPL.tempfile(k).endswith("at123.jobs"))
+
+    def test_kill_calls_remote(self):
+        srv = _MockedServer()
+        k = self._uninit_kestrel()
+        k.neos = srv
+        kestrelAMPL.kill(k, 42, "pw")
+        self.assertEqual(srv.kill_args, (42, "pw"))
+
+    def test_retrieve_string_and_binary(self):
+        with tempfile.TemporaryDirectory() as td:
+            stub = os.path.join(td, "foo")
+
+            # string payload -> encoded
+            srv = _MockedServer(final_results="text")
+            k = self._uninit_kestrel()
+            k.neos = srv
+            kestrelAMPL.retrieve(k, stub, 1, "pw")
+            with open(stub + ".sol", "rb") as fh:
+                self.assertEqual(fh.read(), b"text")
+
+            # binary payload
+            payload = b"binary"
+            srv = _MockedServer(final_results=xmlrpclib.Binary(payload))
+            k.neos = srv
+            kestrelAMPL.retrieve(k, stub, 1, "pw")
+            with open(stub + ".sol", "rb") as fh:
+                self.assertEqual(fh.read(), payload)
+
+    def test_parsing_and_default(self):
+        k = self._uninit_kestrel()
+
+        # env absent
+        os.environ.pop("kestrel_options", None)
+        self.assertEqual(kestrelAMPL.getJobAndPassword(k), (0, ""))
+
+        # env present
+        os.environ["kestrel_options"] = "job=12 password=xyz"
+        self.assertEqual(kestrelAMPL.getJobAndPassword(k), (12, "xyz"))
+
+    def test_solvers_none_neos(self):
+        k = self._uninit_kestrel()
+        k.neos = None
+        self.assertEqual(kestrelAMPL.getAvailableSolvers(k), [])
+
+    def test_solvers_exception_returns_empty(self):
+        srv = _MockedServer(list_err=(99, RuntimeError("boom")))
+        k = self._uninit_kestrel()
+        k.neos = srv
+        self.assertEqual(kestrelAMPL.getAvailableSolvers(k), [])
+
+    def test_solvers_filter_and_strip(self):
+        srv = _MockedServer()
+        k = self._uninit_kestrel()
+        k.neos = srv
+        self.assertEqual(kestrelAMPL.getAvailableSolvers(k), ["cbc", "ipopt"])
 
 
 @unittest.pytest.mark.default
@@ -108,6 +213,9 @@ class TestKestrel(unittest.TestCase):
 
 
 class RunAllNEOSSolvers(object):
+    def test_baron(self):
+        self._run('baron')
+
     def test_bonmin(self):
         self._run('bonmin')
 
@@ -160,8 +268,10 @@ class RunAllNEOSSolvers(object):
     # [16 Jul 24]: Octeract is erroring.  We will disable the interface
     # (and testing) until we have time to resolve #3321
     # [20 Sep 24]: and appears to have been removed from NEOS
-    #
+    # [24 Apr 25]: it appears to be there but causes timeouts
+    # [29 Apr 25]: JK, it has been removed again
     # def test_octeract(self):
+    #     pass
     #     self._run('octeract')
 
     def test_ooqp(self):
@@ -174,8 +284,7 @@ class RunAllNEOSSolvers(object):
             self._run('ooqp')
 
     def test_path(self):
-        # The simple tests aren't complementarity
-        # problems
+        # The simple tests aren't complementarity problems
         self.skipTest("The simple NEOS test is not a complementarity problem")
 
     def test_snopt(self):

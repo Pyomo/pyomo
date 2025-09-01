@@ -19,6 +19,7 @@
 
 import logging
 import os
+import sys
 from inspect import currentframe, getframeinfo
 from io import StringIO
 
@@ -30,7 +31,9 @@ from pyomo.common.log import (
     LogHandler,
     LogStream,
     Preformatted,
+    StdoutHandler,
     WrappingFormatter,
+    is_debug_set,
     pyomo_formatter,
 )
 
@@ -52,17 +55,17 @@ class TestLegacyLogHandler(unittest.TestCase):
             self.handler = LogHandler(
                 os.path.dirname(__file__),
                 stream=self.stream,
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                verbosity=lambda: is_debug_set(logger),
             )
         self.assertIn('LogHandler class has been deprecated', log.getvalue())
         logger.addHandler(self.handler)
 
         logger.setLevel(logging.WARNING)
         logger.info("(info)")
-        self.assertEqual(self.stream.getvalue(), "")
+        self.assertEqual("", self.stream.getvalue())
         logger.warning("(warn)")
         ans = "WARNING: (warn)\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
         logger.warning("(warn)")
@@ -71,7 +74,7 @@ class TestLegacyLogHandler(unittest.TestCase):
             'WARNING: "[base]%stest_log.py", %d, test_simple_log\n'
             '    (warn)\n' % (os.path.sep, lineno)
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_default_verbosity(self):
         # Testing positional base, configurable verbosity
@@ -88,7 +91,7 @@ class TestLegacyLogHandler(unittest.TestCase):
             'WARNING: "[base]%stest_log.py", %d, test_default_verbosity\n'
             '    (warn)\n' % (os.path.sep, lineno)
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
 
 class TestWrappingFormatter(unittest.TestCase):
@@ -106,17 +109,17 @@ class TestWrappingFormatter(unittest.TestCase):
         self.handler.setFormatter(WrappingFormatter(style='%'))
         logger.warning("(warn)")
         ans += "WARNING: (warn)\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         self.handler.setFormatter(WrappingFormatter(style='$'))
         logger.warning("(warn)")
         ans += "WARNING: (warn)\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         self.handler.setFormatter(WrappingFormatter(style='{'))
         logger.warning("(warn)")
         ans += "WARNING: (warn)\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         with self.assertRaisesRegex(ValueError, 'unrecognized style flag "s"'):
             WrappingFormatter(style='s')
@@ -142,17 +145,16 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         # Testing positional base, configurable verbosity
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
         logger.setLevel(logging.WARNING)
         logger.info("(info)")
-        self.assertEqual(self.stream.getvalue(), "")
+        self.assertEqual("", self.stream.getvalue())
         logger.warning("(warn)")
         ans = "WARNING: (warn)\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
         logger.warning("(warn)")
@@ -161,48 +163,47 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             'WARNING: "[base]%stest_log.py", %d, test_simple_log\n'
             '    (warn)\n' % (os.path.sep, lineno)
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_alternate_base(self):
         self.handler.setFormatter(LegacyPyomoFormatter(base='log_config'))
 
         logger.setLevel(logging.WARNING)
         logger.info("(info)")
-        self.assertEqual(self.stream.getvalue(), "")
+        self.assertEqual("", self.stream.getvalue())
         logger.warning("(warn)")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans = 'WARNING: "%s", %d, test_alternate_base\n    (warn)\n' % (
             filename,
             lineno,
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_no_base(self):
         self.handler.setFormatter(LegacyPyomoFormatter())
 
         logger.setLevel(logging.WARNING)
         logger.info("(info)")
-        self.assertEqual(self.stream.getvalue(), "")
+        self.assertEqual("", self.stream.getvalue())
         logger.warning("(warn)")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans = 'WARNING: "%s", %d, test_no_base\n    (warn)\n' % (filename, lineno)
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_no_message(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
         logger.setLevel(logging.WARNING)
         logger.info("")
-        self.assertEqual(self.stream.getvalue(), "")
+        self.assertEqual("", self.stream.getvalue())
 
         logger.warning("")
         ans = "WARNING:\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
         logger.warning("")
@@ -211,20 +212,19 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             os.path.sep,
             lineno,
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_blank_lines(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
         logger.setLevel(logging.WARNING)
         logger.warning("\n\nthis is a message.\n\n\n")
         ans = "WARNING: this is a message.\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
         logger.warning("\n\nthis is a message.\n\n\n")
@@ -233,25 +233,24 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             'WARNING: "[base]%stest_log.py", %d, test_blank_lines\n'
             "    this is a message.\n" % (os.path.sep, lineno)
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_numbered_level(self):
         testname = 'test_numbered_level'
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
         logger.setLevel(logging.WARNING)
         logger.log(45, "(hi)")
         ans = "Level 45: (hi)\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.log(45, "")
         ans += "Level 45:\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
         logger.log(45, "(hi)")
@@ -261,7 +260,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             lineno,
             testname,
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.log(45, "")
         lineno = getframeinfo(currentframe()).lineno - 1
@@ -270,13 +269,12 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             lineno,
             testname,
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_preformatted(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
@@ -287,11 +285,11 @@ would be line-wrapped
 
         logger.setLevel(logging.WARNING)
         logger.info(msg)
-        self.assertEqual(self.stream.getvalue(), "")
+        self.assertEqual("", self.stream.getvalue())
 
         logger.warning(Preformatted(msg))
         ans = msg + "\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.warning(msg)
         ans += (
@@ -299,13 +297,13 @@ would be line-wrapped
             "circumstances would\n"
             "be line-wrapped with additional information that normally would be combined.\n"
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
 
         logger.warning(Preformatted(msg))
         ans += msg + "\n"
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.warning(msg)
         lineno = getframeinfo(currentframe()).lineno - 1
@@ -318,13 +316,12 @@ would be line-wrapped
             "circumstances would be\n"
             "    line-wrapped with additional information that normally would be combined.\n"
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_long_messages(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
@@ -344,7 +341,7 @@ would be line-wrapped
             "        - including a bulleted list\n"
             "        - list 2\n"
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
         logger.info(msg)
@@ -357,7 +354,7 @@ would be line-wrapped
             "        - including a bulleted list\n"
             "        - list 2\n" % (os.path.sep, lineno)
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         # test trailing newline
         msg += "\n"
@@ -370,7 +367,7 @@ would be line-wrapped
             "        - including a bulleted list\n"
             "        - list 2\n"
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
         logger.info(msg)
@@ -383,7 +380,7 @@ would be line-wrapped
             "        - including a bulleted list\n"
             "        - list 2\n" % (os.path.sep, lineno)
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         # test initial and final blank lines
         msg = "\n" + msg + "\n\n"
@@ -396,7 +393,7 @@ would be line-wrapped
             "        - including a bulleted list\n"
             "        - list 2\n"
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
         logger.setLevel(logging.DEBUG)
         logger.info(msg)
@@ -409,13 +406,12 @@ would be line-wrapped
             "        - including a bulleted list\n"
             "        - list 2\n" % (os.path.sep, lineno)
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
     def test_verbatim(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
@@ -511,7 +507,7 @@ would be line-wrapped
             "\n"
             "    quote block\n"
         )
-        self.assertEqual(self.stream.getvalue(), ans)
+        self.assertEqual(ans, self.stream.getvalue())
 
 
 class TestLogStream(unittest.TestCase):
@@ -530,7 +526,7 @@ class TestLogStream(unittest.TestCase):
             # empty writes do not generate log records
             ls.write("")
             ls.flush()
-            self.assertEqual(OUT.getvalue(), "")
+            self.assertEqual("", OUT.getvalue())
 
         with LI as OUT:
             ls.write("line 1\nline 2")
@@ -619,3 +615,52 @@ class TestLoggingIntercept(unittest.TestCase):
             self.assertEqual(logger.level, 40)
         finally:
             logger.setLevel(30)
+
+
+class TestStdoutHandler(unittest.TestCase):
+    def setUp(self):
+        self.orig = sys.stdout
+
+    def tearDown(self):
+        sys.stdout = self.orig
+
+    def test_emit(self):
+        handler = StdoutHandler()
+        self.assertIsNone(handler.stream)
+
+        sys.stdout = StringIO()
+        record = logging.LogRecord(
+            name="test",
+            level=logging.WARNING,
+            pathname="/path/to/file.py",
+            lineno=42,
+            msg="Test msg",
+            args=(),
+            exc_info=None,
+        )
+        handler.emit(record)
+        handler.flush()
+
+        self.assertEqual(sys.stdout.getvalue(), "Test msg\n")
+        self.assertIsNone(handler.stream)
+
+    def test_handler(self):
+        logger = logging.getLogger(__name__)
+        propagate, level = logger.propagate, logger.level
+        handler = StdoutHandler()
+        try:
+            logger.addHandler(handler)
+            logger.propagate = False
+            sys.stdout = StringIO()
+
+            logger.setLevel(logging.WARNING)
+            logger.info("Test1")
+            self.assertEqual("", sys.stdout.getvalue())
+
+            logger.setLevel(logging.INFO)
+            logger.info("Test2")
+            self.assertEqual(sys.stdout.getvalue(), "Test2\n")
+        finally:
+            logger.removeHandler(handler)
+            logger.propagate = propagate
+            logger.setLevel(level)

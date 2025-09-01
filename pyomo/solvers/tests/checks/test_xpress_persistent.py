@@ -66,8 +66,8 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, -0.4, delta=1e-6)
         self.assertAlmostEqual(m.y.value, 0.2, delta=1e-6)
         opt.load_vars()
-        self.assertAlmostEqual(m.x.value, 0, delta=1e-6)
-        self.assertAlmostEqual(m.y.value, 1, delta=2e-6)
+        self.assertAlmostEqual(m.x.value, 0, delta=2.5e-6)
+        self.assertAlmostEqual(m.y.value, 1, delta=2.5e-6)
 
         opt.remove_constraint(m.c2)
         m.del_component(m.c2)
@@ -127,6 +127,31 @@ class TestXpressPersistent(unittest.TestCase):
         opt.remove_var(m.z)
         del m.z
         self.assertEqual(opt.get_xpress_attribute('cols'), 2)
+
+    @unittest.skipIf(not xpress_available, "xpress is not available")
+    def test_vartype_change(self):
+        # test for issue #3565
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, 1))
+        m.o = pyo.Objective(expr=m.x)
+
+        opt = pyo.SolverFactory('xpress_persistent')
+        opt.set_instance(m)
+
+        m.x.fix(1)
+        opt.update_var(m.x)
+
+        x_idx = opt._solver_model.getIndex(opt._pyomo_var_to_solver_var_map[m.x])
+        lb = []
+        opt._solver_model.getlb(lb, x_idx, x_idx)
+        self.assertEqual(lb[0], 1)
+
+        m.x.domain = pyo.Binary
+        opt.update_var(m.x)
+
+        lb = []
+        opt._solver_model.getlb(lb, x_idx, x_idx)
+        self.assertEqual(lb[0], 1)
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_qconstraint(self):

@@ -47,6 +47,7 @@ from pyomo.core.base.initializer import (
     ParameterizedIndexedCallInitializer,
     ParameterizedInitializer,
     ParameterizedScalarCallInitializer,
+    ScalarCallInitializer,
 )
 from pyomo.core.base.range import (
     NumericRange,
@@ -2304,6 +2305,19 @@ class Set(IndexedComponent):
         if self._anonymous_sets is not None:
             for _set in self._anonymous_sets:
                 _set.construct()
+
+        if self.is_indexed():
+            # A constant rule could return a dict-like thing or matrix
+            # that we would then want to process with Initializer().  If
+            # the rule actually returned a constant, then this is just a
+            # little overhead.
+            if self._init_values is not None and self._init_values._init.constant():
+                self._init_values = TuplizeValuesInitializer(
+                    Initializer(
+                        self._init_values._init(self.parent_block(), None),
+                        treat_sequences_as_mappings=False,
+                    )
+                )
 
         if data is not None:
             # Data supplied to construct() should override data provided

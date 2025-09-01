@@ -15,7 +15,6 @@ and related objects.
 """
 
 from itertools import product
-import os
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
@@ -38,6 +37,8 @@ from pyomo.contrib.pyros.util import (
     ABS_CON_CHECK_FEAS_TOL,
     call_solver,
     check_time_limit_reached,
+    get_all_first_stage_eq_cons,
+    write_subproblem,
 )
 
 
@@ -121,7 +122,7 @@ def construct_separation_problem(model_data):
     # fix/deactivate all nonadjustable components
     for var in separation_model.all_nonadjustable_variables:
         var.fix()
-    for fs_eqcon in separation_model.first_stage.equality_cons.values():
+    for fs_eqcon in get_all_first_stage_eq_cons(separation_model):
         fs_eqcon.deactivate()
     for fs_ineqcon in separation_model.first_stage.inequality_cons.values():
         fs_ineqcon.deactivate()
@@ -192,27 +193,23 @@ def get_sep_objective_values(separation_data, ss_ineq_cons):
     con_to_obj_map = separation_data.separation_model.second_stage_ineq_con_to_obj_map
     violations = ComponentMap()
 
-    user_var_partitioning = separation_data.separation_model.user_var_partitioning
-    first_stage_variables = user_var_partitioning.first_stage_variables
-    second_stage_variables = user_var_partitioning.second_stage_variables
-
     for ss_ineq_con in ss_ineq_cons:
         obj = con_to_obj_map[ss_ineq_con]
         try:
             violations[ss_ineq_con] = value(obj.expr)
-        except ValueError:
-            for v in first_stage_variables:
-                config.progress_logger.info(v.name + " " + str(v.value))
-            for v in second_stage_variables:
-                config.progress_logger.info(v.name + " " + str(v.value))
-            raise ArithmeticError(
-                f"Evaluation of second-stage inequality constraint {ss_ineq_con.name} "
-                f"(separation objective {obj.name}) "
-                "led to a math domain error. "
-                "Does the constraint expression "
-                "contain log(x) or 1/x functions "
+        except (ValueError, ArithmeticError):
+            vars_in_expr_str = ",\n  ".join(
+                f"{var.name}={var.value}" for var in identify_variables(obj.expr)
+            )
+            config.progress_logger.error(
+                "PyROS encountered an exception evaluating "
+                "expression of second-stage inequality constraint with name "
+                f"{ss_ineq_con.name!r} (separation objective {obj.name!r}) "
+                f"at variable values:\n  {vars_in_expr_str}\n"
+                "Does the expression contain log(x) or 1/x functions "
                 "or others with tricky domains?"
             )
+            raise
 
     return violations
 
@@ -386,21 +383,43 @@ def group_ss_ineq_constraints_by_priority(separation_data):
         Keys are sorted in descending order
         (i.e. highest priority first).
     """
+    separation_data.config.progress_logger.debug(
+        "Grouping second-stage inequality constraints by separation priority..."
+    )
+
     ss_ineq_cons = separation_data.separation_model.second_stage.inequality_cons
     separation_priority_groups = dict()
     for name, ss_ineq_con in ss_ineq_cons.items():
-        # by default, priority set to 0
         priority = separation_data.separation_priority_order[name]
         cons_with_same_priority = separation_priority_groups.setdefault(priority, [])
         cons_with_same_priority.append(ss_ineq_con)
 
     # sort separation priority groups
-    return {
+    numeric_priority_grp_items = [
+        (priority, cons) for priority, cons in separation_priority_groups.items()
+    ]
+    sorted_priority_groups = {
         priority: ss_ineq_cons
-        for priority, ss_ineq_cons in sorted(
-            separation_priority_groups.items(), reverse=True
-        )
+        for priority, ss_ineq_cons in sorted(numeric_priority_grp_items, reverse=True)
     }
+
+    num_priority_groups = len(sorted_priority_groups)
+    separation_data.config.progress_logger.debug(
+        f"Found {num_priority_groups} separation "
+        f"priority group{'s' if num_priority_groups != 1 else ''}."
+    )
+    separation_data.config.progress_logger.debug(
+        "Separation priority grouping statistics:"
+    )
+    separation_data.config.progress_logger.debug(
+        f"  {'Priority':20s}{'# Ineq Cons':15s}"
+    )
+    for priority, cons in sorted_priority_groups.items():
+        separation_data.config.progress_logger.debug(
+            f"  {priority:<20d}{len(cons):<15d}"
+        )
+
+    return sorted_priority_groups
 
 
 def get_worst_discrete_separation_solution(
@@ -566,7 +585,7 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
         master_data=master_data,
         ss_ineq_cons=all_ss_ineq_constraints,
     )
-    sorted_priority_groups = group_ss_ineq_constraints_by_priority(separation_data)
+    sorted_priority_groups = separation_data.separation_priority_groups
     uncertainty_set_is_discrete = (
         config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
     )
@@ -628,11 +647,12 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
 
     all_solve_call_results = ComponentMap()
     priority_groups_enum = enumerate(sorted_priority_groups.items())
+    solve_adverb = "Globally" if solve_globally else "Locally"
     for group_idx, (priority, ss_ineq_constraints) in priority_groups_enum:
         priority_group_solve_call_results = ComponentMap()
+
         for idx, ss_ineq_con in enumerate(ss_ineq_constraints):
             # log progress of separation loop
-            solve_adverb = "Globally" if solve_globally else "Locally"
             config.progress_logger.debug(
                 f"{solve_adverb} separating second-stage inequality constraint "
                 f"{get_con_name_repr(separation_data.separation_model, ss_ineq_con)} "
@@ -1073,30 +1093,6 @@ def solver_call_separation(
     # termination condition. PyROS will terminate with subsolver
     # error. At this point, export model if desired
     solve_call_results.subsolver_error = True
-    save_dir = config.subproblem_file_directory
-    serialization_msg = ""
-    if save_dir and config.keepfiles:
-        objective = separation_obj.name
-        output_problem_path = os.path.join(
-            save_dir,
-            (
-                config.uncertainty_set.type
-                + "_"
-                + separation_model.name
-                + "_separation_"
-                + str(separation_data.iteration)
-                + "_obj_"
-                + objective
-                + ".bar"
-            ),
-        )
-        separation_model.write(
-            output_problem_path, io_options={'symbolic_solver_labels': True}
-        )
-        serialization_msg = (
-            " For debugging, problem has been serialized to the file "
-            f"{output_problem_path!r}."
-        )
     solve_call_results.message = (
         "Could not successfully solve separation problem of iteration "
         f"{separation_data.iteration} "
@@ -1104,9 +1100,19 @@ def solver_call_separation(
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
         f"{[str(term_cond) for term_cond in solver_status_dict.values()]}.)"
-        f"{serialization_msg}"
     )
     config.progress_logger.warning(solve_call_results.message)
+
+    if config.keepfiles and config.subproblem_file_directory is not None:
+        write_subproblem(
+            model=separation_model,
+            fname=(
+                f"{config.uncertainty_set.type}_{separation_model.name}"
+                f"_separation_{separation_data.iteration}"
+                f"_obj_{separation_obj.name}"
+            ),
+            config=config,
+        )
 
     separation_obj.deactivate()
 
@@ -1292,6 +1298,8 @@ class SeparationProblemData:
             ]
         else:
             self.idxs_of_master_scenarios = None
+
+        self.separation_priority_groups = group_ss_ineq_constraints_by_priority(self)
 
     def solve_separation(self, master_data):
         """

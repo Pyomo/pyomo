@@ -262,9 +262,10 @@ class Test(unittest.TestCase):
         _test = TempfileManager.create_tempfile(suffix='test3.out')
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=_test, format='json')
-        with open(_test, 'r') as out, open(
-            join(currdir, "test3.baseline.out"), 'r'
-        ) as txt:
+        with (
+            open(_test, 'r') as out,
+            open(join(currdir, "test3.baseline.out"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-6, allow_second_superset=True
             )
@@ -279,9 +280,10 @@ class Test(unittest.TestCase):
         results = opt.solve(self.model, keepfiles=False)
         _test = TempfileManager.create_tempfile(suffix='test3a.out')
         results.write(filename=_test, format='json')
-        with open(_test, 'r') as out, open(
-            join(currdir, "test3.baseline.out"), 'r'
-        ) as txt:
+        with (
+            open(_test, 'r') as out,
+            open(join(currdir, "test3.baseline.out"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-6, allow_second_superset=True
             )

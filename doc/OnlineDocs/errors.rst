@@ -8,10 +8,13 @@ Common Warnings/Errors
    for backwards compatibility, DO NOT recycle old ID (no longer used)
    numbers.
 
-.. doctest::
-   :hide:
+.. testsetup::
 
-   >>> import pyomo.environ as pyo
+   import pyomo.environ as pyo
+   # Ensure that all logged messages are sent to stdout
+   # (so they show up in the doctest output and can be tested)
+   import pyomo.common.log as _log
+   _log.pyomo_handler.__class__ = _log.StdoutHandler
 
 .. py:currentmodule:: pyomo.environ
 

@@ -20,16 +20,14 @@ from pyomo.common.dependencies import (
     matplotlib_available,
 )
 
-import platform
-
-is_osx = platform.mac_ver()[0] != ''
-
 import pyomo.common.unittest as unittest
 import sys
 import os
 
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as graphics
+
+from pyomo.contrib.parmest.tests.test_parmest import _RANDOM_SEED_FOR_TESTING
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -41,12 +39,9 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 @unittest.skipIf(
     not graphics.imports_available, "parmest.graphics imports are unavailable"
 )
-@unittest.skipIf(
-    is_osx,
-    "Disabling graphics tests on OSX due to issue in Matplotlib, see Pyomo PR #1337",
-)
 class TestGraphics(unittest.TestCase):
     def setUp(self):
+        np.random.seed(_RANDOM_SEED_FOR_TESTING)
         self.A = pd.DataFrame(
             np.random.randint(0, 100, size=(100, 4)), columns=list('ABCD')
         )
@@ -55,7 +50,12 @@ class TestGraphics(unittest.TestCase):
         )
 
     def test_pairwise_plot(self):
-        graphics.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'])
+        graphics.pairwise_plot(
+            self.A,
+            alpha=0.8,
+            distributions=['Rect', 'MVN', 'KDE'],
+            seed=_RANDOM_SEED_FOR_TESTING,
+        )
 
     def test_grouped_boxplot(self):
         graphics.grouped_boxplot(self.A, self.B, normalize=True, group_names=['A', 'B'])

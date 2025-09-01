@@ -11,6 +11,7 @@
 
 import sys
 
+import pyomo
 import pyomo.common.unittest as unittest
 
 from pyomo.common.flags import NOTSET, in_testing_environment, building_documentation
@@ -23,12 +24,12 @@ class TestFlags(unittest.TestCase):
         self.assertFalse(building_documentation())
 
         self.assertEqual(str(NOTSET), 'NOTSET')
-        self.assertNotIn('sphinx', sys.modules)
+        self.assertFalse(hasattr(pyomo, '__sphinx_build__'))
         self.assertEqual(repr(NOTSET), 'pyomo.common.flags.NOTSET')
         self.assertIsNone(in_testing_environment.state)
 
         try:
-            sys.modules['sphinx'] = sys.modules[__name__]
+            pyomo.__sphinx_build__ = True
             self.assertTrue(in_testing_environment())
             self.assertTrue(building_documentation())
             self.assertEqual(repr(NOTSET), 'NOTSET')
@@ -38,7 +39,7 @@ class TestFlags(unittest.TestCase):
             self.assertTrue(building_documentation())
             self.assertEqual(repr(NOTSET), 'NOTSET')
         finally:
-            del sys.modules['sphinx']
+            del pyomo.__sphinx_build__
             in_testing_environment(None)
         self.assertIsNone(in_testing_environment.state)
 

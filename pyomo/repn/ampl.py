@@ -1137,6 +1137,16 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 # attempt to convert the value to a float before
                 # proceeding.
                 #
+                # Note that as of NumPy 1.25, blindly casting a
+                # 1-element ndarray to a float will generate a
+                # deprecation warning.  We will explicitly test for
+                # that, but want to do the test without triggering the
+                # numpy import
+                for cls in ans.__class__.__mro__:
+                    if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
+                        if len(ans) == 1:
+                            ans = ans[0]
+                        break
                 # TODO: we should check bool and warn/error (while bool is
                 # convertible to float in Python, they have very
                 # different semantic meanings in Pyomo).

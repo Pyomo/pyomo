@@ -16,6 +16,7 @@ from typing import List, Optional
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
+from pyomo.common.flags import NOTSET
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.var import VarData
@@ -96,6 +97,120 @@ class _MutableObjectiveCoefficient:
         self.highs.changeColCost(col_ndx, value(self.expr))
 
 
+class _MutableQuadraticCoefficient:
+    def __init__(self, expr, v1_id, v2_id):
+        self.expr = expr
+        self.v1_id = v1_id
+        self.v2_id = v2_id
+
+
+class _MutableObjective:
+    def __init__(
+        self,
+        highs,
+        constant,
+        linear_coefs,
+        quadratic_coefs,
+        pyomo_var_to_solver_var_map,
+    ):
+        self.highs = highs
+        self.constant = constant
+        self.linear_coefs = linear_coefs
+        self.quadratic_coefs = quadratic_coefs
+        self._pyomo_var_to_solver_var_map = pyomo_var_to_solver_var_map
+        # Store the quadratic coefficients in dictionary format
+        self._initialize_quad_coef_dicts()
+        # Flag to force first update of quadratic coefficients
+        self._first_update = True
+
+    def _initialize_quad_coef_dicts(self):
+        self.quad_coef_dict = {}
+        for coef in self.quadratic_coefs:
+            self.quad_coef_dict[(coef.v1_id, coef.v2_id)] = value(coef.expr)
+        self.previous_quad_coef_dict = self.quad_coef_dict.copy()
+
+    def update(self):
+        """
+        Update the quadratic objective expression.
+        """
+        needs_quadratic_update = self._first_update
+
+        self.constant.update()
+        for coef in self.linear_coefs:
+            coef.update()
+
+        for coef in self.quadratic_coefs:
+            current_val = value(coef.expr)
+            previous_val = self.previous_quad_coef_dict.get((coef.v1_id, coef.v2_id))
+            if previous_val is not None and current_val != previous_val:
+                needs_quadratic_update = True
+                self.quad_coef_dict[(coef.v1_id, coef.v2_id)] = current_val
+                self.previous_quad_coef_dict[(coef.v1_id, coef.v2_id)] = current_val
+
+        # If anything changed, rebuild and pass the Hessian
+        if needs_quadratic_update:
+            self._build_and_pass_hessian()
+            self._first_update = False
+
+    def _build_and_pass_hessian(self):
+        """Build and pass the Hessian to HiGHS in CSC format"""
+        if not self.quad_coef_dict:
+            return
+
+        dim = self.highs.getNumCol()
+
+        # Build CSC format for the lower triangular part
+        hessian_value = []
+        hessian_index = []
+        hessian_start = [0] * dim
+
+        quad_coef_idx_dict = {}
+        for (v1_id, v2_id), coef in self.quad_coef_dict.items():
+            v1_ndx = self._pyomo_var_to_solver_var_map[v1_id]
+            v2_ndx = self._pyomo_var_to_solver_var_map[v2_id]
+            # Ensure we're storing the lower triangular part
+            row = max(v1_ndx, v2_ndx)
+            col = min(v1_ndx, v2_ndx)
+            # Adjust the diagonal to match Highs' expected format
+            if v1_ndx == v2_ndx:
+                coef *= 2.0
+            quad_coef_idx_dict[(row, col)] = coef
+
+        sorted_entries = sorted(
+            quad_coef_idx_dict.items(), key=lambda x: (x[0][1], x[0][0])
+        )
+
+        last_col = -1
+        for (row, col), val in sorted_entries:
+            while col > last_col:
+                last_col += 1
+                if last_col < dim:
+                    hessian_start[last_col] = len(hessian_value)
+
+            # Add the entry
+            hessian_index.append(row)
+            hessian_value.append(val)
+
+        while last_col < dim - 1:
+            last_col += 1
+            hessian_start[last_col] = len(hessian_value)
+
+        nnz = len(hessian_value)
+        status = self.highs.passHessian(
+            dim,
+            nnz,
+            highspy.HessianFormat.kTriangular,
+            np.array(hessian_start, dtype=np.int32),
+            np.array(hessian_index, dtype=np.int32),
+            np.array(hessian_value, dtype=np.double),
+        )
+
+        if status != highspy.HighsStatus.kOk:
+            logger.warning(
+                f"HiGHS returned non-OK status when passing Hessian: {status}"
+            )
+
+
 class _MutableObjectiveOffset:
     def __init__(self, expr, highs):
         self.expr = expr
@@ -141,7 +256,6 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         self._solver_con_to_pyomo_con_map = {}
         self._mutable_helpers = {}
         self._mutable_bounds = {}
-        self._objective_helpers = []
         self._last_results_object: Optional[Results] = None
         self._sol = None
 
@@ -288,7 +402,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                 f'({self.available()}).'
             )
 
-        with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=True):
+        with capture_output(TeeStream(*ostreams), capture_fd=True):
             self._reinit()
             self._model = model
 
@@ -472,13 +586,14 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
+
         for con, helpers in self._mutable_helpers.items():
             for helper in helpers:
                 helper.update()
         for k, (v, helper) in self._mutable_bounds.items():
             helper.update()
-        for helper in self._objective_helpers:
-            helper.update()
+
+        self._mutable_objective.update()
 
     def _set_objective(self, obj):
         self._sol = None
@@ -487,10 +602,14 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         n = len(self._pyomo_var_to_solver_var_map)
         indices = np.arange(n)
         costs = np.zeros(n, dtype=np.double)
-        self._objective_helpers = []
+
+        # Initialize empty lists for all coefficient types
+        mutable_linear_coefficients = []
+        mutable_quadratic_coefficients = []
+
         if obj is None:
             sense = highspy.ObjSense.kMinimize
-            self._solver_model.changeObjectiveOffset(0)
+            mutable_constant = _MutableObjectiveOffset(expr=0, highs=self._solver_model)
         else:
             if obj.sense == minimize:
                 sense = highspy.ObjSense.kMinimize
@@ -500,9 +619,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                 raise ValueError(f'Objective sense is not recognized: {obj.sense}')
 
             repn = generate_standard_repn(
-                obj.expr, quadratic=False, compute_values=False
+                obj.expr, quadratic=True, compute_values=False
             )
-            if repn.nonlinear_expr is not None:
+            if repn.nonlinear_expr is not None or repn.polynomial_degree() > 2:
                 raise IncompatibleModelError(
                     f'Highs interface does not support expressions of degree {repn.polynomial_degree()}'
                 )
@@ -518,17 +637,32 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                         expr=coef,
                         highs=self._solver_model,
                     )
-                    self._objective_helpers.append(mutable_objective_coef)
+                    mutable_linear_coefficients.append(mutable_objective_coef)
 
-            self._solver_model.changeObjectiveOffset(value(repn.constant))
-            if not is_constant(repn.constant):
-                mutable_objective_offset = _MutableObjectiveOffset(
-                    expr=repn.constant, highs=self._solver_model
-                )
-                self._objective_helpers.append(mutable_objective_offset)
+            mutable_constant = _MutableObjectiveOffset(
+                expr=repn.constant, highs=self._solver_model
+            )
+
+            if repn.quadratic_vars and len(repn.quadratic_vars) > 0:
+                for ndx, (v1, v2) in enumerate(repn.quadratic_vars):
+                    coef = repn.quadratic_coefs[ndx]
+
+                    mutable_quadratic_coefficients.append(
+                        _MutableQuadraticCoefficient(
+                            expr=coef, v1_id=id(v1), v2_id=id(v2)
+                        )
+                    )
 
         self._solver_model.changeObjectiveSense(sense)
         self._solver_model.changeColsCost(n, indices, costs)
+        self._mutable_objective = _MutableObjective(
+            self._solver_model,
+            mutable_constant,
+            mutable_linear_coefficients,
+            mutable_quadratic_coefficients,
+            self._pyomo_var_to_solver_var_map,
+        )
+        self._mutable_objective.update()
 
     def _postsolve(self):
         config = self._active_config
@@ -583,9 +717,13 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             results.termination_condition = TerminationCondition.maxTimeLimit
         elif status == highspy.HighsModelStatus.kIterationLimit:
             results.termination_condition = TerminationCondition.iterationLimit
+        elif status == getattr(highspy.HighsModelStatus, "kSolutionLimit", NOTSET):
+            # kSolutionLimit was introduced in HiGHS v1.5.3 for MIP-related limits
+            results.termination_condition = TerminationCondition.iterationLimit
         elif status == highspy.HighsModelStatus.kUnknown:
             results.termination_condition = TerminationCondition.unknown
         else:
+            logger.warning(f'Received unhandled {status=} from solver HiGHS.')
             results.termination_condition = TerminationCondition.unknown
 
         if (

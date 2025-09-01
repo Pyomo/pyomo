@@ -5,6 +5,19 @@ Library Reference
 {{ name | escape | underline}}
 {% endif %}
 
+.. testsetup:: *
+
+   # import everything from the module containing this class so that
+   # doctests for the class docstrings see the correct environment
+   from {{ module }} import *
+   try:
+       from {{ module }} import _autosummary_doctest_setup
+       _autosummary_doctest_setup()
+   except ImportError:
+       pass
+
+.. currentmodule:: {{ module }}
+
 .. automodule:: {{ fullname }}
    :undoc-members:
 
@@ -81,7 +94,7 @@ Library Reference
    :toctree:
    :template: recursive-module.rst
    :recursive:
-{% for item in modules %}
+{% for item in all_modules %}
 {# Need item != tests for Sphinx >= 8.0; !endswith(.tests) for < 8.0 #}
 {% if item != 'tests' and not item.endswith('.tests')
    and item != 'examples' and not item.endswith('.examples') %}

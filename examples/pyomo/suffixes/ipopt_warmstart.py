@@ -11,7 +11,7 @@
 
 # A Suffix example for ipopt.
 # Translated to Pyomo from AMPL model source at:
-#   https://projects.coin-or.org/Ipopt/wiki/IpoptAddFeatures
+#   http://web.archive.org/web/20120610123756/https://projects.coin-or.org/Ipopt/wiki/IpoptAddFeatures
 #
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:

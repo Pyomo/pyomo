@@ -57,9 +57,10 @@ class Test(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir, "blend.out"), format='json')
-        with open(join(currdir, "blend.out"), 'r') as out, open(
-            join(currdir, "blend.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "blend.out"), 'r') as out,
+            open(join(currdir, "blend.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-2, allow_second_superset=True
             )

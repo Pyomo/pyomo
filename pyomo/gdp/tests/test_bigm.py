@@ -1904,7 +1904,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             lb_expr,
-            1.0 <= sum_indicators - outer_disjunct.binary_indicator_var + 1.0,
+            1.0 <= sum_indicators - outer_disjunct.binary_indicator_var + 1,
         )
         ub = cons[1]
         ct.check_obj_in_active_tree(self, ub)
@@ -2695,6 +2695,18 @@ class EstimatingMwithFixedVars(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, promise.x, 1)
         ct.check_linear_coef(self, repn, promise.d.indicator_var, 7)
+
+
+class TrivialDisjuncts(unittest.TestCase):
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_trivial_disjuncts_linear(self):
+        ct.check_trivial_constraints(self, ct.linear_solvers[0], transformation='bigm')
+
+    @unittest.skipIf(not ct.nonlinear_solvers, "No linear solver available")
+    def test_trivial_disjuncts_nonlinear(self):
+        ct.check_trivial_constraints(
+            self, ct.nonlinear_solvers[0], transformation='bigm'
+        )
 
 
 class NetworkDisjuncts(unittest.TestCase, CommonTests):

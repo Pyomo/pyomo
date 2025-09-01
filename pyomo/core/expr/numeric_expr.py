@@ -13,6 +13,7 @@ import collections
 import logging
 import math
 import operator
+import sys
 
 logger = logging.getLogger('pyomo.core')
 
@@ -104,7 +105,7 @@ relocated_module_attribute(
 relocated_module_attribute(
     'register_arg_type',
     'pyomo.core.expr.expr_common',
-    version='6.9.2.dev0',
+    version='6.9.2',
     f_globals=globals(),
 )
 
@@ -3771,8 +3772,10 @@ def _fcn_mutable(a, name, fcn):
 
 
 def _fcn_invalid(a, name, fcn):
-    fcn(a)
-    # returns None
+    try:
+        return a._op(fcn, a)
+    except:
+        return _invalid(str(sys.exc_info()[1]))
 
 
 def _fcn_native(a, name, fcn):
