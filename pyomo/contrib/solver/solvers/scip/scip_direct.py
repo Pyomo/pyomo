@@ -896,5 +896,5 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
             opt=self,
         )
 
-        has_obj = self._objective is not None:
+        has_obj = self._objective is not None
         return self._solver_model, solution_loader, has_obj

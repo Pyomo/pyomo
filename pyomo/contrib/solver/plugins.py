@@ -15,7 +15,7 @@ from .solvers.ipopt import Ipopt
 from .solvers.gurobi.gurobi_direct import GurobiDirect
 from .solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic, GurobiPersistent
 from .solvers.highs import Highs
-from .solvers.scip.scip_direct import SCIPDirect
+from .solvers.scip.scip_direct import ScipDirect
 
 
 def load():
@@ -44,4 +44,4 @@ def load():
         name='scip_direct', 
         legacy_name='scip_direct_v2', 
         doc='Direct interface pyscipopt',
-    )(SCIPDirect)
+    )(ScipDirect)
