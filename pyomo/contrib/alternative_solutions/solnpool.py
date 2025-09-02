@@ -25,30 +25,33 @@ def _as_pyomo_solution(*args, **kwargs):
 
 
 class PoolCounter:
-
+    """
+    A class to wrap the counter element for solution pools.
+    It contains just the solution_counter element.
+    """
     solution_counter = 0
 
 
 class SolutionPoolBase:
     """
-    A class for handing groups of solutions as pools
+    A class to manage groups of solutions as a pool.
     This is the general base pool class.
 
     This class is designed to integrate with the alternative_solution generation methods.
-    Additionally, groups of solution pools can be handled with the PoolManager class.
+    Additionally, groups of SolutionPool objects can be handled with the PoolManager class.
 
     Parameters
     ----------
     name : String
-        String name of the pool object
+        String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used
+        A value of None will result in the default _as_solution method being used.
     counter : PoolCounter or None
-        PoolCounter object to manage solution indexing
-        A value of None will result in a new PoolCounter object being used
+        PoolCounter object to manage solution indexing.
+        A value of None will result in a new PoolCounter object being created and used.
     policy : String
-        String name for the pool construction policy
+        String name to describe the pool construction and management policy.
     """
 
     def __init__(self, name, as_solution, counter, policy="unspecified"):
@@ -97,7 +100,7 @@ class SolutionPoolBase:
 
 class SolutionPool_KeepAll(SolutionPoolBase):
     """
-    A subclass of SolutionPool with the policy of keeping all added solutions
+    A SolutionPool subclass to keep all added solutions.
 
     This class is designed to integrate with the alternative_solution generation methods.
     Additionally, groups of solution pools can be handled with the PoolManager class.
@@ -105,13 +108,13 @@ class SolutionPool_KeepAll(SolutionPoolBase):
     Parameters
     ----------
     name : String
-        String name of the pool object
+        String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used
+        A value of None will result in the default _as_solution method being used.
     counter : PoolCounter or None
-        PoolCounter object to manage solution indexing
-        A value of None will result in a new PoolCounter object being used
+        PoolCounter object to manage solution indexing.
+        A value of None will result in a new PoolCounter object being created and used.
     """
 
     def __init__(self, name=None, as_solution=None, counter=None):
@@ -122,17 +125,17 @@ class SolutionPool_KeepAll(SolutionPoolBase):
         Add input solution to SolutionPool.
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         Adds the converted Solution object to the pool dictionary.
-        ID value for the solution genenerated as next increment of instance PoolCounter
+        ID value for the solution genenerated as next increment of instance PoolCounter.
 
         Parameters
         ----------
-        General format accepted.
-        Needs to match as_solution format
+        Input needs to match as_solution format from pool inialization.
 
         Returns
         ----------
         int
-            ID value for the added Solution object in the pool dictionary
+            The ID value to match the added solution from the solution pool's PoolCounter. 
+            The ID value is also the pool dictionary key for this solution.
         """
         soln = self._as_solution(*args, **kwargs)
         #
@@ -146,20 +149,22 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 
     def to_dict(self):
         """
-        Converts SolutionPool to dictionary
+        Converts SolutionPool to a dictionary object.
 
         Returns
         ----------
         dict
-            Dictionary of dictionaries for SolutionPool members
-            metadata corresponding to _to_dict of self.metadata
-            solutions corresponding to _to_dict of self._solutions
-            pool_config corresponding to a dictionary of pool details with keys as member names
-                including: self.policy
+            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
+            'metadata' contains a dictionary of information about pool structure and details as Strings.
+            'solutions' contains a dictionary of the pool's solutions.
+            'pool_config' contains a dictionary of the pool details.
         """
         return dict(
+            #TODO: why are we running _to_dict on metadata, which is a munch?
             metadata=_to_dict(self.metadata),
+            #TODO: why are we running _to_dict on _solutions, whcih is a dict
             solutions=_to_dict(self._solutions),
+            #TODO: why is metadata separate from pool_config? Is it not toString versions?
             pool_config=dict(policy=self._policy),
         )
 
@@ -167,7 +172,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 class SolutionPool_KeepLatest(SolutionPoolBase):
     """
     A subclass of SolutionPool with the policy of keep the latest k solutions.
-    Added solutions are not checked for uniqueness
+    Added solutions are not checked for uniqueness.
 
 
     This class is designed to integrate with the alternative_solution generation methods.
@@ -176,13 +181,13 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
     Parameters
     ----------
     name : String
-        String name of the pool object
+        String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used
+        A value of None will result in the default _as_solution method being used.
     counter : PoolCounter or None
-        PoolCounter object to manage solution indexing
-        A value of None will result in a new PoolCounter object being used
+        PoolCounter object to manage solution indexing.
+        A value of None will result in a new PoolCounter object being created and used.
     max_pool_size : int
         The max_pool_size is the K value for keeping the latest K solutions.
         Must be a positive integer.
@@ -199,19 +204,19 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         Add input solution to SolutionPool.
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         Adds the converted Solution object to the pool dictionary.
-        ID value for the solution genenerated as next increment of instance PoolCounter
-        When pool size < max_pool_size, new solution is added without deleting old solutions
-        When pool size == max_pool_size, new solution is added and oldest solution deleted
+        ID value for the solution genenerated as next increment of instance PoolCounter.
+        When pool size < max_pool_size, new solution is added without deleting old solutions.
+        When pool size == max_pool_size, new solution is added and oldest solution deleted.
 
         Parameters
         ----------
-        General format accepted.
-        Needs to match as_solution format
+        Input needs to match as_solution format from pool inialization.
 
         Returns
         ----------
         int
-            ID value for the added Solution object in the pool dictionary
+            The ID value to match the added solution from the solution pool's PoolCounter. 
+            The ID value is also the pool dictionary key for this solution.
         """
         soln = self._as_solution(*args, **kwargs)
         #
@@ -230,15 +235,15 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
     def to_dict(self):
         """
-        Converts SolutionPool to dictionary
+        Converts SolutionPool to a dictionary object.
 
         Returns
         ----------
         dict
-            Dictionary of dictionaries for SolutionPool members
-            metadata corresponding to _to_dict of self.metadata
-            solutions corresponding to _to_dict of self._solutions
-            pool_config corresponding to a dictionary of self.policy and self.max_pool_size
+            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
+            'metadata' contains a dictionary of information about pool structure and details as Strings.
+            'solutions' contains a dictionary of the pool's solutions.
+            'pool_config' contains a dictionary of the pool details.
         """
         return dict(
             metadata=_to_dict(self.metadata),
@@ -250,7 +255,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 class SolutionPool_KeepLatestUnique(SolutionPoolBase):
     """
     A subclass of SolutionPool with the policy of keep the latest k unique solutions.
-    Added solutions are checked for uniqueness
+    Added solutions are checked for uniqueness.
 
 
     This class is designed to integrate with the alternative_solution generation methods.
@@ -259,13 +264,13 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
     Parameters
     ----------
     name : String
-        String name of the pool object
+        String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
         A value of None will result in the default _as_solution method being used
     counter : PoolCounter or None
-        PoolCounter object to manage solution indexing
-        A value of None will result in a new PoolCounter object being used
+        PoolCounter object to manage solution indexing.
+        A value of None will result in a new PoolCounter object being created and used.
     max_pool_size : int
         The max_pool_size is the K value for keeping the latest K solutions.
         Must be a positive integer.
@@ -284,20 +289,20 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         If solution already present, new solution is not added.
         If input solution is new, the converted Solution object to the pool dictionary.
-        ID value for the solution genenerated as next increment of instance PoolCounter
-        When pool size < max_pool_size, new solution is added without deleting old solutions
-        When pool size == max_pool_size, new solution is added and oldest solution deleted
+        ID value for the solution genenerated as next increment of instance PoolCounter.
+        When pool size < max_pool_size, new solution is added without deleting old solutions.
+        When pool size == max_pool_size, new solution is added and oldest solution deleted.
 
         Parameters
         ----------
-        General format accepted.
-        Needs to match as_solution format
+        Input needs to match as_solution format from pool inialization.
 
         Returns
         ----------
         None or int
-            None value corresponds to solution was already present and is ignored
-            int corresponds to ID value for the added Solution object in the pool dictionary
+            None value corresponds to solution was already present and is ignored.
+            When not present, the ID value to match the added solution from the solution pool's PoolCounter. 
+            The ID value is also the pool dictionary key for this solution.
         """
         soln = self._as_solution(*args, **kwargs)
         #
@@ -323,16 +328,15 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
     def to_dict(self):
         """
-        Converts SolutionPool to dictionary
+        Converts SolutionPool to a dictionary object.
 
         Returns
         ----------
         dict
-            Dictionary of dictionaries for SolutionPool members
-            metadata corresponding to _to_dict of self.metadata
-            solutions corresponding to _to_dict of self._solutions
-            pool_config corresponding to a dictionary of pool details with keys as member names
-                including: self.policy, self.max_pool_size
+            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
+            'metadata' contains a dictionary of information about pool structure and details as Strings.
+            'solutions' contains a dictionary of the pool's solutions.
+            'pool_config' contains a dictionary of the pool details.
         """
         return dict(
             metadata=_to_dict(self.metadata),
@@ -360,27 +364,28 @@ class SolutionPool_KeepBest(SolutionPoolBase):
     Parameters
     ----------
     name : String
-        String name of the pool object
+        String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
         A value of None will result in the default _as_solution method being used
     counter : PoolCounter or None
-        PoolCounter object to manage solution indexing
-        A value of None will result in a new PoolCounter object being used
+        PoolCounter object to manage solution indexing.
+        A value of None will result in a new PoolCounter object being created and used.
     max_pool_size : int
         The max_pool_size is the K value for keeping the latest K solutions.
         Must be a positive integer.
     objective : None or Function
         The function to compare solutions based on.
-        None results in use of the constant function 0
+        None makes the objective be the constant function 0.
     abs_tolerance : None or int
-        absolute tolerance from best solution based on objective beyond which to reject a solution
-        None results in absolute tolerance test passing new solution
+        absolute tolerance from best solution based on objective beyond which to reject a solution.
+        None results in absolute tolerance test passing new solution.
     rel_tolernace : None or int
-        relative tolerance from best solution based on objective beyond which to reject a solution
-        None results in relative tolerance test passing new solution
+        relative tolerance from best solution based on objective beyond which to reject a solution.
+        None results in relative tolerance test passing new solution.
     keep_min : Boolean
-        TODO: fill in
+        Sense information to encode either minimization or maximization.
+        True means minimization problem. False means maximization problem.
     best_value : float
         TODO: fill in
     """
@@ -496,17 +501,15 @@ class SolutionPool_KeepBest(SolutionPoolBase):
 
     def to_dict(self):
         """
-        Converts SolutionPool to dictionary
+        Converts SolutionPool to a dictionary object.
 
         Returns
         ----------
         dict
-            Dictionary of dictionaries for SolutionPool members
-            metadata corresponding to _to_dict of self.metadata
-            solutions corresponding to _to_dict of self._solutions
-            pool_config corresponding to a dictionary of pool details with keys as member names
-                including: self.policy, self.max_pool_size, self.objective
-                    self.abs_tolerance, self.rel_tolerance
+            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
+            'metadata' contains a dictionary of information about pool structure and details as Strings.
+            'solutions' contains a dictionary of the pool's solutions.
+            'pool_config' contains a dictionary of the pool details.
         """
         return dict(
             metadata=_to_dict(self.metadata),
