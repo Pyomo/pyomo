@@ -7,7 +7,8 @@ from pyomo.contrib.alternative_solutions import (
     Variable,
     Objective,
 )
-#from pyomo.contrib.alternative_solutions.aos_utils import MyMunch
+
+# from pyomo.contrib.alternative_solutions.aos_utils import MyMunch
 
 
 def soln(value, objective):
@@ -125,7 +126,7 @@ def test_multiple_pools():
 
     assert pm.get_pool_dicts() == {
         "pool_1": {
-            "metadata": {"context_name": "pool_1"}, #"policy": "keep_all"},
+            "metadata": {"context_name": "pool_1"},  # "policy": "keep_all"},
             "pool_config": {"policy": "keep_all"},
             "solutions": {
                 0: {
@@ -507,6 +508,7 @@ def test_keepbest_bad_max_pool_size():
     except AssertionError as e:
         pass
 
+
 def test_pool_manager_to_dict_passthrough():
     pm = PoolManager()
     pm = PoolManager()
@@ -525,51 +527,49 @@ def test_pool_manager_to_dict_passthrough():
     assert len(pm) == 2
 
     assert pm.to_dict() == {
-            "metadata": {"context_name": "pool"},
-            "pool_config": {
-                "abs_tolerance": 1,
-                "max_pool_size": None,
-                "objective": 0,
-                "policy": "keep_best",
-                "rel_tolerance": None,
+        "metadata": {"context_name": "pool"},
+        "pool_config": {
+            "abs_tolerance": 1,
+            "max_pool_size": None,
+            "objective": 0,
+            "policy": "keep_best",
+            "rel_tolerance": None,
+        },
+        "solutions": {
+            0: {
+                "id": 0,
+                "objectives": [{"index": None, "name": None, "suffix": {}, "value": 0}],
+                "suffix": {},
+                "variables": [
+                    {
+                        "discrete": False,
+                        "fixed": False,
+                        "index": None,
+                        "name": None,
+                        "suffix": {},
+                        "value": 0,
+                    }
+                ],
             },
-            "solutions": {
-                0: {
-                    "id": 0,
-                    "objectives": [
-                        {"index": None, "name": None, "suffix": {}, "value": 0}
-                    ],
-                    "suffix": {},
-                    "variables": [
-                        {
-                            "discrete": False,
-                            "fixed": False,
-                            "index": None,
-                            "name": None,
-                            "suffix": {},
-                            "value": 0,
-                        }
-                    ],
-                },
-                1: {
-                    "id": 1,
-                    "objectives": [
-                        {"index": None, "name": None, "suffix": {}, "value": 1}
-                    ],
-                    "suffix": {},
-                    "variables": [
-                        {
-                            "discrete": False,
-                            "fixed": False,
-                            "index": None,
-                            "name": None,
-                            "suffix": {},
-                            "value": 1,
-                        }
-                    ],
-                },
+            1: {
+                "id": 1,
+                "objectives": [{"index": None, "name": None, "suffix": {}, "value": 1}],
+                "suffix": {},
+                "variables": [
+                    {
+                        "discrete": False,
+                        "fixed": False,
+                        "index": None,
+                        "name": None,
+                        "suffix": {},
+                        "value": 1,
+                    }
+                ],
             },
-        }
+        },
+    }
+
+
 def test_keepbest_add1():
     pm = PoolManager()
     pm.add_pool("pool", policy="keep_best", abs_tolerance=1)
@@ -823,7 +823,7 @@ def test_keepbest_add3():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},#, "policy": "keep_best"},
+            "metadata": {"context_name": "pool"},  # , "policy": "keep_best"},
             "pool_config": {
                 "abs_tolerance": 1,
                 "max_pool_size": 2,

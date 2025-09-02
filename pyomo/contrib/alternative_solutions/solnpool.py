@@ -29,6 +29,7 @@ class PoolCounter:
     A class to wrap the counter element for solution pools.
     It contains just the solution_counter element.
     """
+
     solution_counter = 0
 
 
@@ -119,6 +120,11 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None):
         super().__init__(name, as_solution, counter, policy="keep_all")
+        # TODO: Bill, comment out line 127 and see the suffix tests it breaks
+        # this is separate from the need to update the metadata line
+        # I get equivalents to this when I add anything to metadata that suffix dicts break, going from {} to MyMunch
+        # this feels like an issue with comparing versions of to_dict instead of true json or writable version of the dict
+        # self.metadata['policy'] = "keep_all"
 
     def add(self, *args, **kwargs):
         """
@@ -134,7 +140,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
         Returns
         ----------
         int
-            The ID value to match the added solution from the solution pool's PoolCounter. 
+            The ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
         soln = self._as_solution(*args, **kwargs)
@@ -160,11 +166,12 @@ class SolutionPool_KeepAll(SolutionPoolBase):
             'pool_config' contains a dictionary of the pool details.
         """
         return dict(
-            #TODO: why are we running _to_dict on metadata, which is a munch?
+            # TODO: why are we running _to_dict on metadata, which is a munch of strings?
             metadata=_to_dict(self.metadata),
-            #TODO: why are we running _to_dict on _solutions, whcih is a dict
+            # TODO: why are we running _to_dict on _solutions, which is a dict of solutions
+            # looks like to recursively call to_dict on solution objects
             solutions=_to_dict(self._solutions),
-            #TODO: why is metadata separate from pool_config? Is it not toString versions?
+            # TODO: why is metadata separate from pool_config? Is it just metadata without str() wrapping items?
             pool_config=dict(policy=self._policy),
         )
 
@@ -215,7 +222,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         Returns
         ----------
         int
-            The ID value to match the added solution from the solution pool's PoolCounter. 
+            The ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
         soln = self._as_solution(*args, **kwargs)
@@ -301,7 +308,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         ----------
         None or int
             None value corresponds to solution was already present and is ignored.
-            When not present, the ID value to match the added solution from the solution pool's PoolCounter. 
+            When not present, the ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
         soln = self._as_solution(*args, **kwargs)
@@ -436,7 +443,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         ----------
         None or int
             None value corresponds to solution was already present and is ignored.
-            When not present, the ID value to match the added solution from the solution pool's PoolCounter. 
+            When not present, the ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
         soln = self._as_solution(*args, **kwargs)
@@ -455,7 +462,11 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             self.best_value = value
             keep = True
         else:
-            diff = value - self.best_value if self.sense_is_min else self.best_value - value
+            diff = (
+                value - self.best_value
+                if self.sense_is_min
+                else self.best_value - value
+            )
             if diff < 0.0:
                 # Keep if this is a new best value
                 self.best_value = value
@@ -582,6 +593,9 @@ class PoolManager:
     def last_solution(self):
         return self.active_pool.last_solution
 
+    def to_dict(self):
+        return self.active_pool.to_dict()
+
     def __iter__(self):
         for soln in self.active_pool.solutions:
             yield soln
@@ -592,6 +606,8 @@ class PoolManager:
     def __getitem__(self, soln_id):
         return self._pools[self._name][soln_id]
 
+    # TODO: I have a note saying we want all pass through methods to be properties
+    # Not sure add works as a property
     def add(self, *args, **kwargs):
         """
         Adds input to active SolutionPool
@@ -602,10 +618,6 @@ class PoolManager:
         """
         return self.active_pool.add(*args, **kwargs)
 
-    # TODO as is this method works on all the pools, not the active pool, do we want to change this to enforce active pool API paradigm
-    def to_dict(self):
-        return self.active_pool.to_dict()
-    
     def get_pool_dicts(self):
         """
         Converts the set of pools to dictionary object with underlying dictionary of pools

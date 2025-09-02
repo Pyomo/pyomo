@@ -317,6 +317,8 @@ def _to_dict(x):
     elif xtype in [tuple, set, frozenset]:
         return list(x)
     elif xtype in [dict, Munch, MyMunch]:
+        # TODO: why are we recursively calling _to_dict on dicts?
+        # TODO: what about empty dict/Munch/MyMunch?
         return {k: _to_dict(v) for k, v in x.items()}
     else:
         return x.to_dict()
