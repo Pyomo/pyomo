@@ -3,7 +3,7 @@
 APPSI is a collection of solver interfaces which can resolve Pyomo models quickly.
 
 Design Decisions
------------------
+----------------
 * Fixing variables does not change the structure of a constraint (linear, quadratic, etc.)
   * Making this decision means we do not need to update constraints when variables in those constraints become fixed.
   * In the NL writer, we can fix variables in the bounds section (i.e., "4 value")
