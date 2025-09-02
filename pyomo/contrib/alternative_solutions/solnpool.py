@@ -383,7 +383,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
     rel_tolernace : None or int
         relative tolerance from best solution based on objective beyond which to reject a solution.
         None results in relative tolerance test passing new solution.
-    keep_min : Boolean
+    sense_is_min : Boolean
         Sense information to encode either minimization or maximization.
         True means minimization problem. False means maximization problem.
     best_value : float
@@ -401,7 +401,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         objective=None,
         abs_tolerance=0.0,
         rel_tolerance=None,
-        keep_min=True,
+        sense_is_min=True,
         best_value=nan,
     ):
         super().__init__(name, as_solution, counter, policy="keep_best")
@@ -412,7 +412,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         self.objective = 0 if objective is None else objective
         self.abs_tolerance = abs_tolerance
         self.rel_tolerance = rel_tolerance
-        self.keep_min = keep_min
+        self.sense_is_min = sense_is_min
         self.best_value = best_value
         self.heap = []
         self.unique_solutions = set()
@@ -434,7 +434,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             self.best_value = value
             keep = True
         else:
-            diff = value - self.best_value if self.keep_min else self.best_value - value
+            diff = value - self.best_value if self.sense_is_min else self.best_value - value
             if diff < 0.0:
                 # Keep if this is a new best value
                 self.best_value = value
@@ -458,7 +458,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             #
             self._solutions[soln.id] = soln
             #
-            item = HeapItem(value=-value if self.keep_min else value, id=soln.id)
+            item = HeapItem(value=-value if self.sense_is_min else value, id=soln.id)
             if self.max_pool_size is None or len(self.heap) < self.max_pool_size:
                 # There is room in the pool, so we just add it
                 heapq.heappush(self.heap, item)
@@ -471,10 +471,10 @@ class SolutionPool_KeepBest(SolutionPoolBase):
                 # We have a new best value, so we need to check that all existing solutions are close enough and re-heapify
                 tmp = []
                 for item in self.heap:
-                    value = -item.value if self.keep_min else item.value
+                    value = -item.value if self.sense_is_min else item.value
                     diff = (
                         value - self.best_value
-                        if self.keep_min
+                        if self.sense_is_min
                         else self.best_value - value
                     )
                     if (
