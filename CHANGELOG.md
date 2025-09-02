@@ -2,6 +2,35 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.9.4   (27 Aug 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Cleanup `collections` module (#3708)
+  - Work around environments where `IntEnum.__doc__` is None (#3711)
+  - Standardize 'multiprocessing' deferred import (#3702)
+  - Resolve `capture_output(capture_fd=True)` deadlock on Windows (#3679)
+- Core
+  - Bugfix: standard form with fixed variables (#3704)
+- DAE
+  - Fix simulator bug (#3692)
+- Solver Interfaces
+  - Add reporting of SCIP node count to solver results (#3691)
+  - Create API version attribute for different solver generations (#3699)
+  - Ipopt_v2: update options processing (#3693)
+  - Expanded LegacySolverWrapper fixes (#3700)
+- Testing
+  - Update GAMS download to new "latest" link (#3706)
+  - New TPL cache version on GHA workflows (#3705)
+- Contributed Packages
+  - benders: Added support for HiGHS solver (#3686)
+  - DoE: Add grey box objectives (#3606)
+  - Parmest: Correct two very old test skips (#3697)
+  - Parmest: Extend capability for weighted SSE objective (#3535)
+  - PyROS: Modify two solver tests (#3694)
+  - sensitivity_toolbox: Sensitivity calculation for named expressions (#3685)
+
+-------------------------------------------------------------------------------
 Pyomo 6.9.3   (6 Aug 2025)
 -------------------------------------------------------------------------------
 

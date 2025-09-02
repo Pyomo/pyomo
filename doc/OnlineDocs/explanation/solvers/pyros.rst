@@ -964,7 +964,7 @@ Observe that the log contains the following information:
 
    ==============================================================================
    PyROS: The Pyomo Robust Optimization Solver, v1.3.9.
-          Pyomo version: 6.9.3dev0
+          Pyomo version: 6.9.3
           Commit hash: unknown
           Invoked at UTC 2025-07-21T00:00:00.000000+00:00
 
