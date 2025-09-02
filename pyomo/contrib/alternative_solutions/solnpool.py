@@ -122,7 +122,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 
     def add(self, *args, **kwargs):
         """
-        Add input solution to SolutionPool.
+        Add inputted solution to SolutionPool.
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         Adds the converted Solution object to the pool dictionary.
         ID value for the solution genenerated as next increment of instance PoolCounter.
@@ -201,7 +201,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
     def add(self, *args, **kwargs):
         """
-        Add input solution to SolutionPool.
+        Add inputted solution to SolutionPool.
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         Adds the converted Solution object to the pool dictionary.
         ID value for the solution genenerated as next increment of instance PoolCounter.
@@ -285,7 +285,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
     def add(self, *args, **kwargs):
         """
-        Add input solution to SolutionPool.
+        Add inputted solution to SolutionPool.
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         If solution already present, new solution is not added.
         If input solution is new, the converted Solution object to the pool dictionary.
@@ -367,13 +367,14 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used
+        A value of None will result in the default _as_solution method being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
-    max_pool_size : int
+    max_pool_size : None or int
+        Value of None results in no max pool limit based on number of solutions.
+        If not None, the value must be a positive integer.
         The max_pool_size is the K value for keeping the latest K solutions.
-        Must be a positive integer.
     objective : None or Function
         The function to compare solutions based on.
         None makes the objective be the constant function 0.
@@ -387,10 +388,10 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         Sense information to encode either minimization or maximization.
         True means minimization problem. False means maximization problem.
     best_value : float
-        TODO: fill in
+        Optional information to provide a starting best-discovered value for tolerance comparisons.
+        Defaults to a 'nan' value that the first added solution's value will replace.
     """
 
-    # TODO: pool design seems to assume problem sense as min, do we want to add sense to support max?
     def __init__(
         self,
         name=None,
@@ -418,6 +419,26 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         self.unique_solutions = set()
 
     def add(self, *args, **kwargs):
+        """
+        Add inputted solution to SolutionPool.
+        Relies on the instance as_solution conversion method to convert inputs to Solution Object.
+        If solution already present or outside tolerance of the best objective value, new solution is not added.
+        If input solution is new and within tolerance of the best objective value, the converted Solution object to the pool dictionary.
+        ID value for the solution genenerated as next increment of instance PoolCounter.
+        When pool size < max_pool_size, new solution is added without deleting old solutions.
+        When pool size == max_pool_size, new solution is added and oldest solution deleted.
+
+        Parameters
+        ----------
+        Input needs to match as_solution format from pool inialization.
+
+        Returns
+        ----------
+        None or int
+            None value corresponds to solution was already present and is ignored.
+            When not present, the ID value to match the added solution from the solution pool's PoolCounter. 
+            The ID value is also the pool dictionary key for this solution.
+        """
         soln = self._as_solution(*args, **kwargs)
         #
         # Return None if the solution has already been added to the pool
@@ -526,12 +547,12 @@ class SolutionPool_KeepBest(SolutionPoolBase):
 
 class PoolManager:
     """
-    A class for handing groups of SolutionPool objects
-    Defaults to having a SolutionPool with policy KeepBest under name 'None'
-    If a new SolutionPool is added while the 'None' pool is empty, 'None' pool is deleted
+    A class to handle groups of SolutionPool objects.
+    Defaults to having a SolutionPool with policy KeepBest under name 'None'.
+    If a new SolutionPool is added while the 'None' pool is empty, 'None' pool is deleted.
 
     When PoolManager has multiple pools, there is an active pool.
-    PoolManager is designed ot have the same API as a pool for the active pool.
+    PoolManager is designed to have the same API as a pool for the active pool as pass-through.
     Unless changed, the active pool defaults to the one most recently added to the PoolManager.
 
     All pools share the same Counter object to enable overall solution count tracking and unique solution id values.
@@ -583,6 +604,9 @@ class PoolManager:
 
     # TODO as is this method works on all the pools, not the active pool, do we want to change this to enforce active pool API paradigm
     def to_dict(self):
+        return self.active_pool.to_dict()
+    
+    def get_pool_dicts(self):
         """
         Converts the set of pools to dictionary object with underlying dictionary of pools
 

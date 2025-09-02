@@ -7,6 +7,7 @@ from pyomo.contrib.alternative_solutions import (
     Variable,
     Objective,
 )
+#from pyomo.contrib.alternative_solutions.aos_utils import MyMunch
 
 
 def soln(value, objective):
@@ -122,9 +123,9 @@ def test_multiple_pools():
     assert retval is not None
     assert len(pm) == 3
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool_1": {
-            "metadata": {"context_name": "pool_1"},
+            "metadata": {"context_name": "pool_1"}, #"policy": "keep_all"},
             "pool_config": {"policy": "keep_all"},
             "solutions": {
                 0: {
@@ -185,7 +186,7 @@ def test_multiple_pools():
     retval = pm.add(soln(0, 0))
     assert len(pm) == 1
     retval = pm.add(soln(0, 1))
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool_1": {
             "metadata": {"context_name": "pool_1"},
             "solutions": {
@@ -286,7 +287,7 @@ def test_keepall_add():
     assert retval is not None
     assert len(pm) == 3
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool": {
             "metadata": {"context_name": "pool"},
             "pool_config": {"policy": "keep_all"},
@@ -387,7 +388,7 @@ def test_keeplatest_add():
     assert retval is not None
     assert len(pm) == 2
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool": {
             "metadata": {"context_name": "pool"},
             "pool_config": {"max_pool_size": 2, "policy": "keep_latest"},
@@ -455,7 +456,7 @@ def test_keeplatestunique_add():
     assert retval is not None
     assert len(pm) == 2
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool": {
             "metadata": {"context_name": "pool"},
             "pool_config": {"max_pool_size": 2, "policy": "keep_latest_unique"},
@@ -523,7 +524,7 @@ def test_keepbest_add1():
     assert retval is not None
     assert len(pm) == 2
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool": {
             "metadata": {"context_name": "pool"},
             "pool_config": {
@@ -597,7 +598,7 @@ def test_keepbest_add2():
     assert retval is not None
     assert len(pm) == 3
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool": {
             "metadata": {"context_name": "pool"},
             "pool_config": {
@@ -667,7 +668,7 @@ def test_keepbest_add2():
     assert retval is not None
     assert len(pm) == 3
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool": {
             "metadata": {"context_name": "pool"},
             "pool_config": {
@@ -758,9 +759,9 @@ def test_keepbest_add3():
     assert retval is not None
     assert len(pm) == 2
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},
+            "metadata": {"context_name": "pool"},#, "policy": "keep_best"},
             "pool_config": {
                 "abs_tolerance": 1,
                 "max_pool_size": 2,
@@ -811,7 +812,7 @@ def test_keepbest_add3():
     assert retval is not None
     assert len(pm) == 2
 
-    assert pm.to_dict() == {
+    assert pm.get_pool_dicts() == {
         "pool": {
             "metadata": {"context_name": "pool"},
             "pool_config": {
