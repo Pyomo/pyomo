@@ -507,7 +507,69 @@ def test_keepbest_bad_max_pool_size():
     except AssertionError as e:
         pass
 
+def test_pool_manager_to_dict_passthrough():
+    pm = PoolManager()
+    pm = PoolManager()
+    pm.add_pool("pool", policy="keep_best", abs_tolerance=1)
 
+    retval = pm.add(soln(0, 0))
+    assert retval is not None
+    assert len(pm) == 1
+
+    retval = pm.add(soln(0, 1))  # not unique
+    assert retval is None
+    assert len(pm) == 1
+
+    retval = pm.add(soln(1, 1))
+    assert retval is not None
+    assert len(pm) == 2
+
+    assert pm.to_dict() == {
+            "metadata": {"context_name": "pool"},
+            "pool_config": {
+                "abs_tolerance": 1,
+                "max_pool_size": None,
+                "objective": 0,
+                "policy": "keep_best",
+                "rel_tolerance": None,
+            },
+            "solutions": {
+                0: {
+                    "id": 0,
+                    "objectives": [
+                        {"index": None, "name": None, "suffix": {}, "value": 0}
+                    ],
+                    "suffix": {},
+                    "variables": [
+                        {
+                            "discrete": False,
+                            "fixed": False,
+                            "index": None,
+                            "name": None,
+                            "suffix": {},
+                            "value": 0,
+                        }
+                    ],
+                },
+                1: {
+                    "id": 1,
+                    "objectives": [
+                        {"index": None, "name": None, "suffix": {}, "value": 1}
+                    ],
+                    "suffix": {},
+                    "variables": [
+                        {
+                            "discrete": False,
+                            "fixed": False,
+                            "index": None,
+                            "name": None,
+                            "suffix": {},
+                            "value": 1,
+                        }
+                    ],
+                },
+            },
+        }
 def test_keepbest_add1():
     pm = PoolManager()
     pm.add_pool("pool", policy="keep_best", abs_tolerance=1)
