@@ -140,6 +140,7 @@ class TestPersistentSolverBase(unittest.TestCase):
 class TestLegacySolverWrapper(unittest.TestCase):
     def test_class_method_list(self):
         expected_list = [
+            'api_version',
             'available',
             'config_block',
             'default_variable_value',
