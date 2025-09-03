@@ -1043,7 +1043,7 @@ valid_solvers = {
         'RMIQCP',
     },
     'GLOMIQO': {'QCP', 'MIQCP', 'RMIQCP'},
-    'GUROBI': {'LP', 'MIP', 'RMIP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'GUROBI': {'LP', 'NLP', 'MIP', 'MINLP', 'RMIP', 'QCP', 'MIQCP', 'RMIQCP'},
     'GUSS': {'LP', 'MIP', 'NLP', 'MCP', 'CNS', 'DNLP', 'MINLP', 'QCP', 'MIQCP'},
     'IPOPT': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
     'IPOPTH': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
