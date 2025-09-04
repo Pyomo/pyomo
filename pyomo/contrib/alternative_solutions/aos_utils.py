@@ -306,8 +306,9 @@ def get_model_variables(
 
 
 class MyMunch(Munch):
-
-    to_dict = Munch.toDict
+    #WEH, MPV needed to add a to_dict since Bunch did not have one
+    def to_dict(self):
+        return _to_dict(self)
 
 
 def _to_dict(x):
@@ -317,8 +318,7 @@ def _to_dict(x):
     elif xtype in [tuple, set, frozenset]:
         return list(x)
     elif xtype in [dict, Munch, MyMunch]:
-        # TODO: why are we recursively calling _to_dict on dicts?
-        # TODO: what about empty dict/Munch/MyMunch?
         return {k: _to_dict(v) for k, v in x.items()}
     else:
+        print(f'Here: {x=} {type(x)}')
         return x.to_dict()
