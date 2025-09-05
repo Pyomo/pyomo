@@ -56,11 +56,7 @@ class SolutionPoolBase:
     """
 
     def __init__(self, name, as_solution, counter, policy="unspecified"):
-        # TODO: what is the point of the metadata attribute? Can we add the policy to this
-        # TODO: can we add subclass specific data to metadata object e.g. max_pool_size, abs_tolerance, objective
-        self.metadata = MyMunch(context_name=name)
         self._solutions = {}
-        self._policy = policy
         if as_solution is None:
             self._as_solution = _as_solution
         else:
@@ -69,19 +65,55 @@ class SolutionPoolBase:
             self.counter = PoolCounter()
         else:
             self.counter = counter
+        # TODO: consider renaming context_name to name
+        self._metadata = MyMunch(
+            context_name=name,
+            policy=policy,
+            as_solution_source=f"{self._as_solution.__module__}.{self._as_solution.__qualname__}",
+        )
+
+    @property
+    def metadata(self):
+        """
+        Property to return SolutionPool metadata that all SolutionPool subclasses have.
+        """
+        return self._metadata
 
     @property
     def solutions(self):
+        """
+        Property to return values of the dictionary of solutions.
+        """
         return self._solutions.values()
 
     @property
     def last_solution(self):
+        """
+        Property to return last (successfully) added solution.
+        """
         index = next(reversed(self._solutions.keys()))
         return self._solutions[index]
 
     @property
     def policy(self):
-        return self._policy
+        """
+        Property to return pool construction policy.
+        """
+        return self.metadata['policy']
+
+    @property
+    def as_solution(self):
+        """
+        Property to return solution conversion method.
+        """
+        return self._as_solution
+
+    @property
+    def pool_config(self):
+        """
+        Property to return SolutionPool class specific configuration data.
+        """
+        return dict()
 
     def __iter__(self):
         for soln in self._solutions.values():
@@ -120,11 +152,6 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None):
         super().__init__(name, as_solution, counter, policy="keep_all")
-        # TODO: Bill, comment out line 127 and see the suffix tests it breaks
-        # this is separate from the need to update the metadata line
-        # I get equivalents to this when I add anything to metadata that suffix dicts break, going from {} to MyMunch
-        # this feels like an issue with comparing versions of to_dict instead of true json or writable version of the dict
-        # self.metadata['policy'] = "keep_all"
 
     def add(self, *args, **kwargs):
         """
@@ -161,18 +188,14 @@ class SolutionPool_KeepAll(SolutionPoolBase):
         ----------
         dict
             Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
-            'metadata' contains a dictionary of information about pool structure and details as Strings.
+            'metadata' contains a dictionary of information about SolutionPools that is always present.
             'solutions' contains a dictionary of the pool's solutions.
-            'pool_config' contains a dictionary of the pool details.
+            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
         """
         return dict(
-            # TODO: why are we running _to_dict on metadata, which is a munch of strings?
             metadata=_to_dict(self.metadata),
-            # TODO: why are we running _to_dict on _solutions, which is a dict of solutions
-            # looks like to recursively call to_dict on solution objects
             solutions=_to_dict(self._solutions),
-            # TODO: why is metadata separate from pool_config? Is it just metadata without str() wrapping items?
-            pool_config=dict(policy=self._policy),
+            pool_config=_to_dict(self.pool_config),
         )
 
 
@@ -205,6 +228,10 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         super().__init__(name, as_solution, counter, policy="keep_latest")
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
+
+    @property
+    def pool_config(self):
+        return dict(max_pool_size=self.max_pool_size)
 
     def add(self, *args, **kwargs):
         """
@@ -248,14 +275,14 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         ----------
         dict
             Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
-            'metadata' contains a dictionary of information about pool structure and details as Strings.
+            'metadata' contains a dictionary of information about SolutionPools that is always present.
             'solutions' contains a dictionary of the pool's solutions.
-            'pool_config' contains a dictionary of the pool details.
+            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
         """
         return dict(
             metadata=_to_dict(self.metadata),
             solutions=_to_dict(self._solutions),
-            pool_config=dict(policy=self._policy, max_pool_size=self.max_pool_size),
+            pool_config=_to_dict(self.pool_config),
         )
 
 
@@ -289,6 +316,10 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
         self.unique_solutions = set()
+
+    @property
+    def pool_config(self):
+        return dict(max_pool_size=self.max_pool_size)
 
     def add(self, *args, **kwargs):
         """
@@ -341,14 +372,14 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         ----------
         dict
             Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
-            'metadata' contains a dictionary of information about pool structure and details as Strings.
+            'metadata' contains a dictionary of information about SolutionPools that is always present.
             'solutions' contains a dictionary of the pool's solutions.
-            'pool_config' contains a dictionary of the pool details.
+            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
         """
         return dict(
             metadata=_to_dict(self.metadata),
             solutions=_to_dict(self._solutions),
-            pool_config=dict(policy=self._policy, max_pool_size=self.max_pool_size),
+            pool_config=_to_dict(self.pool_config),
         )
 
 
@@ -424,6 +455,15 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         self.best_value = best_value
         self.heap = []
         self.unique_solutions = set()
+
+    @property
+    def pool_config(self):
+        return dict(
+            max_pool_size=self.max_pool_size,
+            objective=self.objective,
+            abs_tolerance=self.abs_tolerance,
+            rel_tolerance=self.rel_tolerance,
+        )
 
     def add(self, *args, **kwargs):
         """
@@ -539,20 +579,14 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         ----------
         dict
             Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
-            'metadata' contains a dictionary of information about pool structure and details as Strings.
+            'metadata' contains a dictionary of information about SolutionPools that is always present.
             'solutions' contains a dictionary of the pool's solutions.
-            'pool_config' contains a dictionary of the pool details.
+            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
         """
         return dict(
             metadata=_to_dict(self.metadata),
             solutions=_to_dict(self._solutions),
-            pool_config=dict(
-                policy=self._policy,
-                max_pool_size=self.max_pool_size,
-                objective=self.objective,
-                abs_tolerance=self.abs_tolerance,
-                rel_tolerance=self.rel_tolerance,
-            ),
+            pool_config=_to_dict(self.pool_config),
         )
 
 
@@ -583,15 +617,59 @@ class PoolManager:
 
     @property
     def metadata(self):
+        """
+        Pass through property to return metadata of the active pool.
+
+        Returns
+        ----------
+        String
+            The metadata to describe the active pool.
+
+        """
         return self.active_pool.metadata
 
     @property
     def solutions(self):
+        """
+        Pass through property to return solutions of the active pool.
+
+        Returns
+        ----------
+        dict_values
+            The solutions contained in the active pool.
+
+        """
         return self.active_pool.solutions.values()
 
     @property
     def last_solution(self):
+        """
+        Pass through property to return last_solution of the active pool.
+
+        Returns
+        ----------
+        Solution
+            The last_solution found in the active pool.
+
+        """
         return self.active_pool.last_solution
+
+    @property
+    def policy(self):
+        """
+        Pass through property to return policy of the active pool.
+
+        Returns
+        ----------
+        String
+            The policy used in the active pool.
+
+        """
+        return self.active_pool.policy
+
+    @property
+    def as_solution(self):
+        return self.active_pool.as_solution
 
     def to_dict(self):
         return self.active_pool.to_dict()
@@ -745,18 +823,6 @@ class PoolManager:
 
         """
         return self._name
-
-    def get_active_pool_policy(self):
-        """
-        Returns the policy string for the active pool
-
-        Returns
-        ----------
-        String
-            policy in use for the active pool
-
-        """
-        return self.active_pool.policy
 
     def get_pool_names(self):
         """

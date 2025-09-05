@@ -35,11 +35,11 @@ def test_get_pool_names():
 
 def test_get_active_pool_policy():
     pm = PoolManager()
-    assert pm.get_active_pool_policy() == "keep_best", "Should only be 'keep_best'"
+    assert pm.policy == "keep_best", "Should only be 'keep_best'"
     pm.add_pool("pool_1", policy="keep_all")
-    assert pm.get_active_pool_policy() == "keep_all", "Should only be 'keep_best'"
+    assert pm.policy == "keep_all", "Should only be 'keep_best'"
     pm.add_pool("pool_2", policy="keep_latest", max_pool_size=1)
-    assert pm.get_active_pool_policy() == "keep_latest", "Should only be 'keep_latest'"
+    assert pm.policy == "keep_latest", "Should only be 'keep_latest'"
 
 
 def test_get_pool_policies():
@@ -126,8 +126,12 @@ def test_multiple_pools():
 
     assert pm.get_pool_dicts() == {
         "pool_1": {
-            "metadata": {"context_name": "pool_1"},  # "policy": "keep_all"},
-            "pool_config": {"policy": "keep_all"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool_1",
+                "policy": "keep_all",
+            },
+            "pool_config": {},
             "solutions": {
                 0: {
                     "id": 0,
@@ -189,7 +193,11 @@ def test_multiple_pools():
     retval = pm.add(soln(0, 1))
     assert pm.get_pool_dicts() == {
         "pool_1": {
-            "metadata": {"context_name": "pool_1"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool_1",
+                "policy": "keep_all",
+            },
             "solutions": {
                 0: {
                     "id": 0,
@@ -243,10 +251,14 @@ def test_multiple_pools():
                     "suffix": {},
                 },
             },
-            "pool_config": {"policy": "keep_all"},
+            "pool_config": {},
         },
         "pool_2": {
-            "metadata": {"context_name": "pool_2"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool_2",
+                "policy": "keep_latest",
+            },
             "solutions": {
                 4: {
                     "id": 4,
@@ -266,7 +278,7 @@ def test_multiple_pools():
                     "suffix": {},
                 }
             },
-            "pool_config": {"policy": "keep_latest", "max_pool_size": 1},
+            "pool_config": {"max_pool_size": 1},
         },
     }
     assert len(pm) == 1
@@ -290,8 +302,13 @@ def test_keepall_add():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},
-            "pool_config": {"policy": "keep_all"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_all",
+            },
+            "pool_config": {},
             "solutions": {
                 0: {
                     "id": 0,
@@ -391,8 +408,12 @@ def test_keeplatest_add():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},
-            "pool_config": {"max_pool_size": 2, "policy": "keep_latest"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_latest",
+            },
+            "pool_config": {"max_pool_size": 2},
             "solutions": {
                 1: {
                     "id": 1,
@@ -459,8 +480,12 @@ def test_keeplatestunique_add():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},
-            "pool_config": {"max_pool_size": 2, "policy": "keep_latest_unique"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_latest_unique",
+            },
+            "pool_config": {"max_pool_size": 2},
             "solutions": {
                 0: {
                     "id": 0,
@@ -527,12 +552,15 @@ def test_pool_manager_to_dict_passthrough():
     assert len(pm) == 2
 
     assert pm.to_dict() == {
-        "metadata": {"context_name": "pool"},
+        "metadata": {
+            "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+            "context_name": "pool",
+            "policy": "keep_best",
+        },
         "pool_config": {
             "abs_tolerance": 1,
             "max_pool_size": None,
             "objective": 0,
-            "policy": "keep_best",
             "rel_tolerance": None,
         },
         "solutions": {
@@ -588,12 +616,15 @@ def test_keepbest_add1():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_best",
+            },
             "pool_config": {
                 "abs_tolerance": 1,
                 "max_pool_size": None,
                 "objective": 0,
-                "policy": "keep_best",
                 "rel_tolerance": None,
             },
             "solutions": {
@@ -662,12 +693,15 @@ def test_keepbest_add2():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_best",
+            },
             "pool_config": {
                 "abs_tolerance": 1,
                 "max_pool_size": None,
                 "objective": 0,
-                "policy": "keep_best",
                 "rel_tolerance": None,
             },
             "solutions": {
@@ -732,12 +766,15 @@ def test_keepbest_add2():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_best",
+            },
             "pool_config": {
                 "abs_tolerance": 1,
                 "max_pool_size": None,
                 "objective": 0,
-                "policy": "keep_best",
                 "rel_tolerance": None,
             },
             "solutions": {
@@ -823,12 +860,15 @@ def test_keepbest_add3():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},  # , "policy": "keep_best"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_best",
+            },
             "pool_config": {
                 "abs_tolerance": 1,
                 "max_pool_size": 2,
                 "objective": 0,
-                "policy": "keep_best",
                 "rel_tolerance": None,
             },
             "solutions": {
@@ -876,12 +916,15 @@ def test_keepbest_add3():
 
     assert pm.get_pool_dicts() == {
         "pool": {
-            "metadata": {"context_name": "pool"},
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_best",
+            },
             "pool_config": {
                 "abs_tolerance": 1,
                 "max_pool_size": 2,
                 "objective": 0,
-                "policy": "keep_best",
                 "rel_tolerance": None,
             },
             "solutions": {
