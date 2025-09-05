@@ -19,9 +19,9 @@ more context than this result. For example,
 The *alternative-solutions library* provides a variety of functions that
 can be used to generate optimal or near-optimal solutions for a pyomo
 model. Conceptually, these functions are like pyomo solvers. They can
-be configured with solver names and options, and they return a list of
+be configured with solver names and options, and they return a pool of
 solutions for the pyomo model. However, these functions are independent
-of pyomo's solver interface because they return a custom solution object.
+of pyomo's solver interface because they return a custom pool manager object.
 
 The following functions are defined in the alternative-solutions library:
 
@@ -73,7 +73,7 @@ solutions have integer objective values ranging from 0 to 90.
    >>> m.c = pyo.Constraint(expr=sum(weights[i] * m.x[i] for i in range(4)) <= capacity)
 
 We can execute the ``enumerate_binary_solutions`` function to generate a
-list of ``Solution`` objects that represent alternative optimal
+pool of ``Solution`` objects that represent alternative optimal
 solutions:
 
 .. doctest::
@@ -92,15 +92,50 @@ For example:
 
    >>> print(solns[0])
    {
-       "fixed_variables": [],
-       "objective": "o",
-       "objective_value": 90.0,
-       "solution": {
-           "x[0]": 0,
-           "x[1]": 1,
-           "x[2]": 0,
-           "x[3]": 1
-       }
+       "id": 0,
+       "objectives": [
+           {
+               "index": 0,
+               "name": "o",
+               "suffix": {},
+               "value": 90.0
+           }
+       ],
+       "suffix": {},
+       "variables": [
+           {
+               "discrete": true,
+               "fixed": false,
+               "index": 0,
+               "name": "x[0]",
+               "suffix": {},
+               "value": 0
+           },
+           {
+               "discrete": true,
+               "fixed": false,
+               "index": 1,
+               "name": "x[1]",
+               "suffix": {},
+               "value": 1
+           },
+           {
+               "discrete": true,
+               "fixed": false,
+               "index": 2,
+               "name": "x[2]",
+               "suffix": {},
+               "value": 0
+           },
+           {
+               "discrete": true,
+               "fixed": false,
+               "index": 3,
+               "name": "x[3]",
+               "suffix": {},
+               "value": 1
+           }
+       ]
    }
 
 
@@ -157,56 +192,224 @@ precision issues.
 
    >>> solns = aos.enumerate_binary_solutions(m, num_solutions=10, solver="glpk", abs_opt_gap = 0.5)
    >>> assert(len(solns) == 4)
-   >>> for soln in sorted(solns, key=lambda s: str(s.get_variable_name_values())):
+   >>> for soln in sorted(solns):
    ...     print(soln)
-   {
-       "fixed_variables": [],
-       "objective": "o",
-       "objective_value": 12.0,
-       "solution": {
-           "x[0]": 0,
-           "x[1]": 1,
-           "x[2]": 1,
-           "x[3]": 0,
-           "x[4]": 1
-       }
-   }
-   {
-       "fixed_variables": [],
-       "objective": "o",
-       "objective_value": 12.0,
-       "solution": {
-           "x[0]": 0,
-           "x[1]": 1,
-           "x[2]": 1,
-           "x[3]": 1,
-           "x[4]": 0
-       }
-   }
-   {
-       "fixed_variables": [],
-       "objective": "o",
-       "objective_value": 12.0,
-       "solution": {
-           "x[0]": 1,
-           "x[1]": 0,
-           "x[2]": 0,
-           "x[3]": 1,
-           "x[4]": 1
-       }
-   }
-   {
-       "fixed_variables": [],
-       "objective": "o",
-       "objective_value": 12.0,
-       "solution": {
-           "x[0]": 1,
-           "x[1]": 0,
-           "x[2]": 1,
-           "x[3]": 0,
-           "x[4]": 0
-       }
-   }
+    {
+        "id": 3,
+        "objectives": [
+            {
+                "index": 0,
+                "name": "o",
+                "suffix": {},
+                "value": 12.0
+            }
+        ],
+        "suffix": {},
+        "variables": [
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 0,
+                "name": "x[0]",
+                "suffix": {},
+                "value": 0
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 1,
+                "name": "x[1]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 2,
+                "name": "x[2]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 3,
+                "name": "x[3]",
+                "suffix": {},
+                "value": 0
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 4,
+                "name": "x[4]",
+                "suffix": {},
+                "value": 1
+            }
+        ]
+    }
+    {
+        "id": 2,
+        "objectives": [
+            {
+                "index": 0,
+                "name": "o",
+                "suffix": {},
+                "value": 12.0
+            }
+        ],
+        "suffix": {},
+        "variables": [
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 0,
+                "name": "x[0]",
+                "suffix": {},
+                "value": 0
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 1,
+                "name": "x[1]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 2,
+                "name": "x[2]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 3,
+                "name": "x[3]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 4,
+                "name": "x[4]",
+                "suffix": {},
+                "value": 0
+            }
+        ]
+    }
+    {
+        "id": 1,
+        "objectives": [
+            {
+                "index": 0,
+                "name": "o",
+                "suffix": {},
+                "value": 12.0
+            }
+        ],
+        "suffix": {},
+        "variables": [
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 0,
+                "name": "x[0]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 1,
+                "name": "x[1]",
+                "suffix": {},
+                "value": 0
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 2,
+                "name": "x[2]",
+                "suffix": {},
+                "value": 0
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 3,
+                "name": "x[3]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 4,
+                "name": "x[4]",
+                "suffix": {},
+                "value": 1
+            }
+        ]
+    }
+    {
+        "id": 0,
+        "objectives": [
+            {
+                "index": 0,
+                "name": "o",
+                "suffix": {},
+                "value": 12.0
+            }
+        ],
+        "suffix": {},
+        "variables": [
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 0,
+                "name": "x[0]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 1,
+                "name": "x[1]",
+                "suffix": {},
+                "value": 0
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 2,
+                "name": "x[2]",
+                "suffix": {},
+                "value": 1
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 3,
+                "name": "x[3]",
+                "suffix": {},
+                "value": 0
+            },
+            {
+                "discrete": true,
+                "fixed": false,
+                "index": 4,
+                "name": "x[4]",
+                "suffix": {},
+                "value": 0
+            }
+        ]
+    }
 
 
 Interface Documentation

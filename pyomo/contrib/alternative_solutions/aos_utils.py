@@ -9,11 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.collections import Bunch as Munch
 import logging
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
-from contextlib import contextmanager
 
 from pyomo.common.dependencies import numpy as numpy, numpy_available
 
@@ -302,3 +303,21 @@ def get_model_variables(
                 )
 
     return variable_set
+
+
+class MyMunch(Munch):
+    # WEH, MPV needed to add a to_dict since Bunch did not have one
+    def to_dict(self):
+        return _to_dict(self)
+
+
+def _to_dict(x):
+    xtype = type(x)
+    if xtype in [float, int, complex, str, list, bool] or x is None:
+        return x
+    elif xtype in [tuple, set, frozenset]:
+        return list(x)
+    elif xtype in [dict, Munch, MyMunch]:
+        return {k: _to_dict(v) for k, v in x.items()}
+    else:
+        return x.to_dict()

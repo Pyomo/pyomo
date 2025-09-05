@@ -42,6 +42,16 @@ class TestLPEnum:
         except pyomo.common.errors.ApplicationError as e:
             pass
 
+    def test_non_positive_num_solutions(self, mip_solver):
+        """
+        Confirm that an exception is thrown with a non-positive num solutions
+        """
+        m = tc.get_3d_polyhedron_problem()
+        try:
+            lp_enum.enumerate_linear_solutions(m, num_solutions=-1, solver=mip_solver)
+        except AssertionError as e:
+            pass
+
     @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
     def test_no_time(self, mip_solver):
         """
@@ -62,7 +72,7 @@ class TestLPEnum:
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
         assert len(sols) == 2
         for s in sols:
-            assert s.objective_value == unittest.pytest.approx(4)
+            assert s.objective().value == unittest.pytest.approx(4)
 
     def test_3d_polyhedron(self, mip_solver):
         m = tc.get_3d_polyhedron_problem()
@@ -72,9 +82,9 @@ class TestLPEnum:
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
         assert len(sols) == 2
         for s in sols:
-            assert s.objective_value == unittest.pytest.approx(
+            assert s.objective().value == unittest.pytest.approx(
                 9
-            ) or s.objective_value == unittest.pytest.approx(10)
+            ) or s.objective().value == unittest.pytest.approx(10)
 
     def test_2d_diamond_problem(self, mip_solver):
         m = tc.get_2d_diamond_problem()
@@ -82,8 +92,8 @@ class TestLPEnum:
         assert len(sols) == 2
         for s in sols:
             print(s)
-        assert sols[0].objective_value == unittest.pytest.approx(6.789473684210527)
-        assert sols[1].objective_value == unittest.pytest.approx(3.6923076923076916)
+        assert sols[0].objective().value == unittest.pytest.approx(6.789473684210527)
+        assert sols[1].objective().value == unittest.pytest.approx(3.6923076923076916)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_pentagonal_pyramid(self, mip_solver):

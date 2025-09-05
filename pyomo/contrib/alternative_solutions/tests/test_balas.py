@@ -39,6 +39,16 @@ class TestBalasUnit:
         except pyomo.common.errors.ApplicationError as e:
             pass
 
+    def test_non_positive_num_solutions(self, mip_solver):
+        """
+        Confirm that an exception is thrown with a non-positive num solutions
+        """
+        m = tc.get_triangle_ip()
+        try:
+            enumerate_binary_solutions(m, num_solutions=-1, solver=mip_solver)
+        except AssertionError as e:
+            pass
+
     def test_ip_feasibility(self, mip_solver):
         """
         Enumerate solutions for an ip: triangle_ip.
@@ -48,7 +58,8 @@ class TestBalasUnit:
         m = tc.get_triangle_ip()
         results = enumerate_binary_solutions(m, num_solutions=100, solver=mip_solver)
         assert len(results) == 1
-        assert results[0].objective_value == unittest.pytest.approx(5)
+        for soln in results:
+            assert soln.objective().value == unittest.pytest.approx(5)
 
     @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
     def test_no_time(self, mip_solver):
@@ -74,7 +85,7 @@ class TestBalasUnit:
         )
         results = enumerate_binary_solutions(m, num_solutions=100, solver=mip_solver)
         objectives = list(
-            sorted((round(result.objective[1], 2) for result in results), reverse=True)
+            sorted((round(soln.objective().value, 2) for soln in results), reverse=True)
         )
         assert_array_almost_equal(objectives, m.ranked_solution_values)
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -94,7 +105,7 @@ class TestBalasUnit:
             m, num_solutions=100, solver=mip_solver, variables=[m.x[0], m.x[1]]
         )
         objectives = list(
-            sorted((round(result.objective[1], 2) for result in results), reverse=True)
+            sorted((round(soln.objective().value, 2) for soln in results), reverse=True)
         )
         assert_array_almost_equal(objectives, [6, 5, 4, 3])
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
@@ -111,7 +122,7 @@ class TestBalasUnit:
         )
         results = enumerate_binary_solutions(m, num_solutions=3, solver=mip_solver)
         objectives = list(
-            sorted((round(result.objective[1], 2) for result in results), reverse=True)
+            sorted((round(soln.objective().value, 2) for soln in results), reverse=True)
         )
         assert_array_almost_equal(objectives, m.ranked_solution_values[:3])
 
@@ -128,7 +139,7 @@ class TestBalasUnit:
             m, num_solutions=3, solver=mip_solver, search_mode="hamming"
         )
         objectives = list(
-            sorted((round(result.objective[1], 2) for result in results), reverse=True)
+            sorted((round(soln.objective().value, 2) for soln in results), reverse=True)
         )
         assert_array_almost_equal(objectives, [6, 3, 1])
 
@@ -145,7 +156,7 @@ class TestBalasUnit:
             m, num_solutions=3, solver=mip_solver, search_mode="random", seed=1118798374
         )
         objectives = list(
-            sorted((round(result.objective[1], 2) for result in results), reverse=True)
+            sorted((round(soln.objective().value, 2) for soln in results), reverse=True)
         )
         assert_array_almost_equal(objectives, [6, 5, 4])
 
