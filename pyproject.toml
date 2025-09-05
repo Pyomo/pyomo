@@ -86,3 +86,9 @@ markers = [
     "bar: marks bar tests",
     "builders: tests that should be run when testing custom (extension) builders",
 ]
+
+[tool.black]
+line-length = 88
+skip-string-normalization = true
+skip-magic-trailing-comma = true
+extend-exclude = 'examples/pyomobook/python-ch/BadIndent.py'

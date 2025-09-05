@@ -83,7 +83,7 @@ def _deprecated_separation_priority_order(obj):
             "The argument 'separation_priority_order' is deprecated. "
             "Consider specifying separation priorities by declaring, on your "
             "model, Suffix components with local name `pyros_separation_priority`.",
-            version="6.9.3dev0",
+            version="6.9.3",
         )
     return separation_priority_order
 
@@ -776,7 +776,7 @@ def pyros_config():
                 until, within a group, constraint violations
                 are detected.
 
-                *Deprecated since Pyomo 6.9.3dev0*: The argument
+                *Deprecated since Pyomo 6.9.3*: The argument
                 `separation_priority_order` is deprecated.
                 Specify separation priorities by declaring, on your
                 model, `Suffix` components with local name
@@ -851,6 +851,26 @@ def pyros_config():
                 In the event ``keepfiles=True`` is specified, a str or
                 path-like referring to an existing directory must be
                 provided.
+                """
+            ),
+        ),
+    )
+    CONFIG.declare(
+        "subproblem_format_options",
+        ConfigValue(
+            default={"bar": {"symbolic_solver_labels": True}},
+            # note: we leave all validation of the dict entries
+            #       to ``BlockData.write()``
+            domain=dict,
+            description=(
+                """
+                File format options for writing/exporting subproblems
+                that were not solved to an acceptable level
+                if ``keepfiles=True`` is specified.
+                Each entry of the dict should map a Pyomo WriterFactory
+                format (e.g., 'bar' for BARON, 'gams' for GAMS)
+                to a value for the argument ``io_options``
+                to the method ``BlockData.write()``.
                 """
             ),
         ),

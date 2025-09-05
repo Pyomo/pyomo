@@ -19,18 +19,24 @@ from pyomo.common.dependencies import (
     pandas_available,
     scipy_available,
 )
+
+
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
-from pyomo.contrib.doe.examples.reactor_example import (
-    ReactorExperiment as FullReactorExperiment,
-    run_reactor_doe,
-)
-from pyomo.contrib.doe.tests.experiment_class_example_flags import (
-    FullReactorExperimentBad,
-)
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
+
+if scipy_available:
+    from pyomo.contrib.doe import DesignOfExperiments
+    from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
+    from pyomo.contrib.doe.examples.reactor_example import (
+        ReactorExperiment as FullReactorExperiment,
+        run_reactor_doe,
+    )
+    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+        FullReactorExperimentBad,
+    )
 from pyomo.contrib.doe.utils import rescale_FIM
 
 import pyomo.environ as pyo
@@ -102,26 +108,33 @@ def get_FIM_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args["experiment"] = experiment
-    args["fd_formula"] = fd_method
-    args["step"] = 1e-3
-    args["objective_option"] = obj_used
-    args["scale_constant_value"] = 1
-    args["scale_nominal_param_value"] = True
-    args["prior_FIM"] = None
-    args["jac_initial"] = None
-    args["fim_initial"] = None
-    args["L_diagonal_lower_bound"] = 1e-7
-    args["solver"] = None
-    args["tee"] = False
-    args["get_labeled_model_args"] = None
-    args["_Cholesky_option"] = True
-    args["_only_compute_fim_lower"] = True
+    args['experiment'] = experiment
+    args['fd_formula'] = fd_method
+    args['step'] = 1e-3
+    args['objective_option'] = obj_used
+    args['scale_constant_value'] = 1
+    args['scale_nominal_param_value'] = True
+    args['prior_FIM'] = None
+    args['jac_initial'] = None
+    args['fim_initial'] = None
+    args['L_diagonal_lower_bound'] = 1e-7
+    # Make solver object with
+    # good linear subroutines
+    solver = SolverFactory("ipopt")
+    solver.options["linear_solver"] = "ma57"
+    solver.options["halt_on_ampl_error"] = "yes"
+    solver.options["max_iter"] = 3000
+    args['solver'] = solver
+    args['tee'] = False
+    args['get_labeled_model_args'] = None
+    args['_Cholesky_option'] = True
+    args['_only_compute_fim_lower'] = True
     return args
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
 class TestReactorExampleSolving(unittest.TestCase):
     def test_reactor_fd_central_solve(self):
         fd_method = "central"
@@ -205,6 +218,10 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
+        # Increase numerical performance by adding a prior
+        prior_FIM = doe_obj.compute_FIM()
+        doe_obj.prior_FIM = prior_FIM
+
         doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
@@ -233,7 +250,6 @@ class TestReactorExampleSolving(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
     def test_reactor_obj_cholesky_solve_bad_prior(self):
-
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
@@ -244,7 +260,8 @@ class TestReactorExampleSolving(unittest.TestCase):
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
         # Specify a prior that is slightly negative definite
-        # Because it is less than the tolerance, it should be adjusted to be positive definite
+        # Because it is less than the tolerance, it should be
+        # adjusted to be positive definite
         # No error should be thrown
         DoE_args["prior_FIM"] = -(_SMALL_TOLERANCE_DEFINITENESS / 100) * np.eye(4)
 
@@ -341,7 +358,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             design_ranges=design_ranges, method="sequential"
         )
 
-        # Check to make sure the lengths of the inputs in results object are indeed correct
+        # Check to make sure the lengths of the inputs
+        # in results object are indeed correct
         CA_vals = doe_obj.fim_factorial_results["CA[0]"]
         T_vals = doe_obj.fim_factorial_results["T[0]"]
 
@@ -408,7 +426,8 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model from experiment did not solve appropriately. Make sure the model is well-posed.",
+            "Model from experiment did not solve appropriately. "
+            "Make sure the model is well-posed.",
         ):
             doe_obj.run_doe()
 

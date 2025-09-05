@@ -1082,6 +1082,7 @@ with declare_modules_as_importable(globals()):
     ctypes, _ = attempt_import(
         'ctypes', deferred_submodules=['util'], callback=_finalize_ctypes
     )
+    multiprocessing, _ = attempt_import('multiprocessing')
     random, _ = attempt_import('random')
 
     # Necessary for minimum version checking for other optional dependencies

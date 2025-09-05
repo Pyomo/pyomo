@@ -24,8 +24,10 @@ from pyomo.core import (
     NonPositiveReals,
     maximize,
     minimize,
+    RangeSet,
     Reals,
 )
+from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.opt import WriterFactory
 from pyomo.repn.standard_repn import isclose_const
 from pyomo.util.config_domains import ComponentDataSet
@@ -110,6 +112,11 @@ class LinearProgrammingDual(object):
                 "Model '%s' has no objective or multiple active objectives. Can "
                 "only take dual with exactly one active objective!" % model.name
             )
+        if len(std_form.columns) == 0 and std_form.c.shape[1] == 0:
+            raise ValueError(
+                f"Model '{model.name}' has no variables in the active Constraints "
+                f"or Objective."
+            )
         primal_sense = std_form.objectives[0].sense
 
         dual = ConcreteModel(name="%s dual" % model.name)
@@ -121,7 +128,29 @@ class LinearProgrammingDual(object):
         dual_cols = range(A.shape[0])
         dual.x = Var(dual_cols, domain=NonNegativeReals)
         trans_info = dual.private_data()
+        A_csr = A.tocsr()
         for j, (primal_cons, ineq) in enumerate(std_form.rows):
+            # We need to check this constraint isn't trivial due to the
+            # parameterization, which we can detect if the row is all 0's.
+            if A_csr.indptr[j] == A_csr.indptr[j + 1]:
+                # All 0's in the coefficient matrix: check what's on the RHS
+                b = std_form.rhs[j]
+                if type(b) not in native_numeric_types:
+                    # The parameterization made this trivial. I'm not sure what's
+                    # really expected here, so maybe we just scream? Or we leave
+                    # the constraint in the model as it is written...
+                    raise ValueError(
+                        f"The primal model contains a constraint that the "
+                        f"parameterization makes trivial: '{primal_cons.name}'"
+                        f"\nPlease deactivate it or declare it on another Block "
+                        f"before taking the dual."
+                    )
+                else:
+                    # The whole constraint is trivial--it will already have been
+                    # checked compiling the standard form, so we can safely ignore
+                    # it.
+                    pass
+
             # maximize is -1 and minimize is +1 and ineq is +1 for <= and -1 for
             # >=, so we need to change domain to NonPositiveReals if the product
             # of these is +1.
@@ -141,17 +170,28 @@ class LinearProgrammingDual(object):
                 primal_row = A.indices[j]
                 lhs += coef * dual.x[primal_row]
 
-            if primal.domain is Reals:
+            domain = primal.domain
+            lb, ub = domain.bounds()
+            # Note: the following checks the domain for continuity and compactness:
+            if not domain == RangeSet(*domain.bounds(), 0):
+                raise ValueError(
+                    f"The domain of the primal variable '{primal.name}' "
+                    f"is not continuous."
+                )
+            unrestricted = (lb is None or lb < 0) and (ub is None or ub > 0)
+            nonneg = (lb is not None) and lb >= 0
+
+            if unrestricted:
                 dual.constraints[i] = lhs == c[i]
             elif primal_sense is minimize:
-                if primal.domain is NonNegativeReals:
+                if nonneg:
                     dual.constraints[i] = lhs <= c[i]
-                else:  # primal.domain is NonPositiveReals
+                else:  # primal domain is nonpositive
                     dual.constraints[i] = lhs >= c[i]
             else:
-                if primal.domain is NonNegativeReals:
+                if nonneg:
                     dual.constraints[i] = lhs >= c[i]
-                else:  # primal.domain is NonPositiveReals
+                else:  # primal domain is nonpositive
                     dual.constraints[i] = lhs <= c[i]
             trans_info.dual_constraint[primal] = dual.constraints[i]
             trans_info.primal_var[dual.constraints[i]] = primal
