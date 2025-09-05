@@ -66,14 +66,49 @@ def test_get_max_pool_size():
     pm.add_pool("pool_2", policy="keep_latest", max_pool_size=1)
     assert pm.max_pool_size == 1, "Should only be 1"
 
+
 def test_pass_through_parameters():
     pm = PoolManager()
     assert pm.max_pool_size == None, "Should only be None"
     pm.add_pool("pool_1", policy="keep_all")
     assert pm.max_pool_size == None, "Should only be None"
+    temp_as_solution = pm.as_solution
+    assert pm.pool_config == dict(), "Should be an empty dictionary"
+    assert pm.sense_is_min == None, "Should be None"
+    assert pm.abs_tolerance == None, "Should be None"
+    assert pm.objective == None, "Should be None"
+    assert pm.max_pool_size == None, "Should be None"
+    # best_value, sense_is_min, abs_tolerance, rel_tolerance, objective, max_pool_size, pool_config
     pm.add_pool("pool_2", policy="keep_latest", max_pool_size=1)
+    assert temp_as_solution == pm.as_solution, "as_solution methods should match"
+    assert pm.sense_is_min == None, "Should be None"
+    assert pm.abs_tolerance == None, "Should be None"
+    assert pm.objective == None, "Should be None"
     assert pm.max_pool_size == 1, "Should only be 1"
+    assert pm.pool_config == {'max_pool_size': 1}, "Assert should match"
 
+    pm.add_pool(
+        "pool_3",
+        policy="keep_best",
+        best_value=1.618,
+        max_pool_size=1,
+        objective=1,
+        abs_tolerance=1,
+        sense_is_min=False,
+    )
+    assert temp_as_solution == pm.as_solution, "as_solution methods should match"
+    assert pm.sense_is_min == False, "Should be False"
+    assert pm.abs_tolerance == 1, "Should be None"
+    assert pm.objective == 1, "Should be 1"
+    assert pm.max_pool_size == 1, "Should only be 1"
+    assert pm.pool_config == {
+        'abs_tolerance': 1,
+        'best_value': 1.618,
+        'objective': 1,
+        'max_pool_size': 1,
+        'rel_tolerance': None,
+        'sense_is_min': False,
+    }, "Assert should match"
 
 
 def test_get_max_pool_sizes():
@@ -946,7 +981,7 @@ def test_keepbest_add3():
                 "max_pool_size": 2,
                 "objective": 0,
                 "rel_tolerance": None,
-                "sense_is_min":True,
+                "sense_is_min": True,
             },
             "solutions": {
                 2: {

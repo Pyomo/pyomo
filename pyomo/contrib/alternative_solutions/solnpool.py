@@ -464,7 +464,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             abs_tolerance=self.abs_tolerance,
             rel_tolerance=self.rel_tolerance,
             sense_is_min=self.sense_is_min,
-            best_value = self.best_value
+            best_value=self.best_value,
         )
 
     def add(self, *args, **kwargs):
@@ -668,7 +668,7 @@ class PoolManager:
 
         """
         return self.active_pool.policy
-    
+
     @property
     def counter(self):
         return self.active_pool.counter
@@ -685,7 +685,7 @@ class PoolManager:
 
         """
         return self.active_pool.as_solution
-    
+
     @property
     def pool_config(self):
         """
@@ -698,7 +698,7 @@ class PoolManager:
 
         """
         return self.active_pool.pool_config
-    
+
     @property
     def max_pool_size(self):
         """
@@ -712,7 +712,7 @@ class PoolManager:
 
         """
         return getattr(self.active_pool, "max_pool_size", None)
-    
+
     @property
     def objective(self):
         """
@@ -726,7 +726,7 @@ class PoolManager:
 
         """
         return getattr(self.active_pool, "objective", None)
-    
+
     @property
     def abs_tolerance(self):
         """
@@ -740,6 +740,7 @@ class PoolManager:
 
         """
         return getattr(self.active_pool, "abs_tolerance", None)
+
     @property
     def rel_tolerance(self):
         """
@@ -753,9 +754,7 @@ class PoolManager:
 
         """
         return getattr(self.active_pool, "rel_tolerance", None)
-    
-    
-    
+
     @property
     def sense_is_min(self):
         """
@@ -770,7 +769,7 @@ class PoolManager:
 
         """
         return getattr(self.active_pool, "sense_is_min", None)
-    
+
     @property
     def best_value(self):
         """
@@ -784,7 +783,6 @@ class PoolManager:
 
         """
         return getattr(self.active_pool, "best_value", None)
-
 
     def to_dict(self):
         return self.active_pool.to_dict()
@@ -960,8 +958,6 @@ class PoolManager:
 
         """
         return {k: v.policy for k, v in self._pools.items()}
-
-    
 
     def get_max_pool_sizes(self):
         """
