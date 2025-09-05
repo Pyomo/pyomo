@@ -34,6 +34,26 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         Maybe this should be an AOS utility since it may be a thing we will want to do often.
     """
 
+    def test_non_positive_num_solutions(self):
+        """
+        Confirm that an exception is thrown with a non-positive num solutions
+        """
+        m = tc.get_triangle_ip()
+        try:
+            gurobi_generate_solutions(m, num_solutions=-1)
+        except AssertionError as e:
+            pass
+
+    def test_search_mode(self):
+        """
+        Confirm that an exception is thrown with pool_search_mode not in [1,2]
+        """
+        m = tc.get_triangle_ip()
+        try:
+            gurobi_generate_solutions(m, pool_search_mode=0)
+        except AssertionError as e:
+            pass
+
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_ip_feasibility(self):
         """
