@@ -3873,16 +3873,14 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
 
         log_msg = LOG.getvalue()
         self.assertRegex(
-            log_msg,
-            "NOTE: No user-provided first-stage variables or second-stage.*",
+            log_msg, "NOTE: No user-provided first-stage variables or second-stage.*"
         )
         # need 2 iterations to satisfy epigraph constraint
         # due to worst-case objective focus
         self.assertEqual(res.iterations, 2)
         self.assertAlmostEqual(res.final_objective_value, 1)
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_feasible,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
 
     @parameterized.expand([[True], [False]])
@@ -3919,13 +3917,12 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         log_msg = LOG.getvalue()
         self.assertRegex(
             log_msg,
-            "NOTE: No variables.*appear in the active model objective.*constraints"
+            "NOTE: No variables.*appear in the active model objective.*constraints",
         )
         self.assertEqual(res.iterations, 1)
         self.assertAlmostEqual(res.final_objective_value, 0.5)
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_feasible,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
 
     @unittest.skipUnless(ipopt_available, "IPOPT is not available")
@@ -3980,7 +3977,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         m.x = Var(bounds=(1, 2))
         m.z = Var(bounds=(1, 2))
         m.y = Var(bounds=(1, 2))
-        m.obj = Objective(expr=m.x ** 2 + m.z ** 2 + m.y ** 2)
+        m.obj = Objective(expr=m.x**2 + m.z**2 + m.y**2)
 
         ipopt = SolverFactory("ipopt")
         pyros = SolverFactory("pyros")
@@ -4003,8 +4000,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         self.assertAlmostEqual(m.z.value, 1)
         self.assertAlmostEqual(m.y.value, 1)
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_feasible,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
 
     def test_pyros_overlap_dof_vars(self):
