@@ -320,5 +320,4 @@ def _to_dict(x):
     elif xtype in [dict, Munch, MyMunch]:
         return {k: _to_dict(v) for k, v in x.items()}
     else:
-        print(f'Here: {x=} {type(x)}')
         return x.to_dict()

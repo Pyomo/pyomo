@@ -60,11 +60,20 @@ def test_get_pool_policies():
 
 def test_get_max_pool_size():
     pm = PoolManager()
-    assert pm.get_max_pool_size() == None, "Should only be None"
+    assert pm.max_pool_size == None, "Should only be None"
     pm.add_pool("pool_1", policy="keep_all")
-    assert pm.get_max_pool_size() == None, "Should only be None"
+    assert pm.max_pool_size == None, "Should only be None"
     pm.add_pool("pool_2", policy="keep_latest", max_pool_size=1)
-    assert pm.get_max_pool_size() == 1, "Should only be 1"
+    assert pm.max_pool_size == 1, "Should only be 1"
+
+def test_pass_through_parameters():
+    pm = PoolManager()
+    assert pm.max_pool_size == None, "Should only be None"
+    pm.add_pool("pool_1", policy="keep_all")
+    assert pm.max_pool_size == None, "Should only be None"
+    pm.add_pool("pool_2", policy="keep_latest", max_pool_size=1)
+    assert pm.max_pool_size == 1, "Should only be 1"
+
 
 
 def test_get_max_pool_sizes():
@@ -558,10 +567,12 @@ def test_pool_manager_to_dict_passthrough():
             "policy": "keep_best",
         },
         "pool_config": {
-            "abs_tolerance": 1,
-            "max_pool_size": None,
-            "objective": 0,
-            "rel_tolerance": None,
+            'abs_tolerance': 1,
+            'best_value': 0,
+            'max_pool_size': None,
+            'objective': 0,
+            'rel_tolerance': None,
+            'sense_is_min': True,
         },
         "solutions": {
             0: {
@@ -622,10 +633,12 @@ def test_keepbest_add1():
                 "policy": "keep_best",
             },
             "pool_config": {
-                "abs_tolerance": 1,
-                "max_pool_size": None,
-                "objective": 0,
-                "rel_tolerance": None,
+                'abs_tolerance': 1,
+                'best_value': 0,
+                'max_pool_size': None,
+                'objective': 0,
+                'rel_tolerance': None,
+                'sense_is_min': True,
             },
             "solutions": {
                 0: {
@@ -699,10 +712,12 @@ def test_keepbest_add2():
                 "policy": "keep_best",
             },
             "pool_config": {
-                "abs_tolerance": 1,
-                "max_pool_size": None,
-                "objective": 0,
-                "rel_tolerance": None,
+                'abs_tolerance': 1,
+                'best_value': -1,
+                'max_pool_size': None,
+                'objective': 0,
+                'rel_tolerance': None,
+                'sense_is_min': True,
             },
             "solutions": {
                 0: {
@@ -773,9 +788,11 @@ def test_keepbest_add2():
             },
             "pool_config": {
                 "abs_tolerance": 1,
+                'best_value': -1.5,
                 "max_pool_size": None,
                 "objective": 0,
                 "rel_tolerance": None,
+                'sense_is_min': True,
             },
             "solutions": {
                 2: {
@@ -867,9 +884,11 @@ def test_keepbest_add3():
             },
             "pool_config": {
                 "abs_tolerance": 1,
+                'best_value': -1,
                 "max_pool_size": 2,
                 "objective": 0,
                 "rel_tolerance": None,
+                'sense_is_min': True,
             },
             "solutions": {
                 2: {
@@ -923,9 +942,11 @@ def test_keepbest_add3():
             },
             "pool_config": {
                 "abs_tolerance": 1,
+                'best_value': -1.5,
                 "max_pool_size": 2,
                 "objective": 0,
                 "rel_tolerance": None,
+                "sense_is_min":True,
             },
             "solutions": {
                 2: {

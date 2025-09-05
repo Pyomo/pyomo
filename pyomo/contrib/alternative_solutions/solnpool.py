@@ -227,7 +227,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         assert max_pool_size >= 1, "max_pool_size must be positive integer"
         super().__init__(name, as_solution, counter, policy="keep_latest")
         self.max_pool_size = max_pool_size
-        self.int_deque = collections.deque()
+        self._int_deque = collections.deque()
 
     @property
     def pool_config(self):
@@ -259,9 +259,9 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
         #
-        self.int_deque.append(soln.id)
-        if len(self.int_deque) > self.max_pool_size:
-            index = self.int_deque.popleft()
+        self._int_deque.append(soln.id)
+        if len(self._int_deque) > self.max_pool_size:
+            index = self._int_deque.popleft()
             del self._solutions[index]
         #
         self._solutions[soln.id] = soln
@@ -314,8 +314,8 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         assert max_pool_size >= 1, "max_pool_size must be positive integer"
         super().__init__(name, as_solution, counter, policy="keep_latest_unique")
         self.max_pool_size = max_pool_size
-        self.int_deque = collections.deque()
-        self.unique_solutions = set()
+        self._int_deque = collections.deque()
+        self._unique_solutions = set()
 
     @property
     def pool_config(self):
@@ -347,18 +347,18 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         # Return None if the solution has already been added to the pool
         #
         tuple_repn = soln._tuple_repn()
-        if tuple_repn in self.unique_solutions:
+        if tuple_repn in self._unique_solutions:
             return None
-        self.unique_solutions.add(tuple_repn)
+        self._unique_solutions.add(tuple_repn)
         #
         soln.id = self._next_solution_counter()
         assert (
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
         #
-        self.int_deque.append(soln.id)
-        if len(self.int_deque) > self.max_pool_size:
-            index = self.int_deque.popleft()
+        self._int_deque.append(soln.id)
+        if len(self._int_deque) > self.max_pool_size:
+            index = self._int_deque.popleft()
             del self._solutions[index]
         #
         self._solutions[soln.id] = soln
@@ -453,8 +453,8 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         self.rel_tolerance = rel_tolerance
         self.sense_is_min = sense_is_min
         self.best_value = best_value
-        self.heap = []
-        self.unique_solutions = set()
+        self._heap = []
+        self._unique_solutions = set()
 
     @property
     def pool_config(self):
@@ -463,6 +463,8 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             objective=self.objective,
             abs_tolerance=self.abs_tolerance,
             rel_tolerance=self.rel_tolerance,
+            sense_is_min=self.sense_is_min,
+            best_value = self.best_value
         )
 
     def add(self, *args, **kwargs):
@@ -491,9 +493,9 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         # Return None if the solution has already been added to the pool
         #
         tuple_repn = soln._tuple_repn()
-        if tuple_repn in self.unique_solutions:
+        if tuple_repn in self._unique_solutions:
             return None
-        self.unique_solutions.add(tuple_repn)
+        self._unique_solutions.add(tuple_repn)
         #
         value = soln.objective(self.objective).value
         keep = False
@@ -531,18 +533,18 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             self._solutions[soln.id] = soln
             #
             item = HeapItem(value=-value if self.sense_is_min else value, id=soln.id)
-            if self.max_pool_size is None or len(self.heap) < self.max_pool_size:
+            if self.max_pool_size is None or len(self._heap) < self.max_pool_size:
                 # There is room in the pool, so we just add it
-                heapq.heappush(self.heap, item)
+                heapq.heappush(self._heap, item)
             else:
                 # We add the item to the pool and pop the worst item in the pool
-                item = heapq.heappushpop(self.heap, item)
+                item = heapq.heappushpop(self._heap, item)
                 del self._solutions[item.id]
 
             if new_best_value:
                 # We have a new best value, so we need to check that all existing solutions are close enough and re-heapify
                 tmp = []
-                for item in self.heap:
+                for item in self._heap:
                     value = -item.value if self.sense_is_min else item.value
                     diff = (
                         value - self.best_value
@@ -562,11 +564,11 @@ class SolutionPool_KeepBest(SolutionPoolBase):
                     else:
                         del self._solutions[item.id]
                 heapq.heapify(tmp)
-                self.heap = tmp
+                self._heap = tmp
 
             assert len(self._solutions) == len(
-                self.heap
-            ), f"Num solutions is {len(self._solutions)} but the heap size is {len(self.heap)}"
+                self._heap
+            ), f"Num solutions is {len(self._solutions)} but the heap size is {len(self._heap)}"
             return soln.id
 
         return None
@@ -666,10 +668,123 @@ class PoolManager:
 
         """
         return self.active_pool.policy
+    
+    @property
+    def counter(self):
+        return self.active_pool.counter
 
     @property
     def as_solution(self):
+        """
+        Pass through property to return the as_solution conversion method of the active pool.
+
+        Returns
+        ----------
+        Function
+            The as_solution solution conversion method used in the active pool.
+
+        """
         return self.active_pool.as_solution
+    
+    @property
+    def pool_config(self):
+        """
+        Pass through property to return the pool_config of the active pool.
+
+        Returns
+        ----------
+        String
+            The policy used in the active pool.
+
+        """
+        return self.active_pool.pool_config
+    
+    @property
+    def max_pool_size(self):
+        """
+        Pass through property to return the max_pool_size of the active pool.
+        If the pool has that property, it is returned, otherwise None is returned.
+
+        Returns
+        ----------
+        int or None
+            max_pool_size attribute of the active pool, if not defined, returns None
+
+        """
+        return getattr(self.active_pool, "max_pool_size", None)
+    
+    @property
+    def objective(self):
+        """
+        Pass through property to return the objective of the active pool.
+        If the pool has that property, it is returned, otherwise None is returned.
+
+        Returns
+        ----------
+        Pyomo expression or None
+            objective attribute of the active pool, if not defined, returns None
+
+        """
+        return getattr(self.active_pool, "objective", None)
+    
+    @property
+    def abs_tolerance(self):
+        """
+        Pass through property to return the absolute tolerance of the active pool.
+        If the pool has that property, it is returned, otherwise None is returned.
+
+        Returns
+        ----------
+        float or None
+            abs_tolerance attribute of the active pool, if not defined, returns None
+
+        """
+        return getattr(self.active_pool, "abs_tolerance", None)
+    @property
+    def rel_tolerance(self):
+        """
+        Pass through property to return the relative tolerance of the active pool.
+        If the pool has that property, it is returned, otherwise None is returned.
+
+        Returns
+        ----------
+        float or None
+            rel_tolerance attribute of the active pool, if not defined, returns None
+
+        """
+        return getattr(self.active_pool, "rel_tolerance", None)
+    
+    
+    
+    @property
+    def sense_is_min(self):
+        """
+        Pass through property to return the sense of the active pool objective.
+        If the pool has that property, it is returned, otherwise None is returned.
+        If the value exists, true means sense is minimization and false means maximization.
+
+        Returns
+        ----------
+        boolean or None
+            sense_is_min attribute of the active pool, if not defined, returns None
+
+        """
+        return getattr(self.active_pool, "sense_is_min", None)
+    
+    @property
+    def best_value(self):
+        """
+        Pass through property to return the best known objective value of the active pool.
+        If the pool has that property, it is returned, otherwise None is returned.
+
+        Returns
+        ----------
+        float or None
+            best_value attribute of the active pool, if not defined, returns None
+
+        """
+        return getattr(self.active_pool, "best_value", None)
+
 
     def to_dict(self):
         return self.active_pool.to_dict()
@@ -684,8 +799,6 @@ class PoolManager:
     def __getitem__(self, soln_id):
         return self._pools[self._name][soln_id]
 
-    # TODO: I have a note saying we want all pass through methods to be properties
-    # Not sure add works as a property
     def add(self, *args, **kwargs):
         """
         Adds input to active SolutionPool
@@ -848,17 +961,7 @@ class PoolManager:
         """
         return {k: v.policy for k, v in self._pools.items()}
 
-    def get_max_pool_size(self):
-        """
-        Returns the max_pool_size of the active pool if exists, else none
-
-        Returns
-        ----------
-        int or None
-            max_pool_size attribute of the active pool, if not defined, returns None
-
-        """
-        return getattr(self.active_pool, "max_pool_size", None)
+    
 
     def get_max_pool_sizes(self):
         """
