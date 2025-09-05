@@ -175,9 +175,7 @@ def _check_viewsumexpression(expr, i):
         ):
             dv = item
         elif type(item) is EXPR.ProductExpression:
-            # This will contain the constant coefficient if there is one
             lhs = item.arg(0)
-            # This is a potentially variable expression
             rhs = item.arg(1)
             if (
                 type(lhs) in native_numeric_types or not lhs.is_potentially_variable()
@@ -187,6 +185,14 @@ def _check_viewsumexpression(expr, i):
             ):
                 dv = rhs
                 dvcoef = lhs
+            elif (
+                type(rhs) in native_numeric_types or not rhs.is_potentially_variable()
+            ) and (
+                isinstance(lhs, EXPR.GetItemExpression)
+                and type(lhs.arg(0)) is DerivativeVar
+            ):
+                dv = lhs
+                dvcoef = rhs
         else:
             items.append(item)
 

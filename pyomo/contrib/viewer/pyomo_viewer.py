@@ -25,7 +25,7 @@ from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.scripting.pyomo_parser import add_subparser
 
 relocated_module_attribute(
-    'QtApp', 'pyomo.contrib.viewer.pyomo_qtapp.QtApp', version='6.9.3.dev0'
+    'QtApp', 'pyomo.contrib.viewer.pyomo_qtapp.QtApp', version='6.9.3'
 )
 
 qtconsole_app, qtconsole_available = attempt_import(

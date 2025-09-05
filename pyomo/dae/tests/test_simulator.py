@@ -411,6 +411,33 @@ class TestSimulator(unittest.TestCase):
         m.del_component('deqw')
         m.del_component('deqv_index')
         m.del_component('deqw_index')
+
+        def _deqv(m, i):
+            return m.v[i] ** 2 + m.v[i] == 10 * m.dv[i] + m.y
+
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.w[i, j] ** 2 + m.w[i, j] == m.y + m.dw[i, j] * 10
+
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t, 1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t, 2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t, 1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t, 2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+
         m.del_component('w')
         m.del_component('dw')
         m.del_component('p')
