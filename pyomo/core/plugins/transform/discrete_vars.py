@@ -129,7 +129,7 @@ class RelaxIntegerVars(Transformation):
             deprecation_warning(
                 "The 'undo' argument is deprecated. Please use the 'reverse' "
                 "argument to undo the transformation.",
-                version='6.9.3.dev0',
+                version='6.9.3',
             )
             for v, d in model._relaxed_integer_vars[None].values():
                 bounds = v.bounds
@@ -189,7 +189,7 @@ class RelaxIntegerVars(Transformation):
                         "The `transform_deactivated_blocks` arguments is deprecated. "
                         "Either specify deactivated Blocks as targets to activate them "
                         "if transforming them is the desired behavior.",
-                        version='6.9.3.dev0',
+                        version='6.9.3',
                     )
                 else:
                     continue

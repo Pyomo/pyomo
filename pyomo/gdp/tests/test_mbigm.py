@@ -13,7 +13,9 @@ from io import StringIO
 import logging
 from os.path import join, normpath
 import pickle
+import os
 
+from pyomo.common.dependencies import dill_available
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
@@ -44,9 +46,14 @@ from pyomo.gdp.tests.common_tests import (
 from pyomo.gdp.tests.models import make_indexed_equality_model
 from pyomo.repn import generate_standard_repn
 
+
 gurobi_available = (
     SolverFactory('gurobi').available(exception_flag=False)
     and SolverFactory('gurobi').license_is_valid()
+)
+gurobi_direct_available = (
+    SolverFactory('gurobi_direct_v2').available(exception_flag=False)
+    and SolverFactory('gurobi_direct_v2').license_is_valid()
 )
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
@@ -334,7 +341,7 @@ class LinearModelDecisionTreeExample(CommonTests):
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_calculated_Ms_correct(self):
         # Calculating all the Ms is expensive, so we just do it in this one test
-        # and then specify them for the others
+        # and then specify them for most of the others
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
         mbm.apply_to(m, reduce_bound_constraints=False)
@@ -906,6 +913,85 @@ class LinearModelDecisionTreeExample(CommonTests):
             m, mbm, {m.d1: (-1050, 1050), m.d2: (-2000, 1200), m.d3: (-4000, 4000)}
         )
 
+    # A set of tests identical to test_calculated_Ms_correct, except
+    # that we use each possible process spawning method for
+    # multiprocessing
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
+    def test_calculated_Ms_spawn(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m, reduce_bound_constraints=False, threads=3, process_start_method='spawn'
+        )
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_calculated_Ms_singlethreaded(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, reduce_bound_constraints=False, threads=1)
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
+    @unittest.skipIf(os.name == 'nt', "'forkserver' is not available on Windows")
+    def test_calculated_Ms_forkserver(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m,
+            reduce_bound_constraints=False,
+            threads=3,
+            process_start_method='forkserver',
+        )
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipIf(os.name == 'nt', "'fork' is not available on Windows")
+    def test_calculated_Ms_fork(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m, reduce_bound_constraints=False, threads=3, process_start_method='fork'
+        )
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
+    # Make sure we don't choke on a LegacySolverWrapper
+    @unittest.skipUnless(gurobi_direct_available, "Gurobi direct is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
+    def test_calculated_Ms_legacy_solver_wrapper(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m,
+            reduce_bound_constraints=False,
+            threads=3,
+            process_start_method='spawn',
+            solver=SolverFactory('gurobi_direct_v2'),
+        )
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class NestedDisjunctsInFlatGDP(unittest.TestCase):
@@ -1054,15 +1140,21 @@ class EdgeCases(unittest.TestCase):
     )
     def test_calculate_Ms_infeasible_Disjunct_local_solver(self):
         m = self.make_infeasible_disjunct_model()
+        # When multiple exceptions are raised during a
+        # multiprocessing.Pool.map call, it is indeterminate which
+        # exception will be raised to the caller.
         with self.assertRaisesRegex(
             GDP_Error,
             r"Unsuccessful solve to calculate M value to "
-            r"relax constraint 'disjunction_disjuncts\[1\].constraint\[1\]' "
-            r"on Disjunct 'disjunction_disjuncts\[1\]' when "
-            r"Disjunct 'disjunction_disjuncts\[0\]' is selected.",
+            r"relax constraint 'disjunction_disjuncts\[\d+\].constraint\[\d+\]' "
+            r"on Disjunct 'disjunction_disjuncts\[\d+\]' when "
+            r"Disjunct 'disjunction_disjuncts\[\d+\]' is selected.",
         ):
             TransformationFactory('gdp.mbigm').apply_to(
-                m, solver=SolverFactory('ipopt'), reduce_bound_constraints=False
+                m,
+                solver=SolverFactory('ipopt'),
+                reduce_bound_constraints=False,
+                use_primal_bound=True,
             )
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
