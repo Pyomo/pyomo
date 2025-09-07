@@ -281,7 +281,9 @@ class PyROS(object):
             Keyword arguments to each statement of ``logger.log()``.
         """
         if exclude_options is None:
-            exclude_options = self._DEFAULT_CONFIG_USER_OPTIONS
+            exclude_options = set(self._DEFAULT_CONFIG_USER_OPTIONS)
+        else:
+            exclude_options = set(exclude_options)
 
         logger.log(msg="Full solver options:", **log_kwargs)
         for key, val in config.items():
