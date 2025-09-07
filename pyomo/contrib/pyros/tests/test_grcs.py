@@ -3775,6 +3775,48 @@ class TestPyROSSubproblemWriter(unittest.TestCase):
         )
 
 
+class ZeroDimensionalSet(UncertaintySet):
+    @property
+    def geometry(self):
+        return Geometry.LINEAR
+
+    @property
+    def parameter_bounds(self):
+        return []
+
+    @property
+    def dim(self):
+        return 0
+
+    @property
+    def type(self):
+        return "zero-d"
+
+    def validate(self, config):
+        pass
+
+    def point_in_set(self, point):
+        if list(point):
+            raise ValueError
+        return True
+
+    def set_as_constraint(self, uncertain_params=None, block=None):
+        block, params, cons, auxvars = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                num_auxiliary_vars=None,
+                dim=0,
+            )
+        )
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=params,
+            auxiliary_vars=auxvars,
+            uncertainty_cons=list(cons.values()),
+        )
+
+
 class TestPyROSSolverAdvancedValidation(unittest.TestCase):
     """
     Test PyROS solver validation routines result in
@@ -3835,6 +3877,44 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
                 local_solver=local_solver,
                 global_solver=global_solver,
             )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available")
+    def test_pyros_trivial_block(self):
+        """
+        Test PyROS solver operates on a block with no variables
+        or uncertain parameters.
+        """
+        mdl = ConcreteModel()
+        mdl.obj = Objective(expr=0)
+
+        # prepare solvers
+        ipopt = SolverFactory("ipopt")
+        pyros = SolverFactory("pyros")
+
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            res = pyros.solve(
+                model=mdl,
+                first_stage_variables=[],
+                second_stage_variables=[],
+                uncertain_params=[],
+                uncertainty_set=ZeroDimensionalSet(),
+                local_solver=ipopt,
+                global_solver=ipopt,
+                objective_focus="worst_case",
+            )
+
+        log_msg = LOG.getvalue()
+        self.assertRegex(
+            log_msg,
+            "NOTE: No variables.*appear in the active model objective.*constraints",
+        )
+        # need 2 iterations to satisfy epigraph constraint
+        # due to worst-case objective focus
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 0)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
+        )
 
     @parameterized.expand([[True], [False]])
     @unittest.skipUnless(ipopt_available, "IPOPT is not available")
@@ -3931,47 +4011,6 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         Test PyROS works for a model with no uncertain
         parameters (zero-dimensional uncertainty set).
         """
-
-        class ZeroDimensionalSet(UncertaintySet):
-            @property
-            def geometry(self):
-                return Geometry.LINEAR
-
-            @property
-            def parameter_bounds(self):
-                return []
-
-            @property
-            def dim(self):
-                return 0
-
-            @property
-            def type(self):
-                return "zero-d"
-
-            def validate(self, config):
-                pass
-
-            def point_in_set(self, point):
-                if list(point):
-                    raise ValueError
-                return True
-
-            def set_as_constraint(self, uncertain_params=None, block=None):
-                block, params, cons, auxvars = (
-                    _setup_standard_uncertainty_set_constraint_block(
-                        block=block,
-                        uncertain_param_vars=uncertain_params,
-                        num_auxiliary_vars=None,
-                        dim=0,
-                    )
-                )
-                return UncertaintyQuantification(
-                    block=block,
-                    uncertain_param_vars=params,
-                    auxiliary_vars=auxvars,
-                    uncertainty_cons=list(cons.values()),
-                )
 
         m = ConcreteModel()
         m.x = Var(bounds=(1, 2))
