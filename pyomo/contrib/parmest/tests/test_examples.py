@@ -194,6 +194,15 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         datarec_example.main()
 
+    def test_update_suffix_example(self):
+        from pyomo.contrib.parmest.examples.reactor_design import update_suffix_example
+
+        suffix_obj, new_vals, new_var_vals = update_suffix_example.main()
+
+        # Check that the suffix object has been updated correctly
+        for i, v in enumerate(new_var_vals):
+            self.assertAlmostEqual(new_var_vals[i], new_vals[i], places=6)
+
 
 if __name__ == "__main__":
     unittest.main()

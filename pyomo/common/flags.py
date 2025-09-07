@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
+import pyomo
 import inspect
 import sys
 
@@ -115,7 +115,13 @@ def building_documentation(state=NOTSET):
         building_documentation.state = state
     if building_documentation.state is not None:
         return bool(building_documentation.state)
-    return 'sphinx' in sys.modules or 'Sphinx' in sys.modules
+    # Note that we previously detected if Sphinx was running by looking
+    # for it in sys.modules.  That proved to be fragile as other
+    # packages (notably sphinx-jinja2-compat) started causing Sphinx to
+    # be imported immediately any time Python started.  We work around
+    # this by having Pyomo's Sphinx conf.py add a flag to an
+    # easy-to-find location.
+    return bool(getattr(pyomo, '__sphinx_build__', False))
 
 
 building_documentation.state = None

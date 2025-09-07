@@ -37,6 +37,7 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 import pyomo.common.unittest as unittest
 
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.core.base
 from pyomo.core.base.util import flatten_tuple
 from pyomo.environ import (
@@ -2754,36 +2755,45 @@ class TestSetArgs2(PyomoModel):
         #
         # Create data file to test a successful validation using indexed sets
         #
-        OUTPUT = open(currdir + "setsAB.dat", "w")
-        OUTPUT.write(
-            "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5; end;"
-        )
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
-        self.model.B = Set(self.model.Z, validate=lambda model, x, i: x in model.A[i])
-        self.instance = self.model.create_instance(currdir + "setsAB.dat")
+        with TempfileManager.new_context() as TMP:
+            file = TMP.create_tempfile('setsAB.dat')
+            with open(file, 'w') as OUTPUT:
+                OUTPUT.write(
+                    "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5; end;"
+                )
+            #
+            # Create A with an error
+            #
+            self.model.Z = Set()
+            self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
+            self.model.B = Set(
+                self.model.Z, validate=lambda model, x, i: x in model.A[i]
+            )
+            self.instance = self.model.create_instance(file)
 
     def test_validation3_fail(self):
         #
         # Create data file to test a failed validation using indexed sets
         #
-        OUTPUT = open(currdir + "setsAB.dat", "w")
-        OUTPUT.write(
-            "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5 6; end;"
-        )
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
-        self.model.B = Set(self.model.Z, validate=lambda model, x, i: x in model.A[i])
-        with self.assertRaisesRegex(ValueError, ".*violates the validation rule of"):
-            self.instance = self.model.create_instance(currdir + "setsAB.dat")
+
+        with TempfileManager.new_context() as TMP:
+            file = TMP.create_tempfile('setsAB.dat')
+            with open(file, 'w') as OUTPUT:
+                OUTPUT.write(
+                    "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5 6; end;"
+                )
+            #
+            # Create A with an error
+            #
+            self.model.Z = Set()
+            self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
+            self.model.B = Set(
+                self.model.Z, validate=lambda model, x, i: x in model.A[i]
+            )
+            with self.assertRaisesRegex(
+                ValueError, ".*violates the validation rule of"
+            ):
+                self.instance = self.model.create_instance(file)
 
     def test_validation4_pass(self):
         #
