@@ -3824,8 +3824,8 @@ class TestPyROSNoVarsParams(unittest.TestCase):
     @unittest.skipUnless(ipopt_available, "IPOPT is not available")
     def test_pyros_trivial_block(self):
         """
-        Test PyROS solver operates on a block with no variables
-        or uncertain parameters.
+        Test PyROS solver successfully operates on a model
+        with no variables, constraints, or uncertain parameters.
         """
         mdl = ConcreteModel()
         mdl.obj = Objective(expr=0)
@@ -3863,9 +3863,9 @@ class TestPyROSNoVarsParams(unittest.TestCase):
     @unittest.skipUnless(ipopt_available, "IPOPT is not available")
     def test_pyros_only_state_vars(self, add_x_out_of_scope):
         """
-        Test PyROS solver functions as expected if the only
-        user-provided variables in the problem scope are
-        state variables.
+        Test PyROS solver successfully operates on a model with
+        no first-stage variables or second-stage variables in
+        the problem scope.
         """
         mdl = ConcreteModel()
         mdl.q = Param(initialize=0.5, mutable=True)
@@ -3910,7 +3910,7 @@ class TestPyROSNoVarsParams(unittest.TestCase):
     @unittest.skipUnless(ipopt_available, "IPOPT is not available")
     def test_pyros_no_vars(self, add_var_out_of_scope):
         """
-        Test PyROS solver raises exception raised if there are
+        Test PyROS solver successfully operates on a model with
         no variables appearing in the active model objective
         or constraints.
         """
@@ -3951,7 +3951,7 @@ class TestPyROSNoVarsParams(unittest.TestCase):
     @unittest.skipUnless(ipopt_available, "IPOPT is not available")
     def test_pyros_no_uncertain_params(self):
         """
-        Test PyROS works for a model with no uncertain
+        Test PyROS successfully operates on a model with no uncertain
         parameters (zero-dimensional uncertainty set).
         """
 
