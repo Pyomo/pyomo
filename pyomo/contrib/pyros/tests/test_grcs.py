@@ -3392,17 +3392,58 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
     Test logging of introductory information by PyROS solver.
     """
 
+    def test_log_config_user_values(self):
+        """
+        Test method for logging config user values.
+        """
+        pyros_solver = SolverFactory("pyros")
+        config = pyros_solver.CONFIG(dict(
+            # mandatory arguments to PyROS solver.
+            # by default, these should be excluded from the printout
+            first_stage_variables=[],
+            second_stage_variables=[],
+            uncertain_params=[],
+            uncertainty_set=BoxSet([[1, 2]]),
+            local_solver=SimpleTestSolver(),
+            global_solver=SimpleTestSolver(),
+            # optional arguments. these should be included
+            decision_rule_order=1,
+            objective_focus="worst_case",
+        ))
+        with LoggingIntercept(logger=logger, level=logging.INFO) as LOG:
+            pyros_solver._log_config_user_values(
+                logger=logger,
+                config=config,
+                level=logging.INFO,
+            )
+
+        ans = (
+            "User-provided solver options:\n"
+            f" objective_focus={ObjectiveType.worst_case!r}\n"
+            " decision_rule_order=1\n"
+            + "-" * 78 + "\n"
+        )
+        logged_str = LOG.getvalue()
+        self.assertEqual(
+            logged_str,
+            ans,
+            msg=(
+                "Logger output for PyROS solver config (default case) "
+                "does not match expected result."
+            ),
+        )
+
     def test_log_config(self):
         """
         Test method for logging PyROS solver config dict.
         """
         pyros_solver = SolverFactory("pyros")
         config = pyros_solver.CONFIG(dict(nominal_uncertain_param_vals=[0.5]))
-        with LoggingIntercept(level=logging.INFO) as LOG:
-            pyros_solver._log_config(logger=logger, config=config, level=logging.INFO)
+        with LoggingIntercept(logger=logger, level=logging.DEBUG) as LOG:
+            pyros_solver._log_config(logger=logger, config=config, level=logging.DEBUG)
 
         ans = (
-            "Solver options:\n"
+            "Full solver options:\n"
             " time_limit=None\n"
             " keepfiles=False\n"
             " tee=False\n"
@@ -4247,6 +4288,43 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
 
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
 class TestResolveAndValidatePyROSInputs(unittest.TestCase):
+    def test_validate_pyros_inputs_config_options(self):
+        """
+        Test config setup order of precedence is as expected.
+        """
+        model = build_leyffer_two_cons()
+        box_set = BoxSet(bounds=[[0.25, 2]])
+        solver = SimpleTestSolver()
+        pyros_solver = SolverFactory("pyros")
+        config, _ = pyros_solver._resolve_and_validate_pyros_args(
+            model=model,
+            first_stage_variables=[model.x1, model.x2],
+            second_stage_variables=[],
+            uncertain_params=model.u,
+            uncertainty_set=box_set,
+            local_solver=solver,
+            global_solver=solver,
+            decision_rule_order=1,
+            bypass_local_separation=True,
+            options=dict(
+                solve_master_globally=True,
+                bypass_local_separation=False,
+            ),
+        )
+        self.assertEqual(config.first_stage_variables, [model.x1, model.x2])
+        self.assertFalse(config.second_stage_variables)
+        self.assertEqual(config.uncertain_params, [model.u])
+        self.assertIs(config.uncertainty_set, box_set)
+        self.assertIs(config.local_solver, solver)
+        self.assertIs(config.global_solver, solver)
+        self.assertEqual(config.decision_rule_order, 1)
+        # was specified directly by keyword and indirectly
+        # through 'options'. value specified directly should
+        # take precedence
+        self.assertTrue(config.bypass_local_separation)
+        # was specified indirectly through "options"
+        self.assertTrue(config.solve_master_globally)
+
     def test_validate_pyros_inputs_config(self):
         """
         Test PyROS solver input validation sets up the
