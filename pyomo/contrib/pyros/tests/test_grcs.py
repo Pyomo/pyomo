@@ -3370,6 +3370,31 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
     Test logging of introductory information by PyROS solver.
     """
 
+    def test_log_config_user_values_all_default(self):
+        """
+        Test method for logging config user values logs
+        nothing if all values are set to default.
+        """
+        pyros_solver = SolverFactory("pyros")
+        config = pyros_solver.CONFIG(dict(
+            # mandatory arguments to PyROS solver.
+            # by default, these should be excluded from the printout
+            first_stage_variables=[],
+            second_stage_variables=[],
+            uncertain_params=[],
+            uncertainty_set=BoxSet([[1, 2]]),
+            local_solver=SimpleTestSolver(),
+            global_solver=SimpleTestSolver(),
+            # no optional arguments
+        ))
+        with LoggingIntercept(logger=logger, level=logging.INFO) as LOG:
+            pyros_solver._log_config_user_values(
+                logger=logger,
+                config=config,
+                level=logging.INFO,
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
     def test_log_config_user_values(self):
         """
         Test method for logging config user values.

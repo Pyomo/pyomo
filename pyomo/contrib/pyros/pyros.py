@@ -227,19 +227,41 @@ class PyROS(object):
             ):
         """
         Log explicitly set PyROS solver options.
+
+        If there are no such options, or all such options
+        are to be excluded from consideration, then nothing is logged.
+
+        Parameters
+        ----------
+        logger : logging.Logger
+            Logger for the solver options.
+        config : ConfigDict
+            PyROS solver options.
+        exclude_options : None or iterable of str, optional
+            Options (keys of the ConfigDict) to exclude from
+            logging. If `None` passed, then the names of the
+            required arguments to ``self.solve()`` are skipped.
+        **log_kwargs : dict, optional
+            Keyword arguments to each statement of ``logger.log()``.
         """
         if exclude_options is None:
-            exclude_options = self._DEFAULT_CONFIG_USER_OPTIONS
+            exclude_options = set(self._DEFAULT_CONFIG_USER_OPTIONS)
+        else:
+            exclude_options = set(exclude_options)
 
-        logger.log(msg="User-provided solver options:", **log_kwargs)
-        for val in config.user_values():
-            val_name, val_value = val.name(), val.value()
-            # note: first clause of if statement
+        user_values = list(filter(
+            # note: first clause of logical expression
             #       accounts for bug(?) causing an iterate
             #       of user_values to be the config dict itself
-            if val_name and val_name not in exclude_options:
+            lambda val: bool(val.name()) and val.name() not in exclude_options,
+            config.user_values(),
+        ))
+        if user_values:
+            logger.log(msg="User-provided solver options:", **log_kwargs)
+            for val in user_values:
+                val_name, val_value = val.name(), val.value()
                 logger.log(msg=f" {val_name}={val_value!r}", **log_kwargs)
-        logger.log(msg="-" * self._LOG_LINE_LENGTH, **log_kwargs)
+            logger.log(msg="-" * self._LOG_LINE_LENGTH, **log_kwargs)
 
     def _log_config(self, logger, config, exclude_options=None, **log_kwargs):
         """
