@@ -295,8 +295,8 @@ class PyROS(object):
            through direct argument 'options'.
         2. Inter-argument validation.
         """
-        kwargs = kwds.pop("options", {})
-        kwargs.update(**kwds)
+        # prioritize entries of kwds over entries of kwds['options']
+        kwargs = {**kwds.pop("options", {}), **kwds}
         config = self.CONFIG(value=kwargs)
         user_var_partitioning = validate_pyros_inputs(model, config)
         return config, user_var_partitioning
