@@ -228,7 +228,6 @@ class PyROS(object):
         """
         Log explicitly set PyROS solver options.
         """
-        # log solver options
         if exclude_options is None:
             exclude_options = self._DEFAULT_CONFIG_USER_OPTIONS
 
@@ -259,7 +258,6 @@ class PyROS(object):
         **log_kwargs : dict, optional
             Keyword arguments to each statement of ``logger.log()``.
         """
-        # log solver options
         if exclude_options is None:
             exclude_options = self._DEFAULT_CONFIG_USER_OPTIONS
 
