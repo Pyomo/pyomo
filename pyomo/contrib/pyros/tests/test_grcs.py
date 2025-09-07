@@ -3801,13 +3801,11 @@ class ZeroDimensionalSet(UncertaintySet):
         return True
 
     def set_as_constraint(self, uncertain_params=None, block=None):
-        block, params, cons, auxvars = (
-            _setup_standard_uncertainty_set_constraint_block(
-                block=block,
-                uncertain_param_vars=uncertain_params,
-                num_auxiliary_vars=None,
-                dim=0,
-            )
+        block, params, cons, auxvars = _setup_standard_uncertainty_set_constraint_block(
+            block=block,
+            uncertain_param_vars=uncertain_params,
+            num_auxiliary_vars=None,
+            dim=0,
         )
         return UncertaintyQuantification(
             block=block,
@@ -3817,66 +3815,11 @@ class ZeroDimensionalSet(UncertaintySet):
         )
 
 
-class TestPyROSSolverAdvancedValidation(unittest.TestCase):
+class TestPyROSNoVarsParams(unittest.TestCase):
     """
-    Test PyROS solver validation routines result in
-    expected normal or exceptional solver behavior
-    depending on the arguments.
+    Test PyROS is capable of solving models without variables
+    or uncertain parameters.
     """
-
-    def build_simple_test_model(self):
-        """
-        Build simple valid test model.
-        """
-        return build_leyffer()
-
-    def test_pyros_invalid_model_type(self):
-        """
-        Test PyROS fails if model is not of correct class.
-        """
-        mdl = self.build_simple_test_model()
-
-        local_solver = SimpleTestSolver()
-        global_solver = SimpleTestSolver()
-
-        pyros = SolverFactory("pyros")
-
-        exc_str = "Model should be of type.*but is of type.*"
-        with self.assertRaisesRegex(TypeError, exc_str):
-            pyros.solve(
-                model=2,
-                first_stage_variables=[mdl.x1],
-                second_stage_variables=[mdl.x2],
-                uncertain_params=[mdl.u],
-                uncertainty_set=BoxSet([[1 / 4, 2]]),
-                local_solver=local_solver,
-                global_solver=global_solver,
-            )
-
-    def test_pyros_multiple_objectives(self):
-        """
-        Test PyROS raises exception if input model has multiple
-        objectives.
-        """
-        mdl = self.build_simple_test_model()
-        mdl.obj2 = Objective(expr=(mdl.x1 + mdl.x2))
-
-        local_solver = SimpleTestSolver()
-        global_solver = SimpleTestSolver()
-
-        pyros = SolverFactory("pyros")
-
-        exc_str = "Expected model with exactly 1 active.*but.*has 2"
-        with self.assertRaisesRegex(ValueError, exc_str):
-            pyros.solve(
-                model=mdl,
-                first_stage_variables=[mdl.x1],
-                second_stage_variables=[mdl.x2],
-                uncertain_params=[mdl.u],
-                uncertainty_set=BoxSet([[1 / 4, 2]]),
-                local_solver=local_solver,
-                global_solver=global_solver,
-            )
 
     @unittest.skipUnless(ipopt_available, "IPOPT is not available")
     def test_pyros_trivial_block(self):
@@ -4041,6 +3984,68 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         self.assertEqual(
             res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
+
+
+class TestPyROSSolverAdvancedValidation(unittest.TestCase):
+    """
+    Test PyROS solver validation routines result in
+    expected normal or exceptional solver behavior
+    depending on the arguments.
+    """
+
+    def build_simple_test_model(self):
+        """
+        Build simple valid test model.
+        """
+        return build_leyffer()
+
+    def test_pyros_invalid_model_type(self):
+        """
+        Test PyROS fails if model is not of correct class.
+        """
+        mdl = self.build_simple_test_model()
+
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        pyros = SolverFactory("pyros")
+
+        exc_str = "Model should be of type.*but is of type.*"
+        with self.assertRaisesRegex(TypeError, exc_str):
+            pyros.solve(
+                model=2,
+                first_stage_variables=[mdl.x1],
+                second_stage_variables=[mdl.x2],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+            )
+
+    def test_pyros_multiple_objectives(self):
+        """
+        Test PyROS raises exception if input model has multiple
+        objectives.
+        """
+        mdl = self.build_simple_test_model()
+        mdl.obj2 = Objective(expr=(mdl.x1 + mdl.x2))
+
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        pyros = SolverFactory("pyros")
+
+        exc_str = "Expected model with exactly 1 active.*but.*has 2"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pyros.solve(
+                model=mdl,
+                first_stage_variables=[mdl.x1],
+                second_stage_variables=[mdl.x2],
+                uncertain_params=[mdl.u],
+                uncertainty_set=BoxSet([[1 / 4, 2]]),
+                local_solver=local_solver,
+                global_solver=global_solver,
+            )
 
     def test_pyros_overlap_dof_vars(self):
         """
