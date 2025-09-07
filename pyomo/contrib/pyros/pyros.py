@@ -235,6 +235,9 @@ class PyROS(object):
         logger.log(msg="User-provided solver options:", **log_kwargs)
         for val in config.user_values():
             val_name, val_value = val.name(), val.value()
+            # note: first clause of if statement
+            #       accounts for bug(?) causing an iterate
+            #       of user_values to be the config dict itself
             if val_name and val_name not in exclude_options:
                 logger.log(msg=f" {val_name}={val_value!r}", **log_kwargs)
         logger.log(msg="-" * self._LOG_LINE_LENGTH, **log_kwargs)
