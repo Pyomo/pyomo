@@ -1600,7 +1600,13 @@ class ConfigBase(object):
 
         # ... and set the value, if appropriate
         if value is not NOTSET:
-            ans.set_value(value)
+            # Change in response to Pyomo/pyomo#3721
+            # If setting a ConfigDict from a (nonempty) dict during __call__,
+            # do not mark the container itself as user-set; only the children.
+            if isinstance(ans, ConfigDict) and isinstance(value, dict):
+                ans.set_value(value, _mark_container_userSet=False)
+            else:
+                ans.set_value(value)
         return ans
 
     def name(self, fully_qualified=False):
@@ -2580,7 +2586,7 @@ class ConfigDict(ConfigBase, Mapping):
             self._userAccessed = True
         return {cfg._name: cfg.value(accessValue) for cfg in self._data.values()}
 
-    def set_value(self, value, skip_implicit=False):
+    def set_value(self, value, skip_implicit=False, _mark_container_userSet=True):
         if value is None:
             return self
         if isinstance(value, str):
@@ -2631,7 +2637,9 @@ class ConfigDict(ConfigBase, Mapping):
             self.reset()
             self.set_value(_old_data)
             raise
-        self._userSet = True
+        # Change in response to Pyomo/pyomo#3721
+        if _mark_container_userSet:
+            self._userSet = True
         return self
 
     def reset(self):
