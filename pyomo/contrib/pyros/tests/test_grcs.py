@@ -3096,6 +3096,9 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=True,
             all_sep_problems_solved=True,
             global_separation=False,
+            master_backup_solver=False,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3129,6 +3132,9 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=False,
             all_sep_problems_solved=True,
             global_separation=False,
+            master_backup_solver=False,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3167,6 +3173,9 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=True,
             all_sep_problems_solved=True,
             global_separation=True,
+            master_backup_solver=False,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3181,6 +3190,96 @@ class TestIterationLogRecord(unittest.TestCase):
         self.assertEqual(
             ans,
             result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_iter_log_record_master_backup(self):
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+            master_backup_solver=True,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00* 2.3457e-08   3.4568e-07   10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_iter_log_record_separation_backup(self):
+        # for some fields, we choose floats with more than four
+        # four decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+            master_backup_solver=False,
+            separation_backup_local_solver=True,
+            separation_backup_global_solver=False,
+        )
+
+        # backup solver for local separation only
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+        self.assertEqual(
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10^     7.6543e-03   "
+            "21.200       \n",
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+        # backup solver for global separation only
+        iter_record.separation_backup_global_solver = True
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result2 = LOG.getvalue()
+        self.assertEqual(
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10^*    7.6543e-03   "
+            "21.200       \n",
+            result2,
+            msg="Iteration log record message does not match expected result",
+        )
+
+        # backup solver for local and global separation
+        iter_record.separation_backup_local_solver = False
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result3 = LOG.getvalue()
+        self.assertEqual(
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10*     7.6543e-03   "
+            "21.200       \n",
+            result3,
             msg="Iteration log record message does not match expected result",
         )
 
@@ -3208,6 +3307,9 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=True,
             all_sep_problems_solved=False,
             global_separation=False,
+            master_backup_solver=False,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3244,6 +3346,9 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=False,
             all_sep_problems_solved=False,
             global_separation=True,
+            master_backup_solver=False,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3283,6 +3388,9 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=True,
             all_sep_problems_solved=False,
             global_separation=True,
+            master_backup_solver=False,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected

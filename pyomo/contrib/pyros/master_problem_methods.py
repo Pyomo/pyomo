@@ -787,7 +787,7 @@ def solver_call_master(master_data):
 
     for idx, opt in enumerate(solvers):
         if idx > 0:
-            config.progress_logger.warning(
+            config.progress_logger.debug(
                 f"Invoking backup solver {opt!r} "
                 f"(solver {idx + 1} of {len(solvers)}) for "
                 f"master problem of iteration {master_data.iteration}."

@@ -1014,12 +1014,15 @@ def solver_call_separation(
     )
     for idx, opt in enumerate(solvers):
         if idx > 0:
-            config.progress_logger.warning(
+            config.progress_logger.debug(
                 f"Invoking backup solver {opt!r} "
                 f"(solver {idx + 1} of {len(solvers)}) for {solve_mode} "
                 f"separation of second-stage inequality constraint {con_name_repr} "
                 f"in iteration {separation_data.iteration}."
             )
+            # TODO: confirm this is sufficient for tracking
+            #       discrete separation backup solver usage
+            solve_call_results.backup_solver_used = True
         results = call_solver(
             model=separation_model,
             solver=opt,

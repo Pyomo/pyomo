@@ -3329,6 +3329,15 @@ class IterationLogRecord:
         found during separation step.
     elapsed_time : float, optional
         Total time elapsed up to the current iteration, in seconds.
+    master_backup_solver : bool
+        True if a backup subordinate optimizer was used to solve the
+        master problem, False otherwise.
+    separation_backup_local_solver : bool
+        True if a backup subordinate local optimizer was used
+        to solve at least one separation problem, False otherwise.
+    separation_backup_global_solver : bool
+        True if a backup subordinate global optimizer was used
+        to solve at least one separation problem, False otherwise.
 
     Attributes
     ----------
@@ -3368,6 +3377,15 @@ class IterationLogRecord:
         found during separation step.
     elapsed_time : float
         Total time elapsed up to the current iteration, in seconds.
+    master_backup_solver : bool
+        True if a backup subordinate optimizer was used to solve the
+        master problem, False otherwise.
+    separation_backup_local_solver : bool
+        True if a backup subordinate local optimizer was used
+        to solve at least one separation problem, False otherwise.
+    separation_backup_global_solver : bool
+        True if a backup subordinate global optimizer was used
+        to solve at least one separation problem, False otherwise.
     """
 
     _LINE_LENGTH = 78
@@ -3403,6 +3421,9 @@ class IterationLogRecord:
         num_violated_cons,
         all_sep_problems_solved,
         global_separation,
+        master_backup_solver,
+        separation_backup_local_solver,
+        separation_backup_global_solver,
         max_violation,
         elapsed_time,
     ):
@@ -3416,6 +3437,9 @@ class IterationLogRecord:
         self.num_violated_cons = num_violated_cons
         self.all_sep_problems_solved = all_sep_problems_solved
         self.global_separation = global_separation
+        self.master_backup_solver = master_backup_solver
+        self.separation_backup_local_solver = separation_backup_local_solver
+        self.separation_backup_global_solver = separation_backup_global_solver
         self.max_violation = max_violation
         self.elapsed_time = elapsed_time
 
@@ -3455,7 +3479,12 @@ class IterationLogRecord:
             if attr_name in ["second_stage_var_shift", "dr_var_shift"]:
                 qual = "*" if not self.dr_polishing_success else ""
             elif attr_name == "num_violated_cons":
-                qual = "+" if not self.all_sep_problems_solved else ""
+                all_solved_qual = "+" if not self.all_sep_problems_solved else ""
+                bkp_local_qual = "^" if self.separation_backup_local_solver else ""
+                bkp_global_qual = "*" if self.separation_backup_global_solver else ""
+                qual = all_solved_qual + bkp_local_qual + bkp_global_qual
+            elif attr_name == "objective":
+                qual = "*" if self.master_backup_solver else ""
             elif attr_name == "max_violation":
                 qual = "g" if self.global_separation else ""
             else:
