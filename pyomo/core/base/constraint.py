@@ -16,7 +16,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 from typing import Union, Type
 
-from pyomo.common.deprecation import RenamedClass
+from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
@@ -63,7 +63,8 @@ logger = logging.getLogger('pyomo.core')
 TEMPLATIZE_CONSTRAINTS = False
 
 _inf = float('inf')
-_nonfinite_values = {_inf, -_inf}
+_ninf = -_inf
+_nonfinite_values = {_inf, _ninf}
 _known_relational_expression_types = {
     EqualityExpression,
     InequalityExpression,
@@ -246,21 +247,31 @@ class ConstraintData(ActiveComponentData):
 
         if evaluate_bounds:
             lb, body, ub = ans
-            return self._evaluate_bound(lb, True), body, self._evaluate_bound(ub, False)
+            return self._evaluate_bound(lb, _ninf), body, self._evaluate_bound(ub, _inf)
         return ans
 
-    def _evaluate_bound(self, bound, is_lb):
+    def _evaluate_bound(self, bound, unbounded):
         if bound is None:
             return None
         if bound.__class__ not in native_numeric_types:
-            bound = float(value(bound))
+            bound = value(bound)
+            if bound.__class__ not in native_numeric_types:
+                # Starting in numpy 1.25, casting 1-element ndarray to
+                # float is deprecated.  We still want to support
+                # that... but without enforcing a hard numpy dependence
+                for cls in bound.__class__.__mro__:
+                    if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
+                        if len(bound) == 1:
+                            bound = bound[0]
+                        break
+                bound = float(bound)
         # Note that "bound != bound" catches float('nan')
         if bound in _nonfinite_values or bound != bound:
-            if bound == (-_inf if is_lb else _inf):
+            if bound == unbounded:
                 return None
             raise ValueError(
                 f"Constraint '{self.name}' created with an invalid non-finite "
-                f"{'lower' if is_lb else 'upper'} bound ({bound})."
+                f"{'upper' if unbounded==_inf else 'lower'} bound ({bound})."
             )
         return bound
 
@@ -333,12 +344,12 @@ class ConstraintData(ActiveComponentData):
     @property
     def lb(self):
         """float : the value of the lower bound of a constraint expression."""
-        return self._evaluate_bound(self.to_bounded_expression()[0], True)
+        return self._evaluate_bound(self.to_bounded_expression()[0], _ninf)
 
     @property
     def ub(self):
         """float : the value of the upper bound of a constraint expression."""
-        return self._evaluate_bound(self.to_bounded_expression()[2], False)
+        return self._evaluate_bound(self.to_bounded_expression()[2], _inf)
 
     @property
     def equality(self):
@@ -527,7 +538,41 @@ class _GeneralConstraintData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class TemplateConstraintData(ConstraintData):
+class TemplateDataMixin:
+    __slots__ = ()
+
+    @property
+    def expr(self):
+        # Note that it is faster to just generate the expression from
+        # scratch than it is to clone it and replace the IndexTemplate objects
+        self.set_value(self.parent_component()._rule(self.parent_block(), self.index()))
+        return self.expr
+
+    def template_expr(self):
+        return self._expr
+
+    def set_value(self, expr):
+        # Setting a value will convert this instance from a templatized
+        # type to the original Data type (and call the original set_value()).
+        #
+        # Note: We assume that the templatized type is created by
+        # inheriting (TemplateDataMixin, <original data class>), and
+        # that this instance doesn't have additional multiple
+        # inheritance that could re-order the MRO.
+        self.__class__ = self.__class__.__mro__[
+            self.__class__.__mro__.index(TemplateDataMixin) + 1
+        ]
+        return self.set_value(expr)
+
+    def to_bounded_expression(self, evaluate_bounds=False):
+        tmp, self._expr = self._expr, self._expr[0]
+        try:
+            return super().to_bounded_expression(evaluate_bounds)
+        finally:
+            self._expr = tmp
+
+
+class TemplateConstraintData(TemplateDataMixin, ConstraintData):
     __slots__ = ()
 
     def __init__(self, template_info, component, index):
@@ -540,27 +585,6 @@ class TemplateConstraintData(ConstraintData):
         self._active = True
         self._index = index
         self._expr = template_info
-
-    @property
-    def expr(self):
-        # Note that it is faster to just generate the expression from
-        # scratch than it is to clone it and replace the IndexTemplate objects
-        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
-        return self.expr
-
-    def template_expr(self):
-        return self._expr
-
-    def set_value(self, expr):
-        self.__class__ = ConstraintData
-        return self.set_value(expr)
-
-    def to_bounded_expression(self):
-        tmp, self._expr = self._expr, self._expr[0]
-        try:
-            return super().to_bounded_expression()
-        finally:
-            self._expr = tmp
 
 
 @ModelComponentFactory.register("General constraint expressions.")
@@ -640,9 +664,9 @@ class Constraint(ActiveIndexedComponent):
         _init = self._pop_from_kwargs('Constraint', kwargs, ('rule', 'expr'), None)
         # Special case: we accept 2- and 3-tuples as constraints
         if type(_init) is tuple:
-            self.rule = Initializer(_init, treat_sequences_as_mappings=False)
+            self._rule = Initializer(_init, treat_sequences_as_mappings=False)
         else:
-            self.rule = Initializer(_init)
+            self._rule = Initializer(_init)
 
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
@@ -663,7 +687,7 @@ class Constraint(ActiveIndexedComponent):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        rule = self.rule
+        rule = self._rule
         try:
             # We do not (currently) accept data for constructing Constraints
             index = None
@@ -695,11 +719,17 @@ class Constraint(ActiveIndexedComponent):
                 if TEMPLATIZE_CONSTRAINTS:
                     try:
                         template_info = templatize_constraint(self)
-                        comp = weakref_ref(self)
-                        self._data = {
-                            idx: TemplateConstraintData(template_info, comp, idx)
-                            for idx in self.index_set()
-                        }
+                        if self.is_indexed():
+                            comp = weakref_ref(self)
+                            self._data = {
+                                idx: TemplateConstraintData(template_info, comp, idx)
+                                for idx in self.index_set()
+                            }
+                        else:
+                            assert self.__class__ is ScalarConstraint
+                            self.__class__ = TemplateScalarConstraint
+                            self._expr = template_info
+                            self._data = {None: self}
                         return
                     except TemplateExpressionError:
                         pass
@@ -719,9 +749,9 @@ class Constraint(ActiveIndexedComponent):
             timer.report()
 
     def _getitem_when_not_present(self, idx):
-        if self.rule is None:
+        if self._rule is None:
             raise KeyError(idx)
-        con = self._setitem_when_not_present(idx, self.rule(self.parent_block(), idx))
+        con = self._setitem_when_not_present(idx, self._rule(self.parent_block(), idx))
         if con is None:
             raise KeyError(idx)
         return con
@@ -745,6 +775,20 @@ class Constraint(ActiveIndexedComponent):
                 v.active,
             ],
         )
+
+    @property
+    def rule(self):
+        return self._rule
+
+    @rule.setter
+    @deprecated(
+        f"The 'Constraint.rule' attribute will be made "
+        "read-only in a future Pyomo release.",
+        version='6.9.3',
+        remove_in='6.11',
+    )
+    def rule(self, rule):
+        self._rule = rule
 
     def display(self, prefix="", ostream=None):
         """
@@ -912,6 +956,7 @@ class SimpleConstraint(metaclass=RenamedClass):
 
 @disable_methods(
     {
+        '__call__',
         'add',
         'set_value',
         'to_bounded_expression',
@@ -931,6 +976,10 @@ class AbstractScalarConstraint(ScalarConstraint):
 class AbstractSimpleConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractScalarConstraint
     __renamed__version__ = '6.0'
+
+
+class TemplateScalarConstraint(TemplateDataMixin, ScalarConstraint):
+    pass
 
 
 class IndexedConstraint(Constraint):
@@ -971,14 +1020,14 @@ class ConstraintList(IndexedConstraint):
 
         super().__init__(Set(dimen=1), **kwargs)
 
-        self.rule = Initializer(
+        self._rule = Initializer(
             _rule, treat_sequences_as_mappings=False, allow_generators=True
         )
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
         # reliable.
-        if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(self, self.rule, self._starting_index)
+        if self._rule is not None and type(self._rule) is IndexedCallInitializer:
+            self._rule = CountedCallInitializer(self, self._rule, self._starting_index)
 
     def construct(self, data=None):
         """
@@ -995,8 +1044,8 @@ class ConstraintList(IndexedConstraint):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        if self.rule is not None:
-            _rule = self.rule(self.parent_block(), ())
+        if self._rule is not None:
+            _rule = self._rule(self.parent_block(), ())
             for cc in iter(_rule):
                 if cc is ConstraintList.End:
                     break

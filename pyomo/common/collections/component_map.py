@@ -9,9 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
-from collections.abc import Mapping as collections_Mapping
+from collections.abc import Mapping, MutableMapping
+
 from pyomo.common.autoslots import AutoSlots
+
+from ._hasher import hasher
 
 
 def _rehash_keys(encode, val):
@@ -20,50 +22,10 @@ def _rehash_keys(encode, val):
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
-        return {_hasher[obj.__class__](obj): (obj, v) for obj, v in val.values()}
+        return {hasher[obj.__class__](obj): (obj, v) for obj, v in val.values()}
 
 
-class _Hasher(collections.defaultdict):
-    def __init__(self, *args, **kwargs):
-        super().__init__(lambda: self._missing_impl, *args, **kwargs)
-        self[tuple] = self._tuple
-
-    def _missing_impl(self, val):
-        try:
-            hash(val)
-            self[val.__class__] = self._hashable
-        except:
-            self[val.__class__] = self._unhashable
-        return self[val.__class__](val)
-
-    @staticmethod
-    def _hashable(val):
-        return val
-
-    @staticmethod
-    def _unhashable(val):
-        return id(val)
-
-    def _tuple(self, val):
-        return tuple(self[i.__class__](i) for i in val)
-
-    def hashable(self, obj, hashable=None):
-        if isinstance(obj, type):
-            cls = obj
-        else:
-            cls = type(obj)
-        if hashable is None:
-            fcn = self.get(cls, None)
-            if fcn is None:
-                raise KeyError(obj)
-            return fcn is self._hashable
-        self[cls] = self._hashable if hashable else self._unhashable
-
-
-_hasher = _Hasher()
-
-
-class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
+class ComponentMap(AutoSlots.Mixin, MutableMapping):
     """
     This class is a replacement for dict that allows Pyomo
     modeling components to be used as entry keys. The
@@ -89,9 +51,9 @@ class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
     """
 
     __slots__ = ("_dict",)
-    __autoslot_mappers__ = {'_dict': _rehash_keys}
+    __autoslot_mappers__ = {"_dict": _rehash_keys}
     # Expose a "public" interface to the global _hasher dict
-    hasher = _hasher
+    hasher = hasher
 
     def __init__(self, *args, **kwds):
         # maps id_hash(obj) -> (obj,val)
@@ -110,19 +72,19 @@ class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
 
     def __getitem__(self, obj):
         try:
-            return self._dict[_hasher[obj.__class__](obj)][1]
+            return self._dict[hasher[obj.__class__](obj)][1]
         except KeyError:
-            _id = _hasher[obj.__class__](obj)
+            _id = hasher[obj.__class__](obj)
             raise KeyError(f"{obj} (key={_id})") from None
 
     def __setitem__(self, obj, val):
-        self._dict[_hasher[obj.__class__](obj)] = (obj, val)
+        self._dict[hasher[obj.__class__](obj)] = (obj, val)
 
     def __delitem__(self, obj):
         try:
-            del self._dict[_hasher[obj.__class__](obj)]
+            del self._dict[hasher[obj.__class__](obj)]
         except KeyError:
-            _id = _hasher[obj.__class__](obj)
+            _id = hasher[obj.__class__](obj)
             raise KeyError(f"{obj} (key={_id})") from None
 
     def __iter__(self):
@@ -147,11 +109,11 @@ class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
     def __eq__(self, other):
         if self is other:
             return True
-        if not isinstance(other, collections_Mapping) or len(self) != len(other):
+        if not isinstance(other, Mapping) or len(self) != len(other):
             return False
         # Note we have already verified the dicts are the same size
         for key, val in other.items():
-            other_id = _hasher[key.__class__](key)
+            other_id = hasher[key.__class__](key)
             if other_id not in self._dict:
                 return False
             self_val = self._dict[other_id][1]
@@ -174,20 +136,20 @@ class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
     #
 
     def __contains__(self, obj):
-        return _hasher[obj.__class__](obj) in self._dict
+        return hasher[obj.__class__](obj) in self._dict
 
     def clear(self):
-        'D.clear() -> None.  Remove all items from D.'
+        "D.clear() -> None.  Remove all items from D."
         self._dict.clear()
 
     def get(self, key, default=None):
-        'D.get(k[,d]) -> D[k] if k in D, else d.  d defaults to None.'
+        "D.get(k[,d]) -> D[k] if k in D, else d.  d defaults to None."
         if key in self:
             return self[key]
         return default
 
     def setdefault(self, key, default=None):
-        'D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D'
+        "D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D"
         if key in self:
             return self[key]
         else:
@@ -204,7 +166,7 @@ class DefaultComponentMap(ComponentMap):
 
     """
 
-    __slots__ = ('default_factory',)
+    __slots__ = ("default_factory",)
 
     def __init__(self, default_factory=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -217,7 +179,7 @@ class DefaultComponentMap(ComponentMap):
         return ans
 
     def __getitem__(self, obj):
-        _key = _hasher[obj.__class__](obj)
+        _key = hasher[obj.__class__](obj)
         if _key in self._dict:
             return self._dict[_key][1]
         else:

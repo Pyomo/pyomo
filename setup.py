@@ -219,8 +219,6 @@ setup_kwargs = dict(
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
-            'sphinx-toolbox>=2.16.0',
-            'sphinx-jinja2-compat>=0.1.1',
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],
@@ -275,6 +273,8 @@ setup_kwargs = dict(
     package_data={
         "pyomo.contrib.ampl_function_demo": ["src/*"],
         "pyomo.contrib.appsi.cmodel": ["src/*"],
+        "pyomo.contrib.cspline_external": ["src/*"],
+        "pyomo.contrib.aslfunctions": ["src/*"],
         "pyomo.contrib.mcpp": ["*.cpp"],
         "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
         "pyomo.contrib.viewer": ["*.ui"],

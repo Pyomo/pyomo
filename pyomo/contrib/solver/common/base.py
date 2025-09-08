@@ -17,8 +17,8 @@ from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import Objective, ObjectiveData
-from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
-from pyomo.common.enums import IntEnum
+from pyomo.common.config import ConfigValue, ConfigDict
+from pyomo.common.enums import IntEnum, SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import NOTSET
@@ -63,19 +63,29 @@ class Availability(IntEnum):
 
 
 class SolverBase:
-    """
-    This base class defines the methods required for all solvers:
-        - available: Determines whether the solver is able to be run,
-                     combining both whether it can be found on the system and if the license is valid.
-        - solve: The main method of every solver
-        - version: The version of the solver
-        - is_persistent: Set to false for all non-persistent solvers.
+    """The base class for "new-style" Pyomo solver interfaces.
 
-    Additionally, solvers should have a :attr:`CONFIG<SolverBase.CONFIG>` attribute that
-    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.common.config.SolverConfig>`,
-    :class:`BranchAndBoundConfig<pyomo.contrib.solver.common.config.BranchAndBoundConfig>`,
-    :class:`PersistentSolverConfig<pyomo.contrib.solver.common.config.PersistentSolverConfig>`, or
-    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.common.config.PersistentBranchAndBoundConfig>`.
+    This base class defines the methods all derived solvers are expected
+    to implement:
+
+      - :py:meth:`available`
+      - :py:meth:`is_persistent`
+      - :py:meth:`solve`
+      - :py:meth:`version`
+
+    **Class Configuration**
+
+    All derived concrete implementations of this class must define a
+    class attribute ``CONFIG`` containing the :class:`ConfigDict` that
+    specifies the solver's configuration options.  By convention, the
+    ``CONFIG`` should derive from (or implement a superset of the
+    options from) one of the following:
+
+    - :class:`~pyomo.contrib.solver.common.config.SolverConfig`
+    - :class:`~pyomo.contrib.solver.common.config.BranchAndBoundConfig`
+    - :class:`~pyomo.contrib.solver.common.config.PersistentSolverConfig`
+    - :class:`~pyomo.contrib.solver.common.config.PersistentBranchAndBoundConfig`
+
     """
 
     CONFIG = SolverConfig()
@@ -85,6 +95,8 @@ class SolverBase:
             self.name = kwds.pop('name')
         elif not hasattr(self, 'name'):
             self.name = type(self).__name__.lower()
+
+        #: Instance configuration; see CONFIG documentation on derived class
         self.config = self.CONFIG(value=kwds)
 
     def __enter__(self):
@@ -93,10 +105,20 @@ class SolverBase:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
 
-    @document_kwargs_from_configdict(CONFIG)
-    def solve(self, model: BlockData, **kwargs) -> Results:
+    @classmethod
+    def api_version(self):
         """
-        Solve a Pyomo model.
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V2
+
+    def solve(self, model: BlockData, **kwargs) -> Results:
+        """Solve a Pyomo model.
 
         Parameters
         ----------
@@ -110,6 +132,7 @@ class SolverBase:
         -------
         results: :class:`Results<pyomo.contrib.solver.common.results.Results>`
             A results object
+
         """
         raise NotImplementedError(
             f"Derived class {self.__class__.__name__} failed to implement required method 'solve'."
@@ -143,7 +166,8 @@ class SolverBase:
         )
 
     def version(self) -> Tuple:
-        """
+        """Return the solver version found on the system.
+
         Returns
         -------
         version: tuple
@@ -154,7 +178,8 @@ class SolverBase:
         )
 
     def is_persistent(self) -> bool:
-        """
+        """``True`` if this supports a persistent interface to the solver.
+
         Returns
         -------
         is_persistent: bool
@@ -178,7 +203,6 @@ class PersistentSolverBase(SolverBase):
         super().__init__(**kwds)
         self._active_config = self.config
 
-    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model: BlockData, **kwargs) -> Results:
         """
         Solve a Pyomo model.
@@ -384,9 +408,27 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
+    class _all_true:
+        # A mockup of Bunch that returns True for all attribute lookups
+        # or containment tests.
+        def __getattr__(self, name):
+            return True
+
+        def __contains__(self, name):
+            return True
+
+    class _UpdatableConfigDict(ConfigDict):
+        # The legacy solver interface used Option objects.  we will make
+        # the ConfigDict *look* like an Option by supporting update()
+        __slots__ = ()
+
+        def update(self, value):
+            return self.set_value(value)
+
     def __init__(self, **kwargs):
-        if 'solver_io' in kwargs:
-            raise NotImplementedError('Still working on this')
+        solver_io = kwargs.pop('solver_io', None)
+        if solver_io:
+            raise NotImplementedError(f'Still working on this ({solver_io=})')
         # There is no reason for a user to be trying to mix both old
         # and new options. That is silly. So we will yell at them.
         _options = kwargs.pop('options', None)
@@ -401,8 +443,14 @@ class LegacySolverWrapper:
             kwargs['solver_options'] = _options
         super().__init__(**kwargs)
         # Make the legacy 'options' attribute an alias of the new
-        # config.solver_options
+        # config.solver_options; change its class so it behaves more
+        # like an old Bunch/Options object.
         self.options = self.config.solver_options
+        self.options.__class__ = LegacySolverWrapper._UpdatableConfigDict
+        # We will assume the solver interface supports all capabilities
+        # (unless a derived class actually set something
+        if not hasattr(self, '_capabilities'):
+            self._capabilities = LegacySolverWrapper._all_true()
 
     #
     # Support "with" statements
@@ -543,7 +591,7 @@ class LegacySolverWrapper:
         self, load_solutions, model, results, legacy_results, legacy_soln
     ):
         """Method to handle the preferred action for the solution"""
-        symbol_map = SymbolMap()
+        symbol_map = legacy_soln.symbol_map = SymbolMap()
         symbol_map.default_labeler = NumericLabeler('x')
         if not hasattr(model, 'solutions'):
             # This logic gets around Issue #2130 in which
@@ -552,6 +600,7 @@ class LegacySolverWrapper:
 
             setattr(model, 'solutions', ModelSolutions(model))
         model.solutions.add_symbol_map(symbol_map)
+        legacy_results._smap = symbol_map
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True
         if load_solutions:
@@ -573,10 +622,12 @@ class LegacySolverWrapper:
                     legacy_soln.variable['Rc'] = val
 
         legacy_results.solution.insert(legacy_soln)
-        # Timing info was not originally on the legacy results, but we want
-        # to make it accessible to folks who are utilizing the backwards
-        # compatible version.
-        legacy_results.timing_info = results.timing_info
+        # Timing info was not originally on the legacy results, but we
+        # want to make it accessible to folks who are utilizing the
+        # backwards compatible version.  Note that embedding the
+        # ConfigDict broke pickling the legacy_results, so we will only
+        # return raw nested dicts
+        legacy_results.timing_info = results.timing_info.value()
         if delete_legacy_soln:
             legacy_results.solution.delete(0)
         return legacy_results
@@ -687,3 +738,9 @@ class LegacySolverWrapper:
         opts = {k: v for k, v in options.value().items() if v is not None}
         if opts:
             self._map_config(**opts)
+
+    def warm_start_capable(self):
+        return False
+
+    def default_variable_value(self):
+        return None

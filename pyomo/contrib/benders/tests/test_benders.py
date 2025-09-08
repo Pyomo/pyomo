@@ -17,7 +17,15 @@ from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 
 ipopt_available = pyo.SolverFactory('ipopt').available(exception_flag=False)
 
-for mip_name in ('cplex_direct', 'gurobi_direct', 'gurobi', 'cplex', 'glpk', 'cbc'):
+for mip_name in (
+    'cplex_direct',
+    'gurobi_direct',
+    'gurobi',
+    'cplex',
+    'glpk',
+    'cbc',
+    'highs',
+):
     mip_available = pyo.SolverFactory(mip_name).available(exception_flag=False)
     if mip_available:
         break
