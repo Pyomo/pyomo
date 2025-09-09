@@ -744,3 +744,15 @@ class LegacySolverWrapper:
 
     def default_variable_value(self):
         return None
+
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1
