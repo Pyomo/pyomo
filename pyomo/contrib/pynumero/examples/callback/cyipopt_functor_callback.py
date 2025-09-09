@@ -19,7 +19,7 @@ values from each iteration in a class
 """
 
 
-class ResidualsTableCallback(object):
+class ResidualsTableCallback:
     def __init__(self):
         self._residuals = None
 

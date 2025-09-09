@@ -35,12 +35,12 @@ from pyomo.solvers.plugins.solvers.CPLEX import (
 )
 
 
-class _mock_cplex_128(object):
+class _mock_cplex_128:
     def version(self):
         return (12, 8, 0)
 
 
-class _mock_cplex_126(object):
+class _mock_cplex_126:
     def version(self):
         return (12, 6, 0)
 

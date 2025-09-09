@@ -143,7 +143,7 @@ def make_lower_triangular_full(lower_triangular_matrix):
     return coo_matrix((data, (row, col)), shape=lower_triangular_matrix.shape)
 
 
-class CondensedSparseSummation(object):
+class CondensedSparseSummation:
     def __init__(self, list_of_matrices):
         """
         This class is used to perform a summation of sparse matrices

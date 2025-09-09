@@ -23,7 +23,7 @@ def build_ampl_function_demo(user_args=[], parallel=None):
     )
 
 
-class AMPLFunctionDemoBuilder(object):
+class AMPLFunctionDemoBuilder:
     def __call__(self, parallel):
         return build_ampl_function_demo(parallel=parallel)
 

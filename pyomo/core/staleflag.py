@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-class _StaleFlagManager(object):
+class _StaleFlagManager:
     def __init__(self):
         self._current = 0
         self.mark_all_as_stale()
