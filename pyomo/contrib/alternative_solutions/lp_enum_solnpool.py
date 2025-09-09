@@ -19,7 +19,7 @@ gurobipy, gurobi_available = attempt_import("gurobipy")
 
 import pyomo.environ as pyo
 import pyomo.common.errors
-from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, solution
+from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, PyomoPoolManager
 from pyomo.contrib import appsi
 
 
@@ -33,6 +33,7 @@ class NoGoodCutGenerator:
         all_variables,
         orig_objective,
         num_solutions,
+        poolmanager,
     ):
         self.model = model
         self.zero_threshold = zero_threshold
@@ -41,8 +42,9 @@ class NoGoodCutGenerator:
         self.orig_model = orig_model
         self.all_variables = all_variables
         self.orig_objective = orig_objective
-        self.solutions = []
         self.num_solutions = num_solutions
+        self.poolmanager = poolmanager
+        self.soln_count = 0
 
     def cut_generator_callback(self, cb_m, cb_opt, cb_where):
         if cb_where == gurobipy.GRB.Callback.MIPSOL:
@@ -51,13 +53,18 @@ class NoGoodCutGenerator:
 
             for var, index in self.model.var_map.items():
                 var.set_value(var.lb + self.model.var_lower[index].value)
-            sol = solution.Solution(
-                self.orig_model, self.all_variables, objective=self.orig_objective
+            self.poolmanager.add(
+                variables=self.all_variables, objective=self.orig_objective
             )
-            self.solutions.append(sol)
 
-            if len(self.solutions) >= self.num_solutions:
+            # We explicitly count the number of solutions generated, rather than rely on the
+            # size of the solution pool, since that may be configured to filter
+            # solutions.
+            self.soln_count += 1
+
+            if self.soln_count >= self.num_solutions:
                 cb_opt._solver_model.terminate()
+
             num_non_zero = 0
             non_zero_basic_expr = 1
             for idx in range(len(self.variable_groups)):
@@ -86,6 +93,7 @@ def enumerate_linear_solutions_soln_pool(
     zero_threshold=1e-5,
     solver_options={},
     tee=False,
+    poolmanager=None,
 ):
     """
     Finds alternative optimal solutions for a (mixed-binary) linear program
@@ -96,7 +104,7 @@ def enumerate_linear_solutions_soln_pool(
     model : ConcreteModel
         A concrete Pyomo model
     num_solutions : int
-        The maximum number of solutions to generate.
+        The maximum number of solutions to generate. Must be positive.
     variables: None or a collection of Pyomo _GeneralVarData variables
         The variables for which bounds will be generated. None indicates
         that all variables will be included. Alternatively, a collection of
@@ -116,14 +124,24 @@ def enumerate_linear_solutions_soln_pool(
         Solver option-value pairs to be passed to the solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
+    poolmanager : None
+        Optional pool manager that will be used to collect solution
 
     Returns
     -------
-    solutions
-        A list of Solution objects.
-        [Solution]
+    poolmanager
+        A PyomoPoolManager object
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
+
+    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if num_solutions == 1:
+        logger.warning("Running alternative_solutions method to find only 1 solution!")
+
+    if poolmanager is None:
+        poolmanager = PyomoPoolManager()
+        poolmanager.add_pool("enumerate_binary_solutions", policy="keep_all")
+
     #
     # Setup gurobi
     #
@@ -217,6 +235,7 @@ def enumerate_linear_solutions_soln_pool(
         all_variables,
         orig_objective,
         num_solutions,
+        poolmanager,
     )
 
     opt = appsi.solvers.Gurobi()
@@ -232,4 +251,4 @@ def enumerate_linear_solutions_soln_pool(
     aos_block.deactivate()
     logger.info("COMPLETED LP ENUMERATION ANALYSIS")
 
-    return cut_generator.solutions
+    return cut_generator.poolmanager
