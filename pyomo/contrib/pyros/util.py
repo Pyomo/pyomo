@@ -3480,11 +3480,14 @@ class IterationLogRecord:
                 qual = "*" if not self.dr_polishing_success else ""
             elif attr_name == "num_violated_cons":
                 all_solved_qual = "+" if not self.all_sep_problems_solved else ""
-                bkp_local_qual = "^" if self.separation_backup_local_solver else ""
-                bkp_global_qual = "*" if self.separation_backup_global_solver else ""
-                qual = all_solved_qual + bkp_local_qual + bkp_global_qual
+                bkp_qual = (
+                    "^" if self.separation_backup_local_solver
+                    or self.separation_backup_global_solver
+                    else ""
+                )
+                qual = all_solved_qual + bkp_qual
             elif attr_name == "objective":
-                qual = "*" if self.master_backup_solver else ""
+                qual = "^" if self.master_backup_solver else ""
             elif attr_name == "max_violation":
                 qual = "g" if self.global_separation else ""
             else:

@@ -3215,7 +3215,7 @@ class TestIterationLogRecord(unittest.TestCase):
 
         # now check record logged as expected
         ans = (
-            "4     1.2346e+00* 2.3457e-08   3.4568e-07   10      7.6543e-03   "
+            "4     1.2346e+00^ 2.3457e-08   3.4568e-07   10      7.6543e-03   "
             "21.200       \n"
         )
         with LoggingIntercept(level=logging.INFO) as LOG:
@@ -3265,7 +3265,7 @@ class TestIterationLogRecord(unittest.TestCase):
             iter_record.log(logger.info)
         result2 = LOG.getvalue()
         self.assertEqual(
-            "4     1.2346e+00  2.3457e-08   3.4568e-07   10^*    7.6543e-03   "
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10^     7.6543e-03   "
             "21.200       \n",
             result2,
             msg="Iteration log record message does not match expected result",
@@ -3277,7 +3277,7 @@ class TestIterationLogRecord(unittest.TestCase):
             iter_record.log(logger.info)
         result3 = LOG.getvalue()
         self.assertEqual(
-            "4     1.2346e+00  2.3457e-08   3.4568e-07   10*     7.6543e-03   "
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10^     7.6543e-03   "
             "21.200       \n",
             result3,
             msg="Iteration log record message does not match expected result",
