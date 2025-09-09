@@ -14,6 +14,9 @@ Containers for PyROS subproblem solve results.
 """
 
 
+from pyomo.opt import check_optimal_termination
+
+
 class ROSolveResults(object):
     """
     PyROS solver results object.
@@ -128,6 +131,17 @@ class MasterResults:
         False otherwise.
         """
         return len(self.master_results_list) > 1
+
+    @property
+    def feasibility_problem_success(self):
+        """
+        bool : True if the feasibility problem was solved
+        successfully, False otherwise.
+        """
+        return (
+            self.feasibility_problem_results is None
+            or check_optimal_termination(self.feasibility_problem_results)
+        )
 
 
 class SeparationSolveCallResults:

@@ -3097,6 +3097,7 @@ class TestIterationLogRecord(unittest.TestCase):
             all_sep_problems_solved=True,
             global_separation=False,
             master_backup_solver=False,
+            master_feasibility_success=True,
             separation_backup_local_solver=False,
             separation_backup_global_solver=False,
         )
@@ -3104,6 +3105,44 @@ class TestIterationLogRecord(unittest.TestCase):
         # now check record logged as expected
         ans = (
             "4     1.2346e+00  2.3457e-08   3.4568e-07   10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_log_iter_record_master_feasibility_failed(self):
+        """
+        Test iteration log record in event of master feasibility
+        problem failure.
+        """
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+            master_backup_solver=False,
+            master_feasibility_success=False,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08*  3.4568e-07   10      7.6543e-03   "
             "21.200       \n"
         )
         with LoggingIntercept(level=logging.INFO) as LOG:
@@ -3133,6 +3172,7 @@ class TestIterationLogRecord(unittest.TestCase):
             all_sep_problems_solved=True,
             global_separation=False,
             master_backup_solver=False,
+            master_feasibility_success=True,
             separation_backup_local_solver=False,
             separation_backup_global_solver=False,
         )
@@ -3174,6 +3214,7 @@ class TestIterationLogRecord(unittest.TestCase):
             all_sep_problems_solved=True,
             global_separation=True,
             master_backup_solver=False,
+            master_feasibility_success=True,
             separation_backup_local_solver=False,
             separation_backup_global_solver=False,
         )
@@ -3209,6 +3250,7 @@ class TestIterationLogRecord(unittest.TestCase):
             all_sep_problems_solved=True,
             global_separation=False,
             master_backup_solver=True,
+            master_feasibility_success=True,
             separation_backup_local_solver=False,
             separation_backup_global_solver=False,
         )
@@ -3244,6 +3286,7 @@ class TestIterationLogRecord(unittest.TestCase):
             all_sep_problems_solved=True,
             global_separation=False,
             master_backup_solver=False,
+            master_feasibility_success=True,
             separation_backup_local_solver=True,
             separation_backup_global_solver=False,
         )
@@ -3308,6 +3351,7 @@ class TestIterationLogRecord(unittest.TestCase):
             all_sep_problems_solved=False,
             global_separation=False,
             master_backup_solver=False,
+            master_feasibility_success=True,
             separation_backup_local_solver=False,
             separation_backup_global_solver=False,
         )
@@ -3347,6 +3391,7 @@ class TestIterationLogRecord(unittest.TestCase):
             all_sep_problems_solved=False,
             global_separation=True,
             master_backup_solver=False,
+            master_feasibility_success=True,
             separation_backup_local_solver=False,
             separation_backup_global_solver=False,
         )
@@ -3389,6 +3434,7 @@ class TestIterationLogRecord(unittest.TestCase):
             all_sep_problems_solved=False,
             global_separation=True,
             master_backup_solver=False,
+            master_feasibility_success=True,
             separation_backup_local_solver=False,
             separation_backup_global_solver=False,
         )

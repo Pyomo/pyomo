@@ -3332,6 +3332,9 @@ class IterationLogRecord:
     master_backup_solver : bool
         True if a backup subordinate optimizer was used to solve the
         master problem, False otherwise.
+    master_feasibility_success : bool
+        True if the master feasibility problem was solved
+        successfully, False otherwise.
     separation_backup_local_solver : bool
         True if a backup subordinate local optimizer was used
         to solve at least one separation problem, False otherwise.
@@ -3380,6 +3383,9 @@ class IterationLogRecord:
     master_backup_solver : bool
         True if a backup subordinate optimizer was used to solve the
         master problem, False otherwise.
+    master_feasibility_success : bool
+        True if the master feasibility problem was solved
+        successfully, False otherwise.
     separation_backup_local_solver : bool
         True if a backup subordinate local optimizer was used
         to solve at least one separation problem, False otherwise.
@@ -3422,6 +3428,7 @@ class IterationLogRecord:
         all_sep_problems_solved,
         global_separation,
         master_backup_solver,
+        master_feasibility_success,
         separation_backup_local_solver,
         separation_backup_global_solver,
         max_violation,
@@ -3438,6 +3445,7 @@ class IterationLogRecord:
         self.all_sep_problems_solved = all_sep_problems_solved
         self.global_separation = global_separation
         self.master_backup_solver = master_backup_solver
+        self.master_feasibility_success = master_feasibility_success
         self.separation_backup_local_solver = separation_backup_local_solver
         self.separation_backup_global_solver = separation_backup_global_solver
         self.max_violation = max_violation
@@ -3486,6 +3494,8 @@ class IterationLogRecord:
                     else ""
                 )
                 qual = all_solved_qual + bkp_qual
+            elif attr_name == "first_stage_var_shift":
+                qual = "*" if not self.master_feasibility_success else ""
             elif attr_name == "objective":
                 qual = "^" if self.master_backup_solver else ""
             elif attr_name == "max_violation":
