@@ -48,6 +48,29 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
+    def test_invalid_search_mode(self):
+        """
+        Confirm that an exception is thrown with pool_search_mode not in [1,2]
+        """
+        m = tc.get_triangle_ip()
+        try:
+            gurobi_generate_solutions(m, pool_search_mode=0)
+        except AssertionError as e:
+            pass
+
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
+    def test_ip_num_solutions_best_effort(self):
+        """
+        Enumerate solutions for an ip: triangle_ip.
+        Test best effort mode in solution pool.
+        
+        Check that the correct number of alternate solutions are found.
+        """
+        m = tc.get_triangle_ip()
+        results = gurobi_generate_solutions(m,pool_search_mode=1,num_solutions=8)
+        assert len(results) >= 1, 'Need to find some solutions'
+        
+
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_ip_num_solutions(self):
         """

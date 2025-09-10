@@ -29,6 +29,7 @@ def gurobi_generate_solutions(
     abs_opt_gap=None,
     solver_options={},
     tee=False,
+    pool_search_mode=2,
 ):
     """
     Finds alternative optimal solutions for discrete variables using Gurobi's
@@ -56,6 +57,10 @@ def gurobi_generate_solutions(
         Solver option-value pairs to be passed to the Gurobi solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
+    pool_search_mode : 1 or 2
+        The generation method for filling the pool.
+        This parameter maps to the PoolSearchMode in gurobi.
+        Method designed to work with value 2 as optimality ordered.
 
     Returns
     -------
@@ -69,10 +74,20 @@ def gurobi_generate_solutions(
     if not opt.available():
         raise ApplicationError("Solver (gurobi) not available")
 
+    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if num_solutions == 1:
+        logger.warning("Running alternative_solutions method to find only 1 solution!")
+
+    assert pool_search_mode in [1, 2], "pool_search_mode must be 1 or 2"
+    if pool_search_mode == 1:
+        logger.warning(
+            "Running gurobi_solnpool with PoolSearchMode=1, best effort search may lead to unexpected behavior"
+        )
+
     opt.config.stream_solver = tee
     opt.config.load_solution = False
     opt.gurobi_options["PoolSolutions"] = num_solutions
-    opt.gurobi_options["PoolSearchMode"] = 2
+    opt.gurobi_options["PoolSearchMode"] = pool_search_mode
     if rel_opt_gap is not None:
         opt.gurobi_options["PoolGap"] = rel_opt_gap
     if abs_opt_gap is not None:
