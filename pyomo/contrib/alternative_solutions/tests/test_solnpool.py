@@ -63,13 +63,12 @@ class TestSolnPoolUnit(unittest.TestCase):
         """
         Enumerate solutions for an ip: triangle_ip.
         Test best effort mode in solution pool.
-        
+
         Check that the correct number of alternate solutions are found.
         """
         m = tc.get_triangle_ip()
-        results = gurobi_generate_solutions(m,pool_search_mode=1,num_solutions=8)
+        results = gurobi_generate_solutions(m, pool_search_mode=1, num_solutions=8)
         assert len(results) >= 1, 'Need to find some solutions'
-        
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_ip_num_solutions(self):
