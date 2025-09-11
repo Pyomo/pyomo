@@ -532,9 +532,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
 
-        print(jac_FD)
-        print(jac)
-
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
@@ -629,8 +626,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Get numerical derivative matrix
         hess_FD = get_numerical_second_derivative(grey_box_object)
-        print("hess_FD", hess_FD)
-        print("hess_gb", hess_gb)
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
@@ -1015,12 +1010,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Solve the model
         doe_object.run_doe()
-
-        print("Termination Message")
-        print(doe_object.results["Termination Message"])
-        print(cyipopt_call_working)
-        print(bad_message in doe_object.results["Termination Message"])
-        print("End Message")
 
         optimal_time_val = doe_object.results["Experiment Design"][0]
         optimal_obj_val = np.log10(np.exp(pyo.value(doe_object.model.objective)))
