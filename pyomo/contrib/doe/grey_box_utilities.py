@@ -310,6 +310,10 @@ class FIMExternalGreyBox(
         else:
             ObjectiveLib(self.objective_option)
 
+        # We are only using the triangle,
+        # so we need to add the off-diagonals
+        # twice.
+        jac_M = 2 * jac_M - np.diag(np.diag(jac_M))
         # Filter jac_M using the
         # masking matrix
         jac_M = jac_M[self._masking_matrix > 0]
@@ -402,6 +406,22 @@ class FIMExternalGreyBox(
                 hess_rows.append(row)
                 hess_cols.append(col)
 
+                # Hessian needs to be handled carefully because of
+                # the ``missing`` components when only passing
+                # a triangular version of the FIM.
+                #
+                # The general format is that fully diagonal elements
+                # (i == j AND k == l) require no additional counting
+                # of the computed term. Off-diagonal elements
+                # (i != j OR k != l) add one instance. Having two
+                # off-diagonal elements (i != j AND k != l) will add
+                # two instances. Finally, if the off-diagonal elements
+                # are not the same ((i != j AND k != l) AND (i != k))
+                # there is an additional element. A more detailed
+                # explanation is included in the documentation.
+                multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
+                hess_vals[-1] += multiplier * (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
+
         elif self.objective_option == ObjectiveLib.determinant:
             # Grab inverse
             Minv = np.linalg.pinv(M)
@@ -424,6 +444,13 @@ class FIMExternalGreyBox(
                 hess_vals.append(-(Minv[i, l] * Minv[k, j]))
                 hess_rows.append(row)
                 hess_cols.append(col)
+
+                # See explanation above in trace hessian code
+                # for more brief information. Also, you may
+                # consult the documentation for a detailed
+                # description.
+                multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
+                hess_vals[-1] += -multiplier * (Minv[i, l] * Minv[k, j])
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             # Grab eigenvalues and eigenvectors
             # Also need the min location
@@ -482,6 +509,13 @@ class FIMExternalGreyBox(
                 hess_vals.append(curr_hess_val)
                 hess_rows.append(row)
                 hess_cols.append(col)
+
+                # See explanation above in trace hessian code
+                # for more brief information. Also, you may
+                # consult the documentation for a detailed
+                # description.
+                multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
+                hess_vals[-1] += multiplier * curr_hess_val
         elif self.objective_option == ObjectiveLib.condition_number:
             pass
         else:
