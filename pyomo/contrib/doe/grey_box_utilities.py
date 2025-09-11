@@ -420,7 +420,9 @@ class FIMExternalGreyBox(
                 # there is an additional element. A more detailed
                 # explanation is included in the documentation.
                 multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
-                hess_vals[-1] += multiplier * (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
+                hess_vals[-1] += multiplier * (Minv[i, l] * Minv_sq[k, j]) + (
+                    Minv_sq[i, l] * Minv[k, j]
+                )
 
         elif self.objective_option == ObjectiveLib.determinant:
             # Grab inverse
