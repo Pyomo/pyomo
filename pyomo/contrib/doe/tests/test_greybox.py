@@ -215,9 +215,11 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
         for i in ordered_quads:
             row = ordered_pairs_list.index(i[0])
             col = ordered_pairs_list.index(i[1])
-            numerical_derivative_reduced[row, col] = numerical_derivative[
-                i[0][0], i[0][1], i[1][0], i[1][1]
-            ]
+            i, j, k, l = i[0][0], i[0][1], i[1][0], i[1][1]
+            multiplier = 1 + ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
+            numerical_derivative_reduced[row, col] = (
+                multiplier * numerical_derivative[i, j, k, l]
+            )
 
         numerical_derivative_reduced += (
             numerical_derivative_reduced.transpose()
@@ -524,7 +526,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Recover the Jacobian in Matrix Form
         jac = np.zeros_like(grey_box_object._get_FIM())
         jac[np.triu_indices_from(jac)] = utri_vals_jac
-        jac += jac.transpose() - np.diag(np.diag(jac))
+        jac += jac.transpose()
+        jac = jac / 2
 
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
@@ -547,7 +550,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Recover the Jacobian in Matrix Form
         jac = np.zeros_like(grey_box_object._get_FIM())
         jac[np.triu_indices_from(jac)] = utri_vals_jac
-        jac += jac.transpose() - np.diag(np.diag(jac))
+        jac += jac.transpose()
+        jac = jac / 2
 
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
@@ -570,7 +574,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Recover the Jacobian in Matrix Form
         jac = np.zeros_like(grey_box_object._get_FIM())
         jac[np.triu_indices_from(jac)] = utri_vals_jac
-        jac += jac.transpose() - np.diag(np.diag(jac))
+        jac += jac.transpose()
+        jac = jac / 2
 
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
@@ -593,7 +598,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Recover the Jacobian in Matrix Form
         jac = np.zeros_like(grey_box_object._get_FIM())
         jac[np.triu_indices_from(jac)] = utri_vals_jac
-        jac += jac.transpose() - np.diag(np.diag(jac))
+        jac += jac.transpose()
+        jac = jac / 2
 
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
@@ -990,7 +996,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # (time, optimal objective value)
         # Here, the objective value is
         # log-10(determinant) of the FIM
-        optimal_experimental_designs = [np.array([2.24, 4.33]), np.array([10.00, 4.35])]
+        optimal_experimental_designs = [
+            np.array([1.782, 4.34]),
+            np.array([10.00, 4.35]),
+        ]
         objective_option = "determinant"
         doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
             objective_option=objective_option
@@ -1001,12 +1010,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Solve the model
         doe_object.run_doe()
-
-        print("Termination Message")
-        print(doe_object.results["Termination Message"])
-        print(cyipopt_call_working)
-        print(bad_message in doe_object.results["Termination Message"])
-        print("End Message")
 
         optimal_time_val = doe_object.results["Experiment Design"][0]
         optimal_obj_val = np.log10(np.exp(pyo.value(doe_object.model.objective)))
@@ -1035,7 +1038,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Here, the objective value is
         # trace(inverse(FIM))
         optimal_experimental_designs = [
-            np.array([1.94, 0.0295]),
+            np.array([1.33, 0.0277]),
             np.array([9.9, 0.0366]),
         ]
         objective_option = "trace"
@@ -1076,7 +1079,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Here, the objective value is
         # minimum eigenvalue of the FIM
         optimal_experimental_designs = [
-            np.array([1.92, 36.018]),
+            np.array([1.30, 38.70]),
             np.array([10.00, 28.349]),
         ]
         objective_option = "minimum_eigenvalue"
@@ -1117,7 +1120,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Here, the objective value is
         # condition number of the FIM
         optimal_experimental_designs = [
-            np.array([1.59, 15.22]),
+            np.array([0.943, 13.524]),
             np.array([10.00, 27.675]),
         ]
         objective_option = "condition_number"
