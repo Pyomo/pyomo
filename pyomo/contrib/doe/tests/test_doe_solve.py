@@ -553,6 +553,8 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(
             ff_results["eigval_min"], eigval_min_expected, abstol=1e-4
         )
+        # abstol of 1e-4 removed for the following values as
+        # their non-log values are large (e.g., >1e10) 
         self.assertStructuredAlmostEqual(ff_results["eigval_max"], eigval_max_expected)
         self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
         self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
