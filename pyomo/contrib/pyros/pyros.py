@@ -207,7 +207,7 @@ class PyROS(object):
         disclaimer_header = " DISCLAIMER ".center(self._LOG_LINE_LENGTH, "=")
 
         logger.log(msg=disclaimer_header, **log_kwargs)
-        logger.log(msg="PyROS is still under development. ", **log_kwargs)
+        logger.log(msg="PyROS is currently under active development. ", **log_kwargs)
         logger.log(
             msg=(
                 "Please provide feedback and/or report any issues by creating "

@@ -3702,7 +3702,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check regex main text
         self.assertRegex(
             " ".join(disclaimer_msg_lines[1:-1]),
-            r"PyROS is still under development.*ticket at.*",
+            r"PyROS is currently under active development.*ticket at.*",
         )
 
 
