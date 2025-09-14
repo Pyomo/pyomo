@@ -15,6 +15,7 @@ and related objects.
 """
 
 from itertools import product
+import logging
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
@@ -903,21 +904,22 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
     # confirm the initial point is feasible for cases where
     # we expect it to be (i.e. non-discrete uncertainty sets).
     # otherwise, log the violated constraints
-    tol = ABS_CON_CHECK_FEAS_TOL
-    ss_ineq_con_name_repr = get_con_name_repr(
-        separation_model=sep_model, con=ss_ineq_con_to_maximize, with_obj_name=True
-    )
-    uncertainty_set_is_discrete = (
-        config.uncertainty_set.geometry is Geometry.DISCRETE_SCENARIOS
-    )
-    for con in sep_model.component_data_objects(Constraint, active=True):
-        lslack, uslack = con.lslack(), con.uslack()
-        if (lslack < -tol or uslack < -tol) and not uncertainty_set_is_discrete:
-            config.progress_logger.debug(
-                f"Initial point for separation of second-stage ineq constraint "
-                f"{ss_ineq_con_name_repr} violates the model constraint "
-                f"{con.name!r} by more than {tol} ({lslack=}, {uslack=})"
-            )
+    if config.progress_logger.isEnabledFor(logging.DEBUG):
+        tol = ABS_CON_CHECK_FEAS_TOL
+        ss_ineq_con_name_repr = get_con_name_repr(
+            separation_model=sep_model, con=ss_ineq_con_to_maximize, with_obj_name=True
+        )
+        uncertainty_set_is_discrete = (
+            config.uncertainty_set.geometry is Geometry.DISCRETE_SCENARIOS
+        )
+        for con in sep_model.component_data_objects(Constraint, active=True):
+            lslack, uslack = con.lslack(), con.uslack()
+            if (lslack < -tol or uslack < -tol) and not uncertainty_set_is_discrete:
+                config.progress_logger.debug(
+                    f"Initial point for separation of second-stage ineq constraint "
+                    f"{ss_ineq_con_name_repr} violates the model constraint "
+                    f"{con.name!r} by more than {tol} ({lslack=}, {uslack=})"
+                )
 
     for con in sep_model.uncertainty.certain_param_var_cons:
         trivially_infeasible = (
