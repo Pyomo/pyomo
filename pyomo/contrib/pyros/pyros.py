@@ -219,12 +219,8 @@ class PyROS(object):
         logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
 
     def _log_config_user_values(
-            self,
-            logger,
-            config,
-            exclude_options=None,
-            **log_kwargs,
-            ):
+        self, logger, config, exclude_options=None, **log_kwargs
+    ):
         """
         Log explicitly set PyROS solver options.
 
@@ -249,13 +245,15 @@ class PyROS(object):
         else:
             exclude_options = set(exclude_options)
 
-        user_values = list(filter(
-            # note: first clause of logical expression
-            #       accounts for bug(?) causing an iterate
-            #       of user_values to be the config dict itself
-            lambda val: bool(val.name()) and val.name() not in exclude_options,
-            config.user_values(),
-        ))
+        user_values = list(
+            filter(
+                # note: first clause of logical expression
+                #       accounts for bug(?) causing an iterate
+                #       of user_values to be the config dict itself
+                lambda val: bool(val.name()) and val.name() not in exclude_options,
+                config.user_values(),
+            )
+        )
         if user_values:
             logger.log(msg="User-provided solver options:", **log_kwargs)
             for val in user_values:

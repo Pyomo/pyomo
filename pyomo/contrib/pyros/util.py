@@ -3489,7 +3489,8 @@ class IterationLogRecord:
             elif attr_name == "num_violated_cons":
                 all_solved_qual = "+" if not self.all_sep_problems_solved else ""
                 bkp_qual = (
-                    "^" if self.separation_backup_local_solver
+                    "^"
+                    if self.separation_backup_local_solver
                     or self.separation_backup_global_solver
                     else ""
                 )

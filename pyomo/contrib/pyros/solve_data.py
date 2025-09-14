@@ -138,9 +138,8 @@ class MasterResults:
         bool : True if the feasibility problem was solved
         successfully, False otherwise.
         """
-        return (
-            self.feasibility_problem_results is None
-            or check_optimal_termination(self.feasibility_problem_results)
+        return self.feasibility_problem_results is None or check_optimal_termination(
+            self.feasibility_problem_results
         )
 
 

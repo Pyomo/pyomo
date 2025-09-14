@@ -3530,22 +3530,22 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         nothing if all values are set to default.
         """
         pyros_solver = SolverFactory("pyros")
-        config = pyros_solver.CONFIG(dict(
-            # mandatory arguments to PyROS solver.
-            # by default, these should be excluded from the printout
-            first_stage_variables=[],
-            second_stage_variables=[],
-            uncertain_params=[],
-            uncertainty_set=BoxSet([[1, 2]]),
-            local_solver=SimpleTestSolver(),
-            global_solver=SimpleTestSolver(),
-            # no optional arguments
-        ))
+        config = pyros_solver.CONFIG(
+            dict(
+                # mandatory arguments to PyROS solver.
+                # by default, these should be excluded from the printout
+                first_stage_variables=[],
+                second_stage_variables=[],
+                uncertain_params=[],
+                uncertainty_set=BoxSet([[1, 2]]),
+                local_solver=SimpleTestSolver(),
+                global_solver=SimpleTestSolver(),
+                # no optional arguments
+            )
+        )
         with LoggingIntercept(logger=logger, level=logging.INFO) as LOG:
             pyros_solver._log_config_user_values(
-                logger=logger,
-                config=config,
-                level=logging.INFO,
+                logger=logger, config=config, level=logging.INFO
             )
         self.assertEqual(LOG.getvalue(), "")
 
@@ -3554,31 +3554,30 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         Test method for logging config user values.
         """
         pyros_solver = SolverFactory("pyros")
-        config = pyros_solver.CONFIG(dict(
-            # mandatory arguments to PyROS solver.
-            # by default, these should be excluded from the printout
-            first_stage_variables=[],
-            second_stage_variables=[],
-            uncertain_params=[],
-            uncertainty_set=BoxSet([[1, 2]]),
-            local_solver=SimpleTestSolver(),
-            global_solver=SimpleTestSolver(),
-            # optional arguments. these should be included
-            decision_rule_order=1,
-            objective_focus="worst_case",
-        ))
+        config = pyros_solver.CONFIG(
+            dict(
+                # mandatory arguments to PyROS solver.
+                # by default, these should be excluded from the printout
+                first_stage_variables=[],
+                second_stage_variables=[],
+                uncertain_params=[],
+                uncertainty_set=BoxSet([[1, 2]]),
+                local_solver=SimpleTestSolver(),
+                global_solver=SimpleTestSolver(),
+                # optional arguments. these should be included
+                decision_rule_order=1,
+                objective_focus="worst_case",
+            )
+        )
         with LoggingIntercept(logger=logger, level=logging.INFO) as LOG:
             pyros_solver._log_config_user_values(
-                logger=logger,
-                config=config,
-                level=logging.INFO,
+                logger=logger, config=config, level=logging.INFO
             )
 
         ans = (
             "User-provided solver options:\n"
             f" objective_focus={ObjectiveType.worst_case!r}\n"
-            " decision_rule_order=1\n"
-            + "-" * 78 + "\n"
+            " decision_rule_order=1\n" + "-" * 78 + "\n"
         )
         logged_str = LOG.getvalue()
         self.assertEqual(
@@ -4463,10 +4462,7 @@ class TestResolveAndValidatePyROSInputs(unittest.TestCase):
             global_solver=solver,
             decision_rule_order=1,
             bypass_local_separation=True,
-            options=dict(
-                solve_master_globally=True,
-                bypass_local_separation=False,
-            ),
+            options=dict(solve_master_globally=True, bypass_local_separation=False),
         )
         self.assertEqual(config.first_stage_variables, [model.x1, model.x2])
         self.assertFalse(config.second_stage_variables)
