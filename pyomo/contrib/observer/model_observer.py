@@ -378,7 +378,6 @@ class ModelChangeDetector:
                     params.append(p)
             vars_to_check.extend(variables)
             params_to_check.extend(params)
-            self._named_expressions[con] = []
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = params
         self._check_for_new_vars(vars_to_check)
@@ -445,7 +444,7 @@ class ModelChangeDetector:
             vars_to_check.extend(self._vars_referenced_by_obj[obj_id])
             params_to_check.extend(self._params_referenced_by_obj[obj_id])
             del self._objectives[obj_id]
-            del self._obj_named_expressions[obj_id]
+            self._obj_named_expressions.pop(obj_id, None)
             self._external_functions.pop(obj, None)
             del self._vars_referenced_by_obj[obj_id]
             del self._params_referenced_by_obj[obj_id]
@@ -508,7 +507,7 @@ class ModelChangeDetector:
             vars_to_check.extend(self._vars_referenced_by_con[con])
             params_to_check.extend(self._params_referenced_by_con[con])
             del self._active_constraints[con]
-            del self._named_expressions[con]
+            self._named_expressions.pop(con, None)
             self._external_functions.pop(con, None)
             del self._vars_referenced_by_con[con]
             del self._params_referenced_by_con[con]
@@ -532,7 +531,6 @@ class ModelChangeDetector:
             vars_to_check.extend(self._vars_referenced_by_con[con])
             params_to_check.extend(self._params_referenced_by_con[con])
             del self._active_sos[con]
-            del self._named_expressions[con]
             del self._vars_referenced_by_con[con]
             del self._params_referenced_by_con[con]
         self._check_to_remove_vars(vars_to_check)

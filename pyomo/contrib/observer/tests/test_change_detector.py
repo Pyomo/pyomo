@@ -156,8 +156,18 @@ class TestChangeDetector(unittest.TestCase):
         m.x.fix(2)
         detector.update()
         expected[m.x]['update'] += 1
+        # the variable gets updated
+        # the objective must get removed and added
+        # that causes x,y, and p to all get removed 
+        # and added
         expected[m.obj]['remove'] += 1
         expected[m.obj]['add'] += 1
+        expected[m.x]['remove'] += 1
+        expected[m.x]['add'] += 1
+        expected[m.y]['remove'] += 1
+        expected[m.y]['add'] += 1
+        expected[m.p]['remove'] += 1
+        expected[m.p]['add'] += 1
         obs.check(expected)
 
         m.x.unfix()
@@ -165,6 +175,12 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.x]['update'] += 1
         expected[m.obj]['remove'] += 1
         expected[m.obj]['add'] += 1
+        expected[m.x]['remove'] += 1
+        expected[m.x]['add'] += 1
+        expected[m.y]['remove'] += 1
+        expected[m.y]['add'] += 1
+        expected[m.p]['remove'] += 1
+        expected[m.p]['add'] += 1
         obs.check(expected)
 
         m.p.value = 2
@@ -174,20 +190,27 @@ class TestChangeDetector(unittest.TestCase):
 
         m.obj.expr = m.x**2 + m.y**2
         detector.update()
-        expected[m.p]['remove'] += 1
         expected[m.obj]['remove'] += 1
         expected[m.obj]['add'] += 1
+        expected[m.x]['remove'] += 1
+        expected[m.x]['add'] += 1
+        expected[m.y]['remove'] += 1
+        expected[m.y]['add'] += 1
+        expected[m.p]['remove'] += 1
         obs.check(expected)
 
         expected[m.obj]['remove'] += 1
         del m.obj
-        m.obj = pyo.Objective(expr=m.p * m.x)
+        m.obj2 = pyo.Objective(expr=m.p * m.x)
         detector.update()
-        expected[m.p]['add'] += 1
-        expected[m.y]['remove'] += 1
         # remember, m.obj is a different object now
-        expected[m.obj] = make_count_dict()
-        expected[m.obj]['add'] += 1
+        expected[m.obj2] = make_count_dict()
+        expected[m.obj2]['add'] += 1
+        expected[m.x]['remove'] += 1
+        expected[m.x]['add'] += 1
+        expected[m.y]['remove'] += 1
+        expected[m.p]['add'] += 1
+        obs.check(expected)
 
     def test_constraints(self):
         m = pyo.ConcreteModel()
@@ -199,10 +222,6 @@ class TestChangeDetector(unittest.TestCase):
         detector = ModelChangeDetector(m, [obs])
 
         expected = ComponentMap()
-        expected[None] = make_count_dict()
-        expected[None]['set'] += 1
-
-        detector.set_instance(m)
         obs.check(expected)
 
         m.obj = pyo.Objective(expr=m.y)
@@ -217,15 +236,13 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.c1] = make_count_dict()
         expected[m.c1]['add'] += 1
         expected[m.obj] = make_count_dict()
-        expected[m.obj]['set'] += 1
+        expected[m.obj]['add'] += 1
         obs.check(expected)
 
         # now fix a variable and make sure the
         # constraint gets removed and added
         m.x.fix(1)
-        obs.pprint()
         detector.update()
-        obs.pprint()
         expected[m.c1]['remove'] += 1
         expected[m.c1]['add'] += 1
         # because x and p are only used in the
@@ -248,8 +265,7 @@ class TestChangeDetector(unittest.TestCase):
         m.c1 = pyo.SOSConstraint(var=m.x, sos=1)
 
         obs = ObserverChecker()
-        detector = ModelChangeDetector([obs])
-        detector.set_instance(m)
+        detector = ModelChangeDetector(m, [obs])
 
         expected = ComponentMap()
         expected[m.obj] = make_count_dict()
@@ -257,7 +273,7 @@ class TestChangeDetector(unittest.TestCase):
             expected[m.x[i]] = make_count_dict()
         expected[m.y] = make_count_dict()
         expected[m.c1] = make_count_dict()
-        expected[m.obj]['set'] += 1
+        expected[m.obj]['add'] += 1
         for i in m.a:
             expected[m.x[i]]['add'] += 1
         expected[m.y]['add'] += 1
@@ -280,13 +296,9 @@ class TestChangeDetector(unittest.TestCase):
         m2 = pyo.ConcreteModel()
 
         obs = ObserverChecker()
-        detector = ModelChangeDetector([obs])
+        detector = ModelChangeDetector(m2, [obs])
 
         expected = ComponentMap()
-        expected[None] = make_count_dict()
-        expected[None]['set'] += 1
-
-        detector.set_instance(m2)
         obs.check(expected)
 
         m2.obj = pyo.Objective(expr=m1.y)
@@ -301,15 +313,13 @@ class TestChangeDetector(unittest.TestCase):
         expected[m2.c1] = make_count_dict()
         expected[m2.c1]['add'] += 1
         expected[m2.obj] = make_count_dict()
-        expected[m2.obj]['set'] += 1
+        expected[m2.obj]['add'] += 1
         obs.check(expected)
 
         # now fix a variable and make sure the
         # constraint gets removed and added
         m1.x.fix(1)
-        obs.pprint()
         detector.update()
-        obs.pprint()
         expected[m2.c1]['remove'] += 1
         expected[m2.c1]['add'] += 1
         # because x and p are only used in the
@@ -330,13 +340,9 @@ class TestChangeDetector(unittest.TestCase):
         m.p = pyo.Param(mutable=True, initialize=1)
 
         obs = ObserverChecker()
-        detector = ModelChangeDetector([obs])
+        detector = ModelChangeDetector(m, [obs])
 
         expected = ComponentMap()
-        expected[None] = make_count_dict()
-        expected[None]['set'] += 1
-
-        detector.set_instance(m)
         obs.check(expected)
 
         m.obj = pyo.Objective(expr=m.y)
@@ -352,7 +358,7 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.c1] = make_count_dict()
         expected[m.c1]['add'] += 1
         expected[m.obj] = make_count_dict()
-        expected[m.obj]['set'] += 1
+        expected[m.obj]['add'] += 1
         obs.check(expected)
 
         # now modify the named expression and make sure the
@@ -376,9 +382,34 @@ class TestChangeDetector(unittest.TestCase):
         m.x = pyo.Var()
         m.y = pyo.Var()
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
 
         obs = ObserverChecker()
-        detector = ModelChangeDetector([obs])
+        detector = ModelChangeDetector(m, [obs])
 
         expected = ComponentMap()
-        expected[None] = make_count_dict()
+        expected[m.x] = make_count_dict()
+        expected[m.y] = make_count_dict()
+        expected[m.obj] = make_count_dict()
+        expected[m.c1] = make_count_dict()
+        expected[m.x]['add'] += 1
+        expected[m.y]['add'] += 1
+        expected[m.obj]['add'] += 1
+        expected[m.c1]['add'] += 1
+        obs.check(expected)
+
+        detector.config.check_for_new_or_removed_constraints = False
+        detector.config.update_constraints = False
+        m.c2 = pyo.Constraint(expr=m.y >= (m.x - 1)**2)
+        detector.update()
+        obs.check(expected)
+
+        m.x.setlb(0)
+        detector.update()
+        expected[m.x]['update'] += 1
+        obs.check(expected)
+
+        detector.config.check_for_new_or_removed_constraints = True
+        detector.update()
+        expected[m.c2] = make_count_dict()
+        expected[m.c2]['add'] += 1

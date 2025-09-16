@@ -63,6 +63,7 @@ collector_handlers = ExitNodeDispatcher()
 collector_handlers[VarData] = handle_var
 collector_handlers[ParamData] = handle_param
 collector_handlers[ExpressionData] = handle_named_expression
+collector_handlers[ScalarExpression] = handle_named_expression
 collector_handlers[ExternalFunctionExpression] = handle_external_function
 collector_handlers[NegationExpression] = handle_skip
 collector_handlers[PowExpression] = handle_skip
@@ -78,6 +79,8 @@ collector_handlers[AbsExpression] = handle_skip
 collector_handlers[RangedExpression] = handle_skip
 collector_handlers[InequalityExpression] = handle_skip
 collector_handlers[EqualityExpression] = handle_skip
+collector_handlers[int] = handle_skip
+collector_handlers[float] = handle_skip
 
 
 class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
