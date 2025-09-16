@@ -230,31 +230,31 @@ class Observer(abc.ABC):
 
 class ModelChangeDetector:
     """
-    This class "watches" a pyomo model and notifies the observers when any 
+    This class "watches" a pyomo model and notifies the observers when any
     changes to the model are made (but only when ModelChangeDetector.update
     is called). An example use case is for the persistent solver interfaces.
-    
-    The ModelChangeDetector considers the model to be defined by its set of 
+
+    The ModelChangeDetector considers the model to be defined by its set of
     active components and any components used by those active components. For
     example, the observers will not be notified of the addition of a variable
-    if that variable is not used in any constraints. 
+    if that variable is not used in any constraints.
 
-    The Observer/ModelChangeDetector are most useful when a small number 
-    of changes are being relative to the size of the model. For example, 
+    The Observer/ModelChangeDetector are most useful when a small number
+    of changes are being relative to the size of the model. For example,
     the persistent solver interfaces can be very efficient when repeatedly
     solving the same model but with different values for mutable parameters.
 
-    If you know that certain changes will not be made to the model, the 
-    config can be modified to improve performance. For example, if you 
+    If you know that certain changes will not be made to the model, the
+    config can be modified to improve performance. For example, if you
     know that no constraints will be added to or removed from the model,
     then ``check_for_new_or_removed_constraints`` can be set to ``False``,
     which will save some time when ``update`` is called.
-    
+
     Here are some examples:
 
     >>> import pyomo.environ as pyo
     >>> from pyomo.contrib.observer.model_observer import (
-    ...     AutoUpdateConfig, 
+    ...     AutoUpdateConfig,
     ...     Observer,
     ...     ModelChangeDetector,
     ... )
@@ -371,18 +371,18 @@ class ModelChangeDetector:
 
         self._external_functions = ComponentMap()
 
-        # the dictionaries below are really just ordered sets, but we need to 
+        # the dictionaries below are really just ordered sets, but we need to
         # stick with built-in types for performance
 
         # var_id: (
         #     dict[constraints, None],
-        #     dict[sos constraints, None], 
+        #     dict[sos constraints, None],
         #     dict[objectives, None],
         # )
         self._referenced_variables = {}
 
         # param_id: (
-        #     dict[constraints, None], 
+        #     dict[constraints, None],
         #     dict[sos constraints, None],
         #     dict[objectives, None],
         # )
@@ -465,12 +465,9 @@ class ModelChangeDetector:
             if con in self._active_constraints:
                 raise ValueError(f'Constraint {con.name} has already been added')
             self._active_constraints[con] = con.expr
-            (
-                named_exprs,
-                variables,
-                parameters,
-                external_functions,
-            ) = collect_components_from_expr(con.expr)
+            (named_exprs, variables, parameters, external_functions) = (
+                collect_components_from_expr(con.expr)
+            )
             vars_to_check.extend(variables)
             params_to_check.extend(parameters)
             if named_exprs:
@@ -532,12 +529,9 @@ class ModelChangeDetector:
         for obj in objs:
             obj_id = id(obj)
             self._objectives[obj_id] = (obj, obj.expr, obj.sense)
-            (
-                named_exprs, 
-                variables,
-                parameters,
-                external_functions,
-            ) = collect_components_from_expr(obj.expr)
+            (named_exprs, variables, parameters, external_functions) = (
+                collect_components_from_expr(obj.expr)
+            )
             vars_to_check.extend(variables)
             params_to_check.extend(parameters)
             if named_exprs:
@@ -592,9 +586,7 @@ class ModelChangeDetector:
             if ctype in self._known_active_ctypes:
                 continue
             for comp in self._model.component_data_objects(
-                ctype, 
-                active=True, 
-                descend_into=True
+                ctype, active=True, descend_into=True
             ):
                 raise NotImplementedError(
                     f'ModelChangeDetector does not know how to '
@@ -611,20 +603,22 @@ class ModelChangeDetector:
 
             self._add_constraints(
                 list(
-                    self._model.component_data_objects(Constraint, descend_into=True, active=True)
+                    self._model.component_data_objects(
+                        Constraint, descend_into=True, active=True
+                    )
                 )
             )
             self._add_sos_constraints(
                 list(
                     self._model.component_data_objects(
-                        SOSConstraint, descend_into=True, active=True,
+                        SOSConstraint, descend_into=True, active=True
                     )
                 )
             )
             self._add_objectives(
                 list(
                     self._model.component_data_objects(
-                        Objective, descend_into=True, active=True,
+                        Objective, descend_into=True, active=True
                     )
                 )
             )
@@ -817,7 +811,9 @@ class ModelChangeDetector:
             elif _domain_interval != v.domain.get_interval():
                 vars_to_update.append(v)
         cons_to_update = list(cons_to_update.keys())
-        objs_to_update = [self._objectives[obj_id][0] for obj_id in objs_to_update.keys()]
+        objs_to_update = [
+            self._objectives[obj_id][0] for obj_id in objs_to_update.keys()
+        ]
         return vars_to_update, cons_to_update, objs_to_update
 
     def _check_for_param_changes(self):
@@ -846,7 +842,8 @@ class ModelChangeDetector:
         new_objs = []
         old_objs = []
         current_objs_dict = {
-            id(obj): obj for obj in self._model.component_data_objects(
+            id(obj): obj
+            for obj in self._model.component_data_objects(
                 Objective, descend_into=True, active=True
             )
         }
@@ -917,7 +914,7 @@ class ModelChangeDetector:
             if config.check_for_new_or_removed_objectives:
                 timer.start('objective')
                 new_objs, old_objs = self._check_for_new_or_removed_objectives()
-                # many solvers require one objective, so we have to remove the 
+                # many solvers require one objective, so we have to remove the
                 # old objective first
                 if old_objs:
                     self._remove_objectives(old_objs)
@@ -937,7 +934,9 @@ class ModelChangeDetector:
 
             if config.update_vars:
                 timer.start('vars')
-                vars_to_update, cons_to_update, objs_to_update = self._check_for_var_changes()
+                vars_to_update, cons_to_update, objs_to_update = (
+                    self._check_for_var_changes()
+                )
                 if vars_to_update:
                     self._update_variables(vars_to_update)
                 cons_to_update = [i for i in cons_to_update if i not in added_cons]
@@ -954,7 +953,9 @@ class ModelChangeDetector:
 
             if config.update_named_expressions:
                 timer.start('named expressions')
-                cons_to_update, objs_to_update = self._check_for_named_expression_changes()
+                cons_to_update, objs_to_update = (
+                    self._check_for_named_expression_changes()
+                )
                 cons_to_update = [i for i in cons_to_update if i not in added_cons]
                 objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
                 if cons_to_update:

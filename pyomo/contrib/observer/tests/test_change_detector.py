@@ -158,7 +158,7 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.x]['update'] += 1
         # the variable gets updated
         # the objective must get removed and added
-        # that causes x,y, and p to all get removed 
+        # that causes x,y, and p to all get removed
         # and added
         expected[m.obj]['remove'] += 1
         expected[m.obj]['add'] += 1
@@ -400,7 +400,7 @@ class TestChangeDetector(unittest.TestCase):
 
         detector.config.check_for_new_or_removed_constraints = False
         detector.config.update_constraints = False
-        m.c2 = pyo.Constraint(expr=m.y >= (m.x - 1)**2)
+        m.c2 = pyo.Constraint(expr=m.y >= (m.x - 1) ** 2)
         detector.update()
         obs.check(expected)
 
