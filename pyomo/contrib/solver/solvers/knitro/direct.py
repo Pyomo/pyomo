@@ -11,13 +11,10 @@
 
 
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.contrib.solver.common.results import TerminationCondition
-from pyomo.contrib.solver.common.util import NoOptimalSolutionError
 from pyomo.core.base.block import BlockData
 
 from .base import SolverBase
 from .config import Config
-from .solution import SolutionLoader
 
 
 class Solver(SolverBase):
