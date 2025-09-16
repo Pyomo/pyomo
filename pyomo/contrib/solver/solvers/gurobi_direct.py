@@ -14,6 +14,8 @@ import io
 import math
 import operator
 import os
+import logging
+from typing import Optional, Tuple
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigValue
@@ -26,7 +28,8 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
-from pyomo.contrib.solver.common.base import SolverBase, Availability
+from pyomo.contrib.solver.common.availability import Availability, LicenseAvailability
+from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import BranchAndBoundConfig
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
@@ -44,6 +47,7 @@ from pyomo.contrib.solver.common.results import (
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
 
+logger = logging.getLogger(__name__)
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
 
@@ -174,83 +178,172 @@ class GurobiSolverMixin:
     duplicate code.
     """
 
+    _gurobipy_available = gurobipy_available
     _num_gurobipy_env_clients = 0
     _gurobipy_env = None
-    _available = None
-    _gurobipy_available = gurobipy_available
 
-    def available(self):
-        if self._available is None:
+    _available_cache = None
+    _version_cache = None
+    _license_cache = None
+
+    def available(self, recheck: bool = False) -> Availability:
+        if recheck or self._available_cache is None:
             # this triggers the deferred import, and for the persistent
-            # interface, may update the _available flag
+            # interface, may update the _available_cache flag
             #
-            # Note that we set the _available flag on the *most derived
+            # Note that we set the _available_cache flag on the *most derived
             # class* and not on the instance, or on the base class.  That
             # allows different derived interfaces to have different
             # availability (e.g., persistent has a minimum version
             # requirement that the direct interface doesn't)
             if not self._gurobipy_available:
-                if self._available is None:
-                    self.__class__._available = Availability.NotFound
+                self.__class__._available_cache = Availability.NotFound
             else:
-                self.__class__._available = self._check_license()
-        return self._available
+                self.__class__._available_cache = Availability.Available
+        return self._available_cache
 
-    @staticmethod
-    def release_license():
-        if GurobiSolverMixin._gurobipy_env is None:
+    def version(self) -> Optional[Tuple[int, int, int]]:
+        if self._version_cache is None:
+            self.__class__._version_cache = (
+                gurobipy.GRB.VERSION_MAJOR,
+                gurobipy.GRB.VERSION_MINOR,
+                gurobipy.GRB.VERSION_TECHNICAL,
+            )
+        return self._version_cache
+
+    def license_available(
+        self, recheck: bool = False, timeout: Optional[float] = 0
+    ) -> LicenseAvailability:
+        """
+        Attempts to acquire a license (by opening an Env and building a small model).
+        Responses:
+          - FullLicense   : can optimize a small model with >2000 vars
+          - LimitedLicense: can optimize only up to demo/community limits
+          - NotAvailable  : gurobi license not present/denied
+          - Timeout       : waited but could not check out
+          - BadLicense    : clearly invalid/corrupt license
+          - Unknown       : unexpected error states
+        """
+        if not gurobipy_available:
+            return LicenseAvailability.NotAvailable
+
+        if not recheck and self._license_cache is not None:
+            return self._license_cache
+
+        # Handle license wait via environment
+        old_wait = os.environ.get("GRB_LICENSE_WAIT", None)
+        if timeout and timeout > 0:
+            # Gurobi treats this as integer seconds if set
+            os.environ["GRB_LICENSE_WAIT"] = str(int(timeout))
+        else:
+            # Ensure we don't inherit a user's shell setting for this probe
+            # (but preserve it to restore later)
+            os.environ["GRB_LICENSE_WAIT"] = os.environ.get("GRB_LICENSE_WAIT", "0")
+
+        try:
+            # Try to bring up an environment (this is where a license is often checked)
+            try:
+                env = self._ensure_env()
+            except gurobipy.GurobiError as e:
+                # Distinguish timeout vs unavailable vs bad license
+                code = getattr(e, "errno", None)
+                msg = str(e).lower()
+                if "queue" in msg or "timeout" in msg:
+                    self._license_cache = LicenseAvailability.Timeout
+                elif (
+                    "no gurobi license" in msg
+                    or "not licensed" in msg
+                    or code in (10009,)
+                ):
+                    self._license_cache = LicenseAvailability.NotAvailable
+                else:
+                    self._license_cache = LicenseAvailability.BadLicense
+                return self._license_cache
+
+            # Build model to test license level
+            with capture_output(capture_fd=True):
+                large_model = gurobipy.Model(env=env)
+
+                try:
+                    # First try to exceed typical demo/community limits
+                    # (demo traditionally allows up to 2000 vars/cons)
+                    large_model.addVars(range(2001))
+                    large_model.optimize()
+                    self._license_cache = LicenseAvailability.FullLicense
+                except gurobipy.GurobiError:
+                    # If we fail when exceeding limits, try within limits
+                    with capture_output(capture_fd=True):
+                        small_model = gurobipy.Model(env=env)
+                        try:
+                            small_model.addVars(
+                                range(100)
+                            )  # comfortably under demo limits
+                            small_model.optimize()
+                            self._license_cache = LicenseAvailability.LimitedLicense
+                        except gurobipy.GurobiError as small_error:
+                            # Could be a denied/expired/invalid license
+                            small_msg = str(small_error).lower()
+                            small_status = getattr(small_error, "errno", None)
+                            if "queue" in small_msg or "timeout" in small_msg:
+                                self._license_cache = LicenseAvailability.Timeout
+                            elif (
+                                "no gurobi license" in small_msg
+                                or "not licensed" in small_msg
+                                or small_status in (10009,)
+                            ):
+                                self._license_cache = LicenseAvailability.NotAvailable
+                            else:
+                                self._license_cache = LicenseAvailability.BadLicense
+                        finally:
+                            small_model.dispose()
+                finally:
+                    large_model.dispose()
+
+        finally:
+            # Restore environment
+            if old_wait is None:
+                os.environ.pop("GRB_LICENSE_WAIT", None)
+            else:
+                os.environ["GRB_LICENSE_WAIT"] = old_wait
+
+        return self._license_cache
+
+    @classmethod
+    def release_license(cls):
+        """Close the shared gurobipy.Env when not referenced."""
+        if cls._gurobipy_env is None:
             return
-        if GurobiSolverMixin._num_gurobipy_env_clients:
+        if cls._num_gurobipy_env_clients:
             logger.warning(
                 "Call to GurobiSolverMixin.release_license() with %s remaining "
-                "environment clients." % (GurobiSolverMixin._num_gurobipy_env_clients,)
+                "environment clients.",
+                cls._num_gurobipy_env_clients,
             )
-        GurobiSolverMixin._gurobipy_env.close()
-        GurobiSolverMixin._gurobipy_env = None
+        try:
+            cls._gurobipy_env.close()
+        except Exception:
+            pass
+        cls._gurobipy_env = None
 
-    @staticmethod
-    def env():
-        if GurobiSolverMixin._gurobipy_env is None:
+    @classmethod
+    def _ensure_env(cls):
+        if cls._gurobipy_env is None:
             with capture_output(capture_fd=True):
-                GurobiSolverMixin._gurobipy_env = gurobipy.Env()
-        return GurobiSolverMixin._gurobipy_env
+                cls._gurobipy_env = gurobipy.Env()
+        return cls._gurobipy_env
 
-    @staticmethod
-    def _register_env_client():
-        GurobiSolverMixin._num_gurobipy_env_clients += 1
+    def env(self):
+        return type(self)._ensure_env()
 
-    @staticmethod
-    def _release_env_client():
-        GurobiSolverMixin._num_gurobipy_env_clients -= 1
-        if GurobiSolverMixin._num_gurobipy_env_clients <= 0:
-            # Note that _num_gurobipy_env_clients should never be <0,
-            # but if it is, release_license will issue a warning (that
-            # we want to know about)
-            GurobiSolverMixin.release_license()
+    @classmethod
+    def _register_env_client(cls):
+        cls._num_gurobipy_env_clients += 1
 
-    def _check_license(self):
-        try:
-            model = gurobipy.Model(env=self.env())
-        except gurobipy.GurobiError:
-            return Availability.BadLicense
-
-        model.setParam('OutputFlag', 0)
-        try:
-            model.addVars(range(2001))
-            model.optimize()
-            return Availability.FullLicense
-        except gurobipy.GurobiError:
-            return Availability.LimitedLicense
-        finally:
-            model.dispose()
-
-    def version(self):
-        version = (
-            gurobipy.GRB.VERSION_MAJOR,
-            gurobipy.GRB.VERSION_MINOR,
-            gurobipy.GRB.VERSION_TECHNICAL,
-        )
-        return version
+    @classmethod
+    def _release_env_client(cls):
+        cls._num_gurobipy_env_clients -= 1
+        if cls._num_gurobipy_env_clients <= 0:
+            cls.release_license()
 
 
 class GurobiDirect(GurobiSolverMixin, SolverBase):
@@ -278,6 +371,13 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
             raise ApplicationError(
                 f'Solver {c.__module__}.{c.__qualname__} is not available '
                 f'({self.available()}).'
+            )
+        if not self.license_available():
+            c = self.__class__
+            raise ApplicationError(
+                f'Solver {c.__module__}.{c.__qualname__} does '
+                'not have an available license '
+                f'({self.license_available()}).'
             )
         if config.timer is None:
             config.timer = HierarchicalTimer()

@@ -11,7 +11,7 @@
 
 import logging
 import io
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
@@ -29,7 +29,8 @@ from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
 
-from pyomo.contrib.solver.common.base import PersistentSolverBase, Availability
+from pyomo.contrib.solver.common.availability import Availability, LicenseAvailability
+from pyomo.contrib.solver.common.base import PersistentSolverBase
 from pyomo.contrib.solver.common.results import (
     Results,
     TerminationCondition,
@@ -242,8 +243,6 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
     CONFIG = PersistentBranchAndBoundConfig()
 
-    _available = None
-
     def __init__(self, **kwds):
         treat_fixed_vars_as_params = kwds.pop('treat_fixed_vars_as_params', True)
         PersistentSolverBase.__init__(self, **kwds)
@@ -258,27 +257,42 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         self._mutable_bounds = {}
         self._last_results_object: Optional[Results] = None
         self._sol = None
+        self._available_cache = None
+        self._version_cache = None
 
-    def available(self):
-        if highspy_available:
-            return Availability.FullLicense
-        return Availability.NotFound
+    def available(self, recheck: bool = False) -> Availability:
+        if recheck or self._available_cache is None:
+            if not highspy_available:
+                self._available_cache = Availability.NotFound
+            else:
+                self._available_cache = Availability.Available
+        return self._available_cache
 
-    def version(self):
-        try:
-            version = (
-                highspy.HIGHS_VERSION_MAJOR,
-                highspy.HIGHS_VERSION_MINOR,
-                highspy.HIGHS_VERSION_PATCH,
-            )
-        except AttributeError:
-            # Older versions of Highs do not have the above attributes
-            # and the solver version can only be obtained by making
-            # an instance of the solver class.
-            tmp = highspy.Highs()
-            version = (tmp.versionMajor(), tmp.versionMinor(), tmp.versionPatch())
+    def license_available(
+        self, recheck: bool = False, timeout: Optional[float] = 0
+    ) -> LicenseAvailability:
+        # HiGHS doesn't require a license
+        return LicenseAvailability.NotApplicable
 
-        return version
+    def version(self) -> Optional[Tuple[int, int, int]]:
+        if self._version_cache is None:
+            try:
+                self._version_cache = (
+                    highspy.HIGHS_VERSION_MAJOR,
+                    highspy.HIGHS_VERSION_MINOR,
+                    highspy.HIGHS_VERSION_PATCH,
+                )
+            except AttributeError:
+                # Older versions of Highs do not have the above attributes
+                # and the solver version can only be obtained by making
+                # an instance of the solver class.
+                tmp = highspy.Highs()
+                self._version_cache = (
+                    tmp.versionMajor(),
+                    tmp.versionMinor(),
+                    tmp.versionPatch(),
+                )
+        return self._version_cache
 
     def _solve(self):
         config = self._active_config

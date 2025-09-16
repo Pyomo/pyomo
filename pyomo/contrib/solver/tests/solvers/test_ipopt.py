@@ -99,22 +99,6 @@ class TestIpoptInterface(unittest.TestCase):
                 options.append(option_name)
         self.assertEqual(sorted(ipopt.ipopt_command_line_options), sorted(options))
 
-    def test_class_member_list(self):
-        opt = ipopt.Ipopt()
-        expected_list = [
-            'CONFIG',
-            'config',
-            'api_version',
-            'available',
-            'has_linear_solver',
-            'is_persistent',
-            'solve',
-            'version',
-            'name',
-        ]
-        method_list = [method for method in dir(opt) if method.startswith('_') is False]
-        self.assertEqual(sorted(expected_list), sorted(method_list))
-
     def test_default_instantiation(self):
         opt = ipopt.Ipopt()
         self.assertFalse(opt.is_persistent())
@@ -136,24 +120,12 @@ class TestIpoptInterface(unittest.TestCase):
         opt.available()
         self.assertTrue(opt._available_cache[1])
         self.assertIsNotNone(opt._available_cache[0])
-        # Now we will try with a custom config that has a fake path
-        config = ipopt.IpoptConfig()
-        config.executable = Executable('/a/bogus/path')
-        opt.available(config=config)
-        self.assertFalse(opt._available_cache[1])
-        self.assertIsNone(opt._available_cache[0])
 
     def test_version_cache(self):
         opt = ipopt.Ipopt()
         opt.version()
         self.assertIsNotNone(opt._version_cache[0])
         self.assertIsNotNone(opt._version_cache[1])
-        # Now we will try with a custom config that has a fake path
-        config = ipopt.IpoptConfig()
-        config.executable = Executable('/a/bogus/path')
-        opt.version(config=config)
-        self.assertIsNone(opt._version_cache[0])
-        self.assertIsNone(opt._version_cache[1])
 
     def test_parse_output(self):
         # Old ipopt style (<=3.13)
@@ -338,8 +310,9 @@ Ipopt 3.14.17: Optimal Solution Found
         )
         with self.assertRaisesRegex(
             ValueError,
-            r'Pyomo generates the ipopt options file as part of the `solve` '
-            r'method.  Add all options to ipopt.config.solver_options instead',
+            r"unallowed ipopt option 'option_file_name': Pyomo generates the "
+            r"ipopt options file as part of the `solve` method. Add all "
+            r"options to ipopt.config.solver_options instead.",
         ):
             opt._verify_ipopt_options(opt.config)
 

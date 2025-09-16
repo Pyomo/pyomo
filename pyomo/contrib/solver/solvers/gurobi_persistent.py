@@ -272,13 +272,25 @@ class GurobiPersistent(
         self._vars_added_since_update = ComponentSet()
         self._last_results_object: Optional[Results] = None
 
+    def close(self):
+        """Instance-level cleanup: drop model state, then release shared Env."""
+        try:
+            self._reinit()
+        except Exception:
+            pass
+        type(self).release_license()
+
     def release_license(self):
-        self._reinit()
-        self.__class__.release_license()
+        # This is a bit of a hack; I defined a classmethod version of
+        # release_license which causes a name clash.
+        self.close()
 
     def __del__(self):
-        if not python_is_shutting_down():
-            self._release_env_client()
+        try:
+            if not python_is_shutting_down():
+                type(self)._release_env_client()
+        except Exception:
+            pass
 
     @property
     def symbol_map(self):

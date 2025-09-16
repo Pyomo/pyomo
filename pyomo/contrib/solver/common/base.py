@@ -18,7 +18,7 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.common.config import ConfigValue, ConfigDict
-from pyomo.common.enums import IntEnum, SolverAPIVersion
+from pyomo.common.enums import SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import NOTSET
@@ -29,6 +29,7 @@ from pyomo.core.base import SymbolMap
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.scripting.solve_config import default_config_block
+from pyomo.contrib.solver.common.availability import Availability, LicenseAvailability
 from pyomo.contrib.solver.common.config import SolverConfig, PersistentSolverConfig
 from pyomo.contrib.solver.common.util import get_objective
 from pyomo.contrib.solver.common.results import (
@@ -39,29 +40,6 @@ from pyomo.contrib.solver.common.results import (
 )
 
 
-class Availability(IntEnum):
-    """
-    Class to capture different statuses in which a solver can exist in
-    order to record its availability for use.
-    """
-
-    FullLicense = 2
-    LimitedLicense = 1
-    NotFound = 0
-    BadVersion = -1
-    BadLicense = -2
-    NeedsCompiledExtension = -3
-
-    def __bool__(self):
-        return self._value_ > 0
-
-    def __format__(self, format_spec):
-        return format(self.name, format_spec)
-
-    def __str__(self):
-        return self.name
-
-
 class SolverBase:
     """The base class for "new-style" Pyomo solver interfaces.
 
@@ -69,6 +47,7 @@ class SolverBase:
     to implement:
 
       - :py:meth:`available`
+      - :py:meth:`license_available`
       - :py:meth:`is_persistent`
       - :py:meth:`solve`
       - :py:meth:`version`
@@ -138,31 +117,70 @@ class SolverBase:
             f"Derived class {self.__class__.__name__} failed to implement required method 'solve'."
         )
 
-    def available(self) -> Availability:
+    def available(self, recheck: bool = False) -> Availability:
         """Test if the solver is available on this system.
 
         Nominally, this will return `True` if the solver interface is
         valid and can be used to solve problems and `False` if it cannot.
-        Note that for licensed solvers there are a number of "levels" of
-        available: depending on the license, the solver may be available
-        with limitations on problem size or runtime (e.g., 'demo'
-        vs. 'community' vs. 'full').  In these cases, the solver may
-        return a subclass of enum.IntEnum, with members that resolve to
-        True if the solver is available (possibly with limitations).
         The Enum may also have multiple members that all resolve to
         False indicating the reason why the interface is not available
         (not found, bad license, unsupported version, etc).
+
+        Parameters
+        ----------
+        recheck: bool
+            A flag to trigger whether the availability should be
+            rechecked. Default behavior is to use the cached availability.
 
         Returns
         -------
         available: Availability
             An enum that indicates "how available" the solver is.
             Note that the enum can be cast to bool, which will
-            be True if the solver is runable at all and False
+            be True if the solver is runnable at all and False
             otherwise.
         """
         raise NotImplementedError(
             f"Derived class {self.__class__.__name__} failed to implement required method 'available'."
+        )
+
+    def license_available(
+        self, recheck: bool = False, timeout: Optional[float] = 0
+    ) -> LicenseAvailability:
+        """Test if licensed solver has an available and usable license.
+
+        The default behavior of this for solvers without licenses should be
+        to return `True`.
+        Note that for licensed solvers there are a number of "levels" of
+        available: depending on the license, the solver may be available
+        with limitations on problem size or runtime (e.g., 'demo'
+        vs. 'community' vs. 'full').
+        Some solvers may also want to consider implementing
+        `acquire_license` and `release_license` if the license
+        needs to be checked out (e.g., gurobi), whereas others
+        may simply need to check for the existence of a
+        license file (e.g., mosek).
+
+        Parameters
+        ----------
+        recheck: bool
+            A flag to trigger whether the license availability should be
+            rechecked. Default behavior is to use the cached availability.
+        timeout: float
+            How long to wait for a license before declaring a timeout.
+            Default behavior is to not wait (i.e., a license either
+            needs to be available immediately or will return False)
+
+        Returns
+        -------
+        license_available: LicenseAvailability
+            An enum that indicates the license availability of a solver.
+            Note that the enum can be cast to bool, which will
+            be True if the license is valid at all and False
+            otherwise.
+        """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'license_available'."
         )
 
     def version(self) -> Tuple:
