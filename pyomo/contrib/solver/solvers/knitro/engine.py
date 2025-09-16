@@ -196,7 +196,9 @@ class Engine:
                 setter_fn = knitro.KN_set_char_param
             self._execute(setter_fn, param_id, val)
 
-    def set_outlev(self, level: int = knitro.KN_OUTLEV_ALL):
+    def set_outlev(self, level: Optional[int] = None):
+        if level is None:
+            level = knitro.KN_OUTLEV_ALL
         self.set_options(outlev=level)
 
     def set_time_limit(self, time_limit: float):
