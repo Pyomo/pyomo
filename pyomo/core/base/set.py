@@ -94,10 +94,10 @@ All Sets implement one of the following APIs:
 1. `class SetData(ComponentData)`
    *(base class for all AML Sets)*
 
-2. `class _FiniteSetMixin(object)`
+2. `class _FiniteSetMixin`
    *(pure virtual interface, adds support for discrete/iterable sets)*
 
-4. `class _OrderedSetMixin(object)`
+4. `class _OrderedSetMixin`
    *(pure virtual interface, adds support for ordered Sets)*
 
 This is a bit of a change from python set objects.  First, the
