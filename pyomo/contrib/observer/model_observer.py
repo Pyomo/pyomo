@@ -229,10 +229,131 @@ class Observer(abc.ABC):
 
 
 class ModelChangeDetector:
+    """
+    This class "watches" a pyomo model and notifies the observers when any 
+    changes to the model are made (but only when ModelChangeDetector.update
+    is called). An example use case is for the persistent solver interfaces.
+    
+    The ModelChangeDetector considers the model to be defined by its set of 
+    active components and any components used by those active components. For
+    example, the observers will not be notified of the addition of a variable
+    if that variable is not used in any constraints. 
+
+    The Observer/ModelChangeDetector are most useful when a small number 
+    of changes are being relative to the size of the model. For example, 
+    the persistent solver interfaces can be very efficient when repeatedly
+    solving the same model but with different values for mutable parameters.
+
+    If you know that certain changes will not be made to the model, the 
+    config can be modified to improve performance. For example, if you 
+    know that no constraints will be added to or removed from the model,
+    then ``check_for_new_or_removed_constraints`` can be set to ``False``,
+    which will save some time when ``update`` is called.
+    
+    Here are some examples:
+
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.contrib.observer.model_observer import (
+    ...     AutoUpdateConfig, 
+    ...     Observer,
+    ...     ModelChangeDetector,
+    ... )
+    >>> class PrintObserver(Observer):
+    ...     def add_variables(self, variables):
+    ...         for i in variables:
+    ...             print(f'{i} was added to the model')
+    ...     def add_parameters(self, params):
+    ...         for i in params:
+    ...             print(f'{i} was added to the model')
+    ...     def add_constraints(self, cons):
+    ...         for i in cons:
+    ...             print(f'{i} was added to the model')
+    ...     def add_sos_constraints(self, cons):
+    ...         for i in cons:
+    ...             print(f'{i} was added to the model')
+    ...     def add_objectives(self, objs):
+    ...         for i in objs:
+    ...             print(f'{i} was added to the model')
+    ...     def remove_objectives(self, objs):
+    ...         for i in objs:
+    ...             print(f'{i} was removed from the model')
+    ...     def remove_constraints(self, cons):
+    ...         for i in cons:
+    ...             print(f'{i} was removed from the model')
+    ...     def remove_sos_constraints(self, cons):
+    ...         for i in cons:
+    ...             print(f'{i} was removed from the model')
+    ...     def remove_variables(self, variables):
+    ...         for i in variables:
+    ...             print(f'{i} was removed from the model')
+    ...     def remove_parameters(self, params):
+    ...         for i in params:
+    ...             print(f'{i} was removed from the model')
+    ...     def update_variables(self, variables):
+    ...         for i in variables:
+    ...             print(f'{i} was modified')
+    ...     def update_parameters(self, params):
+    ...         for i in params:
+    ...             print(f'{i} was modified')
+    >>> m = pyo.ConcreteModel()
+    >>> obs = PrintObserver()
+    >>> detector = ModelChangeDetector(m, [obs])
+    >>> m.x = pyo.Var(bounds=())
+    >>> m.y = pyo.Var()
+    >>> detector.update()  # no output because the variables are not used
+    >>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+    >>> detector.update()
+    x was added to the model
+    y was added to the model
+    obj was added to the model
+    >>> del m.obj
+    >>> detector.update()
+    obj was removed from the model
+    x was removed from the model
+    y was removed from the model
+    >>> m.px = pyo.Param(mutable=True, initialize=1)
+    >>> m.py = pyo.Param(mutable=True, initialize=1)
+    >>> m.obj = pyo.Objective(expr=m.px*m.x + m.py*m.y)
+    >>> detector.update()
+    x was added to the model
+    y was added to the model
+    px was added to the model
+    py was added to the model
+    obj was added to the model
+    >>> detector.config.check_for_new_or_removed_constraints = False
+    >>> detector.config.check_for_new_or_removed_objectives = False
+    >>> detector.config.update_constraints = False
+    >>> detector.config.update_vars = False
+    >>> detector.config.update_parameters = True
+    >>> detector.config.update_named_expressions = False
+    >>> detector.config.update_objectives = False
+    >>> for i in range(10):
+    ...     m.py.value = i
+    ...     detector.update()  # this will be faster because it is only checking for changes to parameters
+    py was modified
+    py was modified
+    py was modified
+    py was modified
+    py was modified
+    py was modified
+    py was modified
+    py was modified
+    py was modified
+    py was modified
+    >>> m.c = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
+    >>> detector.update()  # no output because we did not check for new constraints
+    >>> detector.config.check_for_new_or_removed_constraints = True
+    >>> detector.update()
+    c was added to the model
+
+    """
+
     def __init__(self, model: BlockData, observers: Sequence[Observer], **kwds):
         """
         Parameters
         ----------
+        model: BlockData
+            The model for which changes should be detected
         observers: Sequence[Observer]
             The objects to notify when changes are made to the model
         """
