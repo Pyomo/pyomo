@@ -50,5 +50,8 @@ class LicenseAvailability(IntEnum):
     def __bool__(self):
         return self._value_ > 0
 
+    def __format__(self, format_spec):
+        return format(self.name, format_spec)
+
     def __str__(self):
         return self.name
