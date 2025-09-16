@@ -81,6 +81,7 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
         self.assertIsNotNone(opt._available_cache)
 
 
+@unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroDirectSolver(unittest.TestCase):
     def setUp(self):
         self.opt = knitro.KnitroDirectSolver()
