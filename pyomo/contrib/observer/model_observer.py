@@ -352,9 +352,9 @@ class ModelChangeDetector:
             ) = collect_components_from_expr(con.expr)
             vars_to_check.extend(variables)
             params_to_check.extend(parameters)
-            if len(named_exprs) > 0:
+            if named_exprs:
                 self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
-            if len(external_functions) > 0:
+            if external_functions:
                 self._external_functions[con] = external_functions
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = parameters
@@ -419,9 +419,9 @@ class ModelChangeDetector:
             ) = collect_components_from_expr(obj.expr)
             vars_to_check.extend(variables)
             params_to_check.extend(parameters)
-            if len(named_exprs) > 0:
+            if named_exprs:
                 self._obj_named_expressions[obj_id] = [(e, e.expr) for e in named_exprs]
-            if len(external_functions) > 0:
+            if external_functions:
                 self._external_functions[obj] = external_functions
             self._vars_referenced_by_obj[obj_id] = variables
             self._params_referenced_by_obj[obj_id] = parameters
