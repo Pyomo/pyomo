@@ -863,6 +863,30 @@ class ModelChangeDetector:
         return objs_to_update
 
     def update(self, timer: Optional[HierarchicalTimer] = None, **kwds):
+        """
+        Check for changes to the model and notify the observers.
+
+        Parameters
+        ----------
+        timer: Optional[HierarchicalTimer]
+            The timer to use for tracking how much time is spent detecting
+            different kinds of changes
+        """
+
+        """
+        When possible, it is better to add new constraints before removing old 
+        constraints. This prevents unnecessarily removing and adding variables.
+        If a constraint is removed, any variables that are used only by that 
+        constraint will be removed. If there is a new constraint that uses 
+        the same variable, then we don't actually need to remove the variable.
+        This is hard to avoid when we are modifying a constraint or changing
+        the objective. When the objective changes, we remove the old one 
+        first just because most things don't handle multiple objectives.
+
+        We check for changes to constraints/objectives before variables/parameters 
+        so that we don't waste time updating a variable/parameter that is going to 
+        get removed.
+        """
         if timer is None:
             timer = HierarchicalTimer()
         config: AutoUpdateConfig = self.config(value=kwds, preserve_implicit=True)
