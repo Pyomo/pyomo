@@ -230,78 +230,57 @@ class GurobiSolverMixin:
         if not recheck and self._license_cache is not None:
             return self._license_cache
 
-        # Handle license wait via environment
-        old_wait = os.environ.get("GRB_LICENSE_WAIT", None)
-        if timeout and timeout > 0:
-            # Gurobi treats this as integer seconds if set
-            os.environ["GRB_LICENSE_WAIT"] = str(int(timeout))
-        else:
-            # Ensure we don't inherit a user's shell settings
-            # (but preserve it to restore later)
-            os.environ["GRB_LICENSE_WAIT"] = os.environ.get("GRB_LICENSE_WAIT", "0")
-
+        # Try to bring up an environment (this is where a license is often checked)
         try:
-            # Try to bring up an environment (this is where a license is often checked)
-            try:
-                env = self._ensure_env()
-            except gurobipy.GurobiError as e:
-                # Distinguish timeout vs unavailable vs bad license
-                code = getattr(e, "errno", None)
-                msg = str(e).lower()
-                if "queue" in msg or "timeout" in msg:
-                    self._license_cache = LicenseAvailability.Timeout
-                elif (
-                    "no gurobi license" in msg
-                    or "not licensed" in msg
-                    or code in (10009,)
-                ):
-                    self._license_cache = LicenseAvailability.NotAvailable
-                else:
-                    self._license_cache = LicenseAvailability.BadLicense
-                return self._license_cache
-
-            # Build model to test license level
-            with capture_output(capture_fd=True):
-                large_model = gurobipy.Model(env=env)
-
-                try:
-                    # First try to exceed typical demo/community limits
-                    # (demo traditionally allows up to 2000 vars/cons)
-                    large_model.addVars(range(2001))
-                    large_model.optimize()
-                    self._license_cache = LicenseAvailability.FullLicense
-                except gurobipy.GurobiError:
-                    with capture_output(capture_fd=True):
-                        small_model = gurobipy.Model(env=env)
-                        try:
-                            small_model.addVars(range(100))
-                            small_model.optimize()
-                            self._license_cache = LicenseAvailability.LimitedLicense
-                        except gurobipy.GurobiError as small_error:
-                            # Could be a denied/expired/invalid license
-                            small_msg = str(small_error).lower()
-                            small_status = getattr(small_error, "errno", None)
-                            if "queue" in small_msg or "timeout" in small_msg:
-                                self._license_cache = LicenseAvailability.Timeout
-                            elif (
-                                "no gurobi license" in small_msg
-                                or "not licensed" in small_msg
-                                or small_status in (10009,)
-                            ):
-                                self._license_cache = LicenseAvailability.NotAvailable
-                            else:
-                                self._license_cache = LicenseAvailability.BadLicense
-                        finally:
-                            small_model.dispose()
-                finally:
-                    large_model.dispose()
-
-        finally:
-            # Restore environment
-            if old_wait is None:
-                os.environ.pop("GRB_LICENSE_WAIT", None)
+            env = self._ensure_env()
+        except gurobipy.GurobiError as e:
+            # Distinguish timeout vs unavailable vs bad license
+            code = getattr(e, "errno", None)
+            msg = str(e).lower()
+            if "queue" in msg or "timeout" in msg:
+                self._license_cache = LicenseAvailability.Timeout
+            elif (
+                "no gurobi license" in msg or "not licensed" in msg or code in (10009,)
+            ):
+                self._license_cache = LicenseAvailability.NotAvailable
             else:
-                os.environ["GRB_LICENSE_WAIT"] = old_wait
+                self._license_cache = LicenseAvailability.BadLicense
+            return self._license_cache
+
+        # Build model to test license level
+        with capture_output(capture_fd=True):
+            try:
+                # First try to exceed typical demo/community limits
+                # (demo traditionally allows up to 2000 vars/cons)
+                large_model = gurobipy.Model(env=env)
+                large_model.addVars(range(2001))
+                large_model.optimize()
+                self._license_cache = LicenseAvailability.FullLicense
+            except gurobipy.GurobiError:
+                with capture_output(capture_fd=True):
+                    small_model = gurobipy.Model(env=env)
+                    try:
+                        small_model.addVars(range(100))
+                        small_model.optimize()
+                        self._license_cache = LicenseAvailability.LimitedLicense
+                    except gurobipy.GurobiError as small_error:
+                        # Could be a denied/expired/invalid license
+                        small_msg = str(small_error).lower()
+                        small_status = getattr(small_error, "errno", None)
+                        if "queue" in small_msg or "timeout" in small_msg:
+                            self._license_cache = LicenseAvailability.Timeout
+                        elif (
+                            "no gurobi license" in small_msg
+                            or "not licensed" in small_msg
+                            or small_status in (10009,)
+                        ):
+                            self._license_cache = LicenseAvailability.NotAvailable
+                        else:
+                            self._license_cache = LicenseAvailability.BadLicense
+                    finally:
+                        small_model.dispose()
+            finally:
+                large_model.dispose()
 
         return self._license_cache
 
