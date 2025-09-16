@@ -47,7 +47,7 @@ class SolutionLoader(SolutionLoaderBase):
     def get_primals(self, vars_to_load=None):
         return self.get_vars(vars_to_load)
 
-    def get_reduced_costs(self, vars_to_load = None):
+    def get_reduced_costs(self, vars_to_load=None):
         return self._provider.get_reduced_costs(vars_to_load)
 
     def get_duals(
