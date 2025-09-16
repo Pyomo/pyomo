@@ -13,8 +13,8 @@ import logging
 
 import pyomo.environ as pyo
 from pyomo.core.expr import replace_expressions, identify_mutable_parameters
-from pyomo.core.base.var import IndexedVar
-from pyomo.core.base.param import IndexedParam
+from pyomo.core.base.var import IndexedVar, VarData
+from pyomo.core.base.param import IndexedParam, ParamData
 from pyomo.common.collections import ComponentMap
 
 from pyomo.environ import ComponentUID
@@ -201,3 +201,46 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
     # solver.solve(model)
 
     return model
+
+
+def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
+    """
+    Overwrite each variable/parameter referenced by ``suffix_obj`` with the
+    corresponding value in ``values``. The provided values are expected to
+    be in the same order as the components in the suffix from when it was
+    created.
+
+    Parameters
+    ----------
+    suffix_obj : pyomo.core.base.suffix.Suffix
+        The suffix whose *keys* are the components you want to update.
+        Call like ``update_from_suffix(model.unknown_parameters, vals)``.
+    values : iterable of numbers
+        New numerical values for the components referenced by the suffix.
+        Must be the same length as ``suffix_obj``.
+
+    Notes
+    -----
+    The measurement_error suffix is a special case: instead of updating the value of the
+    keys (variables/parameters), it updates the value stored in the suffix itself.
+    """
+    # Check that the length of values matches the suffix length
+    comps = list(suffix_obj.keys())
+    if len(comps) != len(values):
+        raise ValueError("values length does not match suffix length")
+
+    # Add a check for measurement error suffix
+    is_me_err = "measurement_error" in suffix_obj.name
+    # Iterate through the keys in the suffix and update their values
+    # First loop: check all values are the right type
+    for comp in comps:
+        if not isinstance(comp, (VarData, ParamData)):
+            raise TypeError(
+                f"Unsupported component type {type(comp)}; expected VarData or ParamData."
+            )
+    # Second loop: adjust the values
+    for comp, new_val in zip(comps, values):
+        if is_me_err:
+            suffix_obj[comp] = float(new_val)
+        else:
+            comp.set_value(float(new_val))

@@ -13,12 +13,14 @@ import os
 import subprocess
 
 import pyomo.environ as pyo
+from pyomo.common.envvar import is_windows
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict, ADVANCED_OPTION
 from pyomo.common.errors import DeveloperError
 from pyomo.common.tee import capture_output
 import pyomo.contrib.solver.solvers.ipopt as ipopt
 from pyomo.contrib.solver.common.util import NoSolutionError
+from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.common import unittest, Executable
 from pyomo.common.tempfiles import TempfileManager
@@ -102,6 +104,7 @@ class TestIpoptInterface(unittest.TestCase):
         expected_list = [
             'CONFIG',
             'config',
+            'api_version',
             'available',
             'has_linear_solver',
             'is_persistent',
@@ -318,15 +321,38 @@ Ipopt 3.14.17: Optimal Solution Found
             logs.output[0],
         )
 
+    def test_verify_ipopt_options(self):
+        opt = ipopt.Ipopt(solver_options={'max_iter': 4})
+        opt._verify_ipopt_options(opt.config)
+        self.assertEqual(opt.config.solver_options.value(), {'max_iter': 4})
+
+        opt = ipopt.Ipopt(solver_options={'max_iter': 4}, time_limit=10)
+        opt._verify_ipopt_options(opt.config)
+        self.assertEqual(
+            opt.config.solver_options.value(), {'max_iter': 4, 'max_cpu_time': 10}
+        )
+
+        # Finally, let's make sure it errors if someone tries to pass option_file_name
+        opt = ipopt.Ipopt(
+            solver_options={'max_iter': 4, 'option_file_name': 'myfile.opt'}
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r'Pyomo generates the ipopt options file as part of the `solve` '
+            r'method.  Add all options to ipopt.config.solver_options instead',
+        ):
+            opt._verify_ipopt_options(opt.config)
+
     def test_write_options_file(self):
-        # If we have no options, we should get false back
+        # If we have no options, nothing should happen (and no options
+        # file should be added tot he set of options)
         opt = ipopt.Ipopt()
-        result = opt._write_options_file('fakename', None)
-        self.assertFalse(result)
+        opt._write_options_file('fakename', opt.config.solver_options)
+        self.assertEqual(opt.config.solver_options.value(), {})
         # Pass it some options that ARE on the command line
         opt = ipopt.Ipopt(solver_options={'max_iter': 4})
-        result = opt._write_options_file('myfile', opt.config.solver_options)
-        self.assertFalse(result)
+        opt._write_options_file('myfile', opt.config.solver_options)
+        self.assertNotIn('option_file_name', opt.config.solver_options)
         self.assertFalse(os.path.isfile('myfile.opt'))
         # Now we are going to actually pass it some options that are NOT on
         # the command line
@@ -335,23 +361,25 @@ Ipopt 3.14.17: Optimal Solution Found
             dname = temp.mkdtemp()
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            filename = os.path.join(dname, 'myfile')
-            result = opt._write_options_file(filename, opt.config.solver_options)
-            self.assertTrue(result)
-            self.assertTrue(os.path.isfile(filename + '.opt'))
+            filename = os.path.join(dname, 'myfile.opt')
+            opt._write_options_file(filename, opt.config.solver_options)
+            self.assertIn('option_file_name', opt.config.solver_options)
+            self.assertTrue(os.path.isfile(filename))
         # Make sure all options are writing to the file
         opt = ipopt.Ipopt(solver_options={'custom_option_1': 4, 'custom_option_2': 3})
         with TempfileManager.new_context() as temp:
             dname = temp.mkdtemp()
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            filename = os.path.join(dname, 'myfile')
-            result = opt._write_options_file(filename, opt.config.solver_options)
-            self.assertTrue(result)
-            self.assertTrue(os.path.isfile(filename + '.opt'))
-            with open(filename + '.opt', 'r') as f:
+            filename = os.path.join(dname, 'myfile.opt')
+            opt._write_options_file(filename, opt.config.solver_options)
+            self.assertIn('option_file_name', opt.config.solver_options)
+            self.assertTrue(os.path.isfile(filename))
+            with open(filename, 'r') as f:
                 data = f.readlines()
-                self.assertEqual(len(data), len(list(opt.config.solver_options.keys())))
+                self.assertEqual(
+                    len(data) + 1, len(list(opt.config.solver_options.keys()))
+                )
 
     def test_has_linear_solver(self):
         opt = ipopt.Ipopt()
@@ -379,17 +407,18 @@ Ipopt 3.14.17: Optimal Solution Found
     def test_create_command_line(self):
         opt = ipopt.Ipopt()
         # No custom options, no file created. Plain and simple.
-        result = opt._create_command_line('myfile', opt.config, False)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(result, [str(opt.config.executable), 'myfile.nl', '-AMPL'])
         # Custom command line options
         opt = ipopt.Ipopt(solver_options={'max_iter': 4})
-        result = opt._create_command_line('myfile', opt.config, False)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result, [str(opt.config.executable), 'myfile.nl', '-AMPL', 'max_iter=4']
         )
         # Let's see if we correctly parse config.time_limit
         opt = ipopt.Ipopt(solver_options={'max_iter': 4}, time_limit=10)
-        result = opt._create_command_line('myfile', opt.config, False)
+        opt._verify_ipopt_options(opt.config)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result,
             [
@@ -402,7 +431,8 @@ Ipopt 3.14.17: Optimal Solution Found
         )
         # Now let's do multiple command line options
         opt = ipopt.Ipopt(solver_options={'max_iter': 4, 'max_cpu_time': 10})
-        result = opt._create_command_line('myfile', opt.config, False)
+        opt._verify_ipopt_options(opt.config)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result,
             [
@@ -413,25 +443,6 @@ Ipopt 3.14.17: Optimal Solution Found
                 'max_iter=4',
             ],
         )
-        # Let's now include if we "have" an options file
-        result = opt._create_command_line('myfile', opt.config, True)
-        self.assertEqual(
-            result,
-            [
-                str(opt.config.executable),
-                'myfile.nl',
-                '-AMPL',
-                'option_file_name=myfile.opt',
-                'max_cpu_time=10',
-                'max_iter=4',
-            ],
-        )
-        # Finally, let's make sure it errors if someone tries to pass option_file_name
-        opt = ipopt.Ipopt(
-            solver_options={'max_iter': 4, 'option_file_name': 'myfile.opt'}
-        )
-        with self.assertRaises(ValueError):
-            result = opt._create_command_line('myfile', opt.config, False)
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -457,12 +468,15 @@ class TestIpopt(unittest.TestCase):
         # Test custom initialization
         solver = SolverFactory('ipopt', executable='/path/to/exe')
         self.assertFalse(solver.config.tee)
-        self.assertTrue(solver.config.executable.startswith('/path'))
+        self.assertIsNone(solver.config.executable.path())
+        self.assertTrue(solver.config.executable._registered_name.startswith('/path'))
 
     def test_ipopt_solve(self):
         # Gut check - does it solve?
         model = self.create_model()
         ipopt.Ipopt().solve(model)
+        self.assertAlmostEqual(model.x.value, 1)
+        self.assertAlmostEqual(model.y.value, 1)
 
     def test_ipopt_results(self):
         model = self.create_model()
@@ -504,3 +518,111 @@ class TestIpopt(unittest.TestCase):
         else:
             # Newer version of IPOPT
             self.assertIn('IPOPT', timing_info.keys())
+
+    def test_ipopt_options_file(self):
+        # Check that the options file is getting to Ipopt: if we give it
+        # an invalid option in the options file, ipopt will fail.  This
+        # is important, as ipopt will NOT fail if you pass if an
+        # option_file_name that does not exist.
+        model = self.create_model()
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        # If the model name contains a quote, then the name needs
+        # to be quoted
+        model.name = "test'model'"
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        model.name = 'test"model'
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        # Because we are using universal=True for to_legal_filename,
+        # using both single and double quotes will be OK
+        model.name = 'test"\'model'
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        if not is_windows:
+            # This test is not valid on Windows, as {"} is not a valid
+            # character in a directory name.
+            with TempfileManager.new_context() as temp:
+                dname = temp.mkdtemp()
+                working_dir = os.path.join(dname, '"foo"')
+                os.mkdir(working_dir)
+                with self.assertRaisesRegex(ValueError, 'single and double'):
+                    results = ipopt.Ipopt().solve(
+                        model,
+                        working_dir=working_dir,
+                        solver_options={'bogus_option': 5},
+                        raise_exception_on_nonoptimal_result=False,
+                        load_solutions=False,
+                    )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class TestLegacyIpopt(unittest.TestCase):
+    def create_model(self):
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var(initialize=1.5)
+        model.y = pyo.Var(initialize=1.5)
+
+        @model.Objective(sense=pyo.minimize)
+        def rosenbrock(m):
+            return (1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2
+
+        return model
+
+    def test_map_OF_options(self):
+        model = self.create_model()
+
+        with capture_output() as LOG:
+            results = ipopt.LegacyIpoptSolver().solve(
+                model,
+                tee=True,
+                solver_options={'OF_bogus_option': 5},
+                load_solutions=False,
+            )
+        print(LOG.getvalue())
+        self.assertIn('OPTION_INVALID', LOG.getvalue())
+        # Note: OF_ is stripped
+        self.assertIn(
+            'Read Option: "bogus_option". It is not a valid option', LOG.getvalue()
+        )
+
+        with self.assertRaisesRegex(ValueError, "unallowed ipopt option 'wantsol'"):
+            results = ipopt.LegacyIpoptSolver().solve(
+                model,
+                tee=True,
+                solver_options={'OF_wantsol': False},
+                load_solutions=False,
+            )
