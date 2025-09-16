@@ -177,7 +177,11 @@ class Engine:
         idx_vars = [self.var_map[id(var)] for var in variables]
         return self._execute(knitro.KN_get_var_primal_values, idx_vars)
 
-    def get_duals(self, cons: Iterable[ConstraintData]) -> Optional[List[float]]:
+    def get_var_duals(self, variables: Iterable[VarData]) -> Optional[List[float]]:
+        idx_vars = [self.var_map[id(var)] for var in variables]
+        return self._execute(knitro.KN_get_var_dual_values, idx_vars)
+
+    def get_con_duals(self, cons: Iterable[ConstraintData]) -> Optional[List[float]]:
         idx_cons = [self.con_map[id(con)] for con in cons]
         return self._execute(knitro.KN_get_con_dual_values, idx_cons)
 

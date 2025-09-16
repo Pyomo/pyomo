@@ -171,13 +171,21 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
             return NoSolutionError()
         return ComponentMap([(var, x[i]) for i, var in enumerate(vars_to_load)])
 
+    def get_reduced_costs(self, vars_to_load: Optional[Sequence[VarData]] = None):
+        if vars_to_load is None:
+            vars_to_load = self.get_vars()
+        rc = self._engine.get_var_duals(vars_to_load)
+        if rc is None:
+            return NoDualsError()
+        return ComponentMap([(var, -rc[i]) for i, var in enumerate(vars_to_load)])
+
     def get_duals(self, cons_to_load: Optional[Sequence[ConstraintData]] = None):
         if cons_to_load is None:
             cons_to_load = self.get_cons()
-        y = self._engine.get_duals(cons_to_load)
+        y = self._engine.get_con_duals(cons_to_load)
         if y is None:
             return NoDualsError()
-        return ComponentMap([(con, y[i]) for i, con in enumerate(cons_to_load)])
+        return ComponentMap([(con, -y[i]) for i, con in enumerate(cons_to_load)])
 
     def get_num_solutions(self):
         return self._engine.get_num_solutions()

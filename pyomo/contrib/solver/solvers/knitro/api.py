@@ -12,7 +12,7 @@
 
 from pyomo.common.dependencies import attempt_import
 
-# import knitro
+import knitro
 
-knitro, KNITRO_AVAILABLE = attempt_import("knitro")
+_, KNITRO_AVAILABLE = attempt_import("knitro")
 KNITRO_VERSION = knitro.__version__ if KNITRO_AVAILABLE else "0.0.0"

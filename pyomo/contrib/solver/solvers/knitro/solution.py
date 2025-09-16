@@ -22,6 +22,9 @@ class SolutionProvider(Protocol):
     def get_primals(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]: ...
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]: ...
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Mapping[ConstraintData, float]: ...
@@ -43,6 +46,9 @@ class SolutionLoader(SolutionLoaderBase):
     # TODO: remove this when the solution loader is fixed.
     def get_primals(self, vars_to_load=None):
         return self.get_vars(vars_to_load)
+
+    def get_reduced_costs(self, vars_to_load = None):
+        return self._provider.get_reduced_costs(vars_to_load)
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
