@@ -12,7 +12,7 @@
 import abc
 from typing import List, Sequence, Optional
 
-from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.common.config import ConfigDict, ConfigValue, document_configdict
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData
@@ -48,6 +48,7 @@ Note that inactive components (e.g., constraints) are treated as "removed".
 """
 
 
+@document_configdict()
 class AutoUpdateConfig(ConfigDict):
     """
     Control which parts of the model are automatically checked and/or updated upon re-solve
@@ -71,6 +72,7 @@ class AutoUpdateConfig(ConfigDict):
             visibility=visibility,
         )
 
+        # automatically detect new/removed constraints on subsequent solves
         self.check_for_new_or_removed_constraints: bool = self.declare(
             'check_for_new_or_removed_constraints',
             ConfigValue(
@@ -84,6 +86,7 @@ class AutoUpdateConfig(ConfigDict):
                 model.""",
             ),
         )
+        # automatically detect new/removed objectives on subsequent solves
         self.check_for_new_or_removed_objectives: bool = self.declare(
             'check_for_new_or_removed_objectives',
             ConfigValue(
@@ -97,6 +100,7 @@ class AutoUpdateConfig(ConfigDict):
                 model.""",
             ),
         )
+        # automatically detect changes to constraints on subsequent solves
         self.update_constraints: bool = self.declare(
             'update_constraints',
             ConfigValue(
@@ -111,6 +115,7 @@ class AutoUpdateConfig(ConfigDict):
                 being modified.""",
             ),
         )
+        # automatically detect changes to variables on subsequent solves
         self.update_vars: bool = self.declare(
             'update_vars',
             ConfigValue(
@@ -126,6 +131,7 @@ class AutoUpdateConfig(ConfigDict):
                 update_parameters_and_fixed_vars.""",
             ),
         )
+        # automatically detect changes to parameters on subsequent solves
         self.update_parameters: bool = self.declare(
             'update_parameters',
             ConfigValue(
@@ -139,6 +145,7 @@ class AutoUpdateConfig(ConfigDict):
                 parameters are not being modified.""",
             ),
         )
+        # automatically detect changes to named expressions on subsequent solves
         self.update_named_expressions: bool = self.declare(
             'update_named_expressions',
             ConfigValue(
@@ -151,6 +158,7 @@ class AutoUpdateConfig(ConfigDict):
                 are certain Expressions are not being modified.""",
             ),
         )
+        # automatically detect changes to objectives on subsequent solves
         self.update_objectives: bool = self.declare(
             'update_objectives',
             ConfigValue(
