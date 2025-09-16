@@ -745,28 +745,34 @@ class ModelChangeDetector:
         if config.check_for_new_or_removed_constraints:
             timer.start('sos')
             new_sos, old_sos = self._check_for_new_or_removed_sos()
-            self._add_sos_constraints(new_sos)
-            self._remove_sos_constraints(old_sos)
+            if new_sos:
+                self._add_sos_constraints(new_sos)
+            if old_sos:
+                self._remove_sos_constraints(old_sos)
             added_sos.update(new_sos)
             timer.stop('sos')
             timer.start('cons')
             new_cons, old_cons = self._check_for_new_or_removed_constraints()
-            self._add_constraints(new_cons)
-            self._remove_constraints(old_cons)
+            if new_cons:
+                self._add_constraints(new_cons)
+            if old_cons:
+                self._remove_constraints(old_cons)
             added_cons.update(new_cons)
             timer.stop('cons')
 
         if config.update_constraints:
             timer.start('cons')
             cons_to_update = self._check_for_modified_constraints()
-            self._remove_constraints(cons_to_update)
-            self._add_constraints(cons_to_update)
+            if cons_to_update:
+                self._remove_constraints(cons_to_update)
+                self._add_constraints(cons_to_update)
             added_cons.update(cons_to_update)
             timer.stop('cons')
             timer.start('sos')
             sos_to_update = self._check_for_modified_sos()
-            self._remove_sos_constraints(sos_to_update)
-            self._add_sos_constraints(sos_to_update)
+            if sos_to_update:
+                self._remove_sos_constraints(sos_to_update)
+                self._add_sos_constraints(sos_to_update)
             added_sos.update(sos_to_update)
             timer.stop('sos')
 
@@ -775,30 +781,36 @@ class ModelChangeDetector:
             new_objs, old_objs = self._check_for_new_or_removed_objectives()
             # many solvers require one objective, so we have to remove the 
             # old objective first
-            self._remove_objectives(old_objs)
-            self._add_objectives(new_objs)
+            if old_objs:
+                self._remove_objectives(old_objs)
+            if new_objs:
+                self._add_objectives(new_objs)
             added_objs.update((id(i), i) for i in new_objs)
             timer.stop('objective')
 
         if config.update_objectives:
             timer.start('objective')
             objs_to_update = self._check_for_modified_objectives()
-            self._remove_objectives(objs_to_update)
-            self._add_objectives(objs_to_update)
+            if objs_to_update:
+                self._remove_objectives(objs_to_update)
+                self._add_objectives(objs_to_update)
             added_objs.update((id(i), i) for i in objs_to_update)
             timer.stop('objective')
 
         if config.update_vars:
             timer.start('vars')
             vars_to_update, cons_to_update, objs_to_update = self._check_for_var_changes()
-            self._update_variables(vars_to_update)
+            if vars_to_update:
+                self._update_variables(vars_to_update)
             cons_to_update = [i for i in cons_to_update if i not in added_cons]
             objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
-            self._remove_constraints(cons_to_update)
-            self._add_constraints(cons_to_update)
+            if cons_to_update:
+                self._remove_constraints(cons_to_update)
+                self._add_constraints(cons_to_update)
             added_cons.update(cons_to_update)
-            self._remove_objectives(objs_to_update)
-            self._add_objectives(objs_to_update)
+            if objs_to_update:
+                self._remove_objectives(objs_to_update)
+                self._add_objectives(objs_to_update)
             added_objs.update((id(i), i) for i in objs_to_update)
             timer.stop('vars')
 
@@ -807,16 +819,19 @@ class ModelChangeDetector:
             cons_to_update, objs_to_update = self._check_for_named_expression_changes()
             cons_to_update = [i for i in cons_to_update if i not in added_cons]
             objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
-            self._remove_constraints(cons_to_update)
-            self._add_constraints(cons_to_update)
+            if cons_to_update:
+                self._remove_constraints(cons_to_update)
+                self._add_constraints(cons_to_update)
             added_cons.update(cons_to_update)
-            self._remove_objectives(objs_to_update)
-            self._add_objectives(objs_to_update)
+            if objs_to_update:
+                self._remove_objectives(objs_to_update)
+                self._add_objectives(objs_to_update)
             added_objs.update((id(i), i) for i in objs_to_update)
             timer.stop('named expressions')
 
         if config.update_parameters:
             timer.start('params')
             params_to_update = self._check_for_param_changes()
-            self._update_parameters(params_to_update)
+            if params_to_update:
+                self._update_parameters(params_to_update)
             timer.stop('params')
