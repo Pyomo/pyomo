@@ -25,6 +25,7 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.util import get_objective
 from pyomo.contrib.observer.component_collector import collect_components_from_expr
 from pyomo.common.numeric_types import native_numeric_types
+import gc
 
 
 """
@@ -476,27 +477,35 @@ class ModelChangeDetector:
                 )
 
     def _set_instance(self):
-        self._check_for_unknown_active_components()
 
-        self._add_constraints(
-            list(
-                self._model.component_data_objects(Constraint, descend_into=True, active=True)
-            )
-        )
-        self._add_sos_constraints(
-            list(
-                self._model.component_data_objects(
-                    SOSConstraint, descend_into=True, active=True,
+        is_gc_enabled = gc.isenabled()
+        gc.disable()
+
+        try:
+            self._check_for_unknown_active_components()
+
+            self._add_constraints(
+                list(
+                    self._model.component_data_objects(Constraint, descend_into=True, active=True)
                 )
             )
-        )
-        self._add_objectives(
-            list(
-                self._model.component_data_objects(
-                    Objective, descend_into=True, active=True,
+            self._add_sos_constraints(
+                list(
+                    self._model.component_data_objects(
+                        SOSConstraint, descend_into=True, active=True,
+                    )
                 )
             )
-        )
+            self._add_objectives(
+                list(
+                    self._model.component_data_objects(
+                        Objective, descend_into=True, active=True,
+                    )
+                )
+            )
+        finally:
+            if is_gc_enabled:
+                gc.enable()
 
     def _remove_constraints(self, cons: List[ConstraintData]):
         for obs in self._observers:
@@ -736,102 +745,109 @@ class ModelChangeDetector:
             timer = HierarchicalTimer()
         config: AutoUpdateConfig = self.config(value=kwds, preserve_implicit=True)
 
-        self._check_for_unknown_active_components()
+        is_gc_enabled = gc.isenabled()
+        gc.disable()
 
-        added_cons = set()
-        added_sos = set()
-        added_objs = {}
+        try:
+            self._check_for_unknown_active_components()
 
-        if config.check_for_new_or_removed_constraints:
-            timer.start('sos')
-            new_sos, old_sos = self._check_for_new_or_removed_sos()
-            if new_sos:
-                self._add_sos_constraints(new_sos)
-            if old_sos:
-                self._remove_sos_constraints(old_sos)
-            added_sos.update(new_sos)
-            timer.stop('sos')
-            timer.start('cons')
-            new_cons, old_cons = self._check_for_new_or_removed_constraints()
-            if new_cons:
-                self._add_constraints(new_cons)
-            if old_cons:
-                self._remove_constraints(old_cons)
-            added_cons.update(new_cons)
-            timer.stop('cons')
+            added_cons = set()
+            added_sos = set()
+            added_objs = {}
 
-        if config.update_constraints:
-            timer.start('cons')
-            cons_to_update = self._check_for_modified_constraints()
-            if cons_to_update:
-                self._remove_constraints(cons_to_update)
-                self._add_constraints(cons_to_update)
-            added_cons.update(cons_to_update)
-            timer.stop('cons')
-            timer.start('sos')
-            sos_to_update = self._check_for_modified_sos()
-            if sos_to_update:
-                self._remove_sos_constraints(sos_to_update)
-                self._add_sos_constraints(sos_to_update)
-            added_sos.update(sos_to_update)
-            timer.stop('sos')
+            if config.check_for_new_or_removed_constraints:
+                timer.start('sos')
+                new_sos, old_sos = self._check_for_new_or_removed_sos()
+                if new_sos:
+                    self._add_sos_constraints(new_sos)
+                if old_sos:
+                    self._remove_sos_constraints(old_sos)
+                added_sos.update(new_sos)
+                timer.stop('sos')
+                timer.start('cons')
+                new_cons, old_cons = self._check_for_new_or_removed_constraints()
+                if new_cons:
+                    self._add_constraints(new_cons)
+                if old_cons:
+                    self._remove_constraints(old_cons)
+                added_cons.update(new_cons)
+                timer.stop('cons')
 
-        if config.check_for_new_or_removed_objectives:
-            timer.start('objective')
-            new_objs, old_objs = self._check_for_new_or_removed_objectives()
-            # many solvers require one objective, so we have to remove the 
-            # old objective first
-            if old_objs:
-                self._remove_objectives(old_objs)
-            if new_objs:
-                self._add_objectives(new_objs)
-            added_objs.update((id(i), i) for i in new_objs)
-            timer.stop('objective')
+            if config.update_constraints:
+                timer.start('cons')
+                cons_to_update = self._check_for_modified_constraints()
+                if cons_to_update:
+                    self._remove_constraints(cons_to_update)
+                    self._add_constraints(cons_to_update)
+                added_cons.update(cons_to_update)
+                timer.stop('cons')
+                timer.start('sos')
+                sos_to_update = self._check_for_modified_sos()
+                if sos_to_update:
+                    self._remove_sos_constraints(sos_to_update)
+                    self._add_sos_constraints(sos_to_update)
+                added_sos.update(sos_to_update)
+                timer.stop('sos')
 
-        if config.update_objectives:
-            timer.start('objective')
-            objs_to_update = self._check_for_modified_objectives()
-            if objs_to_update:
-                self._remove_objectives(objs_to_update)
-                self._add_objectives(objs_to_update)
-            added_objs.update((id(i), i) for i in objs_to_update)
-            timer.stop('objective')
+            if config.check_for_new_or_removed_objectives:
+                timer.start('objective')
+                new_objs, old_objs = self._check_for_new_or_removed_objectives()
+                # many solvers require one objective, so we have to remove the 
+                # old objective first
+                if old_objs:
+                    self._remove_objectives(old_objs)
+                if new_objs:
+                    self._add_objectives(new_objs)
+                added_objs.update((id(i), i) for i in new_objs)
+                timer.stop('objective')
 
-        if config.update_vars:
-            timer.start('vars')
-            vars_to_update, cons_to_update, objs_to_update = self._check_for_var_changes()
-            if vars_to_update:
-                self._update_variables(vars_to_update)
-            cons_to_update = [i for i in cons_to_update if i not in added_cons]
-            objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
-            if cons_to_update:
-                self._remove_constraints(cons_to_update)
-                self._add_constraints(cons_to_update)
-            added_cons.update(cons_to_update)
-            if objs_to_update:
-                self._remove_objectives(objs_to_update)
-                self._add_objectives(objs_to_update)
-            added_objs.update((id(i), i) for i in objs_to_update)
-            timer.stop('vars')
+            if config.update_objectives:
+                timer.start('objective')
+                objs_to_update = self._check_for_modified_objectives()
+                if objs_to_update:
+                    self._remove_objectives(objs_to_update)
+                    self._add_objectives(objs_to_update)
+                added_objs.update((id(i), i) for i in objs_to_update)
+                timer.stop('objective')
 
-        if config.update_named_expressions:
-            timer.start('named expressions')
-            cons_to_update, objs_to_update = self._check_for_named_expression_changes()
-            cons_to_update = [i for i in cons_to_update if i not in added_cons]
-            objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
-            if cons_to_update:
-                self._remove_constraints(cons_to_update)
-                self._add_constraints(cons_to_update)
-            added_cons.update(cons_to_update)
-            if objs_to_update:
-                self._remove_objectives(objs_to_update)
-                self._add_objectives(objs_to_update)
-            added_objs.update((id(i), i) for i in objs_to_update)
-            timer.stop('named expressions')
+            if config.update_vars:
+                timer.start('vars')
+                vars_to_update, cons_to_update, objs_to_update = self._check_for_var_changes()
+                if vars_to_update:
+                    self._update_variables(vars_to_update)
+                cons_to_update = [i for i in cons_to_update if i not in added_cons]
+                objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
+                if cons_to_update:
+                    self._remove_constraints(cons_to_update)
+                    self._add_constraints(cons_to_update)
+                added_cons.update(cons_to_update)
+                if objs_to_update:
+                    self._remove_objectives(objs_to_update)
+                    self._add_objectives(objs_to_update)
+                added_objs.update((id(i), i) for i in objs_to_update)
+                timer.stop('vars')
 
-        if config.update_parameters:
-            timer.start('params')
-            params_to_update = self._check_for_param_changes()
-            if params_to_update:
-                self._update_parameters(params_to_update)
-            timer.stop('params')
+            if config.update_named_expressions:
+                timer.start('named expressions')
+                cons_to_update, objs_to_update = self._check_for_named_expression_changes()
+                cons_to_update = [i for i in cons_to_update if i not in added_cons]
+                objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
+                if cons_to_update:
+                    self._remove_constraints(cons_to_update)
+                    self._add_constraints(cons_to_update)
+                added_cons.update(cons_to_update)
+                if objs_to_update:
+                    self._remove_objectives(objs_to_update)
+                    self._add_objectives(objs_to_update)
+                added_objs.update((id(i), i) for i in objs_to_update)
+                timer.stop('named expressions')
+
+            if config.update_parameters:
+                timer.start('params')
+                params_to_update = self._check_for_param_changes()
+                if params_to_update:
+                    self._update_parameters(params_to_update)
+                timer.stop('params')
+        finally:
+            if is_gc_enabled:
+                gc.enable()
