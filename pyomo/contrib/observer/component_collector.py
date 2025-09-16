@@ -93,6 +93,11 @@ class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         return collector_handlers[node.__class__](node, self)
+    
+    def beforeChild(self, node, child, child_idx):
+        if id(child) in self.named_expressions:
+            return False, None
+        return True, None
 
 
 _visitor = _ComponentFromExprCollector()
