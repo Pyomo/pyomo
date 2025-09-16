@@ -10,9 +10,10 @@
 #  ___________________________________________________________________________
 
 
-from collections.abc import Iterable, Mapping, MutableMapping
+from collections.abc import Iterable, Mapping, MutableSet
 from typing import Any, List, Optional
 
+from pyomo.common.collections.component_set import ComponentSet
 from pyomo.common.numeric_types import value
 from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs
 from pyomo.core.base.block import BlockData
@@ -70,10 +71,10 @@ class Problem:
     objs: List[ObjectiveData]
     cons: List[ConstraintData]
     variables: List[VarData]
-    _var_map: MutableMapping[int, VarData]
+    _vars: MutableSet[VarData]
 
     def __init__(self, block: Optional[BlockData] = None):
-        self._var_map = {}
+        self._vars = ComponentSet()
         self.objs = []
         self.cons = []
         self.variables = []
@@ -84,7 +85,7 @@ class Problem:
         self.objs.clear()
         self.cons.clear()
         self.variables.clear()
-        self._var_map.clear()
+        self._vars.clear()
 
     def set_block(self, block: BlockData):
         self.clear()
@@ -99,12 +100,12 @@ class Problem:
         for obj in new_objs:
             _, variables, _, _ = collect_vars_and_named_exprs(obj.expr)
             for v in variables:
-                self._var_map[id(v)] = v
+                self._vars.add(v)
         for con in new_cons:
             _, variables, _, _ = collect_vars_and_named_exprs(con.body)
             for v in variables:
-                self._var_map[id(v)] = v
-        self.variables.extend(self._var_map.values())
+                self._vars.add(v)
+        self.variables.extend(self._vars)
 
 
 class NonlinearExpressionData:
