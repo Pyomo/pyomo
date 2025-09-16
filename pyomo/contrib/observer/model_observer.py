@@ -687,13 +687,13 @@ class ModelChangeDetector:
                     cons_to_update[c] = None
                 for obj_id in self._referenced_variables[vid][2]:
                     objs_to_update[obj_id] = None
+            elif _fixed and v.value != _value:
+                vars_to_update.append(v)
             elif v._lb is not _lb:
                 vars_to_update.append(v)
             elif v._ub is not _ub:
                 vars_to_update.append(v)
             elif _domain_interval != v.domain.get_interval():
-                vars_to_update.append(v)
-            elif v.value != _value:
                 vars_to_update.append(v)
         cons_to_update = list(cons_to_update.keys())
         objs_to_update = [self._objectives[obj_id][0] for obj_id in objs_to_update.keys()]
