@@ -273,7 +273,6 @@ class GurobiPersistent(
         self._last_results_object: Optional[Results] = None
 
     def close(self):
-        """Instance-level cleanup: drop model state, then release shared Env."""
         try:
             self._reinit()
         except Exception:

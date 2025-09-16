@@ -236,7 +236,7 @@ class GurobiSolverMixin:
             # Gurobi treats this as integer seconds if set
             os.environ["GRB_LICENSE_WAIT"] = str(int(timeout))
         else:
-            # Ensure we don't inherit a user's shell setting for this probe
+            # Ensure we don't inherit a user's shell settings
             # (but preserve it to restore later)
             os.environ["GRB_LICENSE_WAIT"] = os.environ.get("GRB_LICENSE_WAIT", "0")
 
@@ -271,13 +271,10 @@ class GurobiSolverMixin:
                     large_model.optimize()
                     self._license_cache = LicenseAvailability.FullLicense
                 except gurobipy.GurobiError:
-                    # If we fail when exceeding limits, try within limits
                     with capture_output(capture_fd=True):
                         small_model = gurobipy.Model(env=env)
                         try:
-                            small_model.addVars(
-                                range(100)
-                            )  # comfortably under demo limits
+                            small_model.addVars(range(100))
                             small_model.optimize()
                             self._license_cache = LicenseAvailability.LimitedLicense
                         except gurobipy.GurobiError as small_error:
