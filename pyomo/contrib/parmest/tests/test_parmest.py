@@ -9,12 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import platform
 import sys
 import os
 import subprocess
 from itertools import product
 
+from pyomo.common.unittest import pytest
+from parameterized import parameterized, parameterized_class
 import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as graphics
@@ -26,15 +27,265 @@ from pyomo.common.dependencies import numpy as np, pandas as pd, scipy, matplotl
 from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.pynumero.asl import AmplInterface
-from pyomo.opt import SolverFactory
 
-is_osx = platform.mac_ver()[0] != ""
-ipopt_available = SolverFactory("ipopt").available()
+ipopt_available = pyo.SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
 
 # Set the global seed for random number generation in tests
 _RANDOM_SEED_FOR_TESTING = 524
+
+
+# Test class for the built-in "SSE" and "SSE_weighted" objective functions
+# validated the results using the Rooney-Biegler paper example linked below
+# https://doi.org/10.1002/aic.690470811
+# The Rooney-Biegler paper example is the case when the measurement error is None
+# we considered another case when the user supplies the value of the measurement error
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+
+# we use parameterized_class to test the two objective functions
+# over the two cases of the measurement error. Included a third objective function
+# to test the error message when an incorrect objective function is supplied
+@parameterized_class(
+    ("measurement_std", "objective_function"),
+    [
+        (None, "SSE"),
+        (None, "SSE_weighted"),
+        (None, "incorrect_obj"),
+        (0.1, "SSE"),
+        (0.1, "SSE_weighted"),
+        (0.1, "incorrect_obj"),
+    ],
+)
+class TestParmestCovEst(unittest.TestCase):
+
+    def setUp(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+            RooneyBieglerExperiment,
+        )
+
+        self.data = pd.DataFrame(
+            data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+            columns=["hour", "y"],
+        )
+
+        # Create an experiment list
+        exp_list = []
+        for i in range(self.data.shape[0]):
+            exp_list.append(
+                RooneyBieglerExperiment(self.data.loc[i, :], self.measurement_std)
+            )
+
+        self.exp_list = exp_list
+
+        if self.objective_function == "incorrect_obj":
+            with pytest.raises(
+                ValueError,
+                match=r"Invalid objective function: 'incorrect_obj'\. "
+                r"Choose from: \['SSE', 'SSE_weighted'\]\.",
+            ):
+                self.pest = parmest.Estimator(
+                    self.exp_list, obj_function=self.objective_function, tee=True
+                )
+        else:
+            self.pest = parmest.Estimator(
+                self.exp_list, obj_function=self.objective_function, tee=True
+            )
+
+    def check_rooney_biegler_parameters(
+        self, obj_val, theta_vals, obj_function, measurement_error
+    ):
+        """
+        Checks if the objective value and parameter estimates are equal to the
+        expected values and agree with the results of the Rooney-Biegler paper
+
+        Argument:
+            obj_val: float or integer value of the objective function
+            theta_vals: dictionary of the estimated parameters
+            obj_function: string objective function supplied by the user,
+                e.g., 'SSE'
+            measurement_error: float or integer value of the measurement error
+                standard deviation
+        """
+        if obj_function == "SSE":
+            self.assertAlmostEqual(obj_val, 4.33171, places=2)
+        elif obj_function == "SSE_weighted" and measurement_error is not None:
+            self.assertAlmostEqual(obj_val, 216.58556, places=2)
+
+        self.assertAlmostEqual(
+            theta_vals["asymptote"], 19.1426, places=2
+        )  # 19.1426 from the paper
+        self.assertAlmostEqual(
+            theta_vals["rate_constant"], 0.5311, places=2
+        )  # 0.5311 from the paper
+
+    def check_rooney_biegler_covariance(
+        self, cov, cov_method, obj_function, measurement_error
+    ):
+        """
+        Checks if the covariance matrix elements are equal to the expected
+        values and agree with the results of the Rooney-Biegler paper
+
+        Argument:
+            cov: pd.DataFrame, covariance matrix of the estimated parameters
+            cov_method: string ``method`` object specified by the user
+                Options - 'finite_difference', 'reduced_hessian',
+                        and 'automatic_differentiation_kaug'
+            obj_function: string objective function supplied by the user,
+                e.g., 'SSE'
+            measurement_error: float or integer value of the measurement error
+                standard deviation
+        """
+
+        # get indices in covariance matrix
+        cov_cols = cov.columns.to_list()
+        asymptote_index = [idx for idx, s in enumerate(cov_cols) if "asymptote" in s][0]
+        rate_constant_index = [
+            idx for idx, s in enumerate(cov_cols) if "rate_constant" in s
+        ][0]
+
+        if measurement_error is None and obj_function == "SSE":
+            if (
+                cov_method == "finite_difference"
+                or cov_method == "automatic_differentiation_kaug"
+            ):
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.432265, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.432265, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index],
+                    0.041242,
+                    places=2,
+                )  # 0.04124 from paper
+            else:
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index],
+                    0.040571,
+                    places=2,
+                )  # 0.04124 from paper
+        elif measurement_error is not None and obj_function in ("SSE", "SSE_weighted"):
+            if (
+                cov_method == "finite_difference"
+                or cov_method == "automatic_differentiation_kaug"
+            ):
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 0.009588, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.000665, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.000665, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index],
+                    0.000063,
+                    places=4,
+                )
+            else:
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 0.009474, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.000654, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.000654, places=4
+                )
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index],
+                    0.000062,
+                    places=4,
+                )
+
+    # test the covariance calculation of the three supported methods
+    # added a 'unsupported_method' to test the error message when the method supplied
+    # is not supported
+    @parameterized.expand(
+        [
+            ("finite_difference"),
+            ("automatic_differentiation_kaug"),
+            ("reduced_hessian"),
+            ("unsupported_method"),
+        ]
+    )
+    def test_parmest_covariance(self, cov_method):
+        """
+        Estimates the parameters and covariance matrix and compares them
+        with the results of the Rooney-Biegler paper
+
+        Argument:
+            cov_method: string ``method`` specified by the user
+                Options - 'finite_difference', 'reduced_hessian',
+                and 'automatic_differentiation_kaug'
+        """
+        valid_cov_methods = (
+            "finite_difference",
+            "automatic_differentiation_kaug",
+            "reduced_hessian",
+        )
+
+        if self.measurement_std is None and self.objective_function == "SSE_weighted":
+            with pytest.raises(
+                ValueError,
+                match='One or more values are missing from '
+                '"measurement_error". All values of the measurement errors are '
+                'required for the "SSE_weighted" objective.',
+            ):
+                # we expect this error when estimating the parameters
+                obj_val, theta_vals = self.pest.theta_est()
+        elif self.objective_function != "incorrect_obj":
+
+            # estimate the parameters
+            obj_val, theta_vals = self.pest.theta_est()
+
+            # check the parameter estimation result
+            self.check_rooney_biegler_parameters(
+                obj_val,
+                theta_vals,
+                obj_function=self.objective_function,
+                measurement_error=self.measurement_std,
+            )
+
+            # calculate the covariance matrix
+            if cov_method in valid_cov_methods:
+                cov = self.pest.cov_est(method=cov_method)
+
+                # check the covariance calculation results
+                self.check_rooney_biegler_covariance(
+                    cov,
+                    cov_method,
+                    obj_function=self.objective_function,
+                    measurement_error=self.measurement_std,
+                )
+            else:
+                with pytest.raises(
+                    ValueError,
+                    match=r"Invalid method: 'unsupported_method'\. Choose from: "
+                    r"\['finite_difference', "
+                    r"'automatic_differentiation_kaug', "
+                    r"'reduced_hessian'\]\.",
+                ):
+                    cov = self.pest.cov_est(method=cov_method)
 
 
 @unittest.skipIf(
@@ -60,8 +311,7 @@ class TestRooneyBiegler(unittest.TestCase):
         # Sum of squared error function
         def SSE(model):
             expr = (
-                model.experiment_outputs[model.y]
-                - model.response_function[model.experiment_outputs[model.hour]]
+                model.experiment_outputs[model.y[model.hour]] - model.y[model.hour]
             ) ** 2
             return expr
 
@@ -79,6 +329,27 @@ class TestRooneyBiegler(unittest.TestCase):
         self.pest = parmest.Estimator(
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
+
+    def test_custom_covariance_exception(self):
+        """
+        Tests the error raised when a user attempts to calculate
+        the covariance matrix using a custom objective function
+        """
+
+        # estimate the parameters
+        obj_val, theta_vals = self.pest.theta_est()
+
+        # check the error raised when the user tries to calculate the
+        # covariance matrix using the custom objective function
+        with pytest.raises(
+            ValueError,
+            match=r"Invalid objective function for covariance calculation\. The "
+            r"covariance matrix can only be calculated using the built-in "
+            r"objective functions: \['SSE', 'SSE_weighted'\]\. Supply "
+            r"the Estimator object one of these built-in objectives and "
+            r"re-run the code\.",
+        ):
+            cov = self.pest.cov_est()
 
     def test_parmest_exception(self):
         """
@@ -108,7 +379,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         # check the exception raised by parmest due to not defining
         # the "experiment_outputs"
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(AttributeError) as context:
             parmest.Estimator(exp_list, obj_function="SSE", tee=True)
 
         self.assertIn("experiment_outputs", str(context.exception))
@@ -200,6 +471,7 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertEqual(bootstrap_theta.shape[0], 3)  # bootstrap for sample 1
         self.assertEqual(bootstrap_theta[1.0].sum(), 3)  # all true
 
+    @pytest.mark.expensive
     def test_diagnostic_mode(self):
         self.pest.diagnostic_mode = True
 
@@ -254,16 +526,16 @@ class TestRooneyBiegler(unittest.TestCase):
 
         # Covariance matrix
         self.assertAlmostEqual(
-            cov["asymptote"]["asymptote"], 6.30579403, places=2
+            cov["asymptote"]["asymptote"], 6.155892, places=2
         )  # 6.22864 from paper
         self.assertAlmostEqual(
-            cov["asymptote"]["rate_constant"], -0.4395341, places=2
+            cov["asymptote"]["rate_constant"], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov["rate_constant"]["asymptote"], -0.4395341, places=2
+            cov["rate_constant"]["asymptote"], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov["rate_constant"]["rate_constant"], 0.04124, places=2
+            cov["rate_constant"]["rate_constant"], 0.040571, places=2
         )  # 0.04124 from paper
 
         """ Why does the covariance matrix from parmest not match the paper? Parmest is
@@ -410,6 +682,20 @@ class TestModelVariants(unittest.TestCase):
                 data_df = self.data.to_frame().transpose()
                 self.model = rooney_biegler_params(data_df)
 
+            def label_model(self):
+
+                m = self.model
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+                )
+
         rooney_biegler_params_exp_list = []
         for i in range(self.data.shape[0]):
             rooney_biegler_params_exp_list.append(
@@ -487,6 +773,20 @@ class TestModelVariants(unittest.TestCase):
             def create_model(self):
                 data_df = self.data.to_frame().transpose()
                 self.model = rooney_biegler_vars(data_df)
+
+            def label_model(self):
+
+                m = self.model
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+                )
 
         rooney_biegler_vars_exp_list = []
         for i in range(self.data.shape[0]):
@@ -969,12 +1269,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
         Test the exception raised by parmest when the "unknown_parameters"
         attribute is not defined in the model
         """
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(AttributeError) as context:
             parmest.Estimator(self.exp_list_df_no_params, obj_function="SSE")
 
         self.assertIn("unknown_parameters", str(context.exception))
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(AttributeError) as context:
             parmest.Estimator(self.exp_list_dict_no_params, obj_function="SSE")
 
         self.assertIn("unknown_parameters", str(context.exception))

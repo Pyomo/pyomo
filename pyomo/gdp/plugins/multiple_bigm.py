@@ -12,7 +12,6 @@
 import itertools
 import logging
 import math
-import multiprocessing
 import os
 import threading
 import enum
@@ -27,7 +26,8 @@ from pyomo.common.config import (
 )
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.dependencies import dill, dill_available
+from pyomo.common.dependencies import dill, dill_available, multiprocessing
+from pyomo.common.enums import SolverAPIVersion
 
 from pyomo.core import (
     Block,
@@ -55,8 +55,6 @@ from pyomo.gdp.plugins.bigm_mixin import (
 from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
 from pyomo.gdp.util import _to_dict
 from pyomo.opt import SolverFactory, TerminationCondition
-from pyomo.contrib.solver.common.base import SolverBase as NewSolverBase
-from pyomo.contrib.solver.common.base import LegacySolverWrapper
 from pyomo.repn import generate_standard_repn
 
 from weakref import ref as weakref_ref
@@ -93,11 +91,8 @@ def Solver(val):
         return SolverFactory(val)
     if not hasattr(val, 'solve'):
         raise ValueError("Expected a string or solver object (with solve() method)")
-    if isinstance(val, NewSolverBase) and not isinstance(val, LegacySolverWrapper):
-        raise ValueError(
-            "Please pass an old-style solver object, using the "
-            "LegacySolverWrapper mechanism if necessary."
-        )
+    if not hasattr(val, 'api_version') or val.api_version() is not SolverAPIVersion.V1:
+        raise ValueError("Solver object should support the V1 solver API version")
     return val
 
 

@@ -563,22 +563,42 @@ class _LinearStandardFormCompiler_impl(object):
         A_ip = A.indptr
         active_var_mask = (A_ip[1:] > A_ip[:-1]) | (c_ip[1:] > c_ip[:-1])
 
-        # Masks on NumPy arrays are very fast.  Build the reduced A
-        # indptr and then check if we actually have to manipulate the
-        # columns
-        augmented_mask = np.concatenate((active_var_mask, [True]))
-        reduced_A_indptr = A.indptr[augmented_mask]
-        n_cols -= len(reduced_A_indptr) - 1
-        if n_cols > 0:
+        obj_offset = np.array(obj_offset)
+
+        # Note: since we are doing matrix multiplication and then
+        # removing the fixed columns, we only want to go through that
+        # hassle for columns with actual nonzero entries.
+        fixed_vars = (
+            np.array([v.fixed for v in columns], dtype=np.bool_) & active_var_mask
+        )
+        if any(fixed_vars):
+            x = np.array([columns[i].value for i, f in enumerate(fixed_vars) if f])
+            obj_offset = obj_offset + c[:, fixed_vars] @ x
+            rhs = np.array(rhs) - A[:, fixed_vars] @ x
+            # Update the active variable mask to exclude the fixed_vars
+            # (that we just moved to the RHS)
+            active_var_mask &= ~fixed_vars
+            c = c[:, active_var_mask]
+            A = A[:, active_var_mask]
             columns = [v for k, v in zip(active_var_mask, columns) if k]
-            c = self._csc_matrix(
-                (c.data, c.indices, c.indptr[augmented_mask]),
-                [c.shape[0], len(columns)],
-            )
-            # active_var_idx[-1] = len(columns)
-            A = self._csc_matrix(
-                (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
-            )
+            n_cols = len(columns)
+        else:
+            # Masks on NumPy arrays are very fast.  Build the reduced A
+            # indptr and then check if we actually have to manipulate the
+            # columns
+            augmented_mask = np.concatenate((active_var_mask, [True]))
+            reduced_A_indptr = A.indptr[augmented_mask]
+            n_cols -= len(reduced_A_indptr) - 1
+            if n_cols > 0:
+                columns = [v for k, v in zip(active_var_mask, columns) if k]
+                c = self._csc_matrix(
+                    (c.data, c.indices, c.indptr[augmented_mask]),
+                    [c.shape[0], len(columns)],
+                )
+                # active_var_idx[-1] = len(columns)
+                A = self._csc_matrix(
+                    (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
+                )
 
         if with_debug_timing:
             timer.toc('Eliminated %s unused columns', n_cols, level=logging.DEBUG)
@@ -591,7 +611,7 @@ class _LinearStandardFormCompiler_impl(object):
             eliminated_vars = []
 
         info = LinearStandardFormInfo(
-            c, np.array(obj_offset), A, rhs, rows, columns, objectives, eliminated_vars
+            c, obj_offset, A, rhs, rows, columns, objectives, eliminated_vars
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
