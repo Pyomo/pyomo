@@ -1686,6 +1686,18 @@ class LegacySolverInterface:
     def __exit__(self, t, v, traceback):
         pass
 
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1
+
 
 class SolverFactoryClass(Factory):
     def register(self, name, doc=None):
