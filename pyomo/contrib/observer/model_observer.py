@@ -344,8 +344,12 @@ class ModelChangeDetector:
             if con in self._active_constraints:
                 raise ValueError(f'Constraint {con.name} has already been added')
             self._active_constraints[con] = con.expr
-            tmp = collect_components_from_expr(con.expr)
-            named_exprs, variables, parameters, external_functions = tmp
+            (
+                named_exprs,
+                variables,
+                parameters,
+                external_functions,
+            ) = collect_components_from_expr(con.expr)
             vars_to_check.extend(variables)
             params_to_check.extend(parameters)
             if len(named_exprs) > 0:
