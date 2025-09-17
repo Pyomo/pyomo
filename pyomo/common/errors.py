@@ -157,10 +157,23 @@ class DeveloperError(PyomoException, NotImplementedError):
 
 
 class InfeasibleConstraintException(PyomoException):
+    """Exception raised by Pyomo transformations or solver interfaces
+    to indicate that an infeasible constraint has been identified
+    (e.g. in the course of range reduction).
+
     """
-    Exception class used by Pyomo transformations to indicate
-    that an infeasible constraint has been identified (e.g. in
-    the course of range reduction).
+
+
+class InvalidConstraintError(PyomoException, ValueError):
+    """Exception raised when invalid constraints are identified.
+
+    Pyomo will raise this exception when:
+
+      - Creating a constraint with a trivial (Boolean) expression.
+      - Creating a constraint from an incorrectly structured tuple.
+      - Compiling a ranged constraint (``lb <= body <= ub``) where
+        either ``lb`` or ``ub`` are variable expressions.
+
     """
 
 

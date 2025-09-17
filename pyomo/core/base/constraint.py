@@ -17,7 +17,11 @@ from pyomo.common.pyomo_typing import overload
 from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass, deprecated
-from pyomo.common.errors import DeveloperError, TemplateExpressionError
+from pyomo.common.errors import (
+    DeveloperError,
+    InvalidConstraintError,
+    TemplateExpressionError,
+)
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
@@ -219,7 +223,7 @@ class ConstraintData(ActiveComponentData):
                 and lb.is_potentially_variable()
                 and not lb.is_fixed()
             ):
-                raise ValueError(
+                raise InvalidConstraintError(
                     f"Constraint '{self.name}' is a Ranged Inequality with a "
                     "variable lower bound.  Cannot normalize the "
                     "constraint or send it to a solver."
@@ -229,7 +233,7 @@ class ConstraintData(ActiveComponentData):
                 and ub.is_potentially_variable()
                 and not ub.is_fixed()
             ):
-                raise ValueError(
+                raise InvalidConstraintError(
                     f"Constraint '{self.name}' is a Ranged Inequality with a "
                     "variable upper bound.  Cannot normalize the "
                     "constraint or send it to a solver."
@@ -414,7 +418,7 @@ class ConstraintData(ActiveComponentData):
                     or isinstance(arg, NumericValue)
                 ):
                     continue
-                raise ValueError(
+                raise InvalidConstraintError(
                     "Constraint '%s' does not have a proper value. "
                     "Constraint expressions expressed as tuples must "
                     "contain native numeric types or Pyomo NumericValue "
@@ -426,7 +430,7 @@ class ConstraintData(ActiveComponentData):
                 # Form equality expression
                 #
                 if expr[0] is None or expr[1] is None:
-                    raise ValueError(
+                    raise InvalidConstraintError(
                         "Constraint '%s' does not have a proper value. "
                         "Equality Constraints expressed as 2-tuples "
                         "cannot contain None [received %s]" % (self.name, expr)
@@ -445,7 +449,7 @@ class ConstraintData(ActiveComponentData):
                     self._expr = RangedExpression(expr, False)
                 return
             else:
-                raise ValueError(
+                raise InvalidConstraintError(
                     "Constraint '%s' does not have a proper value. "
                     "Found a tuple of length %d. Expecting a tuple of "
                     "length 2 or 3:\n"
@@ -464,7 +468,7 @@ class ConstraintData(ActiveComponentData):
             raise ValueError(_rule_returned_none_error % (self.name,))
 
         elif expr.__class__ is bool:
-            raise ValueError(
+            raise InvalidConstraintError(
                 "Invalid constraint expression. The constraint "
                 "expression resolved to a trivial Boolean (%s) "
                 "instead of a Pyomo object. Please modify your "
