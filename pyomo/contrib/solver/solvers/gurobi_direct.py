@@ -238,6 +238,9 @@ class GurobiSolverMixin:
             # Try to bring up an environment (this is where a license is often checked)
             try:
                 env = self.acquire_license(timeout=timeout)
+                if env is None:
+                    self._license_cache = LicenseAvailability.Timeout
+                    return self._license_cache
             except gurobipy.GurobiError as acquire_error:
                 # Distinguish timeout vs unavailable vs bad license
                 status = getattr(acquire_error, "errno", None)
@@ -311,6 +314,10 @@ class GurobiSolverMixin:
                 sleep_for *= 2
                 elapsed = time.time() - current_time
                 remaining = timeout - elapsed
+            logger.warning(
+                "Timed out after %.2f seconds trying to acquire a Gurobi license.",
+                timeout,
+            )
 
     @classmethod
     def release_license(cls):
