@@ -63,17 +63,12 @@ class LinearTemplateRepn(LinearRepn):
         return 2  # something not 0 or 1
 
     def walker_exitNode(self):
-        if not self.linear and self.linear_sum:
-            # "LINEAR" is "linear or linear_sum"; (temporarily) move
-            # linear_sum to linear so this node is recognized as "LINEAR".
-            linear = self.linear
-            self.linear = self.linear_sum
-            try:
-                return super().walker_exitNode()
-            finally:
-                self.linear = linear
+        if self.nonlinear is not None:
+            return _GENERAL, self
+        elif self.linear or self.linear_sum:
+            return _LINEAR, self
         else:
-            return super().walker_exitNode()
+            return _CONSTANT, self.multiplier * self.constant
 
     def duplicate(self):
         ans = super().duplicate()
