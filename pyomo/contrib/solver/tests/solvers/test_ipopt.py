@@ -19,6 +19,7 @@ from pyomo.common.config import ConfigDict, ADVANCED_OPTION
 from pyomo.common.errors import DeveloperError
 from pyomo.common.tee import capture_output
 import pyomo.contrib.solver.solvers.ipopt as ipopt
+from pyomo.contrib.solver.common.availability import LicenseAvailability
 from pyomo.contrib.solver.common.util import NoSolutionError
 from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -115,11 +116,15 @@ class TestIpoptInterface(unittest.TestCase):
             self.assertEqual(opt.CONFIG, opt.config)
             self.assertTrue(opt.available())
 
-    def test_available_cache(self):
+    def test_solver_available_cache(self):
         opt = ipopt.Ipopt()
-        opt.available()
+        opt.solver_available()
         self.assertTrue(opt._available_cache[1])
         self.assertIsNotNone(opt._available_cache[0])
+
+    def test_license_available(self):
+        opt = ipopt.Ipopt()
+        self.assertEqual(opt.license_available(), LicenseAvailability.NotApplicable)
 
     def test_version_cache(self):
         opt = ipopt.Ipopt()
