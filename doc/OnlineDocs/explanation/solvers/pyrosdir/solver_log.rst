@@ -23,6 +23,8 @@ your console output will, by default, look like this:
 .. _solver-log-snippet:
 
 .. code-block:: text
+   :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
+   :linenos:
 
    ==============================================================================
    PyROS: The Pyomo Robust Optimization Solver, v1.3.4.
