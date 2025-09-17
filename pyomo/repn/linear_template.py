@@ -108,16 +108,14 @@ class LinearTemplateRepn(LinearRepn):
         constant = self.constant
         if constant.__class__ not in native_types or constant:
             constant *= multiplier
-            if not repetitions or (
-                constant.__class__ not in native_types and constant.is_expression_type()
-            ):
+            if not repetitions or constant.__class__ not in native_types:
                 ans.append('const += ' + constant.to_string(smap=smap))
                 constant = 0
             else:
                 constant *= repetitions
         for k, coef in list(self.linear.items()):
             coef *= multiplier
-            if coef.__class__ not in native_types and coef.is_expression_type():
+            if coef.__class__ not in native_types:
                 coef = coef.to_string(smap=smap)
             elif coef:
                 coef = repr(coef)
