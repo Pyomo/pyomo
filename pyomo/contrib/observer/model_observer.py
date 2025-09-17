@@ -298,7 +298,7 @@ class ModelChangeDetector:
     >>> m = pyo.ConcreteModel()
     >>> obs = PrintObserver()
     >>> detector = ModelChangeDetector(m, [obs])
-    >>> m.x = pyo.Var(bounds=())
+    >>> m.x = pyo.Var()
     >>> m.y = pyo.Var()
     >>> detector.update()  # no output because the variables are not used
     >>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
