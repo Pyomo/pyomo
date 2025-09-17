@@ -101,13 +101,7 @@ class LinearTemplateRepn(LinearRepn):
             self.linear_sum.extend(other.linear_sum)
 
     def _build_evaluator(
-        self,
-        smap,
-        expr_cache,
-        multiplier,
-        repetitions,
-        remove_fixed_vars,
-        check_duplicates,
+        self, smap, expr_cache, multiplier, repetitions, remove_fixed_vars
     ):
         ans = []
         multiplier *= self.multiplier
@@ -133,29 +127,22 @@ class LinearTemplateRepn(LinearRepn):
             indent = ''
             if k in expr_cache:
                 k = expr_cache[k]
-                if k.__class__ not in native_types and k.is_expression_type():
-                    ans.append('v = ' + k.to_string(smap=smap))
-                    k = 'v'
+                if k.__class__ not in native_types:
+                    # Directly substitute the expression into the
+                    # 'linear[vid] = coef' below
+                    k = k.to_string(smap=smap)
+                    # If we are removing fixed vars, add that logic here:
                     if remove_fixed_vars:
+                        ans.append(f"v = {k}")
                         ans.append('if v.__class__ is tuple:')
                         ans.append('    const += v[0] * {coef}')
                         ans.append('    v = None')
                         ans.append('else:')
+                        k = 'v'
                         indent = '    '
-                    elif not check_duplicates:
-                        # Directly substitute the expression into the
-                        # 'linear[vid] = coef below
-                        #
-                        # Remove the 'v = ' from the beginning of the last line:
-                        k = ans.pop()[4:]
-            if check_duplicates:
-                ans.append(indent + f'if {k} in linear:')
-                ans.append(indent + f'    linear[{k}] += {coef}')
-                ans.append(indent + 'else:')
-                ans.append(indent + f'    linear[{k}] = {coef}')
-            else:
-                ans.append(indent + f'linear_indices.append({k})')
-                ans.append(indent + f'linear_data.append({coef})')
+            ans.append(indent + f'linear_indices.append({k})')
+            ans.append(indent + f'linear_data.append({coef})')
+
         for subrepn, subindices, subsets in self.linear_sum:
             ans.extend(
                 '    ' * i
@@ -175,30 +162,15 @@ class LinearTemplateRepn(LinearRepn):
             except:
                 subrep = 0
             subans, subconst = subrepn._build_evaluator(
-                smap,
-                expr_cache,
-                multiplier,
-                repetitions * subrep,
-                remove_fixed_vars,
-                check_duplicates,
+                smap, expr_cache, multiplier, repetitions * subrep, remove_fixed_vars
             )
             indent = '    ' * (len(subsets))
             ans.extend(indent + line for line in subans)
             constant += subconst
         return ans, constant
 
-    def compile(
-        self,
-        env,
-        smap,
-        expr_cache,
-        args,
-        remove_fixed_vars=False,
-        check_duplicates=False,
-    ):
-        ans, constant = self._build_evaluator(
-            smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates
-        )
+    def compile(self, env, smap, expr_cache, args, remove_fixed_vars=False):
+        ans, constant = self._build_evaluator(smap, expr_cache, 1, 1, remove_fixed_vars)
         if not ans:
             return constant
         indent = '\n    '
@@ -217,12 +189,9 @@ class LinearTemplateRepn(LinearRepn):
                 ans.insert(0, fcn_body)
         else:
             ans = [ans[0], fcn_body, 'return const']
-        if check_duplicates:
-            ans.insert(0, f"def build_expr(linear, {', '.join(args)}):")
-        else:
-            ans.insert(
-                0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
-            )
+        ans.insert(
+            0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
+        )
         ans = indent.join(ans)
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
