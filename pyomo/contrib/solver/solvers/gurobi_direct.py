@@ -229,7 +229,7 @@ class GurobiSolverMixin:
           - BadLicense    : clearly invalid/corrupt license
           - Unknown       : unexpected error states
         """
-        if not gurobipy_available:
+        if not self._gurobipy_available:
             return LicenseAvailability.NotAvailable
         if not recheck and self._license_cache is not None:
             return self._license_cache
