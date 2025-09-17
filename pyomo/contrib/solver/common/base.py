@@ -49,11 +49,11 @@ class SolverBase:
     This base class defines the methods all derived solvers are expected
     to implement:
 
-      - :py:meth:`available`
+      - :py:meth:`solver_available`
       - :py:meth:`license_available`
       - :py:meth:`is_persistent`
-      - :py:meth:`solve`
       - :py:meth:`version`
+      - :py:meth:`solve`
 
     **Class Configuration**
 
