@@ -9,7 +9,10 @@ It was developed by **Natalie M. Isenberg**, **Jason A. F. Sherman**,
 and **Chrysanthos E. Gounaris** of Carnegie Mellon University,
 in collaboration with **John D. Siirola** of Sandia National Labs.
 The developers gratefully acknowledge support from the U.S. Department of Energy's
-`Institute for the Design of Advanced Energy Systems (IDAES) <https://idaes.org>`_.
+`Institute for the Design of Advanced Energy Systems (IDAES) <https://idaes.org>`_
+and `Carbon Capture Simulation for Industry Impact (CCSI2)
+<https://netl.doe.gov/carbon-management/carbon-capture/ccsi2>`_
+projects.
 
 .. toctree::
    :maxdepth: 1
