@@ -92,74 +92,11 @@ def rescale_FIM(FIM, param_vals):
     return scaled_FIM
 
 
-# TODO: Add swapping parameters for variables helper function
-# def get_parameters_from_suffix(suffix, fix_vars=False):
-#     """
-#     Finds the Params within the suffix provided. It will also check to see
-#     if there are Vars in the suffix provided. ``fix_vars`` will indicate
-#     if we should fix all the Vars in the set or not.
-#
-#     Parameters
-#     ----------
-#     suffix: pyomo Suffix object, contains the components to be checked
-#             as keys
-#     fix_vars: boolean, whether or not to fix the Vars, default = False
-#
-#     Returns
-#     -------
-#     param_list: list of Param
-#     """
-#     param_list = []
-#
-#     # FIX THE MODEL TREE ISSUE WHERE I GET base_model.<param> INSTEAD OF <param>
-#     # Check keys if they are Param or Var. Fix the vars if ``fix_vars`` is True
-#     for k, v in suffix.items():
-#         if isinstance(k, ParamData):
-#             param_list.append(k.name)
-#         elif isinstance(k, VarData):
-#             if fix_vars:
-#                 k.fix()
-#         else:
-#             pass  # ToDo: Write error for suffix keys that aren't ParamData or VarData
-#
-#     return param_list
-
-
-# Adding utility to update parameter values in a model based on the suffix
-def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
-    """
-    Overwrite each variable/parameter referenced by ``suffix_obj`` with the
-    corresponding value in ``values``.
-
-    Parameters
-    ----------
-    suffix_obj : pyomo.core.base.suffix.Suffix
-        The suffix whose *keys* are the components you want to update.
-        Call like ``update_from_suffix(model.unknown_parameters, vals)``.
-    values : iterable of numbers
-        New numerical values for the components referenced by the suffix.
-        Must be the same length as ``suffix_obj``.
-    """
-    # Check that the length of values matches the suffix length
-    items = list(suffix_obj.items())
-    if len(items) != len(values):
-        raise ValueError("values length does not match suffix length")
-
-    # Iterate through the items in the suffix and update their values
-    # Note: items are tuples of (component, suffix_value)
-    for (comp, _), new_val in zip(items, values):
-
-        # update the component value
-        # Check if the component is a VarData or ParamData
-        if isinstance(comp, (VarData, ParamData)):
-            comp.set_value(new_val)
-        else:
-            raise TypeError(
-                f"Unsupported component type {type(comp)}; expected VarData or ParamData."
-            )
-
-
+<<<<<<< HEAD
 def check_matrix(mat, check_pos_def=True):
+=======
+def check_FIM(FIM):
+>>>>>>> upstream/main
     """
     Checks that the matrix is square, positive definite, and symmetric.
 
@@ -308,6 +245,7 @@ def get_FIM_metrics(FIM):
         "log10(E-Optimality)": E_opt,
         "log10(Modified E-Optimality)": ME_opt,
     }
+<<<<<<< HEAD
 
 
 def snake_traversal_grid_sampling(*array_like_args):
@@ -409,3 +347,5 @@ def compute_correlation_matrix(
     )
 
     return corr_df.round(significant_digits) if significant_digits else corr_df
+=======
+>>>>>>> upstream/main

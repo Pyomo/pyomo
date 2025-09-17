@@ -16,9 +16,20 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 
+"""The Pyomo configuration system.
+
+This module provides classes and methods for building standardized
+hierarchical configuration objects based on the :class:`ConfigDict`,
+:class:`ConfigList`, and :class:`ConfigValue` classes.
+
+See the :doc:`Pyomo Configuration System
+</explanation/developer_utils/config>` for a more detailed
+discussion."""
+
 import argparse
 import builtins
 import enum
+import functools
 import importlib
 import inspect
 import io
@@ -689,421 +700,6 @@ class ConfigEnum(enum.Enum):
             return cls(arg)
 
 
-__doc__ = """
-=================================
-The Pyomo Configuration System
-=================================
-
-The Pyomo config system provides a set of three classes
-(:py:class:`ConfigDict`, :py:class:`ConfigList`, and
-:py:class:`ConfigValue`) for managing and documenting structured
-configuration information and user input.  The system is based around
-the ConfigValue class, which provides storage for a single configuration
-entry.  ConfigValue objects can be grouped using two containers
-(ConfigDict and ConfigList), which provide functionality analogous to
-Python's dict and list classes, respectively.
-
-At its simplest, the Config system allows for developers to specify a
-dictionary of documented configuration entries:
-
-.. testcode::
-
-    from pyomo.common.config import (
-        ConfigDict, ConfigList, ConfigValue
-    )
-    config = ConfigDict()
-    config.declare('filename', ConfigValue(
-        default=None,
-        domain=str,
-        description="Input file name",
-    ))
-    config.declare("bound tolerance", ConfigValue(
-        default=1E-5,
-        domain=float,
-        description="Bound tolerance",
-        doc="Relative tolerance for bound feasibility checks"
-    ))
-    config.declare("iteration limit", ConfigValue(
-        default=30,
-        domain=int,
-        description="Iteration limit",
-        doc="Number of maximum iterations in the decomposition methods"
-    ))
-
-Users can then provide values for those entries, and retrieve the
-current values:
-
-.. doctest::
-
-    >>> config['filename'] = 'tmp.txt'
-    >>> print(config['filename'])
-    tmp.txt
-    >>> print(config['iteration limit'])
-    30
-
-For convenience, ConfigDict objects support read/write access via
-attributes (with spaces in the declaration names replaced by
-underscores):
-
-.. doctest::
-
-    >>> print(config.filename)
-    tmp.txt
-    >>> print(config.iteration_limit)
-    30
-    >>> config.iteration_limit = 20
-    >>> print(config.iteration_limit)
-    20
-
-Domain validation
-=================
-
-All Config objects support a ``domain`` keyword that accepts a callable
-object (type, function, or callable instance).  The domain callable
-should take data and map it onto the desired domain, optionally
-performing domain validation (see :py:class:`ConfigValue`,
-:py:class:`ConfigDict`, and :py:class:`ConfigList` for more
-information).  This allows client code to accept a very flexible set of
-inputs without "cluttering" the code with input validation:
-
-.. doctest::
-
-    >>> config.iteration_limit = 35.5
-    >>> print(config.iteration_limit)
-    35
-    >>> print(type(config.iteration_limit).__name__)
-    int
-
-In addition to common types (like ``int``, ``float``, ``bool``, and
-``str``), the config system profides a number of custom domain
-validators for common use cases:
-
-.. autosummary::
-
-   Bool
-   Integer
-   PositiveInt
-   NegativeInt
-   NonNegativeInt
-   NonPositiveInt
-   PositiveFloat
-   NegativeFloat
-   NonPositiveFloat
-   NonNegativeFloat
-   In
-   InEnum
-   IsInstance
-   ListOf
-   Module
-   Path
-   PathList
-   DynamicImplicitDomain
-
-Configuring class hierarchies
-=============================
-
-A feature of the Config system is that the core classes all implement
-``__call__``, and can themselves be used as ``domain`` values.  Beyond
-providing domain verification for complex hierarchical structures, this
-feature allows ConfigDicts to cleanly support the configuration of
-derived objects.  Consider the following example:
-
-.. doctest::
-
-    >>> class Base(object):
-    ...     CONFIG = ConfigDict()
-    ...     CONFIG.declare('filename', ConfigValue(
-    ...         default='input.txt',
-    ...         domain=str,
-    ...     ))
-    ...     def __init__(self, **kwds):
-    ...         c = self.CONFIG(kwds)
-    ...         c.display()
-    ...
-    >>> class Derived(Base):
-    ...     CONFIG = Base.CONFIG()
-    ...     CONFIG.declare('pattern', ConfigValue(
-    ...         default=None,
-    ...         domain=str,
-    ...     ))
-    ...
-    >>> tmp = Base(filename='foo.txt')
-    filename: foo.txt
-    >>> tmp = Derived(pattern='.*warning')
-    filename: input.txt
-    pattern: .*warning
-
-Here, the base class ``Base`` declares a class-level attribute CONFIG as a
-ConfigDict containing a single entry (``filename``).  The derived class
-(``Derived``) then starts by making a copy of the base class' ``CONFIG``,
-and then defines an additional entry (`pattern`).  Instances of the base
-class will still create ``c`` instances that only have the single
-``filename`` entry, whereas instances of the derived class will have ``c``
-instances with two entries: the ``pattern`` entry declared by the derived
-class, and the ``filename`` entry "inherited" from the base class.
-
-An extension of this design pattern provides a clean approach for
-handling "ephemeral" instance options.  Consider an interface to an
-external "solver".  Our class implements a ``solve()`` method that takes a
-problem and sends it to the solver along with some solver configuration
-options.  We would like to be able to set those options "persistently"
-on instances of the interface class, but still override them
-"temporarily" for individual calls to ``solve()``.  We implement this by
-creating copies of the class's configuration for both specific instances
-and for use by each ``solve()`` call:
-
-.. doctest::
-
-    >>> class Solver(object):
-    ...     CONFIG = ConfigDict()
-    ...     CONFIG.declare('iterlim', ConfigValue(
-    ...         default=10,
-    ...         domain=int,
-    ...     ))
-    ...     def __init__(self, **kwds):
-    ...         self.config = self.CONFIG(kwds)
-    ...     def solve(self, model, **options):
-    ...         config = self.config(options)
-    ...         # Solve the model with the specified iterlim
-    ...         config.display()
-    ...
-    >>> solver = Solver()
-    >>> solver.solve(None)
-    iterlim: 10
-    >>> solver.config.iterlim = 20
-    >>> solver.solve(None)
-    iterlim: 20
-    >>> solver.solve(None, iterlim=50)
-    iterlim: 50
-    >>> solver.solve(None)
-    iterlim: 20
-
-
-Interacting with argparse
-=========================
-
-In addition to basic storage and retrieval, the Config system provides
-hooks to the argparse command-line argument parsing system.  Individual
-Config entries can be declared as argparse arguments using the
-:py:meth:`~ConfigBase.declare_as_argument` method.  To make declaration
-simpler, the :py:meth:`declare` method returns the declared Config
-object so that the argument declaration can be done inline:
-
-.. testcode::
-
-    import argparse
-    config = ConfigDict()
-    config.declare('iterlim', ConfigValue(
-        domain=int,
-        default=100,
-        description="iteration limit",
-    )).declare_as_argument()
-    config.declare('lbfgs', ConfigValue(
-        domain=bool,
-        description="use limited memory BFGS update",
-    )).declare_as_argument()
-    config.declare('linesearch', ConfigValue(
-        domain=bool,
-        default=True,
-        description="use line search",
-    )).declare_as_argument()
-    config.declare('relative tolerance', ConfigValue(
-        domain=float,
-        description="relative convergence tolerance",
-    )).declare_as_argument('--reltol', '-r', group='Tolerances')
-    config.declare('absolute tolerance', ConfigValue(
-        domain=float,
-        description="absolute convergence tolerance",
-    )).declare_as_argument('--abstol', '-a', group='Tolerances')
-
-The ConfigDict can then be used to initialize (or augment) an argparse
-ArgumentParser object:
-
-.. testcode::
-
-    parser = argparse.ArgumentParser("tester")
-    config.initialize_argparse(parser)
-
-
-Key information from the ConfigDict is automatically transferred over
-to the ArgumentParser object:
-
-.. doctest::
-   :hide:
-
-    >>> import os
-    >>> original_environ, os.environ = os.environ, os.environ.copy()
-    >>> os.environ['COLUMNS'] = '80'
-
-.. doctest::
-
-    >>> print(parser.format_help())
-    usage: tester [-h] [--iterlim INT] [--lbfgs] [--disable-linesearch]
-                  [--reltol FLOAT] [--abstol FLOAT]
-    ...
-      -h, --help            show this help message and exit
-      --iterlim INT         iteration limit
-      --lbfgs               use limited memory BFGS update
-      --disable-linesearch  [DON'T] use line search
-    <BLANKLINE>
-    Tolerances:
-      --reltol... -r FLOAT  relative convergence tolerance
-      --abstol... -a FLOAT  absolute convergence tolerance
-    <BLANKLINE>
-
-.. doctest::
-   :hide:
-
-    >>> os.environ = original_environ
-
-Parsed arguments can then be imported back into the ConfigDict:
-
-.. doctest::
-
-    >>> args=parser.parse_args(['--lbfgs', '--reltol', '0.1', '-a', '0.2'])
-    >>> args = config.import_argparse(args)
-    >>> config.display()
-    iterlim: 100
-    lbfgs: true
-    linesearch: true
-    relative tolerance: 0.1
-    absolute tolerance: 0.2
-
-Accessing user-specified values
-===============================
-
-It is frequently useful to know which values a user explicitly set, and
-which values a user explicitly set but have never been retrieved.  The
-configuration system provides two generator methods to return the items
-that a user explicitly set (:py:meth:`user_values`) and the items that
-were set but never retrieved (:py:meth:`unused_user_values`):
-
-.. doctest::
-
-    >>> print([val.name() for val in config.user_values()])
-    ['lbfgs', 'relative tolerance', 'absolute tolerance']
-    >>> print(config.relative_tolerance)
-    0.1
-    >>> print([val.name() for val in config.unused_user_values()])
-    ['lbfgs', 'absolute tolerance']
-
-Generating output & documentation
-=================================
-
-Configuration objects support three methods for generating output and
-documentation: :py:meth:`display()`,
-:py:meth:`generate_yaml_template()`, and
-:py:meth:`generate_documentation()`.  The simplest is
-:py:meth:`display()`, which prints out the current values of the
-configuration object (and if it is a container type, all of it's
-children).  :py:meth:`generate_yaml_template` is similar to
-:py:meth:`display`, but also includes the description fields as
-formatted comments.
-
-.. testcode::
-
-    solver_config = config
-    config = ConfigDict()
-    config.declare('output', ConfigValue(
-        default='results.yml',
-        domain=str,
-        description='output results filename'
-    ))
-    config.declare('verbose', ConfigValue(
-        default=0,
-        domain=int,
-        description='output verbosity',
-        doc='This sets the system verbosity.  The default (0) only logs '
-        'warnings and errors.  Larger integer values will produce '
-        'additional log messages.',
-    ))
-    config.declare('solvers', ConfigList(
-        domain=solver_config,
-        description='list of solvers to apply',
-    ))
-
-.. doctest::
-
-    >>> config.display()
-    output: results.yml
-    verbose: 0
-    solvers: []
-    >>> print(config.generate_yaml_template())
-    output: results.yml  # output results filename
-    verbose: 0           # output verbosity
-    solvers: []          # list of solvers to apply
-    <BLANKLINE>
-
-It is important to note that both methods document the current state of
-the configuration object.  So, in the example above, since the `solvers`
-list is empty, you will not get any information on the elements in the
-list.  Of course, if you add a value to the list, then the data will be
-output:
-
-.. doctest::
-
-    >>> tmp = config()
-    >>> tmp.solvers.append({})
-    >>> tmp.display()
-    output: results.yml
-    verbose: 0
-    solvers:
-      -
-        iterlim: 100
-        lbfgs: true
-        linesearch: true
-        relative tolerance: 0.1
-        absolute tolerance: 0.2
-    >>> print(tmp.generate_yaml_template())
-    output: results.yml          # output results filename
-    verbose: 0                   # output verbosity
-    solvers:                     # list of solvers to apply
-      -
-        iterlim: 100             # iteration limit
-        lbfgs: true              # use limited memory BFGS update
-        linesearch: true         # use line search
-        relative tolerance: 0.1  # relative convergence tolerance
-        absolute tolerance: 0.2  # absolute convergence tolerance
-    <BLANKLINE>
-
-The third method (:py:meth:`generate_documentation`) behaves
-differently.  This method is designed to generate reference
-documentation.  For each configuration item, the `doc` field is output.
-If the item has no `doc`, then the `description` field is used.
-
-List containers have their *domain* documented and not their current
-values.  The documentation can be configured through optional arguments.
-The defaults generate LaTeX documentation:
-
-.. doctest::
-
-    >>> print(config.generate_documentation())
-    \\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
-      \\item[{output}]\\hfill
-        \\\\output results filename
-      \\item[{verbose}]\\hfill
-        \\\\This sets the system verbosity.  The default (0) only logs warnings and
-        errors.  Larger integer values will produce additional log messages.
-      \\item[{solvers}]\\hfill
-        \\\\list of solvers to apply
-      \\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
-        \\item[{iterlim}]\\hfill
-          \\\\iteration limit
-        \\item[{lbfgs}]\\hfill
-          \\\\use limited memory BFGS update
-        \\item[{linesearch}]\\hfill
-          \\\\use line search
-        \\item[{relative tolerance}]\\hfill
-          \\\\relative convergence tolerance
-        \\item[{absolute tolerance}]\\hfill
-          \\\\absolute convergence tolerance
-      \\end{description}
-    \\end{description}
-    <BLANKLINE>
-
-"""
-
-
 def _dump(*args, **kwds):
     # TODO: Change the default behavior to no longer be YAML.
     # This was a legacy decision that may no longer be the best
@@ -1135,6 +731,8 @@ def _munge_name(name, space_to_dash=True):
 def _domain_name(domain):
     if domain is None:
         return ""
+    if isinstance(domain, str):
+        return domain
     if hasattr(domain, 'domain_name') and not isinstance(domain, type):
         dn = domain.domain_name
         if hasattr(dn, '__call__'):
@@ -1437,7 +1035,7 @@ class ConfigFormatter(object):
 
     def generate(self, config, indent_spacing=2, width=78, visibility=None):
         self._initialize(indent_spacing, width, visibility)
-        level = []
+        self._level = level = []
         lastObj = config
         indent = ''
         for lvl, pre, val, obj in config._data_collector(1, '', visibility, True):
@@ -1489,13 +1087,24 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
     def _initialize(self, *args):
         super()._initialize(*args)
         self.wrapper = textwrap.TextWrapper(width=self.width)
+        self.suppress = None
+
+    def _block_start(self, indent, obj):
+        if len(self._level) > 1 and obj.domain_name() != "dict":
+            self.suppress = obj
+
+    def _block_end(self, indent, obj):
+        if self.suppress is obj:
+            self.suppress = None
 
     def _item_body(self, indent, obj):
+        if self.suppress is not None:
+            return
         typeinfo = ', '.join(
             filter(
                 None,
                 [
-                    'dict' if isinstance(obj, ConfigDict) else obj.domain_name(),
+                    obj.domain_name(),
                     (
                         'optional'
                         if obj._default is None
@@ -1639,34 +1248,36 @@ class document_kwargs_from_configdict(object):
         width=78,
         visibility=None,
         doc=None,
+        preamble=None,
     ):
-        if '\n' not in section:
-            section += '\n' + '-' * len(section) + '\n'
         self.config = config
         self.section = section
         self.indent_spacing = indent_spacing
         self.width = width
         self.visibility = visibility
         self.doc = doc
+        self.preamble = preamble
 
     def __call__(self, fcn):
-        if isinstance(self.config, str):
-            self.config = getattr(fcn, self.config)
+        config = self.config
+        section = self.section
+        if isinstance(config, str):
+            config = getattr(fcn, config)
+        if section and '\n' not in section:
+            section += '\n' + '-' * len(section) + '\n'
         if self.doc is not None:
             doc = inspect.cleandoc(self.doc)
         elif fcn.__doc__:
             doc = inspect.cleandoc(fcn.__doc__)
         else:
             doc = ""
-        if doc:
-            if not doc.endswith('\n'):
-                doc += '\n\n'
-            else:
-                doc += '\n'
+        doc = self._ensure_blank_line(doc)
+        if self.preamble:
+            doc += self._ensure_blank_line(inspect.cleandoc(self.preamble))
         fcn.__doc__ = (
             doc
-            + f'{self.section}'
-            + self.config.generate_documentation(
+            + f'{section}'
+            + config.generate_documentation(
                 indent_spacing=self.indent_spacing,
                 width=self.width,
                 visibility=self.visibility,
@@ -1674,6 +1285,122 @@ class document_kwargs_from_configdict(object):
             )
         )
         return fcn
+
+    def _ensure_blank_line(self, val):
+        if not val:
+            return val
+        if not val.endswith('\n'):
+            return val + '\n\n'
+        return val + '\n'
+
+
+def _method_wrapper(func):
+    """A simplified :class:`functools.partialmethod` that duplicates the __doc__
+
+    Ideally we could use :class:`functools.partialmethod` to copy a
+    method from a base class to a derived class so that we can set a
+    docstring that is customized for the derived class.  Unfortunately,
+    :class:`functools.partialmethod` returns a method descriptor.  Here
+    we will declare a new method (with a generic signature) and then
+    leverage :func:`functools.wraps` to copy over the original signature
+    and docstring.
+
+    """
+
+    @functools.wraps(func)
+    def method(self, *args, **kwargs):
+        return func(self, *args, **kwargs)
+
+    return method
+
+
+class document_configdict(document_kwargs_from_configdict):
+    """A simplified wrapper around :class:`document_kwargs_from_configdict`
+    for documenting classes derived from ConfigDict.
+
+    """
+
+    def __init__(
+        self,
+        section='Options',
+        indent_spacing=4,
+        width=78,
+        visibility=None,
+        doc=None,
+        preamble=None,
+    ):
+        return super().__init__(
+            config=None,
+            section=section,
+            indent_spacing=indent_spacing,
+            width=width,
+            visibility=visibility,
+            doc=doc,
+            preamble=preamble,
+        )
+
+    def __call__(self, fcn):
+        self.config = fcn()
+        return super().__call__(fcn)
+
+
+class document_class_CONFIG(document_kwargs_from_configdict):
+    def __init__(
+        self,
+        section='CONFIG',
+        indent_spacing=4,
+        width=78,
+        visibility=None,
+        doc=None,
+        preamble=None,
+        methods=None,
+    ):
+        self.methods = methods
+        return super().__init__(
+            config=None,
+            section=section,
+            indent_spacing=indent_spacing,
+            width=width,
+            visibility=visibility,
+            doc=doc,
+            preamble=preamble,
+        )
+
+    def __call__(self, cls):
+        self.config = cls.CONFIG
+        if cls.__module__ == 'builtins':
+            # Suppress "builtins" module (appears as part of
+            # documentation tests)
+            module = ""
+        else:
+            module = cls.__module__ + '.'
+        ref = f"{module}{cls.__name__}::CONFIG"
+        self.config.set_domain(f":ref:`{cls.__name__}.CONFIG <{ref}>`")
+        if self.preamble is None:
+            self.preamble = f"""**Class configuration**
+
+This class leverages the Pyomo Configuration System for managing
+configuration options.  See the discussion on :ref:`configuring class
+hierarchies <class_config>` for more information on how configuration
+class attributes, instance attributes, and method keyword arguments
+interact."""
+
+        self.preamble += f"\n\n.. _{ref}:\n"
+        if self.methods:
+            for method in self.methods:
+                if method not in vars(cls):
+                    # If this method is inherited, we need to make a
+                    # "local" version of it so we don't change the
+                    # docstring on the base class.
+                    setattr(cls, method, _method_wrapper(getattr(cls, method)))
+                document_kwargs_from_configdict(
+                    self.config,
+                    indent_spacing=self.indent_spacing,
+                    width=self.width,
+                    visibility=self.visibility,
+                    doc=self.doc,
+                )(getattr(cls, method))
+        return super().__call__(cls)
 
 
 class UninitializedMixin(object):
@@ -1684,7 +1411,7 @@ class UninitializedMixin(object):
     attempt to access the ``_data`` will trigger the initialization of the
     Config object from its ``_default`` value.  Setting the ``_data``
     attribute will also trigger resolution of the Config object, but
-    without processing the ``_default__``.
+    without processing the ``_default``.
 
     """
 
@@ -1722,7 +1449,7 @@ class UninitializedMixin(object):
         # recursively lookup the _data attribute and the second lookup
         # will resolve to normal attribute assignment).
         #
-        # We first encountered this issue for Config objects stores as
+        # We first encountered this issue for Config objects stored as
         # class attributes (i.e., the default Config for something like
         # a solver or writer) and multiple threads were simultaneously
         # creating instances of the class (each of which was resolving
@@ -1862,6 +1589,7 @@ class ConfigBase(object):
 
         if isinstance(self, ConfigDict):
             # Copy over any Dict definitions
+            ans._domain = self._domain
             for k, v in self._data.items():
                 if preserve_implicit or k in self._declared:
                     ans._data[k] = _tmp = v(preserve_implicit=preserve_implicit)
@@ -1900,7 +1628,12 @@ class ConfigBase(object):
 
     def set_domain(self, domain):
         self._domain = domain
-        self.set_value(self.value(accessValue=False))
+        # Note that the domain is generally a callable (type, function,
+        # or functor).  However, ConfigDict can also have a str domain
+        # (because ConfigDict doesn't need/use an actual domain for
+        # validation, we re-use that slot to *document* the domain).
+        if domain.__class__ is not str:
+            self.set_value(self.value(accessValue=False))
 
     def _cast(self, value):
         if value is None:
@@ -2631,11 +2364,15 @@ class ConfigDict(ConfigBase, Mapping):
             self._implicit_domain = implicit_domain
         else:
             self._implicit_domain = ConfigValue(None, domain=implicit_domain)
-        ConfigBase.__init__(self, None, {}, description, doc, visibility)
+        ConfigBase.__init__(
+            self,
+            None,
+            dict if self.__class__ is ConfigDict else self.__class__,
+            description,
+            doc,
+            visibility,
+        )
         self._data = {}
-
-    def domain_name(self):
-        return _munge_name(self.name(), False)
 
     def __getstate__(self):
         state = super().__getstate__()
