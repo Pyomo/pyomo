@@ -434,7 +434,7 @@ function:
     ...     # nominal uncertain parameter realizations
     ...     nom_vals = np.array([10, 1635])
     ... 
-    ...     # sample points from 10% box uncertainty set
+    ...     # sample points from box set of specified test size
     ...     point_samples = np.empty((samples, 2))
     ...     point_samples[0] = nom_vals
     ...     point_samples[1:] = rng.uniform(
@@ -444,7 +444,6 @@ function:
     ...     )
     ... 
     ...     costs = np.empty((len(solutions), point_samples.shape[0]), dtype=float)
-    ...     is_feas = np.empty((len(solutions), point_samples.shape[0]), dtype=bool)
     ...     mdl = build_model()
     ...     for sol_idx, (size, sol) in enumerate(solutions.items()):
     ...         # fix the first-stage variables
@@ -456,7 +455,7 @@ function:
     ...             mdl.kR.set_value(pt[0])
     ...             mdl.U.set_value(pt[1])
     ... 
-    ...             # initialize the model
+    ...             # update the model variable values
     ...             initialize_model(mdl, Vhat=sol[0], A=sol[1])
     ... 
     ...             # try solving the model to inspect for feasibility
@@ -467,34 +466,38 @@ function:
     ...             else:
     ...                 costs[sol_idx, pt_idx] = np.nan
     ... 
-    ...         # generate the plot
-    ...         is_feas[sol_idx] = ~np.isnan(costs[sol_idx])
-    ...         
+    ...     # now generate the plot
     ...     fig, axs = plt.subplots(
-    ...         figsize=(5 * len(solutions), 4),
+    ...         figsize=(0.5 * (len(solutions) - 1) + 5 * len(solutions), 4),
     ...         ncols=len(solutions),
     ...         squeeze=False,
     ...         sharey=True,
     ...     )
     ...     for sol_idx, (size, ax) in enumerate(zip(solutions, axs[0])):
+    ...         # track realizations for which solution feasible
+    ...         is_feas = ~np.isnan(costs[sol_idx])
+    ... 
+    ...         # realizations for which feasibility occurs, colored by objective
     ...         plot = ax.scatter(
-    ...             point_samples[is_feas[sol_idx]][:, 0],
-    ...             point_samples[is_feas[sol_idx]][:, 1],
-    ...             c=costs[sol_idx, is_feas[sol_idx]],
+    ...             point_samples[is_feas][:, 0],
+    ...             point_samples[is_feas][:, 1],
+    ...             c=costs[sol_idx, is_feas],
     ...             vmin=np.nanmin(costs),
     ...             vmax=np.nanmax(costs),
     ...             cmap="plasma_r",
     ...             marker="o",
     ...         )
+    ...         # realizations for which infeasibility occurs
     ...         ax.scatter(
-    ...             point_samples[~is_feas[sol_idx]][:, 0],
-    ...             point_samples[~is_feas[sol_idx]][:, 1],
+    ...             point_samples[~is_feas][:, 0],
+    ...             point_samples[~is_feas][:, 1],
     ...             color="none",
     ...             edgecolors="black",
     ...             label="infeasible",
     ...             marker="^",
     ...         )
     ...         if size != 0:
+    ...             # boundary of the box uncertainty set mapped to the design
     ...             rect = patches.Rectangle(
     ...                 nom_vals * (1 - size / 100),
     ...                 *tuple(nom_vals * 2 * size / 100),
@@ -504,27 +507,28 @@ function:
     ...                 label=f"{size}% box set",
     ...             )
     ...             ax.add_patch(rect)
+    ...             
     ...         ax.legend(bbox_to_anchor=(1, -0.15), loc="upper right")
-    ... 
     ...         ax.set_xlabel(r"$k_\mathrm{R}$ (per hr)")
     ...         ax.set_ylabel("$U$ (kJ/sqm-h-K)")
-    ...         
+    ... 
     ...         is_in_set = np.logical_and(
     ...             np.all(nom_vals * (1 - size / 100) <= point_samples, axis=1),
     ...             np.all(point_samples <= nom_vals * (1 + size / 100), axis=1),
     ...         )
-    ...         feas_in_set = np.logical_and(is_feas[sol_idx], is_in_set)
+    ...         feas_in_set = np.logical_and(is_feas, is_in_set)
+    ...         
+    ...         # add plot title showing statistics of the results
     ...         ax.set_title(
     ...             f"Solution for {size}% box set\n"
     ...             "Avg ± SD objective "
-    ...             f"${costs[sol_idx, is_feas[sol_idx]].mean():.2f} ±"
-    ...             f"{costs[sol_idx, is_feas[sol_idx]].std():.2f}\n"
+    ...             f"{costs[sol_idx, is_feas].mean():.2f} ± {costs[sol_idx, is_feas].std():.2f}\n"
     ...             f"Feas. for {feas_in_set.sum()}/{is_in_set.sum()} samples in set\n"
     ...             f"Feas. for {is_feas.sum()}/{len(point_samples)} samples overall"
     ...         )
-    ...     
-    ...     cbar = fig.colorbar(plot, ax=axs.ravel().tolist())
-    ...     cbar.ax.set_ylabel("Objective")
+    ... 
+    ...     cbar = fig.colorbar(plot, ax=axs.ravel().tolist(), pad=0.03)
+    ...     cbar.ax.set_ylabel("Objective ($/yr)")
     ... 
     ...     plt.show()
     ...     plt.close(fig)
