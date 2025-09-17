@@ -850,7 +850,7 @@ class TemplateVarRecorder(object):
             # that ordering.  This means we need to both initialize the
             # env dict with all the Vars referenced, PLUS fill in any
             # additional vars that we would have indexed/recorded in
-            # add()
+            # add().
             next_i = len(var_map)
             for i, v in enumerate(list(var_map.values())):
                 var_comp = v.parent_component()
@@ -858,7 +858,11 @@ class TemplateVarRecorder(object):
                 ve = self.env.get(name, None)
                 if ve is None:
                     ve = self.env[name] = {}
-                    for idx, vdata in var_comp.items():
+                    # Fill-in all var data in this component.  Note that
+                    # we are careful to only add / assign column ids to
+                    # var data that we will not later encounter in the
+                    # var_map.
+                    for idx, vdata in var_comp.items(self.sorter):
                         vid = id(vdata)
                         if vid not in var_map:
                             var_map[vid] = v
