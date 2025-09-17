@@ -409,7 +409,7 @@ class TestChangeDetector(unittest.TestCase):
         detector.config.update_named_expressions = False
 
         m.e = pyo.Expression(expr=pyo.exp(m.x))
-        m.obj = pyo.Objective(expr=m.x**2 + m.p*m.y**2)
+        m.obj = pyo.Objective(expr=m.x**2 + m.p * m.y**2)
         m.c1 = pyo.Constraint(expr=m.y >= m.e + m.p)
 
         detector.update()
