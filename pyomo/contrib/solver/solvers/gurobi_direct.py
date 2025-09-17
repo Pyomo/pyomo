@@ -369,13 +369,6 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 f'Solver {c.__module__}.{c.__qualname__} is not available '
                 f'({self.available()}).'
             )
-        if not self.license_available():
-            c = self.__class__
-            raise ApplicationError(
-                f'Solver {c.__module__}.{c.__qualname__} does '
-                'not have an available license '
-                f'({self.license_available()}).'
-            )
         if config.timer is None:
             config.timer = HierarchicalTimer()
         timer = config.timer
