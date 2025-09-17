@@ -57,8 +57,9 @@ from pyomo.contrib.doe.utils import (
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
     snake_traversal_grid_sampling,
-    update_model_from_suffix,
 )
+
+from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 
 
 from pyomo.opt import SolverStatus
