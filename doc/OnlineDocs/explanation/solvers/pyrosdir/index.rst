@@ -20,6 +20,7 @@ The developers gratefully acknowledge support from the U.S. Department of Energy
    Solver Interface <solver_interface.rst>
    Uncertainty Sets <uncertainty_sets.rst>
    Solver Output Log <solver_log.rst>
+   Usage Tutorial <tutorial/tutorial.rst>
 
 
 Citing PyROS

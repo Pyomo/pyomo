@@ -46,11 +46,12 @@ PyROS can be installed as follows:
    depending on the solver distributions (e.g., Ipopt, BARON, SCIP)
    that you have pre-installed and licensed on your system.
 
-Usage Tutorial
-==============
-In this tutorial, we will use PyROS to solve a few robust
-optimization problems.
-The problems are derived from the deterministic model *hydro*,
+
+Quickstart
+==========
+We now provide a quick overview of how to use PyROS to solve
+robust optimization problems.
+The problems here are derived from the deterministic model *hydro*,
 a QCQP taken from the
 `GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_.
 We have converted the
@@ -690,3 +691,9 @@ impact of the uncertainty set size on the robust optimal
 objective function value
 and the ease of analyzing the price of robustness
 for a given optimization problem under uncertainty.
+
+
+Beyond the Basics
+=================
+A more in-depth introduction to PyROS is given
+in the :ref:`Usage Tutorial <pyros_tutorial>`.
