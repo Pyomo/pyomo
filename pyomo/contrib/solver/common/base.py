@@ -125,8 +125,8 @@ class SolverBase:
 
         This function, which does not need to be implemented by any derived
         class, returns a bool that represents if a solver is both
-        available to run (`solver_available`) and if it is properly
-        licensed to run (`license_available`).
+        available to run (``solver_available``) and if it is properly
+        licensed to run (``license_available``).
 
         Parameters
         ----------
@@ -147,9 +147,9 @@ class SolverBase:
     def solver_available(self, recheck: bool = False) -> SolverAvailability:
         """Test if the solver is available/findable on this system.
 
-        Nominally, this will return `True` if the solver interface is
+        Nominally, this will return ``True`` if the solver interface is
         valid and findable (e.g., executable is on the path, solver is
-        importable), and will return `False` otherwise.
+        importable), and will return ``False`` otherwise.
 
         Parameters
         ----------
@@ -175,13 +175,13 @@ class SolverBase:
         """Test if licensed solver has an available and usable license.
 
         The default behavior of this for solvers without licenses should be
-        to return `True`.
+        to return ``True``.
         Note that for licensed solvers there are a number of "levels" of
         available: depending on the license, the solver may be available
         with limitations on problem size or runtime (e.g., 'demo'
         vs. 'community' vs. 'full').
         Some solvers may also want to consider implementing
-        `acquire_license` and `release_license` if the license
+        ``acquire_license`` and ``release_license`` if the license
         needs to be checked out (e.g., gurobi), whereas others
         may simply need to check for the existence of a
         license file (e.g., BARON).
