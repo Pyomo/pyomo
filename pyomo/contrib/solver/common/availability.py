@@ -12,7 +12,7 @@
 from pyomo.common.enums import IntEnum
 
 
-class Availability(IntEnum):
+class SolverAvailability(IntEnum):
     """
     Class to capture different statuses in which a solver can exist in
     order to record its availability for use.

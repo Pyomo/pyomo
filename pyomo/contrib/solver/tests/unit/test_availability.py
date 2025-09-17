@@ -10,20 +10,23 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.contrib.solver.common.availability import Availability, LicenseAvailability
+from pyomo.contrib.solver.common.availability import (
+    SolverAvailability,
+    LicenseAvailability,
+)
 
 
-class TestAvailability(unittest.TestCase):
+class TestSolverAvailability(unittest.TestCase):
     def test_statuses(self):
-        self.assertTrue(bool(Availability.Available))
-        self.assertFalse(bool(Availability.NotFound))
-        self.assertFalse(bool(Availability.BadVersion))
-        self.assertFalse(bool(Availability.NeedsCompiledExtension))
+        self.assertTrue(bool(SolverAvailability.Available))
+        self.assertFalse(bool(SolverAvailability.NotFound))
+        self.assertFalse(bool(SolverAvailability.BadVersion))
+        self.assertFalse(bool(SolverAvailability.NeedsCompiledExtension))
 
     def test_str_and_format(self):
-        self.assertEqual(str(Availability.Available), "Available")
-        self.assertEqual(f"{Availability.BadVersion}", "BadVersion")
-        formatted = "{:>15}".format(Availability.Available)
+        self.assertEqual(str(SolverAvailability.Available), "Available")
+        self.assertEqual(f"{SolverAvailability.BadVersion}", "BadVersion")
+        formatted = "{:>15}".format(SolverAvailability.Available)
         self.assertIn("Available", formatted)
 
 

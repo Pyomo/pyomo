@@ -29,7 +29,10 @@ from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
 
-from pyomo.contrib.solver.common.availability import Availability, LicenseAvailability
+from pyomo.contrib.solver.common.availability import (
+    SolverAvailability,
+    LicenseAvailability,
+)
 from pyomo.contrib.solver.common.base import PersistentSolverBase
 from pyomo.contrib.solver.common.results import (
     Results,
@@ -260,12 +263,12 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         self._available_cache = None
         self._version_cache = None
 
-    def available(self, recheck: bool = False) -> Availability:
+    def solver_available(self, recheck: bool = False) -> SolverAvailability:
         if recheck or self._available_cache is None:
             if not highspy_available:
-                self._available_cache = Availability.NotFound
+                self._available_cache = SolverAvailability.NotFound
             else:
-                self._available_cache = Availability.Available
+                self._available_cache = SolverAvailability.Available
         return self._available_cache
 
     def license_available(

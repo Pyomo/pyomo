@@ -37,7 +37,10 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
-from pyomo.contrib.solver.common.availability import Availability, LicenseAvailability
+from pyomo.contrib.solver.common.availability import (
+    SolverAvailability,
+    LicenseAvailability,
+)
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import LegacySolverWrapper
@@ -242,13 +245,13 @@ class Ipopt(SolverBase):
         #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
         self.config = self.config
 
-    def available(self, recheck: bool = False) -> Availability:
+    def solver_available(self, recheck: bool = False) -> SolverAvailability:
         pth = self.config.executable.path()
         if recheck or self._available_cache is None or self._available_cache[0] != pth:
             if pth is None:
-                self._available_cache = (None, Availability.NotFound)
+                self._available_cache = (None, SolverAvailability.NotFound)
             else:
-                self._available_cache = (pth, Availability.Available)
+                self._available_cache = (pth, SolverAvailability.Available)
         return self._available_cache[1]
 
     def license_available(
