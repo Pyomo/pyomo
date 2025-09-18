@@ -74,7 +74,10 @@ after the preceding code statements will be made mutable by default.
 
 Uncertainty Set
 ---------------
-See the :ref:`pyros_uncertainty_sets` section.
+The uncertainty set is represented by an
+:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
+object.
+See the :ref:`pyros_uncertainty_sets` section for more information.
 
 Subordinate NLP Solvers
 -----------------------
@@ -180,5 +183,9 @@ The uncertain parameter objects are left unchanged.
 
 Solver Output Log
 -----------------
-See the :ref:`pyros_solver_log` section for more information on the
-PyROS solver log output.
+When the PyROS
+:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
+is invoked to solve an RO problem,
+the progress and final result are reported through a highly
+configurable logging system.
+See the :ref:`pyros_solver_log` section for more information.
