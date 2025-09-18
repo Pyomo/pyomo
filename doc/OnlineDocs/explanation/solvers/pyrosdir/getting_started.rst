@@ -11,6 +11,19 @@ Getting Started with PyROS
 
 Installation
 ============
+In advance of using PyROS to solve robust optimization problems,
+you will need at least one local nonlinear programming (NLP) solver
+(e.g.,
+`CONOPT <https://conopt.gams.com/>`_,
+`IPOPT <https://github.com/coin-or/Ipopt>`_,
+`Knitro <https://www.artelys.com/solvers/knitro/>`_)
+and one global NLP solver
+(e.g.,
+`BARON <https://minlp.com/baron-solver>`_,
+`COUENNE <https://www.coin-or.org/Couenne/>`_,
+`SCIP <https://www.scipopt.org/>`_)
+installed and licensed on your system.
+
 PyROS can be installed as follows:
 
 1. :ref:`Install Pyomo <pyomo_installation>`.
@@ -42,9 +55,14 @@ PyROS can be installed as follows:
 
       python -c 'import os, pytest, pyomo.contrib.pyros as p; pytest.main([os.path.dirname(p.__file__)])'
 
-   Some tests involving solvers may fail or be skipped,
-   depending on the solver distributions (e.g., Ipopt, BARON, SCIP)
-   that you have pre-installed and licensed on your system.
+   Some tests involving deterministic NLP solvers may be skipped
+   if
+   `IPOPT <https://github.com/coin-or/Ipopt>`_,
+   `BARON <https://minlp.com/baron-solver>`_,
+   or
+   `SCIP <https://www.scipopt.org/>`_
+   is not 
+   pre-installed and licensed on your system.
 
 
 Quickstart
