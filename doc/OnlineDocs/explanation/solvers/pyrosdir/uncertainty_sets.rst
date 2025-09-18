@@ -23,6 +23,13 @@ that are commonly used in the optimization literature.
 can be implemented by subclassing
 :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`.
 
+
+.. note::
+   The :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
+   class is an abstract class and therefore cannot be
+   directly instantiated.
+
+
 .. _pyros_pre_implemented_types:
 
 Pre-Implemented Uncertainty Set Types
