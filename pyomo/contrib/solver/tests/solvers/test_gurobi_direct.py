@@ -67,7 +67,14 @@ class TestGurobiMixin(unittest.TestCase):
             self.disposed = True
 
     @staticmethod
-    def mocked_gurobipy(license_status="ok"):
+    def mocked_gurobipy(license_status="ok", env_side_effect=None):
+        """
+        Build a fake gurobipy module.
+        - license_status controls Model.optimize() behavior
+        - env_side_effect (callable or Exception) controls Env() behavior
+          e.g. env_side_effect=TestGurobiMixin.GurobiError("no gurobi license", errno=10009)
+        """
+
         class GRB:
             # Arbitrarily picking a version
             VERSION_MAJOR = 12
@@ -78,7 +85,13 @@ class TestGurobiMixin(unittest.TestCase):
                 OutputFlag = 0
 
         mocker = unittest.mock.MagicMock()
-        mocker.Env = unittest.mock.MagicMock(return_value=TestGurobiMixin.Env())
+        if env_side_effect is None:
+            mocker.Env = unittest.mock.MagicMock(return_value=TestGurobiMixin.Env())
+        else:
+            if isinstance(env_side_effect, Exception):
+                mocker.Env = unittest.mock.MagicMock(side_effect=env_side_effect)
+            else:
+                mocker.Env = unittest.mock.MagicMock(side_effect=env_side_effect)
         mocker.Model = unittest.mock.MagicMock(
             side_effect=lambda **kw: TestGurobiMixin.Model(
                 license_status=license_status
@@ -114,6 +127,15 @@ class TestGurobiMixin(unittest.TestCase):
                 mixin.solver_available(recheck=True), SolverAvailability.Available
             )
 
+    def test_license_available_solver_not_available(self):
+        mixin = GurobiSolverMixin()
+        with unittest.mock.patch.object(
+            GurobiSolverMixin, "_gurobipy_available", False
+        ):
+            with capture_output(capture_fd=True):
+                output = mixin.license_available()
+            self.assertEqual(output, LicenseAvailability.Unknown)
+
     def test_full_license(self):
         mixin = GurobiSolverMixin()
         mock_gp = self.mocked_gurobipy("ok")
@@ -138,7 +160,8 @@ class TestGurobiMixin(unittest.TestCase):
 
     def test_no_license(self):
         mixin = GurobiSolverMixin()
-        mock_gp = self.mocked_gurobipy("no_license")
+        env_error = self.GurobiError("no gurobi license", errno=10009)
+        mock_gp = self.mocked_gurobipy(license_status="ok", env_side_effect=env_error)
         with (
             unittest.mock.patch.object(GurobiSolverMixin, "_gurobipy_available", True),
             unittest.mock.patch(f"{self.MODULE_PATH}.gurobipy", mock_gp),
@@ -149,7 +172,8 @@ class TestGurobiMixin(unittest.TestCase):
 
     def test_license_timeout(self):
         mixin = GurobiSolverMixin()
-        mock_gp = self.mocked_gurobipy("timeout")
+        env_error = self.GurobiError("timeout waiting for license")
+        mock_gp = self.mocked_gurobipy(license_status="ok", env_side_effect=env_error)
         with (
             unittest.mock.patch.object(GurobiSolverMixin, "_gurobipy_available", True),
             unittest.mock.patch(f"{self.MODULE_PATH}.gurobipy", mock_gp),
@@ -169,20 +193,27 @@ class TestGurobiMixin(unittest.TestCase):
                 output = mixin.license_available()
             self.assertEqual(output, LicenseAvailability.FullLicense)
 
-        mock_gp_none = self.mocked_gurobipy("no_license")
+        # Clear the cached Env so acquire_license() re-runs
+        GurobiSolverMixin._gurobipy_env = None
+
+        env_error = self.GurobiError("no gurobi license", errno=10009)
+        mock_gp_none = self.mocked_gurobipy(
+            license_status="ok", env_side_effect=env_error
+        )
         with (
             unittest.mock.patch.object(GurobiSolverMixin, "_gurobipy_available", True),
             unittest.mock.patch(f"{self.MODULE_PATH}.gurobipy", mock_gp_none),
         ):
             with capture_output(capture_fd=True):
-                output = mixin.license_available()
+                output_cached = mixin.license_available()
             # Should return the cached value first because we didn't ask
             # for a recheck
-            self.assertEqual(output, LicenseAvailability.FullLicense)
+            self.assertEqual(output_cached, LicenseAvailability.FullLicense)
+
             with capture_output(capture_fd=True):
-                output = mixin.license_available(recheck=True)
+                output_recheck = mixin.license_available(recheck=True)
             # Should officially recheck
-            self.assertEqual(output, LicenseAvailability.NotAvailable)
+            self.assertEqual(output_recheck, LicenseAvailability.NotAvailable)
 
     def test_version(self):
         mixin = GurobiSolverMixin()

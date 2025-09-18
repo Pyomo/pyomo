@@ -227,10 +227,10 @@ class GurobiSolverMixin:
           - NotAvailable  : gurobi license not present/denied
           - Timeout       : waited but could not check out
           - BadLicense    : clearly invalid/corrupt license
-          - Unknown       : unexpected error states
+          - Unknown       : unexpected error states; solver itself is unavailable
         """
         if not self._gurobipy_available:
-            return LicenseAvailability.NotAvailable
+            return LicenseAvailability.Unknown
         if not recheck and self._license_cache is not None:
             return self._license_cache
 
@@ -272,15 +272,12 @@ class GurobiSolverMixin:
                 if "too large" in msg or status in (10010,):
                     self._license_cache = LicenseAvailability.LimitedLicense
                 elif "queue" in msg or "timeout" in msg:
+                    # We may still hit a timeout, so let's add this check
+                    # just in case
                     self._license_cache = LicenseAvailability.Timeout
-                elif (
-                    "no gurobi license" in msg
-                    or "not licensed" in msg
-                    or status in (10009,)
-                ):
-                    self._license_cache = LicenseAvailability.NotAvailable
                 else:
-                    self._license_cache = LicenseAvailability.BadLicense
+                    # We have no idea what's going on otherwise
+                    self._license_cache = LicenseAvailability.Unknown
             finally:
                 large_model.dispose()
 
@@ -294,10 +291,11 @@ class GurobiSolverMixin:
         if not timeout:
             try:
                 cls._gurobipy_env = gurobipy.Env()
-            except:
-                pass
-            if cls._gurobipy_env is not None:
-                return cls._gurobipy_env
+            except gurobipy.GurobiError:
+                # Re-raise so license_available can inspect further
+                # or so users can explicitly view the error
+                raise
+            return cls._gurobipy_env
         else:
             current_time = time.time()
             sleep_for = 0.1
@@ -307,8 +305,13 @@ class GurobiSolverMixin:
                 time.sleep(min(sleep_for, remaining))
                 try:
                     cls._gurobipy_env = gurobipy.Env()
-                except:
-                    pass
+                except Exception as e:
+                    # Log and keep going
+                    logger.info(
+                        "Exception occurred during license timeout: %s",
+                        e,
+                        exc_info=True,
+                    )
                 if cls._gurobipy_env is not None:
                     return cls._gurobipy_env
                 sleep_for *= 2
