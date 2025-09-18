@@ -182,10 +182,10 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def add_variables(self, variables: List[VarData]):
         """
-        This method gets called by the ModelChangeDetector when new 
+        This method gets called by the ModelChangeDetector when new
         "active" variables are detected in the model. This means variables
-        that are used within an active component such as a constraint or 
-        an objective. 
+        that are used within an active component such as a constraint or
+        an objective.
 
         Parameters
         ----------
@@ -197,10 +197,10 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def add_parameters(self, params: List[ParamData]):
         """
-        This method gets called by the ModelChangeDetector when new 
+        This method gets called by the ModelChangeDetector when new
         "active" parameters are detected in the model. This means parameters
-        that are used within an active component such as a constraint or 
-        an objective. 
+        that are used within an active component such as a constraint or
+        an objective.
 
         Parameters
         ----------
@@ -212,8 +212,8 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def add_constraints(self, cons: List[ConstraintData]):
         """
-        This method gets called by the ModelChangeDetector when new 
-        active constraints are detected in the model.  
+        This method gets called by the ModelChangeDetector when new
+        active constraints are detected in the model.
 
         Parameters
         ----------
@@ -225,8 +225,8 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def add_sos_constraints(self, cons: List[SOSConstraintData]):
         """
-        This method gets called by the ModelChangeDetector when new 
-        active SOS constraints are detected in the model.  
+        This method gets called by the ModelChangeDetector when new
+        active SOS constraints are detected in the model.
 
         Parameters
         ----------
@@ -238,8 +238,8 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def add_objectives(self, objs: List[ObjectiveData]):
         """
-        This method gets called by the ModelChangeDetector when new 
-        active objectives are detected in the model.  
+        This method gets called by the ModelChangeDetector when new
+        active objectives are detected in the model.
 
         Parameters
         ----------
@@ -253,8 +253,8 @@ class Observer(abc.ABC):
         """
         This method gets called by the ModelChangeDetector when it detects
         objectives that have been deactivated or removed from the model.
-        If the ModelChangeDetector detects changes in the underlying 
-        expression for the objective, then ``remove_objectives`` will be 
+        If the ModelChangeDetector detects changes in the underlying
+        expression for the objective, then ``remove_objectives`` will be
         called followed by ``add_objectives``.
 
         Parameters
@@ -269,8 +269,8 @@ class Observer(abc.ABC):
         """
         This method gets called by the ModelChangeDetector when it detects
         constraints that have been deactivated or removed from the model.
-        If the ModelChangeDetector detects changes in the underlying 
-        expression for the constraint, then ``remove_constraints`` will be 
+        If the ModelChangeDetector detects changes in the underlying
+        expression for the constraint, then ``remove_constraints`` will be
         called followed by ``add_constraints``.
 
         Parameters
@@ -285,8 +285,8 @@ class Observer(abc.ABC):
         """
         This method gets called by the ModelChangeDetector when it detects
         SOS constraints that have been deactivated or removed from the model.
-        If the ModelChangeDetector detects changes in the underlying 
-        data for the constraint, then ``remove_sos_constraints`` will be 
+        If the ModelChangeDetector detects changes in the underlying
+        data for the constraint, then ``remove_sos_constraints`` will be
         called followed by ``add_sos_constraints``.
 
         Parameters
@@ -328,11 +328,11 @@ class Observer(abc.ABC):
     def update_variables(self, variables: List[VarData]):
         """
         This method gets called by the ModelChangeDetector when it detects
-        variables that have been modified in some way (e.g., the bounds 
-        change). This is only true for changes that are considered 
+        variables that have been modified in some way (e.g., the bounds
+        change). This is only true for changes that are considered
         "inputs" to the model. For example, the value of the variable is
         considered an "output" (unless the variable is fixed), so changing
-        the value of an unfixed variable will not cause this method to be 
+        the value of an unfixed variable will not cause this method to be
         called.
 
         Parameters
