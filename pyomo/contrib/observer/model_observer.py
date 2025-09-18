@@ -73,7 +73,7 @@ class AutoUpdateConfig(ConfigDict):
             visibility=visibility,
         )
 
-        # automatically detect new/removed constraints on subsequent solves
+        #: automatically detect new/removed constraints on subsequent solves
         self.check_for_new_or_removed_constraints: bool = self.declare(
             'check_for_new_or_removed_constraints',
             ConfigValue(
@@ -87,7 +87,7 @@ class AutoUpdateConfig(ConfigDict):
                 model.""",
             ),
         )
-        # automatically detect new/removed objectives on subsequent solves
+        #: automatically detect new/removed objectives on subsequent solves
         self.check_for_new_or_removed_objectives: bool = self.declare(
             'check_for_new_or_removed_objectives',
             ConfigValue(
@@ -101,7 +101,7 @@ class AutoUpdateConfig(ConfigDict):
                 model.""",
             ),
         )
-        # automatically detect changes to constraints on subsequent solves
+        #: automatically detect changes to constraints on subsequent solves
         self.update_constraints: bool = self.declare(
             'update_constraints',
             ConfigValue(
@@ -116,7 +116,7 @@ class AutoUpdateConfig(ConfigDict):
                 being modified.""",
             ),
         )
-        # automatically detect changes to variables on subsequent solves
+        #: automatically detect changes to variables on subsequent solves
         self.update_vars: bool = self.declare(
             'update_vars',
             ConfigValue(
@@ -132,7 +132,7 @@ class AutoUpdateConfig(ConfigDict):
                 update_parameters_and_fixed_vars.""",
             ),
         )
-        # automatically detect changes to parameters on subsequent solves
+        #: automatically detect changes to parameters on subsequent solves
         self.update_parameters: bool = self.declare(
             'update_parameters',
             ConfigValue(
@@ -146,7 +146,7 @@ class AutoUpdateConfig(ConfigDict):
                 parameters are not being modified.""",
             ),
         )
-        # automatically detect changes to named expressions on subsequent solves
+        #: automatically detect changes to named expressions on subsequent solves
         self.update_named_expressions: bool = self.declare(
             'update_named_expressions',
             ConfigValue(
@@ -159,7 +159,7 @@ class AutoUpdateConfig(ConfigDict):
                 are certain Expressions are not being modified.""",
             ),
         )
-        # automatically detect changes to objectives on subsequent solves
+        #: automatically detect changes to objectives on subsequent solves
         self.update_objectives: bool = self.declare(
             'update_objectives',
             ConfigValue(
@@ -181,50 +181,178 @@ class Observer(abc.ABC):
 
     @abc.abstractmethod
     def add_variables(self, variables: List[VarData]):
+        """
+        This method gets called by the ModelChangeDetector when new 
+        "active" variables are detected in the model. This means variables
+        that are used within an active component such as a constraint or 
+        an objective. 
+
+        Parameters
+        ----------
+        variables: List[VarData]
+            The list of variables added to the model
+        """
         pass
 
     @abc.abstractmethod
     def add_parameters(self, params: List[ParamData]):
+        """
+        This method gets called by the ModelChangeDetector when new 
+        "active" parameters are detected in the model. This means parameters
+        that are used within an active component such as a constraint or 
+        an objective. 
+
+        Parameters
+        ----------
+        params: List[ParamData]
+            The list of parameters added to the model
+        """
         pass
 
     @abc.abstractmethod
     def add_constraints(self, cons: List[ConstraintData]):
+        """
+        This method gets called by the ModelChangeDetector when new 
+        active constraints are detected in the model.  
+
+        Parameters
+        ----------
+        cons: List[ConstraintData]
+            The list of constraints added to the model
+        """
         pass
 
     @abc.abstractmethod
     def add_sos_constraints(self, cons: List[SOSConstraintData]):
+        """
+        This method gets called by the ModelChangeDetector when new 
+        active SOS constraints are detected in the model.  
+
+        Parameters
+        ----------
+        cons: List[SOSConstraintData]
+            The list of SOS constraints added to the model
+        """
         pass
 
     @abc.abstractmethod
     def add_objectives(self, objs: List[ObjectiveData]):
+        """
+        This method gets called by the ModelChangeDetector when new 
+        active objectives are detected in the model.  
+
+        Parameters
+        ----------
+        objs: List[ObjectiveData]
+            The list of objectives added to the model
+        """
         pass
 
     @abc.abstractmethod
     def remove_objectives(self, objs: List[ObjectiveData]):
+        """
+        This method gets called by the ModelChangeDetector when it detects
+        objectives that have been deactivated or removed from the model.
+        If the ModelChangeDetector detects changes in the underlying 
+        expression for the objective, then ``remove_objectives`` will be 
+        called followed by ``add_objectives``.
+
+        Parameters
+        ----------
+        objs: List[ObjectiveData]
+            The list of objectives that are no longer part of the model
+        """
         pass
 
     @abc.abstractmethod
     def remove_constraints(self, cons: List[ConstraintData]):
+        """
+        This method gets called by the ModelChangeDetector when it detects
+        constraints that have been deactivated or removed from the model.
+        If the ModelChangeDetector detects changes in the underlying 
+        expression for the constraint, then ``remove_constraints`` will be 
+        called followed by ``add_constraints``.
+
+        Parameters
+        ----------
+        cons: List[ConstraintData]
+            The list of constraints that are no longer part of the model
+        """
         pass
 
     @abc.abstractmethod
     def remove_sos_constraints(self, cons: List[SOSConstraintData]):
+        """
+        This method gets called by the ModelChangeDetector when it detects
+        SOS constraints that have been deactivated or removed from the model.
+        If the ModelChangeDetector detects changes in the underlying 
+        data for the constraint, then ``remove_sos_constraints`` will be 
+        called followed by ``add_sos_constraints``.
+
+        Parameters
+        ----------
+        cons: List[SOSConstraintData]
+            The list of SOS constraints that are no longer part of the model
+        """
         pass
 
     @abc.abstractmethod
     def remove_variables(self, variables: List[VarData]):
+        """
+        This method gets called by the ModelChangeDetector when it detects
+        variables that are no longer used in any active components (
+        objectives or constraints).
+
+        Parameters
+        ----------
+        variables: List[VarData]
+            The list of variables that are no longer part of the model
+        """
         pass
 
     @abc.abstractmethod
     def remove_parameters(self, params: List[ParamData]):
+        """
+        This method gets called by the ModelChangeDetector when it detects
+        parameters that are no longer used in any active components (
+        objectives or constraints).
+
+        Parameters
+        ----------
+        params: List[ParamData]
+            The list of parameters that are no longer part of the model
+        """
         pass
 
     @abc.abstractmethod
     def update_variables(self, variables: List[VarData]):
+        """
+        This method gets called by the ModelChangeDetector when it detects
+        variables that have been modified in some way (e.g., the bounds 
+        change). This is only true for changes that are considered 
+        "inputs" to the model. For example, the value of the variable is
+        considered an "output" (unless the variable is fixed), so changing
+        the value of an unfixed variable will not cause this method to be 
+        called.
+
+        Parameters
+        ----------
+        variables: List[VarData]
+            The list of variables that have been modified
+        """
         pass
 
     @abc.abstractmethod
     def update_parameters(self, params: List[ParamData]):
+        """
+        This method gets called by the ModelChangeDetector when it detects
+        parameters that have been modified (i.e., the value changed).
+
+        Parameters
+        ----------
+        params: List[ParamData]
+            The list of parameters that have been modified
+        """
         pass
 
 
@@ -240,7 +368,7 @@ class ModelChangeDetector:
     if that variable is not used in any constraints.
 
     The Observer/ModelChangeDetector are most useful when a small number
-    of changes are being relative to the size of the model. For example,
+    of changes are being made relative to the size of the model. For example,
     the persistent solver interfaces can be very efficient when repeatedly
     solving the same model but with different values for mutable parameters.
 
