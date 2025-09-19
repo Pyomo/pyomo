@@ -98,6 +98,58 @@ Optional Arguments
 The optional arguments are enumerated in the documentation of the
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
 
+Separation Priority Ordering 
+----------------------------
+The PyROS solver supports custom prioritization of
+the separation subproblems (and, thus, the constraints)
+that are automatically derived from
+a given model for robust optimization.
+Users may specify separation priorities through:
+
+- (Recommended) :class:`~pyomo.core.base.suffix.Suffix` components
+  with local name ``pyros_separation_priority``,
+  declared on the model or any of its sub-blocks.
+  Each entry of every such
+  :class:`~pyomo.core.base.suffix.Suffix`
+  should map a
+  :class:`~pyomo.core.base.var.Var`
+  or :class:`~pyomo.core.base.constraint.Constraint`
+  component to a value that specifies the separation
+  priority of all constraints derived from that component
+- The optional argument ``separation_priority_order``
+  to the PyROS :py:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
+  method. The argument should be castable to a :py:obj:`dict`,
+  of which each entry maps the full name of a
+  :class:`~pyomo.core.base.var.Var`
+  or :class:`~pyomo.core.base.constraint.Constraint`
+  component to a value that specifies the
+  separation priority of all constraints
+  derived from that component
+
+Specification via :class:`~pyomo.core.base.suffix.Suffix` components
+takes precedence over specification via the solver argument
+``separation_priority_order``.
+Moreover, the precedence ordering among
+:class:`~pyomo.core.base.suffix.Suffix`
+components is handled by the Pyomo
+:class:`~pyomo.core.base.suffix.SuffixFinder` utility.
+
+A separation priority can be either
+a (real) number (i.e., of type :py:class:`int`, :py:class:`float`, etc.)
+or :py:obj:`None`.
+A higher number indicates a higher priority.
+The default priority for all constraints is 0.
+Therefore a constraint can be prioritized [or deprioritized]
+over the default by mapping the constraint to a positive [or negative] number.
+In practice, critical or dominant constraints are often
+prioritized over algorithmic or implied constraints.
+
+Constraints that have been assigned a priority of :py:obj:`None`
+are enforced subject to only the nominal uncertain parameter realization
+provided by the user. Therefore, these constraints are not imposed robustly
+and, in particular, are excluded from the separation problems.
+
+
 .. _pyros_solver_outputs:
 
 Overview of Outputs
