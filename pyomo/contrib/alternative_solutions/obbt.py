@@ -155,7 +155,7 @@ def obbt_analysis_bounds_and_solutions(
 
     if poolmanager is None:
         poolmanager = PyomoPoolManager()
-        poolmanager.add_pool("enumerate_binary_solutions", policy="keep_all")
+        poolmanager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
 
     if warmstart:
         assert (

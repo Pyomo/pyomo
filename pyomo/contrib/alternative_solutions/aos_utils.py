@@ -306,7 +306,7 @@ def get_model_variables(
 
 
 class MyMunch(Munch):
-    #WEH, MPV needed to add a to_dict since Bunch did not have one
+    # WEH, MPV needed to add a to_dict since Bunch did not have one
     def to_dict(self):
         return _to_dict(self)
 

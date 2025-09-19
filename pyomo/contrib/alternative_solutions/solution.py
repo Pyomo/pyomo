@@ -23,7 +23,26 @@ else:
 
 
 @dataclasses.dataclass(**dataclass_kwargs)
-class Variable:
+class VariableInfo:
+    """
+    Represents a variable in a solution.
+
+    Attributes
+    ----------
+    value : float
+        The value of the variable.
+    fixed : bool
+        If True, then the variable was fixed during optimization.
+    name : str
+        The name of the variable.
+    index : int
+        The unique identifier for this variable.
+    discrete : bool
+        If True, then this is a discrete variable
+    suffix : dict
+        Other information about this variable.
+    """
+
     value: float = nan
     fixed: bool = False
     name: str = None
@@ -37,7 +56,22 @@ class Variable:
 
 
 @dataclasses.dataclass(**dataclass_kwargs)
-class Objective:
+class ObjectiveInfo:
+    """
+    Represents an objective in a solution.
+
+    Attributes
+    ----------
+    value : float
+        The objective value.
+    name : str
+        The name of the objective.
+    index : int
+        The unique identifier for this objective.
+    suffix : dict
+        Other information about this objective.
+    """
+
     value: float = nan
     name: str = None
     index: int = None
@@ -49,6 +83,20 @@ class Objective:
 
 @functools.total_ordering
 class Solution:
+    """
+    An object that describes an optimization solution.
+
+    Parameters
+    -----------
+    variables : None or list
+        A list of :py:class:`VariableInfo` objects. (default is None)
+    objective : None or :py:class:`ObjectiveInfo`
+        A :py:class:`ObjectiveInfo` object. (default is None)
+    objectives : None or list
+        A list of :py:class:`ObjectiveInfo` objects. (default is None)
+    kwds : dict
+        A dictionary of auxiliary data that is stored with the core solution values.
+    """
 
     def __init__(self, *, variables=None, objective=None, objectives=None, **kwds):
         self.id = None
@@ -80,24 +128,64 @@ class Solution:
             self.suffix = MyMunch(**kwds)
 
     def variable(self, index):
+        """Returns the specified variable.
+
+        Parameters
+        ----------
+        index : int or str
+            The index or name of the objective. (default is 0)
+
+        Returns
+        -------
+        VariableInfo
+        """
         if type(index) is int:
             return self._variables[index]
         else:
             return self.name_to_variable[index]
 
     def variables(self):
+        """
+        Returns
+        -------
+        list
+            The list of variables in the solution.
+        """
         return self._variables
 
     def objective(self, index=0):
+        """Returns the specified objective.
+
+        Parameters
+        ----------
+        index : int or str
+            The index or name of the objective. (default is 0)
+
+        Returns
+        -------
+        :py:class:`ObjectiveInfo`
+        """
         if type(index) is int:
             return self._objectives[index]
         else:
             return self.name_to_objective[index]
 
     def objectives(self):
+        """
+        Returns
+        -------
+        list
+            The list of objectives in the solution.
+        """
         return self._objectives
 
     def to_dict(self):
+        """
+        Returns
+        -------
+        dict
+            A dictionary representation of the solution.
+        """
         return dict(
             id=self.id,
             variables=[v.to_dict() for v in self.variables()],
@@ -106,6 +194,22 @@ class Solution:
         )
 
     def to_string(self, sort_keys=True, indent=4):
+        """
+        Returns a string representation of the solution, which is generated
+        from a dictionary representation of the solution.
+
+        Parameters
+        ----------
+        sort_keys : bool
+            If True, then sort the keys in the dictionary representation. (default is True)
+        indent : int
+            Specifies the number of whitespaces to indent each element of the dictionary.
+
+        Returns
+        -------
+        str
+            A string representation of the solution.
+        """
         return json.dumps(self.to_dict(), sort_keys=sort_keys, indent=indent)
 
     def __str__(self):
@@ -149,7 +253,7 @@ def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
         index = 0
         for var in variables:
             vlist.append(
-                Variable(
+                VariableInfo(
                     value=(
                         pyo.value(var) if var.is_continuous() else round(pyo.value(var))
                     ),
@@ -170,7 +274,9 @@ def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
     if objectives is not None:
         index = 0
         for obj in objectives:
-            olist.append(Objective(value=pyo.value(obj), name=str(obj), index=index))
+            olist.append(
+                ObjectiveInfo(value=pyo.value(obj), name=str(obj), index=index)
+            )
             index += 1
 
     return Solution(variables=vlist, objectives=olist, **kwds)

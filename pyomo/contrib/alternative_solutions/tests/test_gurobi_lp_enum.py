@@ -14,13 +14,12 @@ from pyomo.common import unittest
 
 import pyomo.common.errors
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
-from pyomo.contrib.alternative_solutions import lp_enum
-from pyomo.contrib.alternative_solutions import lp_enum_solnpool
+from pyomo.contrib.alternative_solutions import gurobi_enumerate_linear_solutions
 from pyomo.opt import check_available_solvers
 
 import pyomo.environ as pyo
 
-# lp_enum_solnpool uses both 'gurobi' and 'appsi_gurobi'
+# lp_enum_gurobi uses both 'gurobi' and 'appsi_gurobi'
 gurobi_available = len(check_available_solvers("gurobi", "appsi_gurobi")) == 2
 
 #
@@ -38,7 +37,7 @@ class TestLPEnumSolnpool(unittest.TestCase):
         """
         n = tc.get_pentagonal_pyramid_mip()
         try:
-            lp_enum.enumerate_linear_solutions(n, num_solutions=-1)
+            gurobi_enumerate_linear_solutions(n, num_solutions=-1)
         except AssertionError as e:
             pass
 
@@ -48,7 +47,7 @@ class TestLPEnumSolnpool(unittest.TestCase):
         n.y.domain = pyo.Reals
 
         try:
-            sols = lp_enum_solnpool.enumerate_linear_solutions_soln_pool(n, tee=True)
+            sols = gurobi_enumerate_linear_solutions(n, tee=True)
         except pyomo.common.errors.ApplicationError as e:
             sols = []
 

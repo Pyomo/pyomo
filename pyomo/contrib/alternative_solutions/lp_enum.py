@@ -33,7 +33,8 @@ def enumerate_linear_solutions(
     poolmanager=None,
 ):
     """
-    Finds alternative optimal solutions a (mixed-integer) linear program.
+    Finds alternative optimal solutions a (mixed-integer) linear program by iteratively
+    generating corners of the feasible polytope.
 
     This function implements the technique described here:
 
@@ -101,7 +102,7 @@ def enumerate_linear_solutions(
 
     if poolmanager is None:
         poolmanager = PyomoPoolManager()
-        poolmanager.add_pool("enumerate_binary_solutions", policy="keep_all")
+        poolmanager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
 
     all_variables = aos_utils.get_model_variables(model)
     # else:

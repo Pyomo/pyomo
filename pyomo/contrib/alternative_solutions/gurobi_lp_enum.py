@@ -85,7 +85,7 @@ class NoGoodCutGenerator:
             cb_opt.cbLazy(new_con)
 
 
-def enumerate_linear_solutions_soln_pool(
+def gurobi_enumerate_linear_solutions(
     model,
     num_solutions=10,
     rel_opt_gap=None,
@@ -97,7 +97,9 @@ def enumerate_linear_solutions_soln_pool(
 ):
     """
     Finds alternative optimal solutions for a (mixed-binary) linear program
-    using Gurobi's solution pool feature.
+    using Gurobi's cut generator to enumerate corners of the feasible polytope
+    using lazy cuts.
+
 
     Parameters
     ----------
@@ -140,7 +142,7 @@ def enumerate_linear_solutions_soln_pool(
 
     if poolmanager is None:
         poolmanager = PyomoPoolManager()
-        poolmanager.add_pool("enumerate_binary_solutions", policy="keep_all")
+        poolmanager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
 
     #
     # Setup gurobi

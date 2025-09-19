@@ -98,7 +98,7 @@ def enumerate_binary_solutions(
 
     if poolmanager is None:
         poolmanager = PyomoPoolManager()
-        poolmanager.add_pool("enumerate_binary_solutions", policy="keep_all")
+        poolmanager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
 
     all_variables = aos_utils.get_model_variables(model, include_fixed=True)
     if variables == None:

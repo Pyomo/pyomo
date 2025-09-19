@@ -232,12 +232,12 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
         #
+        self._solutions[soln.id] = soln
         self.int_deque.append(soln.id)
         if len(self.int_deque) > self.max_pool_size:
             index = self.int_deque.popleft()
             del self._solutions[index]
         #
-        self._solutions[soln.id] = soln
         return soln.id
 
     def to_dict(self):
@@ -263,7 +263,6 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
     """
     A subclass of SolutionPool with the policy of keep the latest k unique solutions.
     Added solutions are checked for uniqueness.
-
 
     This class is designed to integrate with the alternative_solution generation methods.
     Additionally, groups of solution pools can be handled with the PoolManager class.
@@ -558,22 +557,27 @@ class SolutionPool_KeepBest(SolutionPoolBase):
 
 class PoolManager:
     """
-    A class to handle groups of SolutionPool objects.
-    Defaults to having a SolutionPool with policy KeepBest under name 'None'.
-    If a new SolutionPool is added while the 'None' pool is empty, 'None' pool is deleted.
+    Manages one or more solution pools.
 
-    When PoolManager has multiple pools, there is an active pool.
-    PoolManager is designed to have the same API as a pool for the active pool as pass-through.
-    Unless changed, the active pool defaults to the one most recently added to the PoolManager.
+    The default solution pool has policy ``keep_best`` with name ``None``.
+    If a new Solution pool is added without a name, then the ``None``
+    pool is replaced.  Otherwise, if a solution pool is added with an
+    existing name an error occurs.
 
-    All pools share the same Counter object to enable overall solution count tracking and unique solution id values.
+    The pool manager always has an active pool.  The pool manager has the
+    same API as a solution pool, and the envelope design pattern is used
+    to expose the methods and data for the active pool.  The active pool
+    defaults to the pool that was most recently added to the pool manager.
+
+    Note that all pools share the same Counter object to enable overall
+    solution count tracking and unique solution id values.
 
     """
 
     def __init__(self):
         self._name = None
         self._pools = {}
-        self.add_pool(self._name)
+        self.add_pool(name=self._name)
         self._solution_counter = 0
 
     #
@@ -582,54 +586,112 @@ class PoolManager:
     #
 
     @property
+    def name(self):
+        """
+        Returns
+        -------
+        str
+            The name of the active pool.
+        """
+        return self._name
+
+    @property
     def metadata(self):
+        """
+        Returns
+        -------
+        Munch
+            Metadata for the active pool.
+        """
         return self.active_pool.metadata
 
     @property
+    def policy(self):
+        """
+        Returns
+        -------
+        str
+            The policy that is executed by the active pool.
+        """
+        return self.active_pool.policy
+
+    @property
     def solutions(self):
+        """
+        Returns
+        -------
+        list
+            The solutions in the active pool.
+        """
         return self.active_pool.solutions.values()
 
     @property
     def last_solution(self):
+        """
+        Returns
+        -------
+        Solution
+            The last solution added to the active pool.
+        """
         return self.active_pool.last_solution
 
+    @property
+    def max_pool_size(self):
+        """
+        Returns
+        -------
+        int or None
+            The maximum pool size value for the active pool, or None if this parameter is not by this pool.
+        """
+        return getattr(self.active_pool, 'max_pool_size', None)
+
     def to_dict(self):
+        """
+        Returns
+        -------
+        dict
+            A dictionary representation of the active pool.
+        """
         return self.active_pool.to_dict()
 
     def __iter__(self):
+        """
+        Yields
+        -------
+        Solution
+            The solutions in the active pool.
+        """
         for soln in self.active_pool.solutions:
             yield soln
 
     def __len__(self):
+        """
+        Returns
+        -------
+        int
+            The number of solutions in the active pool.
+        """
         return len(self.active_pool)
 
     def __getitem__(self, soln_id):
+        """
+        Returns
+        -------
+        Solution
+            The specified solution in the active pool.
+        """
         return self._pools[self._name][soln_id]
 
-    # TODO: I have a note saying we want all pass through methods to be properties
-    # Not sure add works as a property
     def add(self, *args, **kwargs):
         """
-        Adds input to active SolutionPool
+        Adds a solution to the active pool.
 
         Returns
         ----------
-        Pass through for return value from calling add method on underlying pool
+        int
+            The index of the solution that is added.
         """
         return self.active_pool.add(*args, **kwargs)
-
-    def get_pool_dicts(self):
-        """
-        Converts the set of pools to dictionary object with underlying dictionary of pools
-
-        Returns
-        ----------
-        dict
-            Keys are names of each pool in PoolManager
-            Values are to_dict called on corresponding pool
-
-        """
-        return {k: v.to_dict() for k, v in self._pools.items()}
 
     #
     # The following methods support the management of multiple
@@ -650,7 +712,7 @@ class PoolManager:
         assert self._name in self._pools, f"Unknown pool '{self._name}'"
         return self._pools[self._name]
 
-    def add_pool(self, name, *, policy="keep_best", as_solution=None, **kwds):
+    def add_pool(self, *, name=None, policy="keep_best", as_solution=None, **kwds):
         """
         Initializes a new SolutionPool and adds it to the PoolManager.
         The method expects required parameters for the constructor of the corresponding SolutionPool except Counter.
@@ -680,6 +742,9 @@ class PoolManager:
             Metadata attribute of the newly create SolutionPool
 
         """
+        if name is None and None in self._pools:
+            del self._pools[None]
+
         if name not in self._pools:
             # Delete the 'None' pool if it isn't being used
             if name is not None and None in self._pools and len(self._pools[None]) == 0:
@@ -734,29 +799,23 @@ class PoolManager:
         self._name = name
         return self.metadata
 
-    def get_active_pool_name(self):
+    #
+    # The following methods provide information about all
+    # pools in the pool manager.
+    #
+
+    def get_pool_dicts(self):
         """
-        Returns the name string for the active pool
+        Converts the set of pools to dictionary object with underlying dictionary of pools
 
         Returns
         ----------
-        String
-            name key for the active pool
+        dict
+            Keys are names of each pool in PoolManager
+            Values are to_dict called on corresponding pool
 
         """
-        return self._name
-
-    def get_active_pool_policy(self):
-        """
-        Returns the policy string for the active pool
-
-        Returns
-        ----------
-        String
-            policy in use for the active pool
-
-        """
-        return self.active_pool.policy
+        return {k: v.to_dict() for k, v in self._pools.items()}
 
     def get_pool_names(self):
         """
@@ -781,18 +840,6 @@ class PoolManager:
 
         """
         return {k: v.policy for k, v in self._pools.items()}
-
-    def get_max_pool_size(self):
-        """
-        Returns the max_pool_size of the active pool if exists, else none
-
-        Returns
-        ----------
-        int or None
-            max_pool_size attribute of the active pool, if not defined, returns None
-
-        """
-        return getattr(self.active_pool, "max_pool_size", None)
 
     def get_max_pool_sizes(self):
         """
@@ -883,14 +930,15 @@ class PoolManager:
 class PyomoPoolManager(PoolManager):
     """
     A subclass of PoolManager for handing groups of SolutionPool objects.
-    Uses default as_solution method _as_pyomo_solution instead of _as_solution
 
-    Otherwise inherits from PoolManager
+    This class redefines the add_pool method to use the _as_pyomo_solution method to construct Solution objects.
+    Otherwise, this class inherits from PoolManager.
     """
 
-    def add_pool(self, name, *, policy="keep_best", as_solution=None, **kwds):
+    def add_pool(self, *, name=None, policy="keep_best", as_solution=None, **kwds):
         """
         Initializes a new SolutionPool and adds it to the PoolManager.
+
         The method expects required parameters for the constructor of the corresponding SolutionPool except Counter.
         The counter object is provided by the PoolManager.
         Supported pools are KeepAll, KeepBest, KeepLatest, KeepLatestUnique
@@ -921,5 +969,5 @@ class PyomoPoolManager(PoolManager):
         if as_solution is None:
             as_solution = _as_pyomo_solution
         return PoolManager.add_pool(
-            self, name, policy=policy, as_solution=as_solution, **kwds
+            self, name=name, policy=policy, as_solution=as_solution, **kwds
         )

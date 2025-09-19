@@ -83,7 +83,7 @@ def gurobi_generate_solutions(
 
     if poolmanager is None:
         poolmanager = PyomoPoolManager()
-        poolmanager.add_pool("gurobi_generate_solutions", policy="keep_all")
+        poolmanager.add_pool(name="gurobi_generate_solutions", policy="keep_all")
     #
     # Setup gurobi
     #
