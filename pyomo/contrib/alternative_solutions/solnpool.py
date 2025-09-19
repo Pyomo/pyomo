@@ -135,7 +135,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 
         Parameters
         ----------
-        Input needs to match as_solution format from pool inialization.
+        Input needs to match as_solution format from pool initialization.
 
         Returns
         ----------
@@ -217,7 +217,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
         Parameters
         ----------
-        Input needs to match as_solution format from pool inialization.
+        Input needs to match as_solution format from pool initialization.
 
         Returns
         ----------
@@ -301,7 +301,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
         Parameters
         ----------
-        Input needs to match as_solution format from pool inialization.
+        Input needs to match as_solution format from pool initialization.
 
         Returns
         ----------
@@ -436,7 +436,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
 
         Parameters
         ----------
-        Input needs to match as_solution format from pool inialization.
+        Input needs to match as_solution format from pool initialization.
 
         Returns
         ----------
@@ -784,7 +784,7 @@ class PoolManager:
         ----------
         name : String
             name key to pick the SolutionPool in the PoolManager object to the active pool
-            If name not a valid key then assertation error thrown
+            If name not a valid key then assertion error thrown
         Returns
         ----------
         dict
@@ -840,7 +840,7 @@ class PoolManager:
     def get_max_pool_sizes(self):
         """
         Returns the max_pool_size of all pools in the PoolManager as a dict.
-        If a pool does not have a max_pool_size that value defualts to none
+        If a pool does not have a max_pool_size that value defaults to none
 
         Returns
         ----------
@@ -893,7 +893,7 @@ class PoolManager:
         ----------
         json_filename : path-like
             File name to read in as SolutionPools for this PoolManager
-            If corresponding file does not exist, throws assertation error
+            If corresponding file does not exist, throws assertion error
 
         """
         # TODO: this does not set an active pool, should we do that?
