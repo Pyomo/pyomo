@@ -13,10 +13,29 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.contrib.solver.solvers.highs import Highs
+from pyomo.contrib.solver.common.availability import LicenseAvailability
 
 opt = Highs()
 if not opt.available():
     raise unittest.SkipTest
+
+
+class TestHighsInterface(unittest.TestCase):
+    def test_solver_available_cache(self):
+        opt = Highs()
+        opt.solver_available()
+        self.assertTrue(opt._available_cache)
+        self.assertIsNotNone(opt._available_cache)
+
+    def test_license_available(self):
+        opt = Highs()
+        self.assertEqual(opt.license_available(), LicenseAvailability.NotApplicable)
+
+    def test_version_cache(self):
+        opt = Highs()
+        opt.version()
+        self.assertIsNotNone(opt._version_cache[0])
+        self.assertIsNotNone(opt._version_cache[1])
 
 
 class TestBugs(unittest.TestCase):

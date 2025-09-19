@@ -30,7 +30,7 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
-from pyomo.contrib.solver.common.base import PersistentSolverBase, Availability
+from pyomo.contrib.solver.common.base import PersistentSolverBase, SolverAvailability
 from pyomo.contrib.solver.common.results import (
     Results,
     TerminationCondition,
@@ -64,10 +64,10 @@ def _import_gurobipy():
     try:
         import gurobipy
     except ImportError:
-        GurobiPersistent._available = Availability.NotFound
+        GurobiPersistent._available_cache = SolverAvailability.NotFound
         raise
     if gurobipy.GRB.VERSION_MAJOR < 7:
-        GurobiPersistent._available = Availability.BadVersion
+        GurobiPersistent._available_cache = SolverAvailability.BadVersion
         raise ImportError('The Persistent Gurobi interface requires gurobipy>=7.0.0')
     return gurobipy
 
@@ -272,13 +272,24 @@ class GurobiPersistent(
         self._vars_added_since_update = ComponentSet()
         self._last_results_object: Optional[Results] = None
 
+    def close(self):
+        try:
+            self._reinit()
+        except Exception:
+            pass
+        type(self).release_license()
+
     def release_license(self):
-        self._reinit()
-        self.__class__.release_license()
+        # This is a bit of a hack; I defined a classmethod version of
+        # release_license which causes a name clash.
+        self.close()
 
     def __del__(self):
-        if not python_is_shutting_down():
-            self._release_env_client()
+        try:
+            if not python_is_shutting_down():
+                type(self)._release_env_client()
+        except Exception:
+            pass
 
     @property
     def symbol_map(self):

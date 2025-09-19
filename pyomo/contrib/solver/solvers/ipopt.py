@@ -37,7 +37,11 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
-from pyomo.contrib.solver.common.base import SolverBase, Availability
+from pyomo.contrib.solver.common.availability import (
+    SolverAvailability,
+    LicenseAvailability,
+)
+from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import LegacySolverWrapper
 from pyomo.contrib.solver.common.results import (
@@ -217,7 +221,7 @@ unallowed_ipopt_options = {
     'wantsol': 'The solver interface requires the sol file to be created',
     'option_file_name': (
         'Pyomo generates the ipopt options file as part of the `solve` '
-        'method.  Add all options to ipopt.config.solver_options instead.'
+        'method. Add all options to ipopt.config.solver_options instead.'
     ),
 }
 
@@ -241,23 +245,23 @@ class Ipopt(SolverBase):
         #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
         self.config = self.config
 
-    def available(self, config: Optional[IpoptConfig] = None) -> Availability:
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-        if self._available_cache is None or self._available_cache[0] != pth:
+    def solver_available(self, recheck: bool = False) -> SolverAvailability:
+        pth = self.config.executable.path()
+        if recheck or self._available_cache is None or self._available_cache[0] != pth:
             if pth is None:
-                self._available_cache = (None, Availability.NotFound)
+                self._available_cache = (None, SolverAvailability.NotFound)
             else:
-                self._available_cache = (pth, Availability.FullLicense)
+                self._available_cache = (pth, SolverAvailability.Available)
         return self._available_cache[1]
 
-    def version(
-        self, config: Optional[IpoptConfig] = None
-    ) -> Optional[Tuple[int, int, int]]:
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
+    def license_available(
+        self, recheck: bool = False, timeout: Optional[float] = 0
+    ) -> LicenseAvailability:
+        # Ipopt doesn't require a license
+        return LicenseAvailability.NotApplicable
+
+    def version(self) -> Optional[Tuple[int, int, int]]:
+        pth = self.config.executable.path()
         if self._version_cache is None or self._version_cache[0] != pth:
             if pth is None:
                 self._version_cache = (None, None)
@@ -344,7 +348,7 @@ class Ipopt(SolverBase):
         # Update configuration options, based on keywords passed to solve
         config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
         # Check if solver is available
-        avail = self.available(config)
+        avail = self.available()
         if not avail:
             raise ApplicationError(
                 f'Solver {self.__class__} is not available ({avail}).'
@@ -524,7 +528,7 @@ class Ipopt(SolverBase):
             raise NoOptimalSolutionError()
 
         results.solver_name = self.name
-        results.solver_version = self.version(config)
+        results.solver_version = self.version()
 
         if config.load_solutions:
             if results.solution_status == SolutionStatus.noSolution:
