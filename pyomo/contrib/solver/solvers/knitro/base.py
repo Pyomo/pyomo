@@ -133,7 +133,10 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         results.solver_config = config
         results.solution_status = self.get_solution_status(status)
         results.termination_condition = self.get_termination_condition(status)
-        results.incumbent_objective = self._engine.get_obj_value()
+        if self._problem.objs:
+            results.incumbent_objective = self._engine.get_obj_value()
+        else:
+            results.incumbent_objective = None
         results.iteration_count = self._engine.get_num_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
