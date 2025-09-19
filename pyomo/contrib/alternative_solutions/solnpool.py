@@ -47,7 +47,7 @@ class SolutionPoolBase:
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used.
+        A value of None will result in the default _as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -112,7 +112,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used.
+        A value of None will result in the default _as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -191,7 +191,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used.
+        A value of None will result in the default _as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -273,7 +273,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used
+        A value of None will result in the default _as_solution function being used
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -373,7 +373,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution method being used.
+        A value of None will result in the default _as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -714,33 +714,29 @@ class PoolManager:
 
     def add_pool(self, *, name=None, policy="keep_best", as_solution=None, **kwds):
         """
-        Initializes a new SolutionPool and adds it to the PoolManager.
-        The method expects required parameters for the constructor of the corresponding SolutionPool except Counter.
-        The counter object is provided by the PoolManager.
-        Supported pools are KeepAll, KeepBest, KeepLatest, KeepLatestUnique
+        Initializes a new solution pool and adds it to this pool manager.
+
+        The method expects parameters for the constructor of the corresponding solution pool.
+        Supported pools are `keep_all`, `keep_best`, `keep_latest`, and `keep_latest_unique`.
 
         Parameters
         ----------
         name : String
-            name for the new pool.
-            Acts as key for the new SolutionPool in the dictionary of pools maintained by PoolManager
-            If name already used then sets that pool to active but makes no other changes
+            The name of the solution pool.  If name is already used then, then an error is generated.
         policy : String
-            String to choose which policy to enforce in the new SolutionPool
-            Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique']
-            Unsupported policy name will throw error.
-            Default is 'keep_best'
+            This string indicates the policy that is enforced new solution pool.
+            Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
+            (Default is 'keep_best'.)
         as_solution : None or Function
-            Pass through method for as_solution conversion method to create Solution objects for the new SolutionPool
-            Default is None for pass through default as_solution method
+            This function is used to create solution objects from raw data.
+            (Default is None, for which the _as_solution function is used.)
         **kwds
-            Other associated arguments corresponding to the constructor for intended subclass of SolutionPoolBase
+            Other associated arguments that are used to initialize the solution pool.
 
         Returns
         ----------
         dict
-            Metadata attribute of the newly create SolutionPool
-
+            Metadata for the newly create solution pool.
         """
         if name is None and None in self._pools:
             del self._pools[None]
@@ -929,7 +925,7 @@ class PoolManager:
 
 class PyomoPoolManager(PoolManager):
     """
-    A subclass of PoolManager for handing groups of SolutionPool objects.
+    A subclass of PoolManager for handing pools of Pyomo solutions.
 
     This class redefines the add_pool method to use the _as_pyomo_solution method to construct Solution objects.
     Otherwise, this class inherits from PoolManager.
@@ -937,33 +933,29 @@ class PyomoPoolManager(PoolManager):
 
     def add_pool(self, *, name=None, policy="keep_best", as_solution=None, **kwds):
         """
-        Initializes a new SolutionPool and adds it to the PoolManager.
+        Initializes a new solution pool and adds it to this pool manager.
 
-        The method expects required parameters for the constructor of the corresponding SolutionPool except Counter.
-        The counter object is provided by the PoolManager.
-        Supported pools are KeepAll, KeepBest, KeepLatest, KeepLatestUnique
+        The method expects parameters for the constructor of the corresponding solution pool.
+        Supported pools are `keep_all`, `keep_best`, `keep_latest`, and `keep_latest_unique`.
 
         Parameters
         ----------
         name : String
-            name for the new pool.
-            Acts as key for the new SolutionPool in the dictionary of pools maintained by PoolManager
-            If name already used then sets that pool to active but makes no other changes
+            The name of the solution pool.  If name is already used then, then an error is generated.
         policy : String
-            String to choose which policy to enforce in the new SolutionPool
-            Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique']
-            Unsupported policy name will throw error.
-            Default is 'keep_best'
+            This string indicates the policy that is enforced new solution pool.
+            Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
+            (Default is 'keep_best'.)
         as_solution : None or Function
-            Pass through method for as_solution conversion method to create Solution objects for the new SolutionPool
-            Default is None which results in using _as_pyomo_solution
+            This function is used to create solution objects from raw data.
+            (Default is None, for which the _as_pyomo_solution method is used.)
         **kwds
-            Other associated arguments corresponding to the constructor for intended subclass of SolutionPoolBase
+            Other associated arguments that are used to initialize the solution pool.
 
         Returns
         ----------
         dict
-            Metadata attribute of the newly create SolutionPool
+            Metadata for the newly create solution pool.
 
         """
         if as_solution is None:
