@@ -359,8 +359,7 @@ class DesignOfExperiments:
                         )
             # Set objective value
             if self.objective_option == ObjectiveLib.trace:
-                # Do safe inverse here?
-                trace_val = 1 / np.trace(np.array(self.get_FIM()))
+                trace_val = np.trace(np.linalg.pinv(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
             elif self.objective_option == ObjectiveLib.determinant:
                 det_val = np.linalg.det(np.array(self.get_FIM()))
