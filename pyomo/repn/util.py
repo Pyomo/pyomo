@@ -131,10 +131,10 @@ def val2str(val):
     raised by :py:meth:`InvalidNumber.__str__`.
 
     """
-    if hasattr(val, '_str'):
-        return val._str()
     if hasattr(val, 'to_string'):
         return val.to_string()
+    if hasattr(val, '_str'):
+        return val._str()
     return repr(val)
 
 

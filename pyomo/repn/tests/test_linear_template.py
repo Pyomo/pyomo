@@ -41,6 +41,35 @@ class TestLinearTemplate(unittest.TestCase):
             self.visitor.symbolmap, self.visitor.expr_cache, 1, 1, False
         )
 
+    def test_repn_to_string(self):
+        m = ConcreteModel()
+        m.x = Var(range(3))
+        m.p = Param(range(3), initialize={0: 5}, mutable=True, default=1)
+
+        e = m.p[0] * m.x[0] + m.x[1] + 10
+
+        repn = self.visitor.walk_expression(e)
+        self.assertEqual(
+            str(repn),
+            "LinearTemplateRepn(mult=1, const=10, linear={0: 5, 1: 1}, "
+            "linear_sum=[], nonlinear=None)",
+        )
+
+        @m.Objective()
+        def obj(m):
+            return sum(m.p[i] * m.x[i] for i in m.p.index_set())
+
+        e = m.obj.template_expr()[0]
+        repn = self.visitor.walk_expression(e)
+        self.assertEqual(
+            str(repn),
+            "LinearTemplateRepn(mult=1, const=0, linear={}, "
+            "linear_sum=[LinearTemplateRepn(mult=p[_1], const=0, "
+            "linear={%s: 1}, linear_sum=[], nonlinear=None), "
+            "[(_1)], [(0, 1, 2)]], nonlinear=None)"
+            % (list(self.visitor.expr_cache)[-1],),
+        )
+
     def test_no_indirection(self):
         m = ConcreteModel()
         m.x = Var()
