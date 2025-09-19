@@ -1,8 +1,8 @@
 .. _pyros_tutorial:
 
-==============
-PyROS Tutorial
-==============
+====================
+PyROS Usage Tutorial
+====================
 
 .. contents:: Table of Contents
    :depth: 3
