@@ -240,9 +240,9 @@ class GurobiDirect(DirectSolver):
         StaleFlagManager.mark_all_as_stale()
 
         if self._tee:
-            self._solver_model.setParam('OutputFlag', 1)
+            self._solver_model.setParam('LogToConsole', 1)
         else:
-            self._solver_model.setParam('OutputFlag', 0)
+            self._solver_model.setParam('LogToConsole', 0)
 
         if self._keepfiles:
             # Only save log file when the user wants to keep it.
