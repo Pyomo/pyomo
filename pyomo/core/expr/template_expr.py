@@ -16,6 +16,7 @@ import builtins
 from contextlib import nullcontext
 
 from pyomo.common.collections import MutableMapping
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
@@ -44,6 +45,10 @@ from pyomo.core.expr.visitor import (
     expression_to_string,
     _ToStringVisitor,
 )
+
+# Deferred imports to break circular dependencies
+pyomo_core_base_set, _ = attempt_import('pyomo.core.base.set')
+pyomo_core_base_param, _ = attempt_import('pyomo.core.base.param')
 
 logger = logging.getLogger(__name__)
 
@@ -764,8 +769,6 @@ def _reduce_template_to_component(expr):
     GetAttrExpression, and TemplateSumExpression expression nodes.
 
     """
-    import pyomo.core.base.set
-
     # wildcards holds lists of
     #   [iterator, source, value, orig_value, object0, ...]
     # 'iterator' iterates over 'source' to provide 'value's for each of
@@ -798,14 +801,12 @@ def _reduce_template_to_component(expr):
                     ans = child._resolve_template(())
                 return False, ans
             if child.is_variable_type():
-                from pyomo.core.base.set import RangeSet
-
                 if child.domain.isdiscrete():
                     domain = child.domain
                     bounds = child.bounds
                     if bounds != (None, None):
                         try:
-                            bounds = pyomo.core.base.set.RangeSet(*bounds, 0)
+                            bounds = pyomo_core_base_set.RangeSet(*bounds, 0)
                             domain = domain & bounds
                         except:
                             pass
@@ -975,14 +976,12 @@ def substitute_getitem_with_param(expr, _map):
     new Param.  For example, this method will create expressions
     suitable for passing to DAE integrators
     """
-    import pyomo.core.base.param
-
     if type(expr) is IndexTemplate:
         return expr
 
     _id = _GetItemIndexer(expr)
     if _id not in _map:
-        _map[_id] = pyomo.core.base.param.Param(mutable=True)
+        _map[_id] = pyomo_core_base_param.Param(mutable=True)
         _map[_id].construct()
         _map[_id]._name = "%s[%s]" % (_id.base.name, ','.join(str(x) for x in _id.args))
     return _map[_id]
@@ -1165,15 +1164,13 @@ _TemplateIterManager = _template_iter_manager()
 
 
 def templatize_rule(block, rule, index_set):
-    import pyomo.core.base.set
-
     context = _template_iter_context()
     internal_error = None
     try:
         # Override Set iteration to return IndexTemplates
         with _TemplateIterManager.init(
             context,
-            pyomo.core.base.set._FiniteSetMixin,
+            pyomo_core_base_set._FiniteSetMixin,
             GetItemExpression,
             GetAttrExpression,
         ):
