@@ -94,7 +94,7 @@ Library Reference
    :toctree:
    :template: recursive-module.rst
    :recursive:
-{% for item in modules %}
+{% for item in all_modules %}
 {# Need item != tests for Sphinx >= 8.0; !endswith(.tests) for < 8.0 #}
 {% if item != 'tests' and not item.endswith('.tests')
    and item != 'examples' and not item.endswith('.examples') %}
