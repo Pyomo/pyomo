@@ -344,6 +344,9 @@ So our variable designation is as follows:
   ... ]
   >>> second_stage_variables = []
 
+PyROS automatically considers all other variables of the model to be
+state variables.
+
 The single-stage problem can now be solved
 to robust optimality
 by invoking the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`

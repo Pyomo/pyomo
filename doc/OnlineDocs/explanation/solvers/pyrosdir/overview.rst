@@ -60,8 +60,8 @@ where:
 .. note::
     PyROS accepts models in which there are:
 
-    1. Bounds declared on the ``Var`` objects representing
-       components of the variable vectors
+    1. Bounds declared on the :class:`~pyomo.core.base.var.Var`
+       objects representing components of the variable vectors
     2. Ranged inequality constraints
 
 In order to cast the robust optimization counterpart of the

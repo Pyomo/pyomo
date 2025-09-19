@@ -27,19 +27,19 @@ Overview of Inputs
 ==================
 Deterministic Model
 -------------------
-PyROS is designed to operate on a single-objective deterministic model,
+PyROS is designed to operate on a single-objective deterministic model
+(implemented as a :class:`~pyomo.core.base.PyomoModel.ConcreteModel`),
 from which the robust optimization counterpart is automatically inferred.
 All variables of the model should be continuous, as
 mixed-integer problems are not supported.
 
 First-Stage and Second-Stage Variables
 --------------------------------------
-A model may have either first-stage variables, second-stage variables,
-or both.
-Any variable of the model that is excluded from the lists
-of first-stage and second-stage variables
-is automatically considered to be a state variable.
-PyROS assumes that the state variables are
+A model may have either first-stage variables,
+second-stage variables, or both.
+PyROS automatically considers all other variables participating
+in the active model components to be state variables.
+Further, PyROS assumes that the state variables are
 :ref:`uniquely defined by the equality constraints <pyros_unique_state_vars>`.
 
 
