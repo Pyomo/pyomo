@@ -223,7 +223,11 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
             return TerminationCondition.convergenceCriteriaSatisfied
         elif status == knitro.KN_RC_INFEAS_NO_IMPROVE:
             return TerminationCondition.locallyInfeasible
-        elif status == knitro.KN_RC_INFEASIBLE:
+        elif (
+            status == knitro.KN_RC_INFEASIBLE
+            or status == knitro.KN_RC_INFEAS_CON_BOUNDS
+            or status == knitro.KN_RC_INFEAS_VAR_BOUNDS   
+        ):
             return TerminationCondition.provenInfeasible
         elif (
             status == knitro.KN_RC_UNBOUNDED_OR_INFEAS
