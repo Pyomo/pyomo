@@ -11,13 +11,13 @@
 
 
 from abc import abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from io import StringIO
-from typing import Optional
+from typing import List, Optional, Type, TypeVar, Union
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.errors import ApplicationError
+from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.common.numeric_types import value
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.timing import HierarchicalTimer
@@ -31,6 +31,7 @@ from pyomo.contrib.solver.common.util import (
     IncompatibleModelError,
     NoDualsError,
     NoOptimalSolutionError,
+    NoReducedCostsError,
     NoSolutionError,
 )
 from pyomo.core.base.block import BlockData
@@ -44,6 +45,24 @@ from .engine import Engine
 from .package import PackageChecker
 from .utils import Problem
 from .solution import SolutionLoader, SolutionProvider
+
+T = TypeVar("T", bound=Union[VarData, ConstraintData])
+
+
+def helper(
+    to_load: Optional[Sequence[T]],
+    fetch_all: Callable[[], Sequence[T]],
+    loader: Callable[[Iterable[T]], Optional[List[float]]],
+    error_type: Type[PyomoException],
+    flip_sign: bool = False,
+) -> Mapping[T, float]:
+    if to_load is None:
+        to_load = fetch_all()
+    x = loader(to_load)
+    if x is None:
+        raise error_type()
+    sign = -1.0 if flip_sign else 1.0
+    return ComponentMap([(k, sign * x[i]) for i, k in enumerate(to_load)])
 
 
 class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
@@ -110,9 +129,11 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         self._saved_var_values = {id(var): value(var.value) for var in self.get_vars()}
 
     def _restore_var_values(self) -> None:
+        StaleFlagManager.mark_all_as_stale(delayed=True)
         for var in self.get_vars():
             if id(var) in self._saved_var_values:
                 var.set_value(self._saved_var_values[id(var)])
+        StaleFlagManager.mark_all_as_stale()
 
     @abstractmethod
     def _presolve(
@@ -133,7 +154,11 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         results.solver_config = config
         results.solution_status = self.get_solution_status(status)
         results.termination_condition = self.get_termination_condition(status)
-        if self._problem.objs:
+        if self._problem.objs and results.termination_condition in {
+            TerminationCondition.convergenceCriteriaSatisfied,
+            TerminationCondition.iterationLimit,
+            TerminationCondition.maxTimeLimit,
+        }:
             results.incumbent_objective = self._engine.get_obj_value()
         else:
             results.incumbent_objective = None
@@ -148,7 +173,14 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         ):
             raise NoOptimalSolutionError()
 
-        results.solution_loader = SolutionLoader(self)
+        results.solution_loader = SolutionLoader(
+            self,
+            has_primals=results.solution_status
+            not in {SolutionStatus.infeasible, SolutionStatus.noSolution},
+            has_reduced_costs=results.solution_status == SolutionStatus.optimal,
+            has_duals=results.solution_status
+            not in {SolutionStatus.infeasible, SolutionStatus.noSolution},
+        )
         if config.load_solutions:
             timer.start("load_solutions")
             results.solution_loader.load_vars()
@@ -166,29 +198,31 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         return self._problem.cons
 
     def get_primals(self, vars_to_load: Optional[Sequence[VarData]] = None):
-        if vars_to_load is None:
-            vars_to_load = self.get_vars()
-
-        x = self._engine.get_primals(vars_to_load)
-        if x is None:
-            return NoSolutionError()
-        return ComponentMap([(var, x[i]) for i, var in enumerate(vars_to_load)])
+        return helper(
+            vars_to_load,
+            self.get_vars,
+            self._engine.get_var_primals,
+            NoSolutionError,
+            flip_sign=False,
+        )
 
     def get_reduced_costs(self, vars_to_load: Optional[Sequence[VarData]] = None):
-        if vars_to_load is None:
-            vars_to_load = self.get_vars()
-        rc = self._engine.get_var_duals(vars_to_load)
-        if rc is None:
-            return NoDualsError()
-        return ComponentMap([(var, -rc[i]) for i, var in enumerate(vars_to_load)])
+        return helper(
+            vars_to_load,
+            self.get_vars,
+            self._engine.get_var_duals,
+            NoReducedCostsError,
+            flip_sign=True,
+        )
 
     def get_duals(self, cons_to_load: Optional[Sequence[ConstraintData]] = None):
-        if cons_to_load is None:
-            cons_to_load = self.get_cons()
-        y = self._engine.get_con_duals(cons_to_load)
-        if y is None:
-            return NoDualsError()
-        return ComponentMap([(con, -y[i]) for i, con in enumerate(cons_to_load)])
+        return helper(
+            cons_to_load,
+            self.get_cons,
+            self._engine.get_con_duals,
+            NoDualsError,
+            flip_sign=True,
+        )
 
     def get_num_solutions(self):
         return self._engine.get_num_solutions()
