@@ -165,7 +165,7 @@ class InfeasibleConstraintException(PyomoException):
 
 
 class InvalidConstraintError(PyomoException, ValueError):
-    """Exception raised when invalid constraints are identified.
+    """Exception raised for constraints that cannot be represented or emitted.
 
     Pyomo will raise this exception when:
 
@@ -173,6 +173,8 @@ class InvalidConstraintError(PyomoException, ValueError):
       - Creating a constraint from an incorrectly structured tuple.
       - Compiling a ranged constraint (``lb <= body <= ub``) where
         either ``lb`` or ``ub`` are variable expressions.
+      - Compiling a constraint that cannot be expressed / written in the
+        target format or interface.
 
     """
 

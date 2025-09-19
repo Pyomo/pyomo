@@ -113,6 +113,10 @@ class LinearTemplateRepn(LinearRepn):
     def _build_evaluator(
         self, smap, expr_cache, multiplier, repetitions, remove_fixed_vars
     ):
+        if self.nonlinear is not None:
+            raise InvalidConstraintError(
+                "LinearTemplateRepn cannot build an evaluator for template "
+                "constraints containing general nonlinear terms")
         ans = []
         multiplier *= self.multiplier
         constant = self.constant
