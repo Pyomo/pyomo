@@ -2,19 +2,21 @@
 Generating Alternative (Near-)Optimal Solutions
 ###############################################
 
+.. py:currentmodule:: pyomo.contrib.alternative_solutions
+
 Optimization solvers are generally designed to return a feasible solution
 to the user. However, there are many applications where a user needs
 more context than this result. For example,
 
-* alternative solutions can support an assessment of trade-offs between
-  competing objectives;
-
-* if the optimization formulation may be inaccurate or untrustworthy,
-  then comparisons amongst alternative solutions provide additional
-  insights into the reliability of these model predictions; or
-
-* the user may have unexpressed objectives or constraints, which only
-  are realized in later stages of model analysis.
+* alternative optimal solutions can be used to assess trade-offs between
+  competing objectives; 
+ 
+* comparisons amongst alternative solutions provide 
+  insights into the efficacy of model predictions with 
+  inaccurate or untrusted optimization formulations; or 
+ 
+* alternative solutions can be identified to support the future analysis of model revisions (e.g. to 
+  account for previously unexpressed constraints).
 
 The *alternative-solutions library* provides a variety of functions that
 can be used to generate optimal or near-optimal solutions for a pyomo
@@ -25,25 +27,25 @@ of pyomo's solver interface because they return a custom pool manager object.
 
 The following functions are defined in the alternative-solutions library:
 
-* ``enumerate_binary_solutions``
+* :py:func:`enumerate_binary_solutions`
 
     * Finds alternative optimal solutions for a binary problem using no-good cuts.
 
-* ``enumerate_linear_solutions``
+* :py:func:`enumerate_linear_solutions`
 
     * Finds alternative optimal solutions for a (mixed-integer) linear program.
 
-* ``enumerate_linear_solutions_soln_pool``
+* :py:func:`gurobi_enumerate_linear_solutions`
 
     * Finds alternative optimal solutions for a (mixed-binary) linear
-      program using Gurobi's solution pool feature.
+      program using Gurobi to generate lazy cuts.
 
-* ``gurobi_generate_solutions``
+* :py:func:`gurobi_generate_solutions`
 
     * Finds alternative optimal solutions for discrete variables using
       Gurobi's built-in solution pool capability.
 
-* ``obbt_analysis_bounds_and_solutions``
+* :py:func:`obbt_analysis_bounds_and_solutions`
 
     * Calculates the bounds on each variable by solving a series of min
       and max optimization problems where each variable is used as the
@@ -51,20 +53,22 @@ The following functions are defined in the alternative-solutions library:
       supported by the selected solver.
 
 
-Basic Usage Example
--------------------
+A Simple Example
+----------------
 
 Many of the functions in the alternative-solutions library have similar
-options, so we simply illustrate the ``enumerate_binary_solutions``
-function.  We define a simple knapsack example whose alternative
-solutions have integer objective values ranging from 0 to 90.
+options, so we simply illustrate the :py:func:`enumerate_binary_solutions`
+function.  
+
+We define a simple knapsack example whose alternative
+solutions have integer objective values ranging from 0 to 70.
 
 .. doctest::
 
    >>> import pyomo.environ as pyo
 
-   >>> values = [10, 40, 30, 50]
-   >>> weights = [5, 4, 6, 3]
+   >>> values = [20, 10, 60, 50]
+   >>> weights = [5, 4, 6, 5]
    >>> capacity = 10
 
    >>> m = pyo.ConcreteModel()
@@ -72,8 +76,8 @@ solutions have integer objective values ranging from 0 to 90.
    >>> m.o = pyo.Objective(expr=sum(values[i] * m.x[i] for i in range(4)), sense=pyo.maximize)
    >>> m.c = pyo.Constraint(expr=sum(weights[i] * m.x[i] for i in range(4)) <= capacity)
 
-We can execute the ``enumerate_binary_solutions`` function to generate a
-pool of ``Solution`` objects that represent alternative optimal
+The function :py:func:`enumerate_binary_solutions` generates a
+pool of :py:class:`Solution` objects that represent alternative optimal
 solutions:
 
 .. doctest::
@@ -81,24 +85,146 @@ solutions:
 
    >>> import pyomo.contrib.alternative_solutions as aos
    >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk")
-   >>> assert len(solns) == 10
+   >>> assert len(solns) == 9
+   >>> print( [soln.objective().value for soln in solns] )
+   [70.0, 70.0, 60.0, 60.0, 50.0, 30.0, 20.0, 10.0, 0.0]
 
-Each ``Solution`` object contains information about the objective and
-variables, and it includes various methods to access this information.
-For example:
+
+Enumerating Near-Optimal Solutions
+----------------------------------
+
+The previous example enumerated all feasible solutions. However optimization models are typically
+used to identify optimal or near-optimal solutions.  The ``abs_opt_gap`` and ``rel_opt_gap``
+arguments are used to limit the search to these solutions:
+
+* ``rel_opt_gap`` : non-negative float or None
+
+  * The relative optimality gap for allowable alternative solutions.  None implies that there is no limit on the relative optimality gap (i.e. that any feasible solution can be considered).
+
+* ``abs_opt_gap`` : non-negative float or None
+
+  * The absolute optimality gap for allowable alternative solutions.  None implies that there is no limit on the absolute optimality gap (i.e. that any feasible solution can be considered).
+
+For example, we can generate all optimal solutions as follows:
 
 .. doctest::
    :skipif: not glpk_available
 
-   >>> print(solns[0])
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk", abs_opt_gap=0.0)
+   >>> print( [soln.objective().value for soln in solns] )
+   [70.0, 70.0]
+
+Similarly, we can generate the six solutions within 40 of the optimum:
+
+.. doctest::
+   :skipif: not glpk_available
+
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk", abs_opt_gap=40.0)
+   >>> print( [soln.objective().value for soln in solns] )
+   [70.0, 70.0, 60.0, 60.0, 50.0, 30.0]
+
+
+Pyomo Solution Pools
+--------------------
+
+The *alternative-solutions library* uses solution pools to filter and store solutions generated by an optimizer.
+The following types of solution pools are currently supported:
+
+* ``keep_all`` : This pool stores all solutions. No solutions are filtered out.
+
+* ``keep_latest`` : This pool stores the latest ``max_pool_size`` solutions that are added to the pool.
+
+  * ``max_pool_size`` (non-negative integer) : The maximum number of solutions that are stored.
+
+* ``keep_latest_unique`` : This pool stores the latest ``max_pool_size`` unique solutions that are added to the pool.
+
+  * ``max_pool_size`` (non-negative integer) : The maximum number of solutions that are stored.
+
+* ``keep_best`` : This pool stores the best solutions added to the pool.
+
+  * ``max_pool_size`` (non-negative integer) : The maximum number of solutions that are stored.
+
+  * ``objective`` (function) : A user-specified function that computes the objective value used for comparisons.
+    
+  * ``abs_tolerance`` (non-negative float) : The absolute tolerance that is used to filter solutions.
+
+  * ``rel_tolernace`` (non-negative float) : The relative tolerance that is used to filter solutions.
+
+  * ``sense_is_min`` (bool) : If True, then the pool will keep solutions with the minimal objective values.
+    
+  * ``best_value`` (float) : If specified, then this value is used to filter solutions when the absolute or relative tolerances are specified.
+
+A pool manager class is used to manage one-or-more solution pools. This allows for flexible collection of solutions with different criteria. For example, the
+the best solutions might be stored along with all per-iteration solutions in an optimization solver.  The solution generation functions 
+in the *alternative-solutions library* return a :py:class:`PyomoPoolManager`.  By default, this pool manager uses a solution pool that keeps the best solutions.
+However, the user can provide a pool manager that is used to store solutions.
+
+For example, we can explicit create a pool manager that keeps the latest solutions.  Consider the previous example, where all
+feasible solutions are generated:
+
+.. doctest::
+   :skipif: not glpk_available
+
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk")
+   >>> print( [soln.objective().value for soln in solns] )
+   [70.0, 70.0, 60.0, 60.0, 50.0, 30.0, 20.0, 10.0, 0.0]
+   
+Each solution has a unique index:
+
+.. doctest::
+   :skipif: not glpk_available
+
+   >>> print( [soln.id for soln in solns] )
+   [0, 1, 2, 3, 4, 5, 6, 7, 8]
+
+Now we create a :py:class:`PyomoPoolManager` that is configured with a ``keep_latest`` pool:
+
+.. doctest::
+   :skipif: not glpk_available
+
+   >>> poolmanager = aos.PyomoPoolManager()
+   >>> context = poolmanager.add_pool(policy='keep_latest', max_pool_size=3)
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk", poolmanager=poolmanager)
+
+   >>> assert id(poolmanager) == id(solns)
+   >>> print( [soln.id for soln in solns] )
+   [6, 7, 8]
+
+The default solution pool has policy ``keep_best`` with name ``None``.
+If a new Solution pool is added without a name, then the ``None``
+pool is replaced.  Otherwise, if a solution pool is added with an
+existing name an error occurs.
+
+The pool manager always has an active pool.  The pool manager has the
+same API as a solution pool, and the envelope design pattern is used
+to expose the methods and data for the active pool.  The active pool
+defaults to the pool that was most recently added to the pool manager.
+
+
+Solution Objects
+----------------
+
+Each :py:class:`Solution` object contains information about the objective and
+variables.  Solutions can be sorted based on their variable values:
+
+.. doctest::
+   :skipif: not glpk_available
+
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk", abs_opt_gap=0.0)
+   >>> print( [soln.objective().value for soln in solns] )
+   [70.0, 70.0]
+
+   >>> sorted_solns = list(sorted(solns))
+   >>> for soln in sorted_solns:
+   ...     print(soln)
    {
-       "id": 0,
+       "id": 1,
        "objectives": [
            {
                "index": 0,
                "name": "o",
                "suffix": {},
-               "value": 90.0
+               "value": 70.0
            }
        ],
        "suffix": {},
@@ -125,6 +251,52 @@ For example:
                "index": 2,
                "name": "x[2]",
                "suffix": {},
+               "value": 1
+           },
+           {
+               "discrete": true,
+               "fixed": false,
+               "index": 3,
+               "name": "x[3]",
+               "suffix": {},
+               "value": 0
+           }
+       ]
+   }
+   {
+       "id": 0,
+       "objectives": [
+           {
+               "index": 0,
+               "name": "o",
+               "suffix": {},
+               "value": 70.0
+           }
+       ],
+       "suffix": {},
+       "variables": [
+           {
+               "discrete": true,
+               "fixed": false,
+               "index": 0,
+               "name": "x[0]",
+               "suffix": {},
+               "value": 1
+           },
+           {
+               "discrete": true,
+               "fixed": false,
+               "index": 1,
+               "name": "x[1]",
+               "suffix": {},
+               "value": 0
+           },
+           {
+               "discrete": true,
+               "fixed": false,
+               "index": 2,
+               "name": "x[2]",
+               "suffix": {},
                "value": 0
            },
            {
@@ -138,300 +310,51 @@ For example:
        ]
    }
 
-
-Gap Usage Example
------------------
-
-When we only want some of the solutions based off a tolerance away from
-optimal, this can be done using the ``abs_opt_gap`` parameter. This is
-shown in the following simple knapsack examples where the weights and
-values are the same.
+Further, variable and objective values can be retrieved either using an integer index or the corresponding name:
 
 .. doctest::
    :skipif: not glpk_available
 
-   >>> import pyomo.environ as pyo
-   >>> import pyomo.contrib.alternative_solutions as aos
+   >>> soln = sorted_solns[0]
 
-   >>> values = [10,9,2,1,1]
-   >>> weights = [10,9,2,1,1]
+   >>> print(f"{soln.objective().value=} {soln.objective(0).value=} {soln.objective('o').value=}")
+   soln.objective().value=70.0 soln.objective(0).value=70.0 soln.objective('o').value=70.0
 
-   >>> K = len(values)
-   >>> capacity = 12
-
-   >>> m = pyo.ConcreteModel()
-   >>> m.x = pyo.Var(range(K), within=pyo.Binary)
-   >>> m.o = pyo.Objective(expr=sum(values[i] * m.x[i] for i in range(K)), sense=pyo.maximize)
-   >>> m.c = pyo.Constraint(expr=sum(weights[i] * m.x[i] for i in range(K)) <= capacity)
-
-   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=10, solver="glpk", abs_opt_gap = 0.0)
-   >>> assert(len(solns) == 4)
-
-In this example, we only get the four ``Solution`` objects that have an
-``objective_value`` of 12.  Note that while we wanted only those four
-solutions with no optimality gap, using a gap of half the smallest value
-(in this case .5) will return the same solutions and avoids any machine
-precision issues.
-
-.. doctest::
-   :skipif: not glpk_available
-
-   >>> import pyomo.environ as pyo
-   >>> import pyomo.contrib.alternative_solutions as aos
-
-   >>> values = [10,9,2,1,1]
-   >>> weights = [10,9,2,1,1]
-
-   >>> K = len(values)
-   >>> capacity = 12
-
-   >>> m = pyo.ConcreteModel()
-   >>> m.x = pyo.Var(range(K), within=pyo.Binary)
-   >>> m.o = pyo.Objective(expr=sum(values[i] * m.x[i] for i in range(K)), sense=pyo.maximize)
-   >>> m.c = pyo.Constraint(expr=sum(weights[i] * m.x[i] for i in range(K)) <= capacity)
-
-   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=10, solver="glpk", abs_opt_gap = 0.5)
-   >>> assert(len(solns) == 4)
-   >>> for soln in sorted(solns):
-   ...     print(soln)
-    {
-        "id": 3,
-        "objectives": [
-            {
-                "index": 0,
-                "name": "o",
-                "suffix": {},
-                "value": 12.0
-            }
-        ],
-        "suffix": {},
-        "variables": [
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 0,
-                "name": "x[0]",
-                "suffix": {},
-                "value": 0
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 1,
-                "name": "x[1]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 2,
-                "name": "x[2]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 3,
-                "name": "x[3]",
-                "suffix": {},
-                "value": 0
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 4,
-                "name": "x[4]",
-                "suffix": {},
-                "value": 1
-            }
-        ]
-    }
-    {
-        "id": 2,
-        "objectives": [
-            {
-                "index": 0,
-                "name": "o",
-                "suffix": {},
-                "value": 12.0
-            }
-        ],
-        "suffix": {},
-        "variables": [
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 0,
-                "name": "x[0]",
-                "suffix": {},
-                "value": 0
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 1,
-                "name": "x[1]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 2,
-                "name": "x[2]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 3,
-                "name": "x[3]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 4,
-                "name": "x[4]",
-                "suffix": {},
-                "value": 0
-            }
-        ]
-    }
-    {
-        "id": 1,
-        "objectives": [
-            {
-                "index": 0,
-                "name": "o",
-                "suffix": {},
-                "value": 12.0
-            }
-        ],
-        "suffix": {},
-        "variables": [
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 0,
-                "name": "x[0]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 1,
-                "name": "x[1]",
-                "suffix": {},
-                "value": 0
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 2,
-                "name": "x[2]",
-                "suffix": {},
-                "value": 0
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 3,
-                "name": "x[3]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 4,
-                "name": "x[4]",
-                "suffix": {},
-                "value": 1
-            }
-        ]
-    }
-    {
-        "id": 0,
-        "objectives": [
-            {
-                "index": 0,
-                "name": "o",
-                "suffix": {},
-                "value": 12.0
-            }
-        ],
-        "suffix": {},
-        "variables": [
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 0,
-                "name": "x[0]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 1,
-                "name": "x[1]",
-                "suffix": {},
-                "value": 0
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 2,
-                "name": "x[2]",
-                "suffix": {},
-                "value": 1
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 3,
-                "name": "x[3]",
-                "suffix": {},
-                "value": 0
-            },
-            {
-                "discrete": true,
-                "fixed": false,
-                "index": 4,
-                "name": "x[4]",
-                "suffix": {},
-                "value": 0
-            }
-        ]
-    }
+   >>> print(f"{soln.variable(0).value=} {soln.variable('x[0]').value=}")
+   soln.variable(0).value=0 soln.variable('x[0]').value=0
 
 
 Interface Documentation
 -----------------------
 
-.. currentmodule:: pyomo.contrib.alternative_solutions
+Functions that Generate Alternative Solutions
+=============================================
 
 .. autofunction:: enumerate_binary_solutions
-   :noindex:
 
 .. autofunction:: enumerate_linear_solutions
-   :noindex:
 
-.. autofunction:: pyomo.contrib.alternative_solutions.lp_enum_solnpool.enumerate_linear_solutions_soln_pool
-   :noindex:
+.. autofunction:: gurobi_enumerate_linear_solutions
 
 .. autofunction:: gurobi_generate_solutions
-   :noindex:
 
 .. autofunction:: obbt_analysis_bounds_and_solutions
-   :noindex:
+
+Classes for Solutions and Pools
+===============================
+
+.. autoclass:: VariableInfo
+   :members:
+
+.. autoclass:: ObjectiveInfo
+   :members:
 
 .. autoclass:: Solution
-   :noindex:
+   :members:
 
+.. autoclass:: PoolManager
+   :members:
+
+.. autoclass:: PyomoPoolManager
+    :members:
+    :show-inheritance:
