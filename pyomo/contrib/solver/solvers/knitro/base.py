@@ -226,7 +226,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         elif (
             status == knitro.KN_RC_INFEASIBLE
             or status == knitro.KN_RC_INFEAS_CON_BOUNDS
-            or status == knitro.KN_RC_INFEAS_VAR_BOUNDS   
+            or status == knitro.KN_RC_INFEAS_VAR_BOUNDS
         ):
             return TerminationCondition.provenInfeasible
         elif (
