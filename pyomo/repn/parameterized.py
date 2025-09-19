@@ -34,7 +34,7 @@ _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
 
 
-class ParameterizedRepnMixin(object):
+class ParameterizedRepnMixin:
     @staticmethod
     def constant_flag(val):
         if val.__class__ in native_numeric_types:

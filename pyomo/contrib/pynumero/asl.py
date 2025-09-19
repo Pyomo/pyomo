@@ -239,7 +239,7 @@ def _LoadASLInterface(libname):
     return ASLib, interface_version
 
 
-class AmplInterface(object):
+class AmplInterface:
     libname = _NotSet
     ASLib = None
     interface_version = None

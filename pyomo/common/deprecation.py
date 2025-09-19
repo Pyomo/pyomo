@@ -469,7 +469,7 @@ class RenamedClass(type):
     Examples
     --------
     >>> from pyomo.common.deprecation import RenamedClass
-    >>> class NewClass(object):
+    >>> class NewClass:
     ...     pass
     >>> class OldClass(metaclass=RenamedClass):
     ...     __renamed__new_class__ = NewClass

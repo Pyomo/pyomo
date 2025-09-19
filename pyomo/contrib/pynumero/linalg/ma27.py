@@ -16,7 +16,7 @@ import ctypes
 import os
 
 
-class MA27Interface(object):
+class MA27Interface:
     libname = _NotSet
 
     @classmethod
