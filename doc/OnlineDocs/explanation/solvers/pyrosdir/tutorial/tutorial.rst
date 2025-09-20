@@ -14,23 +14,20 @@ The problem is taken from the area of chemical process systems design.
 
 Setup
 -----
-
-In addition to :ref:`installing PyROS <pyros_installation>`,
-you will need to pre-install:
-
-- At least one local NLP solver
-- At least one global NLP solver
-
+To successfully run this tutorial, you will need to
+:ref:`install PyROS <pyros_installation>`
+along with at least one local
+nonlinear programming
+(NLP) solver and at least one global NLP solver.
 In particular,
 `IPOPT <https://github.com/coin-or/Ipopt>`__
 (to serve as the local solver), `BARON <https://minlp.com/baron-solver>`__
 (to serve as the global solver), and `COUENNE <https://github.com/coin-or/Couenne>`__
-(to serve as a backup global solver) are required to run this tutorial as is.
+(to serve as a backup global solver) are required to run the tutorial verbatim.
 
 You will also need to
-`install Matplotlib <https://matplotlib.org/stable/install/index.html>`__
-which is used to produce plots in this tutorial,
-with your preferred Python package manager.
+`install Matplotlib <https://matplotlib.org/stable/install/index.html>`__,
+which is used to produce plots in this tutorial.
 
 
 Prepare the Deterministic Model
@@ -54,22 +51,24 @@ Consider the reactor-cooler system below:
 
 A stream of chemical species :math:`E` enters the
 reactor with a molar flow rate :math:`F_0 = 45.36\,\text{kmol/h}`,
-absolute temperature of and :math:`T_0 = 333\,\text{K}`, concentration
-:math:`\boldsymbol{c}_{E0} = 32.04\, \text{kmol}/\text{m}^3`, and heat
-capacity :math:`\boldsymbol{c}_p = 167.4\,\text{kJ}/ \text{kmol}\,\text{K}`.
+absolute temperature :math:`T_0 = 333\,\text{K}`,
+concentration :math:`\boldsymbol{c}_{E0} = 32.04\, \text{kmol}/\text{m}^3`,
+and heat capacity
+:math:`\boldsymbol{c}_p = 167.4\,\text{kJ}/ \text{kmol}\,\text{K}`.
 Inside the reactor, the exothermic reaction :math:`E \to F` occurs
 at temperature :math:`T_1`, with a conversion of 90%.
 We assume that the reaction
 follows first-order kinetics, with a rate constant
 :math:`\boldsymbol{k}_\text{R}` of nominal value
 :math:`10\,\text{hr}^{-1}` and normalized activation energy
-:math:`\boldsymbol{E/R} = 555.6\,\text{K}`, and has a molar heat of
-reaction :math:`\boldsymbol{\Delta H}_\text{R}=-23260\,\text{kJ/kmol}`.
+:math:`\boldsymbol{E/R} = 555.6\,\text{K}`.
+Further, the molar heat of reaction is
+:math:`\boldsymbol{\Delta H}_\text{R}=-23260\,\text{kJ/kmol}`.
 
-A portion of the product is cooled to a temperature :math:`T_2` and
-recycled to the reactor.
+A portion of the product is cooled to a temperature :math:`T_2`
+then recycled to the reactor.
 Cooling water, with heat capacity
-:math:`\boldsymbol{c}_{pw} = 4.184\,\text{kJ}/\text{kg}\,\text{K}`
+:math:`\boldsymbol{c}_{w,p} = 4.184\,\text{kJ}/\text{kg}\,\text{K}`
 and inlet
 temperature :math:`\boldsymbol{T}_{w1} = 300\,\text{K}`, is used as the
 cooling medium. The heat transfer coefficient of the cooling unit is of
@@ -171,10 +170,13 @@ in which:
 -  :math:`\dot{Q}_\text{HE}` is the cooling duty of the heat exchanger
    (in :math:`\text{kW}`)
 
+The objective function yields the total annualized cost,
+with units of $/yr.
+
 Once the design :math:`(\hat{V}, A)` and operation :math:`(F_1, T_1)` of
 the system are specified, the state variables
 :math:`(V, \dot{Q}_\text{HE}, F_w, T_{w2}, T_2)` are calculated using
-the equality constraints, which comprise a system of nonlinear
+the equality constraints, which comprise a square system of nonlinear
 equations.
 
 
@@ -378,6 +380,8 @@ Solve the Model Deterministically
 
 We use IPOPT to solve the model to local optimality:
 
+.. _pyros_tutorial_nominal_solve:
+
 .. code::
 
     >>> ipopt = pyo.SolverFactory("ipopt")
@@ -390,6 +394,8 @@ We use IPOPT to solve the model to local optimality:
 We are able to solve the model to local optimality. Inspecting the
 solution, we notice reductions in the objective and the main variables
 of interest compared to the initial point used:
+
+.. _pyros_tutorial_inspect_nominal:
 
 .. code::
 
@@ -410,7 +416,7 @@ heat transfer coefficient :math:`\boldsymbol{U}` are uncertain. We
 assume that each parameter may deviate from its nominal value by up to
 5%, and that the deviations are independent. Thus, the joint
 realizations of the uncertain parameters are confined to a rectangular
-region, i.e., a box.
+region, that is, a box.
 
 Given a *fixed* design :math:`(\hat{V}, A)`, we wish to assess whether
 we can guarantee that the operational variables :math:`(F_1, T_1)`, and
@@ -434,7 +440,7 @@ function:
     ...     # nominal uncertain parameter realizations
     ...     nom_vals = np.array([10, 1635])
     ... 
-    ...     # sample points from box set of specified test size
+    ...     # sample points from box uncertainty set of specified test size
     ...     point_samples = np.empty((samples, 2))
     ...     point_samples[0] = nom_vals
     ...     point_samples[1:] = rng.uniform(
@@ -455,7 +461,7 @@ function:
     ...             mdl.kR.set_value(pt[0])
     ...             mdl.U.set_value(pt[1])
     ... 
-    ...             # update the model variable values
+    ...             # update the values of the operational variables
     ...             initialize_model(mdl, Vhat=sol[0], A=sol[1])
     ... 
     ...             # try solving the model to inspect for feasibility
@@ -466,7 +472,7 @@ function:
     ...             else:
     ...                 costs[sol_idx, pt_idx] = np.nan
     ... 
-    ...     # now generate the plot
+    ...     # now generate the plot(s)
     ...     fig, axs = plt.subplots(
     ...         figsize=(0.5 * (len(solutions) - 1) + 5 * len(solutions), 4),
     ...         ncols=len(solutions),
@@ -477,7 +483,8 @@ function:
     ...         # track realizations for which solution feasible
     ...         is_feas = ~np.isnan(costs[sol_idx])
     ... 
-    ...         # realizations for which feasibility occurs, colored by objective
+    ...         # realizations under which design is feasible
+    ...         # (colored by objective)
     ...         plot = ax.scatter(
     ...             point_samples[is_feas][:, 0],
     ...             point_samples[is_feas][:, 1],
@@ -487,7 +494,7 @@ function:
     ...             cmap="plasma_r",
     ...             marker="o",
     ...         )
-    ...         # realizations for which infeasibility occurs
+    ...         # realizations under which design is infeasible
     ...         ax.scatter(
     ...             point_samples[~is_feas][:, 0],
     ...             point_samples[~is_feas][:, 1],
@@ -518,7 +525,7 @@ function:
     ...         )
     ...         feas_in_set = np.logical_and(is_feas, is_in_set)
     ...         
-    ...         # add plot title showing statistics of the results
+    ...         # add plot title summarizing statistics of the results
     ...         ax.set_title(
     ...             f"Solution for {size}% box set\n"
     ...             "Avg ± SD objective "
@@ -584,7 +591,7 @@ Construct PyROS Solver Arguments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We now construct the required arguments to the PyROS solver.
-A full enumeration of all PyROS solver arguments is presented in the
+A general discussion on all PyROS solver arguments is given in the
 :ref:`Solver Interface Section <pyros_solver_interface>`.
 
 Deterministic Model
@@ -595,9 +602,9 @@ We have already constructed the deterministic model.
 First-stage Variables and Second-Stage Variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As previously discussed, the first-stage variables are comprised of the
+As previously discussed, the first-stage variables comprise the
 design variables :math:`(\hat{V}, A)`, whereas the second-stage
-variables are comprised of the operational decision variables
+variables comprise the operational decision variables
 :math:`(F_1, T_1)`. PyROS automatically infers the state variables of
 the model by inspecting the active objective and constraint components.
 
@@ -642,20 +649,24 @@ COUENNE as a backup.
     >>> # global subsolvers:
     >>> baron = pyo.SolverFactory("baron", options={"MaxTime": 10})
     >>> couenne = pyo.SolverFactory("couenne", options={"max_cpu_time": 10})
-    >>> print("BARON solver version", baron.version())
-    >>> print("COUENNE solver version", couenne.version())
-    BARON solver version (25, 8, 12, 0)
-    COUENNE solver version (0, 5, 8, 0)
 
 
 Invoke PyROS
 ~~~~~~~~~~~~
 
-We are now ready to invoke PyROS on our model:
+We are now ready to invoke PyROS on our model.
+We do so by instantiating the PyROS solver interface:
 
 .. code::
 
-    >>> pyros_solver = pyo.SolverFactory("pyros")  # instantiate the solver
+    >>> pyros_solver = pyo.SolverFactory("pyros")
+
+and invoking the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method:
+
+.. pyros_tutorial_static_ro_solve::
+
+.. code::
+
     >>> pyros_solver.solve(
     ...     # mandatory arguments
     ...     model=m,
@@ -678,17 +689,28 @@ We are now ready to invoke PyROS on our model:
     <pyomo.contrib.pyros.solve_data.ROSolveResults at ...>
 
 
+By default, the progress and final result of the PyROS solver
+is logged to the console.
 The :ref:`Solver Log Output documentation <pyros_solver_log>`
-provides guidance on how the solver log is interpreted.
+provides guidance on how the solver log is to be interpreted.
+The :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
+returns an :class:`~pyomo.contrib.pyros.solve_data.ROSolveResults`
+object summarizing the results.
 
 
 Inspect the Solution
 ~~~~~~~~~~~~~~~~~~~~
 
 Inspecting the solution, we see that the overall objective is increased
-compared to when the model was solved deterministically. The cooler area
-:math:`A` and recycle stream flow :math:`F_1` are reduced, but the
-cooling water utility flow rate :math:`F_w` is increased:
+compared to when the model is
+:ref:`solved deterministically <pyros_tutorial_inspect_nominal>`.
+The cooler area
+:math:`A` and recycle stream flow :math:`F_1` are reduced,
+but the reactor volume :math:`\hat{V}`
+and cooling water utility flow rate :math:`F_w`
+are increased:
+
+.. _pyros_tutorial_inspect_static:
 
 .. code::
 
@@ -717,7 +739,7 @@ Try Higher-Order Decision Rules to Improve Solution Quality
 
 For tractability purposes, the underlying algorithm of PyROS uses
 polynomial decision rules to approximate (restrict) the adjustability of
-the second-stage decision variables (i.e., :math:`F_1` and :math:`T_1`
+the second-stage decision variables (that is, :math:`F_1` and :math:`T_1`
 for the present model) to the uncertain parameters. By default, a static
 approximation is used, such that the second-stage decisions are modeled
 as nonadjustable. A less restrictive approximation can be used by
@@ -749,9 +771,10 @@ argument ``decision_rule_order``:
     <pyomo.contrib.pyros.solve_data.ROSolveResults at ...>
 
 
-Inspecting solutions, we see that the cost is reduced compared to when a
-static decision rule approximation was used, as a smaller reactor volume
-can be accommodated:
+Inspecting solutions, we see that the cost is reduced compared to when
+:ref:`a static decision rule approximation is used <pyros_tutorial_inspect_static>`,
+as a smaller cooling water flow rate :math:`F_w` is required
+since the cooler area :math:`A` is increased:
 
 .. code::
 
@@ -763,6 +786,9 @@ can be accommodated:
     T1             (K)       : 389.00
     Fw             (kg/hr)   : 2278.57
 
+
+Further, our empirical check confirms that the solution
+is robust:
 
 .. code::
 
@@ -778,14 +804,14 @@ Assess Impact of Uncertainty Set on the Solution Obtained
 We now perform a price-of-robustness study, in which the size of the
 uncertainty set is varied to assess the response of the solution. This
 can be easily performed by placing the PyROS solver invocation in a
-for-loop and recording the results at each iteration:
+for-loop and recording the results at each iteration.
 
 Invoke PyROS in a ``for``-Loop
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The PyROS solver invocation can easily be made in a ``for``-loop. At
 each iteration of the loop, we use PyROS to solve the RO problem subject
-to the uncertainty set of the corresponding “size”.
+to the uncertainty set of the corresponding size:
 
 .. code::
 
@@ -801,7 +827,7 @@ to the uncertainty set of the corresponding “size”.
     ...         [param.value * (1 - percent_size / 100), param.value * (1 + percent_size / 100)]
     ...         for param in [mdl.kR, mdl.U]
     ...     ])
-    ...     print(f"Solving RO problem for uncertainty set size {percent_size}")
+    ...     print(f"Solving RO problem for uncertainty set size {percent_size}:")
     ...     res_dict[percent_size] = res = pyros_solver.solve(
     ...         model=mdl,
     ...         first_stage_variables=[mdl.Vhat, mdl.A],
@@ -820,25 +846,24 @@ to the uncertainty set of the corresponding “size”.
     ...         vhat_vals[percent_size] = pyo.value(mdl.Vhat)
     ...         area_vals[percent_size] = pyo.value(mdl.A)
     ...
-    Solving RO problem for uncertainty set size 0
+    Solving RO problem for uncertainty set size 0:
     ...
-    Solving RO problem for uncertainty set size 2.5
+    Solving RO problem for uncertainty set size 2.5:
     ...
-    Solving RO problem for uncertainty set size 5
+    Solving RO problem for uncertainty set size 5:
     ...
-    Solving RO problem for uncertainty set size 7.5
+    Solving RO problem for uncertainty set size 7.5:
     ...
-    Solving RO problem for uncertainty set size 10
+    Solving RO problem for uncertainty set size 10:
     ...
     All done. Exiting PyROS.
     ==============================================================================
 
 
-Inspect the Results
-^^^^^^^^^^^^^^^^^^^
+Visualize the Results
+^^^^^^^^^^^^^^^^^^^^^
 
-We can inspect the solutions, as follows. Notice that the costs and
-reactor volume increase with the size of the uncertainty set:
+We can visualize the results of our price-of-robustness, as follows:
 
 .. code::
 
@@ -865,16 +890,17 @@ reactor volume increase with the size of the uncertainty set:
     >>> plt.show()
 
 
-
 .. image:: por_sensitivity.png
+
+Notice that the costs and reactor volume increase with the size
+of the uncertainty set, whereas the heat transfer area of the
+cooler does not vary.
 
 
 Assess Robust Feasibility of the Solutions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We can also examine the robustness of each solution. Notice that: every
-solution is found to be robust feasible subject to its corresponding
-uncertainty set, but robust infeasible subject to strict supersets:
+We can also examine the robustness of each solution:
 
 .. code::
 
@@ -887,3 +913,11 @@ uncertainty set, but robust infeasible subject to strict supersets:
 
 
 .. image:: por_heatmaps.png
+
+
+Notice that:
+
+- Every solution is found to be robust feasible subject to its corresponding
+  uncertainty set, but robust infeasible subject to strict supersets.
+- As the size of uncertainty set is increased, so is the average objective
+  value.
