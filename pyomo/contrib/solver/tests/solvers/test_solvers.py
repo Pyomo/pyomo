@@ -177,7 +177,7 @@ class TestDualSignConvention(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1, places=5)
+        self.assertAlmostEqual(m.y.value, 1)
         duals = res.solution_loader.get_duals()
         # the sign convention is based on the (lower, body, upper) representation of the constraint,
         # so we need to make sure the constraint body is what we expect
@@ -200,7 +200,7 @@ class TestDualSignConvention(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1, places=5)
+        self.assertAlmostEqual(m.y.value, 1)
         duals = res.solution_loader.get_duals()
         # the sign convention is based on the (lower, body, upper) representation of the constraint,
         # so we need to make sure the constraint body is what we expect
@@ -400,7 +400,7 @@ class TestDualSignConvention(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1, places=5)
+        self.assertAlmostEqual(m.y.value, 1)
         duals = res.solution_loader.get_duals()
         # the sign convention is based on the (lower, body, upper) representation of the constraint,
         # so we need to make sure the constraint body is what we expect
@@ -423,7 +423,7 @@ class TestDualSignConvention(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1, places=5)
+        self.assertAlmostEqual(m.y.value, 1)
         duals = res.solution_loader.get_duals()
         # the sign convention is based on the (lower, body, upper) representation of the constraint,
         # so we need to make sure the constraint body is what we expect

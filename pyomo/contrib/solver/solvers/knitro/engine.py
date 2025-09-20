@@ -160,6 +160,10 @@ class Engine:
 
     def solve(self) -> int:
         self._register_callback()
+        # TODO: remove this when the tolerance test is fixed in test_solvers
+        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_FTOL, 1e-10)
+        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_OPTTOL, 1e-10)
+        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_XTOL, 1e-10)
         self._status = self._execute(knitro.KN_solve)
         return self._status
 
