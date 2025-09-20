@@ -29,6 +29,7 @@ from pyomo.contrib.solver.common.util import (
 )
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.solvers.knitro import KnitroDirectSolver
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
@@ -51,16 +52,25 @@ all_solvers = [
     ('gurobi_direct', GurobiDirect),
     ('ipopt', Ipopt),
     ('highs', Highs),
+    ('knitro_direct', KnitroDirectSolver),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('highs', Highs),
+    ('knitro_direct', KnitroDirectSolver),
 ]
-nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi_persistent', GurobiPersistent), ('ipopt', Ipopt)]
+nlp_solvers = [('ipopt', Ipopt), ('knitro_direct', KnitroDirectSolver)]
+qcp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('ipopt', Ipopt),
+    ('knitro_direct', KnitroDirectSolver),
+]
 qp_solvers = qcp_solvers + [("highs", Highs)]
-miqcqp_solvers = [('gurobi_persistent', GurobiPersistent)]
+miqcqp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('knitro_direct', KnitroDirectSolver),
+]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 
