@@ -102,9 +102,11 @@ The optional arguments are enumerated in the documentation of the
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
 
 Like other Pyomo solver interface methods,
+the PyROS
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
-provides support for specifying optional arguments indirectly by passing
-a keyword argument ``options``, for which the value must be a :class:`dict`
+method
+accepts the keyword argument ``options``,
+which must be a :class:`dict`
 mapping names of optional arguments to
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 to their desired values.
