@@ -128,19 +128,15 @@ class NonlinearExpressionData:
         expr: Optional[Any],
         variables: Iterable[VarData],
         *,
-        compute_grad: bool = True,
-        compute_hess: bool = False,
+        differentiation_order: int = 0,
     ):
         self.body = expr
         self.variables = list(variables)
         self.grad = None
         self.hessian = None
-        if compute_grad:
+        if differentiation_order > 0:
             self.compute_gradient()
-        if compute_hess:
-            if not compute_grad:
-                msg = "Hessian computation requires gradient computation."
-                raise ValueError(msg)
+        if differentiation_order > 1:
             self.compute_hessian()
 
     @property
