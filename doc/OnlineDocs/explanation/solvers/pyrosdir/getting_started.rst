@@ -192,33 +192,35 @@ Further information on PyROS uncertainty sets is presented in the
 
 Subordinate NLP Solvers
 ^^^^^^^^^^^^^^^^^^^^^^^
-PyROS requires at least one subordinate local NLP optimizer
-and one subordinate global NLP optimizer for solving subproblems.
-For convenience, we shall have PyROS use
-:ref:`the previously instantiated BARON solver <pyros_solve_deterministic>`
-as both the subordinate local and global NLP solvers:
+We will use IPOPT as the subordinate local NLP solver
+and BARON as the subordinate global NLP solver:
+
+.. doctest::
+
+  >>> local_solver = pyo.SolverFactory("ipopt")
+  >>> global_solver = pyo.SolverFactory("baron")
 
 In advance of using PyROS, we check that the model can be solved
-to optimality with the subordinate solver(s):
+to optimality with the subordinate global solver:
 
 .. _pyros_solve_deterministic:
 
 .. doctest::
   :skipif: not (baron.available() and baron.license_is_valid())
 
-  >>> baron = pyo.SolverFactory("baron")
-  >>> pyo.assert_optimal_termination(baron.solve(m))
+  >>> pyo.assert_optimal_termination(global_solver.solve(m))
   >>> deterministic_obj = pyo.value(m.obj)
   >>> print("Optimal deterministic objective value: {deterministic_obj:.2f}")
   Optimal deterministic objective value: 5408.02
 
 .. note::
-    Additional NLP optimizers can be automatically used in the event the primary
-    subordinate local or global optimizer passed
-    to the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
-    does not successfully solve a subproblem to an appropriate termination
-    condition. These alternative solvers are provided through the optional
-    keyword arguments ``backup_local_solvers`` and ``backup_global_solvers``.
+
+  Additional NLP optimizers can be automatically used in the event the primary
+  subordinate local or global optimizer passed
+  to the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
+  does not successfully solve a subproblem to an appropriate termination
+  condition. These alternative solvers are provided through the optional
+  keyword arguments ``backup_local_solvers`` and ``backup_global_solvers``.
 
 
 Step 2: Solve With PyROS
@@ -232,7 +234,7 @@ PyROS can be instantiated through the Pyomo
 
 Invoke PyROS
 ^^^^^^^^^^^^^^^^^
-We can now use PyROS to solve the model robustly
+We now use PyROS to solve the model to robust optimality
 by invoking the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 method of the PyROS solver object:
 
@@ -262,7 +264,8 @@ method of the PyROS solver object:
   All done. Exiting PyROS.
   ==============================================================================
 
-PyROS (by default) logs to the output console the progress of the optimization
+
+PyROS, by default, logs to the output console the progress of the optimization
 and, upon termination, a summary of the final result.
 The summary includes the iteration and solve time requirements,
 the final objective function value, and the termination condition.
@@ -313,7 +316,7 @@ Alternatively, we can display the results object ourselves using:
    >>> print(results_1)  # output may vary
    Termination stats:
     Iterations            : 3
-    Solve time (wall s)   : 1.157
+    Solve time (wall s)   : 0.917
     Final objective value : 9.6616e+03
     Termination condition : pyrosTerminationCondition.robust_optimal
 
@@ -325,9 +328,9 @@ We can also query the results object's individual attributes:
    >>> results_1.iterations  # total number of iterations; may vary
    3
    >>> results_1.time  # total wall-clock seconds; may vary
-   1.157
+   0.917
    >>> results_1.final_objective_value  # final objective value; may vary
-   9661.621534121225
+   9661.621528204962
    >>> results_1.pyros_termination_condition  # termination condition
    pyrosTerminationCondition.robust_optimal
 
@@ -387,8 +390,8 @@ Inspecting the results:
 
    >>> print(results_2)  # output may vary
    Termination stats:
-    Iterations            : 3
-    Solve time (wall s)   : 2.338
+    Iterations            : 5
+    Solve time (wall s)   : 2.730
     Final objective value : 6.5403e+03
     Termination condition : pyrosTerminationCondition.robust_optimal
 
