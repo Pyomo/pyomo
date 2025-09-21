@@ -62,8 +62,8 @@ where:
 
    PyROS accepts and automatically reformulates models with:
 
-    1. Interval bounds on components of :math:`(x, z, y)`
-    2. Ranged inequality constraints
+   1. Interval bounds on components of :math:`(x, z, y)`
+   2. Ranged inequality constraints
 
 In order to cast the robust optimization counterpart of the
 :ref:`deterministic model <deterministic-model>`,
