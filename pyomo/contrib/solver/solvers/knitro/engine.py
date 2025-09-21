@@ -162,12 +162,8 @@ class Engine:
     def _add_comps(
         self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool
     ):
-        if is_var:
-            adder = knitro.KN_add_vars
-        else:
-            adder = knitro.KN_add_cons
+        adder = knitro.KN_add_vars if is_var else knitro.KN_add_cons
         idxs = self._execute(adder, len(comps))
-
         if idxs is not None:
             self.mapping[is_var].update(zip(map(id, comps), idxs))
 
@@ -221,39 +217,34 @@ class Engine:
             if con.has_ub():
                 upbnds[i] = value(con.upper)
 
-    def _set_bnds(
-        self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool
-    ):
+    def _get_bnd_setters(self, is_var: bool):
         if is_var:
-            parser = self._parse_var_bnds
-        else:
-            parser = self._parse_con_bnds
-
-        eqbnds, lobnds, upbnds = {}, {}, {}
-        for comp in comps:
-            i = self.mapping[is_var][id(comp)]
-            parser(comp, i, eqbnds, lobnds, upbnds)
-
-        if is_var:
-            setters = [
+            return [
                 knitro.KN_set_var_fxbnds,
                 knitro.KN_set_var_lobnds,
                 knitro.KN_set_var_upbnds,
             ]
         else:
-            setters = [
+            return [
                 knitro.KN_set_con_eqbnds,
                 knitro.KN_set_con_lobnds,
                 knitro.KN_set_con_upbnds,
             ]
-        for bnds, setter in zip([eqbnds, lobnds, upbnds], setters):
+
+    def _set_bnds(
+        self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool
+    ):
+        parser = self._parse_var_bnds if is_var else self._parse_con_bnds
+        bnds_data = [{}, {}, {}]  # eqbnds, lobnds, upbnds
+        for comp in comps:
+            i = self.mapping[is_var][id(comp)]
+            parser(comp, i, *bnds_data)
+        setters = self._get_bnd_setters(is_var)
+        for bnds, setter in zip(bnds_data, setters):
             self._execute(setter, bnds.keys(), bnds.values())
 
-    def _add_structs(self, i: Optional[int], expr):
-        is_obj = i is None
-        repn = generate_standard_repn(expr)
-
-        if is_obj:
+    def _get_struct_api_funcs(self, i: Optional[int]):
+        if i is None:
             add_constant = knitro.KN_add_obj_constant
             add_linear = knitro.KN_add_obj_linear_struct
             add_quadratic = knitro.KN_add_obj_quadratic_struct
@@ -261,8 +252,14 @@ class Engine:
             add_constant = knitro.KN_add_con_constants
             add_linear = knitro.KN_add_con_linear_struct
             add_quadratic = knitro.KN_add_con_quadratic_struct
+        return add_constant, add_linear, add_quadratic
 
-        base_args = [] if is_obj else [i]
+    def _add_structs(self, i: Optional[int], expr):
+        repn = generate_standard_repn(expr)
+
+        add_constant, add_linear, add_quadratic = self._get_struct_api_funcs(i)
+        base_args = [] if i is None else [i]
+
         if repn.constant is not None:
             self._execute(add_constant, *base_args, repn.constant)
         if repn.linear_vars:
@@ -302,38 +299,49 @@ class Engine:
         if callback_type == knitro.KN_RC_EVALFC:
             evaluator = expr.create_evaluator(vmap)
 
-            def _eval(_, cb, req, res, data=None):
-                if req.type != knitro.KN_RC_EVALFC:
-                    return -1
-                if is_obj:
+            if is_obj:
+
+                def _eval(kc, cb, req, res, _):
                     res.obj = evaluator(req.x)
-                else:
+                    return 0
+
+            else:
+
+                def _eval(kc, cb, req, res, _):
                     res.c[0] = evaluator(req.x)
-                return 0
+                    return 0
 
             return _eval
         elif callback_type == knitro.KN_RC_EVALGA:
             grad = expr.create_gradient_evaluator(vmap)
 
-            def _grad(_, cb, req, res, data=None):
-                if req.type != knitro.KN_RC_EVALGA:
-                    return -1
-                if is_obj:
+            if is_obj:
+
+                def _grad(kc, cb, req, res, _):
                     res.objGrad[:] = grad(req.x)
-                else:
+                    return 0
+
+            else:
+
+                def _grad(kc, cb, req, res, _):
                     res.jac[:] = grad(req.x)
-                return 0
+                    return 0
 
             return _grad
         elif callback_type == knitro.KN_RC_EVALH:
             hess = expr.create_hessian_evaluator(vmap)
 
-            def _hess(_, cb, req, res, data=None):
-                if req.type != knitro.KN_RC_EVALH:
-                    return -1
-                mu = req.sigma if is_obj else req.lambda_[i]
-                res.hess[:] = hess(req.x, mu)
-                return 0
+            if is_obj:
+
+                def _hess(kc, cb, req, res, _):
+                    res.hess[:] = hess(req.x, req.sigma)
+                    return 0
+
+            else:
+
+                def _hess(kc, cb, req, res, _):
+                    res.hess[:] = hess(req.x, req.lambda_[i])
+                    return 0
 
             return _hess
 
