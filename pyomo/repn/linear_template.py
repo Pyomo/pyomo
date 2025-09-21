@@ -159,17 +159,6 @@ class LinearTemplateRepn(LinearRepn):
                 ans.append(indent + f'linear_data.append({coef})')
 
         for subrepn, subindices, subsets in self.linear_sum:
-            ans.extend(
-                '    ' * i
-                + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
-                + (
-                    _set.to_string(smap=smap)
-                    if _set.is_expression_type()
-                    else smap.getSymbol(_set)
-                )
-                + ":"
-                for i, (_idx, _set) in enumerate(zip(subindices, subsets))
-            )
             try:
                 subrep = 1
                 for _set in subsets:
@@ -179,8 +168,20 @@ class LinearTemplateRepn(LinearRepn):
             subans, subconst = subrepn._build_evaluator(
                 smap, expr_cache, multiplier, repetitions * subrep, remove_fixed_vars
             )
-            indent = '    ' * (len(subsets))
-            ans.extend(indent + line for line in subans)
+            if subans:
+                ans.extend(
+                    '    ' * i
+                    + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
+                    + (
+                        _set.to_string(smap=smap)
+                        if _set.is_expression_type()
+                        else smap.getSymbol(_set)
+                    )
+                    + ":"
+                    for i, (_idx, _set) in enumerate(zip(subindices, subsets))
+                )
+                indent = '    ' * (len(subsets))
+                ans.extend(indent + line for line in subans)
             constant += subconst
         return ans, constant
 
