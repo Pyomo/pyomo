@@ -11,9 +11,9 @@
 
 
 from collections.abc import Iterable, Mapping, MutableSet
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
-from pyomo.common.collections.component_set import ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.numeric_types import value
 from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs
 from pyomo.core.base.block import BlockData
@@ -121,6 +121,7 @@ class NonlinearExpressionData:
     body: Optional[Any]
     variables: List[VarData]
     grad: Optional[Mapping[VarData, Any]]
+    hessian: Optional[Mapping[Tuple[VarData, VarData], Any]]
 
     def __init__(
         self,
@@ -128,13 +129,58 @@ class NonlinearExpressionData:
         variables: Iterable[VarData],
         *,
         compute_grad: bool = True,
+        compute_hess: bool = False,
     ):
         self.body = expr
         self.variables = list(variables)
+        self.grad = None
+        self.hessian = None
         if compute_grad:
-            self.grad = reverse_sd(self.body)
-        else:
-            self.grad = None
+            self.compute_gradient()
+        if compute_hess:
+            if not compute_grad:
+                msg = "Hessian computation requires gradient computation."
+                raise ValueError(msg)
+            self.compute_hessian()
+
+    @property
+    def grad_vars(self) -> List[VarData]:
+        if self.grad is None:
+            msg = "Gradient information is not available for this expression."
+            raise ValueError(msg)
+        return list(self.grad.keys())
+
+    @property
+    def hess_vars(self) -> List[Tuple[VarData, VarData]]:
+        if self.hessian is None:
+            msg = "Hessian information is not available for this expression."
+            raise ValueError(msg)
+        return list(self.hessian.keys())
+
+    def compute_gradient(self):
+        diff_map = reverse_sd(self.body)
+        variables = ComponentSet(self.variables)
+        self.grad = ComponentMap()
+        for v, expr in diff_map.items():
+            if v in variables:
+                self.grad[v] = expr
+
+    def compute_hessian(self):
+        variables = ComponentSet(self.variables)
+        self.hessian = ComponentMap()
+        for v1, expr in self.grad.items():
+            diff_map = reverse_sd(expr)
+            for v2, diff_expr in diff_map.items():
+                if v2 not in variables:
+                    continue
+                var1 = v1
+                var2 = v2
+                if id(var1) > id(var2):
+                    var1, var2 = var2, var1
+                if (var1, var2) not in self.hessian:
+                    self.hessian[(var1, var2)] = diff_expr
+                else:
+                    self.hessian[(var1, var2)] += diff_expr
 
     def create_evaluator(self, vmap: Mapping[int, int]):
         """
@@ -149,7 +195,6 @@ class NonlinearExpressionData:
         """
 
         def _fn(x: List[float]) -> float:
-            # Set the values of the Pyomo variables from the solver's vector `x`
             for var in self.variables:
                 i = vmap[id(var)]
                 var.set_value(x[i])
@@ -177,10 +222,34 @@ class NonlinearExpressionData:
             raise ValueError(msg)
 
         def _grad(x: List[float]) -> List[float]:
-            # Set the values of the Pyomo variables from the solver's vector `x`
             for var in self.variables:
                 i = vmap[id(var)]
                 var.set_value(x[i])
-            return [value(self.grad.get(var, 0.0)) for var in self.variables]
+            return [value(expr) for expr in self.grad.values()]
 
         return _grad
+
+    def create_hessian_evaluator(self, vmap: Mapping[int, int]):
+        """
+        Create a callable Hessian evaluator for the non-linear expression.
+
+        Args:
+            vmap (Mapping[int, int]): A mapping from variable id to index in the solver's variable vector.
+        Returns:
+            Callable[[List[float]], List[Tuple[int, int, float]]]: A function that takes a list of variable values (x)
+            and returns the Hessian of the expression as a list of (row, column, value) tuples.
+        Raises:
+            ValueError: If Hessian information is not available for this expression.
+        """
+
+        if self.hessian is None:
+            msg = "Hessian information is not available for this expression."
+            raise ValueError(msg)
+
+        def _hess(x: List[float], mu: float) -> List[float]:
+            for var in self.variables:
+                i = vmap[id(var)]
+                var.set_value(x[i])
+            return [mu * value(expr) for expr in self.hessian.values()]
+
+        return _hess

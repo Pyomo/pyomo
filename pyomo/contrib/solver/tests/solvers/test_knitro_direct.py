@@ -138,3 +138,20 @@ class TestKnitroDirectSolver(unittest.TestCase):
         self.opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0.6529186341994245)
         self.assertAlmostEqual(m.y.value, -0.42630274815985264)
+
+    def test_solve_HS071(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(pyo.RangeSet(1, 4), bounds=(1.0, 5.0))
+        m.obj = pyo.Objective(
+            expr=m.x[1] * m.x[4] * (m.x[1] + m.x[2] + m.x[3]) + m.x[3],
+            sense=pyo.minimize,
+        )
+        m.c1 = pyo.Constraint(expr=m.x[1] * m.x[2] * m.x[3] * m.x[4] >= 25.0)
+        m.c2 = pyo.Constraint(
+            expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 + m.x[4] ** 2 == 40.0
+        )
+        self.opt.solve(m, solver_options={"opttol": 1e-5})
+        self.assertAlmostEqual(pyo.value(m.x[1]), 1.0, 3)
+        self.assertAlmostEqual(pyo.value(m.x[2]), 4.743, 3)
+        self.assertAlmostEqual(pyo.value(m.x[3]), 3.821, 3)
+        self.assertAlmostEqual(pyo.value(m.x[4]), 1.379, 3)
