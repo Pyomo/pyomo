@@ -16,7 +16,7 @@ Default Format
 
 When the PyROS
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
-is invoked on a robust optimization problem,
+is called to solve a robust optimzation problem,
 your console output will, by default, look like this:
 
 
@@ -27,10 +27,10 @@ your console output will, by default, look like this:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.4.
-          Pyomo version: 6.9.0
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.9.
+          Pyomo version: 6.9.5.dev0 (devel {main})
           Commit hash: unknown
-          Invoked at UTC 2025-02-13T00:00:00.000000
+          Invoked at UTC 2025-09-21T00:00:00.000000+00:00
    
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -41,7 +41,7 @@ your console output will, by default, look like this:
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
    ================================= DISCLAIMER =================================
-   PyROS is still under development.
+   PyROS is still under development. 
    Please provide feedback and/or report any issues by creating a ticket at
    https://github.com/Pyomo/pyomo/issues/new/choose
    ==============================================================================
@@ -52,7 +52,7 @@ your console output will, by default, look like this:
     load_solution=True
     symbolic_solver_labels=False
     objective_focus=<ObjectiveType.worst_case: 1>
-    nominal_uncertain_param_vals=[0.13248000000000001, 4.97, 4.97, 1800]
+    nominal_uncertain_param_vals=[1, 1]
     decision_rule_order=1
     solve_master_globally=True
     max_iter=-1
@@ -62,37 +62,39 @@ your console output will, by default, look like this:
     backup_local_solvers=[]
     backup_global_solvers=[]
     subproblem_file_directory=None
+    subproblem_format_options={'bar': {'symbolic_solver_labels': True}}
     bypass_local_separation=False
     bypass_global_separation=False
     p_robustness={}
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.009s.
+   Done preprocessing; required wall time of 0.587s.
    ------------------------------------------------------------------------------
    Model Statistics:
-     Number of variables : 62
+     Number of variables : 8
        Epigraph variable : 1
-       First-stage variables : 7
-       Second-stage variables : 6 (6 adj.)
-       State variables : 18 (7 adj.)
-       Decision rule variables : 30
-     Number of uncertain parameters : 4
-     Number of constraints : 52
-       Equality constraints : 24
+       First-stage variables : 1
+       Second-stage variables : 1 (1 adj.)
+       State variables : 2 (2 adj.)
+       Decision rule variables : 3
+     Number of uncertain parameters : 2 (2 eff.)
+     Number of constraints : 12
+       Equality constraints : 3
          Coefficient matching constraints : 0
-         Other first-stage equations : 10
-         Second-stage equations : 8
-         Decision rule equations : 6
-       Inequality constraints : 28
-         First-stage inequalities : 1
-         Second-stage inequalities : 27
+         Other first-stage equations : 0
+         Second-stage equations : 2
+         Decision rule equations : 1
+       Inequality constraints : 9
+         First-stage inequalities : 0
+         Second-stage inequalities : 9
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   0.412
-   1     3.5838e+07  1.2289e-09   1.5886e-12   5       2.8919e+02   0.992
-   2     3.6269e+07  3.1647e-01   1.0432e-01   4       2.9020e+02   1.865
-   3     3.6285e+07  7.6526e-01   2.2258e-01   0       2.3874e-12g  3.508
+   0     5.4079e+03  -            -            3       7.9226e+00   0.815        
+   1     5.4079e+03  6.0451e-10   1.0717e-10   2       1.0250e-01   1.194        
+   2     6.5403e+03  1.0018e-01   7.4564e-03   1       1.7142e-03   1.604        
+   3     6.5403e+03  1.9372e-16   3.6853e-06   2       1.6673e-03   1.993        
+   4     6.5403e+03  0.0000e+00   2.9067e-06   0       9.8487e-05g  2.969        
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
@@ -100,45 +102,46 @@ your console output will, by default, look like this:
    
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1     3.509     3.509  100.0
+   main                           1     2.970     2.970  100.0
         ------------------------------------------------------
-        dr_polishing              3     0.209     0.070    6.0
-        global_separation        27     0.590     0.022   16.8
-        local_separation        108     1.569     0.015   44.7
-        master                    4     0.654     0.163   18.6
-        master_feasibility        3     0.083     0.028    2.4
-        preprocessing             1     0.009     0.009    0.3
-        other                   n/a     0.394       n/a   11.2
+        dr_polishing              4     0.227     0.057    7.6
+        global_separation         9     0.486     0.054   16.4
+        local_separation         45     0.739     0.016   24.9
+        master                    5     0.672     0.134   22.6
+        master_feasibility        4     0.095     0.024    3.2
+        preprocessing             1     0.587     0.587   19.8
+        other                   n/a     0.164       n/a    5.5
         ======================================================
    ===========================================================
    
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 4
-    Solve time (wall s)   : 3.509
-    Final objective value : 3.6285e+07
+    Iterations            : 5
+    Solve time (wall s)   : 2.970
+    Final objective value : 6.5403e+03
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
    All done. Exiting PyROS.
    ==============================================================================
 
+
 Observe that the log contains the following information
 (listed in order of appearance):
 
 
-* **Introductory information and disclaimer**:
+* **Introductory information and disclaimer** (lines 1--19):
   Includes the version number, author
   information, (UTC) time at which the solver was invoked,
   and, if available, information on the local Git branch and
   commit hash.
-* **Summary of solver options**: Enumeration of
+* **Summary of solver options** (lines 20--41): Enumeration of
   specifications for optional arguments to the solver.
-* **Preprocessing information**:
+* **Preprocessing information** (lines 42--44):
   Wall time required for preprocessing
   the deterministic model and associated components,
   i.e., standardizing model components and adding the decision rule
   variables and equations.
-* **Model component statistics**:
+* **Model component statistics** (lines 45--62):
   Breakdown of model component statistics.
   Includes components added by PyROS, such as the decision rule variables
   and equations.
@@ -150,13 +153,13 @@ Observe that the log contains the following information
   are included in parentheses, next to the total numbers
   of second-stage variables and state variables, respectively;
   note that "adjustable" has been abbreviated as "adj."
-* **Iteration log table**:
+* **Iteration log table** (lines 63--70):
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
   :ref:`the table that follows <table-iteration-log-columns>`.
-* **Termination message**: One-line message briefly summarizing
+* **Termination message** (lines 71--72): One-line message briefly summarizing
   the reason the solver has terminated.
-* **Timing statistics**:
+* **Timing statistics** (lines 73--89):
   Tabulated breakdown of the solver timing statistics, based on a
   :class:`pyomo.common.timing.HierarchicalTimer` printout.
   The identifiers are as follows:
@@ -175,17 +178,18 @@ Observe that the log contains the following information
   * ``main.preprocessing``: Preprocessing time.
   * ``main.other``: Overhead time.
 
-* **Final result**:
+* **Final result** (lines 90--95):
   A printout of the
   :class:`~pyomo.contrib.pyros.solve_data.ROSolveResults`
   object that is finally returned.
-* **Exit message**: Confirmation that the solver has been exited properly.
+* **Exit message** (lines 96--97): Confirmation that the
+  solver has been exited properly.
 
 The iteration log table is designed to provide, in a concise manner,
 important information about the progress of the iterative algorithm for
 the problem of interest.
 The constituent columns are defined in the
-table below:
+table below.
 
 .. _table-iteration-log-columns:
 
@@ -196,7 +200,8 @@ table below:
    * - Column Name
      - Definition
    * - Itn
-     - Iteration number.
+     - Iteration number, equal to one less than the total number of elapsed
+       iterations.
    * - Objective
      - Master solution objective function value.
        If the objective of the deterministic model provided
@@ -204,11 +209,6 @@ table below:
        then the negative of the objective function value is displayed.
        Expect this value to trend upward as the iteration number
        increases.
-       If the master problems are solved globally
-       (by passing ``solve_master_globally=True``),
-       then after the iteration number exceeds the number of uncertain parameters,
-       this value should be monotonically nondecreasing
-       as the iteration number is increased.
        A dash ("-") is produced in lieu of a value if the master
        problem of the current iteration is not solved successfully.
    * - 1-Stg Shift
@@ -230,6 +230,8 @@ table below:
        if the current iteration number is 0,
        there are no second-stage variables,
        or the master problem of the current iteration is not solved successfully.
+       An asterisk ("*") is appended to the value if decision rule
+       polishing was unsuccessful.
    * - #CViol
      - Number of second-stage inequality constraints found to be violated during
        the separation step of the current iteration.
@@ -258,15 +260,16 @@ table below:
 Configuring the Output Log
 ==========================
 
-For a given call to the PyROS
-:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method,
-the solver output log is produced by the
+The PyROS solver output log is produced by the
 Python logger (:py:class:`logging.Logger`) object
-derived from the optional argument ``progress_logger``.
-By default, ``progress_logger``
-is taken to be the logger with name ``"pyomo.contrib.pyros"``.
-The level of the default progress logger is originally set to
-:py:obj:`logging.INFO` and, for example, can be set to
+derived from the optional argument ``progress_logger``
+to the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
+By default, the PyROS solver argument ``progress_logger``
+is taken to be the :py:obj:`logging.INFO`-level
+logger with name ``"pyomo.contrib.pyros"``.
+The verbosity level of the output log can be adjusted by setting the
+:py:mod:`logging` level of the progress logger.
+For example, the level of the default logger can be set to
 :py:obj:`logging.DEBUG` with:
 
 .. doctest::
@@ -274,52 +277,6 @@ The level of the default progress logger is originally set to
    >>> import logging
    >>> logging.getLogger("pyomo.contrib.pyros").setLevel(logging.DEBUG)
 
- 
-The verbosity of the output log can be adjusted by setting the
-:py:mod:`logging` level of the progress logger.
-PyROS logs output messages at different :py:mod:`logging` levels,
-according to the following table, in which the levels are
-arranged in decreasing order of severity.
-Messages with a lower level than that of ``progress_logger``
-are excluded from the solver log.
-
-.. _table-logging-levels:
-
-.. list-table:: Solver output log messages at the various standard Python :py:mod:`logging` levels.
-   :widths: 10 50
-   :header-rows: 1
-
-   * - Logging Level
-     - Output Messages
-   * - :py:obj:`logging.ERROR`
-     - * Information on the subproblem for which an exception was raised
-         by a subordinate solver
-       * Details about failure of the PyROS coefficient matching routine
-   * - :py:obj:`logging.WARNING`
-     - * Information about a subproblem not solved to an acceptable status
-         by the user-provided subordinate optimizers
-       * Invocation of a backup solver for a particular subproblem
-       * Caution about solution robustness guarantees in event that
-         user passes ``bypass_global_separation=True``
-   * - :py:obj:`logging.INFO`
-     - * PyROS version, author, and disclaimer information
-       * Summary of user options
-       * Breakdown of model component statistics
-       * Iteration log table
-       * Termination details: message, timing breakdown, summary of statistics
-   * - :py:obj:`logging.DEBUG`
-     - * Progress through the various preprocessing subroutines
-       * Termination outcomes and summary of statistics for
-         every master feasility, master, and DR polishing problem
-       * Progress updates for the separation procedure
-       * Separation subproblem initial point infeasibilities
-       * Summary of separation loop outcomes: second-stage inequality constraints
-         violated, uncertain parameter scenario added to the
-         master problem
-       * Uncertain parameter scenarios added to the master problem
-         thus far
-
 We refer the reader to the
 :doc:`official Python logging library documentation <python:library/logging>`
-for further guidance on (customization of) Python logger objects;
-for a basic tutorial, see the :doc:`logging HOWTO <python:howto/logging>`.
+for further guidance on (customization of) Python logger objects.
