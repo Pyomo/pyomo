@@ -222,7 +222,7 @@ class Engine:
             if con.has_ub():
                 upbnds[i] = value(con.upper)
 
-    def _get_bnd_setters(self, is_var: bool):
+    def _get_bnd_setter_api_funcs(self, is_var: bool):
         if is_var:
             return [
                 knitro.KN_set_var_fxbnds,
@@ -244,7 +244,7 @@ class Engine:
         for comp in comps:
             i = self.mapping[is_var][id(comp)]
             parser(comp, i, *bnds_data)
-        setters = self._get_bnd_setters(is_var)
+        setters = self._get_bnd_setter_api_funcs(is_var)
         for bnds, setter in zip(bnds_data, setters):
             self._execute(setter, bnds.keys(), bnds.values())
 
@@ -299,11 +299,12 @@ class Engine:
     def _create_evaluator(self, expr: NonlinearExpressionData, eval_type: int):
         vmap = self.mapping[True]
         if eval_type == knitro.KN_RC_EVALFC:
-            return expr.create_evaluator(vmap)
+            creator = expr.create_evaluator
         elif eval_type == knitro.KN_RC_EVALGA:
-            return expr.create_gradient_evaluator(vmap)
+            creator = expr.create_gradient_evaluator
         else:
-            return expr.create_hessian_evaluator(vmap)
+            creator = expr.create_hessian_evaluator
+        return creator(vmap)
 
     def _build_callback(
         self, i: Optional[int], expr: NonlinearExpressionData, eval_type: int
