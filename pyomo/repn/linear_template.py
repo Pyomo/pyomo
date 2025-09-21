@@ -116,7 +116,8 @@ class LinearTemplateRepn(LinearRepn):
         if self.nonlinear is not None:
             raise InvalidConstraintError(
                 "LinearTemplateRepn cannot build an evaluator for template "
-                "constraints containing general nonlinear terms")
+                "constraints containing general nonlinear terms"
+            )
         ans = []
         multiplier *= self.multiplier
         constant = self.constant
@@ -127,33 +128,35 @@ class LinearTemplateRepn(LinearRepn):
                 constant = 0
             else:
                 constant *= repetitions
-        for k, coef in list(self.linear.items()):
-            coef *= multiplier
-            if coef.__class__ not in native_types:
-                coef = coef.to_string(smap=smap)
-            elif coef:
-                coef = repr(coef)
-            else:
-                continue
+        if multiplier.__class__ not in native_types or multiplier:
+            for k, coef in list(self.linear.items()):
+                coef *= multiplier
+                if coef.__class__ not in native_types:
+                    coef = coef.to_string(smap=smap)
+                else:
+                    # Note that coef should never be trivially 0 (the
+                    # visitor should remove most of those), so there is
+                    # no reason to check and skip this term...
+                    coef = repr(coef)
 
-            indent = ''
-            if k in expr_cache:
-                k = expr_cache[k]
-                if k.__class__ not in native_types:
-                    # Directly substitute the expression into the
-                    # 'linear[vid] = coef' below
-                    k = k.to_string(smap=smap)
-                    # If we are removing fixed vars, add that logic here:
-                    if remove_fixed_vars:
-                        ans.append(f"v = {k}")
-                        ans.append('if v.__class__ is tuple:')
-                        ans.append('    const += v[0] * {coef}')
-                        ans.append('    v = None')
-                        ans.append('else:')
-                        k = 'v'
-                        indent = '    '
-            ans.append(indent + f'linear_indices.append({k})')
-            ans.append(indent + f'linear_data.append({coef})')
+                indent = ''
+                if k in expr_cache:
+                    k = expr_cache[k]
+                    if k.__class__ not in native_types:
+                        # Directly substitute the expression into the
+                        # 'linear[vid] = coef' below
+                        k = k.to_string(smap=smap)
+                        # If we are removing fixed vars, add that logic here:
+                        if remove_fixed_vars:
+                            ans.append(f"v = {k}")
+                            ans.append('if v.__class__ is tuple:')
+                            ans.append('    const += v[0] * {coef}')
+                            ans.append('    v = None')
+                            ans.append('else:')
+                            k = 'v'
+                            indent = '    '
+                ans.append(indent + f'linear_indices.append({k})')
+                ans.append(indent + f'linear_data.append({coef})')
 
         for subrepn, subindices, subsets in self.linear_sum:
             ans.extend(
