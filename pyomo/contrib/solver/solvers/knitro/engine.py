@@ -295,10 +295,7 @@ class Engine:
         self._execute(knitro.KN_set_obj_goal, obj_goal)
 
     def _build_callback(
-        self,
-        i: Optional[int],
-        expr: NonlinearExpressionData,
-        callback_type: int,
+        self, i: Optional[int], expr: NonlinearExpressionData, callback_type: int
     ):
         is_obj = i is None
         vmap = self.mapping[True]
