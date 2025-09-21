@@ -16,11 +16,11 @@ The PyROS solver is invoked through the
 of an instance of the PyROS solver class, which can be 
 instantiated as follows:
 
-.. code::
+.. code-block::
 
-  >>> import pyomo.environ as pyo
-  >>> import pyomo.contrib.pyros as pyros  # register the PyROS solver
-  >>> pyros_solver = pyo.SolverFactory("pyros")
+  import pyomo.environ as pyo
+  import pyomo.contrib.pyros as pyros  # register the PyROS solver
+  pyros_solver = pyo.SolverFactory("pyros")
 
 
 Overview of Inputs
@@ -63,7 +63,7 @@ then add the following lines of code to your script
 before setting up your deterministic model:
 
 
-.. code::
+.. code-block::
 
    import pyomo.environ as pyo
    pyo.Param.DefaultMutable = True
@@ -93,10 +93,35 @@ to solve subproblems.
    to optimality by either your subordinate local or global
    NLP solver.
 
+
+.. _pyros_optional_arguments:
+
 Optional Arguments
 ------------------
 The optional arguments are enumerated in the documentation of the
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
+
+Like other Pyomo solver interface methods,
+:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
+provides support for specifying optional arguments indirectly by passing
+a keyword argument ``options``, for which the value must be a :class:`dict`
+mapping names of optional arguments to
+:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
+to their desired values.
+If an argument is passed directly by keyword and
+indirectly through ``options``,
+then the value passed directly takes precedence over the
+value passed through ``options``.
+
+.. warning::
+
+   All required arguments to the PyROS
+   :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
+   must be passed directly by position or keyword,
+   or else an exception is raised.
+   Required arguments passed indirectly through the ``options``
+   setting are ignored.
+
 
 Separation Priority Ordering 
 ----------------------------
