@@ -131,8 +131,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
     def _restore_var_values(self) -> None:
         StaleFlagManager.mark_all_as_stale(delayed=True)
         for var in self.get_vars():
-            if id(var) in self._saved_var_values:
-                var.set_value(self._saved_var_values[id(var)])
+            var.set_value(self._saved_var_values[id(var)])
         StaleFlagManager.mark_all_as_stale()
 
     @abstractmethod

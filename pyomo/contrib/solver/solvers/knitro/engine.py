@@ -45,6 +45,7 @@ class Engine:
     ):
         # True: variables, False: constraints
         self.mapping = {True: {}, False: {}}
+        # None: objective
         self.nonlinear_map = {}
         self.compute_nl_grad = compute_nl_grad
         self.compute_nl_hess = compute_nl_hessian
@@ -77,11 +78,11 @@ class Engine:
     def add_vars(self, variables: Iterable[VarData]):
         self._add_comps(variables, is_var=True)
         self._set_var_types(variables)
-        self._set_bnds(variables, is_var=True)
+        self._set_comp_bnds(variables, is_var=True)
 
     def add_cons(self, cons: Iterable[ConstraintData]):
         self._add_comps(cons, is_var=False)
-        self._set_bnds(cons, is_var=False)
+        self._set_comp_bnds(cons, is_var=False)
 
         for con in cons:
             i = self.mapping[False][id(con)]
@@ -113,10 +114,10 @@ class Engine:
         return self._execute(knitro.KN_get_solve_time_real)
 
     def get_var_idxs(self, variables: Iterable[VarData]) -> List[int]:
-        return [self.mapping[True][id(var)] for var in variables]
+        return self._get_comp_idxs(variables, is_var=True)
 
     def get_con_idxs(self, constraints: Iterable[ConstraintData]) -> List[int]:
-        return [self.mapping[False][id(con)] for con in constraints]
+        return self._get_comp_idxs(constraints, is_var=False)
 
     def get_var_primals(self, variables: Iterable[VarData]) -> Optional[List[float]]:
         idx_vars = self.get_var_idxs(variables)
@@ -158,6 +159,9 @@ class Engine:
             msg = "KNITRO context has been freed or has not been initialized and cannot be used."
             raise RuntimeError(msg)
         return api_fn(self._kc, *args, **kwargs)
+
+    def _get_comp_idxs(self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool):
+        return [self.mapping[is_var][id(comp)] for comp in comps]
 
     def _add_comps(
         self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool
@@ -231,7 +235,7 @@ class Engine:
                 knitro.KN_set_con_upbnds,
             ]
 
-    def _set_bnds(
+    def _set_comp_bnds(
         self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool
     ):
         parser = self._parse_var_bnds if is_var else self._parse_con_bnds
@@ -291,107 +295,107 @@ class Engine:
         )
         self._execute(knitro.KN_set_obj_goal, obj_goal)
 
-    def _build_callback(
-        self, i: Optional[int], expr: NonlinearExpressionData, callback_type: int
-    ):
-        is_obj = i is None
+    def _create_evaluator(self, expr: NonlinearExpressionData, eval_type: int):
         vmap = self.mapping[True]
-        if callback_type == knitro.KN_RC_EVALFC:
-            evaluator = expr.create_evaluator(vmap)
+        if eval_type == knitro.KN_RC_EVALFC:
+            return expr.create_evaluator(vmap)
+        elif eval_type == knitro.KN_RC_EVALGA:
+            return expr.create_gradient_evaluator(vmap)
+        else:
+            return expr.create_hessian_evaluator(vmap)
 
-            if is_obj:
-
-                def _eval(kc, cb, req, res, _):
-                    res.obj = evaluator(req.x)
-                    return 0
-
-            else:
-
-                def _eval(kc, cb, req, res, _):
-                    res.c[0] = evaluator(req.x)
-                    return 0
-
-            return _eval
-        elif callback_type == knitro.KN_RC_EVALGA:
-            grad = expr.create_gradient_evaluator(vmap)
-
-            if is_obj:
-
-                def _grad(kc, cb, req, res, _):
-                    res.objGrad[:] = grad(req.x)
-                    return 0
-
-            else:
-
-                def _grad(kc, cb, req, res, _):
-                    res.jac[:] = grad(req.x)
-                    return 0
-
-            return _grad
-        elif callback_type == knitro.KN_RC_EVALH:
-            hess = expr.create_hessian_evaluator(vmap)
-
-            if is_obj:
-
-                def _hess(kc, cb, req, res, _):
-                    res.hess[:] = hess(req.x, req.sigma)
-                    return 0
-
-            else:
-
-                def _hess(kc, cb, req, res, _):
-                    res.hess[:] = hess(req.x, req.lambda_[i])
-                    return 0
-
-            return _hess
-
-    def _add_eval_callback(self, i: Optional[int], expr: NonlinearExpressionData):
-        func_callback = self._build_callback(i, expr, knitro.KN_RC_EVALFC)
-        eval_obj = i is None
-        idx_cons = [i] if not eval_obj else None
-        return self._execute(
-            knitro.KN_add_eval_callback, eval_obj, idx_cons, func_callback
-        )
-
-    def _add_grad_callback(
-        self, i: Optional[int], expr: NonlinearExpressionData, callback
+    def _build_callback(
+        self, i: Optional[int], expr: NonlinearExpressionData, eval_type: int
     ):
-        idx_vars = self.get_var_idxs(expr.grad_vars)
         is_obj = i is None
-        obj_grad_idx_vars = idx_vars if is_obj else None
-        jac_idx_cons = [i] * len(idx_vars) if not is_obj else None
-        jac_idx_vars = idx_vars if not is_obj else None
-        grad_callback = self._build_callback(i, expr, knitro.KN_RC_EVALGA)
-        self._execute(
-            knitro.KN_set_cb_grad,
-            callback,
-            obj_grad_idx_vars,
-            jac_idx_cons,
-            jac_idx_vars,
-            grad_callback,
-        )
+        func = self._create_evaluator(expr, eval_type)
 
-    def _add_hess_callback(
-        self, i: Optional[int], expr: NonlinearExpressionData, callback
+        if is_obj:
+            if eval_type == knitro.KN_RC_EVALFC:
+
+                def _callback(kc, cb, req, res, _):
+                    res.obj = func(req.x)
+                    return 0
+
+            elif eval_type == knitro.KN_RC_EVALGA:
+
+                def _callback(kc, cb, req, res, _):
+                    res.objGrad[:] = func(req.x)
+                    return 0
+
+            else:
+
+                def _callback(kc, cb, req, res, _):
+                    res.hess[:] = func(req.x, req.sigma)
+                    return 0
+
+        else:
+            if eval_type == knitro.KN_RC_EVALFC:
+
+                def _callback(kc, cb, req, res, _):
+                    res.c[0] = func(req.x)
+                    return 0
+
+            elif eval_type == knitro.KN_RC_EVALGA:
+
+                def _callback(kc, cb, req, res, _):
+                    res.jac[:] = func(req.x)
+                    return 0
+
+            else:
+
+                def _callback(kc, cb, req, res, _):
+                    res.hess[:] = func(req.x, req.lambda_[i])
+                    return 0
+
+        return _callback
+
+    def _add_callback(
+        self,
+        i: Optional[int],
+        expr: NonlinearExpressionData,
+        eval_type: int,
+        callback=None,
     ):
-        hess_vars1, hess_vars2 = zip(*expr.hess_vars)
-        hess_idx_vars1 = self.get_var_idxs(hess_vars1)
-        hess_idx_vars2 = self.get_var_idxs(hess_vars2)
-        hess_callback = self._build_callback(i, expr, knitro.KN_RC_EVALH)
-        self._execute(
-            knitro.KN_set_cb_hess,
-            callback,
-            hess_idx_vars1,
-            hess_idx_vars2,
-            hess_callback,
-        )
+        func_callback = self._build_callback(i, expr, eval_type)
+        if eval_type == knitro.KN_RC_EVALFC:
+            eval_obj = i is None
+            idx_cons = [i] if not eval_obj else None
+            return self._execute(
+                knitro.KN_add_eval_callback, eval_obj, idx_cons, func_callback
+            )
+        elif eval_type == knitro.KN_RC_EVALGA:
+            idx_vars = self.get_var_idxs(expr.grad_vars)
+            is_obj = i is None
+            obj_grad_idx_vars = idx_vars if is_obj else None
+            jac_idx_cons = [i] * len(idx_vars) if not is_obj else None
+            jac_idx_vars = idx_vars if not is_obj else None
+            return self._execute(
+                knitro.KN_set_cb_grad,
+                callback,
+                obj_grad_idx_vars,
+                jac_idx_cons,
+                jac_idx_vars,
+                func_callback,
+            )
+        else:
+            hess_vars1, hess_vars2 = zip(*expr.hess_vars)
+            hess_idx_vars1 = self.get_var_idxs(hess_vars1)
+            hess_idx_vars2 = self.get_var_idxs(hess_vars2)
+            return self._execute(
+                knitro.KN_set_cb_hess,
+                callback,
+                hess_idx_vars1,
+                hess_idx_vars2,
+                func_callback,
+            )
 
     def _register_callback(self, i: Optional[int], expr: NonlinearExpressionData):
-        callback = self._add_eval_callback(i, expr)
+        callback = self._add_callback(i, expr, knitro.KN_RC_EVALFC)
         if expr.grad is not None:
-            self._add_grad_callback(i, expr, callback)
+            self._add_callback(i, expr, knitro.KN_RC_EVALGA, callback)
         if expr.hessian is not None:
-            self._add_hess_callback(i, expr, callback)
+            self._add_callback(i, expr, knitro.KN_RC_EVALH, callback)
 
     def _register_callbacks(self):
         for i, expr in self.nonlinear_map.items():
