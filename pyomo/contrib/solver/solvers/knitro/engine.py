@@ -1,18 +1,7 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 from collections.abc import Iterable, Mapping, MutableMapping
-from typing import List, Optional, Union
+from typing import List, Optional, Type, Union
 
-from pyomo.common.enums import ObjectiveSense
+from pyomo.common.enums import Enum, ObjectiveSense
 from pyomo.common.numeric_types import value
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.objective import ObjectiveData
@@ -33,15 +22,15 @@ class Engine:
     setting options, solving, and freeing the context.
     """
 
-    mapping: Mapping[bool, MutableMapping[int, int]]
+    mapping: Mapping[Type[Union[VarData, ConstraintData]], MutableMapping[int, int]]
     nonlinear_map: MutableMapping[Optional[int], NonlinearExpressionData]
     differentiation_order: int
 
     _status: Optional[int]
 
-    def __init__(self, *, differentiation_order: int = 0):
+    def __init__(self, *, differentiation_order: int = 2):
         # True: variables, False: constraints
-        self.mapping = {True: {}, False: {}}
+        self.mapping = {VarData: {}, ConstraintData: {}}
         # None: objective
         self.nonlinear_map = {}
         self.differentiation_order = differentiation_order
@@ -51,6 +40,8 @@ class Engine:
         # KNITRO status after solve
         self._status = None
 
+    # ============= LIFECYCLE MANAGEMENT =============
+
     def __del__(self):
         self.close()
 
@@ -59,36 +50,68 @@ class Engine:
         self._kc = Package.create_context()
         # TODO: remove this when the tolerance tests are fixed in test_solvers
         tol = 1e-8
-        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_FTOL, tol)
-        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_OPTTOL, tol)
-        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_XTOL, tol)
+        self.set_options(ftol=tol, opttol=tol, xtol=tol)
 
     def close(self):
         if self._kc is not None:
             self._execute(knitro.KN_free)
             self._kc = None
 
+    # ============= PROBLEM BUILDING =================
+
     def add_vars(self, variables: Iterable[VarData]):
-        self._add_comps(variables, is_var=True)
+        self._add_items(VarData, variables)
         self._set_var_types(variables)
-        self._set_comp_bnds(variables, is_var=True)
+        self._set_bnds(VarData, variables)
 
     def add_cons(self, cons: Iterable[ConstraintData]):
-        self._add_comps(cons, is_var=False)
-        self._set_comp_bnds(cons, is_var=False)
+        self._add_items(ConstraintData, cons)
+        self._set_bnds(ConstraintData, cons)
 
         for con in cons:
-            i = self.mapping[False][id(con)]
+            i = self.mapping[ConstraintData][id(con)]
             self._add_structs(i, con.body)
 
     def set_obj(self, obj: ObjectiveData):
         self._set_obj_goal(obj.sense)
         self._add_structs(None, obj.expr)
 
+    # ============= CONFIGURATION ===================
+
+    def set_options(self, **options):
+        for param, val in options.items():
+            param_id = self._execute(knitro.KN_get_param_id, param)
+            param_type = self._execute(knitro.KN_get_param_type, param_id)
+            func = self.api_set_param(param_type)
+            self._execute(func, param_id, val)
+
+    def set_outlev(self, level: Optional[int] = None):
+        if level is None:
+            level = knitro.KN_OUTLEV_ALL
+        self.set_options(outlev=level)
+
+    def set_time_limit(self, time_limit: float):
+        self.set_options(maxtime_cpu=time_limit)
+
+    def set_num_threads(self, nthreads: int):
+        self.set_options(threads=nthreads)
+
+    # ============= SOLVING =========================
+
     def solve(self) -> int:
         self._register_callbacks()
         self._status = self._execute(knitro.KN_solve)
         return self._status
+
+    # ============= INDEX RETRIEVAL =================
+
+    def get_idx_vars(self, variables: Iterable[VarData]) -> List[int]:
+        return self._get_idxs(VarData, variables)
+
+    def get_idx_cons(self, constraints: Iterable[ConstraintData]) -> List[int]:
+        return self._get_idxs(ConstraintData, constraints)
+
+    # ============= SOLUTION RETRIEVAL ==============
 
     def get_status(self) -> int:
         if self._status is None:
@@ -106,73 +129,57 @@ class Engine:
     def get_solve_time(self) -> float:
         return self._execute(knitro.KN_get_solve_time_real)
 
-    def get_var_idxs(self, variables: Iterable[VarData]) -> List[int]:
-        return self._get_comp_idxs(variables, is_var=True)
-
-    def get_con_idxs(self, constraints: Iterable[ConstraintData]) -> List[int]:
-        return self._get_comp_idxs(constraints, is_var=False)
-
-    def get_var_primals(self, variables: Iterable[VarData]) -> Optional[List[float]]:
-        idx_vars = self.get_var_idxs(variables)
-        return self._execute(knitro.KN_get_var_primal_values, idx_vars)
-
-    def get_var_duals(self, variables: Iterable[VarData]) -> Optional[List[float]]:
-        idx_vars = self.get_var_idxs(variables)
-        return self._execute(knitro.KN_get_var_dual_values, idx_vars)
-
-    def get_con_duals(self, cons: Iterable[ConstraintData]) -> Optional[List[float]]:
-        idx_cons = self.get_con_idxs(cons)
-        return self._execute(knitro.KN_get_con_dual_values, idx_cons)
-
     def get_obj_value(self) -> Optional[float]:
         return self._execute(knitro.KN_get_obj_value)
 
-    def set_options(self, **options):
-        for param, val in options.items():
-            param_id = self._execute(knitro.KN_get_param_id, param)
-            param_type = self._execute(knitro.KN_get_param_type, param_id)
-            param_setter = self._get_param_setter_api_func(param_type)
-            self._execute(param_setter, param_id, val)
+    def get_values(
+        self,
+        item_type: Type[Union[VarData, ConstraintData]],
+        items: Union[Iterable[VarData], Iterable[ConstraintData]],
+        *,
+        is_dual: bool,
+    ):
+        func = self.api_get_values(item_type, is_dual)
+        idxs = self._get_idxs(item_type, items)
+        return self._execute(func, idxs)
 
-    def set_outlev(self, level: Optional[int] = None):
-        if level is None:
-            level = knitro.KN_OUTLEV_ALL
-        self.set_options(outlev=level)
+    # ============= PRIVATE UTILITIES ===============
 
-    def set_time_limit(self, time_limit: float):
-        self.set_options(maxtime_cpu=time_limit)
-
-    def set_num_threads(self, nthreads: int):
-        self.set_options(threads=nthreads)
-
-    # ----------------- Private methods -------------------------
-
-    def _execute(self, api_fn, *args, **kwargs):
+    def _execute(self, api_func, *args, **kwargs):
         if self._kc is None:
             msg = "KNITRO context has been freed or has not been initialized and cannot be used."
             raise RuntimeError(msg)
-        return api_fn(self._kc, *args, **kwargs)
+        return api_func(self._kc, *args, **kwargs)
 
-    def _get_param_setter_api_func(self, param_type: int):
-        if param_type == knitro.KN_PARAMTYPE_INTEGER:
-            return knitro.KN_set_int_param
-        elif param_type == knitro.KN_PARAMTYPE_FLOAT:
-            return knitro.KN_set_double_param
-        else:
-            return knitro.KN_set_char_param
+    # ======== PRIVATE COMPONENT MANAGEMENT =========
 
-    def _get_comp_idxs(
-        self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool
+    def _get_idxs(
+        self,
+        item_type: Type[Union[VarData, ConstraintData]],
+        items: Union[Iterable[VarData], Iterable[ConstraintData]],
     ):
-        return [self.mapping[is_var][id(comp)] for comp in comps]
+        imap = self.mapping[item_type]
+        return [imap[id(item)] for item in items]
 
-    def _add_comps(
-        self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool
+    def _add_items(
+        self,
+        item_type: Type[Union[VarData, ConstraintData]],
+        items: Union[Iterable[VarData], Iterable[ConstraintData]],
     ):
-        adder = knitro.KN_add_vars if is_var else knitro.KN_add_cons
-        idxs = self._execute(adder, len(comps))
+        func = self.api_add_items(item_type)
+        idxs = self._execute(func, len(items))
         if idxs is not None:
-            self.mapping[is_var].update(zip(map(id, comps), idxs))
+            self.mapping[item_type].update(zip(map(id, items), idxs))
+
+    # ====== PRIVATE VARIABLE TYPE HANDLING =========
+
+    def _set_var_types(self, variables: Iterable[VarData]):
+        var_types = {}
+        func = knitro.KN_set_var_types
+        for var in variables:
+            i = self.mapping[VarData][id(var)]
+            self._parse_var_type(var, i, var_types)
+        self._execute(func, var_types.keys(), var_types.values())
 
     def _parse_var_type(
         self, var: VarData, i: int, var_types: MutableMapping[int, int]
@@ -181,113 +188,70 @@ class Engine:
             var_types[i] = knitro.KN_VARTYPE_BINARY
         elif var.is_integer():
             var_types[i] = knitro.KN_VARTYPE_INTEGER
-        elif not var.is_continuous():
+        elif var.is_continuous():
+            var_types[i] = knitro.KN_VARTYPE_CONTINUOUS
+        else:
             msg = f"Unknown variable type for variable {var.name}."
             raise ValueError(msg)
 
-    def _set_var_types(self, variables: Iterable[VarData]):
-        var_types = {}
-        for var in variables:
-            i = self.mapping[True][id(var)]
-            self._parse_var_type(var, i, var_types)
-        self._execute(knitro.KN_set_var_types, var_types.keys(), var_types.values())
+    # ========== PRIVATE BOUNDS HANDLING ============
+
+    class _BndType(Enum):
+        EQ = 0
+        LO = 1
+        UP = 2
+
+    def _get_parse_bnds(self, item_type: Type[Union[VarData, ConstraintData]]):
+        if item_type is VarData:
+            return self._parse_var_bnds
+        elif item_type is ConstraintData:
+            return self._parse_con_bnds
+
+    def _set_bnds(
+        self,
+        item_type: Type[Union[VarData, ConstraintData]],
+        items: Union[Iterable[VarData], Iterable[ConstraintData]],
+    ):
+        parse = self._get_parse_bnds(item_type)
+        bnds_map = {bnd_type: {} for bnd_type in self._BndType}
+        imap = self.mapping[item_type]
+        for item in items:
+            parse(item, imap[id(item)], bnds_map)
+
+        for bnd_type, bnds in bnds_map.items():
+            if bnds:
+                func = self.api_set_bnds(item_type, bnd_type)
+                self._execute(func, bnds.keys(), bnds.values())
 
     def _parse_var_bnds(
         self,
         var: VarData,
         i: int,
-        eqbnds: MutableMapping[int, float],
-        lobnds: MutableMapping[int, float],
-        upbnds: MutableMapping[int, float],
+        bnds_map: Mapping[_BndType, MutableMapping[int, float]],
     ):
         if var.fixed:
-            eqbnds[i] = value(var.value)
+            bnds_map[Engine._BndType.EQ][i] = value(var.value)
         else:
             if var.has_lb():
-                lobnds[i] = value(var.lb)
+                bnds_map[Engine._BndType.LO][i] = value(var.lb)
             if var.has_ub():
-                upbnds[i] = value(var.ub)
+                bnds_map[Engine._BndType.UP][i] = value(var.ub)
 
     def _parse_con_bnds(
         self,
         con: ConstraintData,
         i: int,
-        eqbnds: MutableMapping[int, float],
-        lobnds: MutableMapping[int, float],
-        upbnds: MutableMapping[int, float],
+        bnds_map: Mapping[_BndType, MutableMapping[int, float]],
     ):
         if con.equality:
-            eqbnds[i] = value(con.lower)
+            bnds_map[Engine._BndType.EQ][i] = value(con.lower)
         else:
             if con.has_lb():
-                lobnds[i] = value(con.lower)
+                bnds_map[Engine._BndType.LO][i] = value(con.lower)
             if con.has_ub():
-                upbnds[i] = value(con.upper)
+                bnds_map[Engine._BndType.UP][i] = value(con.upper)
 
-    def _get_bnd_setter_api_funcs(self, is_var: bool):
-        if is_var:
-            return [
-                knitro.KN_set_var_fxbnds,
-                knitro.KN_set_var_lobnds,
-                knitro.KN_set_var_upbnds,
-            ]
-        else:
-            return [
-                knitro.KN_set_con_eqbnds,
-                knitro.KN_set_con_lobnds,
-                knitro.KN_set_con_upbnds,
-            ]
-
-    def _set_comp_bnds(
-        self, comps: Union[Iterable[VarData], Iterable[ConstraintData]], *, is_var: bool
-    ):
-        parser = self._parse_var_bnds if is_var else self._parse_con_bnds
-        bnds_data = [{}, {}, {}]  # eqbnds, lobnds, upbnds
-        for comp in comps:
-            i = self.mapping[is_var][id(comp)]
-            parser(comp, i, *bnds_data)
-        setters = self._get_bnd_setter_api_funcs(is_var)
-        for bnds, setter in zip(bnds_data, setters):
-            self._execute(setter, bnds.keys(), bnds.values())
-
-    def _get_struct_api_funcs(self, i: Optional[int]):
-        if i is None:
-            add_constant = knitro.KN_add_obj_constant
-            add_linear = knitro.KN_add_obj_linear_struct
-            add_quadratic = knitro.KN_add_obj_quadratic_struct
-        else:
-            add_constant = knitro.KN_add_con_constants
-            add_linear = knitro.KN_add_con_linear_struct
-            add_quadratic = knitro.KN_add_con_quadratic_struct
-        return add_constant, add_linear, add_quadratic
-
-    def _add_structs(self, i: Optional[int], expr):
-        repn = generate_standard_repn(expr)
-
-        add_constant, add_linear, add_quadratic = self._get_struct_api_funcs(i)
-        base_args = [] if i is None else [i]
-
-        if repn.constant is not None:
-            self._execute(add_constant, *base_args, repn.constant)
-        if repn.linear_vars:
-            idx_lin_vars = self.get_var_idxs(repn.linear_vars)
-            lin_coefs = list(repn.linear_coefs)
-            self._execute(add_linear, *base_args, idx_lin_vars, lin_coefs)
-        if repn.quadratic_vars:
-            quad_vars1, quad_vars2 = zip(*repn.quadratic_vars)
-            idx_quad_vars1 = self.get_var_idxs(quad_vars1)
-            idx_quad_vars2 = self.get_var_idxs(quad_vars2)
-            quad_coefs = list(repn.quadratic_coefs)
-            self._execute(
-                add_quadratic, *base_args, idx_quad_vars1, idx_quad_vars2, quad_coefs
-            )
-
-        if repn.nonlinear_expr is not None:
-            self.nonlinear_map[i] = NonlinearExpressionData(
-                repn.nonlinear_expr,
-                repn.nonlinear_vars,
-                differentiation_order=self.differentiation_order,
-            )
+    # ===== PRIVATE OBJECTIVE GOAL HANDLING =========
 
     def _set_obj_goal(self, sense: ObjectiveSense):
         obj_goal = (
@@ -297,59 +261,56 @@ class Engine:
         )
         self._execute(knitro.KN_set_obj_goal, obj_goal)
 
-    def _create_evaluator(self, expr: NonlinearExpressionData, eval_type: int):
-        vmap = self.mapping[True]
-        if eval_type == knitro.KN_RC_EVALH:
-            creator = expr.create_hessian_evaluator
-        elif eval_type == knitro.KN_RC_EVALGA:
-            creator = expr.create_gradient_evaluator
-        else:
-            creator = expr.create_evaluator
-        return creator(vmap)
+    # ======= PRIVATE STRUCTURE BUILDING ============
 
-    def _build_callback(
-        self, i: Optional[int], expr: NonlinearExpressionData, eval_type: int
-    ):
+    def _add_structs(self, i: Optional[int], expr):
+        repn = generate_standard_repn(expr)
+
         is_obj = i is None
-        func = self._create_evaluator(expr, eval_type)
+        base_args = () if is_obj else (i,)
 
-        if is_obj and eval_type == knitro.KN_RC_EVALH:
+        funcs, args_seq = [], []
+        if repn.constant is not None:
+            func = self.api_add_constant(is_obj)
+            funcs.append(func)
+            args_seq.append((repn.constant,))
+        if repn.linear_vars:
+            func = self.api_add_linear_struct(is_obj)
+            idx_lin_vars = self.get_idx_vars(repn.linear_vars)
+            lin_coefs = list(repn.linear_coefs)
+            funcs.append(func)
+            args_seq.append((idx_lin_vars, lin_coefs))
+        if repn.quadratic_vars:
+            func = self.api_add_quadratic_struct(is_obj)
+            quad_vars1, quad_vars2 = zip(*repn.quadratic_vars)
+            idx_quad_vars1 = self.get_idx_vars(quad_vars1)
+            idx_quad_vars2 = self.get_idx_vars(quad_vars2)
+            quad_coefs = list(repn.quadratic_coefs)
+            funcs.append(func)
+            args_seq.append((idx_quad_vars1, idx_quad_vars2, quad_coefs))
 
-            def _callback(kc, cb, req, res, _):
-                res.hess[:] = func(req.x, req.sigma)
-                return 0
+        for func, args in zip(funcs, args_seq):
+            self._execute(func, *base_args, *args)
 
-        elif is_obj and eval_type == knitro.KN_RC_EVALGA:
+        if repn.nonlinear_expr is not None:
+            self.nonlinear_map[i] = NonlinearExpressionData(
+                repn.nonlinear_expr,
+                repn.nonlinear_vars,
+                differentiation_order=self.differentiation_order,
+            )
 
-            def _callback(kc, cb, req, res, _):
-                res.objGrad[:] = func(req.x)
-                return 0
+    # ======= PRIVATE CALLBACK HANDLING =============
 
-        elif is_obj:
+    def _register_callbacks(self):
+        for i, expr in self.nonlinear_map.items():
+            self._register_callback(i, expr)
 
-            def _callback(kc, cb, req, res, _):
-                res.obj = func(req.x)
-                return 0
-
-        elif eval_type == knitro.KN_RC_EVALH:
-
-            def _callback(kc, cb, req, res, _):
-                res.hess[:] = func(req.x, req.lambda_[i])
-                return 0
-
-        elif eval_type == knitro.KN_RC_EVALGA:
-
-            def _callback(kc, cb, req, res, _):
-                res.jac[:] = func(req.x)
-                return 0
-
-        else:
-
-            def _callback(kc, cb, req, res, _):
-                res.c[:] = [func(req.x)]
-                return 0
-
-        return _callback
+    def _register_callback(self, i: Optional[int], expr: NonlinearExpressionData):
+        callback = self._add_callback(i, expr, knitro.KN_RC_EVALFC)
+        if expr.grad is not None:
+            self._add_callback(i, expr, knitro.KN_RC_EVALGA, callback)
+        if expr.hess is not None:
+            self._add_callback(i, expr, knitro.KN_RC_EVALH, callback)
 
     def _add_callback(
         self,
@@ -358,46 +319,158 @@ class Engine:
         eval_type: int,
         callback=None,
     ):
+        func = self.api_add_callback(eval_type)
         func_callback = self._build_callback(i, expr, eval_type)
+
+        args = ()
+        if callback is not None:
+            args += (callback,)
+
         if eval_type == knitro.KN_RC_EVALH:
             hess_vars1, hess_vars2 = zip(*expr.hess_vars)
-            hess_idx_vars1 = self.get_var_idxs(hess_vars1)
-            hess_idx_vars2 = self.get_var_idxs(hess_vars2)
-            return self._execute(
-                knitro.KN_set_cb_hess,
-                callback,
-                hess_idx_vars1,
-                hess_idx_vars2,
-                func_callback,
-            )
+            hess_idx_vars1 = self.get_idx_vars(hess_vars1)
+            hess_idx_vars2 = self.get_idx_vars(hess_vars2)
+            args += (hess_idx_vars1, hess_idx_vars2)
         elif eval_type == knitro.KN_RC_EVALGA:
-            idx_vars = self.get_var_idxs(expr.grad_vars)
+            idx_vars = self.get_idx_vars(expr.grad_vars)
             is_obj = i is None
             obj_grad_idx_vars = idx_vars if is_obj else None
             jac_idx_cons = [i] * len(idx_vars) if not is_obj else None
             jac_idx_vars = idx_vars if not is_obj else None
-            return self._execute(
-                knitro.KN_set_cb_grad,
-                callback,
-                obj_grad_idx_vars,
-                jac_idx_cons,
-                jac_idx_vars,
-                func_callback,
-            )
-        else:
+            args += (obj_grad_idx_vars, jac_idx_cons, jac_idx_vars)
+        elif eval_type == knitro.KN_RC_EVALFC:
             eval_obj = i is None
             idx_cons = [i] if not eval_obj else None
-            return self._execute(
-                knitro.KN_add_eval_callback, eval_obj, idx_cons, func_callback
-            )
+            args += (eval_obj, idx_cons)
 
-    def _register_callback(self, i: Optional[int], expr: NonlinearExpressionData):
-        callback = self._add_callback(i, expr, knitro.KN_RC_EVALFC)
-        if expr.grad is not None:
-            self._add_callback(i, expr, knitro.KN_RC_EVALGA, callback)
-        if expr.hessian is not None:
-            self._add_callback(i, expr, knitro.KN_RC_EVALH, callback)
+        return self._execute(func, *args, func_callback)
 
-    def _register_callbacks(self):
-        for i, expr in self.nonlinear_map.items():
-            self._register_callback(i, expr)
+    def _build_callback(
+        self, i: Optional[int], expr: NonlinearExpressionData, eval_type: int
+    ):
+        is_obj = i is None
+        func = self._get_evaluator(expr, eval_type)
+
+        if is_obj and eval_type == knitro.KN_RC_EVALFC:
+
+            def _callback(req, res):
+                res.obj = func(req.x)
+                return 0
+
+        elif is_obj and eval_type == knitro.KN_RC_EVALGA:
+
+            def _callback(req, res):
+                res.objGrad[:] = func(req.x)
+                return 0
+
+        elif is_obj and eval_type == knitro.KN_RC_EVALH:
+
+            def _callback(req, res):
+                res.hess[:] = func(req.x, req.sigma)
+                return 0
+
+        elif eval_type == knitro.KN_RC_EVALFC:
+
+            def _callback(req, res):
+                res.c[:] = [func(req.x)]
+                return 0
+
+        elif eval_type == knitro.KN_RC_EVALGA:
+
+            def _callback(req, res):
+                res.jac[:] = func(req.x)
+                return 0
+
+        elif eval_type == knitro.KN_RC_EVALH:
+
+            def _callback(req, res):
+                res.hess[:] = func(req.x, req.lambda_[i])
+                return 0
+
+        return lambda *args: _callback(args[2], args[3])
+
+    def _get_evaluator(self, expr: NonlinearExpressionData, eval_type: int):
+        vmap = self.mapping[VarData]
+        if eval_type == knitro.KN_RC_EVALH:
+            func = expr.create_hessian_evaluator
+        elif eval_type == knitro.KN_RC_EVALGA:
+            func = expr.create_gradient_evaluator
+        elif eval_type == knitro.KN_RC_EVALFC:
+            func = expr.create_evaluator
+        return func(vmap)
+
+    # ========= API FUNCTION GETTERS ================
+
+    def api_set_param(self, param_type: int):
+        if param_type == knitro.KN_PARAMTYPE_INTEGER:
+            return knitro.KN_set_int_param
+        elif param_type == knitro.KN_PARAMTYPE_FLOAT:
+            return knitro.KN_set_double_param
+        elif param_type == knitro.KN_PARAMTYPE_STRING:
+            return knitro.KN_set_char_param
+
+    def api_add_items(self, item_type: Type[Union[VarData, ConstraintData]]):
+        if item_type is VarData:
+            return knitro.KN_add_vars
+        elif item_type is ConstraintData:
+            return knitro.KN_add_cons
+        else:
+            msg = "Invalid item type."
+            raise ValueError(msg)
+
+    def api_get_values(
+        self, item_type: Type[Union[VarData, ConstraintData]], is_dual: bool
+    ):
+        if item_type is VarData and not is_dual:
+            return knitro.KN_get_var_primal_values
+        elif item_type is VarData and is_dual:
+            return knitro.KN_get_var_dual_values
+        elif item_type is ConstraintData and is_dual:
+            return knitro.KN_get_con_dual_values
+        elif item_type is ConstraintData and not is_dual:
+            return knitro.KN_get_con_values
+        else:
+            msg = "Invalid item type or dual flag."
+            raise ValueError(msg)
+
+    def api_set_bnds(
+        self, item_type: Type[Union[VarData, ConstraintData]], bnd_type: _BndType
+    ):
+        if item_type is VarData and bnd_type == self._BndType.EQ:
+            return knitro.KN_set_var_fxbnds
+        elif item_type is VarData and bnd_type == self._BndType.LO:
+            return knitro.KN_set_var_lobnds
+        elif item_type is VarData and bnd_type == self._BndType.UP:
+            return knitro.KN_set_var_upbnds
+        elif item_type is ConstraintData and bnd_type == self._BndType.EQ:
+            return knitro.KN_set_con_eqbnds
+        elif item_type is ConstraintData and bnd_type == self._BndType.LO:
+            return knitro.KN_set_con_lobnds
+        elif item_type is ConstraintData and bnd_type == self._BndType.UP:
+            return knitro.KN_set_con_upbnds
+
+    def api_add_constant(self, is_obj: bool):
+        if is_obj:
+            return knitro.KN_add_obj_constant
+        else:
+            return knitro.KN_add_con_constants
+
+    def api_add_linear_struct(self, is_obj: bool):
+        if is_obj:
+            return knitro.KN_add_obj_linear_struct
+        else:
+            return knitro.KN_add_con_linear_struct
+
+    def api_add_quadratic_struct(self, is_obj: bool):
+        if is_obj:
+            return knitro.KN_add_obj_quadratic_struct
+        else:
+            return knitro.KN_add_con_quadratic_struct
+
+    def api_add_callback(self, eval_type: int):
+        if eval_type == knitro.KN_RC_EVALH:
+            return knitro.KN_set_cb_hess
+        elif eval_type == knitro.KN_RC_EVALGA:
+            return knitro.KN_set_cb_grad
+        elif eval_type == knitro.KN_RC_EVALFC:
+            return knitro.KN_add_eval_callback

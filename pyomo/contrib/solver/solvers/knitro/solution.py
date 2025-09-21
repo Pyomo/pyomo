@@ -9,8 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections.abc import Callable, Mapping, Sequence
-from typing import Optional, Protocol, Type, TypeVar, Union
+from collections.abc import Mapping, Sequence
+from typing import Optional, Protocol, Type, Union
 
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
@@ -24,30 +24,25 @@ from pyomo.core.base.var import VarData
 
 
 class SolutionProvider(Protocol):
+
+    def get_error_type(
+        self, load_type: Type[Union[VarData, ConstraintData]], *, is_dual: bool
+    ) -> Type[PyomoException]:
+        if load_type is VarData and not is_dual:
+            return NoSolutionError
+        elif load_type is VarData and is_dual:
+            return NoReducedCostsError
+        elif load_type is ConstraintData and is_dual:
+            return NoDualsError
+
     def get_num_solutions(self) -> int: ...
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
-    ) -> Mapping[VarData, float]: ...
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
-    ) -> Mapping[VarData, float]: ...
-    def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
-    ) -> Mapping[ConstraintData, float]: ...
-
-
-T = TypeVar("T", bound=Union[VarData, ConstraintData])
-
-
-def get_values(
-    to_load: Optional[Sequence[T]],
-    loader: Callable[[Optional[Sequence[T]]], Mapping[T, float]],
-    is_success: bool,
-    error_type: Type[PyomoException],
-) -> Mapping[T, float]:
-    if not is_success:
-        raise error_type()
-    return loader(to_load)
+    def get_values(
+        self,
+        load_type: Type[Union[VarData, ConstraintData]],
+        to_load: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]],
+        *,
+        is_dual: bool,
+    ) -> Mapping[Union[VarData, ConstraintData], float]: ...
 
 
 class SolutionLoader(SolutionLoaderBase):
@@ -73,12 +68,24 @@ class SolutionLoader(SolutionLoaderBase):
     def get_number_of_solutions(self) -> int:
         return self._provider.get_num_solutions()
 
+    def get_values(
+        self,
+        load_type: Type[Union[VarData, ConstraintData]],
+        to_load: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]],
+        *,
+        is_dual: bool,
+        check: bool,
+    ):
+        if not check:
+            error_type = self._provider.get_error_type(load_type, is_dual=is_dual)
+            raise error_type()
+
+        return self._provider.get_values(load_type, to_load, is_dual=is_dual)
+
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        return get_values(
-            vars_to_load, self._provider.get_primals, self.has_primals, NoSolutionError
-        )
+        return self.get_values(VarData, vars_to_load, is_dual=False, check=self.has_primals)
 
     # TODO: remove this when the solution loader is fixed.
     def get_primals(self, vars_to_load=None):
@@ -87,16 +94,9 @@ class SolutionLoader(SolutionLoaderBase):
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        return get_values(
-            vars_to_load,
-            self._provider.get_reduced_costs,
-            self.has_reduced_costs,
-            NoReducedCostsError,
-        )
+        return self.get_values(VarData, vars_to_load, is_dual=True, check=self.has_reduced_costs)
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Mapping[ConstraintData, float]:
-        return get_values(
-            cons_to_load, self._provider.get_duals, self.has_duals, NoDualsError
-        )
+        return self.get_values(ConstraintData, cons_to_load, is_dual=True, check=self.has_duals)
