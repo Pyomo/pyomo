@@ -18,7 +18,8 @@ PyROS can accommodate optimization models with:
   eliminated from the model via reformulation
 * **Inequality constraints** in the degree-of-freedom and/or state variables
 
-Supported deterministic models can be written in the general form
+Supported deterministic models are nonlinear programs (NLPs)
+of the general form
 
 .. _deterministic-model:
 
@@ -58,10 +59,10 @@ where:
 .. _var-bounds-to-ineqs:
 
 .. note::
-    PyROS accepts models in which there are:
 
-    1. Bounds declared on the :class:`~pyomo.core.base.var.Var`
-       objects representing components of the variable vectors
+   PyROS accepts and automatically reformulates models with:
+
+    1. Interval bounds on components of :math:`(x, z, y)`
     2. Ranged inequality constraints
 
 In order to cast the robust optimization counterpart of the
