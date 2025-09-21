@@ -65,10 +65,11 @@ class Engine:
     def renew(self):
         self.close()
         self._kc = Package.create_context()
-        # TODO: remove this when the tolerance test is fixed in test_solvers
-        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_FTOL, 1e-8)
-        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_OPTTOL, 1e-8)
-        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_XTOL, 1e-8)
+        # TODO: remove this when the tolerance tests are fixed in test_solvers
+        tol = 1e-8
+        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_FTOL, tol)
+        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_OPTTOL, tol)
+        self._execute(knitro.KN_set_double_param, knitro.KN_PARAM_XTOL, tol)
 
     def close(self):
         if self._kc is not None:
