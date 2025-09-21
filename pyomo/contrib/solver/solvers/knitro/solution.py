@@ -39,13 +39,13 @@ class SolutionProvider(Protocol):
 T = TypeVar("T", bound=Union[VarData, ConstraintData])
 
 
-def helper(
+def get_values(
     to_load: Optional[Sequence[T]],
     loader: Callable[[Optional[Sequence[T]]], Mapping[T, float]],
-    check: bool,
+    is_success: bool,
     error_type: Type[PyomoException],
 ) -> Mapping[T, float]:
-    if not check:
+    if not is_success:
         raise error_type()
     return loader(to_load)
 
@@ -76,7 +76,7 @@ class SolutionLoader(SolutionLoaderBase):
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        return helper(
+        return get_values(
             vars_to_load, self._provider.get_primals, self.has_primals, NoSolutionError
         )
 
@@ -87,7 +87,7 @@ class SolutionLoader(SolutionLoaderBase):
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        return helper(
+        return get_values(
             vars_to_load,
             self._provider.get_reduced_costs,
             self.has_reduced_costs,
@@ -97,6 +97,6 @@ class SolutionLoader(SolutionLoaderBase):
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Mapping[ConstraintData, float]:
-        return helper(
+        return get_values(
             cons_to_load, self._provider.get_duals, self.has_duals, NoDualsError
         )

@@ -49,7 +49,7 @@ from .solution import SolutionLoader, SolutionProvider
 T = TypeVar("T", bound=Union[VarData, ConstraintData])
 
 
-def helper(
+def get_values(
     to_load: Optional[Sequence[T]],
     fetch_all: Callable[[], Sequence[T]],
     loader: Callable[[Iterable[T]], Optional[List[float]]],
@@ -198,7 +198,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         return self._problem.cons
 
     def get_primals(self, vars_to_load: Optional[Sequence[VarData]] = None):
-        return helper(
+        return get_values(
             vars_to_load,
             self.get_vars,
             self._engine.get_var_primals,
@@ -207,7 +207,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         )
 
     def get_reduced_costs(self, vars_to_load: Optional[Sequence[VarData]] = None):
-        return helper(
+        return get_values(
             vars_to_load,
             self.get_vars,
             self._engine.get_var_duals,
@@ -216,7 +216,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         )
 
     def get_duals(self, cons_to_load: Optional[Sequence[ConstraintData]] = None):
-        return helper(
+        return get_values(
             cons_to_load,
             self.get_cons,
             self._engine.get_con_duals,
