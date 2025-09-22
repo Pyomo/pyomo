@@ -12,7 +12,7 @@ from copy import deepcopy
 from itertools import chain
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.errors import MouseTrap
+from pyomo.common.errors import InvalidConstraintError, MouseTrap
 from pyomo.common.numeric_types import native_types, native_numeric_types
 
 import pyomo.core.expr as expr
@@ -78,9 +78,8 @@ class LinearTemplateRepn(LinearRepn):
         return 2  # something not 0 or 1
 
     def walker_exitNode(self):
-        if self.nonlinear is not None:
-            return _GENERAL, self
-        elif self.linear or self.linear_sum:
+        assert self.nonlinear is None
+        if self.linear or self.linear_sum:
             return _LINEAR, self
         else:
             return _CONSTANT, self.multiplier * self.constant
@@ -89,6 +88,16 @@ class LinearTemplateRepn(LinearRepn):
         ans = super().duplicate()
         ans.linear_sum = [(r[0].duplicate(),) + r[1:] for r in self.linear_sum]
         return ans
+
+    def to_expression(self, visitor):
+        # to_expression() is only used by the underlying
+        # LinearRepnVisitor to generate nonlinear expressions.  We are
+        # explicitly disallowing nonlinear expressions here, so we are
+        # going to bail now:
+        raise InvalidConstraintError(
+            "LinearTemplateRepn does not support constraints containing "
+            "general nonlinear terms."
+        )
 
     def append(self, other):
         """Append a child result from StreamBasedExpressionVisitor.acceptChildResult()
@@ -113,11 +122,7 @@ class LinearTemplateRepn(LinearRepn):
     def _build_evaluator(
         self, smap, expr_cache, multiplier, repetitions, remove_fixed_vars
     ):
-        if self.nonlinear is not None:
-            raise InvalidConstraintError(
-                "LinearTemplateRepn cannot build an evaluator for template "
-                "constraints containing general nonlinear terms"
-            )
+        assert self.nonlinear is None
         ans = []
         multiplier *= self.multiplier
         constant = self.constant
