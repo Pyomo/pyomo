@@ -296,7 +296,7 @@ def solve_master_feasibility_problem(master_data):
             f" Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)}s"
         )
     else:
-        config.progress_logger.warning(
+        config.progress_logger.debug(
             "Could not successfully solve master feasibility problem "
             f"of iteration {master_data.iteration} with primary subordinate "
             f"{'global' if config.solve_master_globally else 'local'} solver "
@@ -548,7 +548,7 @@ def minimize_dr_vars(master_data):
     acceptable = {tc.globallyOptimal, tc.optimal, tc.locallyOptimal}
     if results.solver.termination_condition not in acceptable:
         # continue with "unpolished" master model solution
-        config.progress_logger.warning(
+        config.progress_logger.debug(
             "Could not successfully solve DR polishing problem "
             f"of iteration {master_data.iteration} with primary subordinate "
             f"{'global' if config.solve_master_globally else 'local'} solver "
