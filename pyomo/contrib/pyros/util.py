@@ -862,7 +862,7 @@ def validate_variable_partitioning(model, config):
             "NOTE: No variables declared on the user-provided model "
             "appear in the active model objective or constraints."
         )
-    elif not first_stage_vars | second_stage_vars:
+    elif not (first_stage_vars or second_stage_vars):
         config.progress_logger.warning(
             "NOTE: No user-provided first-stage variables or second-stage variables "
             "appear in the active model objective or constraints."
