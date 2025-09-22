@@ -861,7 +861,8 @@ def validate_variable_partitioning(model, config):
         config.progress_logger.warning(
             "NOTE: No variables declared on the user-provided model "
             "appear in the active model objective or constraints. "
-            "PyROS will proceed with solving for the optimal objective value "
+            "PyROS will proceed with solving for the optimal objective value, "
+            "subject to the active declared constraints, "
             "according to the user-provided options."
         )
     elif not (first_stage_vars or second_stage_vars):
