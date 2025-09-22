@@ -663,7 +663,7 @@ We do so by instantiating the PyROS solver interface:
 
 and invoking the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method:
 
-.. pyros_tutorial_static_ro_solve::
+.. _pyros_tutorial_static_ro_solve:
 
 .. code::
 
