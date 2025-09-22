@@ -272,10 +272,10 @@ The verbosity level of the output log can be adjusted by setting the
 For example, the level of the default logger can be set to
 :py:obj:`logging.DEBUG` with:
 
-.. doctest::
+.. code-block::
 
-   >>> import logging
-   >>> logging.getLogger("pyomo.contrib.pyros").setLevel(logging.DEBUG)
+   import logging
+   logging.getLogger("pyomo.contrib.pyros").setLevel(logging.DEBUG)
 
 We refer the reader to the
 :doc:`official Python logging library documentation <python:library/logging>`
