@@ -11,6 +11,7 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from .api import knitro
 from .package import Package
 from .utils import NonlinearExpressionData
+from .solution import LoadType
 
 
 class Engine:
@@ -29,9 +30,11 @@ class Engine:
     _status: Optional[int]
 
     def __init__(self, *, differentiation_order: int = 2):
-        # True: variables, False: constraints
+        # VarData: id(var) -> idx_var
+        # ConstraintData: id(con) -> idx_con
         self.mapping = {VarData: {}, ConstraintData: {}}
-        # None: objective
+        # None -> objective
+        # idx_con -> constraint
         self.nonlinear_map = {}
         self.differentiation_order = differentiation_order
 
@@ -134,8 +137,8 @@ class Engine:
 
     def get_values(
         self,
-        item_type: Type[Union[VarData, ConstraintData]],
-        items: Union[Iterable[VarData], Iterable[ConstraintData]],
+        item_type: Type[LoadType],
+        items: Iterable[LoadType],
         *,
         is_dual: bool,
     ):
@@ -155,21 +158,22 @@ class Engine:
 
     def _get_idxs(
         self,
-        item_type: Type[Union[VarData, ConstraintData]],
-        items: Union[Iterable[VarData], Iterable[ConstraintData]],
+        item_type: Type[LoadType],
+        items: Iterable[LoadType],
     ):
         imap = self.mapping[item_type]
         return [imap[id(item)] for item in items]
 
     def _add_items(
         self,
-        item_type: Type[Union[VarData, ConstraintData]],
-        items: Union[Iterable[VarData], Iterable[ConstraintData]],
+        item_type: Type[LoadType],
+        items: Iterable[LoadType],
     ):
         func = self.api_add_items(item_type)
-        idxs = self._execute(func, len(items))
+        items_seq = list(items)
+        idxs = self._execute(func, len(items_seq))
         if idxs is not None:
-            self.mapping[item_type].update(zip(map(id, items), idxs))
+            self.mapping[item_type].update(zip(map(id, items_seq), idxs))
 
     # ====== PRIVATE VARIABLE TYPE HANDLING =========
 
@@ -191,7 +195,7 @@ class Engine:
         elif var.is_continuous():
             var_types[i] = knitro.KN_VARTYPE_CONTINUOUS
         else:
-            msg = f"Unknown variable type for variable {var.name}."
+            msg = f"Unsupported variable type for variable {var.name}."
             raise ValueError(msg)
 
     # ========== PRIVATE BOUNDS HANDLING ============
@@ -201,7 +205,7 @@ class Engine:
         LO = 1
         UP = 2
 
-    def _get_parse_bnds(self, item_type: Type[Union[VarData, ConstraintData]]):
+    def _get_parse_bnds(self, item_type: Type[LoadType]):
         if item_type is VarData:
             return self._parse_var_bnds
         elif item_type is ConstraintData:
@@ -209,8 +213,8 @@ class Engine:
 
     def _set_bnds(
         self,
-        item_type: Type[Union[VarData, ConstraintData]],
-        items: Union[Iterable[VarData], Iterable[ConstraintData]],
+        item_type: Type[LoadType],
+        items: Iterable[LoadType],
     ):
         parse = self._get_parse_bnds(item_type)
         bnds_map = {bnd_type: {} for bnd_type in self._BndType}
@@ -306,25 +310,17 @@ class Engine:
             self._register_callback(i, expr)
 
     def _register_callback(self, i: Optional[int], expr: NonlinearExpressionData):
-        callback = self._add_callback(i, expr, knitro.KN_RC_EVALFC)
+        callback = self._add_callback(knitro.KN_RC_EVALFC, i, expr)
         if expr.grad is not None:
-            self._add_callback(i, expr, knitro.KN_RC_EVALGA, callback)
+            self._add_callback(knitro.KN_RC_EVALGA, i, expr, callback)
         if expr.hess is not None:
-            self._add_callback(i, expr, knitro.KN_RC_EVALH, callback)
+            self._add_callback(knitro.KN_RC_EVALH, i, expr, callback)
 
     def _add_callback(
-        self,
-        i: Optional[int],
-        expr: NonlinearExpressionData,
-        eval_type: int,
-        callback=None,
+        self, eval_type: int, i: Optional[int], expr: NonlinearExpressionData, *args
     ):
         func = self.api_add_callback(eval_type)
-        func_callback = self._build_callback(i, expr, eval_type)
-
-        args = ()
-        if callback is not None:
-            args += (callback,)
+        func_callback = self._build_callback(eval_type, i, expr)
 
         if eval_type == knitro.KN_RC_EVALH:
             hess_vars1, hess_vars2 = zip(*expr.hess_vars)
@@ -346,10 +342,10 @@ class Engine:
         return self._execute(func, *args, func_callback)
 
     def _build_callback(
-        self, i: Optional[int], expr: NonlinearExpressionData, eval_type: int
+        self, eval_type: int, i: Optional[int], expr: NonlinearExpressionData
     ):
         is_obj = i is None
-        func = self._get_evaluator(expr, eval_type)
+        func = self._get_evaluator(eval_type, expr)
 
         if is_obj and eval_type == knitro.KN_RC_EVALFC:
 
@@ -389,7 +385,7 @@ class Engine:
 
         return lambda *args: _callback(args[2], args[3])
 
-    def _get_evaluator(self, expr: NonlinearExpressionData, eval_type: int):
+    def _get_evaluator(self, eval_type: int, expr: NonlinearExpressionData):
         vmap = self.mapping[VarData]
         if eval_type == knitro.KN_RC_EVALH:
             func = expr.create_hessian_evaluator
@@ -409,17 +405,14 @@ class Engine:
         elif param_type == knitro.KN_PARAMTYPE_STRING:
             return knitro.KN_set_char_param
 
-    def api_add_items(self, item_type: Type[Union[VarData, ConstraintData]]):
+    def api_add_items(self, item_type: Type[LoadType]):
         if item_type is VarData:
             return knitro.KN_add_vars
         elif item_type is ConstraintData:
             return knitro.KN_add_cons
-        else:
-            msg = "Invalid item type."
-            raise ValueError(msg)
 
     def api_get_values(
-        self, item_type: Type[Union[VarData, ConstraintData]], is_dual: bool
+        self, item_type: Type[LoadType], is_dual: bool
     ):
         if item_type is VarData and not is_dual:
             return knitro.KN_get_var_primal_values
@@ -429,24 +422,21 @@ class Engine:
             return knitro.KN_get_con_dual_values
         elif item_type is ConstraintData and not is_dual:
             return knitro.KN_get_con_values
-        else:
-            msg = "Invalid item type or dual flag."
-            raise ValueError(msg)
 
     def api_set_bnds(
-        self, item_type: Type[Union[VarData, ConstraintData]], bnd_type: _BndType
+        self, item_type: Type[LoadType], bnd_type: _BndType
     ):
-        if item_type is VarData and bnd_type == self._BndType.EQ:
+        if item_type is VarData and bnd_type == Engine._BndType.EQ:
             return knitro.KN_set_var_fxbnds
-        elif item_type is VarData and bnd_type == self._BndType.LO:
+        elif item_type is VarData and bnd_type == Engine._BndType.LO:
             return knitro.KN_set_var_lobnds
-        elif item_type is VarData and bnd_type == self._BndType.UP:
+        elif item_type is VarData and bnd_type == Engine._BndType.UP:
             return knitro.KN_set_var_upbnds
-        elif item_type is ConstraintData and bnd_type == self._BndType.EQ:
+        elif item_type is ConstraintData and bnd_type == Engine._BndType.EQ:
             return knitro.KN_set_con_eqbnds
-        elif item_type is ConstraintData and bnd_type == self._BndType.LO:
+        elif item_type is ConstraintData and bnd_type == Engine._BndType.LO:
             return knitro.KN_set_con_lobnds
-        elif item_type is ConstraintData and bnd_type == self._BndType.UP:
+        elif item_type is ConstraintData and bnd_type == Engine._BndType.UP:
             return knitro.KN_set_con_upbnds
 
     def api_add_constant(self, is_obj: bool):

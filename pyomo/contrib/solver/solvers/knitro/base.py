@@ -14,7 +14,7 @@ from abc import abstractmethod
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from io import StringIO
-from typing import Optional, Type, Union
+from typing import Optional, Type
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import ApplicationError
@@ -41,7 +41,7 @@ from .config import Config
 from .engine import Engine
 from .package import PackageChecker
 from .utils import Problem
-from .solution import SolutionLoader, SolutionProvider
+from .solution import LoadType, SolutionLoader, SolutionProvider
 
 
 class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
@@ -175,7 +175,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
     def get_cons(self):
         return self._problem.cons
 
-    def get_fetch_all(self, load_type: Type[Union[VarData, ConstraintData]]):
+    def get_fetch_all(self, load_type: Type[LoadType]):
         if load_type is VarData:
             return self.get_vars
         elif load_type is ConstraintData:
@@ -183,8 +183,8 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
     def get_values(
         self,
-        load_type: Type[Union[VarData, ConstraintData]],
-        to_load: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]],
+        load_type: Type[LoadType],
+        to_load: Optional[Sequence[LoadType]],
         *,
         is_dual: bool,
     ):

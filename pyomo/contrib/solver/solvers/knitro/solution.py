@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Mapping, Sequence
-from typing import Optional, Protocol, Type, Union
+from typing import Optional, Protocol, Type, TypeVar, Union
 
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
@@ -22,11 +22,12 @@ from pyomo.contrib.solver.common.util import (
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 
+LoadType = TypeVar("LoadType", bound=Union[VarData, ConstraintData])
+
 
 class SolutionProvider(Protocol):
-
     def get_error_type(
-        self, load_type: Type[Union[VarData, ConstraintData]], *, is_dual: bool
+        self, load_type: Type[LoadType], *, is_dual: bool
     ) -> Type[PyomoException]:
         if load_type is VarData and not is_dual:
             return NoSolutionError
@@ -38,11 +39,11 @@ class SolutionProvider(Protocol):
     def get_num_solutions(self) -> int: ...
     def get_values(
         self,
-        load_type: Type[Union[VarData, ConstraintData]],
-        to_load: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]],
+        load_type: Type[LoadType],
+        to_load: Optional[Sequence[LoadType]],
         *,
         is_dual: bool,
-    ) -> Mapping[Union[VarData, ConstraintData], float]: ...
+    ) -> Mapping[LoadType, float]: ...
 
 
 class SolutionLoader(SolutionLoaderBase):
@@ -70,13 +71,13 @@ class SolutionLoader(SolutionLoaderBase):
 
     def get_values(
         self,
-        load_type: Type[Union[VarData, ConstraintData]],
-        to_load: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]],
+        load_type: Type[LoadType],
+        to_load: Optional[Sequence[LoadType]],
         *,
         is_dual: bool,
-        check: bool,
-    ):
-        if not check:
+        exists: bool,
+    ) -> Mapping[LoadType, float]:
+        if not exists:
             error_type = self._provider.get_error_type(load_type, is_dual=is_dual)
             raise error_type()
 
@@ -86,7 +87,7 @@ class SolutionLoader(SolutionLoaderBase):
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
         return self.get_values(
-            VarData, vars_to_load, is_dual=False, check=self.has_primals
+            VarData, vars_to_load, is_dual=False, exists=self.has_primals
         )
 
     # TODO: remove this when the solution loader is fixed.
@@ -97,12 +98,12 @@ class SolutionLoader(SolutionLoaderBase):
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
         return self.get_values(
-            VarData, vars_to_load, is_dual=True, check=self.has_reduced_costs
+            VarData, vars_to_load, is_dual=True, exists=self.has_reduced_costs
         )
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Mapping[ConstraintData, float]:
         return self.get_values(
-            ConstraintData, cons_to_load, is_dual=True, check=self.has_duals
+            ConstraintData, cons_to_load, is_dual=True, exists=self.has_duals
         )
