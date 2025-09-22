@@ -136,11 +136,7 @@ class Engine:
         return self._execute(knitro.KN_get_obj_value)
 
     def get_values(
-        self,
-        item_type: Type[LoadType],
-        items: Iterable[LoadType],
-        *,
-        is_dual: bool,
+        self, item_type: Type[LoadType], items: Iterable[LoadType], *, is_dual: bool
     ):
         func = self.api_get_values(item_type, is_dual)
         idxs = self._get_idxs(item_type, items)
@@ -156,19 +152,11 @@ class Engine:
 
     # ======== PRIVATE COMPONENT MANAGEMENT =========
 
-    def _get_idxs(
-        self,
-        item_type: Type[LoadType],
-        items: Iterable[LoadType],
-    ):
+    def _get_idxs(self, item_type: Type[LoadType], items: Iterable[LoadType]):
         imap = self.mapping[item_type]
         return [imap[id(item)] for item in items]
 
-    def _add_items(
-        self,
-        item_type: Type[LoadType],
-        items: Iterable[LoadType],
-    ):
+    def _add_items(self, item_type: Type[LoadType], items: Iterable[LoadType]):
         func = self.api_add_items(item_type)
         items_seq = list(items)
         idxs = self._execute(func, len(items_seq))
@@ -211,11 +199,7 @@ class Engine:
         elif item_type is ConstraintData:
             return self._parse_con_bnds
 
-    def _set_bnds(
-        self,
-        item_type: Type[LoadType],
-        items: Iterable[LoadType],
-    ):
+    def _set_bnds(self, item_type: Type[LoadType], items: Iterable[LoadType]):
         parse = self._get_parse_bnds(item_type)
         bnds_map = {bnd_type: {} for bnd_type in self._BndType}
         imap = self.mapping[item_type]
@@ -411,9 +395,7 @@ class Engine:
         elif item_type is ConstraintData:
             return knitro.KN_add_cons
 
-    def api_get_values(
-        self, item_type: Type[LoadType], is_dual: bool
-    ):
+    def api_get_values(self, item_type: Type[LoadType], is_dual: bool):
         if item_type is VarData and not is_dual:
             return knitro.KN_get_var_primal_values
         elif item_type is VarData and is_dual:
@@ -423,9 +405,7 @@ class Engine:
         elif item_type is ConstraintData and not is_dual:
             return knitro.KN_get_con_values
 
-    def api_set_bnds(
-        self, item_type: Type[LoadType], bnd_type: _BndType
-    ):
+    def api_set_bnds(self, item_type: Type[LoadType], bnd_type: _BndType):
         if item_type is VarData and bnd_type == Engine._BndType.EQ:
             return knitro.KN_set_var_fxbnds
         elif item_type is VarData and bnd_type == Engine._BndType.LO:
