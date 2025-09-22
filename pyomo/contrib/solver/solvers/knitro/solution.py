@@ -85,7 +85,9 @@ class SolutionLoader(SolutionLoaderBase):
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        return self.get_values(VarData, vars_to_load, is_dual=False, check=self.has_primals)
+        return self.get_values(
+            VarData, vars_to_load, is_dual=False, check=self.has_primals
+        )
 
     # TODO: remove this when the solution loader is fixed.
     def get_primals(self, vars_to_load=None):
@@ -94,9 +96,13 @@ class SolutionLoader(SolutionLoaderBase):
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        return self.get_values(VarData, vars_to_load, is_dual=True, check=self.has_reduced_costs)
+        return self.get_values(
+            VarData, vars_to_load, is_dual=True, check=self.has_reduced_costs
+        )
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Mapping[ConstraintData, float]:
-        return self.get_values(ConstraintData, cons_to_load, is_dual=True, check=self.has_duals)
+        return self.get_values(
+            ConstraintData, cons_to_load, is_dual=True, check=self.has_duals
+        )
