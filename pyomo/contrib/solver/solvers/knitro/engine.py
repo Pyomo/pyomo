@@ -376,26 +376,28 @@ class Engine:
 
         is_obj = i is None
         base_args = () if is_obj else (i,)
+        structure_type_seq, args_seq = [], []
 
         if repn.constant is not None:
-            args = (repn.constant,)
-            func = get_structure_adder(is_obj, StructureType.CONSTANT)
-            self.execute(func, *base_args, *args)
+            structure_type_seq += [StructureType.CONSTANT]
+            args_seq += [(repn.constant,)]
 
         if repn.linear_vars:
             idx_lin_vars = self.get_idx_vars(repn.linear_vars)
             lin_coefs = list(repn.linear_coefs)
-            args = (idx_lin_vars, lin_coefs)
-            func = get_structure_adder(is_obj, StructureType.LINEAR)
-            self.execute(func, *base_args, *args)
+            structure_type_seq += [StructureType.LINEAR]
+            args_seq += [(idx_lin_vars, lin_coefs)]
 
         if repn.quadratic_vars:
             quad_vars1, quad_vars2 = zip(*repn.quadratic_vars)
             idx_quad_vars1 = self.get_idx_vars(quad_vars1)
             idx_quad_vars2 = self.get_idx_vars(quad_vars2)
             quad_coefs = list(repn.quadratic_coefs)
-            args = (idx_quad_vars1, idx_quad_vars2, quad_coefs)
-            func = get_structure_adder(is_obj, StructureType.QUADRATIC)
+            structure_type_seq += [StructureType.QUADRATIC]
+            args_seq += [(idx_quad_vars1, idx_quad_vars2, quad_coefs)]
+
+        for structure_type, args in zip(structure_type_seq, args_seq):
+            func = get_structure_adder(is_obj, structure_type)
             self.execute(func, *base_args, *args)
 
         if repn.nonlinear_expr is not None:
@@ -414,11 +416,9 @@ class Engine:
         self, i: Optional[int], expr: NonlinearExpressionData
     ) -> None:
         is_obj = i is None
-
-        if is_obj:
-            callback = _ObjectiveCallback(expr).expand()
-        else:
-            callback = _ConstraintCallback(i, expr).expand()
+        callback_type = _ObjectiveCallback if is_obj else _ConstraintCallback
+        callback_args = ((i,) if not is_obj else ()) + (expr,)
+        callback = callback_type(*callback_args).expand()
 
         idx_cons = [i] if not is_obj else None
         cb = self.execute(knitro.KN_add_eval_callback, is_obj, idx_cons, callback.func)
