@@ -150,7 +150,7 @@ def get_value_getter(
     raise UnreachableError()
 
 
-def get_item_adder(item_type: type) -> Callable[..., list[int]]:
+def get_item_adder(item_type: type) -> Callable[..., Optional[list[int]]]:
     if item_type is VarData:
         return knitro.KN_add_vars
     elif item_type is ConstraintData:
@@ -198,11 +198,14 @@ def get_structure_adder(
 class Engine:
     """A wrapper around the KNITRO API for a single optimization problem."""
 
+    has_objective: bool
     var_map: MutableMapping[int, int]
     con_map: MutableMapping[int, int]
     nonlinear_map: MutableMapping[Optional[int], NonlinearExpressionData]
-    has_objective: bool
     nonlinear_diff_order: int
+
+    _kc: Optional[Any]
+    _status: Optional[int]
 
     def __init__(self, *, nonlinear_diff_order: int = 2) -> None:
         self.var_map = {}
@@ -253,14 +256,11 @@ class Engine:
     def set_obj(self, obj: ObjectiveData) -> None:
         self.has_objective = True
         self.set_obj_goal(obj.sense)
-        self.add_structures(None, obj.expr)
+        self.set_obj_structures(obj)
 
     def set_options(self, **options) -> None:
         for param, val in options.items():
-            param_id = self.execute(knitro.KN_get_param_id, param)
-            param_type = self.execute(knitro.KN_get_param_type, param_id)
-            func = get_param_setter(param_type)
-            self.execute(func, param_id, val)
+            self.set_option(param, val)
 
     def set_outlev(self, level: Optional[int] = None) -> None:
         if level is None:
@@ -329,6 +329,12 @@ class Engine:
         idxs = self.get_idxs(item_type, items)
         return self.execute(getter, idxs)
 
+    def set_option(self, param: str, val) -> None:
+        param_id = self.execute(knitro.KN_get_param_id, param)
+        param_type = self.execute(knitro.KN_get_param_type, param_id)
+        func = get_param_setter(param_type)
+        self.execute(func, param_id, val)
+
     def set_obj_goal(self, sense: ObjectiveSense) -> None:
         obj_goal = (
             knitro.KN_OBJGOAL_MINIMIZE
@@ -372,6 +378,9 @@ class Engine:
         for con in cons:
             i = self.con_map[id(con)]
             self.add_structures(i, con.body)
+
+    def set_obj_structures(self, obj: ObjectiveData) -> None:
+        self.add_structures(None, obj.expr)
 
     def add_structures(self, i: Optional[int], expr) -> None:
         repn = generate_standard_repn(expr)
