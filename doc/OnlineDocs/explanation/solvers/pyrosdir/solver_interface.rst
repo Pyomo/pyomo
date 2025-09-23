@@ -233,7 +233,7 @@ are evaluated similarly.
 Final Solution
 --------------
 PyROS automatically loads the final solution found to the model
-(i.e., updates the values of the variables of the determinstic model)
+(i.e., updates the values of the variables of the deterministic model)
 if and only if:
 
 1. The argument ``load_solution=True`` has been passed to PyROS
