@@ -24,7 +24,8 @@ from pyomo.contrib.pyros.util import (
     load_final_solution,
     pyrosTerminationCondition,
     validate_pyros_inputs,
-    log_model_statistics,
+    log_preprocessed_model_statistics,
+    log_original_model_statistics,
     IterationLogRecord,
     setup_pyros_logger,
     time_code,
@@ -437,6 +438,8 @@ class PyROS(object):
             )
             model_data.config = config
 
+            log_original_model_statistics(model_data, user_var_partitioning)
+            IterationLogRecord.log_header_rule(config.progress_logger.info)
             config.progress_logger.info("Preprocessing...")
             model_data.timing.start_timer("main.preprocessing")
             robust_infeasible = model_data.preprocess(user_var_partitioning)
@@ -447,7 +450,8 @@ class PyROS(object):
                 f"{preprocessing_time:.3f}s."
             )
 
-            log_model_statistics(model_data)
+            IterationLogRecord.log_header_rule(config.progress_logger.debug)
+            log_preprocessed_model_statistics(model_data)
 
             # === Solve and load solution into model
             return_soln = ROSolveResults()

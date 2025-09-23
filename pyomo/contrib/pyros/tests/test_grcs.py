@@ -16,6 +16,7 @@ Tests for the PyROS solver.
 import logging
 import math
 import os
+import textwrap
 import time
 
 import pyomo.common.unittest as unittest
@@ -36,7 +37,7 @@ from pyomo.common.dependencies import (
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import replace_expressions
-from pyomo.environ import assert_optimal_termination, maximize as pyo_max, units as u
+from pyomo.environ import assert_optimal_termination, maximize as pyo_max
 from pyomo.opt import (
     SolverResults,
     SolverStatus,
@@ -77,6 +78,9 @@ from pyomo.contrib.pyros.util import (
     IterationLogRecord,
     ObjectiveType,
     pyrosTerminationCondition,
+    log_original_model_statistics,
+    ModelData,
+    VariablePartitioning,
 )
 
 logger = logging.getLogger(__name__)
@@ -3056,6 +3060,63 @@ class TestSubsolverTiming(unittest.TestCase):
             0,
             msg="Robust infeasible model terminated in 0 iterations (nominal case).",
         )
+
+
+class TestLogOriginalModelStatistics(unittest.TestCase):
+    """
+    Test logging of model statistics (before preprocessing).
+    """
+
+    def test_log_model_statistics(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(bounds=[0, 10])
+        m.x2 = Var(bounds=[0, 10])
+        m.y = Var()
+        m.c1 = Constraint(expr=(1, m.x1 + m.x2, 2))
+        m.c2 = Constraint(expr=m.x1 * m.y <= 10)
+        m.c3 = Constraint(expr=(m.q, m.x1 + m.y, m.q))
+
+        # set up arguments to log function
+        model_data = ModelData(
+            original_model=m,
+            timing=None,
+            config=Bunch(
+                progress_logger=logger,
+                uncertainty_set=BoxSet([[1, 2]]),
+                uncertain_params=[m.q],
+            ),
+        )
+        user_var_partitioning = VariablePartitioning(
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            state_variables=[m.y],
+        )
+
+        expected_log_str = textwrap.dedent(
+            """
+            Model Statistics (before preprocessing):
+              Number of variables : 3
+                First-stage variables : 2
+                Second-stage variables : 0
+                State variables : 1
+              Number of uncertain parameters : 1
+              Number of constraints : 3
+                Equality constraints : 1
+                Inequality constraints : 2
+            """
+        )
+
+        with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
+            log_original_model_statistics(model_data, user_var_partitioning)
+
+        log_str = LOG.getvalue()
+        log_lines = log_str.splitlines()
+        expected_log_lines = expected_log_str.splitlines()[1:]
+
+        self.assertEqual(len(log_lines), len(expected_log_lines))
+        for line, expected_line in zip(log_lines, expected_log_lines):
+            self.assertEqual(line, expected_line)
 
 
 class TestIterationLogRecord(unittest.TestCase):
