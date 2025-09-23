@@ -79,7 +79,7 @@ class FiniteDifferenceStep(Enum):
     backward = "backward"
 
 
-class SensitivityInitialization(Enum):
+class DesignSpaceTraversal(Enum):
     snake_traversal = "snake_traversal"
     nested_for_loop = "nested_for_loop"
 
@@ -1821,10 +1821,10 @@ class DesignOfExperiments:
         design_vals: dict = None,
         abs_change: list = None,
         rel_change: list = None,
-        n_designs: int = 5,
+        n_design_points: int = None,
         method="sequential",
-        df_settings=(True, None, None, 500),
-        initialization_scheme="snake_traversal",
+        return_df=True,
+        traversal_scheme="snake_traversal",
         file_name: str = None,
     ):
         """Will run a simulation-based factorial exploration of the experimental input
@@ -1838,68 +1838,65 @@ class DesignOfExperiments:
             The model to perform the full factorial exploration on. Default: None
         design_vals : dict,
             dict of lists or other array-like objects, of the form
-            {"var_name": <var_values>}. Default: None.
+            {"var_name": [<var_values>]}. Default: None.
             The `design_values` should have the key(s) passed as strings that is a
             subset of the `experiment_inputs` Suffix of the get_labeled_model(). If one
             or more design variables are not to be changed, then they should not be
             passed in the `design_values` dictionary, but if they are passed in the
             dictionary, then they must be an array-like object of floats. For example,
-            if our experiment has 4 design variables
-            (i.e., `experiment_inputs`): model.x1, model.x2, model.x3, and model.x4,
+            if our experiment has 4 design variables (i.e., `experiment_inputs`):
+            model.x1, model.x2, model.x3, and model.x4,
             their values may be passed as, design_values= {"x1": [1, 2, 3], "x3": [7],
             "x4": [-10, 20]}. In this case, x2 will not be changed and will be fixed at
             the value in the model. Of course, we can pass x2 here as well if we want to
             change it.
-            If design_values argument is provided, then `abs_change`, `rel_change`,
-            `n_designs` arguments will be ignored.
         abs_change : list, optional
             Absolute change in the design variable values. Default: None.
+            Length of the list should be equal to the number of design variables in the
+            experiment_inputs Suffix of the get_labeled_model(), and the order of the values
+            in the list should be the same as the order of the design variables in the
+            experiment_inputs Suffix of the get_labeled_model().
             If provided, will use this value to generate the design values.
-            If `abs_change` is provided, but `rel_change` is not provided, `rel_change`
-            will be set to zero.
+            If `abs_change` is provided, but `rel_change` is not provided, then
+            `rel_change` will be set to zero.
             Formula to calculate the design values:
                 change_in_value = lower_bound * rel_change + abs_change`
                 design_value += design_value + change_in_value
             Also, the design variables need to be bounded for this argument to be used.
         rel_change : list, optional
             Relative change in the design variable values. Default: None.
+            Length of the list should be equal to the number of design variables in the
+            experiment_inputs Suffix of the get_labeled_model(), and the order of the values
+            in the list should be the same as the order of the design variables in the
+            experiment_inputs Suffix of the get_labeled_model().
             If provided, will use this value to generate the design values.
             If `rel_change` is provided, but `abs_change` is not provided, `abs_change`
             will be set to zero. Also, the design variables need to be bounded for this
             argument to be used.
-        n_designs : int, optional
-            Number of design points to generate for each design variable. Default: 5.
-            if n_designs = 3 and we have design variables x1 ( 1<x1≤5) and x2 (10≤x2<20),
+        n_design_points : int, optional
+            Number of design points to generate for each design variable. Default: None.
+            if n_design_points = 3 and we have design variables x1 ( 1<x1≤5) and x2 (10≤x2<20),
             then the design values will be:
                 x1 = np.linspace(1, 5, 3) -> x1 = [1, 3, 5]
                 x2 = np.linspace(10, 20, 3) -> x2 = [10, 15, 20]
-            If `abs_change` and/or `rel_change` are provided, this argument will be
-            ignored. Also, the design variables need to be bounded for this argument
-            to be used.
+            Also, the design variables need to be bounded for this argument to be used.
         method : str, optional
             string to specify which method should be used to compute Fisher Information
             Matrix (FIM). Options are ``kaug`` and ``sequential`. Default: "sequential"
-        df_settings : tuple, optional
-            A tuple containing the arguments for option_context() method of the pandas
-            DataFrame. Default: (True, None, None, 500)
-            - first element: whether to return a pandas DataFrame (True/False)
-            - second element: number of max_columns for the DataFrame. Default: None,
-                i.e., no limit on the number of columns.
-            - third element: number of max_rows for the DataFrame. Default: None,
-                i.e., no limit on the number of rows.
-            - fourth element: display width for the DataFrame. Default: 500.
-            If the first element is True, the results (FIM metrics) will be printed as
+        return_df : bool, optional
+            If True, the results (FIM metrics) will be printed as
             a pandas DataFrame as well.
-        initialization_scheme : str, optional
+        traversal_scheme : str, optional
             Which scheme to use for initializing the design variables.
             Options are ``"snake_traversal"`` and ``"nested_for_loop"``.
-            If ``"snake_traversal"``, the design variables will be initialized in a
+            If ``"snake_traversal"`` is used, the design variables will be initialized in a
             snake-like pattern where only one design variables change at a time.
-            If ``"nested_for_loop"``, the design variables will be initialized using a
+            If ``"nested_for_loop"`` is used, the design variables will be initialized using a
             nested for loop. Default: "snake_traversal"
         file_name : str, optional
-            if provided, will save the results to a json file. Default: None (will not
-            save the results).
+            If provided, will save the results to a json file.
+            Example: file_name = "myresult".
+            Default: None (will not save the results).
 
         Returns
         -------
@@ -1932,6 +1929,29 @@ class DesignOfExperiments:
             **self.get_labeled_model_args
         ).clone()
         model = self.factorial_model
+
+        # Group the mutually exclusive arguments for passing design values
+        # abs_change, and rel_change can be provided together or separately
+        num_des_provided = (
+            (design_vals is not None)
+            + (n_design_points is not None)
+            + (abs_change is not None or rel_change is not None)
+        )
+
+        # Check the count and raise an error if more than one was provided
+        if num_des_provided > 1:
+            raise ValueError(
+                "Please provide only one of the following arguments: "
+                "`design_vals`, `n_design_points`, or `abs_change` and/or `rel_change`."
+            )
+
+        # Optional: Check if at least one was provided, if that's a requirement
+        if num_des_provided == 0:
+            raise ValueError(
+                "At least one of the following arguments: "
+                "`design_vals`, `n_design_points`, or `abs_change` and/or `rel_change`"
+                " must be provided."
+            )
 
         if design_vals is not None:
             # Check whether the design_ranges keys are in the experiment_inputs
@@ -2002,6 +2022,7 @@ class DesignOfExperiments:
                 # change_in_value = lower_bound * rel_change + abs_change
                 elif abs_change or rel_change:
                     des_val = []
+                    # Calculate the change in value, delta value
                     del_val = comp.lb * rel_change[i] + abs_change[i]
                     if del_val == 0:
                         raise ValueError(
@@ -2023,20 +2044,20 @@ class DesignOfExperiments:
 
         # generate the factorial points based on the initialization scheme
         try:
-            scheme_enum = SensitivityInitialization(initialization_scheme)
+            scheme_enum = DesignSpaceTraversal(traversal_scheme)
         except ValueError:
             self.logger.warning(
-                f"Initialization scheme '{initialization_scheme}' is not recognized. "
+                f"Initialization scheme '{traversal_scheme}' is not recognized. "
                 "Using `snake_traversal` as the default initialization scheme."
             )
-            scheme_enum = SensitivityInitialization.snake_traversal
+            scheme_enum = DesignSpaceTraversal.snake_traversal
 
-        if scheme_enum == SensitivityInitialization.snake_traversal:
+        if scheme_enum == DesignSpaceTraversal.snake_traversal:
             factorial_points = snake_traversal_grid_sampling(*design_values)
-        elif scheme_enum == SensitivityInitialization.nested_for_loop:
+        elif scheme_enum == DesignSpaceTraversal.nested_for_loop:
             factorial_points = product(*design_values)
 
-        # TODO: Add more initialization schemes
+        # TODO: Add more DesignSpaceTraversal schemes
 
         factorial_points_list = list(factorial_points)
 
@@ -2142,31 +2163,19 @@ class DesignOfExperiments:
         self.factorial_results = factorial_results
 
         # Set pandas DataFrame options
-        if df_settings[0]:
-            with pd.option_context(
-                "display.max_columns",
-                df_settings[1],
-                "display.max_rows",
-                df_settings[2],
-                "display.width",
-                df_settings[3],
-            ):
-                exclude_keys = {
-                    "total_points",
-                    "success_count",
-                    "failure_count",
-                    "FIM_all",
-                }
-                dict_for_df = {
-                    k: v for k, v in factorial_results.items() if k not in exclude_keys
-                }
-                res_df = pd.DataFrame(dict_for_df)
-                print("\n\n=========Factorial results===========")
-                print("Total points:", total_points)
-                print("Success count:", success_count)
-                print("Failure count:", failure_count)
-                print("\n")
-                print(res_df)
+        if return_df:
+            # exclude matrix-like entries, and unchanging results from the DataFrame
+            exclude_keys = {"total_points", "success_count", "failure_count", "FIM_all"}
+            dict_for_df = {
+                k: v for k, v in factorial_results.items() if k not in exclude_keys
+            }
+            res_df = pd.DataFrame(dict_for_df)
+            print("\n\n=========Factorial results===========")
+            print("Total points:", total_points)
+            print("Success count:", success_count)
+            print("Failure count:", failure_count)
+            print("\n")
+            print(res_df)
 
         # Save the results to a json file based on the file_name provided
         if file_name is not None:
