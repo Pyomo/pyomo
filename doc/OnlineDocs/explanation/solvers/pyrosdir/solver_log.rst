@@ -16,7 +16,7 @@ Default Format
 
 When the PyROS
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
-is called to solve a robust optimzation problem,
+is called to solve a robust optimization problem,
 your console output will, by default, look like this:
 
 
