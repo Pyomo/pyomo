@@ -9,21 +9,23 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-from collections.abc import Iterable, Mapping, MutableSet
-from typing import Any, Callable, List, Optional, Tuple
+from collections.abc import Iterable, Mapping, MutableSet, Sequence
+from typing import Optional
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.numeric_types import value
 from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintData
+from pyomo.core.base.expression import Expression
 from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.core.base.var import VarData
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 
+from .typing import Atom
 
-def get_active_objectives(block: BlockData) -> List[ObjectiveData]:
+
+def get_active_objectives(block: BlockData) -> list[ObjectiveData]:
     """
     Retrieve all active ObjectiveData objects from a Pyomo Block.
 
@@ -31,7 +33,7 @@ def get_active_objectives(block: BlockData) -> List[ObjectiveData]:
         block (BlockData): The Pyomo block to search for objectives.
 
     Returns:
-        List[ObjectiveData]: A sorted list of all active objectives in the block.
+        list[ObjectiveData]: A sorted list of all active objectives in the block.
     """
     generator = block.component_data_objects(
         Objective, descend_into=True, active=True, sort=True
@@ -39,7 +41,7 @@ def get_active_objectives(block: BlockData) -> List[ObjectiveData]:
     return list(generator)
 
 
-def get_active_constraints(block: BlockData) -> List[ConstraintData]:
+def get_active_constraints(block: BlockData) -> list[ConstraintData]:
     """
     Retrieve all active ConstraintData objects from a Pyomo Block.
 
@@ -47,7 +49,7 @@ def get_active_constraints(block: BlockData) -> List[ConstraintData]:
         block (BlockData): The Pyomo block to search for constraints.
 
     Returns:
-        List[ConstraintData]: A sorted list of all active constraints in the block.
+        list[ConstraintData]: A sorted list of all active constraints in the block.
     """
     generator = block.component_data_objects(
         Constraint, descend_into=True, active=True, sort=True
@@ -63,17 +65,17 @@ class Problem:
     This class is used to extract and organize model data before passing it to the solver.
 
     Attributes:
-        objs (List[ObjectiveData]): List of active objectives.
-        cons (List[ConstraintData]): List of active constraints.
-        variables (List[VarData]): List of all referenced variables.
+        objs (list[ObjectiveData]): list of active objectives.
+        cons (list[ConstraintData]): list of active constraints.
+        variables (list[VarData]): list of all referenced variables.
     """
 
-    objs: List[ObjectiveData]
-    cons: List[ConstraintData]
-    variables: List[VarData]
+    objs: list[ObjectiveData]
+    cons: list[ConstraintData]
+    variables: list[VarData]
     _vars: MutableSet[VarData]
 
-    def __init__(self, block: Optional[BlockData] = None):
+    def __init__(self, block: Optional[BlockData] = None) -> None:
         """
         Initialize a Problem instance.
 
@@ -88,14 +90,14 @@ class Problem:
         if block is not None:
             self.add_block(block)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear all objectives, constraints, and variables from the problem."""
         self.objs.clear()
         self.cons.clear()
         self.variables.clear()
         self._vars.clear()
 
-    def set_block(self, block: BlockData):
+    def set_block(self, block: BlockData) -> None:
         """
         Replace the current problem data with data from a new block.
 
@@ -105,7 +107,7 @@ class Problem:
         self.clear()
         self.add_block(block)
 
-    def add_block(self, block: BlockData):
+    def add_block(self, block: BlockData) -> None:
         """
         Add objectives, constraints, and variables from a block to the problem.
 
@@ -120,18 +122,37 @@ class Problem:
         # Collect variables from objectives
         for obj in new_objs:
             _, variables, _, _ = collect_vars_and_named_exprs(obj.expr)
-            self._vars.update(variables)
+            for var in variables:
+                self._vars.add(var)
 
         # Collect variables from constraints
         for con in new_cons:
             _, variables, _, _ = collect_vars_and_named_exprs(con.body)
-            self._vars.update(variables)
+            for var in variables:
+                self._vars.add(var)
 
         # Update the variables list with unique variables only
         self.variables = list(self._vars)
 
 
-class NonlinearExpressionData:
+def set_var_values(
+    variables: Iterable[VarData], values: Sequence[float], var_map: Mapping[int, int]
+) -> None:
+    """
+    Set the values of a list of Pyomo variables from a list of values.
+
+    Args:
+        variables (Iterable[VarData]): The variables to set.
+        values (list[float]): The list of values to assign to the variables.
+        var_map (Mapping[int, int]): A mapping from variable id to index in the
+            values list.
+    """
+    for var in variables:
+        i = var_map[id(var)]
+        var.set_value(values[i])
+
+
+class NonlinearExpressionData(Atom):
     """
     Holds the data required to evaluate a non-linear expression.
 
@@ -139,92 +160,86 @@ class NonlinearExpressionData:
     gradient and Hessian information for use with optimization solvers.
 
     Attributes:
-        body (Optional[Any]): The Pyomo expression representing the non-linear body.
-        variables (List[VarData]): List of variables referenced in the expression.
-        grad (Optional[Mapping[VarData, Any]]): Gradient expressions mapped by variable.
-        hess (Optional[Mapping[Tuple[VarData, VarData], Any]]): Hessian expressions
+        variables (list[VarData]): list of variables referenced in the expression.
+        func_expr (Expression): The Pyomo expression representing the non-linear function.
+        grad_map (Mapping[VarData, Expression]): Gradient expressions mapped by variable.
+        hess_map (Mapping[tuple[VarData, VarData], Expression]): Hessian expressions
             mapped by variable pairs.
+        diff_order (int): Level of differentiation to compute:
+            - 0: function evaluation only
+            - 1: function + gradient
+            - 2: function + gradient + hessian
     """
 
-    body: Optional[Any]
-    variables: List[VarData]
-    grad: Optional[Mapping[VarData, Any]]
-    hess: Optional[Mapping[Tuple[VarData, VarData], Any]]
+    variables: list[VarData]
+    func_expr: Expression
+    grad_map: Mapping[VarData, Expression]
+    hess_map: Mapping[tuple[VarData, VarData], Expression]
+    diff_order: int
 
     def __init__(
         self,
-        expr: Optional[Any],
+        expr: Expression,
         variables: Iterable[VarData],
-        *,
-        differentiation_order: int = 0,
-    ):
+        var_map: Mapping[int, int],
+        diff_order: int = 0,
+    ) -> None:
         """
         Initialize NonlinearExpressionData.
 
         Args:
-            expr (Optional[Any]): The Pyomo expression to evaluate.
+            expr (Expression): The Pyomo expression to evaluate.
             variables (Iterable[VarData]): Variables referenced in the expression.
-            differentiation_order (int): Level of differentiation to compute:
+            diff_order (int): Level of differentiation to compute:
                 - 0: function evaluation only
                 - 1: function + gradient
-                - 2: function + gradient + Hessian
+                - 2: function + gradient + hessian
         """
-        self.body = expr
+        self.func_expr = expr
         self.variables = list(variables)
-        self.grad = None
-        self.hess = None
-        if differentiation_order > 0:
+        self.diff_order = diff_order
+        self._var_map = var_map
+        if diff_order >= 1:
             self.compute_gradient()
-        if differentiation_order > 1:
+        if diff_order >= 2:
             self.compute_hessian()
 
     @property
-    def grad_vars(self) -> List[VarData]:
+    def grad_vars(self) -> list[VarData]:
         """
         Get the list of variables for which gradients are available.
 
         Returns:
-            List[VarData]: Variables with gradient information.
-
-        Raises:
-            ValueError: If gradient information is not available.
+            list[VarData]: Variables with gradient information.
         """
-        if self.grad is None:
-            msg = "Gradient information is not available for this expression."
-            raise ValueError(msg)
-        return list(self.grad.keys())
+        return list(self.grad_map.keys())
 
     @property
-    def hess_vars(self) -> List[Tuple[VarData, VarData]]:
+    def hess_vars(self) -> list[tuple[VarData, VarData]]:
         """
         Get the list of variable pairs for which Hessian entries are available.
 
         Returns:
-            List[Tuple[VarData, VarData]]: Variable pairs with Hessian information.
+            list[tuple[VarData, VarData]]: Variable pairs with Hessian information.
 
-        Raises:
-            ValueError: If Hessian information is not available.
         """
-        if self.hess is None:
-            msg = "Hessian information is not available for this expression."
-            raise ValueError(msg)
-        return list(self.hess.keys())
+        return list(self.hess_map.keys())
 
-    def compute_gradient(self):
+    def compute_gradient(self) -> None:
         """
         Compute gradient expressions for the nonlinear expression.
 
         This method computes the gradient of the expression with respect to all
         variables and stores the results in the grad attribute.
         """
-        derivative = reverse_sd(self.body)
+        derivative = reverse_sd(self.func_expr)
         variables = ComponentSet(self.variables)
-        self.grad = ComponentMap()
+        self.grad_map = ComponentMap()
         for v, expr in derivative.items():
             if v in variables:
-                self.grad[v] = expr
+                self.grad_map[v] = expr
 
-    def compute_hessian(self):
+    def compute_hessian(self) -> None:
         """
         Compute Hessian expressions for the nonlinear expression.
 
@@ -235,100 +250,26 @@ class NonlinearExpressionData:
         Note:
             This method requires that compute_gradient() has been called first.
         """
-        if self.grad is None:
-            msg = "Gradient must be computed before Hessian. Call compute_gradient() first."
-            raise ValueError(msg)
-
         variables = ComponentSet(self.variables)
-        self.hess = ComponentMap()
-        for v1, grad_expr in self.grad.items():
+        self.hess_map = ComponentMap()
+        for v1, grad_expr in self.grad_map.items():
             derivative = reverse_sd(grad_expr)
             for v2, hess_expr in derivative.items():
                 if v2 not in variables:
                     continue
                 # Store only upper triangle: ensure var1 <= var2 by ID
                 var1, var2 = (v1, v2) if id(v1) <= id(v2) else (v2, v1)
-                if (var1, var2) not in self.hess:
-                    self.hess[(var1, var2)] = hess_expr
+                if (var1, var2) not in self.hess_map:
+                    self.hess_map[(var1, var2)] = hess_expr
 
-    def create_evaluator(
-        self, vmap: Mapping[int, int]
-    ) -> Callable[[List[float]], float]:
-        """
-        Create a callable evaluator for the non-linear expression.
+    def func(self, x: list[float]) -> float:
+        set_var_values(self.variables, x, self._var_map)
+        return value(self.func_expr)
 
-        Args:
-            vmap (Mapping[int, int]): A mapping from variable id to index in the
-                solver's variable vector.
+    def grad(self, x: list[float]) -> list[float]:
+        set_var_values(self.variables, x, self._var_map)
+        return [value(g) for g in self.grad_map.values()]
 
-        Returns:
-            Callable[[List[float]], float]: A function that takes a list of variable
-                values (x) and returns the evaluated value of the expression.
-        """
-
-        def _fn(x: List[float]) -> float:
-            for var in self.variables:
-                i = vmap[id(var)]
-                var.set_value(x[i])
-            return value(self.body)
-
-        return _fn
-
-    def create_gradient_evaluator(
-        self, vmap: Mapping[int, int]
-    ) -> Callable[[List[float]], List[float]]:
-        """
-        Create a callable gradient evaluator for the non-linear expression.
-
-        Args:
-            vmap (Mapping[int, int]): A mapping from variable id to index in the
-                solver's variable vector.
-
-        Returns:
-            Callable[[List[float]], List[float]]: A function that takes a list of
-                variable values (x) and returns the gradient of the expression with
-                respect to its variables.
-
-        """
-        if self.grad is None:
-            msg = "Gradient information is not available for this expression."
-            raise ValueError(msg)
-
-        def _grad(x: List[float]) -> List[float]:
-            # Set all variables, not just gradient variables, to ensure consistency
-            for var in self.variables:
-                i = vmap[id(var)]
-                var.set_value(x[i])
-            return [value(expr) for expr in self.grad.values()]
-
-        return _grad
-
-    def create_hessian_evaluator(
-        self, vmap: Mapping[int, int]
-    ) -> Callable[[List[float], float], List[float]]:
-        """
-        Create a callable Hessian evaluator for the non-linear expression.
-
-        Args:
-            vmap (Mapping[int, int]): A mapping from variable id to index in the
-                solver's variable vector.
-
-        Returns:
-            Callable[[List[float], float], List[float]]: A function that takes a list
-                of variable values (x) and a multiplier (mu) and returns the scaled
-                Hessian of the expression as a list of values corresponding to the
-                variable pairs in self.hess.
-
-        """
-        if self.hess is None:
-            msg = "Hessian information is not available for this expression."
-            raise ValueError(msg)
-
-        def _hess(x: List[float], mu: float) -> List[float]:
-            # Set all variables to ensure consistency
-            for var in self.variables:
-                i = vmap[id(var)]
-                var.set_value(x[i])
-            return [mu * value(expr) for expr in self.hess.values()]
-
-        return _hess
+    def hess(self, x: list[float], mu: float) -> list[float]:
+        set_var_values(self.variables, x, self._var_map)
+        return [mu * value(h) for h in self.hess_map.values()]

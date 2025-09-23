@@ -21,7 +21,7 @@ class Config(SolverConfig):
         implicit=False,
         implicit_domain=None,
         visibility=0,
-    ):
+    ) -> None:
         super().__init__(
             description=description,
             doc=doc,
@@ -43,7 +43,7 @@ class Config(SolverConfig):
             "restore_variable_values_after_solve",
             ConfigValue(
                 domain=Bool,
-                default=True,
+                default=False,
                 doc="To evaluate non-linear constraints, KNITRO solver sets explicit values on variables. This option controls whether to restore the original variable values after solving.",
             ),
         )

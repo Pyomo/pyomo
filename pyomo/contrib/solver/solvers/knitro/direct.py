@@ -18,7 +18,9 @@ from .config import Config
 
 
 class Solver(SolverBase):
-    def _presolve(self, model: BlockData, config: Config, timer: HierarchicalTimer):
+    def _presolve(
+        self, model: BlockData, config: Config, timer: HierarchicalTimer
+    ) -> None:
         timer.start("build_problem")
         self._problem.set_block(model)
         timer.stop("build_problem")

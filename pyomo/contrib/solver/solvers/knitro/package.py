@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import io
-from typing import Tuple
+from typing import Optional
 
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.contrib.solver.common.base import Availability
@@ -41,7 +41,7 @@ class Package:
         return Package._license_context
 
     @staticmethod
-    def release_license():
+    def release_license() -> None:
         """
         Release the global KNITRO license context if it exists.
         """
@@ -61,14 +61,15 @@ class Package:
         return knitro.KN_new_lm(lmc)
 
     @staticmethod
-    def get_version() -> Tuple[int, int, int]:
+    def get_version() -> tuple[int, int, int]:
         """
         Get the version of the KNITRO solver as a tuple.
 
         Returns:
-            Tuple[int, int, int]: The (major, minor, patch) version of KNITRO.
+            tuple[int, int, int]: The (major, minor, patch) version of KNITRO.
         """
-        return tuple(int(x) for x in KNITRO_VERSION.split("."))
+        major, minor, patch = map(int, KNITRO_VERSION.split("."))
+        return major, minor, patch
 
     @staticmethod
     def check_availability() -> Availability:
@@ -78,11 +79,11 @@ class Package:
         Returns:
             Availability: The availability status (FullLicense, BadLicense, NotFound).
         """
-        if not KNITRO_AVAILABLE:
+        if not bool(KNITRO_AVAILABLE):
             return Availability.NotFound
         try:
             stream = io.StringIO()
-            with capture_output(TeeStream(stream), capture_fd=1):
+            with capture_output(TeeStream(stream), capture_fd=True):
                 kc = Package.create_context()
                 knitro.KN_free(kc)
             # TODO: parse the stream to check the license type.
@@ -92,9 +93,9 @@ class Package:
 
 
 class PackageChecker:
-    _available_cache: Availability
+    _available_cache: Optional[Availability]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._available_cache = None
 
     def available(self) -> Availability:
@@ -102,5 +103,5 @@ class PackageChecker:
             self._available_cache = Package.check_availability()
         return self._available_cache
 
-    def version(self):
+    def version(self) -> tuple[int, int, int]:
         return Package.get_version()

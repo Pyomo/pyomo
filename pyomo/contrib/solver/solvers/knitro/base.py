@@ -9,12 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
 from abc import abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from io import StringIO
-from typing import Optional, Type
+from typing import Optional, Union
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import ApplicationError
@@ -40,8 +39,9 @@ from .api import knitro
 from .config import Config
 from .engine import Engine
 from .package import PackageChecker
+from .solution import SolutionLoader, SolutionProvider
+from .typing import UnreachableError, ValueType
 from .utils import Problem
-from .solution import LoadType, SolutionLoader, SolutionProvider
 
 
 class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
@@ -51,7 +51,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
     _engine: Engine
     _problem: Problem
     _stream: StringIO
-    _saved_var_values: Mapping[int, float]
+    _saved_var_values: dict[int, Optional[float]]
 
     def __init__(self, **kwds) -> None:
         PackageChecker.__init__(self)
@@ -59,6 +59,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         self._engine = Engine()
         self._problem = Problem()
         self._stream = StringIO()
+        self._saved_var_values = {}
 
     def solve(self, model: BlockData, **kwds) -> Results:
         tick = datetime.now(timezone.utc)
@@ -105,7 +106,9 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
             raise ApplicationError(msg)
 
     def _save_var_values(self) -> None:
-        self._saved_var_values = {id(var): value(var.value) for var in self.get_vars()}
+        self._saved_var_values.clear()
+        for var in self.get_vars():
+            self._saved_var_values[id(var)] = value(var.value)
 
     def _restore_var_values(self) -> None:
         StaleFlagManager.mark_all_as_stale(delayed=True)
@@ -130,16 +133,9 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         results.solver_version = self.version()
         results.solver_log = self._stream.getvalue()
         results.solver_config = config
-        results.solution_status = self.get_solution_status(status)
-        results.termination_condition = self.get_termination_condition(status)
-        if self._problem.objs and results.termination_condition in {
-            TerminationCondition.convergenceCriteriaSatisfied,
-            TerminationCondition.iterationLimit,
-            TerminationCondition.maxTimeLimit,
-        }:
-            results.incumbent_objective = self._engine.get_obj_value()
-        else:
-            results.incumbent_objective = None
+        results.solution_status = self._get_solution_status(status)
+        results.termination_condition = self._get_termination_condition(status)
+        results.incumbent_objective = self._engine.get_obj_value()
         results.iteration_count = self._engine.get_num_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
@@ -166,43 +162,36 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
         return results
 
-    def get_vars(self):
+    def get_vars(self) -> list[VarData]:
         return self._problem.variables
 
-    def get_objectives(self):
-        return self._problem.objs
-
-    def get_cons(self):
-        return self._problem.cons
-
-    def get_fetch_all(self, load_type: Type[LoadType]):
-        if load_type is VarData:
-            return self.get_vars
-        elif load_type is ConstraintData:
-            return self.get_cons
+    def get_items(self, item_type: type):
+        if item_type is VarData:
+            return self._problem.variables
+        elif item_type is ConstraintData:
+            return self._problem.cons
+        raise UnreachableError()
 
     def get_values(
         self,
-        load_type: Type[LoadType],
-        to_load: Optional[Sequence[LoadType]],
-        *,
-        is_dual: bool,
+        item_type: type,
+        value_type: ValueType,
+        items: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]] = None,
     ):
-        fetch_all = self.get_fetch_all(load_type)
-        if to_load is None:
-            to_load = fetch_all()
-        x = self._engine.get_values(load_type, to_load, is_dual=is_dual)
+        if items is None:
+            items = self.get_items(item_type)
+        x = self._engine.get_values(item_type, value_type, items)
         if x is None:
-            error_type = self.get_error_type(load_type, is_dual=is_dual)
+            error_type = SolutionProvider.get_error_type(item_type, value_type)
             raise error_type()
-        sign = -1.0 if is_dual else 1.0
-        return ComponentMap([(k, sign * x[i]) for i, k in enumerate(to_load)])
+        sign = value_type.sign
+        return ComponentMap([(k, sign * xk) for k, xk in zip(items, x)])
 
-    def get_num_solutions(self):
+    def get_num_solutions(self) -> int:
         return self._engine.get_num_solutions()
 
     @staticmethod
-    def get_solution_status(status: int) -> SolutionStatus:
+    def _get_solution_status(status: int) -> SolutionStatus:
         if (
             status == knitro.KN_RC_OPTIMAL
             or status == knitro.KN_RC_OPTIMAL_OR_SATISFACTORY
@@ -222,7 +211,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
             return SolutionStatus.noSolution
 
     @staticmethod
-    def get_termination_condition(status: int) -> TerminationCondition:
+    def _get_termination_condition(status: int) -> TerminationCondition:
         if (
             status == knitro.KN_RC_OPTIMAL
             or status == knitro.KN_RC_OPTIMAL_OR_SATISFACTORY

@@ -18,7 +18,7 @@ __all__ = ["KnitroConfig", "KnitroDirectSolver"]
 
 
 # This function needs to be called from the plugins load function
-def load():
+def load() -> None:
     SolverFactory.register(
         name="knitro_direct",
         legacy_name="knitro_direct",
