@@ -23,7 +23,8 @@ In particular,
 `IPOPT <https://github.com/coin-or/Ipopt>`__
 (to serve as the local solver), `BARON <https://minlp.com/baron-solver>`__
 (to serve as the global solver), and `COUENNE <https://github.com/coin-or/Couenne>`__
-(to serve as a backup global solver) are required to run the tutorial verbatim.
+(to serve as a backup global solver) are required to run the tutorial
+without modification.
 
 You will also need to
 `install Matplotlib <https://matplotlib.org/stable/install/index.html>`__,

@@ -12,12 +12,12 @@ Getting Started with PyROS
 Installation
 ============
 In advance of using PyROS to solve robust optimization problems,
-you will need at least one local nonlinear programming (NLP) solver
+you will need (at least) one local nonlinear programming (NLP) solver
 (e.g.,
 `CONOPT <https://conopt.gams.com/>`_,
 `IPOPT <https://github.com/coin-or/Ipopt>`_,
 `Knitro <https://www.artelys.com/solvers/knitro/>`_)
-and one global NLP solver
+and (at least) one global NLP solver
 (e.g.,
 `BARON <https://minlp.com/baron-solver>`_,
 `COUENNE <https://www.coin-or.org/Couenne/>`_,
@@ -96,7 +96,7 @@ each have a nominal value of 1.
 We assume that :math:`q_1, q_2`
 can independently deviate from their
 nominal values by up to :math:`\pm 10\%`,
-so that the :math:`(q_1, q_2)` is constrained in value to the 
+so that :math:`(q_1, q_2)` is constrained in value to the 
 interval uncertainty set :math:`\mathcal{Q} = [0.9, 1.1]^2`.
 
 .. note::
@@ -293,7 +293,7 @@ see the :ref:`Solver Output Log documentation <pyros_solver_log>`.
           uncertainty_set=box_uncertainty_set,
           local_solver=local_solver,
           global_solver=global_solver,
-          # optional arguments: passed indirectly
+          # indirectly passed optional arguments: solve to robust optimality
           options={
               "objective_focus": "worst_case",
               "solve_master_globally": True,
@@ -513,7 +513,7 @@ Observe that:
   :math:`p=0` is equal to the optimal deterministic objective value
 * The objective value (and thus, the price of robustness)
   increases with the half-length
-* For large enough half-length (:math:`p=0.4`) the problem
+* For large enough half-length (:math:`p=0.4`), the problem
   is robust infeasible
 
 Therefore, this example clearly illustrates the potential

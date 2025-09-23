@@ -4,9 +4,6 @@
 PyROS Methodology Overview
 ==========================
 
-PyROS (Pyomo Robust Optimization Solver) is a Pyomo-based meta-solver
-for non-convex, two-stage adjustable robust optimization problems.
-
 PyROS can accommodate optimization models with:
 
 * **Continuous variables** only
@@ -16,7 +13,8 @@ PyROS can accommodate optimization models with:
 * **Equality constraints** defining state variables,
   including implicitly defined state variables that cannot be
   eliminated from the model via reformulation
-* **Inequality constraints** in the degree-of-freedom and/or state variables
+* **Uncertain parameters** participating in the inequality constraints,
+  equality constraints, and/or objective function
 
 Supported deterministic models are nonlinear programs (NLPs)
 of the general form
@@ -34,19 +32,19 @@ of the general form
 
 where:
 
-* :math:`x \in \mathcal{X}` are the first-stage degrees of freedom,
-  (or "design" variables,)
+* :math:`x \in \mathcal{X}` comprises the first-stage degrees of freedom
+  (or "design" variables)
   of which the feasible space :math:`\mathcal{X} \subseteq \mathbb{R}^{n_x}`
   is defined by the model constraints
   (including variable bounds specifications) referencing :math:`x` only
-* :math:`z \in \mathbb{R}^{n_z}` are the second-stage degrees of freedom
+* :math:`z \in \mathbb{R}^{n_z}` comprises the second-stage degrees of freedom
   (or "control" variables)
-* :math:`y \in \mathbb{R}^{n_y}` are the "state" variables
-* :math:`q \in \mathbb{R}^{n_q}` is the vector of model parameters considered
+* :math:`y \in \mathbb{R}^{n_y}` comprises the state variables
+* :math:`q \in \mathbb{R}^{n_q}` comprises the model parameters considered
   uncertain, and :math:`q^{\text{nom}}` is the vector of nominal values
   associated with those
 * :math:`f_1\left(x\right)` is the summand of the objective function that depends
-  only on design variables
+  only the first-stage degrees of freedom
 * :math:`f_2\left(x, z, y; q\right)` is the summand of the objective function
   that depends on all variables and the uncertain parameters
 * :math:`g_i\left(x, z, y; q\right)` is the :math:`i^\text{th}`
@@ -90,7 +88,6 @@ the form of the robust counterpart addressed by PyROS is
 PyROS accepts a deterministic model and accompanying uncertainty set
 and then, using the Generalized Robust Cutting-Set algorithm developed
 in [IAE+21]_, seeks a solution to the robust counterpart.
-When using PyROS, please consider citing [IAE+21]_.
 
 .. _pyros_unique_state_vars:
 
@@ -105,7 +102,7 @@ When using PyROS, please consider citing [IAE+21]_.
     satisfies the equality constraints
     :math:`h_j(x, z, y, q) = 0\,\,\forall\, j \in \mathcal{J}`.
     If this assumption is not met,
-    then the selection of 'state'
+    then the selection of state
     (i.e., not degree of freedom) variables :math:`y` is incorrect,
     and one or more of the :math:`y` variables should be appropriately
     redesignated to be part of either :math:`x` or :math:`z`.
