@@ -16,7 +16,7 @@ from io import StringIO
 from typing import Optional, Union
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.errors import ApplicationError
+from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.common.numeric_types import value
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.timing import HierarchicalTimer
@@ -28,7 +28,10 @@ from pyomo.contrib.solver.common.results import (
 )
 from pyomo.contrib.solver.common.util import (
     IncompatibleModelError,
+    NoDualsError,
     NoOptimalSolutionError,
+    NoReducedCostsError,
+    NoSolutionError,
 )
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import ConstraintData
@@ -162,6 +165,31 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
         return results
 
+    def get_values(
+        self,
+        item_type: type,
+        value_type: ValueType,
+        items: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]] = None,
+        *,
+        exists: bool,
+        solution_id: Optional[int] = None,
+    ):
+        error_type = self._get_error_type(item_type, value_type)
+        if not exists:
+            raise error_type()
+        # KNITRO only supports a single solution
+        assert solution_id is None
+        if items is None:
+            items = self._get_items(item_type)
+        x = self._engine.get_values(item_type, value_type, items)
+        if x is None:
+            raise error_type()
+        sign = value_type.sign
+        return ComponentMap([(k, sign * xk) for k, xk in zip(items, x)])
+
+    def get_num_solutions(self) -> int:
+        return self._engine.get_num_solutions()
+
     def _get_vars(self) -> list[VarData]:
         return self._problem.variables
 
@@ -171,24 +199,6 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         elif item_type is ConstraintData:
             return self._problem.cons
         raise UnreachableError()
-
-    def get_values(
-        self,
-        item_type: type,
-        value_type: ValueType,
-        items: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]] = None,
-    ):
-        if items is None:
-            items = self._get_items(item_type)
-        x = self._engine.get_values(item_type, value_type, items)
-        if x is None:
-            error_type = SolutionProvider.get_error_type(item_type, value_type)
-            raise error_type()
-        sign = value_type.sign
-        return ComponentMap([(k, sign * xk) for k, xk in zip(items, x)])
-
-    def get_num_solutions(self) -> int:
-        return self._engine.get_num_solutions()
 
     @staticmethod
     def _get_solution_status(status: int) -> SolutionStatus:
@@ -245,3 +255,13 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
             return TerminationCondition.interrupted
         else:
             return TerminationCondition.unknown
+
+    @staticmethod
+    def _get_error_type(item_type: type, value_type: ValueType) -> type[PyomoException]:
+        if item_type is VarData and value_type == ValueType.PRIMAL:
+            return NoSolutionError
+        elif item_type is VarData and value_type == ValueType.DUAL:
+            return NoReducedCostsError
+        elif item_type is ConstraintData and value_type == ValueType.DUAL:
+            return NoDualsError
+        raise UnreachableError()
