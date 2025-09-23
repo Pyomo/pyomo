@@ -107,12 +107,12 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
     def _save_var_values(self) -> None:
         self._saved_var_values.clear()
-        for var in self.get_vars():
+        for var in self._get_vars():
             self._saved_var_values[id(var)] = value(var.value)
 
     def _restore_var_values(self) -> None:
         StaleFlagManager.mark_all_as_stale(delayed=True)
-        for var in self.get_vars():
+        for var in self._get_vars():
             var.set_value(self._saved_var_values[id(var)])
         StaleFlagManager.mark_all_as_stale()
 
@@ -162,10 +162,10 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
         return results
 
-    def get_vars(self) -> list[VarData]:
+    def _get_vars(self) -> list[VarData]:
         return self._problem.variables
 
-    def get_items(self, item_type: type):
+    def _get_items(self, item_type: type):
         if item_type is VarData:
             return self._problem.variables
         elif item_type is ConstraintData:
@@ -179,7 +179,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         items: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]] = None,
     ):
         if items is None:
-            items = self.get_items(item_type)
+            items = self._get_items(item_type)
         x = self._engine.get_values(item_type, value_type, items)
         if x is None:
             error_type = SolutionProvider.get_error_type(item_type, value_type)
