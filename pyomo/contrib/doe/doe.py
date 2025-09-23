@@ -1828,7 +1828,7 @@ class DesignOfExperiments:
         file_name: str = None,
     ):
         """Will run a simulation-based factorial exploration of the experimental input
-        space (i.e., a ``grid search`` or ``parameter sweep``) to understand how the
+        space (a.k.a., a ``grid search`` or ``parameter sweep``) to understand how the
         FIM metrics change as a function of the experimental design space. This method
         can be used for both full factorial and fractional factorial designs.
 
@@ -1840,15 +1840,18 @@ class DesignOfExperiments:
             dict of lists or other array-like objects, of the form
             {"var_name": <var_values>}. Default: None.
             The `design_values` should have the key(s) passed as strings that is a
-            subset of the `experiment_inputs`. If one or more design variables are not
-            to be changed, then they should not be passed in the `design_values`
-            dictionary, but if they are passed in the dictionary, then they must be a
-            array-like object of floats. For example, if our experiment has 4 design variables
+            subset of the `experiment_inputs` Suffix of the get_labeled_model(). If one
+            or more design variables are not to be changed, then they should not be
+            passed in the `design_values` dictionary, but if they are passed in the
+            dictionary, then they must be an array-like object of floats. For example,
+            if our experiment has 4 design variables
             (i.e., `experiment_inputs`): model.x1, model.x2, model.x3, and model.x4,
             their values may be passed as, design_values= {"x1": [1, 2, 3], "x3": [7],
             "x4": [-10, 20]}. In this case, x2 will not be changed and will be fixed at
-            the value in the model.
-            If design_values is provided, then `abs_change` and `rel_change` are ignored.
+            the value in the model. Of course, we can pass x2 here as well if we want to
+            change it.
+            If design_values argument is provided, then `abs_change`, `rel_change`,
+            `n_designs` arguments will be ignored.
         abs_change : list, optional
             Absolute change in the design variable values. Default: None.
             If provided, will use this value to generate the design values.
@@ -1857,19 +1860,27 @@ class DesignOfExperiments:
             Formula to calculate the design values:
                 change_in_value = lower_bound * rel_change + abs_change`
                 design_value += design_value + change_in_value
+            Also, the design variables need to be bounded for this argument to be used.
         rel_change : list, optional
             Relative change in the design variable values. Default: None.
             If provided, will use this value to generate the design values.
             If `rel_change` is provided, but `abs_change` is not provided, `abs_change`
-            will be set to zero.
+            will be set to zero. Also, the design variables need to be bounded for this
+            argument to be used.
         n_designs : int, optional
-            Number of designs to generate for each design variable. Default: 5.
-            If `abs_change` and/or `rel_change` are provided, this value will be ignored.
+            Number of design points to generate for each design variable. Default: 5.
+            if n_designs = 3 and we have design variables x1 ( 1<x1≤5) and x2 (10≤x2<20),
+            then the design values will be:
+                x1 = np.linspace(1, 5, 3) -> x1 = [1, 3, 5]
+                x2 = np.linspace(10, 20, 3) -> x2 = [10, 15, 20]
+            If `abs_change` and/or `rel_change` are provided, this argument will be
+            ignored. Also, the design variables need to be bounded for this argument
+            to be used.
         method : str, optional
-            string to specify which method should be used. options are ``kaug`` and
-            ``sequential`. Default: "sequential"
+            string to specify which method should be used to compute Fisher Information
+            Matrix (FIM). Options are ``kaug`` and ``sequential`. Default: "sequential"
         df_settings : tuple, optional
-            A tuple containing the settings for set_option() method of the pandas
+            A tuple containing the arguments for option_context() method of the pandas
             DataFrame. Default: (True, None, None, 500)
             - first element: whether to return a pandas DataFrame (True/False)
             - second element: number of max_columns for the DataFrame. Default: None,
@@ -1877,12 +1888,18 @@ class DesignOfExperiments:
             - third element: number of max_rows for the DataFrame. Default: None,
                 i.e., no limit on the number of rows.
             - fourth element: display width for the DataFrame. Default: 500.
+            If the first element is True, the results (FIM metrics) will be printed as
+            a pandas DataFrame as well.
         initialization_scheme : str, optional
             Which scheme to use for initializing the design variables.
             Options are ``"snake_traversal"`` and ``"nested_for_loop"``.
-            Default: "snake_traversal"
+            If ``"snake_traversal"``, the design variables will be initialized in a
+            snake-like pattern where only one design variables change at a time.
+            If ``"nested_for_loop"``, the design variables will be initialized using a
+            nested for loop. Default: "snake_traversal"
         file_name : str, optional
-            if provided, will save the results to a json file. Default: None
+            if provided, will save the results to a json file. Default: None (will not
+            save the results).
 
         Returns
         -------
