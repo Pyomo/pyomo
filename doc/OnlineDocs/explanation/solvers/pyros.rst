@@ -880,32 +880,32 @@ your console output will, by default, look like this:
     solve_master_globally=True
    ------------------------------------------------------------------------------
    Model Statistics (before preprocessing):
-     Number of variables : 4
-       First-stage variables : 1
-       Second-stage variables : 1
-       State variables : 2
-     Number of uncertain parameters : 2
-     Number of constraints : 4
-       Equality constraints : 2
-       Inequality constraints : 2
+     Number of variables : 31
+       First-stage variables : 7
+       Second-stage variables : 6
+       State variables : 18
+     Number of uncertain parameters : 4
+     Number of constraints : 24
+       Equality constraints : 18
+       Inequality constraints : 6
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.510s.
+   Done preprocessing; required wall time of 0.013s.
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     5.4079e+03  -            -            3       7.9226e+00   0.705
-   1     5.4079e+03  6.0451e-10   1.0717e-10   2       1.0250e-01   1.028
-   2     6.5403e+03  1.0018e-01   7.4564e-03   1       1.7142e-03   1.411
-   3     6.5403e+03  1.9372e-16   3.6853e-06   2       1.6673e-03   1.783
-   4     6.5403e+03  0.0000e+00   2.9067e-06   0       9.8487e-05g  2.704
+   0     3.5838e+07  -            -            5       1.8832e+04   0.611
+   1     3.5838e+07  1.2289e-09   1.5886e-12   5       2.8919e+02   1.702
+   2     3.6269e+07  3.1647e-01   1.0432e-01   4       2.9020e+02   3.407
+   3     3.6285e+07  7.6526e-01   1.4596e-04   7       7.5966e+03   5.919
+   4     3.6285e+07  1.1608e-11   2.2270e-01   0       1.5084e-12g  8.823
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Termination stats:
     Iterations            : 5
-    Solve time (wall s)   : 2.704
-    Final objective value : 6.5403e+03
+    Solve time (wall s)   : 8.824
+    Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
    All done. Exiting PyROS.
