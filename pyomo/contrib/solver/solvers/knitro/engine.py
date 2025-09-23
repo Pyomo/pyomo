@@ -31,7 +31,8 @@ class _Callback(Protocol):
     def hess(self, req: Request, res: Result) -> int: ...
 
     def expand(self) -> Callback:
-        return Callback(*map(self._expand, (self.func, self.grad, self.hess)))
+        procs = (self.func, self.grad, self.hess)
+        return Callback(*map(self._expand, procs))
 
     @staticmethod
     def _expand(proc: Callable[[Request, Result], int]):
@@ -247,10 +248,7 @@ class Engine:
     def add_cons(self, cons: Sequence[ConstraintData]) -> None:
         self.add_items(ConstraintData, cons, self.con_map)
         self.set_bounds(ConstraintData, cons, self.con_map)
-
-        for con in cons:
-            i = self.con_map[id(con)]
-            self.add_structures(i, con.body)
+        self.set_con_structures(cons)
 
     def set_obj(self, obj: ObjectiveData) -> None:
         self.has_objective = True
@@ -367,7 +365,13 @@ class Engine:
     def set_var_types(self, variables: Iterable[VarData]) -> None:
         var_types = parse_var_types(variables, self.var_map)
         if var_types:
-            self.execute(knitro.KN_set_var_types, var_types.keys(), var_types.values())
+            func = knitro.KN_set_var_types
+            self.execute(func, var_types.keys(), var_types.values())
+
+    def set_con_structures(self, cons: Iterable[ConstraintData]) -> None:
+        for con in cons:
+            i = self.con_map[id(con)]
+            self.add_structures(i, con.body)
 
     def add_structures(self, i: Optional[int], expr) -> None:
         repn = generate_standard_repn(expr)
