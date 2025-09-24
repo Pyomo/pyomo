@@ -743,7 +743,7 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
                 for con, res in all_solve_call_results.items()
                 if res.found_violation
             )
-            config.progress_logger.info(
+            config.progress_logger.debug(
                 f"Violated constraints:\n {violated_con_names} "
             )
             config.progress_logger.debug(
