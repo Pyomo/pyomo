@@ -1,5 +1,6 @@
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, Optional, Protocol, TypeVar, Union
+from types import MappingProxyType
+from typing import Any, Optional, Protocol, TypeVar
 
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.numeric_types import value
@@ -14,6 +15,8 @@ from .typing import (
     Atom,
     BoundType,
     Callback,
+    ItemType,
+    T,
     Request,
     Result,
     StructureType,
@@ -82,8 +85,7 @@ class _ConstraintCallback(_Callback):
 
 
 def parse_bounds(
-    items: Union[Iterable[VarData], Iterable[ConstraintData]],
-    idx_map: Mapping[int, int],
+    items: Iterable[T], idx_map: Mapping[int, int]
 ) -> Mapping[BoundType, MutableMapping[int, float]]:
     bounds_map = {bnd_type: {} for bnd_type in BoundType}
     for item in items:
@@ -107,24 +109,26 @@ def parse_bounds(
     return bounds_map
 
 
-def parse_var_types(
-    variables: Iterable[VarData], idx_map: Mapping[int, int]
+def parse_types(
+    items: Iterable[T], idx_map: Mapping[int, int]
 ) -> Mapping[int, int]:
-    var_types = {}
-    for var in variables:
-        i = idx_map[id(var)]
-        if var.is_binary():
-            var_types[i] = knitro.KN_VARTYPE_BINARY
-        elif var.is_integer():
-            var_types[i] = knitro.KN_VARTYPE_INTEGER
-        elif var.is_continuous():
-            var_types[i] = knitro.KN_VARTYPE_CONTINUOUS
-        else:
-            raise ValueError(f"Unsupported variable type for variable {var.name}.")
-    return var_types
+    types_map = {}
+    for item in items:
+        i = idx_map[id(item)]
+        if isinstance(item, VarData):
+            if item.is_binary():
+                types_map[i] = knitro.KN_VARTYPE_BINARY
+            elif item.is_integer():
+                types_map[i] = knitro.KN_VARTYPE_INTEGER
+            elif item.is_continuous():
+                types_map[i] = knitro.KN_VARTYPE_CONTINUOUS
+            else:
+                msg = f"Variable {item.name} has unsupported type."
+                raise ValueError(msg)
+    return types_map
 
 
-def get_param_setter(param_type: int) -> Callable[..., None]:
+def api_set_param(param_type: int) -> Callable[..., None]:
     if param_type == knitro.KN_PARAMTYPE_INTEGER:
         return knitro.KN_set_int_param
     elif param_type == knitro.KN_PARAMTYPE_FLOAT:
@@ -134,8 +138,8 @@ def get_param_setter(param_type: int) -> Callable[..., None]:
     raise UnreachableError()
 
 
-def get_value_getter(
-    item_type: type, value_type: ValueType
+def api_get_values(
+    item_type: type[T], value_type: ValueType
 ) -> Callable[..., Optional[list[float]]]:
     if item_type is VarData:
         if value_type == ValueType.PRIMAL:
@@ -150,7 +154,7 @@ def get_value_getter(
     raise UnreachableError()
 
 
-def get_item_adder(item_type: type) -> Callable[..., Optional[list[int]]]:
+def api_add_items(item_type: type[T]) -> Callable[..., Optional[list[int]]]:
     if item_type is VarData:
         return knitro.KN_add_vars
     elif item_type is ConstraintData:
@@ -158,7 +162,7 @@ def get_item_adder(item_type: type) -> Callable[..., Optional[list[int]]]:
     raise UnreachableError()
 
 
-def get_bound_setter(item_type: type, bound_type: BoundType) -> Callable[..., None]:
+def api_set_bnds(item_type: type[T], bound_type: BoundType) -> Callable[..., None]:
     if item_type is VarData:
         if bound_type == BoundType.EQ:
             return knitro.KN_set_var_fxbnds
@@ -175,10 +179,12 @@ def get_bound_setter(item_type: type, bound_type: BoundType) -> Callable[..., No
             return knitro.KN_set_con_upbnds
     raise UnreachableError()
 
+def api_set_types(item_type: type[T]) -> Callable[..., None]:
+    if item_type is VarData:
+        return knitro.KN_set_var_types
+    raise UnreachableError()
 
-def get_structure_adder(
-    is_obj: bool, structure_type: StructureType
-) -> Callable[..., None]:
+def api_add_struct(is_obj: bool, structure_type: StructureType) -> Callable[..., None]:
     if is_obj:
         if structure_type == StructureType.CONSTANT:
             return knitro.KN_add_obj_constant
@@ -199,8 +205,7 @@ class Engine:
     """A wrapper around the KNITRO API for a single optimization problem."""
 
     has_objective: bool
-    var_map: MutableMapping[int, int]
-    con_map: MutableMapping[int, int]
+    maps: Mapping[type[ItemType], MutableMapping[int, int]]
     nonlinear_map: MutableMapping[Optional[int], NonlinearExpressionData]
     nonlinear_diff_order: int
 
@@ -208,10 +213,15 @@ class Engine:
     _status: Optional[int]
 
     def __init__(self, *, nonlinear_diff_order: int = 2) -> None:
-        self.var_map = {}
-        self.con_map = {}
-        self.nonlinear_map = {}
         self.has_objective = False
+        # Maps:
+        # VarData -> {id(var): idx in KNITRO}
+        # ConstraintData -> {id(con): idx in KNITRO}
+        self.maps = MappingProxyType({VarData: {}, ConstraintData: {}})
+        # Nonlinear map:
+        # None -> objective nonlinear expression
+        # idx_con -> constranit nonlinear expression
+        self.nonlinear_map = {}
         self.nonlinear_diff_order = nonlinear_diff_order
         self._kc = None
         self._status = None
@@ -222,10 +232,10 @@ class Engine:
     def renew(self) -> None:
         self.close()
         self._kc = Package.create_context()
-        self.var_map.clear()
-        self.con_map.clear()
-        self.nonlinear_map.clear()
         self.has_objective = False
+        for item_type in self.maps:
+            self.maps[item_type].clear()
+        self.nonlinear_map.clear()
         # TODO: remove this when the tolerance tests are fixed in test_solvers
         tol = 1e-8
         self.set_options(ftol=tol, opttol=tol, xtol=tol)
@@ -235,22 +245,22 @@ class Engine:
             self.execute(knitro.KN_free)
             self._kc = None
 
-    T = TypeVar("T")
+    R = TypeVar("R")
 
-    def execute(self, api_func: Callable[..., T], *args, **kwargs) -> T:
+    def execute(self, api_func: Callable[..., R], *args, **kwargs) -> R:
         if self._kc is None:
             msg = "KNITRO context has not been initialized or has been freed."
             raise RuntimeError(msg)
         return api_func(self._kc, *args, **kwargs)
 
     def add_vars(self, variables: Sequence[VarData]) -> None:
-        self.add_items(VarData, variables, self.var_map)
-        self.set_var_types(variables)
-        self.set_bounds(VarData, variables, self.var_map)
+        self.add_items(VarData, variables)
+        self.set_types(VarData, variables)
+        self.set_bounds(VarData, variables)
 
     def add_cons(self, cons: Sequence[ConstraintData]) -> None:
-        self.add_items(ConstraintData, cons, self.con_map)
-        self.set_bounds(ConstraintData, cons, self.con_map)
+        self.add_items(ConstraintData, cons)
+        self.set_bounds(ConstraintData, cons)
         self.set_con_structures(cons)
 
     def set_obj(self, obj: ObjectiveData) -> None:
@@ -310,29 +320,21 @@ class Engine:
             return None
         return self.execute(knitro.KN_get_obj_value)
 
-    def get_idxs(
-        self, item_type: type, items: Union[Iterable[VarData], Iterable[ConstraintData]]
-    ) -> list[int]:
-        if item_type is VarData:
-            return [self.var_map[id(var)] for var in items]
-        elif item_type is ConstraintData:
-            return [self.con_map[id(con)] for con in items]
-        raise UnreachableError()
+    def get_idxs(self, item_type: type[T], items: Iterable[T]) -> list[int]:
+        idx_map = self.maps[item_type]
+        return [idx_map[id(item)] for item in items]
 
     def get_values(
-        self,
-        item_type: type,
-        value_type: ValueType,
-        items: Union[Sequence[VarData], Sequence[ConstraintData]],
+        self, item_type: type[T], value_type: ValueType, items: Iterable[T]
     ) -> Optional[list[float]]:
-        getter = get_value_getter(item_type, value_type)
+        func = api_get_values(item_type, value_type)
         idxs = self.get_idxs(item_type, items)
-        return self.execute(getter, idxs)
+        return self.execute(func, idxs)
 
     def set_option(self, param: str, val) -> None:
         param_id = self.execute(knitro.KN_get_param_id, param)
         param_type = self.execute(knitro.KN_get_param_type, param_id)
-        func = get_param_setter(param_type)
+        func = api_set_param(param_type)
         self.execute(func, param_id, val)
 
     def set_obj_goal(self, sense: ObjectiveSense) -> None:
@@ -343,40 +345,30 @@ class Engine:
         )
         self.execute(knitro.KN_set_obj_goal, obj_goal)
 
-    def add_items(
-        self,
-        item_type: type,
-        items: Union[Sequence[VarData], Sequence[ConstraintData]],
-        idx_map: MutableMapping[int, int],
-    ) -> None:
-        func = get_item_adder(item_type)
+    def add_items(self, item_type: type[T], items: Sequence[T]) -> None:
+        func = api_add_items(item_type)
         idxs = self.execute(func, len(items))
         if idxs is not None:
-            idx_map.update(zip(map(id, items), idxs))
+            self.maps[item_type].update(zip(map(id, items), idxs))
 
-    def set_bounds(
-        self,
-        item_type: type,
-        items: Union[Sequence[VarData], Sequence[ConstraintData]],
-        idx_map: MutableMapping[int, int],
-    ) -> None:
-        bounds_map = parse_bounds(items, idx_map)
+    def set_bounds(self, item_type: type[T], items: Iterable[T]) -> None:
+        bounds_map = parse_bounds(items, self.maps[item_type])
         for bound_type, bounds in bounds_map.items():
             if not bounds:
                 continue
 
-            func = get_bound_setter(item_type, bound_type)
+            func = api_set_bnds(item_type, bound_type)
             self.execute(func, bounds.keys(), bounds.values())
 
-    def set_var_types(self, variables: Iterable[VarData]) -> None:
-        var_types = parse_var_types(variables, self.var_map)
-        if var_types:
-            func = knitro.KN_set_var_types
-            self.execute(func, var_types.keys(), var_types.values())
+    def set_types(self, item_type: type[T], items: Iterable[T]) -> None:
+        types_map = parse_types(items, self.maps[item_type])
+        if types_map:
+            func = api_set_types(item_type)
+            self.execute(func, types_map.keys(), types_map.values())
 
     def set_con_structures(self, cons: Iterable[ConstraintData]) -> None:
         for con in cons:
-            i = self.con_map[id(con)]
+            i = self.maps[ConstraintData][id(con)]
             self.add_structures(i, con.body)
 
     def set_obj_structures(self, obj: ObjectiveData) -> None:
@@ -410,14 +402,14 @@ class Engine:
             args_seq += [(idx_quad_vars1, idx_quad_vars2, quad_coefs)]
 
         for structure_type, args in zip(structure_type_seq, args_seq):
-            func = get_structure_adder(is_obj, structure_type)
+            func = api_add_struct(is_obj, structure_type)
             self.execute(func, *base_args, *args)
 
         if repn.nonlinear_expr is not None:
             self.nonlinear_map[i] = NonlinearExpressionData(
                 repn.nonlinear_expr,
                 repn.nonlinear_vars,
-                var_map=self.var_map,
+                var_map=self.maps[VarData],
                 diff_order=self.nonlinear_diff_order,
             )
 
@@ -429,9 +421,11 @@ class Engine:
         self, i: Optional[int], expr: NonlinearExpressionData
     ) -> None:
         is_obj = i is None
-        callback_type = _ObjectiveCallback if is_obj else _ConstraintCallback
-        callback_args = ((i,) if not is_obj else ()) + (expr,)
-        callback = callback_type(*callback_args).expand()
+        if is_obj:
+            ne = _ObjectiveCallback(expr)
+        else:
+            ne = _ConstraintCallback(i, expr)
+        callback = ne.expand()
 
         idx_cons = [i] if not is_obj else None
         cb = self.execute(knitro.KN_add_eval_callback, is_obj, idx_cons, callback.func)

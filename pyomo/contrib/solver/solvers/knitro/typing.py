@@ -10,9 +10,11 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Callable
-from typing import Any, Optional, Protocol
+from typing import Any, Optional, Protocol, TypeVar, Union
 
 from pyomo.common.enums import Enum
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.var import VarData
 
 
 class BoundType(Enum):
@@ -34,6 +36,10 @@ class ValueType(Enum):
     @property
     def sign(self) -> float:
         return -1.0 if self == ValueType.DUAL else 1.0
+
+
+ItemType = Union[VarData, ConstraintData]
+T = TypeVar("T", bound=ItemType)
 
 
 class Atom(Protocol):

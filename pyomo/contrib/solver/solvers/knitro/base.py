@@ -10,10 +10,10 @@
 #  ___________________________________________________________________________
 
 from abc import abstractmethod
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from io import StringIO
-from typing import Optional, Union
+from typing import Optional
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import ApplicationError, PyomoException
@@ -43,7 +43,7 @@ from .config import Config
 from .engine import Engine
 from .package import PackageChecker
 from .solution import SolutionLoader, SolutionProvider
-from .typing import UnreachableError, ValueType
+from .typing import ItemType, T, UnreachableError, ValueType
 from .utils import Problem
 
 
@@ -95,7 +95,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         return results
 
     def _build_config(self, **kwds) -> Config:
-        return self.config(value=kwds, preserve_implicit=True)
+        return self.config(value=kwds, preserve_implicit=True)  # type: ignore
 
     def _validate_problem(self) -> None:
         if len(self._problem.objs) > 1:
@@ -167,13 +167,13 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
     def get_values(
         self,
-        item_type: type,
+        item_type: type[T],
         value_type: ValueType,
-        items: Optional[Union[Sequence[VarData], Sequence[ConstraintData]]] = None,
+        items: Optional[Sequence[T]] = None,
         *,
         exists: bool,
         solution_id: Optional[int] = None,
-    ):
+    ) -> Mapping[T, float]:
         error_type = self._get_error_type(item_type, value_type)
         if not exists:
             raise error_type()
@@ -193,12 +193,9 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
     def _get_vars(self) -> list[VarData]:
         return self._problem.variables
 
-    def _get_items(self, item_type: type):
-        if item_type is VarData:
-            return self._problem.variables
-        elif item_type is ConstraintData:
-            return self._problem.cons
-        raise UnreachableError()
+    def _get_items(self, item_type: type[T]) -> Sequence[T]:
+        maps = {VarData: self._problem.variables, ConstraintData: self._problem.cons}
+        return maps[item_type]
 
     @staticmethod
     def _get_solution_status(status: int) -> SolutionStatus:
@@ -257,7 +254,9 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
             return TerminationCondition.unknown
 
     @staticmethod
-    def _get_error_type(item_type: type, value_type: ValueType) -> type[PyomoException]:
+    def _get_error_type(
+        item_type: type[ItemType], value_type: ValueType
+    ) -> type[PyomoException]:
         if item_type is VarData and value_type == ValueType.PRIMAL:
             return NoSolutionError
         elif item_type is VarData and value_type == ValueType.DUAL:

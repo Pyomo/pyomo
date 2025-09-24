@@ -10,38 +10,27 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Mapping, Sequence
-from typing import Optional, Protocol, overload
+from typing import Optional, Protocol
 
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 
-from .typing import ValueType
+from .typing import T, ValueType
 
 
 class SolutionProvider(Protocol):
 
     def get_num_solutions(self) -> int: ...
-    @overload
     def get_values(
         self,
-        item_type: type[VarData],
+        item_type: type[T],
         value_type: ValueType,
-        items: Optional[Sequence[VarData]] = None,
+        items: Optional[Sequence[T]] = None,
         *,
         exists: bool,
         solution_id: Optional[int] = None,
-    ) -> Mapping[VarData, float]: ...
-    @overload
-    def get_values(
-        self,
-        item_type: type[ConstraintData],
-        value_type: ValueType,
-        items: Optional[Sequence[ConstraintData]] = None,
-        *,
-        exists: bool,
-        solution_id: Optional[int] = None,
-    ) -> Mapping[ConstraintData, float]: ...
+    ) -> Mapping[T, float]: ...
 
 
 class SolutionLoader(SolutionLoaderBase):
