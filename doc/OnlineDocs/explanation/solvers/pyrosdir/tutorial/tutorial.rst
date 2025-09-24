@@ -19,12 +19,13 @@ To successfully run this tutorial, you will need to
 along with at least one local
 nonlinear programming
 (NLP) solver and at least one global NLP solver.
-In particular,
+In particular, this tutorial uses
 `IPOPT <https://github.com/coin-or/Ipopt>`__
-(to serve as the local solver), `BARON <https://minlp.com/baron-solver>`__
-(to serve as the global solver), and `COUENNE <https://github.com/coin-or/Couenne>`__
-(to serve as a backup global solver) are required to run the tutorial
-without modification.
+as the local solver,
+`BARON <https://minlp.com/baron-solver>`__
+as the global solver,
+and `COUENNE <https://github.com/coin-or/Couenne>`__
+as a backup global solver.
 
 You will also need to
 `install Matplotlib <https://matplotlib.org/stable/install/index.html>`__,
