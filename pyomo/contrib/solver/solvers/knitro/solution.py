@@ -13,10 +13,9 @@ from collections.abc import Mapping, Sequence
 from typing import Optional, Protocol
 
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.solvers.knitro.typing import ItemType, ValueType
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
-
-from .typing import T, ValueType
 
 
 class SolutionProvider(Protocol):
@@ -24,13 +23,13 @@ class SolutionProvider(Protocol):
     def get_num_solutions(self) -> int: ...
     def get_values(
         self,
-        item_type: type[T],
+        item_type: type[ItemType],
         value_type: ValueType,
-        items: Optional[Sequence[T]] = None,
+        items: Optional[Sequence[ItemType]] = None,
         *,
         exists: bool,
         solution_id: Optional[int] = None,
-    ) -> Mapping[T, float]: ...
+    ) -> Mapping[ItemType, float]: ...
 
 
 class SolutionLoader(SolutionLoaderBase):

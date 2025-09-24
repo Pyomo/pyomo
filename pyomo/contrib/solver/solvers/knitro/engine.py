@@ -1,33 +1,47 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2025
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from types import MappingProxyType
 from typing import Any, Optional, Protocol, TypeVar
 
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.numeric_types import value
+from pyomo.contrib.solver.solvers.knitro.api import knitro
+from pyomo.contrib.solver.solvers.knitro.package import Package
+from pyomo.contrib.solver.solvers.knitro.typing import (
+    BoundType,
+    Callback,
+    Function,
+    ItemData,
+    CallbackFunction,
+    Request,
+    Result,
+    StructureType,
+    ItemType,
+    UnreachableError,
+    ValueType,
+)
+from pyomo.contrib.solver.solvers.knitro.utils import NonlinearExpressionData
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.var import VarData
 from pyomo.repn.standard_repn import generate_standard_repn
 
-from .api import knitro
-from .package import Package
-from .typing import (
-    Atom,
-    BoundType,
-    Callback,
-    ItemType,
-    T,
-    Request,
-    Result,
-    StructureType,
-    UnreachableError,
-    ValueType,
-)
-from .utils import NonlinearExpressionData
+
+_CallbackFunction = Callable[[Request, Result], int]
 
 
 class _Callback(Protocol):
-    _atom: Atom
+    _function: Function
 
     def func(self, req: Request, res: Result) -> int: ...
     def grad(self, req: Request, res: Result) -> int: ...
@@ -38,7 +52,7 @@ class _Callback(Protocol):
         return Callback(*map(self._expand, procs))
 
     @staticmethod
-    def _expand(proc: Callable[[Request, Result], int]):
+    def _expand(proc: _CallbackFunction) -> CallbackFunction:
         def _expanded(
             kc: Any, cb: Any, req: Request, res: Result, user_data: Any = None
         ) -> int:
@@ -48,44 +62,44 @@ class _Callback(Protocol):
 
 
 class _ObjectiveCallback(_Callback):
-    def __init__(self, atom: Atom) -> None:
-        self._atom = atom
+    def __init__(self, function: Function) -> None:
+        self._function = function
 
     def func(self, req: Request, res: Result) -> int:
-        res.obj = self._atom.func(req.x)
+        res.obj = self._function.evaluate(req.x)
         return 0
 
     def grad(self, req: Request, res: Result) -> int:
-        res.objGrad[:] = self._atom.grad(req.x)
+        res.objGrad[:] = self._function.gradient(req.x)
         return 0
 
     def hess(self, req: Request, res: Result) -> int:
-        res.hess[:] = self._atom.hess(req.x, req.sigma)
+        res.hess[:] = self._function.hessian(req.x, req.sigma)
         return 0
 
 
 class _ConstraintCallback(_Callback):
     i: int
 
-    def __init__(self, i: int, atom: Atom) -> None:
+    def __init__(self, i: int, evaluator: Function) -> None:
         self.i = i
-        self._atom = atom
+        self._function = evaluator
 
     def func(self, req: Request, res: Result) -> int:
-        res.c[:] = [self._atom.func(req.x)]
+        res.c[:] = [self._function.evaluate(req.x)]
         return 0
 
     def grad(self, req: Request, res: Result) -> int:
-        res.jac[:] = self._atom.grad(req.x)
+        res.jac[:] = self._function.gradient(req.x)
         return 0
 
     def hess(self, req: Request, res: Result) -> int:
-        res.hess[:] = self._atom.hess(req.x, req.lambda_[self.i])
+        res.hess[:] = self._function.hessian(req.x, req.lambda_[self.i])
         return 0
 
 
 def parse_bounds(
-    items: Iterable[T], idx_map: Mapping[int, int]
+    items: Iterable[ItemType], idx_map: Mapping[int, int]
 ) -> Mapping[BoundType, MutableMapping[int, float]]:
     bounds_map = {bnd_type: {} for bnd_type in BoundType}
     for item in items:
@@ -109,7 +123,9 @@ def parse_bounds(
     return bounds_map
 
 
-def parse_types(items: Iterable[T], idx_map: Mapping[int, int]) -> Mapping[int, int]:
+def parse_types(
+    items: Iterable[ItemType], idx_map: Mapping[int, int]
+) -> Mapping[int, int]:
     types_map = {}
     for item in items:
         i = idx_map[id(item)]
@@ -137,7 +153,7 @@ def api_set_param(param_type: int) -> Callable[..., None]:
 
 
 def api_get_values(
-    item_type: type[T], value_type: ValueType
+    item_type: type[ItemType], value_type: ValueType
 ) -> Callable[..., Optional[list[float]]]:
     if item_type is VarData:
         if value_type == ValueType.PRIMAL:
@@ -152,7 +168,7 @@ def api_get_values(
     raise UnreachableError()
 
 
-def api_add_items(item_type: type[T]) -> Callable[..., Optional[list[int]]]:
+def api_add_items(item_type: type[ItemType]) -> Callable[..., Optional[list[int]]]:
     if item_type is VarData:
         return knitro.KN_add_vars
     elif item_type is ConstraintData:
@@ -160,7 +176,9 @@ def api_add_items(item_type: type[T]) -> Callable[..., Optional[list[int]]]:
     raise UnreachableError()
 
 
-def api_set_bnds(item_type: type[T], bound_type: BoundType) -> Callable[..., None]:
+def api_set_bnds(
+    item_type: type[ItemType], bound_type: BoundType
+) -> Callable[..., None]:
     if item_type is VarData:
         if bound_type == BoundType.EQ:
             return knitro.KN_set_var_fxbnds
@@ -178,7 +196,7 @@ def api_set_bnds(item_type: type[T], bound_type: BoundType) -> Callable[..., Non
     raise UnreachableError()
 
 
-def api_set_types(item_type: type[T]) -> Callable[..., None]:
+def api_set_types(item_type: type[ItemType]) -> Callable[..., None]:
     if item_type is VarData:
         return knitro.KN_set_var_types
     raise UnreachableError()
@@ -205,7 +223,7 @@ class Engine:
     """A wrapper around the KNITRO API for a single optimization problem."""
 
     has_objective: bool
-    maps: Mapping[type[ItemType], MutableMapping[int, int]]
+    maps: Mapping[type[ItemData], MutableMapping[int, int]]
     nonlinear_map: MutableMapping[Optional[int], NonlinearExpressionData]
     nonlinear_diff_order: int
 
@@ -245,9 +263,9 @@ class Engine:
             self.execute(knitro.KN_free)
             self._kc = None
 
-    R = TypeVar("R")
+    T = TypeVar("T")
 
-    def execute(self, api_func: Callable[..., R], *args, **kwargs) -> R:
+    def execute(self, api_func: Callable[..., T], *args, **kwargs) -> T:
         if self._kc is None:
             msg = "KNITRO context has not been initialized or has been freed."
             raise RuntimeError(msg)
@@ -320,12 +338,17 @@ class Engine:
             return None
         return self.execute(knitro.KN_get_obj_value)
 
-    def get_idxs(self, item_type: type[T], items: Iterable[T]) -> list[int]:
+    def get_idxs(
+        self, item_type: type[ItemType], items: Iterable[ItemType]
+    ) -> list[int]:
         idx_map = self.maps[item_type]
         return [idx_map[id(item)] for item in items]
 
     def get_values(
-        self, item_type: type[T], value_type: ValueType, items: Iterable[T]
+        self,
+        item_type: type[ItemType],
+        value_type: ValueType,
+        items: Iterable[ItemType],
     ) -> Optional[list[float]]:
         func = api_get_values(item_type, value_type)
         idxs = self.get_idxs(item_type, items)
@@ -345,13 +368,13 @@ class Engine:
         )
         self.execute(knitro.KN_set_obj_goal, obj_goal)
 
-    def add_items(self, item_type: type[T], items: Sequence[T]) -> None:
+    def add_items(self, item_type: type[ItemType], items: Sequence[ItemType]) -> None:
         func = api_add_items(item_type)
         idxs = self.execute(func, len(items))
         if idxs is not None:
             self.maps[item_type].update(zip(map(id, items), idxs))
 
-    def set_bounds(self, item_type: type[T], items: Iterable[T]) -> None:
+    def set_bounds(self, item_type: type[ItemType], items: Iterable[ItemType]) -> None:
         bounds_map = parse_bounds(items, self.maps[item_type])
         for bound_type, bounds in bounds_map.items():
             if not bounds:
@@ -360,7 +383,7 @@ class Engine:
             func = api_set_bnds(item_type, bound_type)
             self.execute(func, bounds.keys(), bounds.values())
 
-    def set_types(self, item_type: type[T], items: Iterable[T]) -> None:
+    def set_types(self, item_type: type[ItemType], items: Iterable[ItemType]) -> None:
         types_map = parse_types(items, self.maps[item_type])
         if types_map:
             func = api_set_types(item_type)

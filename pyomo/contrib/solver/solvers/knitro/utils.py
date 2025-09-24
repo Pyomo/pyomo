@@ -22,18 +22,18 @@ from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.core.base.var import VarData
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 
-from .typing import Atom
+from pyomo.contrib.solver.solvers.knitro.typing import Function
 
 
 def get_active_objectives(block: BlockData) -> list[ObjectiveData]:
-    """
-    Retrieve all active ObjectiveData objects from a Pyomo Block.
+    """Retrieve all active ObjectiveData objects from a Pyomo Block.
 
     Args:
         block (BlockData): The Pyomo block to search for objectives.
 
     Returns:
         list[ObjectiveData]: A sorted list of all active objectives in the block.
+
     """
     generator = block.component_data_objects(
         Objective, descend_into=True, active=True, sort=True
@@ -42,14 +42,14 @@ def get_active_objectives(block: BlockData) -> list[ObjectiveData]:
 
 
 def get_active_constraints(block: BlockData) -> list[ConstraintData]:
-    """
-    Retrieve all active ConstraintData objects from a Pyomo Block.
+    """Retrieve all active ConstraintData objects from a Pyomo Block.
 
     Args:
         block (BlockData): The Pyomo block to search for constraints.
 
     Returns:
         list[ConstraintData]: A sorted list of all active constraints in the block.
+
     """
     generator = block.component_data_objects(
         Constraint, descend_into=True, active=True, sort=True
@@ -57,9 +57,8 @@ def get_active_constraints(block: BlockData) -> list[ConstraintData]:
     return list(generator)
 
 
-class Problem:
-    """
-    Intermediate representation of a Pyomo model for KNITRO.
+class ModelCollector:
+    """Intermediate representation of a Pyomo model for KNITRO.
 
     Collects all active objectives, constraints, and referenced variables from a Pyomo Block.
     This class is used to extract and organize model data before passing it to the solver.
@@ -68,6 +67,7 @@ class Problem:
         objs (list[ObjectiveData]): list of active objectives.
         cons (list[ConstraintData]): list of active constraints.
         variables (list[VarData]): list of all referenced variables.
+
     """
 
     objs: list[ObjectiveData]
@@ -76,12 +76,12 @@ class Problem:
     _vars: MutableSet[VarData]
 
     def __init__(self, block: Optional[BlockData] = None) -> None:
-        """
-        Initialize a Problem instance.
+        """Initialize a Problem instance.
 
         Args:
             block (Optional[BlockData]): Pyomo block to initialize from. If None,
                 creates an empty problem that can be populated later.
+
         """
         self._vars = ComponentSet()
         self.objs = []
@@ -98,21 +98,21 @@ class Problem:
         self._vars.clear()
 
     def set_block(self, block: BlockData) -> None:
-        """
-        Replace the current problem data with data from a new block.
+        """Replace the current problem data with data from a new block.
 
         Args:
             block (BlockData): The Pyomo block to extract data from.
+
         """
         self.clear()
         self.add_block(block)
 
     def add_block(self, block: BlockData) -> None:
-        """
-        Add objectives, constraints, and variables from a block to the problem.
+        """Add objectives, constraints, and variables from a block to the problem.
 
         Args:
             block (BlockData): The Pyomo block to extract data from.
+
         """
         new_objs = get_active_objectives(block)
         new_cons = get_active_constraints(block)
@@ -138,23 +138,22 @@ class Problem:
 def set_var_values(
     variables: Iterable[VarData], values: Sequence[float], var_map: Mapping[int, int]
 ) -> None:
-    """
-    Set the values of a list of Pyomo variables from a list of values.
+    """Set the values of a list of Pyomo variables from a list of values.
 
     Args:
         variables (Iterable[VarData]): The variables to set.
         values (list[float]): The list of values to assign to the variables.
         var_map (Mapping[int, int]): A mapping from variable id to index in the
             values list.
+
     """
     for var in variables:
         i = var_map[id(var)]
         var.set_value(values[i])
 
 
-class NonlinearExpressionData(Atom):
-    """
-    Holds the data required to evaluate a non-linear expression.
+class NonlinearExpressionData(Function):
+    """Holds the data required to evaluate a non-linear expression.
 
     This class stores a Pyomo expression along with its variables and can compute
     gradient and Hessian information for use with optimization solvers.
@@ -169,6 +168,7 @@ class NonlinearExpressionData(Atom):
             - 0: function evaluation only
             - 1: function + gradient
             - 2: function + gradient + hessian
+
     """
 
     variables: list[VarData]
@@ -184,8 +184,7 @@ class NonlinearExpressionData(Atom):
         var_map: Mapping[int, int],
         diff_order: int = 0,
     ) -> None:
-        """
-        Initialize NonlinearExpressionData.
+        """Initialize NonlinearExpressionData.
 
         Args:
             expr (Expression): The Pyomo expression to evaluate.
@@ -194,6 +193,7 @@ class NonlinearExpressionData(Atom):
                 - 0: function evaluation only
                 - 1: function + gradient
                 - 2: function + gradient + hessian
+
         """
         self.func_expr = expr
         self.variables = list(variables)
@@ -206,18 +206,17 @@ class NonlinearExpressionData(Atom):
 
     @property
     def grad_vars(self) -> list[VarData]:
-        """
-        Get the list of variables for which gradients are available.
+        """Get the list of variables for which gradients are available.
 
         Returns:
             list[VarData]: Variables with gradient information.
+
         """
         return list(self.grad_map.keys())
 
     @property
     def hess_vars(self) -> list[tuple[VarData, VarData]]:
-        """
-        Get the list of variable pairs for which Hessian entries are available.
+        """Get the list of variable pairs for which Hessian entries are available.
 
         Returns:
             list[tuple[VarData, VarData]]: Variable pairs with Hessian information.
@@ -226,8 +225,7 @@ class NonlinearExpressionData(Atom):
         return list(self.hess_map.keys())
 
     def compute_gradient(self) -> None:
-        """
-        Compute gradient expressions for the nonlinear expression.
+        """Compute gradient expressions for the nonlinear expression.
 
         This method computes the gradient of the expression with respect to all
         variables and stores the results in the grad attribute.
@@ -240,8 +238,7 @@ class NonlinearExpressionData(Atom):
                 self.grad_map[v] = expr
 
     def compute_hessian(self) -> None:
-        """
-        Compute Hessian expressions for the nonlinear expression.
+        """Compute Hessian expressions for the nonlinear expression.
 
         This method computes the Hessian matrix of the expression with respect to all
         variables and stores the results in the hess attribute. Only the upper triangle
@@ -249,6 +246,7 @@ class NonlinearExpressionData(Atom):
 
         Note:
             This method requires that compute_gradient() has been called first.
+
         """
         variables = ComponentSet(self.variables)
         self.hess_map = ComponentMap()
@@ -262,14 +260,14 @@ class NonlinearExpressionData(Atom):
                 if (var1, var2) not in self.hess_map:
                     self.hess_map[(var1, var2)] = hess_expr
 
-    def func(self, x: list[float]) -> float:
+    def evaluate(self, x: list[float]) -> float:
         set_var_values(self.variables, x, self._var_map)
         return value(self.func_expr)
 
-    def grad(self, x: list[float]) -> list[float]:
+    def gradient(self, x: list[float]) -> list[float]:
         set_var_values(self.variables, x, self._var_map)
         return [value(g) for g in self.grad_map.values()]
 
-    def hess(self, x: list[float], mu: float) -> list[float]:
+    def hessian(self, x: list[float], mu: float) -> list[float]:
         set_var_values(self.variables, x, self._var_map)
         return [mu * value(h) for h in self.hess_map.values()]

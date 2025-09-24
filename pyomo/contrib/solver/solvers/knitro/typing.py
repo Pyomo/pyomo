@@ -38,14 +38,14 @@ class ValueType(Enum):
         return -1.0 if self == ValueType.DUAL else 1.0
 
 
-ItemType = Union[VarData, ConstraintData]
-T = TypeVar("T", bound=ItemType)
+ItemData = Union[VarData, ConstraintData]
+ItemType = TypeVar("ItemType", bound=ItemData)
 
 
-class Atom(Protocol):
-    def func(self, x: list[float]) -> float: ...
-    def grad(self, x: list[float]) -> list[float]: ...
-    def hess(self, x: list[float], mu: float) -> list[float]: ...
+class Function(Protocol):
+    def evaluate(self, x: list[float]) -> float: ...
+    def gradient(self, x: list[float]) -> list[float]: ...
+    def hessian(self, x: list[float], mu: float) -> list[float]: ...
 
 
 class Request(Protocol):
@@ -62,12 +62,12 @@ class Result(Protocol):
     hess: list[float]
 
 
+CallbackFunction = Callable[[Any, Any, Request, Result, Optional[Any]], int]
+
+
 class Callback:
     def __init__(
-        self,
-        func: Callable[[Any, Any, Request, Result, Optional[Any]], int],
-        grad: Callable[[Any, Any, Request, Result, Optional[Any]], int],
-        hess: Callable[[Any, Any, Request, Result, Optional[Any]], int],
+        self, func: CallbackFunction, grad: CallbackFunction, hess: CallbackFunction
     ) -> None:
         self.func = func
         self.grad = grad

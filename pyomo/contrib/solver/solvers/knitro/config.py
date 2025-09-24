@@ -13,7 +13,7 @@ from pyomo.common.config import Bool, ConfigValue
 from pyomo.contrib.solver.common.config import SolverConfig
 
 
-class Config(SolverConfig):
+class KnitroConfig(SolverConfig):
     def __init__(
         self,
         description=None,

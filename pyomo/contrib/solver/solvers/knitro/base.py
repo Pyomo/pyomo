@@ -33,26 +33,33 @@ from pyomo.contrib.solver.common.util import (
     NoReducedCostsError,
     NoSolutionError,
 )
+from pyomo.contrib.solver.solvers.knitro.api import knitro
+from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
+from pyomo.contrib.solver.solvers.knitro.engine import Engine
+from pyomo.contrib.solver.solvers.knitro.package import PackageChecker
+from pyomo.contrib.solver.solvers.knitro.solution import (
+    SolutionLoader,
+    SolutionProvider,
+)
+from pyomo.contrib.solver.solvers.knitro.typing import (
+    ItemData,
+    ItemType,
+    UnreachableError,
+    ValueType,
+)
+from pyomo.contrib.solver.solvers.knitro.utils import ModelCollector
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 
-from .api import knitro
-from .config import Config
-from .engine import Engine
-from .package import PackageChecker
-from .solution import SolutionLoader, SolutionProvider
-from .typing import ItemType, T, UnreachableError, ValueType
-from .utils import Problem
 
-
-class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
-    CONFIG = Config()
-    config: Config
+class KnitroSolverBase(SolutionProvider, PackageChecker, base.SolverBase):
+    CONFIG = KnitroConfig()
+    config: KnitroConfig
 
     _engine: Engine
-    _problem: Problem
+    _problem: ModelCollector
     _stream: StringIO
     _saved_var_values: dict[int, Optional[float]]
 
@@ -60,7 +67,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         PackageChecker.__init__(self)
         base.SolverBase.__init__(self, **kwds)
         self._engine = Engine()
-        self._problem = Problem()
+        self._problem = ModelCollector()
         self._stream = StringIO()
         self._saved_var_values = {}
 
@@ -94,7 +101,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         results.timing_info.wall_time = (tock - tick).total_seconds()
         return results
 
-    def _build_config(self, **kwds) -> Config:
+    def _build_config(self, **kwds) -> KnitroConfig:
         return self.config(value=kwds, preserve_implicit=True)  # type: ignore
 
     def _validate_problem(self) -> None:
@@ -121,15 +128,15 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
     @abstractmethod
     def _presolve(
-        self, model: BlockData, config: Config, timer: HierarchicalTimer
+        self, model: BlockData, config: KnitroConfig, timer: HierarchicalTimer
     ) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def _solve(self, config: Config, timer: HierarchicalTimer) -> None:
+    def _solve(self, config: KnitroConfig, timer: HierarchicalTimer) -> None:
         raise NotImplementedError
 
-    def _postsolve(self, config: Config, timer: HierarchicalTimer) -> Results:
+    def _postsolve(self, config: KnitroConfig, timer: HierarchicalTimer) -> Results:
         status = self._engine.get_status()
         results = Results()
         results.solver_name = self.name
@@ -167,13 +174,13 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
     def get_values(
         self,
-        item_type: type[T],
+        item_type: type[ItemType],
         value_type: ValueType,
-        items: Optional[Sequence[T]] = None,
+        items: Optional[Sequence[ItemType]] = None,
         *,
         exists: bool,
         solution_id: Optional[int] = None,
-    ) -> Mapping[T, float]:
+    ) -> Mapping[ItemType, float]:
         error_type = self._get_error_type(item_type, value_type)
         if not exists:
             raise error_type()
@@ -193,7 +200,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
     def _get_vars(self) -> list[VarData]:
         return self._problem.variables
 
-    def _get_items(self, item_type: type[T]) -> Sequence[T]:
+    def _get_items(self, item_type: type[ItemType]) -> Sequence[ItemType]:
         maps = {VarData: self._problem.variables, ConstraintData: self._problem.cons}
         return maps[item_type]
 
@@ -255,7 +262,7 @@ class SolverBase(SolutionProvider, PackageChecker, base.SolverBase):
 
     @staticmethod
     def _get_error_type(
-        item_type: type[ItemType], value_type: ValueType
+        item_type: type[ItemData], value_type: ValueType
     ) -> type[PyomoException]:
         if item_type is VarData and value_type == ValueType.PRIMAL:
             return NoSolutionError

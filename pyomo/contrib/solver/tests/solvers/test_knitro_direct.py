@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.contrib.solver.solvers.knitro as knitro
 import pyomo.environ as pyo

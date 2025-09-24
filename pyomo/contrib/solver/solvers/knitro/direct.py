@@ -11,21 +11,20 @@
 
 
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.contrib.solver.solvers.knitro.base import KnitroSolverBase
+from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
 from pyomo.core.base.block import BlockData
 
-from .base import SolverBase
-from .config import Config
 
-
-class Solver(SolverBase):
+class KnitroDirectSolver(KnitroSolverBase):
     def _presolve(
-        self, model: BlockData, config: Config, timer: HierarchicalTimer
+        self, model: BlockData, config: KnitroConfig, timer: HierarchicalTimer
     ) -> None:
         timer.start("build_problem")
         self._problem.set_block(model)
         timer.stop("build_problem")
 
-    def _solve(self, config: Config, timer: HierarchicalTimer) -> None:
+    def _solve(self, config: KnitroConfig, timer: HierarchicalTimer) -> None:
         self._engine.renew()
 
         timer.start("add_vars")

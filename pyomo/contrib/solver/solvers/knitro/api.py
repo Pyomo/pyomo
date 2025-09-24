@@ -9,9 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-# import knitro
-
 from pyomo.common.dependencies import attempt_import
 
 knitro, KNITRO_AVAILABLE = attempt_import("knitro")

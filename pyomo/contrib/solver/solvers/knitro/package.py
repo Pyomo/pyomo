@@ -14,13 +14,15 @@ from typing import Optional
 
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.contrib.solver.common.base import Availability
-
-from .api import KNITRO_AVAILABLE, KNITRO_VERSION, knitro
+from pyomo.contrib.solver.solvers.knitro.api import (
+    KNITRO_AVAILABLE,
+    KNITRO_VERSION,
+    knitro,
+)
 
 
 class Package:
-    """
-    Manages the global KNITRO license context and provides utility methods for license handling.
+    """Manages the global KNITRO license context and provides utility methods for license handling.
 
     This class handles license initialization, release, context creation, version reporting,
     and license availability checks for the KNITRO solver.
@@ -30,11 +32,11 @@ class Package:
 
     @staticmethod
     def initialize_license():
-        """
-        Initialize the global KNITRO license context if not already initialized.
+        """Initialize the global KNITRO license context if not already initialized.
 
         Returns:
             The KNITRO license context object.
+
         """
         if Package._license_context is None:
             Package._license_context = knitro.KN_checkout_license()
@@ -42,42 +44,40 @@ class Package:
 
     @staticmethod
     def release_license() -> None:
-        """
-        Release the global KNITRO license context if it exists.
-        """
+        """Release the global KNITRO license context if it exists."""
         if Package._license_context is not None:
             knitro.KN_release_license(Package._license_context)
             Package._license_context = None
 
     @staticmethod
     def create_context():
-        """
-        Create a new KNITRO context using the global license context.
+        """Create a new KNITRO context using the global license context.
 
         Returns:
             The new KNITRO context object.
+
         """
         lmc = Package.initialize_license()
         return knitro.KN_new_lm(lmc)
 
     @staticmethod
     def get_version() -> tuple[int, int, int]:
-        """
-        Get the version of the KNITRO solver as a tuple.
+        """Get the version of the KNITRO solver as a tuple.
 
         Returns:
             tuple[int, int, int]: The (major, minor, patch) version of KNITRO.
+
         """
         major, minor, patch = map(int, KNITRO_VERSION.split("."))
         return major, minor, patch
 
     @staticmethod
     def check_availability() -> Availability:
-        """
-        Check if the KNITRO solver and license are available.
+        """Check if the KNITRO solver and license are available.
 
         Returns:
             Availability: The availability status (FullLicense, BadLicense, NotFound).
+
         """
         if not bool(KNITRO_AVAILABLE):
             return Availability.NotFound
