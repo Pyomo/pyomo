@@ -109,9 +109,7 @@ def parse_bounds(
     return bounds_map
 
 
-def parse_types(
-    items: Iterable[T], idx_map: Mapping[int, int]
-) -> Mapping[int, int]:
+def parse_types(items: Iterable[T], idx_map: Mapping[int, int]) -> Mapping[int, int]:
     types_map = {}
     for item in items:
         i = idx_map[id(item)]
@@ -179,10 +177,12 @@ def api_set_bnds(item_type: type[T], bound_type: BoundType) -> Callable[..., Non
             return knitro.KN_set_con_upbnds
     raise UnreachableError()
 
+
 def api_set_types(item_type: type[T]) -> Callable[..., None]:
     if item_type is VarData:
         return knitro.KN_set_var_types
     raise UnreachableError()
+
 
 def api_add_struct(is_obj: bool, structure_type: StructureType) -> Callable[..., None]:
     if is_obj:
