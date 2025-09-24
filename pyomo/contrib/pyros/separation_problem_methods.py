@@ -699,6 +699,10 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
                     f"{solve_call_results.scaled_violations[ss_ineq_con]}"
                 )
                 config.progress_logger.debug(
+                    " Worst-case violating realization: "
+                    f"{solve_call_results.violating_param_realization}"
+                )
+                config.progress_logger.debug(
                     f" Is constraint violated: {solve_call_results.found_violation} "
                     f"(compared to tolerance {config.robust_feasibility_tolerance})"
                 )
