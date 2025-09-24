@@ -911,7 +911,7 @@ cooler does not vary.
 Assess Robust Feasibility of the Solutions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We can also examine the robustness of each solution:
+We can also visualize the robustness of each solution:
 
 .. code::
 
