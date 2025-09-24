@@ -873,8 +873,6 @@ We can visualize the results of our price-of-robustness, as follows:
 
 .. code::
 
-    >>> import matplotlib.pyplot as plt
-    >>> 
     >>> fig, (obj_ax, vhat_ax, area_ax) = plt.subplots(
     ...     ncols=3,
     ...     figsize=(19, 4),
