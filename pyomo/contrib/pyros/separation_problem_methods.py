@@ -685,13 +685,22 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
 
             priority_group_solve_call_results[ss_ineq_con] = solve_call_results
 
-            termination_not_ok = solve_call_results.time_out
-            if termination_not_ok:
+            if solve_call_results.time_out:
                 all_solve_call_results.update(priority_group_solve_call_results)
                 return SeparationLoopResults(
                     solver_call_results=all_solve_call_results,
                     solved_globally=solve_globally,
                     worst_case_ss_ineq_con=None,
+                )
+            elif not solve_call_results.subsolver_error:
+                config.progress_logger.debug("Separation successful. Results: ")
+                config.progress_logger.debug(
+                    " Scaled violation: "
+                    f"{solve_call_results.scaled_violations[ss_ineq_con]}"
+                )
+                config.progress_logger.debug(
+                    f" Is constraint violated: {solve_call_results.found_violation} "
+                    f"(compared to tolerance {config.robust_feasibility_tolerance})"
                 )
 
             # provide message that PyROS will attempt to find a violation and move
@@ -703,6 +712,11 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
                 )
 
         all_solve_call_results.update(priority_group_solve_call_results)
+
+        config.progress_logger.debug(
+            f"Done separating all constraints of priority {priority} "
+            f"(group {group_idx + 1} of {len(sorted_priority_groups)})"
+        )
 
         # there may be multiple separation problem solutions
         # found to have violated a second-stage inequality constraint.
@@ -725,7 +739,7 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
                 for con, res in all_solve_call_results.items()
                 if res.found_violation
             )
-            config.progress_logger.debug(
+            config.progress_logger.info(
                 f"Violated constraints:\n {violated_con_names} "
             )
             config.progress_logger.debug(
