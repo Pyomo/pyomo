@@ -252,7 +252,8 @@ method of the PyROS solver object:
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
-  ...     # optional arguments: solve to robust optimality
+  ...     # optional arguments: passed directly to
+  ...     #  solve to robust optimality
   ...     objective_focus="worst_case",
   ...     solve_master_globally=True,
   ... )
@@ -293,7 +294,8 @@ see the :ref:`Solver Output Log documentation <pyros_solver_log>`.
           uncertainty_set=box_uncertainty_set,
           local_solver=local_solver,
           global_solver=global_solver,
-          # indirectly passed optional arguments: solve to robust optimality
+          # optional arguments: passed indirectly to
+          #  solve to robust optimality
           options={
               "objective_focus": "worst_case",
               "solve_master_globally": True,
@@ -395,9 +397,11 @@ Inspecting the results:
     Final objective value : 6.5403e+03
     Termination condition : pyrosTerminationCondition.robust_optimal
 
-Observe that there is a ~32% decrease in the final objective
-value when switching from optimizing over static decision rules
-to optimizing over affine decision rules.
+
+Notice that when we switch from optimizing over static decision rules
+to optimizing over affine decision rules,
+there is a ~32% decrease in the final objective
+value, albeit at some additional computational expense.
 
 
 Analyzing the Price of Robustness
