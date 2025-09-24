@@ -101,7 +101,7 @@ interval uncertainty set :math:`\mathcal{Q} = [0.9, 1.1]^2`.
 
 .. note::
     Per our analysis, our selections of first-stage variables
-    and second-stage variables
+    and second-stage variables in the present example
     satisfy our
     :ref:`assumption that the state variable values are uniquely defined <pyros_unique_state_vars>`.
 
@@ -200,6 +200,16 @@ and BARON as the subordinate global NLP solver:
   >>> local_solver = pyo.SolverFactory("ipopt")
   >>> global_solver = pyo.SolverFactory("baron")
 
+.. note::
+
+  Additional NLP optimizers can be automatically used in the event the primary
+  subordinate local or global optimizer passed
+  to the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
+  does not successfully solve a subproblem to an appropriate termination
+  condition. These alternative solvers can be provided through the optional
+  keyword arguments ``backup_local_solvers`` and ``backup_global_solvers``
+  to the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
+
 In advance of using PyROS, we check that the model can be solved
 to optimality with the subordinate global solver:
 
@@ -210,17 +220,8 @@ to optimality with the subordinate global solver:
 
   >>> pyo.assert_optimal_termination(global_solver.solve(m))
   >>> deterministic_obj = pyo.value(m.obj)
-  >>> print("Optimal deterministic objective value: {deterministic_obj:.2f}")
-  Optimal deterministic objective value: 5408.02
-
-.. note::
-
-  Additional NLP optimizers can be automatically used in the event the primary
-  subordinate local or global optimizer passed
-  to the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
-  does not successfully solve a subproblem to an appropriate termination
-  condition. These alternative solvers are provided through the optional
-  keyword arguments ``backup_local_solvers`` and ``backup_global_solvers``.
+  >>> print(f"Optimal deterministic objective value: {deterministic_obj:.2f}")
+  Optimal deterministic objective value: 5407.94
 
 
 Step 2: Solve With PyROS
@@ -440,7 +441,6 @@ subject to a corresponding
   ...         decision_rule_order=1,
   ...     )
   ...
-  >>> print("All done.")
   Solving problem for half_length=0.0:
   ...
   Solving problem for half_length=0.1:
@@ -451,7 +451,8 @@ subject to a corresponding
   ...
   Solving problem for half_length=0.4:
   ...
-  All done.
+  All done. Exiting PyROS.
+  ==============================================================================
 
 Using the :py:obj:`dict` populated in the loop,
 and the 
@@ -461,14 +462,14 @@ we can print a tabular summary of the results:
 .. code::
 
    >>> # table header
-   >>> print("=" * 71)
+   >>> print("-" * 71)
    >>> print(
    ...     f"{'Half-Length':15s}",
    ...     f"{'Termination Cond.':21s}",
    ...     f"{'Objective Value':18s}",
    ...     f"{'Price of Rob. (%)':17s}",
    ... )
-   >>> print("-" * 80)
+   >>> print("-" * 71)
    >>> for half_length, res in results_dict.items():
    ...     obj_value, percent_obj_increase = float("nan"), float("nan")
    ...     is_robust_optimal = (
@@ -494,18 +495,22 @@ we can print a tabular summary of the results:
    ...         f"{res.pyros_termination_condition.name:21s}"
    ...         f"{obj_value:<18.2f}"
    ...         f"{100 * price_of_robustness:<17.2f}"
-   ...     )
+   ...     )  # output here may vary
+   ...     print("-" * 71)
    ...
-   >>> print("=" * 80)  # may vary
    ======================================================================
    Half-Length    Termination Cond.   Objective Value   Price of Rob. (%)
    ----------------------------------------------------------------------
    0.0            robust_optimal      5407.94           0.00
+   ----------------------------------------------------------------------
    0.1            robust_optimal      6540.31           20.94
+   ----------------------------------------------------------------------
    0.2            robust_optimal      7838.50           44.94
+   ----------------------------------------------------------------------
    0.3            robust_optimal      9316.88           72.28
+   ----------------------------------------------------------------------
    0.4            robust_infeasible   inf               inf
-   ======================================================================
+   ----------------------------------------------------------------------
 
 
 The table shows the response of the PyROS termination condition,
