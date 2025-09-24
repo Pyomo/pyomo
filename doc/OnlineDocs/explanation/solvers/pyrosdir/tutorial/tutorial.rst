@@ -29,7 +29,11 @@ as a backup global solver.
 
 You will also need to
 `install Matplotlib <https://matplotlib.org/stable/install/index.html>`__,
-which is used to produce plots in this tutorial.
+which is used to generate plots in this tutorial.
+Further, we recommend installing an
+an `interactive Matplotlib backend
+<https://matplotlib.org/stable/users/explain/figure/backends.html#interactive-backends>`_
+for quick and easy viewing of plots.
 
 
 Prepare the Deterministic Model
@@ -220,7 +224,7 @@ model:
     ...     m.A = pyo.Var(bounds=(0, 10))
     ... 
     ...     # second-stage
-    ...     m.F1 = pyo.Var(initialize)
+    ...     m.F1 = pyo.Var()
     ...     m.T1 = pyo.Var(bounds=(311, 389))
     ... 
     ...     # state
@@ -368,7 +372,7 @@ Inspecting the initial model solution:
 
 .. code::
 
-    >>> print_solution(m)
+    >>> print_solution(m)  # may vary
     Objective      ($/yr)    : 13830.89
     Reactor volume (m^3)     : 20.00
     Cooler area    (m^2)     : 10.00
@@ -401,7 +405,7 @@ of interest compared to the initial point used:
 
 .. code::
 
-    >>> print_solution(m)
+    >>> print_solution(m)  # may vary
     Objective      ($/yr)    : 9774.58
     Reactor volume (m^3)     : 5.32
     Cooler area    (m^2)     : 7.45
@@ -480,6 +484,7 @@ function:
     ...         ncols=len(solutions),
     ...         squeeze=False,
     ...         sharey=True,
+    ...         layout="constrained",
     ...     )
     ...     for sol_idx, (size, ax) in enumerate(zip(solutions, axs[0])):
     ...         # track realizations for which solution feasible
@@ -540,7 +545,6 @@ function:
     ...     cbar.ax.set_ylabel("Objective ($/yr)")
     ... 
     ...     plt.show()
-    ...     plt.close(fig)
     ...
 
 Applying this function to the design that was deterministically
@@ -716,7 +720,7 @@ are increased:
 
 .. code::
 
-    >>> print_solution(m)
+    >>> print_solution(m)  # may vary
     Objective      ($/yr)    : 10334.71
     Reactor volume (m^3)     : 5.59
     Cooler area    (m^2)     : 6.99
@@ -780,7 +784,7 @@ since the cooler area :math:`A` is increased:
 
 .. code::
 
-    >>> print_solution(m)
+    >>> print_solution(m)  # may vary
     Objective      ($/yr)    : 9855.95
     Reactor volume (m^3)     : 5.59
     Cooler area    (m^2)     : 7.45
@@ -871,7 +875,12 @@ We can visualize the results of our price-of-robustness, as follows:
 
     >>> import matplotlib.pyplot as plt
     >>> 
-    >>> fig, (obj_ax, vhat_ax, area_ax) = plt.subplots(ncols=3, figsize=(19, 4))
+    >>> fig, (obj_ax, vhat_ax, area_ax) = plt.subplots(
+    ...     ncols=3,
+    ...     figsize=(19, 4),
+    ...     layout="constrained",
+    ... )
+    >>> plt.subplots_adjust(wspace=0.4, hspace=0.6)
     >>> 
     >>> obj_ax.plot(obj_vals.keys(), obj_vals.values(), label="total", marker="o")
     >>> obj_ax.plot(capex_vals.keys(), capex_vals.values(), label="CAPEX", marker="s")
