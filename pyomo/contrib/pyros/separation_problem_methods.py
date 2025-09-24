@@ -1215,7 +1215,7 @@ def discrete_solve(
         # debug statement for solving square problem for each scenario
         config.progress_logger.debug(
             f"Attempting to solve square problem for discrete scenario {scenario}"
-            f", {idx + 1} of {len(scenario_idxs_to_separate)} total"
+            f" ({idx + 1} of {len(scenario_idxs_to_separate)} total)"
         )
 
         # obtain separation problem solution
