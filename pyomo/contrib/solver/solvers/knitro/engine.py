@@ -153,6 +153,7 @@ def api_add_struct(is_obj: bool, structure_type: StructureType) -> Callable[...,
             return knitro.KN_add_con_linear_struct
         elif structure_type == StructureType.QUADRATIC:
             return knitro.KN_add_con_quadratic_struct
+    raise UnreachableError()
 
 
 class Engine:
@@ -179,6 +180,13 @@ class Engine:
         self.nonlinear_diff_order = nonlinear_diff_order
         self._kc = None
         self._status = None
+
+    def __enter__(self) -> "Engine":
+        self.renew()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.close()
 
     def __del__(self) -> None:
         self.close()
