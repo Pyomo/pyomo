@@ -912,7 +912,7 @@ def configure_loggers(options=None, shutdown=False):
 configure_loggers.fileLogger = None
 
 
-class PyomoCommandLogContext(object):
+class PyomoCommandLogContext:
     """Context manager to setup/restore logging for the Pyomo command"""
 
     def __init__(self, options):

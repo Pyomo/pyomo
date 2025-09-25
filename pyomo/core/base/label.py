@@ -23,7 +23,7 @@ from pyomo.core.base.componentuid import ComponentUID
 # they should be handled in the corresponding solver plugin.
 
 
-class _CharMapper(object):
+class _CharMapper:
     def __init__(self, preserve, translate, other):
         """
         Arguments::
@@ -89,12 +89,12 @@ def alphanum_label_from_name(name):
     return str.translate(name, _alphanum_translation_table)
 
 
-class CuidLabeler(object):
+class CuidLabeler:
     def __call__(self, obj=None):
         return ComponentUID(obj)
 
 
-class CounterLabeler(object):
+class CounterLabeler:
     def __init__(self, start=0):
         self._id = start
 
@@ -103,7 +103,7 @@ class CounterLabeler(object):
         return self._id
 
 
-class NumericLabeler(object):
+class NumericLabeler:
     def __init__(self, prefix, start=0):
         self.id = start
         self.prefix = prefix
@@ -132,12 +132,12 @@ class NumericLabeler(object):
 # (particularly PySP), and I don't know how much depends on the labels
 # actually being LP-compliant.
 #
-class CNameLabeler(object):
+class CNameLabeler:
     def __call__(self, obj):
         return obj.getname(True)
 
 
-class LPFileLabeler(object):
+class LPFileLabeler:
     def __call__(self, obj):
         return cpxlp_label_from_name(obj.getname(True))
 
@@ -154,17 +154,17 @@ class LPFileLabeler(object):
 TextLabeler = LPFileLabeler
 
 
-class AlphaNumericTextLabeler(object):
+class AlphaNumericTextLabeler:
     def __call__(self, obj):
         return alphanum_label_from_name(obj.getname(True))
 
 
-class NameLabeler(object):
+class NameLabeler:
     def __call__(self, obj):
         return obj.getname(True)
 
 
-class ShortNameLabeler(object):
+class ShortNameLabeler:
     def __init__(
         self,
         limit,

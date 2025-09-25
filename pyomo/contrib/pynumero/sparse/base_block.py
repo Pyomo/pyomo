@@ -14,7 +14,7 @@
 from ..dependencies import numpy as np
 
 
-class BaseBlockVector(object):
+class BaseBlockVector:
     """Base class for block vectors"""
 
     def __init__(self):
@@ -132,7 +132,7 @@ class BaseBlockVector(object):
         raise NotImplementedError(msg)
 
 
-class BaseBlockMatrix(object):
+class BaseBlockMatrix:
     """Base class for block matrices"""
 
     def __init__(self):

@@ -19,7 +19,7 @@ MAX_RETRIES = 3
 RETRY_SLEEP_SECONDS = 5
 
 
-class GroupDownloader(object):
+class GroupDownloader:
     def __init__(self):
         self.downloader = FileDownloader()
 
