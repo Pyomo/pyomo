@@ -11,16 +11,17 @@
 
 import pyomo.common.unittest as unittest
 
-import pyomo.contrib.solver.solvers.knitro as knitro
+from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
+from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
 import pyomo.environ as pyo
 
-avail = knitro.KnitroDirectSolver().available()
+avail = KnitroDirectSolver().available()
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroDirectSolverConfig(unittest.TestCase):
     def test_default_instantiation(self):
-        config = knitro.KnitroConfig()
+        config = KnitroConfig()
         self.assertIsNone(config._description)
         self.assertEqual(config._visibility, 0)
         self.assertFalse(config.tee)
@@ -32,7 +33,7 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertIsNone(config.time_limit)
 
     def test_custom_instantiation(self):
-        config = knitro.KnitroConfig(description="A description")
+        config = KnitroConfig(description="A description")
         config.tee = True
         self.assertTrue(config.tee)
         self.assertEqual(config._description, "A description")
@@ -42,7 +43,7 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroDirectSolverInterface(unittest.TestCase):
     def test_class_member_list(self):
-        opt = knitro.KnitroDirectSolver()
+        opt = KnitroDirectSolver()
         expected_list = [
             "CONFIG",
             "available",
@@ -59,7 +60,7 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
         self.assertListEqual(sorted(method_list), sorted(expected_list))
 
     def test_default_instantiation(self):
-        opt = knitro.KnitroDirectSolver()
+        opt = KnitroDirectSolver()
         self.assertFalse(opt.is_persistent())
         self.assertIsNotNone(opt.version())
         self.assertEqual(opt.name, "knitro_direct")
@@ -67,7 +68,7 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
         self.assertTrue(opt.available())
 
     def test_instantiation_as_context(self):
-        with knitro.KnitroDirectSolver() as opt:
+        with KnitroDirectSolver() as opt:
             self.assertFalse(opt.is_persistent())
             self.assertIsNotNone(opt.version())
             self.assertEqual(opt.name, "knitro_direct")
@@ -75,7 +76,7 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
             self.assertTrue(opt.available())
 
     def test_available_cache(self):
-        opt = knitro.KnitroDirectSolver()
+        opt = KnitroDirectSolver()
         opt.available()
         self.assertTrue(opt._available_cache)
         self.assertIsNotNone(opt._available_cache)
@@ -84,7 +85,7 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroDirectSolver(unittest.TestCase):
     def setUp(self):
-        self.opt = knitro.KnitroDirectSolver()
+        self.opt = KnitroDirectSolver()
 
     def test_solve(self):
         m = pyo.ConcreteModel()
