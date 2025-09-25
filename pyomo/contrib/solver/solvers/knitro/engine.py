@@ -411,4 +411,4 @@ class Engine:
         self, i: Optional[int], expr: NonlinearExpressionData
     ) -> None:
         callback = build_callback_handler(expr, idx=i).expand()
-        self.add_callback(i, callback)
+        self.add_callback(i, expr, callback)
