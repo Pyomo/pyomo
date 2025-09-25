@@ -14,6 +14,7 @@ from types import MappingProxyType
 from typing import Any, Optional, TypeVar
 
 from pyomo.common.enums import ObjectiveSense
+from pyomo.common.errors import DeveloperError
 from pyomo.common.numeric_types import value
 from pyomo.contrib.solver.solvers.knitro.api import knitro
 from pyomo.contrib.solver.solvers.knitro.callback import build_callback_handler
@@ -24,7 +25,6 @@ from pyomo.contrib.solver.solvers.knitro.typing import (
     ItemData,
     ItemType,
     StructureType,
-    UnreachableError,
     ValueType,
 )
 from pyomo.contrib.solver.solvers.knitro.utils import NonlinearExpressionData
@@ -85,7 +85,7 @@ def api_set_param(param_type: int) -> Callable[..., None]:
         return knitro.KN_set_double_param
     elif param_type == knitro.KN_PARAMTYPE_STRING:
         return knitro.KN_set_char_param
-    raise UnreachableError()
+    raise DeveloperError()
 
 
 def api_get_values(
@@ -101,7 +101,7 @@ def api_get_values(
             return knitro.KN_get_con_dual_values
         elif value_type == ValueType.PRIMAL:
             return knitro.KN_get_con_values
-    raise UnreachableError()
+    raise DeveloperError()
 
 
 def api_add_items(item_type: type[ItemType]) -> Callable[..., Optional[list[int]]]:
@@ -109,7 +109,7 @@ def api_add_items(item_type: type[ItemType]) -> Callable[..., Optional[list[int]
         return knitro.KN_add_vars
     elif item_type is ConstraintData:
         return knitro.KN_add_cons
-    raise UnreachableError()
+    raise DeveloperError()
 
 
 def api_set_bnds(
@@ -129,13 +129,13 @@ def api_set_bnds(
             return knitro.KN_set_con_lobnds
         elif bound_type == BoundType.UP:
             return knitro.KN_set_con_upbnds
-    raise UnreachableError()
+    raise DeveloperError()
 
 
 def api_set_types(item_type: type[ItemType]) -> Callable[..., None]:
     if item_type is VarData:
         return knitro.KN_set_var_types
-    raise UnreachableError()
+    raise DeveloperError()
 
 
 def api_add_struct(is_obj: bool, structure_type: StructureType) -> Callable[..., None]:
@@ -153,7 +153,7 @@ def api_add_struct(is_obj: bool, structure_type: StructureType) -> Callable[...,
             return knitro.KN_add_con_linear_struct
         elif structure_type == StructureType.QUADRATIC:
             return knitro.KN_add_con_quadratic_struct
-    raise UnreachableError()
+    raise DeveloperError()
 
 
 class Engine:

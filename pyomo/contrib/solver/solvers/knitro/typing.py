@@ -69,9 +69,3 @@ class Callback(NamedTuple):
     func: CallbackFunction
     grad: CallbackFunction
     hess: CallbackFunction
-
-
-class UnreachableError(Exception):
-    """Raised when code reaches a theoretically unreachable state."""
-
-    pass

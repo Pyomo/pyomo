@@ -16,7 +16,7 @@ from io import StringIO
 from typing import Optional
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.errors import ApplicationError, PyomoException
+from pyomo.common.errors import ApplicationError, DeveloperError, PyomoException
 from pyomo.common.numeric_types import value
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.timing import HierarchicalTimer
@@ -41,12 +41,7 @@ from pyomo.contrib.solver.solvers.knitro.solution import (
     SolutionLoader,
     SolutionProvider,
 )
-from pyomo.contrib.solver.solvers.knitro.typing import (
-    ItemData,
-    ItemType,
-    UnreachableError,
-    ValueType,
-)
+from pyomo.contrib.solver.solvers.knitro.typing import ItemData, ItemType, ValueType
 from pyomo.contrib.solver.solvers.knitro.utils import KnitroModelData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import ConstraintData
@@ -273,4 +268,4 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             return NoReducedCostsError
         elif item_type is ConstraintData and value_type == ValueType.DUAL:
             return NoDualsError
-        raise UnreachableError()
+        raise DeveloperError()
