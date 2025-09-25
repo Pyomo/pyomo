@@ -20,7 +20,7 @@ from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.common.numeric_types import value
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.contrib.solver.common import base
+from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
@@ -47,27 +47,27 @@ from pyomo.contrib.solver.solvers.knitro.typing import (
     UnreachableError,
     ValueType,
 )
-from pyomo.contrib.solver.solvers.knitro.utils import ModelCollector
+from pyomo.contrib.solver.solvers.knitro.utils import KnitroModelData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 
 
-class KnitroSolverBase(SolutionProvider, PackageChecker, base.SolverBase):
+class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
     CONFIG = KnitroConfig()
     config: KnitroConfig
 
     _engine: Engine
-    _problem: ModelCollector
+    _model_data: KnitroModelData
     _stream: StringIO
     _saved_var_values: dict[int, Optional[float]]
 
     def __init__(self, **kwds) -> None:
         PackageChecker.__init__(self)
-        base.SolverBase.__init__(self, **kwds)
+        SolverBase.__init__(self, **kwds)
         self._engine = Engine()
-        self._problem = ModelCollector()
+        self._model_data = KnitroModelData()
         self._stream = StringIO()
         self._saved_var_values = {}
 
@@ -105,7 +105,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         return self.config(value=kwds, preserve_implicit=True)  # type: ignore
 
     def _validate_problem(self) -> None:
-        if len(self._problem.objs) > 1:
+        if len(self._model_data.objs) > 1:
             msg = f"{self.name} does not support multiple objectives."
             raise IncompatibleModelError(msg)
 
@@ -198,10 +198,13 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, base.SolverBase):
         return self._engine.get_num_solutions()
 
     def _get_vars(self) -> list[VarData]:
-        return self._problem.variables
+        return self._model_data.variables
 
     def _get_items(self, item_type: type[ItemType]) -> Sequence[ItemType]:
-        maps = {VarData: self._problem.variables, ConstraintData: self._problem.cons}
+        maps = {
+            VarData: self._model_data.variables,
+            ConstraintData: self._model_data.cons,
+        }
         return maps[item_type]
 
     @staticmethod

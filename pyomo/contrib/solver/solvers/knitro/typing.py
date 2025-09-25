@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Callable
-from typing import Any, Optional, Protocol, TypeVar, Union
+from typing import Any, NamedTuple, Protocol, TypeVar, Union
 
 from pyomo.common.enums import Enum
 from pyomo.core.base.constraint import ConstraintData
@@ -48,13 +48,13 @@ class Function(Protocol):
     def hessian(self, x: list[float], mu: float) -> list[float]: ...
 
 
-class Request(Protocol):
+class CallbackRequest(Protocol):
     x: list[float]
     sigma: float
     lambda_: list[float]
 
 
-class Result(Protocol):
+class CallbackResult(Protocol):
     obj: float
     c: list[float]
     objGrad: list[float]
@@ -62,16 +62,13 @@ class Result(Protocol):
     hess: list[float]
 
 
-CallbackFunction = Callable[[Any, Any, Request, Result, Optional[Any]], int]
+CallbackFunction = Callable[[Any, Any, CallbackRequest, CallbackResult, Any], int]
 
 
-class Callback:
-    def __init__(
-        self, func: CallbackFunction, grad: CallbackFunction, hess: CallbackFunction
-    ) -> None:
-        self.func = func
-        self.grad = grad
-        self.hess = hess
+class Callback(NamedTuple):
+    func: CallbackFunction
+    grad: CallbackFunction
+    hess: CallbackFunction
 
 
 class UnreachableError(Exception):

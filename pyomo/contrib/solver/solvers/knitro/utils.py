@@ -15,14 +15,13 @@ from typing import Optional
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.numeric_types import value
 from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs
+from pyomo.contrib.solver.solvers.knitro.typing import Function
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintData
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.core.base.var import VarData
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
-
-from pyomo.contrib.solver.solvers.knitro.typing import Function
 
 
 def get_active_objectives(block: BlockData) -> list[ObjectiveData]:
@@ -57,7 +56,7 @@ def get_active_constraints(block: BlockData) -> list[ConstraintData]:
     return list(generator)
 
 
-class ModelCollector:
+class KnitroModelData:
     """Intermediate representation of a Pyomo model for KNITRO.
 
     Collects all active objectives, constraints, and referenced variables from a Pyomo Block.
@@ -121,13 +120,13 @@ class ModelCollector:
 
         # Collect variables from objectives
         for obj in new_objs:
-            _, variables, _, _ = collect_vars_and_named_exprs(obj.expr)
+            _, variables, _, _ = collect_vars_and_named_exprs(obj.expr)  # type: ignore
             for var in variables:
                 self._vars.add(var)
 
         # Collect variables from constraints
         for con in new_cons:
-            _, variables, _, _ = collect_vars_and_named_exprs(con.body)
+            _, variables, _, _ = collect_vars_and_named_exprs(con.body)  # type: ignore
             for var in variables:
                 self._vars.add(var)
 

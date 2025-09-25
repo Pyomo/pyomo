@@ -21,23 +21,23 @@ class KnitroDirectSolver(KnitroSolverBase):
         self, model: BlockData, config: KnitroConfig, timer: HierarchicalTimer
     ) -> None:
         timer.start("build_problem")
-        self._problem.set_block(model)
+        self._model_data.set_block(model)
         timer.stop("build_problem")
 
     def _solve(self, config: KnitroConfig, timer: HierarchicalTimer) -> None:
         self._engine.renew()
 
         timer.start("add_vars")
-        self._engine.add_vars(self._problem.variables)
+        self._engine.add_vars(self._model_data.variables)
         timer.stop("add_vars")
 
         timer.start("add_cons")
-        self._engine.add_cons(self._problem.cons)
+        self._engine.add_cons(self._model_data.cons)
         timer.stop("add_cons")
 
-        if self._problem.objs:
+        if self._model_data.objs:
             timer.start("set_objective")
-            self._engine.set_obj(self._problem.objs[0])
+            self._engine.set_obj(self._model_data.objs[0])
             timer.stop("set_objective")
 
         self._engine.set_outlev()

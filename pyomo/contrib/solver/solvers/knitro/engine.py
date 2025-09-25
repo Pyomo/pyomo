@@ -11,22 +11,19 @@
 
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from types import MappingProxyType
-from typing import Any, Optional, Protocol, TypeVar
+from typing import Any, Optional, TypeVar
 
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.numeric_types import value
 from pyomo.contrib.solver.solvers.knitro.api import knitro
+from pyomo.contrib.solver.solvers.knitro.callback import build_callback_handler
 from pyomo.contrib.solver.solvers.knitro.package import Package
 from pyomo.contrib.solver.solvers.knitro.typing import (
     BoundType,
     Callback,
-    Function,
     ItemData,
-    CallbackFunction,
-    Request,
-    Result,
-    StructureType,
     ItemType,
+    StructureType,
     UnreachableError,
     ValueType,
 )
@@ -35,67 +32,6 @@ from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.var import VarData
 from pyomo.repn.standard_repn import generate_standard_repn
-
-
-_CallbackFunction = Callable[[Request, Result], int]
-
-
-class _Callback(Protocol):
-    _function: Function
-
-    def func(self, req: Request, res: Result) -> int: ...
-    def grad(self, req: Request, res: Result) -> int: ...
-    def hess(self, req: Request, res: Result) -> int: ...
-
-    def expand(self) -> Callback:
-        procs = (self.func, self.grad, self.hess)
-        return Callback(*map(self._expand, procs))
-
-    @staticmethod
-    def _expand(proc: _CallbackFunction) -> CallbackFunction:
-        def _expanded(
-            kc: Any, cb: Any, req: Request, res: Result, user_data: Any = None
-        ) -> int:
-            return proc(req, res)
-
-        return _expanded
-
-
-class _ObjectiveCallback(_Callback):
-    def __init__(self, function: Function) -> None:
-        self._function = function
-
-    def func(self, req: Request, res: Result) -> int:
-        res.obj = self._function.evaluate(req.x)
-        return 0
-
-    def grad(self, req: Request, res: Result) -> int:
-        res.objGrad[:] = self._function.gradient(req.x)
-        return 0
-
-    def hess(self, req: Request, res: Result) -> int:
-        res.hess[:] = self._function.hessian(req.x, req.sigma)
-        return 0
-
-
-class _ConstraintCallback(_Callback):
-    i: int
-
-    def __init__(self, i: int, evaluator: Function) -> None:
-        self.i = i
-        self._function = evaluator
-
-    def func(self, req: Request, res: Result) -> int:
-        res.c[:] = [self._function.evaluate(req.x)]
-        return 0
-
-    def grad(self, req: Request, res: Result) -> int:
-        res.jac[:] = self._function.gradient(req.x)
-        return 0
-
-    def hess(self, req: Request, res: Result) -> int:
-        res.hess[:] = self._function.hessian(req.x, req.lambda_[self.i])
-        return 0
 
 
 def parse_bounds(
@@ -311,7 +247,8 @@ class Engine:
 
     def get_status(self) -> int:
         if self._status is None:
-            raise RuntimeError("Solver has not been run, so no status is available.")
+            msg = "Solver has not been run. No status is available!"
+            raise RuntimeError(msg)
         return self._status
 
     def get_num_iters(self) -> int:
@@ -404,7 +341,8 @@ class Engine:
 
         is_obj = i is None
         base_args = () if is_obj else (i,)
-        structure_type_seq, args_seq = [], []
+        structure_type_seq: list[StructureType] = []
+        args_seq: list[tuple[Any, ...]] = []
 
         if repn.constant is not None:
             structure_type_seq += [StructureType.CONSTANT]
@@ -436,20 +374,8 @@ class Engine:
                 diff_order=self.nonlinear_diff_order,
             )
 
-    def register_callbacks(self) -> None:
-        for i, expr in self.nonlinear_map.items():
-            self.register_callback(i, expr)
-
-    def register_callback(
-        self, i: Optional[int], expr: NonlinearExpressionData
-    ) -> None:
+    def add_callback(self, i: Optional[int], expr: NonlinearExpressionData, callback: Callback) -> None:
         is_obj = i is None
-        if is_obj:
-            ne = _ObjectiveCallback(expr)
-        else:
-            ne = _ConstraintCallback(i, expr)
-        callback = ne.expand()
-
         idx_cons = [i] if not is_obj else None
         cb = self.execute(knitro.KN_add_eval_callback, is_obj, idx_cons, callback.func)
 
@@ -474,3 +400,13 @@ class Engine:
             self.execute(
                 knitro.KN_set_cb_hess, cb, hess_idx_vars1, hess_idx_vars2, callback.hess
             )
+
+    def register_callbacks(self) -> None:
+        for i, expr in self.nonlinear_map.items():
+            self.register_callback(i, expr)
+
+    def register_callback(
+        self, i: Optional[int], expr: NonlinearExpressionData
+    ) -> None:
+        callback = build_callback_handler(expr, idx=i).expand()
+        self.add_callback(i, callback)
