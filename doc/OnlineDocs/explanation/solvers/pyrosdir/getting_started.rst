@@ -196,6 +196,7 @@ We will use IPOPT as the subordinate local NLP solver
 and BARON as the subordinate global NLP solver:
 
 .. doctest::
+  :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
 
   >>> local_solver = pyo.SolverFactory("ipopt")
   >>> global_solver = pyo.SolverFactory("baron")
@@ -216,7 +217,7 @@ to optimality with the subordinate global solver:
 .. _pyros_solve_deterministic:
 
 .. doctest::
-  :skipif: not (baron.available() and baron.license_is_valid())
+  :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
 
   >>> pyo.assert_optimal_termination(global_solver.solve(m))
   >>> deterministic_obj = pyo.value(m.obj)
@@ -242,7 +243,7 @@ method of the PyROS solver object:
 .. _single-stage-problem:
 
 .. doctest::
-  :skipif: not (baron.available() and baron.license_is_valid())
+  :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
 
   >>> results_1 = pyros_solver.solve(
   ...     # required arguments
@@ -364,7 +365,7 @@ may yield a solution with better quality:
 .. _example-two-stg:
 
 .. doctest::
-  :skipif: not (baron.available() and baron.license_is_valid())
+  :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
 
   >>> results_2 = pyros_solver.solve(
   ...     model=m,
@@ -389,7 +390,7 @@ may yield a solution with better quality:
 
 Inspecting the results:
 
-.. doctest::
+.. code::
 
    >>> print(results_2)  # output may vary  # doctest: +SKIP
    Termination stats:
@@ -422,7 +423,7 @@ subject to a corresponding
 :class:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet` instance:
 
 .. doctest::
-  :skipif: not (baron.available() and baron.license_is_valid())
+  :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
 
   >>> results_dict = dict()
   >>> for half_length in [0.0, 0.1, 0.2, 0.3, 0.4]:
@@ -461,6 +462,7 @@ and the
 we can print a tabular summary of the results:
 
 .. doctest::
+   :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
 
    >>> # table header
    >>> for idx, (half_length, res) in enumerate(results_dict.items()):
