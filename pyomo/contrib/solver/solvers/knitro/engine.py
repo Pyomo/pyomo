@@ -374,7 +374,9 @@ class Engine:
                 diff_order=self.nonlinear_diff_order,
             )
 
-    def add_callback(self, i: Optional[int], expr: NonlinearExpressionData, callback: Callback) -> None:
+    def add_callback(
+        self, i: Optional[int], expr: NonlinearExpressionData, callback: Callback
+    ) -> None:
         is_obj = i is None
         idx_cons = [i] if not is_obj else None
         cb = self.execute(knitro.KN_add_eval_callback, is_obj, idx_cons, callback.func)
