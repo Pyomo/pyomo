@@ -46,7 +46,7 @@ with subordinate NLP optimizers.
 Formulate the Model
 ~~~~~~~~~~~~~~~~~~~
 
-Consider the reactor-cooler system below:
+Consider the reactor-cooler system below.
 
 .. figure:: reactor_cooler.png
    :alt: Reactor-cooler system.
@@ -62,7 +62,8 @@ concentration :math:`\boldsymbol{c}_{E0} = 32.04\, \text{kmol}/\text{m}^3`,
 and heat capacity
 :math:`\boldsymbol{c}_p = 167.4\,\text{kJ}/ \text{kmol}\,\text{K}`.
 Inside the reactor, the exothermic reaction :math:`E \to F` occurs
-at temperature :math:`T_1`, with a conversion of 90%.
+at temperature :math:`T_1` and with a conversion of 90%,
+so that :math:`\boldsymbol{c}_{E1} = 0.1\boldsymbol{c}_{E0}`.
 We assume that the reaction
 follows first-order kinetics, with a rate constant
 :math:`\boldsymbol{k}_\text{R}` of nominal value
@@ -113,7 +114,7 @@ optimization model for the system of interest can be written as
        \text{s.t.}
        &  
        \displaystyle\boldsymbol{F}_{0} \left(\frac{\boldsymbol{c}_{E0} - \boldsymbol{c}_{E1}}{\boldsymbol{c}_{E0}}\right)
-       = V \boldsymbol{k}_{\text{R}} \exp{\left(-\frac{\boldsymbol{E}}{\boldsymbol{R}T_1}\right)}c_{E1}
+       = V \boldsymbol{k}_{\text{R}} \exp{\left(-\frac{\boldsymbol{E}}{\boldsymbol{R}T_1}\right)}\boldsymbol{c}_{E1}
        \\
        & \displaystyle
        -\boldsymbol{\Delta}\boldsymbol{H}_{\text{R}}\boldsymbol{F}_{0}
@@ -196,8 +197,8 @@ First, we import Pyomo:
 
     >>> import pyomo.environ as pyo
 
-and write a function for building (an uninitialized instance of) the
-model:
+and write a function for building the
+model (with the variables uninitialized):
 
 .. code::
 
@@ -205,39 +206,41 @@ model:
     ...     m = pyo.ConcreteModel()
     ... 
     ...     # certain parameters
-    ...     m.cA0 = pyo.Param(initialize=32.040, mutable=True)
-    ...     m.cA1 = pyo.Param(initialize=0.1 * m.cA0, mutable=True)
-    ...     m.EovR = pyo.Param(initialize=555.6, mutable=True)
-    ...     m.delHr = pyo.Param(initialize=-23260, mutable=True)
-    ...     m.cp = pyo.Param(initialize=167.400, mutable=True)
-    ...     m.cwp = pyo.Param(initialize=4.184, mutable=True)
-    ...     m.F0 = pyo.Param(initialize=45.36, mutable=True)
-    ...     m.T0 = pyo.Param(initialize=333, mutable=True)
-    ...     m.Tw1 = pyo.Param(initialize=300, mutable=True)
+    ...     m.cA0 = pyo.Param(initialize=32.040)
+    ...     m.cA1 = pyo.Param(initialize=0.1 * m.cA0)
+    ...     m.EovR = pyo.Param(initialize=555.6)
+    ...     m.delHr = pyo.Param(initialize=-23260)
+    ...     m.cp = pyo.Param(initialize=167.400)
+    ...     m.cwp = pyo.Param(initialize=4.184)
+    ...     m.F0 = pyo.Param(initialize=45.36)
+    ...     m.T0 = pyo.Param(initialize=333)
+    ...     m.Tw1 = pyo.Param(initialize=300)
     ...
     ...     # uncertain parameters
     ...     m.kR = pyo.Param(initialize=10, mutable=True)
     ...     m.U = pyo.Param(initialize=1635, mutable=True)
     ... 
-    ...     # first-stage
+    ...     # first-stage variables
     ...     m.Vhat = pyo.Var(bounds=(0, 20))
     ...     m.A = pyo.Var(bounds=(0, 10))
     ... 
-    ...     # second-stage
+    ...     # second-stage variables
     ...     m.F1 = pyo.Var()
     ...     m.T1 = pyo.Var(bounds=(311, 389))
     ... 
-    ...     # state
+    ...     # state variables
     ...     m.V = pyo.Var(bounds=(0, None))
     ...     m.Qhe = pyo.Var()
     ...     m.T2 = pyo.Var(bounds=(311, 389))
     ...     m.Tw2 = pyo.Var(bounds=(301, 355))
     ...     m.Fw = pyo.Var()
     ... 
+    ...     # objective and constituent expressions
     ...     m.capex = pyo.Expression(expr=691.2 * m.Vhat ** 0.7 + 873.6 * m.A ** 0.6)
     ...     m.opex = pyo.Expression(expr=1.76 * m.Fw + 7.056 * m.F1)
     ...     m.obj = pyo.Objective(expr=m.capex + m.opex)
     ... 
+    ...     # equality constraints
     ...     m.reactant_mol_bal = pyo.Constraint(
     ...         expr=(
     ...             m.F0 * ((m.cA0 - m.cA1) / m.cA0)
@@ -265,6 +268,7 @@ model:
     ...         lmtd_expr = (dt1 - dt2) / (pyo.log(dt1) - pyo.log(dt2))
     ...         return m.Qhe == m.A * m.U * lmtd_expr
     ... 
+    ...     # inequality constraints
     ...     m.V_con = pyo.Constraint(expr=(m.V <= m.Vhat))
     ...     m.T1T2_con = pyo.Constraint(expr=(1 <= m.T1 - m.T2))
     ...     m.Tw1Tw2_con = pyo.Constraint(expr=(1 <= m.Tw2 - m.Tw1))
@@ -301,15 +305,15 @@ model:
     :ref:`Uncertain Parameters section of the Solver Interface page <pyros_uncertain_params>`.
 
 
-For convenience, we also write a function to initialize the variables of
-the model:
+For convenience, we also write a function to initialize the model's
+variables values:
 
 .. code::
 
     >>> from pyomo.util.calc_var_value import calculate_variable_from_constraint
     >>>
     >>> def initialize_model(m, Vhat=20, A=10, F1=50, T1=389):
-    ...     # set degrees of freedom
+    ...     # set first-stage and second-stage variable values
     ...     m.Vhat.set_value(Vhat)
     ...     m.A.set_value(A)
     ...     m.F1.set_value(F1)
@@ -338,7 +342,8 @@ the model:
     ...     )
     ...
 
-And finally, a function to build and initialize the model:
+And finally, a function to build the model and
+and initialize the variable values:
 
 .. code::
 
@@ -360,12 +365,12 @@ the current solution:
 .. code::
 
     >>> def print_solution(model):
-    ...     print(f"Objective      ($/yr)    : {pyo.value(m.obj):.2f}")
-    ...     print(f"Reactor volume (m^3)     : {m.Vhat.value:.2f}")
-    ...     print(f"Cooler area    (m^2)     : {m.A.value:.2f}")
-    ...     print(f"F1             (kmol/hr) : {m.F1.value:.2f}")
-    ...     print(f"T1             (K)       : {m.T1.value:.2f}")
-    ...     print(f"Fw             (kg/hr)   : {m.Fw.value:.2f}")
+    ...     print(f"Objective      ($/yr)    : {pyo.value(model.obj):.2f}")
+    ...     print(f"Reactor volume (m^3)     : {model.Vhat.value:.2f}")
+    ...     print(f"Cooler area    (m^2)     : {model.A.value:.2f}")
+    ...     print(f"F1             (kmol/hr) : {model.F1.value:.2f}")
+    ...     print(f"T1             (K)       : {model.T1.value:.2f}")
+    ...     print(f"Fw             (kg/hr)   : {model.Fw.value:.2f}")
     ...
 
 Inspecting the initial model solution:
@@ -636,7 +641,7 @@ and represent the uncertainty set with an instance of the PyROS
 
     >>> uncertain_params = [m.kR, m.U]
     >>> uncertainty_set = pyros.BoxSet(bounds=[
-    ...     [param.value * (1 - 0.05), param.value * (1 + 0.1)] for param in uncertain_params
+    ...     [param.value * (1 - 0.05), param.value * (1 + 0.05)] for param in uncertain_params
     ... ])
 
 Subsolvers
@@ -697,7 +702,7 @@ and invoking the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method:
 
 By default, the progress and final result of the PyROS solver
 is logged to the console.
-The :ref:`Solver Log Output documentation <pyros_solver_log>`
+The :ref:`Solver Output Log documentation <pyros_solver_log>`
 provides guidance on how the solver log is to be interpreted.
 The :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
 returns an :class:`~pyomo.contrib.pyros.solve_data.ROSolveResults`
@@ -721,12 +726,12 @@ are increased:
 .. code::
 
     >>> print_solution(m)  # may vary
-    Objective      ($/yr)    : 10334.71
+    Objective      ($/yr)    : 10064.11
     Reactor volume (m^3)     : 5.59
-    Cooler area    (m^2)     : 6.99
-    F1             (kmol/hr) : 81.51
+    Cooler area    (m^2)     : 7.19
+    F1             (kmol/hr) : 85.39
     T1             (K)       : 389.00
-    Fw             (kg/hr)   : 2641.08
+    Fw             (kg/hr)   : 2444.42
 
 
 We can also confirm the robust feasibility of the solution empirically:
@@ -777,7 +782,7 @@ argument ``decision_rule_order``:
     <pyomo.contrib.pyros.solve_data.ROSolveResults at ...>
 
 
-Inspecting solutions, we see that the cost is reduced compared to when
+Inspecting the solution, we see that the cost is reduced compared to when
 :ref:`a static decision rule approximation is used <pyros_tutorial_inspect_static>`,
 as a smaller cooling water flow rate :math:`F_w` is required
 since the cooler area :math:`A` is increased:
@@ -807,15 +812,16 @@ is robust:
 Assess Impact of Uncertainty Set on the Solution Obtained
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We now perform a price-of-robustness study, in which the size of the
-uncertainty set is varied to assess the response of the solution. This
-can be easily performed by placing the PyROS solver invocation in a
-for-loop and recording the results at each iteration.
+We now perform a price-of-robustness study, in which
+we assess the response of the solution obtained to the
+size of the uncertainty set.
+This study can be easily performed by placing the PyROS solver
+invocation in a ``for`` loop and recording the result at each iteration.
 
-Invoke PyROS in a ``for``-Loop
+Invoke PyROS in a ``for`` Loop
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The PyROS solver invocation can easily be made in a ``for``-loop. At
+The PyROS solver invocation can easily be made in a ``for`` loop. At
 each iteration of the loop, we use PyROS to solve the RO problem subject
 to the uncertainty set of the corresponding size:
 
@@ -869,7 +875,7 @@ to the uncertainty set of the corresponding size:
 Visualize the Results
 ^^^^^^^^^^^^^^^^^^^^^
 
-We can visualize the results of our price-of-robustness, as follows:
+We can visualize the results of our price-of-robustness analysis, as follows:
 
 .. code::
 
@@ -880,6 +886,7 @@ We can visualize the results of our price-of-robustness, as follows:
     ... )
     >>> plt.subplots_adjust(wspace=0.4, hspace=0.6)
     >>> 
+    >>> # plot costs
     >>> obj_ax.plot(obj_vals.keys(), obj_vals.values(), label="total", marker="o")
     >>> obj_ax.plot(capex_vals.keys(), capex_vals.values(), label="CAPEX", marker="s")
     >>> obj_ax.plot(opex_vals.keys(), opex_vals.values(), label="OPEX", marker="^")
@@ -887,10 +894,12 @@ We can visualize the results of our price-of-robustness, as follows:
     >>> obj_ax.set_ylabel("Cost ($/yr)")
     >>> obj_ax.legend()
     >>> 
+    >>> # plot reactor volume
     >>> vhat_ax.plot(vhat_vals.keys(), vhat_vals.values(), marker="o")
     >>> vhat_ax.set_xlabel("Deviation from Nominal Value (%)")
     >>> vhat_ax.set_ylabel(r"Reactor Volume ($\mathrm{m}^3$)")
     >>> 
+    >>> # plot cooler area
     >>> area_ax.plot(area_vals.keys(), area_vals.values(), marker="o")
     >>> area_ax.set_xlabel("Deviation from Nominal Value (%)")
     >>> area_ax.set_ylabel(r"Cooler Heat Transfer Area ($\mathrm{m}^2$)")
