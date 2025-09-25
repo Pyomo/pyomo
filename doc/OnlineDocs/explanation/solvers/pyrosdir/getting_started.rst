@@ -464,7 +464,6 @@ we can print a tabular summary of the results:
 .. doctest::
    :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
 
-   >>> # table header
    >>> for idx, (half_length, res) in enumerate(results_dict.items()):
    ...     if idx == 0:
    ...         # print table header
