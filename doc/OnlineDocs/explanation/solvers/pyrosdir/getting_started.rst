@@ -257,7 +257,7 @@ method of the PyROS solver object:
   ...     #  solve to robust optimality
   ...     objective_focus="worst_case",
   ...     solve_master_globally=True,
-  ... )
+  ... )  # doctest: +ELLIPSIS
   ==============================================================================
   PyROS: The Pyomo Robust Optimization Solver...
   ...
@@ -316,7 +316,7 @@ Alternatively, we can display the results object ourselves using:
 
 .. code::
 
-   >>> print(results_1)  # output may vary
+   >>> print(results_1)  # output may vary  # doctest: +SKIP
    Termination stats:
     Iterations            : 3
     Solve time (wall s)   : 0.917
@@ -328,14 +328,14 @@ We can also query the results object's individual attributes:
 
 .. code::
 
-   >>> results_1.iterations  # total number of iterations; may vary
+   >>> results_1.iterations  # total number of iterations
    3
-   >>> results_1.time  # total wall-clock seconds; may vary
+   >>> results_1.time  # total wallclock time; may vary # doctest: +SKIP
    0.917
-   >>> results_1.final_objective_value  # final objective value; may vary
-   9661.621528204962
+   >>> results_1.final_objective_value  # final objective value; may vary # doctest: +ELLIPSIS
+   9661.6...
    >>> results_1.pyros_termination_condition  # termination condition
-   pyrosTerminationCondition.robust_optimal
+   <pyrosTerminationCondition.robust_optimal: 1>
 
 Since PyROS has successfully solved our problem,
 the final solution has been automatically loaded to the model.
@@ -377,7 +377,7 @@ may yield a solution with better quality:
   ...     objective_focus="worst_case",
   ...     solve_master_globally=True,
   ...     decision_rule_order=1,  # use affine decision rules
-  ... )
+  ... )  # doctest: +ELLIPSIS
   ==============================================================================
   PyROS: The Pyomo Robust Optimization Solver...
   ...
@@ -389,9 +389,9 @@ may yield a solution with better quality:
 
 Inspecting the results:
 
-.. code::
+.. doctest::
 
-   >>> print(results_2)  # output may vary
+   >>> print(results_2)  # output may vary  # doctest: +SKIP
    Termination stats:
     Iterations            : 5
     Solve time (wall s)   : 2.730
@@ -421,7 +421,8 @@ and in each iteration, solving a robust optimization problem
 subject to a corresponding
 :class:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet` instance:
 
-.. code::
+.. doctest::
+  :skipif: not (baron.available() and baron.license_is_valid())
 
   >>> results_dict = dict()
   >>> for half_length in [0.0, 0.1, 0.2, 0.3, 0.4]:
@@ -439,7 +440,7 @@ subject to a corresponding
   ...         objective_focus="worst_case",
   ...         solve_master_globally=True,
   ...         decision_rule_order=1,
-  ...     )
+  ...     )  # doctest: +ELLIPSIS
   ...
   Solving problem for half_length=0.0:
   ...
@@ -459,18 +460,21 @@ and the
 :ref:`previously evaluated deterministically optimal objective value <pyros_solve_deterministic>`,
 we can print a tabular summary of the results:
 
-.. code::
+.. doctest::
 
    >>> # table header
-   >>> print("-" * 71)
-   >>> print(
-   ...     f"{'Half-Length':15s}",
-   ...     f"{'Termination Cond.':21s}",
-   ...     f"{'Objective Value':18s}",
-   ...     f"{'Price of Rob. (%)':17s}",
-   ... )
-   >>> print("-" * 71)
-   >>> for half_length, res in results_dict.items():
+   >>> for idx, (half_length, res) in enumerate(results_dict.items()):
+   ...     if idx == 0:
+   ...         # print table header
+   ...         print("=" * 71)
+   ...         print(
+   ...             f"{'Half-Length':15s}"
+   ...             f"{'Termination Cond.':21s}"
+   ...             f"{'Objective Value':18s}"
+   ...             f"{'Price of Rob. (%)':17s}"
+   ...         )
+   ...         print("-" * 71)
+   ...     # print table row
    ...     obj_value, percent_obj_increase = float("nan"), float("nan")
    ...     is_robust_optimal = (
    ...         res.pyros_termination_condition
@@ -494,23 +498,23 @@ we can print a tabular summary of the results:
    ...         f"{half_length:<15.1f}"
    ...         f"{res.pyros_termination_condition.name:21s}"
    ...         f"{obj_value:<18.2f}"
-   ...         f"{100 * price_of_robustness:<17.2f}"
-   ...     )  # output here may vary
+   ...         f"{100 * price_of_robustness:<.2f}"
+   ...     )
    ...     print("-" * 71)
    ...
-   ======================================================================
-   Half-Length    Termination Cond.   Objective Value   Price of Rob. (%)
-   ----------------------------------------------------------------------
-   0.0            robust_optimal      5407.94           0.00
-   ----------------------------------------------------------------------
-   0.1            robust_optimal      6540.31           20.94
-   ----------------------------------------------------------------------
-   0.2            robust_optimal      7838.50           44.94
-   ----------------------------------------------------------------------
-   0.3            robust_optimal      9316.88           72.28
-   ----------------------------------------------------------------------
-   0.4            robust_infeasible   inf               inf
-   ----------------------------------------------------------------------
+   =======================================================================
+   Half-Length    Termination Cond.    Objective Value   Price of Rob. (%)
+   -----------------------------------------------------------------------
+   0.0            robust_optimal       5407.94           -0.00
+   -----------------------------------------------------------------------
+   0.1            robust_optimal       6540.31           20.94
+   -----------------------------------------------------------------------
+   0.2            robust_optimal       7838.50           44.94
+   -----------------------------------------------------------------------
+   0.3            robust_optimal       9316.88           72.28
+   -----------------------------------------------------------------------
+   0.4            robust_infeasible    inf               inf
+   -----------------------------------------------------------------------
 
 
 The table shows the response of the PyROS termination condition,
