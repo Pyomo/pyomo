@@ -8,19 +8,3 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-from pyomo.contrib.solver.common.factory import SolverFactory
-
-from .config import KnitroConfig
-from .direct import KnitroDirectSolver
-
-__all__ = ["KnitroConfig", "KnitroDirectSolver"]
-
-
-# This function needs to be called from the plugins load function
-def load() -> None:
-    SolverFactory.register(
-        name="knitro_direct",
-        legacy_name="knitro_direct",
-        doc="Direct interface to KNITRO solver",
-    )(KnitroDirectSolver)

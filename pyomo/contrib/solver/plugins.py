@@ -15,7 +15,7 @@ from .solvers.ipopt import Ipopt, LegacyIpoptSolver
 from .solvers.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi_direct import GurobiDirect
 from .solvers.highs import Highs
-from .solvers.knitro import load as load_knitro
+from .solvers.knitro.direct import KnitroDirectSolver
 
 
 def load():
@@ -35,4 +35,8 @@ def load():
     SolverFactory.register(
         name="highs", legacy_name="highs", doc="Persistent interface to HiGHS"
     )(Highs)
-    load_knitro()
+    SolverFactory.register(
+        name="knitro_direct",
+        legacy_name="knitro_direct",
+        doc="Direct interface to KNITRO solver",
+    )(KnitroDirectSolver)
