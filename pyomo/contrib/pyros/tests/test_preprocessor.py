@@ -67,7 +67,7 @@ from pyomo.contrib.pyros.util import (
     setup_working_model,
     VariablePartitioning,
     preprocess_model_data,
-    log_model_statistics,
+    log_preprocessed_model_statistics,
     DEFAULT_SEPARATION_PRIORITY,
 )
 
@@ -3200,7 +3200,7 @@ class TestPreprocessModelData(unittest.TestCase):
         # expected model stats worked out by hand
         expected_log_str = textwrap.dedent(
             f"""
-            Model Statistics:
+            Model Statistics (after preprocessing):
               Number of variables : 16
                 Epigraph variable : 1
                 First-stage variables : 2
@@ -3220,11 +3220,10 @@ class TestPreprocessModelData(unittest.TestCase):
             """
         )
 
-        with LoggingIntercept(level=logging.INFO) as LOG:
-            log_model_statistics(model_data)
+        with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
+            log_preprocessed_model_statistics(model_data)
         log_str = LOG.getvalue()
-
-        log_lines = log_str.splitlines()[1:]
+        log_lines = log_str.splitlines()
         expected_log_lines = expected_log_str.splitlines()[1:]
 
         self.assertEqual(len(log_lines), len(expected_log_lines))
@@ -3252,7 +3251,7 @@ class TestPreprocessModelData(unittest.TestCase):
         # expected model stats worked out by hand
         expected_log_str = textwrap.dedent(
             f"""
-            Model Statistics:
+            Model Statistics (after preprocessing):
               Number of variables : 22
                 Epigraph variable : 1
                 First-stage variables : 2
@@ -3272,11 +3271,10 @@ class TestPreprocessModelData(unittest.TestCase):
             """
         )
 
-        with LoggingIntercept(level=logging.INFO) as LOG:
-            log_model_statistics(model_data)
+        with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
+            log_preprocessed_model_statistics(model_data)
         log_str = LOG.getvalue()
-
-        log_lines = log_str.splitlines()[1:]
+        log_lines = log_str.splitlines()
         expected_log_lines = expected_log_str.splitlines()[1:]
 
         self.assertEqual(len(log_lines), len(expected_log_lines))
