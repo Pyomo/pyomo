@@ -19,6 +19,7 @@ from pyomo.common.config import ConfigDict, ADVANCED_OPTION
 from pyomo.common.errors import DeveloperError
 from pyomo.common.tee import capture_output
 import pyomo.contrib.solver.solvers.ipopt as ipopt
+from pyomo.contrib.solver.common.availability import LicenseAvailability
 from pyomo.contrib.solver.common.util import NoSolutionError
 from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -99,22 +100,6 @@ class TestIpoptInterface(unittest.TestCase):
                 options.append(option_name)
         self.assertEqual(sorted(ipopt.ipopt_command_line_options), sorted(options))
 
-    def test_class_member_list(self):
-        opt = ipopt.Ipopt()
-        expected_list = [
-            'CONFIG',
-            'config',
-            'api_version',
-            'available',
-            'has_linear_solver',
-            'is_persistent',
-            'solve',
-            'version',
-            'name',
-        ]
-        method_list = [method for method in dir(opt) if method.startswith('_') is False]
-        self.assertEqual(sorted(expected_list), sorted(method_list))
-
     def test_default_instantiation(self):
         opt = ipopt.Ipopt()
         self.assertFalse(opt.is_persistent())
@@ -131,29 +116,21 @@ class TestIpoptInterface(unittest.TestCase):
             self.assertEqual(opt.CONFIG, opt.config)
             self.assertTrue(opt.available())
 
-    def test_available_cache(self):
+    def test_solver_available_cache(self):
         opt = ipopt.Ipopt()
-        opt.available()
+        opt.solver_available()
         self.assertTrue(opt._available_cache[1])
         self.assertIsNotNone(opt._available_cache[0])
-        # Now we will try with a custom config that has a fake path
-        config = ipopt.IpoptConfig()
-        config.executable = Executable('/a/bogus/path')
-        opt.available(config=config)
-        self.assertFalse(opt._available_cache[1])
-        self.assertIsNone(opt._available_cache[0])
+
+    def test_license_available(self):
+        opt = ipopt.Ipopt()
+        self.assertEqual(opt.license_available(), LicenseAvailability.NotApplicable)
 
     def test_version_cache(self):
         opt = ipopt.Ipopt()
         opt.version()
         self.assertIsNotNone(opt._version_cache[0])
         self.assertIsNotNone(opt._version_cache[1])
-        # Now we will try with a custom config that has a fake path
-        config = ipopt.IpoptConfig()
-        config.executable = Executable('/a/bogus/path')
-        opt.version(config=config)
-        self.assertIsNone(opt._version_cache[0])
-        self.assertIsNone(opt._version_cache[1])
 
     def test_parse_output(self):
         # Old ipopt style (<=3.13)
@@ -338,8 +315,9 @@ Ipopt 3.14.17: Optimal Solution Found
         )
         with self.assertRaisesRegex(
             ValueError,
-            r'Pyomo generates the ipopt options file as part of the `solve` '
-            r'method.  Add all options to ipopt.config.solver_options instead',
+            r"unallowed ipopt option 'option_file_name': Pyomo generates the "
+            r"ipopt options file as part of the `solve` method. Add all "
+            r"options to ipopt.config.solver_options instead.",
         ):
             opt._verify_ipopt_options(opt.config)
 
