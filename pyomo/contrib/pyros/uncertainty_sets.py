@@ -1964,7 +1964,7 @@ class BudgetSet(UncertaintySet):
     the quantity
     :math:`I` denotes the :math:`n \\times n` identity matrix,
     the quantity
-    :math:`b \\in \\mathbb{R}_{+}^\\ell` refers to ``budget_rhs``,
+    :math:`b \\in \\mathbb{R}_{+}^\\ell` refers to ``rhs_vec``,
     and
     :math:`q^0 \\in \\mathbb{R}^n` refers to ``origin``.
 
@@ -2329,6 +2329,7 @@ class FactorModelSet(UncertaintySet):
 
     in which
     :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
+    the quantity :math:`F` refers to ``number_of_factors``,
     the quantity :math:`\\Psi \\in \\mathbb{R}^{n \\times F}`
     refers to ``psi_mat``,
     and :math:`\\beta \\in [0, 1]` refers to ``beta``.
