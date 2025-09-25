@@ -174,7 +174,7 @@ class Engine:
         self.maps = MappingProxyType({VarData: {}, ConstraintData: {}})
         # Nonlinear map:
         # None -> objective nonlinear expression
-        # idx_con -> constranit nonlinear expression
+        # idx_con -> constraint nonlinear expression
         self.nonlinear_map = {}
         self.nonlinear_diff_order = nonlinear_diff_order
         self._kc = None
