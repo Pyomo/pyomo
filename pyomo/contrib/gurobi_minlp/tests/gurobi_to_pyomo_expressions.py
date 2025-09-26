@@ -27,7 +27,9 @@ if gurobipy_available:
         GRB.OPCODE_UMINUS: (NegationExpression, ()),
         GRB.OPCODE_MULTIPLY: (ProductExpression, ()), # Their multiply is n-ary
         GRB.OPCODE_DIVIDE: (DivisionExpression, ()),
-        #GRB.OPCODE_SQUARE: , # This is pow with a fixed second argument for us
+        GRB.OPCODE_SQUARE: (PowExpression, ()), # This is pow with a
+                                                # fixed second
+                                                # argument for us
         GRB.OPCODE_SQRT: (UnaryFunctionExpression, ('sqrt', sqrt)),
         GRB.OPCODE_EXP: (UnaryFunctionExpression, ('exp', exp)),
         GRB.OPCODE_LOG: (UnaryFunctionExpression, ('log', log)),
@@ -42,12 +44,16 @@ if gurobipy_available:
 
 nary_ops = { SumExpression, }
 
-def grb_nl_to_pyo_expr(op, data, parent, var_map):
+def grb_nl_to_pyo_expr(opcode, data, parent, var_map):
     ans = []
-    for i, (op, data, parent) in enumerate(zip(op, data, parent)):
+    for i, (op, data, parent) in enumerate(zip(opcode, data, parent)):
         if op in grb_op_to_pyo:
             cls, args = grb_op_to_pyo[op]
-            ans.append(cls((), *args))
+            # SumExpression requires args to be a list (not a
+            # tuple). Since all other expression types are fine with
+            # whatever, we make it a list here to avoid (another)
+            # special case.
+            ans.append(cls([], *args))
         elif op == GRB.OPCODE_VARIABLE:
             ans.append(var_map[data])
         elif op == GRB.OPCODE_CONSTANT:
@@ -58,8 +64,14 @@ def grb_nl_to_pyo_expr(op, data, parent, var_map):
                 f"(or unsupported) opcode: {op}"
             )
         if i:
-            ans[parent]._args_ = ans[parent]._args_ + (ans[-1],)
+            # there are two special cases here to account for minus and square
+            print(ans[parent].__class__)
+            print(ans[parent]._args_)
+            ans[parent]._args_ = ans[parent]._args_ + [ans[-1],]
             if ans[parent].__class__ in nary_ops:
                 ans[parent]._nargs += 1
+            if opcode[parent] == GRB.OPCODE_SQUARE:
+                # add the exponent
+                ans[parent]._args_ = ans[parent]._args_ + [2,]
 
     return ans[0]
