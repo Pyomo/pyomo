@@ -10,8 +10,12 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.core.expr.compare import assertExpressionsEqual
 import pyomo.common.unittest as unittest
 from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import GurobiMINLPVisitor
+from pyomo.contrib.gurobi_minlp.tests.gurobi_to_pyomo_expressions import (
+    grb_nl_to_pyo_expr
+)
 from pyomo.environ import (
     Binary,
     ConcreteModel,
@@ -263,27 +267,18 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x1 = visitor.var_map[id(m.x1)]
+        visitor.grb_model.update()
+        grb_to_pyo_var_map = {grb_var: py_var for py_var, grb_var
+                              in visitor.var_map.items()}
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        # three nodes
-        self.assertEqual(len(opcode), 3)
-        # the root is a division expression
-        self.assertEqual(parent[0], -1)  # root
-        self.assertEqual(opcode[0], GRB.OPCODE_DIVIDE)
-        # divide has no additional data
-        self.assertEqual(data[0], -1)
-
-        # first arg is 1
-        self.assertEqual(parent[1], 0)
-        self.assertEqual(opcode[1], GRB.OPCODE_CONSTANT)
-        self.assertEqual(data[1], 1)
-
-        # second arg is x1
-        self.assertEqual(parent[2], 0)
-        self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[2], x1)
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, grb_to_pyo_var_map)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            1.0 / m.x1
+        )
 
     def test_write_division_linear(self):
         m = self.get_model()
@@ -592,6 +587,10 @@ class TestGurobiMINLPWalker(CommonTest):
         m.c = Constraint(expr=sqrt(-m.p) + m.x1 >= 3)
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
+
+        # TODO: What does gurobi do with this? If nothing good, then I
+        # need to do something different for constants so that I can
+        # catch this.
 
         # TODO: What did I want to happen here? We should probably catch
         # this in the writer?
