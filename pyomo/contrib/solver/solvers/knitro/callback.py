@@ -85,8 +85,7 @@ class ConstraintCallbackHandler(CallbackHandler):
         return 0
 
 
-def build_callback_handler(function, *, idx: Optional[int] = None) -> CallbackHandler:
-    is_obj = idx is None
-    if is_obj:
+def build_callback_handler(function: Function, idx: Optional[int]) -> CallbackHandler:
+    if idx is None:
         return ObjectiveCallbackHandler(function)
     return ConstraintCallbackHandler(idx, function)
