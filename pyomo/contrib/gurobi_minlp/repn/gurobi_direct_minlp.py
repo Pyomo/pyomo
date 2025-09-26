@@ -201,11 +201,9 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
     def _before_named_expression(visitor, child):
         _id = id(child)
         if _id in visitor.subexpression_cache:
-            print("found it--don't descend")
             _type, expr = visitor.subexpression_cache[_id]
             return False, (_type, expr)
         else:
-            print("New Expression")
             return True, None
 
 
@@ -218,11 +216,9 @@ def _handle_node_with_eval_expr_visitor_invariant(visitor, node, data):
 
 
 def _handle_node_with_eval_expr_visitor_unknown(visitor, node, *data):
-    # ESJ: Is this cheating?
+    # The expression type is whatever the highest one of the incoming arguments
+    # was.
     expr_type = max(map(itemgetter(0), data))
-    print("Handle unknown node")
-    print(node)
-    print(expr_type)
     return (
         expr_type,
         visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), data))),
@@ -406,9 +402,6 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        print("EXIT NODE")
-        print(node)
-        print(self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))])
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
