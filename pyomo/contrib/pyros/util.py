@@ -21,6 +21,7 @@ import functools
 import itertools as it
 import logging
 import math
+import os
 import timeit
 
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -58,7 +59,7 @@ from pyomo.core.expr.visitor import (
 from pyomo.core.util import prod
 from pyomo.opt import SolverFactory
 import pyomo.repn.ampl as pyomo_ampl_repn
-from pyomo.repn.parameterized_quadratic import ParameterizedQuadraticRepnVisitor
+from pyomo.repn.parameterized import ParameterizedQuadraticRepnVisitor
 import pyomo.repn.plugins.nl_writer as pyomo_nl_writer
 from pyomo.repn.util import OrderedVarRecorder
 from pyomo.util.vars_from_expressions import get_vars_from_components
@@ -929,8 +930,7 @@ def validate_uncertainty_specification(model, config):
           `config.second_stage_variables`
         - dimension of uncertainty set does not equal number of
           uncertain parameters
-        - uncertainty set `is_valid()` method does not return
-          true.
+        - uncertainty set `validate()` method fails.
         - nominal parameter realization is not in the uncertainty set.
     """
     check_components_descended_from_model(
@@ -967,13 +967,6 @@ def validate_uncertainty_specification(model, config):
             f"({len(config.uncertain_params)} != {config.uncertainty_set.dim})."
         )
 
-    # validate uncertainty set
-    if not config.uncertainty_set.is_valid(config=config):
-        raise ValueError(
-            f"Uncertainty set {config.uncertainty_set} is invalid, "
-            "as it is either empty or unbounded."
-        )
-
     # fill-in nominal point as necessary, if not provided.
     # otherwise, check length matches uncertainty dimension
     if not config.nominal_uncertain_param_vals:
@@ -995,6 +988,9 @@ def validate_uncertainty_specification(model, config):
             f"({len(config.uncertain_params)} != "
             f"{len(config.nominal_uncertain_param_vals)})."
         )
+
+    # validate uncertainty set
+    config.uncertainty_set.validate(config=config)
 
     # uncertainty set should contain nominal point
     nominal_point_in_set = config.uncertainty_set.point_in_set(
@@ -3182,6 +3178,31 @@ def load_final_solution(model_data, master_soln, original_user_var_partitioning)
     )
     for orig_var, master_blk_var in zip(original_model_vars, master_soln_vars):
         orig_var.set_value(master_blk_var.value, skip_validation=True)
+
+
+def write_subproblem(model, fname, config):
+    """
+    Write/export a subproblem to one or more files.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Subproblem to be written/exported.
+    fname : str
+        Base name of the file(s) to be written.
+        Should not include any prefix directories.
+    config : ConfigDict
+        PyROS solver options.
+        A file will be written for each format provided in
+        ``config.subproblem_format_options``,
+        and in the directory ``config.subproblem_file_directory``.
+    """
+    for fmt, io_options in config.subproblem_format_options.items():
+        full_filename = os.path.join(config.subproblem_file_directory, f"{fname}.{fmt}")
+        model.write(filename=full_filename, format=fmt, io_options=io_options)
+        config.progress_logger.warning(
+            f"For debugging, subproblem has been written to the file {full_filename!r}."
+        )
 
 
 def call_solver(model, solver, config, timing_obj, timer_name, err_msg):

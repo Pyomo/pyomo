@@ -252,6 +252,7 @@ To use the GDPopt-LDSDA solver, define your Pyomo GDP model as usual:
   ...     logical_constraint_list=[m.Y1_limit, m.Y2_limit],
   ...     direction_norm='Linf',
   ... )
+
 GDPopt implementation and optional arguments
 --------------------------------------------
 
