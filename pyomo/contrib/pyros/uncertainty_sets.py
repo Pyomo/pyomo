@@ -477,8 +477,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     An object representing an uncertainty set to be passed to the
     PyROS solver.
 
-    An `UncertaintySet` object should be viewed as merely a container
-    for data needed to parameterize the set it represents,
+    `UncertaintySet` is an abstract base class for constructing
+    specific subclasses and instances of uncertainty sets.
+    Therefore, `UncertaintySet` cannot be instantiated directly.
+
+    A concrete `UncertaintySet` instance should be viewed as merely
+    a container for data needed to parameterize the set it represents,
     such that the object's attributes do not reference the
     components of a Pyomo modeling object.
     """
@@ -1186,12 +1190,30 @@ class UncertaintySetList(MutableSequence):
 
 class BoxSet(UncertaintySet):
     """
-    A hyper-rectangle (i.e., "box").
+    A hyperrectangle (or box).
 
     Parameters
     ----------
     bounds : (N, 2) array_like
         Lower and upper bounds for each dimension of the set.
+
+    Notes
+    -----
+    The :math:`n`-dimensional box set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,|
+            \\,q^\\text{L} \\leq q \\leq q^\\text{U}
+        \\right\\}
+
+    in which
+    :math:`q^\\text{L} \\in \\mathbb{R}^n` refers to
+    ``numpy.array(bounds)[:, 0]``,
+    and
+    :math:`q^\\text{U} \\in \\mathbb{R}^n` refers to
+    ``numpy.array(bounds)[:, 1]``.
 
     Examples
     --------
@@ -1211,7 +1233,7 @@ class BoxSet(UncertaintySet):
 
     5D hypercube with bounds 0 and 1 in each dimension:
 
-    >>> hypercube_5d = BoxSet(bounds=[[0, 1] for idx in range(5)])
+    >>> hypercube_5d = BoxSet(bounds=[[0, 1]] * 5)
     >>> hypercube_5d.bounds
     array([[0, 1],
            [0, 1],
@@ -1363,6 +1385,29 @@ class CardinalitySet(UncertaintySet):
         may realize their maximal deviations from the origin
         simultaneously.
 
+    Notes
+    -----
+    The :math:`n`-dimensional cardinality set is defined by
+
+    .. math::
+
+        \\left\\{ q \\in \\mathbb{R}^n\\,\\middle|
+             \\,\\exists\\, \\xi \\in [0, 1]^n \\,:\\,
+             \\left[
+                 \\begin{array}{l}
+                    q = q^0 + \\hat{q} \\circ \\xi \\\\
+                    \\displaystyle \\sum_{i=1}^n \\xi_i \\leq \\Gamma
+                 \\end{array}
+             \\right]
+        \\right\\}
+
+    in which
+    :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
+    the quantity :math:`\\hat{q} \\in \\mathbb{R}_{+}^n`
+    refers to ``positive_deviation``,
+    and :math:`\\Gamma \\in [0, n]` refers to ``gamma``.
+    The operator ":math:`\\circ`" denotes the element-wise product.
+
     Examples
     --------
     A 3D cardinality set:
@@ -1430,7 +1475,7 @@ class CardinalitySet(UncertaintySet):
     def positive_deviation(self):
         """
         (N,) numpy.ndarray : Maximal coordinate deviations from the
-        origin in each dimension. All entries are nonnegative.
+        origin in each dimension. All entries should be nonnegative.
         """
         return self._positive_deviation
 
@@ -1461,15 +1506,16 @@ class CardinalitySet(UncertaintySet):
     def gamma(self):
         """
         numeric type : Upper bound for the number of uncertain
-        parameters which may maximally deviate from their respective
+        parameters that may maximally deviate from their respective
         origin values simultaneously. Must be a numerical value ranging
         from 0 to the set dimension `N`.
 
         Note that, mathematically, setting `gamma` to 0 reduces the set
-        to a singleton containing the center, while setting `gamma` to
+        to a singleton containing the point represented by
+        ``self.origin``, while setting `gamma` to
         the set dimension `N` makes the set mathematically equivalent
         to a `BoxSet` with bounds
-        ``numpy.array([origin, origin + positive_deviation]).T``.
+        ``numpy.array([self.origin, self.origin + self.positive_deviation]).T``.
         """
         return self._gamma
 
@@ -1661,6 +1707,23 @@ class PolyhedralSet(UncertaintySet):
         Each entry is an upper bound for the quantity
         ``lhs_coefficients_mat @ x``, where `x` is an (N,)
         array representing any point in the polyhedral set.
+
+    Notes
+    -----
+    The :math:`n`-dimensional polyhedral set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,
+            \\middle| \\, A q \\leq b
+        \\right\\}
+
+    in which
+    :math:`A \\in \\mathbb{R}^{m \\times n}` refers to
+    ``lhs_coefficients_mat``,
+    and
+    :math:`b \\in \\mathbb{R}^m` refers to ``rhs_vec``.
 
     Examples
     --------
@@ -1875,12 +1938,35 @@ class BudgetSet(UncertaintySet):
         Each row corresponds to a single budget constraint,
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
+        All entries should be of value 0 or 1.
     rhs_vec : (L,) array_like
         Budget limits (upper bounds) with respect to
         the origin of the set.
     origin : (N,) array_like or None, optional
         Origin of the budget set. If `None` is provided, then
         the origin is set to the zero vector.
+
+    Notes
+    -----
+    The :math:`n`-dimensional budget set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,\\middle|
+            \\begin{pmatrix} B \\\\ -I \\end{pmatrix} q
+            \\leq \\begin{pmatrix} b + Bq^0 \\\\ -q^0 \\end{pmatrix}
+        \\right\\}
+
+    in which
+    :math:`B \\in \\{0, 1\\}^{\\ell \\times n}` refers to
+    ``budget_membership_mat``,
+    the quantity
+    :math:`I` denotes the :math:`n \\times n` identity matrix,
+    the quantity
+    :math:`b \\in \\mathbb{R}_{+}^\\ell` refers to ``rhs_vec``,
+    and
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``origin``.
 
     Examples
     --------
@@ -1966,6 +2052,7 @@ class BudgetSet(UncertaintySet):
         constraints.  Each row corresponds to a single budget
         constraint and defines which uncertain parameters
         participate in that row's constraint.
+        All entries should be of value 0 or 1.
         """
         return self._budget_membership_mat
 
@@ -2220,6 +2307,34 @@ class FactorModelSet(UncertaintySet):
         independent factors that can simultaneously attain
         their extreme values.
 
+    Notes
+    -----
+    The :math:`n`-dimensional factor model set is defined by
+
+    .. math::
+
+        \\left\\{ q \\in \\mathbb{R}^n\\,
+            \\middle|
+             \\,
+            \\exists\\, \\xi \\in [-1, 1]^F \\,:\\,
+            \\left[
+            \\begin{array}{l}
+                q = q^0 + \\Psi \\xi \\\\
+                \\displaystyle
+                    \\bigg| \\sum_{i=1}^n \\xi_i \\bigg|
+                    \\leq \\beta F
+            \\end{array}
+            \\right]
+        \\right\\}
+
+    in which
+    :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
+    the quantity :math:`F` refers to ``number_of_factors``,
+    the quantity :math:`\\Psi \\in \\mathbb{R}^{n \\times F}`
+    refers to ``psi_mat``,
+    and :math:`\\beta \\in [0, 1]` refers to ``beta``.
+
+
     Examples
     --------
     A 4D factor model set with a 2D factor space:
@@ -2367,8 +2482,8 @@ class FactorModelSet(UncertaintySet):
         Note that, mathematically, setting ``beta = 0`` will enforce
         that as many factors will be above 0 as there will be below 0
         (i.e., "zero-net-alpha" model). If ``beta = 1``,
-        then the set is numerically equivalent to a `BoxSet` with bounds
-        ``[self.origin - psi @ np.ones(F), self.origin + psi @ np.ones(F)].T``.
+        then any number of factors can be above 0 or below 0
+        simultaneously.
         """
         return self._beta
 
@@ -2582,7 +2697,7 @@ class FactorModelSet(UncertaintySet):
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
     """
-    An axis-aligned ellipsoid.
+    An axis-aligned ellipsoidal region.
 
     Parameters
     ----------
@@ -2591,18 +2706,46 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     half_lengths : (N,) array_like
         Semi-axis lengths of the ellipsoid.
 
+    See Also
+    --------
+    EllipsoidalSet : A general ellipsoidal region.
+
+    Notes
+    -----
+    The :math:`n`-dimensional axis-aligned ellipsoidal set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,
+            \\middle|\\,
+            \\begin{array}{l}
+                \\displaystyle
+                    \\sum_{\\substack{i = 1 \\\\ \\alpha_i > 0}}^n
+                    \\bigg( \\frac{q_i - q_i^0}{\\alpha_i}\\bigg)^2
+                    \\leq 1
+                    \\\\
+                q_i = q_i^0\\quad\\forall\\,i \\,:\\,\\alpha_i = 0
+            \\end{array}
+        \\right\\}
+
+    in which
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
+    and :math:`\\alpha \\in \\mathbb{R}_{+}^n` refers to
+    ``half_lengths``.
+
     Examples
     --------
-    3D origin-centered unit hypersphere:
+    3D origin-centered unit ball:
 
     >>> from pyomo.contrib.pyros import AxisAlignedEllipsoidalSet
-    >>> sphere = AxisAlignedEllipsoidalSet(
+    >>> ball = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0, 0],
-    ...     half_lengths=[1, 1, 1]
+    ...     half_lengths=[1, 1, 1],
     ... )
-    >>> sphere.center
+    >>> ball.center
     array([0, 0, 0])
-    >>> sphere.half_lengths
+    >>> ball.half_lengths
     array([1, 1, 1])
 
     """
@@ -2794,7 +2937,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
 class EllipsoidalSet(UncertaintySet):
     """
-    A general ellipsoid.
+    A general ellipsoidal region.
 
     Parameters
     ----------
@@ -2813,6 +2956,34 @@ class EllipsoidalSet(UncertaintySet):
         matrix `shape_matrix`.
         Exactly one of `scale` and `gaussian_conf_lvl` should be
         None; otherwise, an exception is raised.
+
+    See Also
+    --------
+    AxisAlignedEllipsoidalSet : An axis-aligned ellipsoidal region.
+
+    Notes
+    -----
+    The :math:`n`-dimensional ellipsoidal set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,|
+            \\,(q - q^0)^\\intercal \\Sigma^{-1}(q - q^0) \\leq s
+        \\right\\}
+
+    in which
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
+    the quantity
+    :math:`\\Sigma \\in \\mathbb{R}^{n \\times n}`
+    refers to ``shape_matrix``,
+    and :math:`s \\geq 0` refers to ``scale``.
+
+    The quantity :math:`s` is related to the Gaussian confidence level
+    (``gaussian_conf_lvl``) :math:`p \\in [0, 1)`
+    by :math:`s = \\chi_{n}^2(p)`, in which
+    :math:`\\chi_{n}^2(\\cdot)` is the quantile function
+    of the chi-squared distribution with :math:`n` degrees of freedom.
 
     Examples
     --------
@@ -2834,7 +3005,7 @@ class EllipsoidalSet(UncertaintySet):
     >>> ball.scale
     1
 
-    A 2D ellipsoid with custom rotation and scaling:
+    A 2D ellipsoidal region with custom rotation and scaling:
 
     >>> rotated_ellipsoid = EllipsoidalSet(
     ...     center=[1, 1],
@@ -2849,7 +3020,7 @@ class EllipsoidalSet(UncertaintySet):
     >>> rotated_ellipsoid.scale
     0.5
 
-    A 4D 95% confidence ellipsoid:
+    A 4D 95% confidence ellipsoidal region:
 
     >>> conf_ellipsoid = EllipsoidalSet(
     ...     center=np.zeros(4),
@@ -3197,13 +3368,25 @@ class EllipsoidalSet(UncertaintySet):
 
 class DiscreteScenarioSet(UncertaintySet):
     """
-    A discrete set of finitely many uncertain parameter realizations
-    (or scenarios).
+    A set of finitely many distinct points (or scenarios).
 
     Parameters
     ----------
     scenarios : (M, N) array_like
         A sequence of `M` distinct uncertain parameter realizations.
+
+    Notes
+    -----
+    The :math:`n`-dimensional discrete set is defined by
+
+    .. math::
+
+        \\left\\{
+                q^1, q^2, \\dots, q^m
+        \\right\\}
+
+    in which :math:`q^i \\in \\mathbb{R}^n`
+    refers to ``scenarios[i - 1]`` for :math:`i = 1, 2, \\dots, m`.
 
     Examples
     --------
@@ -3388,7 +3571,7 @@ class DiscreteScenarioSet(UncertaintySet):
 
 class IntersectionSet(UncertaintySet):
     """
-    An intersection of a sequence of uncertainty sets, each of which
+    An intersection of two or more uncertainty sets, each of which
     is represented by an `UncertaintySet` object.
 
     Parameters
@@ -3397,6 +3580,19 @@ class IntersectionSet(UncertaintySet):
         PyROS `UncertaintySet` objects of which to construct
         an intersection. At least two uncertainty sets must
         be provided. All sets must be of the same dimension.
+
+    Notes
+    -----
+    The :math:`n`-dimensional intersection set is defined by
+
+    .. math::
+
+        \\mathcal{Q}_1 \\cap \\mathcal{Q}_2 \\cap \\cdots
+            \\cap \\mathcal{Q}_m
+
+    in which :math:`\\mathcal{Q}_i \\subset \\mathbb{R}^n`
+    refers to the uncertainty set ``list(unc_sets.values())[i - 1]``
+    for :math:`i = 1, 2, \\dots, m`.
 
     Examples
     --------
@@ -3411,7 +3607,8 @@ class IntersectionSet(UncertaintySet):
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
-    >>> # to construct intersection, pass sets as keyword arguments
+    >>> # to construct intersection, pass sets as keyword arguments.
+    >>> # keywords are arbitrary
     >>> intersection = IntersectionSet(set1=square, set2=circle)
     >>> intersection.all_sets  # doctest: +ELLIPSIS
     UncertaintySetList([...])
