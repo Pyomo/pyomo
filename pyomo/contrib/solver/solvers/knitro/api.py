@@ -12,4 +12,9 @@
 from pyomo.common.dependencies import attempt_import
 
 knitro, KNITRO_AVAILABLE = attempt_import("knitro")
-KNITRO_VERSION = knitro.__version__ if bool(KNITRO_AVAILABLE) else "0.0.0"
+
+
+def get_version():
+    if bool(KNITRO_AVAILABLE):
+        return "0.0.0"
+    return knitro.__version__

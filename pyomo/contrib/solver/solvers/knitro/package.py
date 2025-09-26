@@ -16,7 +16,7 @@ from pyomo.common.tee import TeeStream, capture_output
 from pyomo.contrib.solver.common.base import Availability
 from pyomo.contrib.solver.solvers.knitro.api import (
     KNITRO_AVAILABLE,
-    KNITRO_VERSION,
+    get_version,
     knitro,
 )
 
@@ -68,7 +68,7 @@ class Package:
             tuple[int, int, int]: The (major, minor, patch) version of KNITRO.
 
         """
-        major, minor, patch = map(int, KNITRO_VERSION.split("."))
+        major, minor, patch = map(int, get_version().split("."))
         return major, minor, patch
 
     @staticmethod
