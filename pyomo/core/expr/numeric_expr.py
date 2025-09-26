@@ -1206,7 +1206,11 @@ class SumExpression(NumericExpression):
         return self.__class__(_args)
 
     def _apply_operation(self, result):
-        return sum(result)
+        # Avoid 0 being added to summations by specifying the start
+        if result:
+            return sum(result[1:], start=result[0])
+        else:
+            return 0
 
     def _compute_polynomial_degree(self, result):
         # NB: We can't use max() here because None (non-polynomial)
