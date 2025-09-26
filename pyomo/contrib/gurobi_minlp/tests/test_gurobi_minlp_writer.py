@@ -11,6 +11,11 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import attempt_import
+from pyomo.contrib.gurobi_minlp.tests.gurobi_to_pyomo_expressions import (
+    grb_nl_to_pyo_expr
+)
+from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.environ import (
     Binary,
     BooleanVar,
@@ -347,6 +352,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(var_map), 2)
         x = var_map[id(m.x)]
         y = var_map[id(m.y)]
+        reverse_var_map = {grbv : pyov for pyov, grbv in var_map.items()}
 
         self.assertEqual(grb_model.numVars, 4)
         self.assertEqual(grb_model.numIntVars, 0)
@@ -359,7 +365,6 @@ class TestGurobiMINLPWriter(CommonTest):
         nonlinear_constrs = grb_model.getGenConstrs()
         self.assertEqual(len(nonlinear_constrs), 2)
 
-        # TODO: test the constraints
         c1 = lin_constrs[0]
         aux1 = grb_model.getRow(c1)
         self.assertEqual(c1.RHS, 7)
@@ -377,15 +382,32 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(aux2.getCoeff(0), 1)
         self.assertEqual(aux2.getConstant(), 0)
         aux2 = aux2.getVar(0)
-        
+
+        # log(x)**2 + y
         g1 = nonlinear_constrs[0]
         aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(g1)
         self.assertIs(aux_var, aux1)
-        self.assertEqual(len(opcode), 6)
-        from pytest import set_trace
-        set_trace()
-        
+        assertExpressionsEqual(
+            self,
+            grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map),
+            log(m.x)**2 + m.y
+        )
+
+        # log(x)**2 + y + y**3 + log(x + y)
         g2 = nonlinear_constrs[1]
+        aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(g2)
+        self.assertIs(aux_var, aux2)
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            SumExpression(
+                (SumExpression((
+                    SumExpression((log(m.x)**2, m.y)),
+                    m.y ** 3.0)),
+                 log(SumExpression((m.x,  m.y))))
+            )
+        )
 
         # objective
         self.assertEqual(grb_model.ModelSense, 1)  # minimizing
