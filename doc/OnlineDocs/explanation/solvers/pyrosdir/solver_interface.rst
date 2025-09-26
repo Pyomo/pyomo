@@ -25,6 +25,7 @@ instantiated as follows:
 
 Overview of Inputs
 ==================
+
 Deterministic Model
 -------------------
 PyROS is designed to operate on a single-objective deterministic model
@@ -77,7 +78,8 @@ Uncertainty Set
 The uncertainty set is represented by an
 :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
 object.
-See the :ref:`pyros_uncertainty_sets` section for more information.
+See the :ref:`Uncertainty Sets documentation <pyros_uncertainty_sets>`
+for more information.
 
 Subordinate NLP Solvers
 -----------------------
@@ -267,4 +269,5 @@ When the PyROS
 is invoked to solve an RO problem,
 the progress and final result are reported through a highly
 configurable logging system.
-See the :ref:`pyros_solver_log` section for more information.
+See the :ref:`Solver Output Log documentation <pyros_solver_log>`
+documentation for more information.

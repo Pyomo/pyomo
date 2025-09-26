@@ -53,7 +53,7 @@ where:
   (see :ref:`first Note <var-bounds-to-ineqs>`)
 * :math:`h_j\left(x, z, y; q\right)` is the :math:`j^\text{th}`
   equality constraint function in set :math:`\mathcal{J}`
-  (see :ref:`second Note <unique-mapping>`)
+  (see :ref:`second Note <pyros_unique_state_vars>`)
 
 .. _var-bounds-to-ineqs:
 

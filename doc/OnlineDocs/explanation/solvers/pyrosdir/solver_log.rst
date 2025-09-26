@@ -23,7 +23,7 @@ your console output will, by default, look like this:
 .. _solver-log-snippet:
 
 .. code-block:: text
-   :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
+   :caption: PyROS solver output log for the :ref:`Quickstart example <pyros_quickstart_example-two-stg>`.
    :linenos:
 
    ==============================================================================
@@ -156,7 +156,7 @@ Observe that the log contains the following information
 * **Iteration log table** (lines 63--70):
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
-  :ref:`the table that follows <table-iteration-log-columns>`.
+  :ref:`the table that follows <pyros_table-iteration-log-columns>`.
 * **Termination message** (lines 71--72): One-line message briefly summarizing
   the reason the solver has terminated.
 * **Timing statistics** (lines 73--89):
@@ -191,7 +191,7 @@ the problem of interest.
 The constituent columns are defined in the
 table below.
 
-.. _table-iteration-log-columns:
+.. _pyros_table-iteration-log-columns:
 
 .. list-table:: PyROS iteration log table columns.
    :widths: 10 50

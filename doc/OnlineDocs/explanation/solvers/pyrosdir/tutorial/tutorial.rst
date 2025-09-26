@@ -30,7 +30,7 @@ as a backup global solver.
 You will also need to
 `install Matplotlib <https://matplotlib.org/stable/install/index.html>`__,
 which is used to generate plots in this tutorial.
-Further, we recommend installing an
+Further, we recommend installing
 an `interactive Matplotlib backend
 <https://matplotlib.org/stable/users/explain/figure/backends.html#interactive-backends>`_
 for quick and easy viewing of plots.
@@ -302,7 +302,8 @@ model (with the variables uninitialized):
 
     For more information on implementing uncertain parameters for PyROS,
     see the
-    :ref:`Uncertain Parameters section of the Solver Interface page <pyros_uncertain_params>`.
+    :ref:`Uncertain Parameters section of the Solver Interface
+    documentation <pyros_uncertain_params>`.
 
 
 For convenience, we also write a function to initialize the model's
@@ -603,7 +604,7 @@ Construct PyROS Solver Arguments
 
 We now construct the required arguments to the PyROS solver.
 A general discussion on all PyROS solver arguments is given in the
-:ref:`Solver Interface Section <pyros_solver_interface>`.
+:ref:`Solver Interface documentation <pyros_solver_interface>`.
 
 Deterministic Model
 ^^^^^^^^^^^^^^^^^^^
@@ -674,7 +675,7 @@ We do so by instantiating the PyROS solver interface:
 
 and invoking the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method:
 
-.. _pyros_tutorial_tatic_ro_solve:
+.. _pyros_tutorial_static_ro_solve:
 
 .. code::
 

@@ -1,5 +1,3 @@
-.. _pyros_installation:
-
 ==========================
 Getting Started with PyROS
 ==========================
@@ -8,6 +6,8 @@ Getting Started with PyROS
    :depth: 3
    :local:
 
+
+.. _pyros_installation:
 
 Installation
 ============
@@ -103,7 +103,8 @@ interval uncertainty set :math:`\mathcal{Q} = [0.9, 1.1]^2`.
     Per our analysis, our selections of first-stage variables
     and second-stage variables in the present example
     satisfy our
-    :ref:`assumption that the state variable values are uniquely defined <pyros_unique_state_vars>`.
+    :ref:`assumption that the state variable values are
+    uniquely defined <pyros_unique_state_vars>`.
 
 
 Step 0: Import Pyomo and the PyROS Module
@@ -112,7 +113,7 @@ Step 0: Import Pyomo and the PyROS Module
 In anticipation of using the PyROS solver and building the deterministic Pyomo
 model:
 
-.. _pyros_module_imports:
+.. _pyros_quickstart_module_imports:
 
 .. doctest::
 
@@ -127,7 +128,7 @@ Deterministic Model
 
 The model can be implemented as follows:
 
-.. _pyros_model_construct:
+.. _pyros_quickstart_model_construct:
 
 .. doctest::
 
@@ -214,7 +215,7 @@ and BARON as the subordinate global NLP solver:
 In advance of using PyROS, we check that the model can be solved
 to optimality with the subordinate global solver:
 
-.. _pyros_solve_deterministic:
+.. _pyros_quickstart_solve_deterministic:
 
 .. doctest::
   :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
@@ -240,7 +241,7 @@ We now use PyROS to solve the model to robust optimality
 by invoking the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 method of the PyROS solver object:
 
-.. _single-stage-problem:
+.. _pyros_quickstart_single-stage-problem:
 
 .. doctest::
   :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
@@ -281,9 +282,10 @@ see the :ref:`Solver Output Log documentation <pyros_solver_log>`.
    PyROS, like other Pyomo solvers, accepts optional arguments
    passed indirectly through the keyword argument ``options``.
    This is discussed further in the
-   :ref:`Solver Interface documentation <pyros_optional_arguments>`.
+   :ref:`Optional Arguments section of the
+   Solver Interface documentation <pyros_optional_arguments>`.
    Thus, the PyROS solver invocation in the
-   :ref:`above snippet <single-stage-problem>`
+   :ref:`preceding code snippet <pyros_quickstart_single-stage-problem>`
    is equivalent to:
 
    .. code-block::
@@ -362,7 +364,7 @@ so that static decision rules are used.
 Increasing the decision rule order
 may yield a solution with better quality:
 
-.. _example-two-stg:
+.. _pyros_quickstart_example-two-stg:
 
 .. doctest::
   :skipif: not (baron_available and baron.license_is_valid() and ipopt_available)
@@ -458,7 +460,8 @@ subject to a corresponding
 
 Using the :py:obj:`dict` populated in the loop,
 and the 
-:ref:`previously evaluated deterministically optimal objective value <pyros_solve_deterministic>`,
+:ref:`previously evaluated deterministically optimal
+objective value <pyros_quickstart_solve_deterministic>`,
 we can print a tabular summary of the results:
 
 .. doctest::
