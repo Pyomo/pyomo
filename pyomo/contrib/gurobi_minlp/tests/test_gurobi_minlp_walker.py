@@ -11,6 +11,7 @@
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
 from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import GurobiMINLPVisitor
 from pyomo.contrib.gurobi_minlp.tests.gurobi_to_pyomo_expressions import (
@@ -579,19 +580,28 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertIs(data[1], x1)
         self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
 
-    # TODO: what other unary expressions?
-
     def test_handle_complex_number_sqrt(self):
         m = self.get_model()
         m.p = Param(initialize=3, mutable=True)
         m.c = Constraint(expr=sqrt(-m.p) + m.x1 >= 3)
+        
         visitor = self.get_visitor()
-        _, expr = visitor.walk_expression(m.c.body)
+        with self.assertRaisesRegex(
+            InvalidValueError,
+            r"Invalid number encountered evaluating constant unary expression "
+            r"sqrt\(- p\): math domain error"
+        ):
+            _, expr = visitor.walk_expression(m.c.body)
 
-        # TODO: What does gurobi do with this? If nothing good, then I
-        # need to do something different for constants so that I can
-        # catch this.
-
-        # TODO: What did I want to happen here? We should probably catch
-        # this in the writer?
-        self.assertTrue(False)
+    def test_handle_invalid_log(self):
+        m = self.get_model()
+        m.p = Param(initialize=0, mutable=True)
+        m.c = Constraint(expr=log(m.p) + m.x1 >= 3)
+        
+        visitor = self.get_visitor()
+        with self.assertRaisesRegex(
+            InvalidValueError,
+            r"Invalid number encountered evaluating constant unary expression "
+            r"log\(p\): math domain error"
+        ):
+            _, expr = visitor.walk_expression(m.c.body)

@@ -25,6 +25,7 @@ from operator import attrgetter, itemgetter
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.common.errors import InvalidValueError
 from pyomo.common.numeric_types import native_complex_types
 from pyomo.common.timing import HierarchicalTimer
 
@@ -84,6 +85,8 @@ from pyomo.repn.util import (
     nan,
     OrderedVarRecorder,
 )
+
+import sys
 
 ## DEBUG
 from pytest import set_trace
@@ -287,6 +290,16 @@ def _handle_unary(visitor, node, data):
     )
 
 
+def _handle_unary_constant(visitor, node, data):
+    try:
+        return _CONSTANT, node._fcn(value(data[1]))
+    except:
+        raise InvalidValueError(
+            f"Invalid number encountered evaluating constant unary expression "
+            f"{node}: {sys.exc_info()[1]}"
+        )
+
+
 def _handle_named_expression(visitor, node, arg1):
     # Record this common expression
     visitor.subexpression_cache[id(node)] = arg1
@@ -357,7 +370,10 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         (_LINEAR, _CONSTANT): _handle_linear_constant_pow_expr,
         (_QUADRATIC, _CONSTANT): _handle_quadratic_constant_pow_expr,
     }
-    _exit_node_handlers[UnaryFunctionExpression] = {None: _handle_unary}
+    _exit_node_handlers[UnaryFunctionExpression] = {
+        None: _handle_unary,
+        (_CONSTANT,): _handle_unary_constant,
+    }
 
     ## TODO: ExprIf, RangedExpressions (if we do exprif...
     _exit_node_handlers[Expression] = {None: _handle_named_expression}
@@ -473,12 +489,6 @@ class GurobiMINLPWriter():
         if expr_type is not _GENERAL:
             return grb_expr, False, None
         else:
-            #print("Is this the problem?")
-            # TODO: Yes, this is the problem. We should not be calling quadratics
-            # GENERAL first of all, because we don't want them to end up here.
-            # Second of all, for general nonlinear big E expressions, we should
-            # cache the auxiliary Var, I think. For other things, we should cache
-            # the gurobi expression itself.
             aux = grb_model.addVar()
             return grb_expr, True, aux
 
