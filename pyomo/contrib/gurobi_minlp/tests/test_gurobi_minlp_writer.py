@@ -11,6 +11,8 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import numpy as np, numpy_available
+
 from pyomo.contrib.gurobi_minlp.tests.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr
 )
@@ -514,10 +516,9 @@ class TestGurobiMINLPWriter(CommonTest):
         results = opt.solve(m)
         # model is unbounded
         self.assertEqual(results.termination_condition, TerminationCondition.unbounded)
-        
-    def test_soren_example2(self):
-        import numpy as np
 
+    @unittest.skipUnless(numpy_available, "Numpy is not available")
+    def test_numpy_trivially_true_constraint(self):
         m = ConcreteModel()
         m.x1 = Var()
         m.x2 = Var()
@@ -525,9 +526,36 @@ class TestGurobiMINLPWriter(CommonTest):
         m.x2.fix(np.float64(0))
         m.c = Constraint(expr=m.x1 == m.x2)
         m.obj = Objective(expr=m.x1)
-        m.pprint()
         results = SolverFactory('gurobi_direct_minlp').solve(m)
-        results.display()
+
+        self.assertEqual(results.termination_condition,
+                         TerminationCondition.convergenceCriteriaSatisfied)
+        self.assertEqual(value(m.obj), 0)
+        self.assertEqual(results.incumbent_objective, 0)
+        self.assertEqual(results.objective_bound, 0)
+
+        # ESJ TODO: There's still a bug here, but it's with the
+        # expression type I'm passing through, not with the numpy
+        # situation now.
+
+    def test_trivally_true_constraint(self):
+        """
+        We can pass trivially true things to Gurobi and it's fine
+        """
+        m = ConcreteModel()
+        m.x1 = Var()
+        m.x2 = Var()
+        m.x1.fix(2)
+        m.x2.fix(2)
+        m.c = Constraint(expr=m.x1 <= m.x2)
+        m.obj = Objective(expr=m.x1)
+        results = SolverFactory('gurobi_direct_minlp').solve(m, tee=True)
+
+        self.assertEqual(results.termination_condition,
+                         TerminationCondition.convergenceCriteriaSatisfied)
+        self.assertEqual(value(m.obj), 2)
+        self.assertEqual(results.incumbent_objective, 2)
+        self.assertEqual(results.objective_bound, 2)
 
 
 # ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the

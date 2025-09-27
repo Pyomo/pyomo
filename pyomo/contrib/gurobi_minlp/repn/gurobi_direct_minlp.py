@@ -134,8 +134,8 @@ if gurobipy_available:
             'cos': (_GENERAL, nlfunc.cos),
             'tan': (_GENERAL, nlfunc.tan),
             'sqrt': (_GENERAL, nlfunc.sqrt),
-            # TODO: We'll have to do functional programming things if we want to support
-            # any of these...
+            # Not supporting any of these right now--we'd have to build them from the
+            # above:
             # 'asin': None,
             # 'sinh': None,
             # 'asinh': None,
@@ -487,10 +487,10 @@ class GurobiMINLPWriter():
         """
         expr_type, grb_expr = grb_visitor.walk_expression(expr)
         if expr_type is not _GENERAL:
-            return grb_expr, False, None
+            return expr_type, grb_expr, False, None
         else:
             aux = grb_model.addVar()
-            return grb_expr, True, aux
+            return expr_type, grb_expr, True, aux
 
     def write(self, model, **options):
         config = options.pop('config', self.config)(options)
@@ -553,7 +553,7 @@ class GurobiMINLPWriter():
                 sense = GRB.MINIMIZE
             else:
                 sense = GRB.MAXIMIZE
-            obj_expr, nonlinear, aux = self._create_gurobi_expression(
+            expr_type, obj_expr, nonlinear, aux = self._create_gurobi_expression(
                 obj.expr, obj, 0, grb_model, quadratic_visitor, visitor
             )
             if nonlinear:
@@ -570,19 +570,32 @@ class GurobiMINLPWriter():
 
         # write constraints
         for cons in components[Constraint]:
-            expr, nonlinear, aux = self._create_gurobi_expression(
+            expr_type, expr, nonlinear, aux = self._create_gurobi_expression(
                 cons.body, cons, 0, grb_model, quadratic_visitor, visitor
             )
             if nonlinear:
                 grb_model.addConstr(aux == expr)
                 expr = aux
+            print(expr_type)
+            lb = value(cons.lb)
+            ub = value(cons.ub)
+            if expr_type == _CONSTANT:
+                # cast everything to a float in case there are numpy
+                # types because you can't do addConstr(np.True_)
+                print("trivial constraint")
+                expr = float(expr)
+                lb = float(lb)
+                ub = float(ub)
             if cons.equality:
-                grb_model.addConstr(value(cons.lower) == expr)
+                print(type(lb == expr))
+                print(type(lb))
+                print(type(expr))
+                grb_model.addConstr(lb == expr)
             else:
                 if cons.lb is not None:
-                    grb_model.addConstr(value(cons.lb) <= expr)
+                    grb_model.addConstr(lb <= expr)
                 if cons.ub is not None:
-                    grb_model.addConstr(value(cons.ub) >= expr)
+                    grb_model.addConstr(ub >= expr)
 
         grb_model.update()
         return grb_model, visitor.var_map, pyo_obj
