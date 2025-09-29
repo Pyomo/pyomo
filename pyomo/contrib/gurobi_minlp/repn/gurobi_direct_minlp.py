@@ -415,11 +415,6 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        print("EXIT")
-        print(node)
-        print(node.__class__)
-        print(data)
-        print("==========")
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
@@ -577,22 +572,17 @@ class GurobiMINLPWriter():
             if nonlinear:
                 grb_model.addConstr(aux == expr)
                 expr = aux
-            print(expr_type)
             lb = value(cons.lb)
             ub = value(cons.ub)
             if expr_type == _CONSTANT:
                 # cast everything to a float in case there are numpy
                 # types because you can't do addConstr(np.True_)
-                print("trivial constraint")
                 expr = float(expr)
                 if lb is not None:
                     lb = float(lb)
                 if ub is not None:
                     ub = float(ub)
             if cons.equality:
-                print(type(lb == expr))
-                print(type(lb))
-                print(type(expr))
                 grb_model.addConstr(lb == expr)
             else:
                 if cons.lb is not None:
