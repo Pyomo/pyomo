@@ -55,7 +55,7 @@ with existing interfaces).
      - ``highs``
      - ``highs``
    * - KNITRO
-     - ``knitroampl``
+     - ``knitro_direct``
      - ``knitro_direct``
 
 Using the new interfaces through the legacy interface
