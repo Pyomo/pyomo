@@ -14,7 +14,7 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np, numpy_available
 
 from pyomo.contrib.gurobi_minlp.tests.gurobi_to_pyomo_expressions import (
-    grb_nl_to_pyo_expr
+    grb_nl_to_pyo_expr,
 )
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr.numeric_expr import SumExpression
@@ -342,7 +342,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.e = Expression(expr=log(m.x)**2 + m.y)
+        m.e = Expression(expr=log(m.x) ** 2 + m.y)
         m.c = Constraint(expr=m.e <= 7)
         m.c2 = Constraint(expr=m.e + m.y**3 + log(m.x + m.y) >= -3)
         m.obj = Objective(expr=0)
@@ -354,7 +354,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(var_map), 2)
         x = var_map[id(m.x)]
         y = var_map[id(m.y)]
-        reverse_var_map = {grbv : pyov for pyov, grbv in var_map.items()}
+        reverse_var_map = {grbv: pyov for pyov, grbv in var_map.items()}
 
         self.assertEqual(grb_model.numVars, 4)
         self.assertEqual(grb_model.numIntVars, 0)
@@ -392,7 +392,7 @@ class TestGurobiMINLPWriter(CommonTest):
         assertExpressionsEqual(
             self,
             grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map),
-            log(m.x)**2 + m.y
+            log(m.x) ** 2 + m.y,
         )
 
         # log(x)**2 + y + y**3 + log(x + y)
@@ -404,11 +404,11 @@ class TestGurobiMINLPWriter(CommonTest):
             self,
             pyo_expr,
             SumExpression(
-                (SumExpression((
-                    SumExpression((log(m.x)**2, m.y)),
-                    m.y ** 3.0)),
-                 log(SumExpression((m.x,  m.y))))
-            )
+                (
+                    SumExpression((SumExpression((log(m.x) ** 2, m.y)), m.y**3.0)),
+                    log(SumExpression((m.x, m.y))),
+                )
+            ),
         )
 
         # objective
@@ -482,9 +482,9 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertIs(res_var, aux_var)
 
         self.assertEqual(len(opcode), 6)
-        self.assertEqual(parent[0], -1) # root
+        self.assertEqual(parent[0], -1)  # root
         self.assertEqual(opcode[0], GRB.OPCODE_MULTIPLY)
-        self.assertEqual(data[0], -1) # no additional data
+        self.assertEqual(data[0], -1)  # no additional data
 
         # first arg is another multiply with three children
         self.assertEqual(parent[1], 0)
@@ -510,7 +510,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(parent[5], 0)
         self.assertEqual(opcode[5], GRB.OPCODE_VARIABLE)
         self.assertIs(data[5], x3)
-        
+
         opt = SolverFactory('gurobi_direct_minlp')
         opt.config.raise_exception_on_nonoptimal_result = False
         results = opt.solve(m)
@@ -528,8 +528,10 @@ class TestGurobiMINLPWriter(CommonTest):
         m.obj = Objective(expr=m.x1)
         results = SolverFactory('gurobi_direct_minlp').solve(m)
 
-        self.assertEqual(results.termination_condition,
-                         TerminationCondition.convergenceCriteriaSatisfied)
+        self.assertEqual(
+            results.termination_condition,
+            TerminationCondition.convergenceCriteriaSatisfied,
+        )
         self.assertEqual(value(m.obj), 0)
         self.assertEqual(results.incumbent_objective, 0)
         self.assertEqual(results.objective_bound, 0)
@@ -551,8 +553,10 @@ class TestGurobiMINLPWriter(CommonTest):
         m.obj = Objective(expr=m.x1)
         results = SolverFactory('gurobi_direct_minlp').solve(m, tee=True)
 
-        self.assertEqual(results.termination_condition,
-                         TerminationCondition.convergenceCriteriaSatisfied)
+        self.assertEqual(
+            results.termination_condition,
+            TerminationCondition.convergenceCriteriaSatisfied,
+        )
         self.assertEqual(value(m.obj), 2)
         self.assertEqual(results.incumbent_objective, 2)
         self.assertEqual(results.objective_bound, 2)

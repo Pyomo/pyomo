@@ -461,7 +461,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
     'gurobi_minlp',
     'Direct interface to Gurobi that allows for general nonlinear expressions',
 )
-class GurobiMINLPWriter():
+class GurobiMINLPWriter:
     CONFIG = ConfigDict('gurobi_minlp_writer')
     CONFIG.declare(
         'symbolic_solver_labels',

@@ -15,7 +15,7 @@ from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
 from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import GurobiMINLPVisitor
 from pyomo.contrib.gurobi_minlp.tests.gurobi_to_pyomo_expressions import (
-    grb_nl_to_pyo_expr
+    grb_nl_to_pyo_expr,
 )
 from pyomo.environ import (
     Binary,
@@ -232,9 +232,9 @@ class TestGurobiMINLPWalker(CommonTest):
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
         self.assertEqual(len(opcode), 6)
-        self.assertEqual(parent[0], -1) # root
+        self.assertEqual(parent[0], -1)  # root
         self.assertEqual(opcode[0], GRB.OPCODE_MULTIPLY)
-        self.assertEqual(data[0], -1) # no additional data
+        self.assertEqual(data[0], -1)  # no additional data
 
         # first arg is another multiply with three children
         self.assertEqual(parent[1], 0)
@@ -269,17 +269,14 @@ class TestGurobiMINLPWalker(CommonTest):
         _, expr = visitor.walk_expression(m.c.body)
 
         visitor.grb_model.update()
-        grb_to_pyo_var_map = {grb_var: py_var for py_var, grb_var
-                              in visitor.var_map.items()}
+        grb_to_pyo_var_map = {
+            grb_var: py_var for py_var, grb_var in visitor.var_map.items()
+        }
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
         pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, grb_to_pyo_var_map)
-        assertExpressionsEqual(
-            self,
-            pyo_expr,
-            1.0 / m.x1
-        )
+        assertExpressionsEqual(self, pyo_expr, 1.0 / m.x1)
 
     def test_write_division_linear(self):
         m = self.get_model()
@@ -436,7 +433,7 @@ class TestGurobiMINLPWalker(CommonTest):
         # get a constraint:
         # expr == abs(x1)
         x1 = visitor.var_map[id(m.x1)]
-        
+
         self.assertIsInstance(expr, gurobipy.Var)
         grb_model = visitor.grb_model
         # We don't call update in walk expression for performance reasons, but
@@ -495,7 +492,7 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertIs(linexpr.getVar(1), x2)
         self.assertEqual(linexpr.getCoeff(2), 1)
         self.assertIs(linexpr.getVar(2), aux1)
-        
+
     def test_write_expression_with_mutable_param(self):
         m = self.get_model()
         m.p = Param(initialize=4, mutable=True)
@@ -584,12 +581,12 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.p = Param(initialize=3, mutable=True)
         m.c = Constraint(expr=sqrt(-m.p) + m.x1 >= 3)
-        
+
         visitor = self.get_visitor()
         with self.assertRaisesRegex(
             InvalidValueError,
             r"Invalid number encountered evaluating constant unary expression "
-            r"sqrt\(- p\): math domain error"
+            r"sqrt\(- p\): math domain error",
         ):
             _, expr = visitor.walk_expression(m.c.body)
 
@@ -597,11 +594,11 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.p = Param(initialize=0, mutable=True)
         m.c = Constraint(expr=log(m.p) + m.x1 >= 3)
-        
+
         visitor = self.get_visitor()
         with self.assertRaisesRegex(
             InvalidValueError,
             r"Invalid number encountered evaluating constant unary expression "
-            r"log\(p\): math domain error"
+            r"log\(p\): math domain error",
         ):
             _, expr = visitor.walk_expression(m.c.body)
