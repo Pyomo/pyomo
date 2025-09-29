@@ -337,7 +337,8 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         None: _handle_node_with_eval_expr_visitor_unknown
     }
     _exit_node_handlers[LinearExpression] = {
-        None: _handle_node_with_eval_expr_visitor_linear
+        # Can come back LINEAR or CONSTANT, so we use the 'unknown' version
+        None: _handle_node_with_eval_expr_visitor_unknown
     }
     _exit_node_handlers[NegationExpression] = {
         None: _handle_node_with_eval_expr_visitor_invariant
@@ -411,19 +412,19 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        # # Return native types
-        # if child.__class__ in EXPR.native_types:
-        #     return False, child
-
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
+        print("EXIT")
+        print(node)
+        print(node.__class__)
+        print(data)
+        print("==========")
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
 
     def finalizeResult(self, result):
-        #self.grb_model.update()
         return result
 
     # ESJ TODO: THIS IS COPIED FROM THE LINEAR WALKER--CAN WE PUT IT IN UTIL OR
@@ -584,8 +585,10 @@ class GurobiMINLPWriter():
                 # types because you can't do addConstr(np.True_)
                 print("trivial constraint")
                 expr = float(expr)
-                lb = float(lb)
-                ub = float(ub)
+                if lb is not None:
+                    lb = float(lb)
+                if ub is not None:
+                    ub = float(ub)
             if cons.equality:
                 print(type(lb == expr))
                 print(type(lb))
