@@ -433,8 +433,8 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(results.incumbent_objective, 2)
         self.assertEqual(results.objective_bound, 2)
 
-    def test_unbounded_because_of_multplying_by_0(self):
-        # Gurobi belives that the expression in m.c is nonlinear, so we have
+    def test_unbounded_because_of_multiplying_by_0(self):
+        # Gurobi believes that the expression in m.c is nonlinear, so we have
         # to pass it that way for this to work. Because this is in fact an
         # unbounded model.
 
@@ -540,7 +540,7 @@ class TestGurobiMINLPWriter(CommonTest):
         # expression type I'm passing through, not with the numpy
         # situation now.
 
-    def test_trivally_true_constraint(self):
+    def test_trivially_true_constraint(self):
         """
         We can pass trivially true things to Gurobi and it's fine
         """
