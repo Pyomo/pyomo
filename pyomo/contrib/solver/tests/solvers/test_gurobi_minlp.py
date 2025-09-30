@@ -1,91 +1,93 @@
 from math import pi
 import pyomo.common.unittest as unittest
+from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiDirectMINLP
 
 from pyomo.core.base.constraint import Constraint
-from pyomo.environ import *
+from pyomo.environ import (
+    ConcreteModel,
+    Var,
+    VarList,
+    Constraint,
+    ConstraintList,
+    value,
+    Binary,
+    NonNegativeReals,
+    Objective,
+    maximize,
+    minimize,
+    cos,
+    sin,
+    tan,
+    log,
+    log10,
+    exp,
+    sqrt,
+)
 
-gurobi_direct = SolverFactory('gurobi_direct')
+gurobi_direct = SolverFactory('gurobi_direct_minlp')
 
-class TestGurobiMINLP(unittest.TestCase):
-    @unittest.skipUnless(
-        gurobi_direct.available(exception_flag=False) and gurobi_direct.license_is_valid(),
-        "needs Gurobi Direct interface",
+@unittest.skipUnless(
+        gurobi_direct.available(),
+        "needs Gurobi Direct MINLP interface",
     )
+class TestGurobiMINLP(unittest.TestCase):
     def test_gurobi_minlp_sincosexp(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(-1, 4))
         m.o = Objective(expr=sin(m.x) + cos(2*m.x) + 1)
         m.c = Constraint(expr=0.25 * exp(m.x) - m.x <= 0)
         gurobi_direct.solve(m)
-        self.assertAlmostEqual(1, m.o(), delta=1e-3)
-        self.assertAlmostEqual(1.571, m.x(), delta=1e-3)
+        self.assertAlmostEqual(1, value(m.o), delta=1e-3)
+        self.assertAlmostEqual(1.571, value(m.x), delta=1e-3)
 
-    @unittest.skipUnless(
-        gurobi_direct.available(exception_flag=False) and gurobi_direct.license_is_valid(),
-        "needs Gurobi Direct interface",
-    )
     def test_gurobi_minlp_tan(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(0, pi/2))
         m.o = Objective(expr=tan(m.x)/(m.x**2))
         gurobi_direct.solve(m)
-        self.assertAlmostEqual(0.948, m.x(), delta=1e-3)
-        self.assertAlmostEqual(1.549, m.o(), delta=1e-3)
+        self.assertAlmostEqual(0.948, value(m.x), delta=1e-3)
+        self.assertAlmostEqual(1.549, value(m.o), delta=1e-3)
 
-    @unittest.skipUnless(
-        gurobi_direct.available(exception_flag=False) and gurobi_direct.license_is_valid(),
-        "needs Gurobi Direct interface",
-    )
     def test_gurobi_minlp_sqrt(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(0, 2))
         m.o = Objective(expr=sqrt(m.x)-(m.x**2)/3, sense=maximize)
         gurobi_direct.solve(m)
-        self.assertAlmostEqual(0.825, m.x(), delta=1e-3)
-        self.assertAlmostEqual(0.681, m.o(), delta=1e-3)
+        self.assertAlmostEqual(0.825, value(m.x), delta=1e-3)
+        self.assertAlmostEqual(0.681, value(m.o), delta=1e-3)
 
-    @unittest.skipUnless(
-        gurobi_direct.available(exception_flag=False) and gurobi_direct.license_is_valid(),
-        "needs Gurobi Direct interface",
-    )
     def test_gurobi_minlp_log(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(1, 2))
         m.o = Objective(expr=(m.x*m.x)/log(m.x))
         gurobi_direct.solve(m)
-        self.assertAlmostEqual(1.396, m.x(), delta=1e-3)
-        self.assertAlmostEqual(8.155, m.o(), delta=1e-3)
+        self.assertAlmostEqual(1.396, value(m.x), delta=1e-3)
+        self.assertAlmostEqual(8.155, value(m.o), delta=1e-3)
 
-    @unittest.skipUnless(
-        gurobi_direct.available(exception_flag=False) and gurobi_direct.license_is_valid(),
-        "needs Gurobi Direct interface",
-    )
     def test_gurobi_minlp_log10(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(1, 2))
         m.o = Objective(expr=(m.x*m.x)/log10(m.x))
         gurobi_direct.solve(m)
-        self.assertAlmostEqual(1.649, m.x(), delta=1e-3)
-        self.assertAlmostEqual(12.518, m.o(), delta=1e-3)
+        self.assertAlmostEqual(1.649, value(m.x), delta=1e-3)
+        self.assertAlmostEqual(12.518, value(m.o), delta=1e-3)
 
-    @unittest.skipUnless(
-        gurobi_direct.available(exception_flag=False) and gurobi_direct.license_is_valid(),
-        "needs Gurobi Direct interface",
-    )
     def test_gurobi_minlp_sigmoid(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(0, 4))
         m.y = Var(bounds=(0, 4))
         m.o = Objective(expr=m.y-m.x)
         m.c = Constraint(expr=1/(1+exp(-m.x)) <= m.y)
-        gurobi_direct.solve(m, tee=True, options={'logfile':'gurobi.log'})
-        self.assertAlmostEqual(m.o(), -3.017, delta=1e-3)
+        gurobi_direct.solve(m)
+        self.assertAlmostEqual(value(m.o), -3.017, delta=1e-3)
 
     def _build_divpwr_model(self, divide: bool, min: bool):
         model = ConcreteModel(name="test")
         model.x1 = Var(domain=NonNegativeReals, bounds=(0.5, 0.6))
         model.x2 = Var(domain=NonNegativeReals, bounds=(0.1, 0.2))
-        model.y = Var(domain=Boolean, initialize=1)
+        model.y = Var(domain=Binary, initialize=1)
 
         y_mult = 1.3
         if divide:
@@ -100,10 +102,6 @@ class TestGurobiMINLP(unittest.TestCase):
 
         return model
 
-    @unittest.skipUnless(
-        gurobi_direct.available(exception_flag=False) and gurobi_direct.license_is_valid(),
-        "needs Gurobi Direct interface",
-    )
     def test_gurobi_minlp_divpwr(self):
         params = [
             {"min": False, "divide": False, "obj": 13 }, 
@@ -114,13 +112,9 @@ class TestGurobiMINLP(unittest.TestCase):
         for p in params:
             model = self._build_divpwr_model(p['divide'], p['min'])
             gurobi_direct.solve(model)
-            self.assertEqual(p["obj"], model.OBJ())
+            self.assertEqual(p["obj"], value(model.OBJ))
             self.assertEqual(1, model.y.value)
     
-    @unittest.skipUnless(
-        gurobi_direct.available(exception_flag=False) and gurobi_direct.license_is_valid(),
-        "needs Gurobi Direct interface",
-    )
     def test_gurobi_minlp_acopf(self):
         # Based on https://docs.gurobi.com/projects/examples/en/current/examples/python/acopf_4buses.html        
 
@@ -189,7 +183,8 @@ class TestGurobiMINLP(unittest.TestCase):
             m.define_Q.add(m.Q[i+1] == m.v[i+1] * sum(m.v[j+1] * (G[i][j] * sin(m.theta[i+1] - m.theta[j+1]) - B[i][j] * cos(m.theta[i+1] - m.theta[j+1])) for j in range(N)))
         
         results = gurobi_direct.solve(m, tee=True)
-        self.assertEqual(SolverStatus.ok, results.solver.status)
+        self.assertEqual(results.termination_condition, TerminationCondition.convergenceCriteriaSatisfied)
+        self.assertEqual(results.solution_status, SolutionStatus.optimal)
         for i in range(N):
             self.assertAlmostEqual(exp_P[i], m.P[i+1].value, delta=1e-3, msg=f'P[{i}]')
             self.assertAlmostEqual(exp_Q[i], m.Q[i+1].value, delta=1e-3, msg=f'Q[{i}]')
