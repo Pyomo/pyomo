@@ -28,15 +28,13 @@ from pyomo.environ import (
 
 gurobi_direct = SolverFactory('gurobi_direct_minlp')
 
-@unittest.skipUnless(
-        gurobi_direct.available(),
-        "needs Gurobi Direct MINLP interface",
-    )
+
+@unittest.skipUnless(gurobi_direct.available(), "needs Gurobi Direct MINLP interface")
 class TestGurobiMINLP(unittest.TestCase):
     def test_gurobi_minlp_sincosexp(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(-1, 4))
-        m.o = Objective(expr=sin(m.x) + cos(2*m.x) + 1)
+        m.o = Objective(expr=sin(m.x) + cos(2 * m.x) + 1)
         m.c = Constraint(expr=0.25 * exp(m.x) - m.x <= 0)
         gurobi_direct.solve(m)
         self.assertAlmostEqual(1, value(m.o), delta=1e-3)
@@ -44,8 +42,8 @@ class TestGurobiMINLP(unittest.TestCase):
 
     def test_gurobi_minlp_tan(self):
         m = ConcreteModel(name="test")
-        m.x = Var(bounds=(0, pi/2))
-        m.o = Objective(expr=tan(m.x)/(m.x**2))
+        m.x = Var(bounds=(0, pi / 2))
+        m.o = Objective(expr=tan(m.x) / (m.x**2))
         gurobi_direct.solve(m)
         self.assertAlmostEqual(0.948, value(m.x), delta=1e-3)
         self.assertAlmostEqual(1.549, value(m.o), delta=1e-3)
@@ -53,7 +51,7 @@ class TestGurobiMINLP(unittest.TestCase):
     def test_gurobi_minlp_sqrt(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(0, 2))
-        m.o = Objective(expr=sqrt(m.x)-(m.x**2)/3, sense=maximize)
+        m.o = Objective(expr=sqrt(m.x) - (m.x**2) / 3, sense=maximize)
         gurobi_direct.solve(m)
         self.assertAlmostEqual(0.825, value(m.x), delta=1e-3)
         self.assertAlmostEqual(0.681, value(m.o), delta=1e-3)
@@ -61,7 +59,7 @@ class TestGurobiMINLP(unittest.TestCase):
     def test_gurobi_minlp_log(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(1, 2))
-        m.o = Objective(expr=(m.x*m.x)/log(m.x))
+        m.o = Objective(expr=(m.x * m.x) / log(m.x))
         gurobi_direct.solve(m)
         self.assertAlmostEqual(1.396, value(m.x), delta=1e-3)
         self.assertAlmostEqual(8.155, value(m.o), delta=1e-3)
@@ -69,7 +67,7 @@ class TestGurobiMINLP(unittest.TestCase):
     def test_gurobi_minlp_log10(self):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(1, 2))
-        m.o = Objective(expr=(m.x*m.x)/log10(m.x))
+        m.o = Objective(expr=(m.x * m.x) / log10(m.x))
         gurobi_direct.solve(m)
         self.assertAlmostEqual(1.649, value(m.x), delta=1e-3)
         self.assertAlmostEqual(12.518, value(m.o), delta=1e-3)
@@ -78,8 +76,8 @@ class TestGurobiMINLP(unittest.TestCase):
         m = ConcreteModel(name="test")
         m.x = Var(bounds=(0, 4))
         m.y = Var(bounds=(0, 4))
-        m.o = Objective(expr=m.y-m.x)
-        m.c = Constraint(expr=1/(1+exp(-m.x)) <= m.y)
+        m.o = Objective(expr=m.y - m.x)
+        m.c = Constraint(expr=1 / (1 + exp(-m.x)) <= m.y)
         gurobi_direct.solve(m)
         self.assertAlmostEqual(value(m.o), -3.017, delta=1e-3)
 
@@ -93,47 +91,47 @@ class TestGurobiMINLP(unittest.TestCase):
         if divide:
             obj = (1 - model.y) / model.x1 + model.y * y_mult / model.x2
         else:
-            obj = (1 - model.y) * (model.x1 ** -1) + model.y * y_mult * (model.x2 ** -1)
+            obj = (1 - model.y) * (model.x1**-1) + model.y * y_mult * (model.x2**-1)
 
         if min:
-            model.OBJ = Objective(expr = -1 * obj, sense=minimize)
+            model.OBJ = Objective(expr=-1 * obj, sense=minimize)
         else:
-            model.OBJ = Objective(expr = obj, sense=maximize)
+            model.OBJ = Objective(expr=obj, sense=maximize)
 
         return model
 
     def test_gurobi_minlp_divpwr(self):
         params = [
-            {"min": False, "divide": False, "obj": 13 }, 
-            {"min": False, "divide": True, "obj": 13 },
-            {"min": True, "divide": False, "obj": -13}, 
-            {"min": True, "divide": True, "obj": -13}, 
+            {"min": False, "divide": False, "obj": 13},
+            {"min": False, "divide": True, "obj": 13},
+            {"min": True, "divide": False, "obj": -13},
+            {"min": True, "divide": True, "obj": -13},
         ]
         for p in params:
             model = self._build_divpwr_model(p['divide'], p['min'])
             gurobi_direct.solve(model)
             self.assertEqual(p["obj"], value(model.OBJ))
             self.assertEqual(1, model.y.value)
-    
+
     def test_gurobi_minlp_acopf(self):
-        # Based on https://docs.gurobi.com/projects/examples/en/current/examples/python/acopf_4buses.html        
+        # Based on https://docs.gurobi.com/projects/examples/en/current/examples/python/acopf_4buses.html
 
         # Number of Buses (Nodes)
         N = 4
 
         # Conductance/susceptance components
         G = [
-                [1.7647, -0.5882, 0.0, -1.1765],
-                [-0.5882, 1.5611, -0.3846, -0.5882],
-                [0.0, -0.3846, 1.5611, -1.1765],
-                [-1.1765, -0.5882, -1.1765, 2.9412],
-            ]
+            [1.7647, -0.5882, 0.0, -1.1765],
+            [-0.5882, 1.5611, -0.3846, -0.5882],
+            [0.0, -0.3846, 1.5611, -1.1765],
+            [-1.1765, -0.5882, -1.1765, 2.9412],
+        ]
         B = [
-                [-7.0588, 2.3529, 0.0, 4.7059],
-                [2.3529, -6.629, 1.9231, 2.3529],
-                [0.0, 1.9231, -6.629, 4.7059],
-                [4.7059, 2.3529, 4.7059, -11.7647],
-            ]        
+            [-7.0588, 2.3529, 0.0, 4.7059],
+            [2.3529, -6.629, 1.9231, 2.3529],
+            [0.0, 1.9231, -6.629, 4.7059],
+            [4.7059, 2.3529, 4.7059, -11.7647],
+        ]
 
         # Assign bounds where fixings are needed
         v_lb = [1.0, 0.0, 1.0, 0.0]
@@ -151,7 +149,7 @@ class TestGurobiMINLP(unittest.TestCase):
         exp_Q = [0.212, -0.2, 0.173, -0.15]
 
         m = ConcreteModel(name="acopf")
-        
+
         m.P = VarList()
         m.Q = VarList()
         m.v = VarList()
@@ -161,7 +159,7 @@ class TestGurobiMINLP(unittest.TestCase):
             p = m.P.add()
             p.lb = P_lb[i]
             p.ub = P_ub[i]
-            
+
             q = m.Q.add()
             q.lb = Q_lb[i]
             q.ub = Q_ub[i]
@@ -179,14 +177,50 @@ class TestGurobiMINLP(unittest.TestCase):
         m.define_P = ConstraintList()
         m.define_Q = ConstraintList()
         for i in range(N):
-            m.define_P.add(m.P[i+1] == m.v[i+1] * sum(m.v[j+1] * (G[i][j] * cos(m.theta[i+1] - m.theta[j+1]) + B[i][j] * sin(m.theta[i+1] - m.theta[j+1])) for j in range(N)))
-            m.define_Q.add(m.Q[i+1] == m.v[i+1] * sum(m.v[j+1] * (G[i][j] * sin(m.theta[i+1] - m.theta[j+1]) - B[i][j] * cos(m.theta[i+1] - m.theta[j+1])) for j in range(N)))
-        
+            m.define_P.add(
+                m.P[i + 1]
+                == m.v[i + 1]
+                * sum(
+                    m.v[j + 1]
+                    * (
+                        G[i][j] * cos(m.theta[i + 1] - m.theta[j + 1])
+                        + B[i][j] * sin(m.theta[i + 1] - m.theta[j + 1])
+                    )
+                    for j in range(N)
+                )
+            )
+            m.define_Q.add(
+                m.Q[i + 1]
+                == m.v[i + 1]
+                * sum(
+                    m.v[j + 1]
+                    * (
+                        G[i][j] * sin(m.theta[i + 1] - m.theta[j + 1])
+                        - B[i][j] * cos(m.theta[i + 1] - m.theta[j + 1])
+                    )
+                    for j in range(N)
+                )
+            )
+
         results = gurobi_direct.solve(m, tee=True)
-        self.assertEqual(results.termination_condition, TerminationCondition.convergenceCriteriaSatisfied)
+        self.assertEqual(
+            results.termination_condition,
+            TerminationCondition.convergenceCriteriaSatisfied,
+        )
         self.assertEqual(results.solution_status, SolutionStatus.optimal)
         for i in range(N):
-            self.assertAlmostEqual(exp_P[i], m.P[i+1].value, delta=1e-3, msg=f'P[{i}]')
-            self.assertAlmostEqual(exp_Q[i], m.Q[i+1].value, delta=1e-3, msg=f'Q[{i}]')
-            self.assertAlmostEqual(exp_v[i], m.v[i+1].value, delta=1e-3, msg=f'v[{i}]')
-            self.assertAlmostEqual(exp_theta[i], m.theta[i+1].value * 180 / pi, delta=1e-3, msg=f'theta[{i}]')
+            self.assertAlmostEqual(
+                exp_P[i], m.P[i + 1].value, delta=1e-3, msg=f'P[{i}]'
+            )
+            self.assertAlmostEqual(
+                exp_Q[i], m.Q[i + 1].value, delta=1e-3, msg=f'Q[{i}]'
+            )
+            self.assertAlmostEqual(
+                exp_v[i], m.v[i + 1].value, delta=1e-3, msg=f'v[{i}]'
+            )
+            self.assertAlmostEqual(
+                exp_theta[i],
+                m.theta[i + 1].value * 180 / pi,
+                delta=1e-3,
+                msg=f'theta[{i}]',
+            )
