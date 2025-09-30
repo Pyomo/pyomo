@@ -603,44 +603,6 @@ class GurobiMINLPWriter:
         return grb_model, visitor.var_map, pyo_obj, grb_cons, pyo_cons
 
 
-# class GurobiMINLPSolutionLoader(SolutionLoaderBase):
-#     def __init__(self, grb_model, var_map, pyo_obj):
-#         self._grb_model = grb_model
-#         self._pyo_to_grb_var_map = var_map
-#         self._pyo_obj = pyo_obj
-
-#     def load_vars(self, vars_to_load=None, solution_number=0):
-#         assert solution_number == 0
-#         if self._grb_model.SolCount == 0:
-#             raise NoSolutionError()
-
-#         if vars_to_load:
-#             vars_to_load = ComponentSet(vars_to_load)
-#         else:
-#             vars_to_load = ComponentSet(self._pyo_to_grb_var_map.keys())
-
-#         for pyo_var, grb_var in self._pyo_to_grb_var_map.items():
-#             if pyo_var in vars_to_load:
-#                 pyo_var.set_value(grb_var.x, skip_validation=True)
-#         StaleFlagManager.mark_all_as_stale(delayed=True)
-
-#     def get_primals(self, vars_to_load=None):
-#         if self._grb_model.SolCount == 0:
-#             raise NoSolutionError()
-
-#         if vars_to_load:
-#             vars_to_load = ComponentSet(vars_to_load)
-#         else:
-#             vars_to_load = ComponentSet(self._pyo_to_grb_var_map.keys())
-
-#         primal_vars = ComponentMap()
-#         for pyo_var, grb_var in self._pyo_to_grb_var_map.items():
-#             if pyo_var in vars_to_load:
-#                 primal_vars[pyo_var] = grb_var.x
-
-#         return primal_vars
-
-
 @SolverFactory.register(
     'gurobi_direct_minlp',
     doc='Direct interface to Gurobi version 12 and up '
