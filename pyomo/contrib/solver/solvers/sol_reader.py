@@ -117,17 +117,17 @@ class SolSolutionLoader(SolutionLoaderBase):
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Dict[ConstraintData, float]:
-        # If the NL instance has no objectives, report zeros
-        if not getattr(self._nl_info, "objectives", None):
-            cons = (
-                cons_to_load if cons_to_load is not None else self._nl_info.constraints
-            )
-            return {c: 0.0 for c in cons}
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
+        # If the NL instance has no objectives, report zeros
+        if len(self._nl_info.objectives) == 0:
+            cons = (
+                cons_to_load if cons_to_load is not None else self._nl_info.constraints
+            )
+            return {c: 0.0 for c in cons}
         if len(self._nl_info.eliminated_vars) > 0:
             raise NotImplementedError(
                 'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
@@ -141,20 +141,17 @@ class SolSolutionLoader(SolutionLoaderBase):
         res = {}
         # Set a default scaling
         obj_scale = 1
-
-        scaling = getattr(self._nl_info, "scaling", None)
+        scaling = self._nl_info.scaling
 
         # Objective scaling: first item if present
-        if scaling:
-            objectives = getattr(scaling, "objectives", None)
-            if objectives:
-                obj_scale = objectives[0]
+        if scaling and scaling.objectives:
+            obj_scale = scaling.objectives[0]
 
         # Constraint scaling: list from scaling if present
-        if scaling and getattr(scaling, "constraints", None):
+        if scaling and scaling.constraints:
             scale_list = scaling.constraints
         else:
-            scale_list = [1] * len(self._nl_info.constraints)
+            scale_list = [1.0] * len(self._nl_info.constraints)
         if cons_to_load is None:
             cons_to_load = set(self._nl_info.constraints)
         else:
