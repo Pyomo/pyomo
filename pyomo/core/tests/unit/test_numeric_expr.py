@@ -1627,7 +1627,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertExpressionsEqual(e, m.a)
 
         #
-        # Check that numeric constants are simply muliplied out
+        # Check that numeric constants are simply multiplied out
         #
         e = NumericConstant(3) * NumericConstant(2)
         self.assertExpressionsEqual(e, 6)

@@ -250,7 +250,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
         Other things that could be added
         * number of deactivated equalities
         * number of active inequality constraints
-        * number of deactivated inequality constratins
+        * number of deactivated inequality constraints
         * number of free variables not appearing in active constraints
         * number of fixed variables not appearing in active constraints
         * number of free variables not appearing in any constraints

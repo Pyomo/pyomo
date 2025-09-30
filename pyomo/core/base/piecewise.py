@@ -1197,7 +1197,7 @@ class Piecewise(Block):
         #       pw_repn                 -> repn
         #       pw_constr_type          -> bound
         #       f_rule                  -> rule
-        #       force_pw                -> simpify
+        #       force_pw                -> simplify
         #       warning_tol
         #       warn_domain_coverage    -> warning_domain_coverage
         #       unbounded_domain_var

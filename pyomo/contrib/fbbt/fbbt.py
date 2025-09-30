@@ -1482,7 +1482,7 @@ def fbbt(
     ----------
     comp: pyomo.core.base.constraint.Constraint or pyomo.core.base.block.Block or pyomo.core.base.PyomoModel.ConcreteModel
     deactivate_satisfied_constraints: bool
-        If deactivate_satisfied_constraints is True and a constraint is always satisfied, then the constranit
+        If deactivate_satisfied_constraints is True and a constraint is always satisfied, then the constraint
         will be deactivated
     integer_tol: float
         If the lower bound computed on a binary variable is less than or equal to integer_tol, then the

@@ -3491,7 +3491,7 @@ class TestSetErrors(PyomoModel):
         #    pass
         self.assertTrue(Integers.issubset(Reals))
         # Prior to the set rewrite, SetOperators (like issubset) between
-        # sets with differing dimentionality generated an error.
+        # sets with differing dimensionality generated an error.
         # Because of vagueness around the concept of the UnknownSetDimen
         # and dimen=None, we no longer generate those errors.  This
         # means that two empty sets (a and b) with differing

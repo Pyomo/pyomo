@@ -73,4 +73,10 @@ lst = "lst"
 gam = "gam"
 # Regex search term from contrib/solver/solvers/ipopt
 ond = "ond"
+# We regularly use indx in place of index
+indx = "indx"
+# Something that shows up in pyomo.network
+tru = "tru"
+# GAMS_writer
+PATHC = "PATHC"
 # AS NEEDED: Add More Words Below
