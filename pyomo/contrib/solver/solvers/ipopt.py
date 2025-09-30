@@ -154,10 +154,7 @@ class IpoptSolutionLoader(SolSolutionLoader):
         self._error_check()
         # If the NL instance has no objectives, report zeros
         if not len(self._nl_info.objectives):
-            vars_ = (
-                vars_to_load if vars_to_load is not None else self._nl_info.variables
-            )
-            return ComponentMap((v, 0.0) for v in vars_)
+            return ComponentMap()
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
             obj_scale = 1
