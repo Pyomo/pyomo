@@ -105,11 +105,11 @@ def apply_basic_step(disjunctions_or_constraints):
         ans.disjuncts[idx].improper_constraints = ConstraintList()
         for constr in constraints:
             if constr.is_indexed():
-                for idx in constr:
-                    ans.disjuncts[idx].improper_constraints.add(
-                        (constr[idx].lower, constr[idx].body, constr[idx].upper)
+                for idx2 in constr:
+                    ans.disjuncts[idx2].improper_constraints.add(
+                        (constr[idx2].lower, constr[idx2].body, constr[idx2].upper)
                     )
-                    constr[idx].deactivate()
+                    constr[idx2].deactivate()
             # need this so that we can take an improper basic step with a
             # ConstraintData
             else:
