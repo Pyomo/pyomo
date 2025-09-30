@@ -24,6 +24,7 @@ from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiDirectMINLP
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.common.results import (
@@ -52,18 +53,29 @@ if not param_available:
 all_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('highs', Highs),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('highs', Highs),
 ]
-nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi_persistent', GurobiPersistent), ('ipopt', Ipopt)]
+nlp_solvers = [
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
+    ('ipopt', Ipopt),
+]
+qcp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
+    ('ipopt', Ipopt)]
 qp_solvers = qcp_solvers + [("highs", Highs)]
-miqcqp_solvers = [('gurobi_persistent', GurobiPersistent)]
+miqcqp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
+]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 

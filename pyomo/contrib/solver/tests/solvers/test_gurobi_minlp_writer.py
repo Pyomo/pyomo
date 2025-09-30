@@ -13,7 +13,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np, numpy_available
 
-from pyomo.contrib.gurobi_minlp.tests.gurobi_to_pyomo_expressions import (
+from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
 )
 from pyomo.core.expr.compare import assertExpressionsEqual
@@ -39,13 +39,13 @@ from pyomo.environ import (
     Var,
 )
 from pyomo.opt import WriterFactory
-from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
-    GurobiMINLPSolver,
+from pyomo.contrib.solver.solvers.gurobi_direct_minlp import (
+    GurobiDirectMINLP,
     GurobiMINLPVisitor,
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition
-from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import CommonTest
+from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import CommonTest
 
 ## DEBUG
 from pytest import set_trace
@@ -82,7 +82,7 @@ class TestGurobiMINLPWriter(CommonTest):
 
         m = make_model()
 
-        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj, grb_cons, pyo_cons = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 
@@ -194,7 +194,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m.c = Constraint(expr=-m.x1 == m.p1)
         m.obj = Objective(expr=m.x1)
 
-        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj, grb_cons, pyo_cons = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 
@@ -240,7 +240,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m.whatever = LogicalConstraint(expr=~m.b)
         m.whatever.deactivate()
 
-        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj, grb_cons, pyo_cons = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 
@@ -284,7 +284,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m.c2 = Constraint(expr=m.e >= -3)
         m.obj = Objective(expr=0)
 
-        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj, grb_cons, pyo_cons = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 
@@ -347,7 +347,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m.c2 = Constraint(expr=m.e + m.y**3 + log(m.x + m.y) >= -3)
         m.obj = Objective(expr=0)
 
-        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj, grb_cons, pyo_cons = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 
@@ -445,7 +445,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m.c = Constraint(expr=(0 * m.x1 * m.x2) * m.x3 == 0)
         m.obj = Objective(expr=m.x1)
 
-        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj, grb_cons, pyo_cons = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 

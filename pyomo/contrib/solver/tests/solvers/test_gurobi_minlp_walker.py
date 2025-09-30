@@ -13,8 +13,8 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
-from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import GurobiMINLPVisitor
-from pyomo.contrib.gurobi_minlp.tests.gurobi_to_pyomo_expressions import (
+from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiMINLPVisitor
+from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
 )
 from pyomo.environ import (

@@ -33,7 +33,8 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
-from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.common.util import NoSolutionError
+from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect, GurobiDirectSolutionLoader
 
 from pyomo.core.base import (
     Binary,
@@ -565,6 +566,8 @@ class GurobiMINLPWriter:
             pyo_obj = []
 
         # write constraints
+        pyo_cons = []
+        grb_cons = []
         for cons in components[Constraint]:
             expr_type, expr, nonlinear, aux = self._create_gurobi_expression(
                 cons.body, cons, 0, grb_model, quadratic_visitor, visitor
@@ -583,47 +586,64 @@ class GurobiMINLPWriter:
                 if ub is not None:
                     ub = float(ub)
             if cons.equality:
-                grb_model.addConstr(lb == expr)
+                grb_cons.append(grb_model.addConstr(lb == expr))
+                pyo_cons.append(cons)
             else:
                 if cons.lb is not None:
-                    grb_model.addConstr(lb <= expr)
+                    grb_cons.append(grb_model.addConstr(lb <= expr))
+                    pyo_cons.append(cons)
                 if cons.ub is not None:
-                    grb_model.addConstr(ub >= expr)
+                    grb_cons.append(grb_model.addConstr(ub >= expr))
+                    pyo_cons.append(cons)
 
         grb_model.update()
-        return grb_model, visitor.var_map, pyo_obj
+        return grb_model, visitor.var_map, pyo_obj, grb_cons, pyo_cons
 
 
-class GurobiMINLPSolutionLoader(SolutionLoaderBase):
-    def __init__(self, grb_model, var_map, pyo_obj):
-        self._grb_model = grb_model
-        self._pyo_to_grb_var_map = var_map
-        self._pyo_obj = pyo_obj
+# class GurobiMINLPSolutionLoader(SolutionLoaderBase):
+#     def __init__(self, grb_model, var_map, pyo_obj):
+#         self._grb_model = grb_model
+#         self._pyo_to_grb_var_map = var_map
+#         self._pyo_obj = pyo_obj
 
-    def load_vars(self, vars_to_load=None, solution_number=0):
-        assert solution_number == 0
-        if self._grb_model.SolCount == 0:
-            raise NoSolutionError()
+#     def load_vars(self, vars_to_load=None, solution_number=0):
+#         assert solution_number == 0
+#         if self._grb_model.SolCount == 0:
+#             raise NoSolutionError()
 
-        if vars_to_load:
-            vars_to_load = ComponentSet(vars_to_load)
-        else:
-            vars_to_load = ComponentSet(self._pyo_to_grb_var_map.keys())
+#         if vars_to_load:
+#             vars_to_load = ComponentSet(vars_to_load)
+#         else:
+#             vars_to_load = ComponentSet(self._pyo_to_grb_var_map.keys())
 
-        for pyo_var, grb_var in self._pyo_to_grb_var_map.items():
-            if pyo_var in vars_to_load:
-                pyo_var.set_value(grb_var.x, skip_validation=True)
-        StaleFlagManager.mark_all_as_stale(delayed=True)
+#         for pyo_var, grb_var in self._pyo_to_grb_var_map.items():
+#             if pyo_var in vars_to_load:
+#                 pyo_var.set_value(grb_var.x, skip_validation=True)
+#         StaleFlagManager.mark_all_as_stale(delayed=True)
+
+#     def get_primals(self, vars_to_load=None):
+#         if self._grb_model.SolCount == 0:
+#             raise NoSolutionError()
+
+#         if vars_to_load:
+#             vars_to_load = ComponentSet(vars_to_load)
+#         else:
+#             vars_to_load = ComponentSet(self._pyo_to_grb_var_map.keys())
+
+#         primal_vars = ComponentMap()
+#         for pyo_var, grb_var in self._pyo_to_grb_var_map.items():
+#             if pyo_var in vars_to_load:
+#                 primal_vars[pyo_var] = grb_var.x
+
+#         return primal_vars
 
 
-# ESJ TODO: I just did the most convenient inheritance for the moment--if this is the
-# right thing to do is a different question.
 @SolverFactory.register(
     'gurobi_direct_minlp',
     doc='Direct interface to Gurobi version 12 and up '
     'supporting general nonlinear expressions',
 )
-class GurobiMINLPSolver(GurobiDirect):
+class GurobiDirectMINLP(GurobiDirect):
     def solve(self, model, **kwds):
         """Solve the model.
 
@@ -640,14 +660,14 @@ class GurobiMINLPSolver(GurobiDirect):
             )
         if config.timer is None:
             config.timer = HierarchicalTimer()
-        timer = config.timer
+            timer = config.timer
 
         StaleFlagManager.mark_all_as_stale()
 
         timer.start('compile_model')
 
         writer = GurobiMINLPWriter()
-        grb_model, var_map, pyo_obj = writer.write(
+        grb_model, var_map, pyo_obj, grb_cons, pyo_cons = writer.write(
             model, symbolic_solver_labels=config.symbolic_solver_labels
         )
 
@@ -678,7 +698,14 @@ class GurobiMINLPSolver(GurobiDirect):
         grbsol = grb_model.optimize()
 
         res = self._postsolve(
-            timer, config, GurobiMINLPSolutionLoader(grb_model, var_map, pyo_obj)
+            timer, config, GurobiDirectSolutionLoader(
+                grb_model,
+                grb_cons=grb_cons,
+                grb_vars=var_map.values(),
+                pyo_cons=pyo_cons,
+                pyo_vars=var_map.keys(),
+                pyo_obj=pyo_obj
+            )
         )
 
         res.solver_config = config
