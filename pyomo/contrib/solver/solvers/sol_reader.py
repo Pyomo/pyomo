@@ -123,7 +123,7 @@ class SolSolutionLoader(SolutionLoaderBase):
                 'check results.termination_condition and/or results.solution_status.'
             )
         # If the NL instance has no objectives, report zeros
-        if len(self._nl_info.objectives) == 0:
+        if not self._nl_info.objectives:
             cons = (
                 cons_to_load if cons_to_load is not None else self._nl_info.constraints
             )
