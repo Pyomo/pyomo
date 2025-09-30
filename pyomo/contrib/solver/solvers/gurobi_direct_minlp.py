@@ -316,6 +316,7 @@ def _handle_abs_constant(visitor, node, arg1):
 
 
 def _handle_abs_var(visitor, node, arg1):
+    # This auxiliary variable actually is non-negative, yay absolute value!
     aux_abs = visitor.grb_model.addVar()
     visitor.grb_model.addConstr(aux_abs == gurobipy.abs_(arg1[1]))
 
@@ -324,8 +325,9 @@ def _handle_abs_var(visitor, node, arg1):
 
 def _handle_abs_expression(visitor, node, arg1):
     # we need auxiliary variable
-    aux_arg = visitor.grb_model.addVar()
+    aux_arg = visitor.grb_model.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
     visitor.grb_model.addConstr(aux_arg == arg1[1])
+    # This one truly is non-negative because it's an absolute value
     aux_abs = visitor.grb_model.addVar()
     visitor.grb_model.addConstr(aux_abs == gurobipy.abs_(aux_arg))
 
@@ -489,7 +491,7 @@ class GurobiMINLPWriter:
         if expr_type is not _GENERAL:
             return expr_type, grb_expr, False, None
         else:
-            aux = grb_model.addVar()
+            aux = grb_model.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
             return expr_type, grb_expr, True, aux
 
     def write(self, model, **options):
