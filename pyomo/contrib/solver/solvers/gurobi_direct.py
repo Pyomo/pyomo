@@ -148,8 +148,9 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
                 last = con_info_dual[0]
                 yield con_info_dual
 
-        iterator = dedup(zip(self._pyo_cons, map(operator.attrgetter('Pi'),
-                                                 self._grb_cons)))
+        iterator = dedup(
+            zip(self._pyo_cons, map(operator.attrgetter('Pi'), self._grb_cons))
+        )
         if cons_to_load:
             cons_to_load = set(cons_to_load)
             iterator = filter(
@@ -375,7 +376,12 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
             timer,
             config,
             GurobiDirectSolutionLoader(
-                gurobi_model, A, x.tolist(), list(map(operator.itemgetter(0), repn.rows)), repn.columns, repn.objectives
+                gurobi_model,
+                A,
+                x.tolist(),
+                list(map(operator.itemgetter(0), repn.rows)),
+                repn.columns,
+                repn.objectives,
             ),
         )
 

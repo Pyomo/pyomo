@@ -34,7 +34,10 @@ from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.contrib.solver.common.util import NoSolutionError
-from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect, GurobiDirectSolutionLoader
+from pyomo.contrib.solver.solvers.gurobi_direct import (
+    GurobiDirect,
+    GurobiDirectSolutionLoader,
+)
 
 from pyomo.core.base import (
     Binary,
@@ -698,14 +701,16 @@ class GurobiDirectMINLP(GurobiDirect):
         grbsol = grb_model.optimize()
 
         res = self._postsolve(
-            timer, config, GurobiDirectSolutionLoader(
+            timer,
+            config,
+            GurobiDirectSolutionLoader(
                 grb_model,
                 grb_cons=grb_cons,
                 grb_vars=var_map.values(),
                 pyo_cons=pyo_cons,
                 pyo_vars=var_map.keys(),
-                pyo_obj=pyo_obj
-            )
+                pyo_obj=pyo_obj,
+            ),
         )
 
         res.solver_config = config
