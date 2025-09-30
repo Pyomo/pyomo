@@ -1,4 +1,4 @@
-from math import pi
+import math
 import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
@@ -42,7 +42,7 @@ class TestGurobiMINLP(unittest.TestCase):
 
     def test_gurobi_minlp_tan(self):
         m = ConcreteModel(name="test")
-        m.x = Var(bounds=(0, pi / 2))
+        m.x = Var(bounds=(0, math.pi / 2))
         m.o = Objective(expr=tan(m.x) / (m.x**2))
         gurobi_direct.solve(m)
         self.assertAlmostEqual(0.948, value(m.x), delta=1e-3)
@@ -61,8 +61,8 @@ class TestGurobiMINLP(unittest.TestCase):
         m.x = Var(bounds=(1, 2))
         m.o = Objective(expr=(m.x * m.x) / log(m.x))
         gurobi_direct.solve(m)
-        self.assertAlmostEqual(1.396, value(m.x), delta=1e-3)
-        self.assertAlmostEqual(8.155, value(m.o), delta=1e-3)
+        self.assertAlmostEqual(sqrt(math.e), value(m.x), delta=1e-3)
+        self.assertAlmostEqual(2 * math.e, value(m.o), delta=1e-3)
 
     def test_gurobi_minlp_log10(self):
         m = ConcreteModel(name="test")
@@ -140,8 +140,8 @@ class TestGurobiMINLP(unittest.TestCase):
         P_ub = [3.0, -0.3, 0.3, -0.2]
         Q_lb = [-3.0, -0.2, -3.0, -0.15]
         Q_ub = [3.0, -0.2, 3.0, -0.15]
-        theta_lb = [0.0, -pi / 2, -pi / 2, -pi / 2]
-        theta_ub = [0.0, pi / 2, pi / 2, pi / 2]
+        theta_lb = [0.0, -math.pi / 2, -math.pi / 2, -math.pi / 2]
+        theta_ub = [0.0, math.pi / 2, math.pi / 2, math.pi / 2]
 
         exp_v = [1.0, 0.949, 1.0, 0.973]
         exp_theta = [0.0, -2.176, 1.046, -0.768]
@@ -220,7 +220,7 @@ class TestGurobiMINLP(unittest.TestCase):
             )
             self.assertAlmostEqual(
                 exp_theta[i],
-                m.theta[i + 1].value * 180 / pi,
+                m.theta[i + 1].value * 180 / math.pi,
                 delta=1e-3,
                 msg=f'theta[{i}]',
             )
