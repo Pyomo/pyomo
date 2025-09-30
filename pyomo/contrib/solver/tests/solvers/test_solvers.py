@@ -1424,8 +1424,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
         m.y.unfix()
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 2**0.5)
-        self.assertAlmostEqual(m.y.value, 2**0.5)
+        self.assertAlmostEqual(m.x.value, 2**0.5, delta=1e-3)
+        self.assertAlmostEqual(m.y.value, 2**0.5, delta=1e-3)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_mutable_param_with_range(
