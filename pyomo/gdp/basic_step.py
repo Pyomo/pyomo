@@ -106,7 +106,7 @@ def apply_basic_step(disjunctions_or_constraints):
         for constr in constraints:
             if constr.is_indexed():
                 for j in constr:
-                    ans.disjuncts[j].improper_constraints.add(
+                    ans.disjuncts[idx].improper_constraints.add(
                         (constr[j].lower, constr[j].body, constr[j].upper)
                     )
                     constr[j].deactivate()
