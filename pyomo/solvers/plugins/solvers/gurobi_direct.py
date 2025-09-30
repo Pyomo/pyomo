@@ -13,6 +13,7 @@ import logging
 import re
 import sys
 
+from gurobipy import GRB, LinExpr, NLExpr, nlfunc
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
@@ -33,11 +34,16 @@ from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
 
+from pyomo.core.expr.numeric_expr import DivisionExpression, PowExpression, ProductExpression, NumericExpression, UnaryFunctionExpression, SumExpression
+
 
 logger = logging.getLogger('pyomo.solvers')
 
 
 class DegreeError(ValueError):
+    pass
+
+class NonLinearError(ValueError):
     pass
 
 
@@ -280,12 +286,14 @@ class GurobiDirect(DirectSolver):
         referenced_vars = ComponentSet()
 
         degree = repn.polynomial_degree()
+        """
         if (degree is None) or (degree > max_degree):
             raise DegreeError(
                 'GurobiDirect does not support expressions of degree {0}.'.format(
                     degree
                 )
             )
+        """
 
         if len(repn.linear_vars) > 0:
             referenced_vars.update(repn.linear_vars)
@@ -308,8 +316,70 @@ class GurobiDirect(DirectSolver):
 
         new_expr += repn.constant
 
+        if repn.nonlinear_expr is not None:
+            nlexpr = repn.nonlinear_expr
+            nl_grb_expr, nl_ref_vars = self._get_nlexpr_from_pyomo_expr(nlexpr)
+            for var in nl_ref_vars:
+                referenced_vars.add(var)
+            new_expr += nl_grb_expr
+
         return new_expr, referenced_vars, degree
 
+    def _get_nlexpr_from_pyomo_expr(self, nlexpr):
+        referenced_vars = ComponentSet()
+        grb_args = []
+        if isinstance(nlexpr, NumericExpression):
+            for arg in nlexpr.args:
+                grb_arg, arg_vars, _ = self._get_expr_from_pyomo_expr(arg)
+                grb_args.append(grb_arg)
+                for var in arg_vars:
+                    referenced_vars.add(var)
+
+            if type(nlexpr) is ProductExpression:
+                result = 1
+                for g in grb_args:
+                    result = result * g
+                return result, referenced_vars
+            
+            if type(nlexpr) is DivisionExpression:
+                if len(grb_args) != 2:
+                    raise NonLinearError(f'Unexpected argument count for division')
+                result = grb_args[0] / grb_args[1]
+                return result, referenced_vars
+            
+            if type(nlexpr) is SumExpression:
+                result = LinExpr()
+                for g in grb_args:
+                    result += g
+                return result, referenced_vars
+            
+            if type(nlexpr) is PowExpression:
+                if len(grb_args) != 2:
+                    raise NonLinearError(f'Unexpected argument count for power function')
+                return grb_args[0] ** grb_args[1], referenced_vars
+            
+            if type(nlexpr) is UnaryFunctionExpression:
+                if len(grb_args) != 1:
+                    raise NonLinearError(f'Unexpected argument count for unary function')
+                if nlexpr.name == 'exp':
+                    return nlfunc.exp(grb_args[0]), referenced_vars
+                if nlexpr.name == 'sin':
+                    return nlfunc.sin(grb_args[0]), referenced_vars
+                if nlexpr.name == 'cos':
+                    return nlfunc.cos(grb_args[0]), referenced_vars
+                if nlexpr.name == 'sqrt':
+                    return nlfunc.sqrt(grb_args[0]), referenced_vars
+                if nlexpr.name == 'tan':
+                    return nlfunc.tan(grb_args[0]), referenced_vars
+                if nlexpr.name == 'log':
+                    return nlfunc.log(grb_args[0]), referenced_vars
+                if nlexpr.name == 'log10':
+                    return nlfunc.log10(grb_args[0]), referenced_vars
+                
+
+        raise NonLinearError(f'Unsupported nonlinear feature {nlexpr} ({nlexpr.name})')
+            
+    
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
         if max_degree == 2:
             repn = generate_standard_repn(expr, quadratic=True)
@@ -494,6 +564,11 @@ class GurobiDirect(DirectSolver):
     def _addConstr(self, degree, lhs, sense=None, rhs=None, name=""):
         if degree == 2:
             con = self._solver_model.addQConstr(lhs, sense, rhs, name)
+        elif type(lhs) is NLExpr:
+            sm = self._solver_model
+            v = sm.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
+            sm.addConstr(v == lhs)
+            con = self._solver_model.addQConstr(v, sense, rhs, name)            
         else:
             con = self._solver_model.addLConstr(lhs, sense, rhs, name)
         return con
@@ -647,6 +722,11 @@ class GurobiDirect(DirectSolver):
         gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             obj.expr, self._max_obj_degree
         )
+
+        if isinstance(gurobi_expr, NLExpr):
+            grb_obj_var = self._solver_model.addVar(lb=-GRB.INFINITY)
+            self._solver_model.addConstr(grb_obj_var == gurobi_expr)
+            gurobi_expr = grb_obj_var
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
