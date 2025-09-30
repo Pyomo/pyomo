@@ -117,6 +117,12 @@ class SolSolutionLoader(SolutionLoaderBase):
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Dict[ConstraintData, float]:
+        # If the NL instance has no objectives, report zeros
+        if not getattr(self._nl_info, "objectives", None):
+            cons = (
+                cons_to_load if cons_to_load is not None else self._nl_info.constraints
+            )
+            return {c: 0.0 for c in cons}
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -133,12 +139,22 @@ class SolSolutionLoader(SolutionLoaderBase):
                 "have happened. Report this error to the Pyomo Developers."
             )
         res = {}
-        if self._nl_info.scaling is None:
-            scale_list = [1] * len(self._nl_info.constraints)
-            obj_scale = 1
+        # Set a default scaling
+        obj_scale = 1
+
+        scaling = getattr(self._nl_info, "scaling", None)
+
+        # Objective scaling: first item if present
+        if scaling:
+            objectives = getattr(scaling, "objectives", None)
+            if objectives:
+                obj_scale = objectives[0]
+
+        # Constraint scaling: list from scaling if present
+        if scaling and getattr(scaling, "constraints", None):
+            scale_list = scaling.constraints
         else:
-            scale_list = self._nl_info.scaling.constraints
-            obj_scale = self._nl_info.scaling.objectives[0]
+            scale_list = [1] * len(self._nl_info.constraints)
         if cons_to_load is None:
             cons_to_load = set(self._nl_info.constraints)
         else:

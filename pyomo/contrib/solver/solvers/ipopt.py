@@ -115,6 +115,12 @@ class IpoptSolutionLoader(SolSolutionLoader):
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
         self._error_check()
+        # If the NL instance has no objectives, report zeros
+        if not getattr(self._nl_info, "objectives", None):
+            vars_ = (
+                vars_to_load if vars_to_load is not None else self._nl_info.variable_map
+            )
+            return {v: 0.0 for v in vars_}
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
             obj_scale = 1
@@ -610,41 +616,68 @@ class Ipopt(SolverBase):
                 "ls",
             ]
             iterations = []
+            n_expected_columns = len(columns)
 
             for line in iter_table:
                 tokens = line.strip().split()
-                if len(tokens) != len(columns):
+                # Require at least the base columns
+                # Additionally allow optional trailing info-string(s)
+                if len(tokens) < n_expected_columns:
                     continue
-                iter_data = dict(zip(columns, tokens))
+
+                expected_column_tokens = tokens[:n_expected_columns]
+                extra_tokens = tokens[n_expected_columns:]
+
+                iter_data = dict(zip(columns, expected_column_tokens))
 
                 # Extract restoration flag from 'iter'
-                iter_data['restoration'] = iter_data['iter'].endswith('r')
+                iter_str = iter_data['iter']
+                iter_data['restoration'] = iter_str.endswith('r')
                 if iter_data['restoration']:
-                    iter_data['iter'] = iter_data['iter'][:-1]
+                    iter_str = iter_str[:-1]
+                # Keep numeric string for later
+                iter_data['iter'] = iter_str
 
-                # Separate alpha_pr into numeric part and optional tag
-                iter_data['step_acceptance'] = iter_data['alpha_pr'][-1]
-                if iter_data['step_acceptance'] in _ALPHA_PR_CHARS:
+                # Separate alpha_pr into numeric part and optional tag (f, D, R, etc.)
+                step_acceptance_tag = iter_data['alpha_pr'][-1]
+                if step_acceptance_tag in _ALPHA_PR_CHARS:
+                    iter_data['step_acceptance'] = step_acceptance_tag
                     iter_data['alpha_pr'] = iter_data['alpha_pr'][:-1]
                 else:
                     iter_data['step_acceptance'] = None
 
+                # Capture optional IPOPT info string if present
+                if extra_tokens:
+                    # Typically a single string like 'q' or 'Nhj'; join just in case
+                    iter_data['info_string'] = " ".join(extra_tokens)
+
                 # Attempt to cast all values to float where possible
                 for key in columns:
-                    if iter_data[key] == '-':
+                    if key == 'iter':
+                        continue
+                    val = iter_data[key]
+                    if val == '-':
                         iter_data[key] = None
                     else:
                         try:
-                            iter_data[key] = float(iter_data[key])
+                            iter_data[key] = float(val)
                         except (ValueError, TypeError):
                             logger.warning(
                                 "Error converting Ipopt log entry to "
                                 f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
                             )
 
-                assert len(iterations) == iter_data.pop('iter'), (
-                    f"Parsed row in the iterations table\n\t{line}\ndoes not "
-                    f"match the next expected iteration number ({len(iterations)})"
+                try:
+                    iter_num = int(iter_data.pop('iter'))
+                except ValueError:
+                    logger.warning(
+                        "Could not parse IPOPT iteration number from line:\n\t%s", line
+                    )
+                    continue
+
+                assert len(iterations) == iter_num, (
+                    f"Parsed row in the iterations table\n\t{line}\n"
+                    f"does not match the next expected iteration number ({len(iterations)})"
                 )
                 iterations.append(iter_data)
 
@@ -674,7 +707,6 @@ class Ipopt(SolverBase):
                 "complementarity_error",
                 "overall_nlp_error",
             ]
-
             # Filter out None values and create final fields and values.
             # Nones occur in old-style IPOPT output (<= 3.13)
             zipped = [
@@ -684,10 +716,8 @@ class Ipopt(SolverBase):
                 )
                 if scaled is not None and unscaled is not None
             ]
-
             scaled = {k: float(s) for k, s, _ in zipped}
             unscaled = {k: float(u) for k, _, u in zipped}
-
             parsed_data.update(unscaled)
             parsed_data['final_scaled_results'] = scaled
 
