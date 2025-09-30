@@ -142,25 +142,19 @@ class SolSolutionLoader(SolutionLoaderBase):
         # Set a default scaling
         obj_scale = 1
         scaling = self._nl_info.scaling
-
-        # Objective scaling: first item if present
-        if scaling and scaling.objectives:
-            obj_scale = scaling.objectives[0]
-
-        # Constraint scaling: list from scaling if present
-        if scaling and scaling.constraints:
-            scale_list = scaling.constraints
+        if scaling:
+            _iter = zip(
+                self._nl_info.constraints, self._sol_data.duals, scaling.constraints
+            )
+            obj_scale = self._nl_info.scaling.objectives[0]
         else:
-            scale_list = [1.0] * len(self._nl_info.constraints)
-        if cons_to_load is None:
-            cons_to_load = set(self._nl_info.constraints)
+            _iter = zip(self._nl_info.constraints, self._sol_data.duals)
+        if cons_to_load is not None:
+            _iter = filter(lambda x: x[0] in cons_to_load, _iter)
+        if scaling:
+            res = {con: val * scale / obj_scale for con, val, scale in _iter}
         else:
-            cons_to_load = set(cons_to_load)
-        for con, val, scale in zip(
-            self._nl_info.constraints, self._sol_data.duals, scale_list
-        ):
-            if con in cons_to_load:
-                res[con] = val * scale / obj_scale
+            res = {con: val for con, val in _iter}
         return res
 
 

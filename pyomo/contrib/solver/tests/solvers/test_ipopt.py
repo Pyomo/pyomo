@@ -321,7 +321,7 @@ Ipopt 3.14.17: Optimal Solution Found
             logs.output[0],
         )
 
-    def test_parse_output_info_string(self):
+    def test_parse_output_diagnostic_tags(self):
         output = """******************************************************************************
 This program contains Ipopt, a library for large-scale nonlinear optimization.
  Ipopt is released as open source code under the Eclipse Public License (EPL).
@@ -408,7 +408,7 @@ EXIT: Optimal Solution Found.
         self.assertEqual(parsed_output["iters"], 20)
         self.assertEqual(len(parsed_output["iteration_log"]), 21)
         self.assertEqual(parsed_output["incumbent_objective"], 3.2274635418964841e01)
-        self.assertEqual(parsed_output["iteration_log"][3]["info_string"], 'Nhj')
+        self.assertEqual(parsed_output["iteration_log"][3]["diagnostic_tags"], 'Nhj')
         self.assertIn("final_scaled_results", parsed_output.keys())
         self.assertIn(
             'IPOPT (w/o function evaluations)', parsed_output['cpu_seconds'].keys()

@@ -63,6 +63,43 @@ logger = logging.getLogger(__name__)
 # Acceptable chars for the end of the alpha_pr column
 # in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
 _ALPHA_PR_CHARS = set("fFhHkKnNRwstTr")
+_DIAGNOSTIC_TAGS = set(
+    {
+        "!",
+        "A",
+        "a",
+        "C",
+        "Dh",
+        "Dhj",
+        "Dj",
+        "dx",
+        "e",
+        "F-",
+        "F+",
+        "L",
+        "l",
+        "M",
+        "Nh",
+        "Nhj",
+        "Nj",
+        "NW",
+        "q",
+        "R",
+        "S",
+        "s",
+        "Tmax",
+        "W",
+        "w",
+        "Wb",
+        "We",
+        "Wp",
+        "Wr",
+        "Ws",
+        "WS",
+        "y",
+        "z",
+    }
+)
 
 
 class IpoptConfig(SolverConfig):
@@ -116,7 +153,7 @@ class IpoptSolutionLoader(SolSolutionLoader):
     ) -> Mapping[VarData, float]:
         self._error_check()
         # If the NL instance has no objectives, report zeros
-        if len(self._nl_info.objectives) == 0:
+        if not len(self._nl_info.objectives):
             vars_ = (
                 vars_to_load if vars_to_load is not None else self._nl_info.variables
             )
@@ -620,21 +657,34 @@ class Ipopt(SolverBase):
 
             for line in iter_table:
                 tokens = line.strip().split()
-                # Require at least the base columns
-                # Additionally allow optional trailing info-string(s)
-                if len(tokens) < n_expected_columns:
-                    continue
+                # IPOPT sometimes mashes the first two column values together
+                # (e.g., "2r-4.93e-03"). We need to split them.
+                if tokens and (('-' in tokens[0][1:]) or ('+' in tokens[0][1:])):
+                    m = re.match(
+                        r'^(\d+r?)([+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)$',
+                        tokens[0],
+                    )
+                    if m:
+                        tokens = [m.group(1), m.group(2)] + tokens[1:]
 
                 iter_data = dict(zip(columns, tokens))
                 extra_tokens = tokens[n_expected_columns:]
 
                 # Extract restoration flag from 'iter'
-                iter_str = iter_data['iter']
-                iter_data['restoration'] = iter_str.endswith('r')
-                if iter_data['restoration']:
+                iter_str = iter_data.pop("iter")
+                restoration = iter_str.endswith("r")
+                if restoration:
                     iter_str = iter_str[:-1]
-                # Keep numeric string for later
-                iter_data['iter'] = iter_str
+
+                try:
+                    iter_num = int(iter_str)
+                except ValueError:
+                    logger.error(
+                        "Could not parse IPOPT iteration number from line:\n\t%s", line
+                    )
+
+                iter_data["restoration"] = restoration
+                iter_data["iter"] = iter_num
 
                 # Separate alpha_pr into numeric part and optional tag (f, D, R, etc.)
                 step_acceptance_tag = iter_data['alpha_pr'][-1]
@@ -644,10 +694,14 @@ class Ipopt(SolverBase):
                 else:
                     iter_data['step_acceptance'] = None
 
-                # Capture optional IPOPT info string if present
+                # Capture optional IPOPT diagnostic tags if present
                 if extra_tokens:
-                    # Typically a single string like 'q' or 'Nhj'; join just in case
-                    iter_data['info_string'] = " ".join(extra_tokens)
+                    if all(tok in _DIAGNOSTIC_TAGS for tok in extra_tokens):
+                        iter_data['diagnostic_tags'] = "".join(extra_tokens)
+                    else:
+                        raise ValueError(
+                            f"Unrecognized Ipopt diagnostic tags {extra_tokens} on line: {line}"
+                        )
 
                 # Attempt to cast all values to float where possible
                 for key in columns:
@@ -664,14 +718,6 @@ class Ipopt(SolverBase):
                                 "Error converting Ipopt log entry to "
                                 f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
                             )
-
-                try:
-                    iter_num = int(iter_data.pop('iter'))
-                except ValueError:
-                    logger.warning(
-                        "Could not parse IPOPT iteration number from line:\n\t%s", line
-                    )
-                    continue
 
                 assert len(iterations) == iter_num, (
                     f"Parsed row in the iterations table\n\t{line}\n"
