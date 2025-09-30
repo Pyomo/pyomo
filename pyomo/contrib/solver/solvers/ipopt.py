@@ -625,10 +625,8 @@ class Ipopt(SolverBase):
                 if len(tokens) < n_expected_columns:
                     continue
 
-                expected_column_tokens = tokens[:n_expected_columns]
+                iter_data = dict(zip(columns, tokens))
                 extra_tokens = tokens[n_expected_columns:]
-
-                iter_data = dict(zip(columns, expected_column_tokens))
 
                 # Extract restoration flag from 'iter'
                 iter_str = iter_data['iter']
