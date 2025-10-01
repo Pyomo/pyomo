@@ -4327,7 +4327,7 @@ class TestSet(unittest.TestCase):
             list(m.K), [(1, 1), (2, 1), (2, 2), (3, 1), (3, 2), (3, 3), (0, 0)]
         )
 
-        # This tests a filter that matches the dimentionality of the
+        # This tests a filter that matches the dimensionality of the
         # component.  construct() needs to recognize that the filter is
         # returning a constant in construct() and re-assign it to be the
         # _filter for each SetData

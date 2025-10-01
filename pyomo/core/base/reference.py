@@ -582,7 +582,7 @@ def Reference(reference, ctype=NOTSET):
     refer to the same :py:class:`Set` objects for all data identified by
     the slice, then the resulting indexed component will be indexed by
     the product of those sets.  However, if all data do not share common
-    set objects, or only a subset of indices in a multidimentional set
+    set objects, or only a subset of indices in a multidimensional set
     appear as wildcards, then the resulting indexed component will be
     indexed by a :py:class:`SetOf` containing a
     :py:class:`_ReferenceSet` for the slice.

@@ -4023,7 +4023,7 @@ class SetProduct(SetOperator):
             return len(self._sets)
         # By convention, "None" trumps UnknownSetDimen.  That is, a set
         # product is "non-dimentioned" if any term is non-dimentioned,
-        # even if we do not yet know the dimentionality of another term.
+        # even if we do not yet know the dimensionality of another term.
         ans = 0
         _unknown = False
         for s in self._sets:
@@ -4098,7 +4098,7 @@ class SetProduct_InfiniteSet(SetProduct):
             val = (val,)
             v_len = 1
 
-        # Get the dimentionality of all the component sets
+        # Get the dimensionality of all the component sets
         setDims = list(s.dimen for s in self._sets)
 
         # For this search, if a subset has an unknown dimension, assume
@@ -4106,7 +4106,7 @@ class SetProduct_InfiniteSet(SetProduct):
         for i, d in enumerate(setDims):
             if d is UnknownSetDimen:
                 setDims[i] = None
-        # Find the starting index for each subset (based on dimentionality)
+        # Find the starting index for each subset (based on dimensionality)
         index = [None] * len(setDims)
         lastIndex = 0
         for i, dim in enumerate(setDims):

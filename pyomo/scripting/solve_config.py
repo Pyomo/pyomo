@@ -124,7 +124,7 @@ def minlp_config_block(init=False):
             int,
             'When interfacing with a solver using file based I/O, set '
             'the effort level for ensuring the file creation process is '
-            'determistic. See the individual solver interfaces for '
+            'deterministic. See the individual solver interfaces for '
             'valid values and default level of file determinism.',
             None,
         ),
