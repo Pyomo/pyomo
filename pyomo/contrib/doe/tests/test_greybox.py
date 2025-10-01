@@ -88,7 +88,8 @@ def get_numerical_derivative(grey_box_object=None):
         vals_init, vecs_init = np.linalg.eig(current_FIM)
         unperturbed_value = np.min(vals_init)
     elif grey_box_object.objective_option == ObjectiveLib.condition_number:
-        unperturbed_value = np.linalg.cond(current_FIM)
+        vals_init, vecs_init = np.linalg.eig(current_FIM)
+        unperturbed_value = np.log(np.abs(np.max(vals_init) / np.min(vals_init)))
 
     # Calculate the numerical derivative, using forward difference
     numerical_derivative = np.zeros_like(current_FIM)
@@ -109,7 +110,8 @@ def get_numerical_derivative(grey_box_object=None):
                 vals, vecs = np.linalg.eig(FIM_perturbed)
                 new_value_ij = np.min(vals)
             elif grey_box_object.objective_option == ObjectiveLib.condition_number:
-                new_value_ij = np.linalg.cond(FIM_perturbed)
+                vals, vecs = np.linalg.eig(FIM_perturbed)
+                new_value_ij = np.log(np.abs(np.max(vals) / np.min(vals)))
 
             # Calculate the derivative value from forward difference
             diff = (new_value_ij - unperturbed_value) / _FD_EPSILON_FIRST
@@ -186,10 +188,14 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
                         grey_box_object.objective_option
                         == ObjectiveLib.condition_number
                     ):
-                        new_values[0] = np.linalg.cond(FIM_perturbed_1)
-                        new_values[1] = np.linalg.cond(FIM_perturbed_2)
-                        new_values[2] = np.linalg.cond(FIM_perturbed_3)
-                        new_values[3] = np.linalg.cond(FIM_perturbed_4)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_1)
+                        new_values[0] = np.log(np.abs(np.max(vals) / np.min(vals)))
+                        vals, vecs = np.linalg.eig(FIM_perturbed_2)
+                        new_values[1] = np.log(np.abs(np.max(vals) / np.min(vals)))
+                        vals, vecs = np.linalg.eig(FIM_perturbed_3)
+                        new_values[2] = np.log(np.abs(np.max(vals) / np.min(vals)))
+                        vals, vecs = np.linalg.eig(FIM_perturbed_4)
+                        new_values[3] = np.log(np.abs(np.max(vals) / np.min(vals)))
 
                     # Calculate the derivative value from second order difference formula
                     diff = (
@@ -655,6 +661,28 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     def test_hessian_E_opt(self):
         objective_option = "minimum_eigenvalue"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Jacobian values
+        hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        hess_gb = hess_vals_from_gb
+        hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
+
+        # Get numerical derivative matrix
+        hess_FD = get_numerical_second_derivative(grey_box_object)
+
+        # assert that each component is close
+        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
+
+    def test_hessian_ME_opt(self):
+        objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
         )
