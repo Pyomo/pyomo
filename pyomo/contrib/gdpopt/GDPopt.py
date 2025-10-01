@@ -67,7 +67,7 @@ def _handle_strategy_deprecation(config):
     doc='The GDPopt decomposition-based '
     'Generalized Disjunctive Programming (GDP) solver',
 )
-class GDPoptSolver(object):
+class GDPoptSolver:
     """Decomposition solver for Generalized Disjunctive Programming (GDP)
     problems.
 

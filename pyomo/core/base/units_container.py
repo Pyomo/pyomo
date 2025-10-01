@@ -944,7 +944,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         return result
 
 
-class PyomoUnitsContainer(object):
+class PyomoUnitsContainer:
     """Class that is used to create and contain units in Pyomo.
 
     This is the class that is used to create, contain, and interact

@@ -15,7 +15,7 @@ from pyomo.common import Factory
 WriterFactory = Factory('problem writer')
 
 
-class AbstractProblemWriter(object):
+class AbstractProblemWriter:
     """Base class that can write optimization problems."""
 
     def __init__(self, problem_format):  # pragma:nocover
@@ -36,7 +36,7 @@ class AbstractProblemWriter(object):
         pass
 
 
-class BranchDirection(object):
+class BranchDirection:
     """Allowed values for MIP variable branching directions in the `direction` Suffix of a model."""
 
     default = 0

@@ -38,7 +38,7 @@ class TestAssumedBehavior(unittest.TestCase):
             pyo.value(1 + m.x[1] * m.x[2])
 
 
-class _TestIncidence(object):
+class _TestIncidence:
     """Base class with tests for get_incident_variables that should be
     independent of the method used
 
@@ -73,7 +73,7 @@ class _TestIncidence(object):
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
 
 
-class _TestIncidenceLinearOnly(object):
+class _TestIncidenceLinearOnly:
     """Tests for methods that support linear_only"""
 
     def _get_incident_variables(self, expr):
@@ -99,7 +99,7 @@ class _TestIncidenceLinearOnly(object):
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[2]]))
 
 
-class _TestIncidenceLinearCancellation(object):
+class _TestIncidenceLinearCancellation:
     """Tests for methods that perform linear cancellation"""
 
     def _get_incident_variables(self, expr):

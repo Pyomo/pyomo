@@ -81,7 +81,7 @@ from pyomo.common.dependencies import numpy
 logger = logging.getLogger('pyomo.network')
 
 
-class FOQUSGraph(object):
+class FOQUSGraph:
     def solve_tear_direct(
         self, G, order, function, tears, outEdges, iterLim, tol, tol_type, report_diffs
     ):
