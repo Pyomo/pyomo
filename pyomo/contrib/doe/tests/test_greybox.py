@@ -884,7 +884,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
-        ME_opt_val = np.linalg.cond(testing_matrix + np.eye(4))
+        vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
+        ME_opt_val = np.log(np.abs(np.max(vals) / np.min(vals)))
 
         try:
             ME_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["ME-opt"].value
