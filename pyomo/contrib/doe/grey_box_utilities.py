@@ -570,24 +570,24 @@ class FIMExternalGreyBox(
 
                     # Formula derived in Pyomo.DoE Paper
                     log_cond_term_1 += (
-                            1
-                            * (
-                                    max_eig_vec[0, i]
-                                    * all_eig_vecs[j, curr_eig]
-                                    * max_eig_vec[0, l]
-                                    * all_eig_vecs[k, curr_eig]
-                            )
-                            / (max_eig - all_eig_vals[curr_eig])
+                        1
+                        * (
+                            max_eig_vec[0, i]
+                            * all_eig_vecs[j, curr_eig]
+                            * max_eig_vec[0, l]
+                            * all_eig_vecs[k, curr_eig]
+                        )
+                        / (max_eig - all_eig_vals[curr_eig])
                     )
                     log_cond_term_1 += (
-                            1
-                            * (
-                                    max_eig_vec[0, k]
-                                    * all_eig_vecs[i, curr_eig]
-                                    * max_eig_vec[0, j]
-                                    * all_eig_vecs[l, curr_eig]
-                            )
-                            / (max_eig - all_eig_vals[curr_eig])
+                        1
+                        * (
+                            max_eig_vec[0, k]
+                            * all_eig_vecs[i, curr_eig]
+                            * max_eig_vec[0, j]
+                            * all_eig_vecs[l, curr_eig]
+                        )
+                        / (max_eig - all_eig_vals[curr_eig])
                     )
 
                 # For loop to iterate over all
@@ -604,24 +604,24 @@ class FIMExternalGreyBox(
 
                     # Formula derived in Pyomo.DoE Paper
                     log_cond_term_3 += (
-                            1
-                            * (
-                                    min_eig_vec[0, i]
-                                    * all_eig_vecs[j, curr_eig]
-                                    * min_eig_vec[0, l]
-                                    * all_eig_vecs[k, curr_eig]
-                            )
-                            / (min_eig - all_eig_vals[curr_eig])
+                        1
+                        * (
+                            min_eig_vec[0, i]
+                            * all_eig_vecs[j, curr_eig]
+                            * min_eig_vec[0, l]
+                            * all_eig_vecs[k, curr_eig]
+                        )
+                        / (min_eig - all_eig_vals[curr_eig])
                     )
                     log_cond_term_3 += (
-                            1
-                            * (
-                                    min_eig_vec[0, k]
-                                    * all_eig_vecs[i, curr_eig]
-                                    * min_eig_vec[0, j]
-                                    * all_eig_vecs[l, curr_eig]
-                            )
-                            / (min_eig - all_eig_vals[curr_eig])
+                        1
+                        * (
+                            min_eig_vec[0, k]
+                            * all_eig_vecs[i, curr_eig]
+                            * min_eig_vec[0, j]
+                            * all_eig_vecs[l, curr_eig]
+                        )
+                        / (min_eig - all_eig_vals[curr_eig])
                     )
 
                 # Computing each term of the hessian formula
