@@ -302,9 +302,7 @@ class FIMExternalGreyBox(
             safe_cond_number = max_eig / (min_eig + np.sign(min_eig) * min_eig_epsilon)
 
             # Combining the expression
-            jac_M = (
-                1 / max_eig * max_eig_term - 1 / min_eig * min_eig_term
-            )
+            jac_M = 1 / max_eig * max_eig_term - 1 / min_eig * min_eig_term
         else:
             ObjectiveLib(self.objective_option)
 

@@ -371,7 +371,7 @@ class DesignOfExperiments:
                 model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
             elif self.objective_option == ObjectiveLib.condition_number:
                 eig, _ = np.linalg.eig(np.array(self.get_FIM()))
-                cond_number = np.log(np.abs(np.max(eig)/np.min(eig)))
+                cond_number = np.log(np.abs(np.max(eig) / np.min(eig)))
                 model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
 
         # If the model has L, initialize it with the solved FIM
