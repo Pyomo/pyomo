@@ -1122,8 +1122,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Here, the objective value is
         # condition number of the FIM
         optimal_experimental_designs = [
-            np.array([0.943, 13.524]),
-            np.array([10.00, 27.675]),
+            np.array([0.943, np.log(13.524)]),
+            np.array([10.00, np.log(27.675)]),
         ]
         objective_option = "condition_number"
         doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
