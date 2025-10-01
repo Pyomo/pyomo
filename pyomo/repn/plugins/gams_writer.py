@@ -205,7 +205,7 @@ def expression_to_string(expr, treechecker, smap=None, output_fixed_variables=Fa
     return expr_str, visitor.is_discontinuous
 
 
-class Categorizer(object):
+class Categorizer:
     """Class for representing categorized variables.
 
     Given a list of variable names and a symbol map, categorizes the variable
@@ -252,7 +252,7 @@ class Categorizer(object):
                 yield category, var_name
 
 
-class StorageTreeChecker(object):
+class StorageTreeChecker:
     def __init__(self, model):
         # blocks are hashable so we can use a normal set
         self.tree = {model}
