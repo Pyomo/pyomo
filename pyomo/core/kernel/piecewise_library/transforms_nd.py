@@ -101,7 +101,7 @@ def piecewise_nd(tri, values, input=None, output=None, bound='eq', repn='cc'):
     return transform(func, input=input, output=output, bound=bound)
 
 
-class PiecewiseLinearFunctionND(object):
+class PiecewiseLinearFunctionND:
     """A multi-variate piecewise linear function
 
     Multi-varite piecewise linear functions are defined by a

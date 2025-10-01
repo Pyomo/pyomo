@@ -419,7 +419,7 @@ class NonlinearToPWL(Transformation):
 
             It is recommended to leave this False as long as no nonlinear constraint 
             involves more than about 5-6 variables. For constraints with higher-
-            dimmensional nonlinear functions, additive decomposition will improve
+            dimensional nonlinear functions, additive decomposition will improve
             the scalability of the approximation (since partitioning the domain is
             subject to the curse of dimensionality).""",
         ),

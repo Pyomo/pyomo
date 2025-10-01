@@ -237,7 +237,7 @@ class StdoutHandler(logging.StreamHandler):
             self.stream = orig
 
 
-class Preformatted(object):
+class Preformatted:
     __slots__ = ('msg',)
 
     def __init__(self, msg):
@@ -250,7 +250,7 @@ class Preformatted(object):
         return f'Preformatted({self.msg!r})'
 
 
-class _GlobalLogFilter(object):
+class _GlobalLogFilter:
     def __init__(self):
         self.logger = logging.getLogger()
 
@@ -292,7 +292,7 @@ class LogHandler(logging.StreamHandler):
         self.setFormatter(LegacyPyomoFormatter(base=base, verbosity=verbosity))
 
 
-class LoggingIntercept(object):
+class LoggingIntercept:
     r"""Context manager for intercepting messages sent to a log stream
 
     This class is designed to enable easy testing of log messages.
@@ -461,7 +461,7 @@ class LogStream(io.TextIOBase):
                 yield _LastResortRedirector(redirects[fd].original_fd)
 
 
-class _StreamRedirector(object):
+class _StreamRedirector:
     def __init__(self, handler, fd):
         self.handler = handler
         self.fd = fd
@@ -488,7 +488,7 @@ class _StreamRedirector(object):
             self.handler.stream = self.orig_stream
 
 
-class _LastResortRedirector(object):
+class _LastResortRedirector:
     def __init__(self, fd):
         self.fd = fd
         self.local_fd = None

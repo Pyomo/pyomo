@@ -1442,7 +1442,7 @@ ADVANCE CHANGE NOTICE:
 - DAE Updates
   - Extend flattener to allow multiple sets (#1768)
 - GDP Updates
-  - Fix subproblem initialiations in gdp.cuttingplane (#1780)
+  - Fix subproblem initializations in gdp.cuttingplane (#1780)
 - Testing
   - Fix Jenkins test script (#1771)
   - Fix GHA tests to work with PyMySQL 1.0.0 (#1777)
