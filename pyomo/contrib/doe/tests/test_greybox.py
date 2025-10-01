@@ -506,7 +506,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         grey_box_ME_opt = grey_box_object.evaluate_outputs()
 
-        ME_opt = np.linalg.cond(testing_matrix)
+        vals, vecs = np.linalg.eig(testing_matrix)
+        ME_opt = np.log(np.abs(np.max(vals) / np.min(vals)))
 
         self.assertTrue(np.isclose(grey_box_ME_opt, ME_opt))
 
