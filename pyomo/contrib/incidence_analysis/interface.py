@@ -244,7 +244,7 @@ def get_numeric_incidence_matrix(variables, constraints):
     return nlp.extract_submatrix_jacobian(variables, constraints)
 
 
-class IncidenceGraphInterface(object):
+class IncidenceGraphInterface:
     """An interface for applying graph algorithms to Pyomo variables and
     constraints
 

@@ -31,7 +31,7 @@ from pyomo.common.flags import (
 SUPPRESS_DEPENDENCY_WARNINGS = False
 
 
-class ModuleUnavailable(object):
+class ModuleUnavailable:
     """Mock object that raises :py:class:`.DeferredImportError` upon attribute access
 
     This object is returned by :py:func:`attempt_import()` in lieu of
@@ -129,7 +129,7 @@ class ModuleUnavailable(object):
         self.log_import_warning(logger)
 
 
-class DeferredImportModule(object):
+class DeferredImportModule:
     """Mock module object to support the deferred import of a module.
 
     This object is returned by :py:func:`attempt_import()` in lieu of
@@ -281,7 +281,7 @@ def UnavailableClass(unavailable_module):
     return UnavailableBase
 
 
-class _DeferredImportIndicatorBase(object):
+class _DeferredImportIndicatorBase:
     def __and__(self, other):
         return _DeferredAnd(self, other)
 
@@ -857,7 +857,7 @@ def declare_deferred_modules_as_importable(globals_dict):
     return declare_modules_as_importable(globals_dict).__exit__(None, None, None)
 
 
-class declare_modules_as_importable(object):
+class declare_modules_as_importable:
     """Make all :py:class:`ModuleType` and :py:class:`DeferredImportModules`
     importable through the ``globals_dict`` context.
 
