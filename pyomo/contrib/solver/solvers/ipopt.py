@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 
 # Acceptable chars for the end of the alpha_pr column
 # in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
-_ALPHA_PR_CHARS = set("fFhHkKnNRwstTr")
+_ALPHA_PR_CHARS = set("fFhHkKnNRwsStTr")
 
 
 class IpoptConfig(SolverConfig):
@@ -613,6 +613,16 @@ class Ipopt(SolverBase):
 
             for line in iter_table:
                 tokens = line.strip().split()
+
+                # The ipopt output squishes the first and second columns
+                # if the first has a restoration flag and the second has a minus sign,
+                # like this: 2631r-2.9874883e+03. Catch and avoid it.
+                first = tokens[0]
+                if 'r-' in first:
+                    it, obj = first.split('r', 1)
+                    tokens.insert(0, it + 'r')
+                    tokens[1] = obj
+
                 if len(tokens) != len(columns):
                     continue
                 iter_data = dict(zip(columns, tokens))
