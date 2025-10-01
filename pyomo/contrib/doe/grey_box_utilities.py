@@ -185,7 +185,7 @@ class FIMExternalGreyBox(
             obj_value = np.min(eig)
         elif self.objective_option == ObjectiveLib.condition_number:
             eig, _ = np.linalg.eig(M)
-            obj_value = np.max(eig) / np.min(eig)
+            obj_value = np.abs(np.max(eig) / np.min(eig))
         else:
             ObjectiveLib(self.objective_option)
 
