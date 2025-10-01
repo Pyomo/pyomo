@@ -395,7 +395,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
         obj_map = PyomoSympyBimap()
 
-        class bogus(object):
+        class bogus:
             def __init__(self):
                 self.args = (obj_map.getSympySymbol(m.x),)
                 self.func = type(self)

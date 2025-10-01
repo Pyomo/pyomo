@@ -277,7 +277,7 @@ class _PiecewiseData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class _SimpleSinglePiecewise(object):
+class _SimpleSinglePiecewise:
     """
     Called when the piecewise points list has only two points
     """
@@ -321,7 +321,7 @@ class _SimpleSinglePiecewise(object):
             )
 
 
-class _SimplifiedPiecewise(object):
+class _SimplifiedPiecewise:
     """
     Called when piecewise constraints are simplified due to a lower bounding
     convex function or an upper bounding concave function
@@ -364,7 +364,7 @@ class _SimplifiedPiecewise(object):
             )
 
 
-class _SOS2Piecewise(object):
+class _SOS2Piecewise:
     """
     Called to generate Piecewise constraint using the SOS2 formulation
     """
@@ -408,7 +408,7 @@ class _SOS2Piecewise(object):
         pblock.SOS2_sosconstraint = SOSConstraint(initialize=SOS2_rule, sos=2)
 
 
-class _DCCPiecewise(object):
+class _DCCPiecewise:
     """
     Called to generate Piecewise constraint using the DCC formulation
     """
@@ -466,7 +466,7 @@ class _DCCPiecewise(object):
         pblock.DCC_constraint4 = Constraint(expr=sum(bin_y[p] for p in polytopes) == 1)
 
 
-class _DLOGPiecewise(object):
+class _DLOGPiecewise:
     """
     Called to generate Piecewise constraint using the DLOG formulation
     """
@@ -568,7 +568,7 @@ class _DLOGPiecewise(object):
         pblock.DLOG_constraint5 = Constraint(bin_y_index, rule=con5_rule)
 
 
-class _CCPiecewise(object):
+class _CCPiecewise:
     """
     Called to generate Piecewise constraint using the CC formulation
     """
@@ -624,7 +624,7 @@ class _CCPiecewise(object):
         pblock.CC_constraint5 = Constraint(expr=sum(bin_y[p] for p in polytopes) == 1)
 
 
-class _LOGPiecewise(object):
+class _LOGPiecewise:
     """
     Called to generate Piecewise constraint using the LOG formulation
     """
@@ -717,7 +717,7 @@ class _LOGPiecewise(object):
         pblock.LOG_constraint5 = Constraint(bin_y_index, rule=con5_rule)
 
 
-class _MCPiecewise(object):
+class _MCPiecewise:
     """
     Called to generate Piecewise constraint using the MC formulation
     """
@@ -774,7 +774,7 @@ class _MCPiecewise(object):
         pblock.MC_constraint5 = Constraint(expr=sum(bin_y[p] for p in polytopes) == 1)
 
 
-class _INCPiecewise(object):
+class _INCPiecewise:
     """
     Called to generate Piecewise constraint using the INC formulation
     """
@@ -836,7 +836,7 @@ class _INCPiecewise(object):
         pblock.INC_constraint4 = Constraint(polytopes, rule=con4_rule)
 
 
-class _BIGMPiecewise(object):
+class _BIGMPiecewise:
     """
     Called to generate Piecewise constraint using the BIGM formulation
     """

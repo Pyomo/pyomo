@@ -408,7 +408,7 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
-    class _all_true(object):
+    class _all_true:
         # A mockup of Bunch that returns True for all attribute lookups
         # or containment tests.
         def __getattr__(self, name):
