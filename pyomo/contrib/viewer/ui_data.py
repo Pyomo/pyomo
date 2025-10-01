@@ -33,7 +33,7 @@ import pyomo.environ as pyo
 _log = logging.getLogger(__name__)
 
 
-class UIDataNoUi(object):
+class UIDataNoUi:
     """
     This is the UIData object minus the signals.  This is the base class for
     UIData.  The class is split this way for testing when PyQt is not available.

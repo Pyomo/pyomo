@@ -74,13 +74,13 @@ class TestDeprecated(unittest.TestCase):
         ):
 
             @deprecated()
-            class foo(object):
+            class foo:
                 pass
 
         # But no exception if the class can infer a version from the
         # __init__ (or __new__ or __new_member__)
         @deprecated()
-        class foo(object):
+        class foo:
             @deprecated(version="1.2")
             def __init__(self):
                 pass
@@ -258,7 +258,7 @@ class TestDeprecated(unittest.TestCase):
 
     def test_with_class(self):
         @deprecated(version='test')
-        class foo(object):
+        class foo:
             def __init__(self):
                 logger.warning('yeah')
 
@@ -285,7 +285,7 @@ class TestDeprecated(unittest.TestCase):
         )
 
     def test_with_method(self):
-        class foo(object):
+        class foo:
             def __init__(self):
                 pass
 
@@ -316,7 +316,7 @@ class TestDeprecated(unittest.TestCase):
         )
 
     def test_with_remove_in(self):
-        class foo(object):
+        class foo:
             def __init__(self):
                 pass
 
@@ -348,7 +348,7 @@ class TestDeprecated(unittest.TestCase):
         )
 
 
-class Bar(object):
+class Bar:
     data = 21
 
 
@@ -498,7 +498,7 @@ class TestRelocated(unittest.TestCase):
 
 class TestRenamedClass(unittest.TestCase):
     def test_renamed(self):
-        class NewClass(object):
+        class NewClass:
             attr = 'NewClass'
 
         class NewClassSubclass(NewClass):
@@ -640,7 +640,7 @@ class TestRenamedClass(unittest.TestCase):
         self.assertEqual(DeprecatedClassSubSubclass.attr, 'DeprecatedClassSubSubclass')
 
     def test_renamed_errors(self):
-        class NewClass(object):
+        class NewClass:
             pass
 
         with self.assertRaisesRegex(

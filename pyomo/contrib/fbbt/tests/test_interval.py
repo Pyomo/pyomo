@@ -23,7 +23,7 @@ except AttributeError:
         return not (math.isnan(x) or math.isinf(x))
 
 
-class IntervalTestBase(object):
+class IntervalTestBase:
     """
     These tests are set up weird, but it is for a good reason.
     The interval arithmetic code is duplicated in pyomo.contrib.appsi for

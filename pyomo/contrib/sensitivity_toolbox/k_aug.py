@@ -42,7 +42,7 @@ known_files = [
 ]
 
 
-class InTempDir(object):
+class InTempDir:
     def __init__(self, suffix=None, prefix=None, dir=None):
         self._suffix = suffix
         self._prefix = prefix
@@ -63,7 +63,7 @@ class InTempDir(object):
         TempfileManager.pop()
 
 
-class K_augInterface(object):
+class K_augInterface:
     """
     k_aug and dot_sens store information in the user's filesystem,
     some of which is mandatory for subsequent calls.

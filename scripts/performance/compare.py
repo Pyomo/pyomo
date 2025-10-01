@@ -31,7 +31,7 @@ from statistics import stdev, mean
 #      stdev(x)**2 / card(x)  +  stdev(y)**2 / card(y) )
 
 
-class Result(object):
+class Result:
     z_threshold = 1.6448536269514722  # 95%
     # z_threshold = 1.2815515655446004  # 90%
     # z_threshold = 0.8416212335729143  # 80%
