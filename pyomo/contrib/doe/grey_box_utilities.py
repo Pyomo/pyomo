@@ -477,7 +477,7 @@ class FIMExternalGreyBox(
                 k = self._param_names.index(d2[0])
                 l = self._param_names.index(d2[1])
 
-                # For lop to iterate over all
+                # For loop to iterate over all
                 # eigenvalues/vectors
                 curr_hess_val = 0
                 for curr_eig in range(len(all_eig_vals)):
@@ -519,17 +519,29 @@ class FIMExternalGreyBox(
                 multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
                 hess_vals[-1] += multiplier * curr_hess_val
         elif self.objective_option == ObjectiveLib.condition_number:
-            # Hessian for log condition number has 4 terms
+            # Hessian for log condition number has 4
+            # terms. Two are multiples of the second
+            # derivative of the maximum and minimum
+            # eigenvalues. The other two are tensor products
+            # of the first derivative of the maximum
+            # eigenvalue with itself, and minimum
+            # eigenvalue with itself.
             #
             # Grab eigenvalues and eigenvectors
-            # Also need the min location
+            # Also need the max and min locations
             all_eig_vals, all_eig_vecs = np.linalg.eig(M)
             min_eig_loc = np.argmin(all_eig_vals)
+            max_eig_loc = np.argmax(all_eig_vals)
 
             # Grabbing min eigenvalue and corresponding
             # eigenvector
             min_eig = all_eig_vals[min_eig_loc]
             min_eig_vec = np.array([all_eig_vecs[:, min_eig_loc]])
+
+            # Grabbing max eigenvalue and corresponding
+            # eigenvector
+            max_eig = all_eig_vals[max_eig_loc]
+            max_eig_vec = np.array([all_eig_vecs[:, max_eig_loc]])
 
             for current_differential in input_differentials_2D:
                 # Row, Col and i, j, k, l values are
@@ -544,9 +556,45 @@ class FIMExternalGreyBox(
                 k = self._param_names.index(d2[0])
                 l = self._param_names.index(d2[1])
 
-                # For lop to iterate over all
-                # eigenvalues/vectors
-                curr_hess_val = 0
+                # For loop to iterate over all
+                # eigenvalues/vectors for first
+                # term (second derivative of
+                # maximum eigenvalue)
+                log_cond_term_1 = 0
+                for curr_eig in range(len(all_eig_vals)):
+                    # Skip if we are at the minimum
+                    # eigenvalue. Denominator is
+                    # zero.
+                    if curr_eig == max_eig_loc:
+                        continue
+
+                    # Formula derived in Pyomo.DoE Paper
+                    log_cond_term_1 += (
+                            1
+                            * (
+                                    max_eig_vec[0, i]
+                                    * all_eig_vecs[j, curr_eig]
+                                    * max_eig_vec[0, l]
+                                    * all_eig_vecs[k, curr_eig]
+                            )
+                            / (max_eig - all_eig_vals[curr_eig])
+                    )
+                    log_cond_term_1 += (
+                            1
+                            * (
+                                    max_eig_vec[0, k]
+                                    * all_eig_vecs[i, curr_eig]
+                                    * max_eig_vec[0, j]
+                                    * all_eig_vecs[l, curr_eig]
+                            )
+                            / (max_eig - all_eig_vals[curr_eig])
+                    )
+
+                # For loop to iterate over all
+                # eigenvalues/vectors for third
+                # term (second derivative of
+                # minimum eigenvalue)
+                log_cond_term_3 = 0
                 for curr_eig in range(len(all_eig_vals)):
                     # Skip if we are at the minimum
                     # eigenvalue. Denominator is
@@ -555,7 +603,7 @@ class FIMExternalGreyBox(
                         continue
 
                     # Formula derived in Pyomo.DoE Paper
-                    curr_hess_val += (
+                    log_cond_term_3 += (
                             1
                             * (
                                     min_eig_vec[0, i]
@@ -565,7 +613,7 @@ class FIMExternalGreyBox(
                             )
                             / (min_eig - all_eig_vals[curr_eig])
                     )
-                    curr_hess_val += (
+                    log_cond_term_3 += (
                             1
                             * (
                                     min_eig_vec[0, k]
@@ -575,6 +623,38 @@ class FIMExternalGreyBox(
                             )
                             / (min_eig - all_eig_vals[curr_eig])
                     )
+
+                # Computing each term of the hessian formula
+                # Second derivative of max eigenvalue term
+                log_cond_term_1 = 1 / max_eig * log_cond_term_1
+
+                # First derivative of max eigenvalue term
+                log_cond_term_2 = (
+                    1
+                    / (max_eig**2)
+                    * (max_eig_vec[0, l] * max_eig_vec[0, k])
+                    * (max_eig_vec[0, j] * max_eig_vec[0, i])
+                )
+
+                # Second derivative of min eigenvalue term
+                log_cond_term_3 = 1 / min_eig * log_cond_term_3
+
+                # First derivative of min eigenvalue term
+                log_cond_term_4 = (
+                    1
+                    / (min_eig**2)
+                    * (min_eig_vec[0, l] * min_eig_vec[0, k])
+                    * (min_eig_vec[0, j] * min_eig_vec[0, i])
+                )
+
+                # Combining all the components
+                curr_hess_val = (
+                    log_cond_term_1
+                    - log_cond_term_2
+                    - log_cond_term_3
+                    + log_cond_term_4
+                )
+
                 hess_vals.append(curr_hess_val)
                 hess_rows.append(row)
                 hess_cols.append(col)
