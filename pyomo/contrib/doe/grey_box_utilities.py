@@ -558,7 +558,7 @@ class FIMExternalGreyBox(
                 # maximum eigenvalue)
                 log_cond_term_1 = 0
                 for curr_eig in range(len(all_eig_vals)):
-                    # Skip if we are at the minimum
+                    # Skip if we are at the maximum
                     # eigenvalue. Denominator is
                     # zero.
                     if curr_eig == max_eig_loc:
