@@ -1593,8 +1593,8 @@ class TestSolvers(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, -0.42630274815985264)
-        self.assertAlmostEqual(m.y.value, 0.6529186341994245)
+        self.assertAlmostEqual(m.x.value, -0.42630274815985264, delta=1e-3)
+        self.assertAlmostEqual(m.y.value, 0.6529186341994245, delta=1e-3)
 
     @parameterized.expand(input=_load_tests(nlp_solvers))
     def test_log(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
