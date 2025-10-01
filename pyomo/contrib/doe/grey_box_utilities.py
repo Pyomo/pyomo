@@ -185,7 +185,7 @@ class FIMExternalGreyBox(
             obj_value = np.min(eig)
         elif self.objective_option == ObjectiveLib.condition_number:
             eig, _ = np.linalg.eig(M)
-            obj_value = np.abs(np.max(eig) / np.min(eig))
+            obj_value = np.log(np.abs(np.max(eig) / np.min(eig)))
         else:
             ObjectiveLib(self.objective_option)
 
@@ -519,7 +519,72 @@ class FIMExternalGreyBox(
                 multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
                 hess_vals[-1] += multiplier * curr_hess_val
         elif self.objective_option == ObjectiveLib.condition_number:
-            pass
+            # Hessian for log condition number has 4 terms
+            #
+            # Grab eigenvalues and eigenvectors
+            # Also need the min location
+            all_eig_vals, all_eig_vecs = np.linalg.eig(M)
+            min_eig_loc = np.argmin(all_eig_vals)
+
+            # Grabbing min eigenvalue and corresponding
+            # eigenvector
+            min_eig = all_eig_vals[min_eig_loc]
+            min_eig_vec = np.array([all_eig_vecs[:, min_eig_loc]])
+
+            for current_differential in input_differentials_2D:
+                # Row, Col and i, j, k, l values are
+                # obtained identically as in the trace
+                # for loop above.
+                d1, d2 = current_differential
+                row = self.input_names().index(d2)
+                col = self.input_names().index(d1)
+
+                i = self._param_names.index(d1[0])
+                j = self._param_names.index(d1[1])
+                k = self._param_names.index(d2[0])
+                l = self._param_names.index(d2[1])
+
+                # For lop to iterate over all
+                # eigenvalues/vectors
+                curr_hess_val = 0
+                for curr_eig in range(len(all_eig_vals)):
+                    # Skip if we are at the minimum
+                    # eigenvalue. Denominator is
+                    # zero.
+                    if curr_eig == min_eig_loc:
+                        continue
+
+                    # Formula derived in Pyomo.DoE Paper
+                    curr_hess_val += (
+                            1
+                            * (
+                                    min_eig_vec[0, i]
+                                    * all_eig_vecs[j, curr_eig]
+                                    * min_eig_vec[0, l]
+                                    * all_eig_vecs[k, curr_eig]
+                            )
+                            / (min_eig - all_eig_vals[curr_eig])
+                    )
+                    curr_hess_val += (
+                            1
+                            * (
+                                    min_eig_vec[0, k]
+                                    * all_eig_vecs[i, curr_eig]
+                                    * min_eig_vec[0, j]
+                                    * all_eig_vecs[l, curr_eig]
+                            )
+                            / (min_eig - all_eig_vals[curr_eig])
+                    )
+                hess_vals.append(curr_hess_val)
+                hess_rows.append(row)
+                hess_cols.append(col)
+
+                # See explanation above in trace hessian code
+                # for more brief information. Also, you may
+                # consult the documentation for a detailed
+                # description.
+                multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
+                hess_vals[-1] += multiplier * curr_hess_val
         else:
             ObjectiveLib(self.objective_option)
 
