@@ -48,14 +48,6 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    def test_invalid_search_mode(self):
-        """
-        Confirm that an exception is thrown with pool_search_mode not in [1,2]
-        """
-        m = tc.get_triangle_ip()
-        with self.assertRaisesRegex(AssertionError, "pool_search_mode must be 1 or 2"):
-            gurobi_generate_solutions(m, pool_search_mode=0)
-
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_ip_num_solutions_best_effort(self):
         """
@@ -65,7 +57,9 @@ class TestSolnPoolUnit(unittest.TestCase):
         Check that the correct number of alternate solutions are found.
         """
         m = tc.get_triangle_ip()
-        results = gurobi_generate_solutions(m, pool_search_mode=1, num_solutions=8)
+        results = gurobi_generate_solutions(
+            m, num_solutions=8, solver_options={"PoolSearchMode": 1}
+        )
         assert len(results) >= 1, 'Need to find some solutions'
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
