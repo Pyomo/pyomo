@@ -22,7 +22,10 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent, GurobiDirectQuadratic
+from pyomo.contrib.solver.solvers.gurobi_persistent import (
+    GurobiPersistent,
+    GurobiDirectQuadratic,
+)
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct import GurobiDirect
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
