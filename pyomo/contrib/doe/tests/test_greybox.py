@@ -643,9 +643,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Get numerical derivative matrix
         hess_FD = get_numerical_second_derivative(grey_box_object)
 
-        print(hess_gb)
-        print(hess_FD)
-
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
@@ -709,11 +706,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
-        print(hess_gb)
-
         # Get numerical derivative matrix
         hess_FD = get_numerical_second_derivative(grey_box_object)
-        print(hess_FD)
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
