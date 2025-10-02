@@ -16,6 +16,7 @@ import logging
 import shlex
 
 from pyomo.common import Factory
+from pyomo.common.enums import SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 
@@ -54,7 +55,7 @@ def _extract_version(x, length=4):
     return None  # (0,0,0,0)[:length]
 
 
-class UnknownSolver(object):
+class UnknownSolver:
     def __init__(self, *args, **kwds):
         # super(UnknownSolver,self).__init__(**kwds)
 
@@ -79,6 +80,18 @@ class UnknownSolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
+
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1
 
     def available(self, exception_flag=True):
         """Determine if this optimizer is available."""
@@ -178,7 +191,8 @@ class SolverFactoryClass(Factory):
         return opt
 
 
-LegacySolverFactory = SolverFactoryClass('solver type')
+#: Global registry/factory for "v1" solver interfaces.
+LegacySolverFactory: SolverFactoryClass = SolverFactoryClass('solver type')
 
 SolverFactory = SolverFactoryClass('solver type')
 SolverFactory._cls = LegacySolverFactory._cls
@@ -236,7 +250,7 @@ def _raise_ephemeral_error(name, keyword=""):
     )
 
 
-class OptSolver(object):
+class OptSolver:
     """A generic optimization solver"""
 
     #
@@ -248,6 +262,18 @@ class OptSolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
+
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1
 
     #
     # Adding to help track down invalid code after making

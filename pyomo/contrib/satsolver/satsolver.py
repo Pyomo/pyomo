@@ -51,7 +51,7 @@ def satisfiable(model, logger=None):
         raise ValueError('Unknown result: %s' % result)
 
 
-class SMTSatSolver(object):
+class SMTSatSolver:
     """
     Satisfiability solver that checks constraint feasibility through use of
     z3 Sat Solver. Object stores expressions and variables in form consistent
