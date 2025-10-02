@@ -381,10 +381,10 @@ class ModelChangeDetector:
     We have discussed expanding the interface of the ``ModelChangeDetector``
     with methods to request extra information. For example, if the value
     of a fixed variable changes, an observer may want to know all of the
-    constraints that use the variables. This class alredy has that
+    constraints that use the variables. This class already has that
     information, so the observer should not have to waste time recomputing
     that. We have not yet added methods like this because we do not have
-    an immediate use case or need, and it's not yet clear waht those
+    an immediate use case or need, and it's not yet clear what those
     methods should look like. If a need arises, please create an issue or
     pull request.
 
