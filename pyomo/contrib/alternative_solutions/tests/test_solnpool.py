@@ -57,17 +57,16 @@ class TestSolnPoolUnit(unittest.TestCase):
         Check that the correct number of alternate solutions are found.
         """
         m = tc.get_triangle_ip()
-        with LoggingIntercept() as LOG: 
+        with LoggingIntercept() as LOG:
             results = gurobi_generate_solutions(
                 m, num_solutions=8, solver_options={"PoolSearchMode": 1}
             )
         self.assertRegex(
             'Running gurobi_solnpool with PoolSearchMode=1, best effort search may lead to unexpected behavior\n',
-            LOG.getvalue()
+            LOG.getvalue(),
         )
         assert len(results) >= 1, 'Need to find some solutions'
-        
-    
+
     def test_ip_num_solutions_standard_single_solution_solve(self):
         """
         Enumerate solutions for an ip: triangle_ip.
@@ -78,13 +77,13 @@ class TestSolnPoolUnit(unittest.TestCase):
         This is a warning check.
         """
         m = tc.get_triangle_ip()
-        with LoggingIntercept() as LOG: 
+        with LoggingIntercept() as LOG:
             results = gurobi_generate_solutions(
                 m, num_solutions=8, solver_options={"PoolSearchMode": 0}
             )
         self.assertRegex(
             'Running gurobi_solnpool with PoolSearchMode=0, this is single search mode and not the intended use case for gurobi_generate_solutions\n',
-            LOG.getvalue()
+            LOG.getvalue(),
         )
         assert len(results) == 1, 'Need to find only 1 solution'
 
@@ -97,13 +96,11 @@ class TestSolnPoolUnit(unittest.TestCase):
         This is a warning check.
         """
         m = tc.get_triangle_ip()
-        with LoggingIntercept() as LOG: 
-            results = gurobi_generate_solutions(
-                m, num_solutions=1
-            )
+        with LoggingIntercept() as LOG:
+            results = gurobi_generate_solutions(m, num_solutions=1)
         self.assertRegex(
             'Running alternative_solutions method to find only 1 solution!\n',
-            LOG.getvalue()
+            LOG.getvalue(),
         )
         assert len(results) == 1, 'Need to find only 1 solution'
 
@@ -113,7 +110,9 @@ class TestSolnPoolUnit(unittest.TestCase):
         Test case where zero solutions are asked for to check assertation error.
         """
         m = tc.get_triangle_ip()
-        with self.assertRaisesRegex(AssertionError, "num_solutions must be positive integer"):
+        with self.assertRaisesRegex(
+            AssertionError, "num_solutions must be positive integer"
+        ):
             gurobi_generate_solutions(m, num_solutions=0)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
