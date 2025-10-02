@@ -107,7 +107,7 @@ class TestSolnPoolUnit(unittest.TestCase):
     def test_ip_num_solutions_seeking_zero(self):
         """
         Enumerate solutions for an ip: triangle_ip.
-        Test case where zero solutions are asked for to check assertation error.
+        Test case where zero solutions are asked for to check assert error.
         """
         m = tc.get_triangle_ip()
         with self.assertRaisesRegex(
