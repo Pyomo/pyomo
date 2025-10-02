@@ -9,8 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from typing import Sequence, Dict, Optional, Mapping, List, Tuple
 import os
+from contextlib import contextmanager
+from typing import Sequence, Dict, Optional, Mapping, List, Tuple
 
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
@@ -45,12 +46,26 @@ class Availability(IntEnum):
     order to record its availability for use.
     """
 
+    NoLicenseRequired = 3
+    """The solver was found and no license is required to run."""
+
     FullLicense = 2
+    """The solver was found and a full license is accessible to use."""
+
     LimitedLicense = 1
+    """The solver was found and a limited license (e.g., demo license is
+    accessible to use."""
     NotFound = 0
-    BadVersion = -1
-    BadLicense = -2
-    NeedsCompiledExtension = -3
+    """The solver was not found, either because the executable was not
+    on the path or the solver package is not importable."""
+
+    UnsupportedVersion = -1
+    """The solver was found but is an unsupported version in Pyomo."""
+
+    LicenseError = -2
+    """The solver was found but no usable license is available. This could
+    indicate either that no license was found, an expired or misformed
+    license was found, or the license is incorrect for the problem type."""
 
     def __bool__(self):
         return self._value_ > 0
@@ -60,6 +75,40 @@ class Availability(IntEnum):
 
     def __str__(self):
         return self.name
+
+
+class _LicenseManager:
+    def acquire(self, timeout: Optional[float] = None) -> None:
+        """Acquire and lock a license. Default behavior is to simply return
+        because we assume, unless otherwise noted, that a solver does NOT
+        require a license."""
+        return
+
+    def release(self) -> None:
+        """Release the lock on a license."""
+        return
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.release()
+        return False
+
+    def __call__(self, timeout=None):
+        """This logic is necessary in order to support this type of
+        context manager: ``with solver.license(timeout=5):``"""
+
+        @contextmanager
+        def _cm():
+            self.acquire(timeout)
+            try:
+                yield self
+            finally:
+                self.release()
+
+        return _cm()
 
 
 class SolverBase:
@@ -98,6 +147,7 @@ class SolverBase:
 
         #: Instance configuration; see CONFIG documentation on derived class
         self.config = self.CONFIG(value=kwds)
+        self.license = _LicenseManager()
 
     def __enter__(self):
         return self
@@ -138,7 +188,7 @@ class SolverBase:
             f"Derived class {self.__class__.__name__} failed to implement required method 'solve'."
         )
 
-    def available(self) -> Availability:
+    def available(self, recheck: bool = False) -> Availability:
         """Test if the solver is available on this system.
 
         Nominally, this will return `True` if the solver interface is
@@ -165,7 +215,7 @@ class SolverBase:
             f"Derived class {self.__class__.__name__} failed to implement required method 'available'."
         )
 
-    def version(self) -> Tuple:
+    def version(self, recheck: bool = False) -> Tuple:
         """Return the solver version found on the system.
 
         Returns

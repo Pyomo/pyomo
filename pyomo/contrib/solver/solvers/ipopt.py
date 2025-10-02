@@ -241,24 +241,26 @@ class Ipopt(SolverBase):
         #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
         self.config = self.config
 
-    def available(self, config: Optional[IpoptConfig] = None) -> Availability:
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-        if self._available_cache is None or self._available_cache[0] != pth:
+    def available(self, recheck: bool = False) -> Availability:
+        pth = self.config.executable.path()
+        check_availability = (
+            recheck or self._available_cache is None or self._available_cache[0] != pth
+        )
+
+        if check_availability:
             if pth is None:
                 self._available_cache = (None, Availability.NotFound)
             else:
-                self._available_cache = (pth, Availability.FullLicense)
+                self._available_cache = (pth, Availability.NoLicenseRequired)
+
         return self._available_cache[1]
 
-    def version(
-        self, config: Optional[IpoptConfig] = None
-    ) -> Optional[Tuple[int, int, int]]:
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-        if self._version_cache is None or self._version_cache[0] != pth:
+    def version(self, recheck: bool = False) -> Optional[Tuple[int, int, int]]:
+        pth = self.config.executable.path()
+        check_version = (
+            recheck or self._version_cache is None or self._version_cache[0] != pth
+        )
+        if check_version:
             if pth is None:
                 self._version_cache = (None, None)
             else:
@@ -343,12 +345,6 @@ class Ipopt(SolverBase):
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         # Update configuration options, based on keywords passed to solve
         config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
-        # Check if solver is available
-        avail = self.available(config)
-        if not avail:
-            raise ApplicationError(
-                f'Solver {self.__class__} is not available ({avail}).'
-            )
         if config.threads:
             logger.log(
                 logging.WARNING,
@@ -524,7 +520,7 @@ class Ipopt(SolverBase):
             raise NoOptimalSolutionError()
 
         results.solver_name = self.name
-        results.solver_version = self.version(config)
+        results.solver_version = self.version()
 
         if config.load_solutions:
             if results.solution_status == SolutionStatus.noSolution:

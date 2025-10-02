@@ -42,6 +42,8 @@ class TestSolverBase(unittest.TestCase):
         self.assertEqual(instance.name, 'solverbase')
         self.assertEqual(instance.api_version().name, 'V2')
         self.assertEqual(instance.CONFIG, instance.config)
+        self.assertTrue(hasattr(instance, 'license'))
+        self.assertIsInstance(instance.license, base._LicenseManager)
         with self.assertRaises(NotImplementedError):
             self.assertEqual(instance.version(), None)
         with self.assertRaises(NotImplementedError):
@@ -62,6 +64,18 @@ class TestSolverBase(unittest.TestCase):
     def test_custom_solver_name(self):
         instance = base.SolverBase(name='my_unique_name')
         self.assertEqual(instance.name, 'my_unique_name')
+
+    def test_default_license_behavior(self):
+        instance = base.SolverBase()
+        # plain context manager
+        with instance.license:
+            pass
+        # context manager with timeout
+        with instance.license(timeout=0.1):
+            pass
+        # explicit calls also work
+        instance.license.acquire(timeout=0.1)
+        instance.license.release()
 
 
 class TestPersistentSolverBase(unittest.TestCase):
