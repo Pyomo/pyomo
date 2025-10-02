@@ -386,7 +386,9 @@ class FIMExternalGreyBox(
         # Need to iterate over the unique
         # differentials
         full_input_names = itertools.product(self._param_names, repeat=2)
-        input_differentials_2D = itertools.combinations_with_replacement(full_input_names, 2)
+        input_differentials_2D = itertools.combinations_with_replacement(
+            full_input_names, 2
+        )
 
         from pyomo.contrib.doe import ObjectiveLib
 
@@ -439,8 +441,14 @@ class FIMExternalGreyBox(
                 # Note, we have to account for lower triangular
                 # and only add to the element which is
                 # in that section.
-                row = max(self.input_names().index(d1_symmetric), self.input_names().index(d2_symmetric))
-                col = min(self.input_names().index(d1_symmetric), self.input_names().index(d2_symmetric))
+                row = max(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                col = min(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
                 flattened_row_col_index = (row + 1) * row // 2 + col
 
                 # Hessian needs to be handled carefully because of
@@ -503,8 +511,14 @@ class FIMExternalGreyBox(
 
                 # Identify what index of the symmetric FIM
                 # Hessian arrays need to be updated
-                row = max(self.input_names().index(d1_symmetric), self.input_names().index(d2_symmetric))
-                col = min(self.input_names().index(d1_symmetric), self.input_names().index(d2_symmetric))
+                row = max(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                col = min(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
                 flattened_row_col_index = (row + 1) * row // 2 + col
 
                 # Hessian needs to be handled carefully because of
@@ -591,8 +605,14 @@ class FIMExternalGreyBox(
 
                 # Identify what index of the symmetric FIM
                 # Hessian arrays need to be updated
-                row = max(self.input_names().index(d1_symmetric), self.input_names().index(d2_symmetric))
-                col = min(self.input_names().index(d1_symmetric), self.input_names().index(d2_symmetric))
+                row = max(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                col = min(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
                 flattened_row_col_index = (row + 1) * row // 2 + col
 
                 # Hessian needs to be handled carefully because of
@@ -759,8 +779,14 @@ class FIMExternalGreyBox(
 
                 # Identify what index of the symmetric FIM
                 # Hessian arrays need to be updated
-                row = max(self.input_names().index(d1_symmetric), self.input_names().index(d2_symmetric))
-                col = min(self.input_names().index(d1_symmetric), self.input_names().index(d2_symmetric))
+                row = max(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                col = min(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
                 flattened_row_col_index = (row + 1) * row // 2 + col
 
                 # Hessian needs to be handled carefully because of

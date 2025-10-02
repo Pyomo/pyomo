@@ -226,15 +226,13 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
             row = ordered_pairs_list.index((reordered_ijkl[2], reordered_ijkl[3]))
             col = ordered_pairs_list.index((reordered_ijkl[0], reordered_ijkl[1]))
 
-            numerical_derivative_reduced[row, col] += (
-                numerical_derivative[i, j, k, l]
-            )
+            numerical_derivative_reduced[row, col] += numerical_derivative[i, j, k, l]
 
             # Duplicate check and addition
             if ((i != j) and (k != l)) and ((i == l) and (j == k)):
-                numerical_derivative_reduced[row, col] += (
-                    numerical_derivative[i, j, k, l]
-                )
+                numerical_derivative_reduced[row, col] += numerical_derivative[
+                    i, j, k, l
+                ]
 
         numerical_derivative_reduced += (
             numerical_derivative_reduced.transpose()
