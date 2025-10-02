@@ -212,20 +212,29 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
         #
         # Make ordered quads with no repeats
         # of the ordered pairs
-        ordered_pairs = itertools.combinations_with_replacement(range(4), 2)
+        ordered_pairs = itertools.product(range(4), repeat=2)
         ordered_pairs_list = list(itertools.combinations_with_replacement(range(4), 2))
         ordered_quads = itertools.combinations_with_replacement(ordered_pairs, 2)
 
         numerical_derivative_reduced = np.zeros((10, 10))
 
-        for i in ordered_quads:
-            row = ordered_pairs_list.index(i[0])
-            col = ordered_pairs_list.index(i[1])
-            i, j, k, l = i[0][0], i[0][1], i[1][0], i[1][1]
-            multiplier = 1 + ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
-            numerical_derivative_reduced[row, col] = (
-                multiplier * numerical_derivative[i, j, k, l]
+        for curr_quad in ordered_quads:
+            d1, d2 = curr_quad
+            i, j, k, l = d1[0], d1[1], d2[0], d2[1]
+
+            reordered_ijkl = grey_box_object._reorder_pairs(i, j, k, l)
+            row = ordered_pairs_list.index((reordered_ijkl[2], reordered_ijkl[3]))
+            col = ordered_pairs_list.index((reordered_ijkl[0], reordered_ijkl[1]))
+
+            numerical_derivative_reduced[row, col] += (
+                numerical_derivative[i, j, k, l]
             )
+
+            # Duplicate check and addition
+            if ((i != j) and (k != l)) and ((i == l) and (j == k)):
+                numerical_derivative_reduced[row, col] += (
+                    numerical_derivative[i, j, k, l]
+                )
 
         numerical_derivative_reduced += (
             numerical_derivative_reduced.transpose()
@@ -634,6 +643,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Get numerical derivative matrix
         hess_FD = get_numerical_second_derivative(grey_box_object)
 
+        print(hess_gb)
+        print(hess_FD)
+
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
@@ -697,8 +709,11 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
+        print(hess_gb)
+
         # Get numerical derivative matrix
         hess_FD = get_numerical_second_derivative(grey_box_object)
+        print(hess_FD)
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
