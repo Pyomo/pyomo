@@ -123,6 +123,25 @@ class FIMExternalGreyBox(
 
         return current_FIM
 
+    def _reorder_pairs(self, i, j, k, l):
+        # Reorders the pairs (i, j) and
+        # (k, l) for considering only
+        # the symmetric portion of the FIM
+        # while calculating the Hessian
+
+        # If the pairs ((i, j), (k, l)) are not
+        # in increasing order, we reorder
+        # the pairs.
+        if i > j:
+            if k > l:
+                return [j, i, l, k]
+            else:
+                return [j, i, k, l]
+        else:
+            if k > l:
+                return [i, j, l, k]
+        return [i, j, k, l]
+
     def input_names(self):
         # Cartesian product gives us matrix indices flattened in row-first format
         # Can use itertools.combinations(self._param_names, 2) with added
@@ -350,6 +369,12 @@ class FIMExternalGreyBox(
             self._n_params, self._n_params
         )
 
+        # Length of Hessian lists for the sparse
+        # matrix ar a function of number of parameters
+        hess_array_length = round(
+            (((self._n_params + 1) * self._n_params / 2) + 1) * (((self._n_params + 1) * self._n_params / 2)) / 2
+        )
+
         # Hessian with correct size for using only the
         # lower (upper) triangle of the FIM
         hess_vals = []
@@ -365,6 +390,12 @@ class FIMExternalGreyBox(
         from pyomo.contrib.doe import ObjectiveLib
 
         if self.objective_option == ObjectiveLib.trace:
+            input_differentials_2D = itertools.product(
+                self.input_names(), repeat=2
+            )
+            hess_vals = [0, ] * hess_array_length
+            hess_rows = [0, ] * hess_array_length
+            hess_cols = [0, ] * hess_array_length
             # Grab Inverse
             Minv = np.linalg.pinv(M)
 
@@ -372,14 +403,7 @@ class FIMExternalGreyBox(
             Minv_sq = Minv @ Minv
 
             for current_differential in input_differentials_2D:
-                # Row will be the location of the
-                # first ordered pair (d1) in input names
-                #
-                # Col will be the location of the
-                # second ordered pair (d2) in input names
                 d1, d2 = current_differential
-                row = self.input_names().index(d2)
-                col = self.input_names().index(d1)
 
                 # Grabbing the ordered quadruple (i, j, k, l)
                 # `location` here refers to the index in the
@@ -396,29 +420,46 @@ class FIMExternalGreyBox(
 
                 # New Formula (tested with finite differencing)
                 # Will be cited from the Pyomo.DoE 2.0 paper
-                hess_vals.append(
-                    (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
-                )
-                hess_rows.append(row)
-                hess_cols.append(col)
+                hess_contribution = (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
+
+                # Since we are considering the full matrix in
+                # this loop, we need to point the contribution
+                # to the correct index for the symmetric FIM
+                # Hessian.
+                reordered_ijkl = self._reorder_pairs(i, j, k, l)
+                d1_symmetric = (self._param_names[reordered_ijkl[0]], self._param_names[reordered_ijkl[1]])
+                d2_symmetric = (self._param_names[reordered_ijkl[2]], self._param_names[reordered_ijkl[3]])
+
+                # Identify what index of the symmetric FIM
+                # Hessian arrays need to be updated
+                row = self.input_names().index(d1_symmetric)
+                col = self.input_names().index(d2_symmetric)
+                flattened_row_col_index = (row + 1) * row // 2 + col
 
                 # Hessian needs to be handled carefully because of
                 # the ``missing`` components when only passing
-                # a triangular version of the FIM.
+                # a symmetric version of the FIM.
                 #
-                # The general format is that fully diagonal elements
-                # (i == j AND k == l) require no additional counting
-                # of the computed term. Off-diagonal elements
-                # (i != j OR k != l) add one instance. Having two
-                # off-diagonal elements (i != j AND k != l) will add
-                # two instances. Finally, if the off-diagonal elements
-                # are not the same ((i != j AND k != l) AND (i != k))
-                # there is an additional element. A more detailed
-                # explanation is included in the documentation.
-                multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
-                hess_vals[-1] += multiplier * (
-                    (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
-                )
+                # When we reordered (i, j, k, l), we are correctly
+                # pointing to which index needs to be contributed to.
+                # However, when an element that is not included
+                # is being put into a diagonal element of the
+                # symmetric FIM hessian from the full FIM hessian,
+                # it needs to be counted twice. This only occurs
+                # when (i != j) and (k != l) and (i, j) and (k, l)
+                # are the conjugate of one another:
+                # (i == l) and (j == k).
+                #
+                # Otherwise, we only add the element once.
+                # Standard addition
+                hess_vals[flattened_row_col_index] += hess_contribution
+
+                # Duplicate check and addition
+                if ((i != j) and (k != l)) and ((i == l) and ( j == k)):
+                    hess_vals[flattened_row_col_index] += hess_contribution
+
+                hess_rows[flattened_row_col_index] = row
+                hess_cols[flattened_row_col_index] = col
 
         elif self.objective_option == ObjectiveLib.determinant:
             # Grab inverse
@@ -664,6 +705,9 @@ class FIMExternalGreyBox(
         else:
             ObjectiveLib(self.objective_option)
 
+        print(hess_vals)
+        print(hess_rows)
+        print(hess_cols)
         # Returns coo_matrix of the correct shape
         return scipy.sparse.coo_matrix(
             (np.asarray(hess_vals), (hess_rows, hess_cols)),
