@@ -372,20 +372,20 @@ class FIMExternalGreyBox(
         # Length of Hessian lists for the sparse
         # matrix ar a function of number of parameters
         hess_array_length = round(
-            (((self._n_params + 1) * self._n_params / 2) + 1) * (((self._n_params + 1) * self._n_params / 2)) / 2
+            (((self._n_params + 1) * self._n_params / 2) + 1)
+            * (((self._n_params + 1) * self._n_params / 2))
+            / 2
         )
 
         # Hessian with correct size for using only the
         # lower (upper) triangle of the FIM
-        hess_vals = [0, ] * hess_array_length
-        hess_rows = [0, ] * hess_array_length
-        hess_cols = [0, ] * hess_array_length
+        hess_vals = [0] * hess_array_length
+        hess_rows = [0] * hess_array_length
+        hess_cols = [0] * hess_array_length
 
         # Need to iterate over the unique
         # differentials
-        input_differentials_2D = itertools.product(
-            self.input_names(), repeat=2
-        )
+        input_differentials_2D = itertools.product(self.input_names(), repeat=2)
 
         from pyomo.contrib.doe import ObjectiveLib
 
@@ -414,15 +414,23 @@ class FIMExternalGreyBox(
 
                 # New Formula (tested with finite differencing)
                 # Will be cited from the Pyomo.DoE 2.0 paper
-                hess_contribution = (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
+                hess_contribution = (Minv[i, l] * Minv_sq[k, j]) + (
+                    Minv_sq[i, l] * Minv[k, j]
+                )
 
                 # Since we are considering the full matrix in
                 # this loop, we need to point the contribution
                 # to the correct index for the symmetric FIM
                 # Hessian.
                 reordered_ijkl = self._reorder_pairs(i, j, k, l)
-                d1_symmetric = (self._param_names[reordered_ijkl[0]], self._param_names[reordered_ijkl[1]])
-                d2_symmetric = (self._param_names[reordered_ijkl[2]], self._param_names[reordered_ijkl[3]])
+                d1_symmetric = (
+                    self._param_names[reordered_ijkl[0]],
+                    self._param_names[reordered_ijkl[1]],
+                )
+                d2_symmetric = (
+                    self._param_names[reordered_ijkl[2]],
+                    self._param_names[reordered_ijkl[3]],
+                )
 
                 # Identify what index of the symmetric FIM
                 # Hessian arrays need to be updated
@@ -449,7 +457,7 @@ class FIMExternalGreyBox(
                 hess_vals[flattened_row_col_index] += hess_contribution
 
                 # Duplicate check and addition
-                if ((i != j) and (k != l)) and ((i == l) and ( j == k)):
+                if ((i != j) and (k != l)) and ((i == l) and (j == k)):
                     hess_vals[flattened_row_col_index] += hess_contribution
 
                 hess_rows[flattened_row_col_index] = row
@@ -479,8 +487,14 @@ class FIMExternalGreyBox(
                 # to the correct index for the symmetric FIM
                 # Hessian.
                 reordered_ijkl = self._reorder_pairs(i, j, k, l)
-                d1_symmetric = (self._param_names[reordered_ijkl[0]], self._param_names[reordered_ijkl[1]])
-                d2_symmetric = (self._param_names[reordered_ijkl[2]], self._param_names[reordered_ijkl[3]])
+                d1_symmetric = (
+                    self._param_names[reordered_ijkl[0]],
+                    self._param_names[reordered_ijkl[1]],
+                )
+                d2_symmetric = (
+                    self._param_names[reordered_ijkl[2]],
+                    self._param_names[reordered_ijkl[3]],
+                )
 
                 # Identify what index of the symmetric FIM
                 # Hessian arrays need to be updated
@@ -561,8 +575,14 @@ class FIMExternalGreyBox(
                 # to the correct index for the symmetric FIM
                 # Hessian.
                 reordered_ijkl = self._reorder_pairs(i, j, k, l)
-                d1_symmetric = (self._param_names[reordered_ijkl[0]], self._param_names[reordered_ijkl[1]])
-                d2_symmetric = (self._param_names[reordered_ijkl[2]], self._param_names[reordered_ijkl[3]])
+                d1_symmetric = (
+                    self._param_names[reordered_ijkl[0]],
+                    self._param_names[reordered_ijkl[1]],
+                )
+                d2_symmetric = (
+                    self._param_names[reordered_ijkl[2]],
+                    self._param_names[reordered_ijkl[3]],
+                )
 
                 # Identify what index of the symmetric FIM
                 # Hessian arrays need to be updated
@@ -594,12 +614,10 @@ class FIMExternalGreyBox(
             #
             # Grab eigenvalues and eigenvectors
             # Also need the max and min locations
-            input_differentials_2D = itertools.product(
-                self.input_names(), repeat=2
-            )
-            hess_vals = [0, ] * hess_array_length
-            hess_rows = [0, ] * hess_array_length
-            hess_cols = [0, ] * hess_array_length
+            input_differentials_2D = itertools.product(self.input_names(), repeat=2)
+            hess_vals = [0] * hess_array_length
+            hess_rows = [0] * hess_array_length
+            hess_cols = [0] * hess_array_length
 
             all_eig_vals, all_eig_vecs = np.linalg.eig(M)
             min_eig_loc = np.argmin(all_eig_vals)
@@ -730,8 +748,14 @@ class FIMExternalGreyBox(
                 # to the correct index for the symmetric FIM
                 # Hessian.
                 reordered_ijkl = self._reorder_pairs(i, j, k, l)
-                d1_symmetric = (self._param_names[reordered_ijkl[0]], self._param_names[reordered_ijkl[1]])
-                d2_symmetric = (self._param_names[reordered_ijkl[2]], self._param_names[reordered_ijkl[3]])
+                d1_symmetric = (
+                    self._param_names[reordered_ijkl[0]],
+                    self._param_names[reordered_ijkl[1]],
+                )
+                d2_symmetric = (
+                    self._param_names[reordered_ijkl[2]],
+                    self._param_names[reordered_ijkl[3]],
+                )
 
                 # Identify what index of the symmetric FIM
                 # Hessian arrays need to be updated
