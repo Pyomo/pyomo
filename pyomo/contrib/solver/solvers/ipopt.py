@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 
 # Acceptable chars for the end of the alpha_pr column
 # in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
-_ALPHA_PR_CHARS = set("fFhHkKnNRwstTr")
+_ALPHA_PR_CHARS = set("fFhHkKnNRwSstTr")
 _DIAGNOSTIC_TAGS = set(
     {
         "!",
