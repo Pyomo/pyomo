@@ -595,12 +595,6 @@ class GurobiMINLPWriter:
                 pyo_cons.append(cons)
             else:
                 if cons.lb is not None:
-                    # print(lb <= expr)
-                    # print(type(lb <= expr))
-                    print(lb)
-                    print(type(lb))
-                    print(expr)
-                    print(type(expr))
                     grb_cons.append(grb_model.addConstr(lb <= expr))
                     pyo_cons.append(cons)
                 if cons.ub is not None:
