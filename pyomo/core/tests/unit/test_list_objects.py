@@ -23,7 +23,7 @@ from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.expression import ExpressionData
 
 
-class _TestComponentListBase(object):
+class _TestComponentListBase:
     _ctype = None
     _cdatatype = None
 

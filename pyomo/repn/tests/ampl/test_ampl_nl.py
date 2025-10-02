@@ -37,7 +37,7 @@ gsr = ampl_.generate_standard_repn
 thisdir = this_file_dir()
 
 
-class _NLWriter_suite(object):
+class _NLWriter_suite:
     @classmethod
     def setUpClass(cls):
         cls.context = TempfileManager.new_context()

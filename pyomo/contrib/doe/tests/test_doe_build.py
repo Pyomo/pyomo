@@ -16,14 +16,20 @@ from pyomo.common.dependencies import (
     numpy_available,
     pandas as pd,
     pandas_available,
+    scipy_available,
 )
+
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.examples.reactor_example import (
-    ReactorExperiment as FullReactorExperiment,
-)
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
+
+if scipy_available:
+    from pyomo.contrib.doe import DesignOfExperiments
+    from pyomo.contrib.doe.examples.reactor_example import (
+        ReactorExperiment as FullReactorExperiment,
+    )
 
 import pyomo.environ as pyo
 
@@ -109,7 +115,13 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    args['solver'] = None
+    # Make solver object with
+    # good linear subroutines
+    solver = SolverFactory("ipopt")
+    solver.options["linear_solver"] = "ma57"
+    solver.options["halt_on_ampl_error"] = "yes"
+    solver.options["max_iter"] = 3000
+    args['solver'] = solver
     args['tee'] = False
     args['get_labeled_model_args'] = None
     args['_Cholesky_option'] = True
@@ -119,6 +131,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
 class TestReactorExampleBuild(unittest.TestCase):
     def test_reactor_fd_central_check_fd_eqns(self):
         fd_method = "central"
@@ -264,7 +277,8 @@ class TestReactorExampleBuild(unittest.TestCase):
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
             self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
-            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+            # Should not have any constraints sets beyond the
+            # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_fd_backward_design_fixing(self):
@@ -296,7 +310,8 @@ class TestReactorExampleBuild(unittest.TestCase):
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
             self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
-            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+            # Should not have any constraints sets beyond the
+            # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_fd_forward_design_fixing(self):
@@ -328,7 +343,8 @@ class TestReactorExampleBuild(unittest.TestCase):
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
             self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
-            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+            # Should not have any constraints sets beyond the
+            # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_check_user_initialization(self):

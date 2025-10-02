@@ -48,7 +48,7 @@ class Solution:
         ----------
             model : ConcreteModel
                 A concrete Pyomo model.
-            variable_list: A collection of Pyomo _GenereralVarData variables
+            variable_list: A collection of Pyomo _GeneralVarData variables
                 The variables for which the solution will be stored.
             include_fixed : boolean
                 Boolean indicating that fixed variables should be added to the

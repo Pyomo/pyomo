@@ -173,7 +173,7 @@ class DependenciesCommand(Command):
         print(' '.join(deps))
 
     def _print_deps(self, deplist):
-        class version_cmp(object):
+        class version_cmp:
             ver = tuple(map(int, platform.python_version_tuple()[:2]))
 
             def __lt__(self, other):

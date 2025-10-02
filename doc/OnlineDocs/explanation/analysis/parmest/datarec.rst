@@ -44,8 +44,8 @@ The following example returns model values from a Pyomo Expression.
 
    >>> # Define objective
    >>> def SSE(model):
-   ...     expr = (model.experiment_outputs[model.y]
-   ...             - model.response_function[model.experiment_outputs[model.hour]]
+   ...     expr = (model.experiment_outputs[model.y[model.hour]]
+   ...             - model.y[model.hour]
    ...            ) ** 2
    ...     return expr
 
