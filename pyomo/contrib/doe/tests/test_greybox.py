@@ -624,10 +624,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
-        # Grab the Jacobian values
+        # Grab the Hessian values
         hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
 
-        # Recover the Jacobian in Matrix Form
+        # Recover the Hessian in Matrix Form
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
@@ -646,10 +646,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
-        # Grab the Jacobian values
+        # Grab the Hessian values
         hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
 
-        # Recover the Jacobian in Matrix Form
+        # Recover the Hessian in Matrix Form
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
@@ -668,10 +668,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
-        # Grab the Jacobian values
+        # Grab the Hessian values
         hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
 
-        # Recover the Jacobian in Matrix Form
+        # Recover the Hessian in Matrix Form
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
@@ -690,10 +690,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
-        # Grab the Jacobian values
+        # Grab the Hessian values
         hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
 
-        # Recover the Jacobian in Matrix Form
+        # Recover the Hessian in Matrix Form
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
