@@ -17,6 +17,7 @@ from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
 from pyomo.contrib.appsi.solvers import Gurobi
 
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
+from pyomo.common.log import LoggingIntercept
 
 gurobipy_available = Gurobi().available()
 
@@ -48,7 +49,6 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_ip_num_solutions_best_effort(self):
         """
         Enumerate solutions for an ip: triangle_ip.
@@ -57,10 +57,64 @@ class TestSolnPoolUnit(unittest.TestCase):
         Check that the correct number of alternate solutions are found.
         """
         m = tc.get_triangle_ip()
-        results = gurobi_generate_solutions(
-            m, num_solutions=8, solver_options={"PoolSearchMode": 1}
+        with LoggingIntercept() as LOG: 
+            results = gurobi_generate_solutions(
+                m, num_solutions=8, solver_options={"PoolSearchMode": 1}
+            )
+        self.assertRegex(
+            'Running gurobi_solnpool with PoolSearchMode=1, best effort search may lead to unexpected behavior\n',
+            LOG.getvalue()
         )
         assert len(results) >= 1, 'Need to find some solutions'
+        
+    
+    def test_ip_num_solutions_standard_single_solution_solve(self):
+        """
+        Enumerate solutions for an ip: triangle_ip.
+        Test single solve mode in solution pool.
+
+        Check that the correct number of solutions (1) are found.
+        This is not the intended use case for this method.
+        This is a warning check.
+        """
+        m = tc.get_triangle_ip()
+        with LoggingIntercept() as LOG: 
+            results = gurobi_generate_solutions(
+                m, num_solutions=8, solver_options={"PoolSearchMode": 0}
+            )
+        self.assertRegex(
+            'Running gurobi_solnpool with PoolSearchMode=0, this is single search mode and not the intended use case for gurobi_generate_solutions\n',
+            LOG.getvalue()
+        )
+        assert len(results) == 1, 'Need to find only 1 solution'
+
+    def test_ip_num_solutions_seeking_one(self):
+        """
+        Enumerate solutions for an ip: triangle_ip.
+        Test case where only one solution is asked for.
+
+        This is not the intended use case for this code.
+        This is a warning check.
+        """
+        m = tc.get_triangle_ip()
+        with LoggingIntercept() as LOG: 
+            results = gurobi_generate_solutions(
+                m, num_solutions=1
+            )
+        self.assertRegex(
+            'Running alternative_solutions method to find only 1 solution!\n',
+            LOG.getvalue()
+        )
+        assert len(results) == 1, 'Need to find only 1 solution'
+
+    def test_ip_num_solutions_seeking_zero(self):
+        """
+        Enumerate solutions for an ip: triangle_ip.
+        Test case where zero solutions are asked for to check assertation error.
+        """
+        m = tc.get_triangle_ip()
+        with self.assertRaisesRegex(AssertionError, "num_solutions must be positive integer"):
+            gurobi_generate_solutions(m, num_solutions=0)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_ip_num_solutions(self):

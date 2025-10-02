@@ -94,7 +94,7 @@ def gurobi_generate_solutions(
         logger.warning(
             "Running gurobi_solnpool with PoolSearchMode=0, this is single search mode and not the intended use case for gurobi_generate_solutions"
         )
-    if opt.gurobi_options["PoolSearchMode"] == 0:
+    elif opt.gurobi_options["PoolSearchMode"] == 1:
         logger.warning(
             "Running gurobi_solnpool with PoolSearchMode=1, best effort search may lead to unexpected behavior"
         )
