@@ -591,14 +591,14 @@ class GurobiMINLPWriter:
                 if ub is not None:
                     ub = float(ub)
             if cons.equality:
-                grb_cons.append(grb_model.addConstr(lb == expr))
+                grb_cons.append(grb_model.addConstr(expr == lb))
                 pyo_cons.append(cons)
             else:
                 if cons.lb is not None:
-                    grb_cons.append(grb_model.addConstr(lb <= expr))
+                    grb_cons.append(grb_model.addConstr(expr >= lb))
                     pyo_cons.append(cons)
                 if cons.ub is not None:
-                    grb_cons.append(grb_model.addConstr(ub >= expr))
+                    grb_cons.append(grb_model.addConstr(expr <= ub))
                     pyo_cons.append(cons)
 
         grb_model.update()
