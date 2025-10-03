@@ -40,6 +40,7 @@ from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
 from pyomo.contrib.solver.solvers.gurobi_direct import (
     GurobiConfigMixin,
     GurobiSolverMixin,
+    _GurobiLicenseManager,
 )
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
@@ -252,7 +253,7 @@ class GurobiPersistent(
         PersistentSolverUtils.__init__(
             self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
         )
-        self._register_env_client()
+        self.license = _GurobiLicenseManager(type(self))
         self._solver_model = None
         self._symbol_map = SymbolMap()
         self._labeler = None
@@ -273,12 +274,10 @@ class GurobiPersistent(
         self._last_results_object: Optional[Results] = None
 
     def release_license(self):
+        # Reinitialize our persistent solver state (but do not re-acquire a new env)
         self._reinit()
-        self.__class__.release_license()
-
-    def __del__(self):
-        if not python_is_shutting_down():
-            self._release_env_client()
+        # Release the shared Env that we explicitly acquired in set_instance
+        self.license.release()
 
     @property
     def symbol_map(self):
@@ -410,21 +409,13 @@ class GurobiPersistent(
         saved_config = self.config
         saved_tmp_config = self._active_config
         self.__init__(treat_fixed_vars_as_params=self._treat_fixed_vars_as_params)
-        # Note that __init__ registers a new env client, so we need to
-        # release it here:
-        self._release_env_client()
         self.config = saved_config
         self._active_config = saved_tmp_config
 
     def set_instance(self, model):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
-        if not self.available():
-            c = self.__class__
-            raise ApplicationError(
-                f'Solver {c.__module__}.{c.__qualname__} is not available '
-                f'({self.available()}).'
-            )
+        self.license.acquire()
         self._reinit()
         self._model = model
 
@@ -433,7 +424,8 @@ class GurobiPersistent(
         else:
             self._labeler = NumericLabeler('x')
 
-        self._solver_model = gurobipy.Model(name=model.name or '', env=self.env())
+        env = type(self)._gurobipy_env
+        self._solver_model = gurobipy.Model(name=model.name or '', env=env)
 
         self.add_block(model)
         if self._objective is None:
