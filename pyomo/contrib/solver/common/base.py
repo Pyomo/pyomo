@@ -53,7 +53,7 @@ class Availability(IntEnum):
     """The solver was found and a full license is accessible to use."""
 
     LimitedLicense = 1
-    """The solver was found and a limited license (e.g., demo license is
+    """The solver was found and a limited license (e.g., demo license) is
     accessible to use."""
     NotFound = 0
     """The solver was not found, either because the executable was not
