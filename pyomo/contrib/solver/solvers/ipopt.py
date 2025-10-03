@@ -505,6 +505,7 @@ class Ipopt(SolverBase):
                 # This is the data we need to parse to get the iterations
                 # and time
                 parsed_output_data = self._parse_ipopt_output(ostreams[0])
+                parsed_output_message = f"Parsed solver data: {parsed_output_data}"
 
             if proven_infeasible:
                 results = Results()
@@ -545,17 +546,19 @@ class Ipopt(SolverBase):
                         for k, v in cpu_seconds.items():
                             results.timing_info[k] = v
                         results.extra_info = parsed_output_data
-                        # Set iteration_log visibility to ADVANCED_OPTION because it's
-                        # a lot to print out with `display`
-                        results.extra_info.get("iteration_log")._visibility = (
-                            ADVANCED_OPTION
-                        )
-                    except KeyError as e:
+                        iter_log = results.extra_info.get("iteration_log", None)
+                        if iter_log is not None:
+                            # Only set if object supports the attribute
+                            try:
+                                iter_log._visibility = ADVANCED_OPTION
+                            except Exception:
+                                pass
+                    except Exception as e:
                         logger.log(
                             logging.WARNING,
                             "The solver output data is empty or incomplete.\n"
                             f"Full error message: {e}\n"
-                            f"Parsed solver data: {parsed_output_data}\n",
+                            f"{parsed_output_message}\n",
                         )
         if (
             config.raise_exception_on_nonoptimal_result

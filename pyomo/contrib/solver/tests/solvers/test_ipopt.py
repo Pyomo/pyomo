@@ -571,6 +571,39 @@ class TestIpopt(unittest.TestCase):
         self.assertAlmostEqual(model.x.value, 1)
         self.assertAlmostEqual(model.y.value, 1)
 
+    def test_ipopt_quiet_print_level(self):
+        model = self.create_model()
+        result = ipopt.Ipopt().solve(model, solver_options={'print_level': 0})
+        # IPOPT doesn't tell us anything about the iters if the print level
+        # is set to 0
+        self.assertIsNone(result.iteration_count)
+        self.assertFalse(hasattr(result.extra_info, 'iteration_log'))
+        model = self.create_model()
+        result = ipopt.Ipopt().solve(model, tee=True, solver_options={'print_level': 3})
+        # At a slightly higher level, we get some of the info, like
+        # iteration count, but NOT iteration_log
+        self.assertEqual(result.iteration_count, 11)
+        self.assertFalse(hasattr(result.extra_info, 'iteration_log'))
+        result.display(visibility=ADVANCED_OPTION)
+
+    def test_ipopt_loud_print_level(self):
+        model = self.create_model()
+        result = ipopt.Ipopt().solve(model, solver_options={'print_level': 8})
+        # Nothing unexpected should be in the results object at this point,
+        # except that the solver_log is significantly longer
+        self.assertEqual(result.iteration_count, 11)
+        self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
+        self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
+        self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
+        model = self.create_model()
+        result = ipopt.Ipopt().solve(
+            model, tee=True, solver_options={'print_level': 12}
+        )
+        self.assertEqual(result.iteration_count, 11)
+        self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
+        self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
+        self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
+
     def test_ipopt_results(self):
         model = self.create_model()
         results = ipopt.Ipopt().solve(model)
