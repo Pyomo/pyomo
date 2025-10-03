@@ -47,9 +47,6 @@ from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition
 from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import CommonTest
 
-## DEBUG
-from pytest import set_trace
-
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 if gurobipy_available:
     from gurobipy import GRB

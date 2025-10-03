@@ -39,9 +39,6 @@ gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.
 if gurobipy_available:
     from gurobipy import GRB
 
-## DEBUG
-from pytest import set_trace
-
 
 class CommonTest(unittest.TestCase):
     def get_model(self):

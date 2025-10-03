@@ -13,7 +13,6 @@
 ## TODO
 
 # Look into if I can piggyback off of ipopt writer and just plug in my walker
-# Why did I have to make a custom solution loader?
 # Move into contrib.solver: doc/onlinedoc/explanation/experimental has information about future solvers. Put some docs here.
 # Is there a half-matrix half-explicit way to give MINLPs to Gurobi? Soren thinks yes...
 # Open a PR into Miranda's fork.
@@ -92,8 +91,6 @@ from pyomo.repn.util import (
 
 import sys
 
-## DEBUG
-from pytest import set_trace
 
 """
 Even in Gurobi 12:
