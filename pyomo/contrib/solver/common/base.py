@@ -64,7 +64,7 @@ class Availability(IntEnum):
 
     LicenseError = -2
     """The solver was found but no usable license is available. This could
-    indicate either that no license was found, an expired or misformed
+    indicate either that no license was found, an expired or malformed
     license was found, or the license is incorrect for the problem type."""
 
     def __bool__(self):
