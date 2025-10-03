@@ -174,8 +174,8 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
 
 class _GurobiLicenseManager:
     """
-    License handle attached to each solver instance.
-    Internally uses class-level Env so multiple instances share a single checkout.
+    License handler for Gurobi instances. Handles checkout, locking,
+    and release.
     """
 
     def __init__(self, owner_cls):
@@ -260,7 +260,13 @@ class GurobiSolverMixin:
         """
         if not recheck and self._available_cache is not None:
             return self._available_cache
-
+        # this triggers the deferred import
+        #
+        # Note that we set the _available_cache on the *most derived
+        # class* and not on the instance, or on the base class.  That
+        # allows different derived interfaces to have different
+        # availability (e.g., persistent has a minimum version
+        # requirement that the direct interface doesn't)
         if not self._gurobipy_available:
             self.__class__._available_cache = Availability.NotFound
         else:
@@ -340,11 +346,19 @@ class GurobiSolverMixin:
         if cls._num_gurobipy_env_clients > 0:
             cls._num_gurobipy_env_clients -= 1
         if cls._num_gurobipy_env_clients <= 0 and cls._gurobipy_env is not None:
+            if cls._num_gurobipy_env_clients < 0:
+                logger.warning(
+                    "Gurobi env client refcount went negative "
+                    f"({cls._num_gurobipy_env_clients}). "
+                    "This should not have happened and should be reported to "
+                    "Pyomo development team."
+                )
             try:
                 cls._gurobipy_env.close()
-            except Exception:
-                pass
-            cls._gurobipy_env = None
+            except Exception as err:
+                logger.warning(f"Exception while closing Gurobi environment: {err!r}")
+            finally:
+                cls._gurobipy_env = None
 
 
 class GurobiDirect(GurobiSolverMixin, SolverBase):
