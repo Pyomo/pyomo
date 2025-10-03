@@ -34,7 +34,7 @@ from pyomo.contrib.pyros.util import (
 )
 
 
-__version__ = "1.3.9"
+__version__ = "1.3.10"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
@@ -82,7 +82,7 @@ def _get_pyomo_version_info():
     doc="Robust optimization (RO) solver implementing "
     "the generalized robust cutting-set algorithm (GRCS)",
 )
-class PyROS(object):
+class PyROS:
     '''
     PyROS (Pyomo Robust Optimization Solver) implementing a
     generalized robust cutting-set algorithm (GRCS)

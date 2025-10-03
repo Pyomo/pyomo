@@ -118,7 +118,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import NumericValue
 
 
-class decompose_linear_term_wrapper(object):
+class decompose_linear_term_wrapper:
     def __init__(self, pairs):
         self.pairs = pairs
 
@@ -1627,7 +1627,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertExpressionsEqual(e, m.a)
 
         #
-        # Check that numeric constants are simply muliplied out
+        # Check that numeric constants are simply multiplied out
         #
         e = NumericConstant(3) * NumericConstant(2)
         self.assertExpressionsEqual(e, 6)
