@@ -574,15 +574,14 @@ class GurobiMINLPWriter:
         pyo_cons = []
         grb_cons = []
         for cons in components[Constraint]:
+            lb, body, ub = cons.to_bounded_expression(evaluate_bounds=True)
             expr_type, expr, nonlinear, aux = self._create_gurobi_expression(
-                cons.body, cons, 0, grb_model, quadratic_visitor, visitor
+                body, cons, 0, grb_model, quadratic_visitor, visitor
             )
             if nonlinear:
                 grb_model.addConstr(aux == expr)
                 expr = aux
-            lb = value(cons.lb)
-            ub = value(cons.ub)
-            if expr_type == _CONSTANT:
+            elif expr_type == _CONSTANT:
                 # cast everything to a float in case there are numpy
                 # types because you can't do addConstr(np.True_)
                 expr = float(expr)
@@ -594,10 +593,13 @@ class GurobiMINLPWriter:
                 grb_cons.append(grb_model.addConstr(expr == lb))
                 pyo_cons.append(cons)
             else:
-                if cons.lb is not None:
+                # TODO: should be have special handling if expr is a
+                # GRB.LinExpr so that we can use the ranged linear
+                # constraint syntax (expr == [lb, ub])?
+                if lb is not None:
                     grb_cons.append(grb_model.addConstr(expr >= lb))
                     pyo_cons.append(cons)
-                if cons.ub is not None:
+                if ub is not None:
                     grb_cons.append(grb_model.addConstr(expr <= ub))
                     pyo_cons.append(cons)
 
