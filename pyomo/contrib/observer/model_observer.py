@@ -16,16 +16,18 @@ from pyomo.common.config import ConfigDict, ConfigValue, document_configdict
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData
-from pyomo.core.base.param import ParamData
+from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.base.objective import ObjectiveData, Objective
-from pyomo.core.base.block import BlockData
+from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.component import ActiveComponent
+from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.util import get_objective
 from pyomo.contrib.observer.component_collector import collect_components_from_expr
 from pyomo.common.numeric_types import native_numeric_types
 import gc
+import warnings
 
 
 """
@@ -47,6 +49,9 @@ Note that inactive components (e.g., constraints) are treated as "removed".
   - changes to named expressions (relies on expressions being immutable)
   - changes to parameter values and fixed variable values
 """
+
+
+_param_types = {ParamData, ScalarParam}
 
 
 @document_configdict()
@@ -492,7 +497,7 @@ class ModelChangeDetector:
         observers: Sequence[Observer]
             The objects to notify when changes are made to the model
         """
-        self._known_active_ctypes = {Constraint, SOSConstraint, Objective}
+        self._known_active_ctypes = {Constraint, SOSConstraint, Objective, Block}
         self._observers: List[Observer] = list(observers)
         self._active_constraints = {}  # maps constraint to expression
         self._active_sos = {}
@@ -520,12 +525,14 @@ class ModelChangeDetector:
         #     dict[constraints, None],
         #     dict[sos constraints, None],
         #     dict[objectives, None],
+        #     dict[var_id, None],
         # )
         self._referenced_params = {}
 
         self._vars_referenced_by_con = {}
         self._vars_referenced_by_obj = {}
         self._params_referenced_by_con = {}
+        self._params_referenced_by_var = {}  # for when parameters show up in variable bounds
         self._params_referenced_by_obj = {}
 
         self.config: AutoUpdateConfig = AutoUpdateConfig()(
@@ -536,11 +543,13 @@ class ModelChangeDetector:
         self._set_instance()
 
     def add_variables(self, variables: List[VarData]):
+        params_to_check = {}
         for v in variables:
-            if id(v) in self._referenced_variables:
+            vid = id(v)
+            if vid in self._referenced_variables:
                 raise ValueError(f'Variable {v.name} has already been added')
-            self._referenced_variables[id(v)] = ({}, {}, {})
-            self._vars[id(v)] = (
+            self._referenced_variables[vid] = ({}, {}, {})
+            self._vars[vid] = (
                 v,
                 v._lb,
                 v._ub,
@@ -548,6 +557,31 @@ class ModelChangeDetector:
                 v.domain.get_interval(),
                 v.value,
             )
+            ref_params = set()
+            for bnd in (v._lb, v._ub):
+                if bnd is None or type(bnd) in native_numeric_types:
+                    continue
+                (named_exprs, _vars, parameters, external_functions) = (
+                    collect_components_from_expr(bnd)
+                )
+                if _vars:
+                    raise NotImplementedError('ModelChangeDetector does not support variables in the bounds of other variables')
+                if named_exprs:
+                    raise NotImplementedError('ModelChangeDetector does not support Expressions in the bounds of other variables')
+                if external_functions:
+                    raise NotImplementedError('ModelChangeDetector does not support external functions in the bounds of other variables')
+                params_to_check.update((id(p), p) for p in parameters)
+                if vid not in self._params_referenced_by_var:
+                    self._params_referenced_by_var[vid] = []
+                self._params_referenced_by_var[vid].extend(p for p in parameters if id(p) not in ref_params)
+                ref_params.update(id(p) for p in parameters)
+        self._check_for_new_params(list(params_to_check.values()))
+        for v in variables:
+            if id(v) not in self._params_referenced_by_var:
+                continue
+            parameters = self._params_referenced_by_var[id(v)]
+            for p in parameters:
+                self._referenced_params[id(p)][3][id(v)] = None
         for obs in self._observers:
             obs.add_variables(variables)
 
@@ -556,46 +590,46 @@ class ModelChangeDetector:
             pid = id(p)
             if pid in self._referenced_params:
                 raise ValueError(f'Parameter {p.name} has already been added')
-            self._referenced_params[pid] = ({}, {}, {})
+            self._referenced_params[pid] = ({}, {}, {}, {})
             self._params[id(p)] = (p, p.value)
         for obs in self._observers:
             obs.add_parameters(params)
 
     def _check_for_new_vars(self, variables: List[VarData]):
-        new_vars = []
+        new_vars = {}
         for v in variables:
             if id(v) not in self._referenced_variables:
-                new_vars.append(v)
-        self.add_variables(new_vars)
+                new_vars[id(v)] = v
+        self.add_variables(list(new_vars.values()))
 
     def _check_to_remove_vars(self, variables: List[VarData]):
-        vars_to_remove = []
+        vars_to_remove = {}
         for v in variables:
             v_id = id(v)
             ref_cons, ref_sos, ref_obj = self._referenced_variables[v_id]
             if not ref_cons and not ref_sos and not ref_obj:
-                vars_to_remove.append(v)
-        self._remove_variables(vars_to_remove)
+                vars_to_remove[v_id] = v
+        self.remove_variables(list(vars_to_remove.values()))
 
     def _check_for_new_params(self, params: List[ParamData]):
-        new_params = []
+        new_params = {}
         for p in params:
             if id(p) not in self._referenced_params:
-                new_params.append(p)
-        self.add_parameters(new_params)
+                new_params[id(p)] = p
+        self.add_parameters(list(new_params.values()))
 
     def _check_to_remove_params(self, params: List[ParamData]):
-        params_to_remove = []
+        params_to_remove = {}
         for p in params:
             p_id = id(p)
-            ref_cons, ref_sos, ref_obj = self._referenced_params[p_id]
-            if not ref_cons and not ref_sos and not ref_obj:
-                params_to_remove.append(p)
-        self._remove_parameters(params_to_remove)
+            ref_cons, ref_sos, ref_obj, ref_vars = self._referenced_params[p_id]
+            if not ref_cons and not ref_sos and not ref_obj and not ref_vars:
+                params_to_remove[p_id] = p
+        self.remove_parameters(list(params_to_remove.values()))
 
     def add_constraints(self, cons: List[ConstraintData]):
-        vars_to_check = []
-        params_to_check = []
+        vars_to_check = {}
+        params_to_check = {}
         for con in cons:
             if con in self._active_constraints:
                 raise ValueError(f'Constraint {con.name} has already been added')
@@ -603,16 +637,16 @@ class ModelChangeDetector:
             (named_exprs, variables, parameters, external_functions) = (
                 collect_components_from_expr(con.expr)
             )
-            vars_to_check.extend(variables)
-            params_to_check.extend(parameters)
+            vars_to_check.update((id(v), v) for v in variables)
+            params_to_check.update((id(p), p) for p in parameters)
             if named_exprs:
                 self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if external_functions:
                 self._external_functions[con] = external_functions
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = parameters
-        self._check_for_new_vars(vars_to_check)
-        self._check_for_new_params(params_to_check)
+        self._check_for_new_vars(list(vars_to_check.values()))
+        self._check_for_new_params(list(params_to_check.values()))
         for con in cons:
             variables = self._vars_referenced_by_con[con]
             parameters = self._params_referenced_by_con[con]
@@ -624,8 +658,8 @@ class ModelChangeDetector:
             obs.add_constraints(cons)
 
     def add_sos_constraints(self, cons: List[SOSConstraintData]):
-        vars_to_check = []
-        params_to_check = []
+        vars_to_check = {}
+        params_to_check = {}
         for con in cons:
             if con in self._active_sos:
                 raise ValueError(f'Constraint {con.name} has already been added')
@@ -642,12 +676,12 @@ class ModelChangeDetector:
                     continue
                 if p.is_parameter_type():
                     params.append(p)
-            vars_to_check.extend(variables)
-            params_to_check.extend(params)
+            vars_to_check.update((id(v), v) for v in variables)
+            params_to_check.update((id(p), p) for p in params)
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = params
-        self._check_for_new_vars(vars_to_check)
-        self._check_for_new_params(params_to_check)
+        self._check_for_new_vars(list(vars_to_check.values()))
+        self._check_for_new_params(list(params_to_check.values()))
         for con in cons:
             variables = self._vars_referenced_by_con[con]
             params = self._params_referenced_by_con[con]
@@ -659,24 +693,24 @@ class ModelChangeDetector:
             obs.add_sos_constraints(cons)
 
     def add_objectives(self, objs: List[ObjectiveData]):
-        vars_to_check = []
-        params_to_check = []
+        vars_to_check = {}
+        params_to_check = {}
         for obj in objs:
             obj_id = id(obj)
             self._objectives[obj_id] = (obj, obj.expr, obj.sense)
             (named_exprs, variables, parameters, external_functions) = (
                 collect_components_from_expr(obj.expr)
             )
-            vars_to_check.extend(variables)
-            params_to_check.extend(parameters)
+            vars_to_check.update((id(v), v) for v in variables)
+            params_to_check.update((id(p), p) for p in parameters)
             if named_exprs:
                 self._obj_named_expressions[obj_id] = [(e, e.expr) for e in named_exprs]
             if external_functions:
                 self._external_functions[obj] = external_functions
             self._vars_referenced_by_obj[obj_id] = variables
             self._params_referenced_by_obj[obj_id] = parameters
-        self._check_for_new_vars(vars_to_check)
-        self._check_for_new_params(params_to_check)
+        self._check_for_new_vars(list(vars_to_check.values()))
+        self._check_for_new_params(list(params_to_check.values()))
         for obj in objs:
             obj_id = id(obj)
             variables = self._vars_referenced_by_obj[obj_id]
@@ -692,8 +726,8 @@ class ModelChangeDetector:
         for obs in self._observers:
             obs.remove_objectives(objs)
 
-        vars_to_check = []
-        params_to_check = []
+        vars_to_check = {}
+        params_to_check = {}
         for obj in objs:
             obj_id = id(obj)
             if obj_id not in self._objectives:
@@ -704,15 +738,15 @@ class ModelChangeDetector:
                 self._referenced_variables[id(v)][2].pop(obj_id)
             for p in self._params_referenced_by_obj[obj_id]:
                 self._referenced_params[id(p)][2].pop(obj_id)
-            vars_to_check.extend(self._vars_referenced_by_obj[obj_id])
-            params_to_check.extend(self._params_referenced_by_obj[obj_id])
+            vars_to_check.update((id(v), v) for v in self._vars_referenced_by_obj[obj_id])
+            params_to_check.update((id(p), p) for p in self._params_referenced_by_obj[obj_id])
             del self._objectives[obj_id]
             self._obj_named_expressions.pop(obj_id, None)
             self._external_functions.pop(obj, None)
             del self._vars_referenced_by_obj[obj_id]
             del self._params_referenced_by_obj[obj_id]
-        self._check_to_remove_vars(vars_to_check)
-        self._check_to_remove_params(params_to_check)
+        self._check_to_remove_vars(list(vars_to_check.values()))
+        self._check_to_remove_params(list(params_to_check.values()))
 
     def _check_for_unknown_active_components(self):
         for ctype in self._model.collect_ctypes():
@@ -723,9 +757,12 @@ class ModelChangeDetector:
             for comp in self._model.component_data_objects(
                 ctype, active=True, descend_into=True
             ):
+                if isinstance(comp, Suffix):
+                    warnings.warn('ModelChangeDetector does not detect changes to suffixes')
+                    continue
                 raise NotImplementedError(
-                    f'ModelChangeDetector does not know how to '
-                    'handle components with ctype {ctype}'
+                    'ModelChangeDetector does not know how to '
+                    f'handle components with ctype {ctype}'
                 )
 
     def _set_instance(self):
@@ -764,8 +801,8 @@ class ModelChangeDetector:
     def remove_constraints(self, cons: List[ConstraintData]):
         for obs in self._observers:
             obs.remove_constraints(cons)
-        vars_to_check = []
-        params_to_check = []
+        vars_to_check = {}
+        params_to_check = {}
         for con in cons:
             if con not in self._active_constraints:
                 raise ValueError(
@@ -775,21 +812,21 @@ class ModelChangeDetector:
                 self._referenced_variables[id(v)][0].pop(con)
             for p in self._params_referenced_by_con[con]:
                 self._referenced_params[id(p)][0].pop(con)
-            vars_to_check.extend(self._vars_referenced_by_con[con])
-            params_to_check.extend(self._params_referenced_by_con[con])
+            vars_to_check.update((id(v), v) for v in self._vars_referenced_by_con[con])
+            params_to_check.update((id(p), p) for p in self._params_referenced_by_con[con])
             del self._active_constraints[con]
             self._named_expressions.pop(con, None)
             self._external_functions.pop(con, None)
             del self._vars_referenced_by_con[con]
             del self._params_referenced_by_con[con]
-        self._check_to_remove_vars(vars_to_check)
-        self._check_to_remove_params(params_to_check)
+        self._check_to_remove_vars(list(vars_to_check.values()))
+        self._check_to_remove_params(list(params_to_check.values()))
 
     def remove_sos_constraints(self, cons: List[SOSConstraintData]):
         for obs in self._observers:
             obs.remove_sos_constraints(cons)
-        vars_to_check = []
-        params_to_check = []
+        vars_to_check = {}
+        params_to_check = {}
         for con in cons:
             if con not in self._active_sos:
                 raise ValueError(
@@ -799,23 +836,29 @@ class ModelChangeDetector:
                 self._referenced_variables[id(v)][1].pop(con)
             for p in self._params_referenced_by_con[con]:
                 self._referenced_params[id(p)][1].pop(con)
-            vars_to_check.extend(self._vars_referenced_by_con[con])
-            params_to_check.extend(self._params_referenced_by_con[con])
+            vars_to_check.update((id(v), v) for v in self._vars_referenced_by_con[con])
+            params_to_check.update((id(p), p) for p in self._params_referenced_by_con[con])
             del self._active_sos[con]
             del self._vars_referenced_by_con[con]
             del self._params_referenced_by_con[con]
-        self._check_to_remove_vars(vars_to_check)
-        self._check_to_remove_params(params_to_check)
+        self._check_to_remove_vars(list(vars_to_check.values()))
+        self._check_to_remove_params(list(params_to_check.values()))
 
     def remove_variables(self, variables: List[VarData]):
         for obs in self._observers:
             obs.remove_variables(variables)
+        params_to_check = {}
         for v in variables:
             v_id = id(v)
             if v_id not in self._referenced_variables:
                 raise ValueError(
                     f'Cannot remove variable {v.name} - it has not been added'
                 )
+            if v_id in self._params_referenced_by_var:
+                for p in self._params_referenced_by_var[v_id]:
+                    self._referenced_params[id(p)][3].pop(v_id)
+                params_to_check.update((id(p), p) for p in self._params_referenced_by_var[v_id])
+                self._params_referenced_by_var.pop(v_id)
             cons_using, sos_using, obj_using = self._referenced_variables[v_id]
             if cons_using or sos_using or obj_using:
                 raise ValueError(
@@ -823,6 +866,7 @@ class ModelChangeDetector:
                 )
             del self._referenced_variables[v_id]
             del self._vars[v_id]
+        self._check_to_remove_params(list(params_to_check.values()))
 
     def remove_parameters(self, params: List[ParamData]):
         for obs in self._observers:
@@ -833,8 +877,8 @@ class ModelChangeDetector:
                 raise ValueError(
                     f'Cannot remove parameter {p.name} - it has not been added'
                 )
-            cons_using, sos_using, obj_using = self._referenced_params[p_id]
-            if cons_using or sos_using or obj_using:
+            cons_using, sos_using, obj_using, vars_using = self._referenced_params[p_id]
+            if cons_using or sos_using or obj_using or vars_using:
                 raise ValueError(
                     f'Cannot remove parameter {p.name} - it is still being used by constraints/objectives'
                 )

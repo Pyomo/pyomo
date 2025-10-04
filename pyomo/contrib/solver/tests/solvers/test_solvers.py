@@ -22,7 +22,7 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.solvers.gurobi_persistent import (
+from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import (
     GurobiPersistent,
     GurobiDirectQuadratic,
 )
@@ -1537,9 +1537,7 @@ class TestSolvers(unittest.TestCase):
             opt.config.auto_updates.update_vars = False
             opt.config.auto_updates.update_constraints = False
             opt.config.auto_updates.update_named_expressions = False
-            opt.config.auto_updates.check_for_new_or_removed_params = False
             opt.config.auto_updates.check_for_new_or_removed_constraints = False
-            opt.config.auto_updates.check_for_new_or_removed_vars = False
         opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
@@ -1864,7 +1862,11 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 3)
         if opt.is_persistent():
-            opt.config.auto_updates.check_for_new_objective = False
+            # hack until we get everything ported to the observer
+            try:
+                opt.config.auto_updates.check_for_new_or_removed_objectives = False
+            except:
+                opt.config.auto_updates.check_for_new_objective = False
             m.e.expr = 4
             res = opt.solve(m)
             self.assertAlmostEqual(res.incumbent_objective, 4)

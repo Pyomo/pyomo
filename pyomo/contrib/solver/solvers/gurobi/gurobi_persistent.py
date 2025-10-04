@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Sequence, Mapping
 from collections.abc import Iterable
 
 from pyomo.common.collections import ComponentSet, OrderedSet
+from pyomo.common.errors import PyomoException
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.objective import ObjectiveData
@@ -33,13 +34,14 @@ from pyomo.core.staleflag import StaleFlagManager
 from .gurobi_direct_base import (
     GurobiDirectBase,
     gurobipy,
+    GurobiConfig,
     _load_vars,
     _get_primals,
     _get_duals,
     _get_reduced_costs,
 )
 from pyomo.contrib.solver.common.util import get_objective
-from pyomo.contrib.observer.model_observer import Observer, ModelChangeDetector
+from pyomo.contrib.observer.model_observer import Observer, ModelChangeDetector, AutoUpdateConfig
 
 
 logger = logging.getLogger(__name__)
@@ -539,7 +541,7 @@ class GurobiDirectQuadratic(GurobiDirectBase):
 
 
 class _GurobiObserver(Observer):
-    def __init__(self, opt: GurobiPersistentQuadratic) -> None:
+    def __init__(self, opt: GurobiPersistent) -> None:
         self.opt = opt
 
     def add_variables(self, variables: List[VarData]):
@@ -554,8 +556,11 @@ class _GurobiObserver(Observer):
     def add_sos_constraints(self, cons: List[SOSConstraintData]):
         self.opt._add_sos_constraints(cons)
 
-    def set_objective(self, obj: ObjectiveData | None):
-        self.opt._set_objective(obj)
+    def add_objectives(self, objs: List[ObjectiveData]):
+        self.opt._add_objectives(objs)
+
+    def remove_objectives(self, objs: List[ObjectiveData]):
+        self.opt._remove_objectives(objs)
 
     def remove_constraints(self, cons: List[ConstraintData]):
         self.opt._remove_constraints(cons)
@@ -576,8 +581,31 @@ class _GurobiObserver(Observer):
         self.opt._update_parameters(params)
 
 
+class GurobiPersistentConfig(GurobiConfig):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        GurobiConfig.__init__(
+            self,
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+        self.auto_updates: bool = self.declare(
+            'auto_updates', AutoUpdateConfig()
+        )
+
+
 class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
     _minimum_version = (7, 0, 0)
+    CONFIG = GurobiPersistentConfig()
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
@@ -592,14 +620,10 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         self._constraints_added_since_update = OrderedSet()
         self._vars_added_since_update = ComponentSet()
         self._last_results_object: Optional[Results] = None
-        self._observer = _GurobiObserver(self)
-        self._change_detector = ModelChangeDetector(observers=[self._observer])
+        self._observer = None
+        self._change_detector = None
         self._constraint_ndx = 0
         self._should_update_parameters = False
-
-    @property
-    def auto_updates(self):
-        return self._change_detector.config
 
     def _clear(self):
         super()._clear()
@@ -669,8 +693,10 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         self._clear()
         self._pyomo_model = pyomo_model
         self._solver_model = gurobipy.Model(env=self.env())
+        self._observer = _GurobiObserver(self)
         timer.start('set_instance')
-        self._change_detector.set_instance(pyomo_model)
+        self._change_detector = ModelChangeDetector(model=self._pyomo_model, observers=[self._observer], **dict(self.config.auto_updates))
+        self._change_detector.config = self.config.auto_updates
         timer.stop('set_instance')
 
     def update(self):
@@ -804,59 +830,83 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         self._constraints_added_since_update.update(cons)
         self._needs_updated = True
 
-    def _set_objective(self, obj):
-        self._invalidate_last_results()
-        if obj is None:
-            sense = gurobipy.GRB.MINIMIZE
-            gurobi_expr = 0
-            repn_constant = 0
-            self._mutable_objective = None
-        else:
-            if obj.sense == minimize:
-                sense = gurobipy.GRB.MINIMIZE
-            elif obj.sense == maximize:
-                sense = gurobipy.GRB.MAXIMIZE
+    def _remove_objectives(self, objs: List[ObjectiveData]):
+        for obj in objs:
+            if obj is not self._objective:
+                raise RuntimeError(
+                    'tried to remove an objective that has not been added: ' \
+                    f'{str(obj)}'
+                )
             else:
-                raise ValueError(f'Objective sense is not recognized: {obj.sense}')
+                self._invalidate_last_results()
+                self._solver_model.setObjective(0, sense=gurobipy.GRB.MINIMIZE)
+                # see PR #2454
+                self._solver_model.update()
+                self._objective = None
+                self._needs_updated = False
 
-            repn = generate_standard_repn(
-                obj.expr, quadratic=True, compute_values=False
-            )
-            repn_constant = value(repn.constant)
-            gurobi_expr = self._get_expr_from_pyomo_repn(repn)
-
-            mutable_constant = _MutableConstant(repn.constant, None, None)
-
-            mlc_list = []
-            for c, v in zip(repn.linear_coefs, repn.linear_vars):
-                if not is_constant(c):
-                    mlc = _MutableLinearCoefficient(
-                        c,
-                        None,
-                        None,
-                        id(v),
-                        self._pyomo_var_to_solver_var_map,
-                        self._solver_model,
-                    )
-                    mlc_list.append(mlc)
-
-            mqc_list = []
-            for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
-                if not is_constant(coef):
-                    mqc = _MutableQuadraticCoefficient(
-                        coef, id(x), id(y), self._pyomo_var_to_solver_var_map
-                    )
-                    mqc_list.append(mqc)
-
-            self._mutable_objective = _MutableObjective(
-                self._solver_model, mutable_constant, mlc_list, mqc_list
+    def _add_objectives(self, objs: List[ObjectiveData]):
+        if len(objs) > 1:
+            raise NotImplementedError(
+                'the persistent interface to gurobi currently ' \
+                f'only supports single-objective problems; got {len(objs)}: '
+                f'{[str(i) for i in objs]}'
             )
 
-        # hack
-        # see PR #2454
+        if len(objs) == 0:
+            return
+
+        obj = objs[0]
+
         if self._objective is not None:
-            self._solver_model.setObjective(0)
-            self._solver_model.update()
+            raise NotImplementedError(
+                'the persistent interface to gurobi currently ' \
+                'only supports single-objective problems; tried to add ' \
+                f'an objective ({str(obj)}), but there is already an ' \
+                f'active objective ({str(self._objective)})'
+            )
+
+        self._invalidate_last_results()
+
+        if obj.sense == minimize:
+            sense = gurobipy.GRB.MINIMIZE
+        elif obj.sense == maximize:
+            sense = gurobipy.GRB.MAXIMIZE
+        else:
+            raise ValueError(f'Objective sense is not recognized: {obj.sense}')
+
+        repn = generate_standard_repn(
+            obj.expr, quadratic=True, compute_values=False
+        )
+        repn_constant = value(repn.constant)
+        gurobi_expr = self._get_expr_from_pyomo_repn(repn)
+
+        mutable_constant = _MutableConstant(repn.constant, None, None)
+
+        mlc_list = []
+        for c, v in zip(repn.linear_coefs, repn.linear_vars):
+            if not is_constant(c):
+                mlc = _MutableLinearCoefficient(
+                    c,
+                    None,
+                    None,
+                    id(v),
+                    self._pyomo_var_to_solver_var_map,
+                    self._solver_model,
+                )
+                mlc_list.append(mlc)
+
+        mqc_list = []
+        for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
+            if not is_constant(coef):
+                mqc = _MutableQuadraticCoefficient(
+                    coef, id(x), id(y), self._pyomo_var_to_solver_var_map
+                )
+                mqc_list.append(mqc)
+
+        self._mutable_objective = _MutableObjective(
+            self._solver_model, mutable_constant, mlc_list, mqc_list
+        )
 
         self._solver_model.setObjective(gurobi_expr + repn_constant, sense=sense)
         self._objective = obj
@@ -1366,8 +1416,8 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
     def add_sos_constraints(self, cons):
         self._change_detector.add_sos_constraints(cons)
 
-    def set_objective(self, obj):
-        self._change_detector.set_objective(obj)
+    def set_objective(self, obj: ObjectiveData):
+        self._change_detector.add_objectives([obj])
 
     def remove_constraints(self, cons):
         self._change_detector.remove_constraints(cons)

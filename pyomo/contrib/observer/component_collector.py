@@ -33,6 +33,7 @@ from pyomo.core.base.var import VarData, ScalarVar
 from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.base.expression import ExpressionData, ScalarExpression
 from pyomo.repn.util import ExitNodeDispatcher
+from pyomo.common.numeric_types import native_numeric_types
 
 
 def handle_var(node, collector):
@@ -79,8 +80,6 @@ collector_handlers[AbsExpression] = handle_skip
 collector_handlers[RangedExpression] = handle_skip
 collector_handlers[InequalityExpression] = handle_skip
 collector_handlers[EqualityExpression] = handle_skip
-collector_handlers[int] = handle_skip
-collector_handlers[float] = handle_skip
 
 
 class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
@@ -92,6 +91,10 @@ class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
         super().__init__(**kwds)
 
     def exitNode(self, node, data):
+        if type(node) in native_numeric_types:
+            # we need this here to handle numpy
+            # (we can't put numpy in the dispatcher?)
+            return None
         return collector_handlers[node.__class__](node, self)
 
     def beforeChild(self, node, child, child_idx):
