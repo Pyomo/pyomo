@@ -532,7 +532,9 @@ class ModelChangeDetector:
         self._vars_referenced_by_con = {}
         self._vars_referenced_by_obj = {}
         self._params_referenced_by_con = {}
-        self._params_referenced_by_var = {}  # for when parameters show up in variable bounds
+        self._params_referenced_by_var = (
+            {}
+        )  # for when parameters show up in variable bounds
         self._params_referenced_by_obj = {}
 
         self.config: AutoUpdateConfig = AutoUpdateConfig()(
@@ -565,15 +567,23 @@ class ModelChangeDetector:
                     collect_components_from_expr(bnd)
                 )
                 if _vars:
-                    raise NotImplementedError('ModelChangeDetector does not support variables in the bounds of other variables')
+                    raise NotImplementedError(
+                        'ModelChangeDetector does not support variables in the bounds of other variables'
+                    )
                 if named_exprs:
-                    raise NotImplementedError('ModelChangeDetector does not support Expressions in the bounds of other variables')
+                    raise NotImplementedError(
+                        'ModelChangeDetector does not support Expressions in the bounds of other variables'
+                    )
                 if external_functions:
-                    raise NotImplementedError('ModelChangeDetector does not support external functions in the bounds of other variables')
+                    raise NotImplementedError(
+                        'ModelChangeDetector does not support external functions in the bounds of other variables'
+                    )
                 params_to_check.update((id(p), p) for p in parameters)
                 if vid not in self._params_referenced_by_var:
                     self._params_referenced_by_var[vid] = []
-                self._params_referenced_by_var[vid].extend(p for p in parameters if id(p) not in ref_params)
+                self._params_referenced_by_var[vid].extend(
+                    p for p in parameters if id(p) not in ref_params
+                )
                 ref_params.update(id(p) for p in parameters)
         self._check_for_new_params(list(params_to_check.values()))
         for v in variables:
@@ -738,8 +748,12 @@ class ModelChangeDetector:
                 self._referenced_variables[id(v)][2].pop(obj_id)
             for p in self._params_referenced_by_obj[obj_id]:
                 self._referenced_params[id(p)][2].pop(obj_id)
-            vars_to_check.update((id(v), v) for v in self._vars_referenced_by_obj[obj_id])
-            params_to_check.update((id(p), p) for p in self._params_referenced_by_obj[obj_id])
+            vars_to_check.update(
+                (id(v), v) for v in self._vars_referenced_by_obj[obj_id]
+            )
+            params_to_check.update(
+                (id(p), p) for p in self._params_referenced_by_obj[obj_id]
+            )
             del self._objectives[obj_id]
             self._obj_named_expressions.pop(obj_id, None)
             self._external_functions.pop(obj, None)
@@ -758,7 +772,9 @@ class ModelChangeDetector:
                 ctype, active=True, descend_into=True
             ):
                 if isinstance(comp, Suffix):
-                    warnings.warn('ModelChangeDetector does not detect changes to suffixes')
+                    warnings.warn(
+                        'ModelChangeDetector does not detect changes to suffixes'
+                    )
                     continue
                 raise NotImplementedError(
                     'ModelChangeDetector does not know how to '
@@ -813,7 +829,9 @@ class ModelChangeDetector:
             for p in self._params_referenced_by_con[con]:
                 self._referenced_params[id(p)][0].pop(con)
             vars_to_check.update((id(v), v) for v in self._vars_referenced_by_con[con])
-            params_to_check.update((id(p), p) for p in self._params_referenced_by_con[con])
+            params_to_check.update(
+                (id(p), p) for p in self._params_referenced_by_con[con]
+            )
             del self._active_constraints[con]
             self._named_expressions.pop(con, None)
             self._external_functions.pop(con, None)
@@ -837,7 +855,9 @@ class ModelChangeDetector:
             for p in self._params_referenced_by_con[con]:
                 self._referenced_params[id(p)][1].pop(con)
             vars_to_check.update((id(v), v) for v in self._vars_referenced_by_con[con])
-            params_to_check.update((id(p), p) for p in self._params_referenced_by_con[con])
+            params_to_check.update(
+                (id(p), p) for p in self._params_referenced_by_con[con]
+            )
             del self._active_sos[con]
             del self._vars_referenced_by_con[con]
             del self._params_referenced_by_con[con]
@@ -857,7 +877,9 @@ class ModelChangeDetector:
             if v_id in self._params_referenced_by_var:
                 for p in self._params_referenced_by_var[v_id]:
                     self._referenced_params[id(p)][3].pop(v_id)
-                params_to_check.update((id(p), p) for p in self._params_referenced_by_var[v_id])
+                params_to_check.update(
+                    (id(p), p) for p in self._params_referenced_by_var[v_id]
+                )
                 self._params_referenced_by_var.pop(v_id)
             cons_using, sos_using, obj_using = self._referenced_variables[v_id]
             if cons_using or sos_using or obj_using:

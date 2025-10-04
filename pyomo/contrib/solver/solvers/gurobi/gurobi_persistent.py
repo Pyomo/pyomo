@@ -41,7 +41,11 @@ from .gurobi_direct_base import (
     _get_reduced_costs,
 )
 from pyomo.contrib.solver.common.util import get_objective
-from pyomo.contrib.observer.model_observer import Observer, ModelChangeDetector, AutoUpdateConfig
+from pyomo.contrib.observer.model_observer import (
+    Observer,
+    ModelChangeDetector,
+    AutoUpdateConfig,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -598,9 +602,7 @@ class GurobiPersistentConfig(GurobiConfig):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.auto_updates: bool = self.declare(
-            'auto_updates', AutoUpdateConfig()
-        )
+        self.auto_updates: bool = self.declare('auto_updates', AutoUpdateConfig())
 
 
 class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
@@ -695,7 +697,11 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         self._solver_model = gurobipy.Model(env=self.env())
         self._observer = _GurobiObserver(self)
         timer.start('set_instance')
-        self._change_detector = ModelChangeDetector(model=self._pyomo_model, observers=[self._observer], **dict(self.config.auto_updates))
+        self._change_detector = ModelChangeDetector(
+            model=self._pyomo_model,
+            observers=[self._observer],
+            **dict(self.config.auto_updates),
+        )
         self._change_detector.config = self.config.auto_updates
         timer.stop('set_instance')
 
@@ -834,7 +840,7 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         for obj in objs:
             if obj is not self._objective:
                 raise RuntimeError(
-                    'tried to remove an objective that has not been added: ' \
+                    'tried to remove an objective that has not been added: '
                     f'{str(obj)}'
                 )
             else:
@@ -848,7 +854,7 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
     def _add_objectives(self, objs: List[ObjectiveData]):
         if len(objs) > 1:
             raise NotImplementedError(
-                'the persistent interface to gurobi currently ' \
+                'the persistent interface to gurobi currently '
                 f'only supports single-objective problems; got {len(objs)}: '
                 f'{[str(i) for i in objs]}'
             )
@@ -860,9 +866,9 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
 
         if self._objective is not None:
             raise NotImplementedError(
-                'the persistent interface to gurobi currently ' \
-                'only supports single-objective problems; tried to add ' \
-                f'an objective ({str(obj)}), but there is already an ' \
+                'the persistent interface to gurobi currently '
+                'only supports single-objective problems; tried to add '
+                f'an objective ({str(obj)}), but there is already an '
                 f'active objective ({str(self._objective)})'
             )
 
@@ -875,9 +881,7 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         else:
             raise ValueError(f'Objective sense is not recognized: {obj.sense}')
 
-        repn = generate_standard_repn(
-            obj.expr, quadratic=True, compute_values=False
-        )
+        repn = generate_standard_repn(obj.expr, quadratic=True, compute_values=False)
         repn_constant = value(repn.constant)
         gurobi_expr = self._get_expr_from_pyomo_repn(repn)
 
