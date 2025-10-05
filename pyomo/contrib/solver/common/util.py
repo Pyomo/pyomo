@@ -27,7 +27,7 @@ class NoFeasibleSolutionError(PyomoException):
 class NoOptimalSolutionError(PyomoException):
     default_message = (
         'Solver did not find the optimal solution. Set '
-        'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
+        'opt.config.raise_exception_on_nonoptimal_result=False to bypass this error.'
     )
 
 

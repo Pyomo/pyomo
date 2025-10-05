@@ -23,7 +23,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v221013.1
+  CACHE_VER: v250827.0
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: branch
@@ -147,7 +147,6 @@ jobs:
         else
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
-        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         EXTRAS=tests
         if test -z "${{matrix.slim}}"; then
             EXTRAS="$EXTRAS,docs,optional"
@@ -179,7 +178,7 @@ jobs:
       id: download-cache
       with:
         path: cache/download
-        key: download-${{env.CACHE_VER}}.0-${{runner.os}}
+        key: download-${{env.CACHE_VER}}-${{runner.os}}
 
     - name: Configure curl
       run: |
@@ -352,10 +351,6 @@ jobs:
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
-        fi
-        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == 3.13* ]]; then
-            # As of Nov 7, 2024, qtconsole is not compatible with python 3.13 on win
-            EXCLUDE="qtconsole $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
@@ -540,7 +535,7 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
         # Demo licenses are included for 5mo from the newest release
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/50.1.0"
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/latest"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {

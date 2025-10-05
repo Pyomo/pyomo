@@ -306,9 +306,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             self._solver_model.run()
             timer.stop('optimize')
 
-        res = self._postsolve()
-        res.solver_log = ostreams[0].getvalue()
-        return res
+        return self._postsolve(ostreams[0])
 
     def _process_domain_and_bounds(self, var_id):
         _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[var_id]
@@ -666,7 +664,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         )
         self._mutable_objective.update()
 
-    def _postsolve(self):
+    def _postsolve(self, stream: io.StringIO):
         config = self._active_config
         timer = config.timer
         timer.start('load solution')
@@ -676,6 +674,10 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         results = Results()
         results.solution_loader = PersistentSolutionLoader(self, self._model)
+        results.solver_name = self.name
+        results.solver_version = self.version()
+        results.solver_config = config
+        results.solver_log = stream.getvalue()
         results.timing_info.highs_time = highs.getRunTime()
 
         self._sol = highs.getSolution()
@@ -748,6 +750,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     results.objective_bound = None
             else:
                 results.objective_bound = info.mip_dual_bound
+            results.iteration_count = info.simplex_iteration_count
 
         if config.load_solutions:
             if has_feasible_solution:

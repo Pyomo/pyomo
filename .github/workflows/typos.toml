@@ -73,4 +73,6 @@ lst = "lst"
 gam = "gam"
 # Regex search term from contrib/solver/solvers/ipopt
 ond = "ond"
+# GAMS_writer
+PATHC = "PATHC"
 # AS NEEDED: Add More Words Below
