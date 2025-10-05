@@ -40,7 +40,7 @@ model.MixtureLowBounds = pyo.Param(
     model.CrudeType, model.GasType, within=pyo.NonNegativeReals, default=0
 )
 
-# Variabls
+# Variables
 model.x = pyo.Var(model.CrudeType, model.GasType, within=pyo.NonNegativeReals)
 model.q = pyo.Var(model.CrudeType, within=pyo.NonNegativeReals)
 model.z = pyo.Var(model.GasType, within=pyo.NonNegativeReals)

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import datetime
 import random
 import math
 from typing import Type
@@ -17,6 +18,17 @@ import pyomo.environ as pyo
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
+
+from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.common.config import SolverConfig
+from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import (
+    GurobiPersistent,
+    GurobiDirectQuadratic,
+)
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.solvers.highs import Highs
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.common.results import (
     TerminationCondition,
     SolutionStatus,
@@ -24,23 +36,10 @@ from pyomo.contrib.solver.common.results import (
 )
 from pyomo.contrib.solver.common.util import (
     NoDualsError,
+    NoOptimalSolutionError,
     NoSolutionError,
     NoReducedCostsError,
 )
-from pyomo.contrib.solver.common.base import SolverBase
-from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.solvers.ipopt import Ipopt
-from pyomo.contrib.solver.solvers.gurobi.gurobi_direct import GurobiDirect
-from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import (
-    GurobiDirectQuadratic,
-    GurobiPersistent,
-)
-from pyomo.contrib.solver.common.util import (
-    NoSolutionError,
-    NoFeasibleSolutionError,
-    NoOptimalSolutionError,
-)
-from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
@@ -116,7 +115,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -170,7 +169,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -230,7 +229,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -285,7 +284,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -339,7 +338,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -393,7 +392,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -455,7 +454,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -512,7 +511,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -560,6 +559,73 @@ class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_config_overwrite(self, name: str, opt_class: Type[SolverBase]):
         self.assertIsNot(SolverBase.CONFIG, opt_class.CONFIG)
+
+    @parameterized.expand(input=_load_tests(all_solvers))
+    def test_results_object_populated(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(2, None))
+        m.obj = pyo.Objective(expr=m.x)
+        res = opt.solve(m, load_solutions=False)
+        pyo.assert_optimal_termination(res)
+
+        # Initial gut check - is it the right type?
+        self.assertIsInstance(res, Results)
+
+        # termination_condition is set to a valid enum and not unknown
+        self.assertIsInstance(res.termination_condition, TerminationCondition)
+        self.assertNotEqual(res.termination_condition, TerminationCondition.unknown)
+
+        # solution_status is a valid enum and indicates a usable solution
+        self.assertIsInstance(res.solution_status, SolutionStatus)
+        self.assertIn(
+            res.solution_status, {SolutionStatus.feasible, SolutionStatus.optimal}
+        )
+
+        # solver_name is a nonempty string
+        self.assertIsInstance(res.solver_name, str)
+        self.assertTrue(res.solver_name.strip())
+
+        # solver_version is a tuple of ints
+        self.assertIsInstance(res.solver_version, tuple)
+        for v in res.solver_version:
+            self.assertIsInstance(v, int)
+
+        # iteration_count is nonnegative
+        self.assertGreaterEqual(res.iteration_count, 0)
+
+        # timing_info should exist
+        self.assertIsNotNone(res.timing_info)
+
+        # start_timestamp must be a valid datetime
+        self.assertIsInstance(res.timing_info.start_timestamp, datetime.datetime)
+
+        # wall_time must be a float (=> 0)
+        self.assertIsInstance(res.timing_info.wall_time, float)
+        self.assertGreaterEqual(res.timing_info.wall_time, 0.0)
+
+        # incumbent_objective should be populated for a feasible/optimal solve
+        self.assertIsNotNone(res.incumbent_objective)
+
+        # Should have a solution loader available
+        self.assertTrue(hasattr(res, "solution_loader"))
+
+        # Should have a copy of the config used
+        self.assertIsInstance(res.solver_config, SolverConfig)
+
+        # All solvers should be implementing some sort of TeeStream,
+        # so they should be able to capture anything logged to the console
+        self.assertIsNotNone(res.solver_log)
+        self.assertIsInstance(res.solver_log, str)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_remove_variable_and_objective(
@@ -1524,9 +1590,7 @@ class TestSolvers(unittest.TestCase):
             opt.config.auto_updates.update_vars = False
             opt.config.auto_updates.update_constraints = False
             opt.config.auto_updates.update_named_expressions = False
-            opt.config.auto_updates.check_for_new_or_removed_params = False
             opt.config.auto_updates.check_for_new_or_removed_constraints = False
-            opt.config.auto_updates.check_for_new_or_removed_vars = False
         opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
@@ -1851,7 +1915,11 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 3)
         if opt.is_persistent():
-            opt.config.auto_updates.check_for_new_objective = False
+            # hack until we get everything ported to the observer
+            try:
+                opt.config.auto_updates.check_for_new_or_removed_objectives = False
+            except:
+                opt.config.auto_updates.check_for_new_objective = False
             m.e.expr = 4
             res = opt.solve(m)
             self.assertAlmostEqual(res.incumbent_objective, 4)

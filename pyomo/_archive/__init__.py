@@ -13,6 +13,6 @@ __doc__ = """This package contains archived modules that are no longer part of t
 official Pyomo API.
 
 These modules are still importable through their old names via
-:func:`pyomo.common.moved_module()`
+:func:`pyomo.common.deprecation.moved_module()`
 
 """

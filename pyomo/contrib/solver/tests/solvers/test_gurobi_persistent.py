@@ -499,11 +499,11 @@ class TestGurobiPersistent(unittest.TestCase):
 class TestManualMode(unittest.TestCase):
     def setUp(self):
         opt = GurobiPersistent()
-        opt.auto_updates.check_for_new_or_removed_constraints = False
-        opt.auto_updates.update_parameters = False
-        opt.auto_updates.update_vars = False
-        opt.auto_updates.update_constraints = False
-        opt.auto_updates.update_named_expressions = False
+        opt.config.auto_updates.check_for_new_or_removed_constraints = False
+        opt.config.auto_updates.update_parameters = False
+        opt.config.auto_updates.update_vars = False
+        opt.config.auto_updates.update_constraints = False
+        opt.config.auto_updates.update_named_expressions = False
         self.opt = opt
 
     def test_basics(self):

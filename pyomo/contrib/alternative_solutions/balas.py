@@ -48,7 +48,7 @@ def enumerate_binary_solutions(
     variables: None or a collection of Pyomo _GeneralVarData variables
         The variables for which bounds will be generated. None indicates
         that all variables will be included. Alternatively, a collection of
-        _GenereralVarData variables can be provided.
+        _GeneralVarData variables can be provided.
     rel_opt_gap : float or None
         The relative optimality gap for the original objective for which
         variable bounds will be found. None indicates that a relative gap
