@@ -316,7 +316,7 @@ class NLP(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def evaluate_constraints(self, out=None):
         """Returns the values for the constraints evaluated at
-        the values given for the primal variales in set_primals
+        the values given for the primal variables in set_primals
 
         Parameters
         ----------
@@ -534,7 +534,7 @@ class ExtendedNLP(NLP, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def evaluate_eq_constraints(self, out=None):
         """Returns the values for the equality constraints evaluated at
-        the values given for the primal variales in set_primals
+        the values given for the primal variables in set_primals
 
         Parameters
         ----------

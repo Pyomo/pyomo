@@ -10,10 +10,10 @@
 #  ___________________________________________________________________________
 
 
-from collections.abc import MutableMapping, MutableSet, Mapping, Set, Sequence
-from collections import UserDict
+from collections import OrderedDict, UserDict
+from collections.abc import Mapping, MutableMapping, MutableSet, Sequence, Set
 
-from .orderedset import OrderedDict, OrderedSet
+from .bunch import Bunch
 from .component_map import ComponentMap, DefaultComponentMap
 from .component_set import ComponentSet
-from .bunch import Bunch
+from .orderedset import OrderedSet

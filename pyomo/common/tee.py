@@ -57,7 +57,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class _SignalFlush(object):
+class _SignalFlush:
     def __init__(self, ostream, handle):
         super().__setattr__('_ostream', ostream)
         super().__setattr__('_handle', handle)
@@ -135,7 +135,7 @@ class _AutoFlush(_SignalFlush):
             self.flush()
 
 
-class _fd_closer(object):
+class _fd_closer:
     """A context manager to handle closing a specified file descriptor
 
     Ideally we would use `os.fdopen(... closefd=True)`; however, it
@@ -156,7 +156,7 @@ class _fd_closer(object):
         os.close(self.fd)
 
 
-class redirect_fd(object):
+class redirect_fd:
     """Redirect a file descriptor to a new file or file descriptor.
 
     This context manager will redirect the specified file descriptor to
@@ -244,7 +244,7 @@ class redirect_fd(object):
         os.close(self.original_fd)
 
 
-class capture_output(object):
+class capture_output:
     """Context manager to capture output sent to sys.stdout and sys.stderr
 
     This is a drop-in substitute for PyUtilib's capture_output to
@@ -532,7 +532,7 @@ class capture_output(object):
         return self.__exit__(None, None, None)
 
 
-class _StreamHandle(object):
+class _StreamHandle:
     """A stream handler object used by TeeStream
 
     This handler holds the two sides of the pipe used to communicate
@@ -728,7 +728,7 @@ class _StreamHandle(object):
                 )
 
 
-class TeeStream(object):
+class TeeStream:
     def __init__(self, *ostreams, encoding=None, buffering=-1):
         self.ostreams = ostreams
         self.encoding = encoding
@@ -765,7 +765,8 @@ class TeeStream(object):
         # Note that is it VERY important to close file handles in the
         # same thread that opens it.  If you don't you can see deadlocks
         # and a peculiar error ("libgcc_s.so.1 must be installed for
-        # pthread_cancel to work"; see https://bugs.python.org/issue18748)
+        # pthread_cancel to work"; see
+        # https://github.com/python/cpython/issues/62948)
         #
         # To accomplish this, we will keep two handle lists: one is the
         # set of "active" handles that the (merged reader) thread is

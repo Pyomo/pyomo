@@ -11,7 +11,7 @@
 
 
 from .common.factory import SolverFactory
-from .solvers.ipopt import Ipopt
+from .solvers.ipopt import Ipopt, LegacyIpoptSolver
 from .solvers.gurobi.gurobi_direct import GurobiDirect
 from .solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic, GurobiPersistent
 from .solvers.highs import Highs
@@ -21,7 +21,7 @@ from .solvers.scip.scip_direct import ScipDirect
 def load():
     SolverFactory.register(
         name='ipopt', legacy_name='ipopt_v2', doc='The IPOPT NLP solver'
-    )(Ipopt)
+    )(Ipopt, LegacyIpoptSolver)
     SolverFactory.register(
         name='gurobi_persistent',
         legacy_name='gurobi_persistent_v2',

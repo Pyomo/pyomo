@@ -83,7 +83,7 @@ def _deprecated_separation_priority_order(obj):
             "The argument 'separation_priority_order' is deprecated. "
             "Consider specifying separation priorities by declaring, on your "
             "model, Suffix components with local name `pyros_separation_priority`.",
-            version="6.9.3dev0",
+            version="6.9.3",
         )
     return separation_priority_order
 
@@ -154,7 +154,7 @@ def uncertain_param_data_validator(uncertain_obj):
             )
 
 
-class InputDataStandardizer(object):
+class InputDataStandardizer:
     """
     Domain validator for an object that is castable to
     a list of Pyomo component data objects.
@@ -246,7 +246,7 @@ class SolverNotResolvable(PyomoException):
     """
 
 
-class SolverResolvable(object):
+class SolverResolvable:
     """
     Callable for casting an object (such as a str)
     to a Pyomo solver.
@@ -369,7 +369,7 @@ class SolverResolvable(object):
         return "str or Solver"
 
 
-class SolverIterable(object):
+class SolverIterable:
     """
     Callable for casting an iterable (such as a list of strs)
     to a list of Pyomo solvers.
@@ -776,7 +776,7 @@ def pyros_config():
                 until, within a group, constraint violations
                 are detected.
 
-                *Deprecated since Pyomo 6.9.3dev0*: The argument
+                *Deprecated since Pyomo 6.9.3*: The argument
                 `separation_priority_order` is deprecated.
                 Specify separation priorities by declaring, on your
                 model, `Suffix` components with local name

@@ -505,7 +505,51 @@ def import_file(path, clear_cache=False, infer_package=True, module_name=None):
     return module
 
 
-class PathData(object):
+def to_legal_filename(name, universal=False) -> str:
+    """Convert a string to a legal filename on the current platform.
+
+    This converts a candidate file name (not a path) and converts it to
+    a legal file name on the current platform.  This includes replacing
+    any unallowable characters (including the path separator) with
+    underscores (``_``), and on some platforms, enforcing restrictions
+    on the allowable final character.
+
+    Parameters
+    ----------
+    name : str
+
+        The original (desired) file name
+
+    universal : bool
+
+        If True, this will attempt a form of "universal" standardization
+        that uses the most restrictive set of character translations and
+        rules.  Currently, ``universal=True`` is equivalent to running
+        the Windows translations.
+
+    """
+    if envvar.is_windows or universal:
+        tr = getattr(to_legal_filename, 'tr', None)
+        if tr is None:
+            # Windows illegal characters: 0-31, plus < > : " / \ | ? *
+            _illegal = r'<>:"/\|?*' + ''.join(map(chr, range(32)))
+            tr = to_legal_filename.tr = str.maketrans(_illegal, '_' * len(_illegal))
+        # Remove illegal characters
+        name = name.translate(tr)
+        if name:
+            # Windows allows filenames to end with space or dot, but the
+            # file explorer can't interact with them
+            if name[-1] in ' .':
+                name = name[:-1] + '_'
+            # Similarly, starting with a space is generally a bad idea
+            if name[0] == ' ':
+                name = '_' + name[1:]
+    else:
+        name = name.replace('/', '_').replace(chr(0), '_')
+    return name
+
+
+class PathData:
     """An object for storing and managing a :py:class:`PathManager` path"""
 
     def __init__(self, manager, name):
@@ -610,7 +654,7 @@ class ExecutableData(PathData):
         self.set_path(value)
 
 
-class PathManager(object):
+class PathManager:
     """The PathManager defines a registry class for path locations
 
     The :py:class:`PathManager` defines a class very similar to the
@@ -761,7 +805,7 @@ class PathManager(object):
 #
 # Define singleton objects for Pyomo / Users to interact with
 #
-class Executable(object):
+class Executable:
     """Singleton executable registry
 
     This class cannot be instantiated.  Instead, calling this type will
@@ -787,7 +831,7 @@ class Executable(object):
         return cls._manager.rehash()
 
 
-class Library(object):
+class Library:
     """Singleton library registry
 
     This class cannot be instantiated.  Instead, calling this type will

@@ -166,7 +166,7 @@ class _GeneralObjectiveData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class TemplateDataMixin(object):
+class TemplateDataMixin:
     __slots__ = ()
 
     @property
@@ -208,16 +208,6 @@ class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
         self._index = index
         self._args_ = template_info
         self._sense = sense
-
-    @property
-    def args(self):
-        # Note that it is faster to just generate the expression from
-        # scratch than it is to clone it and replace the IndexTemplate objects
-        self.set_value(self.parent_component()._rule(self.parent_block(), self.index()))
-        return self._args_
-
-    def template_expr(self):
-        return self._args_
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
@@ -358,7 +348,7 @@ class Objective(ActiveIndexedComponent):
                         else:
                             assert self.__class__ is ScalarObjective
                             self.__class__ = TemplateScalarObjective
-                            self._expr = template_info
+                            self._args_ = template_info
                             self._data = {None: self}
                             self.set_sense(self._init_sense(self, self.index()))
                         return
@@ -572,7 +562,7 @@ class ObjectiveList(IndexedObjective):
     an index value is not specified.
     """
 
-    class End(object):
+    class End:
         pass
 
     def __init__(self, **kwargs):
