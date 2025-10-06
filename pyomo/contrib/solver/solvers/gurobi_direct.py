@@ -271,7 +271,7 @@ class GurobiSolverMixin:
         # allows different derived interfaces to have different
         # availability (e.g., persistent has a minimum version
         # requirement that the direct interface doesn't)
-        if not self._is_gp_available():
+        if not self._is_gp_available:
             self.__class__._available_cache = Availability.NotFound
         else:
             with capture_output(capture_fd=True):
@@ -333,7 +333,7 @@ class GurobiSolverMixin:
         if not recheck and self._version_cache is not None:
             return self._version_cache
 
-        if not self._is_gp_available():
+        if not self._is_gp_available:
             return None
 
         self.__class__._version_cache = (
