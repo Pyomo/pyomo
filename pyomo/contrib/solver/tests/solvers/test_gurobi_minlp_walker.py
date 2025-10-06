@@ -11,6 +11,9 @@
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.core.expr import (
+    ProductExpression
+)
 from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiMINLPVisitor
@@ -60,6 +63,21 @@ class CommonTest(unittest.TestCase):
 
 @unittest.skipUnless(gurobipy_available, "gurobipy is not available")
 class TestGurobiMINLPWalker(CommonTest):
+    def _get_nl_expr_tree(self, visitor, expr):
+        # This is a bit hacky, but the only way that I know to get the expression tree
+        # publicly is from a general nonlinear constraint. So we can create it, and
+        # then pull out the expression we just used to test it
+        grb_model = visitor.grb_model
+        aux = grb_model.addVar()
+        grb_model.addConstr(aux == expr)
+        grb_model.update()
+        constrs = grb_model.getGenConstrs()
+        self.assertEqual(len(constrs), 1)
+
+        aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(constrs[0])
+        self.assertIs(aux_var, aux)
+        return opcode, data, parent
+    
     def test_var_domains(self):
         m = self.get_model()
         e = m.x1 + m.x2 + m.x3 + m.y1 + m.y2 + m.y3 + m.z1
@@ -221,42 +239,17 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x1 = visitor.var_map[m.x1]
-        x2 = visitor.var_map[m.x2]
-        x3 = visitor.var_map[m.x3]
-
         # this is a "nonlinear"
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        self.assertEqual(len(opcode), 6)
-        self.assertEqual(parent[0], -1)  # root
-        self.assertEqual(opcode[0], GRB.OPCODE_MULTIPLY)
-        self.assertEqual(data[0], -1)  # no additional data
+        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        # first arg is another multiply with three children
-        self.assertEqual(parent[1], 0)
-        self.assertEqual(opcode[1], GRB.OPCODE_MULTIPLY)
-        self.assertEqual(data[0], -1)
-
-        # second arg is the constant
-        self.assertEqual(parent[2], 1)
-        self.assertEqual(opcode[2], GRB.OPCODE_CONSTANT)
-        self.assertEqual(data[2], 0)
-
-        # third arg is x1
-        self.assertEqual(parent[3], 1)
-        self.assertEqual(opcode[3], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[3], x1)
-
-        # fourth arg is x2
-        self.assertEqual(parent[4], 1)
-        self.assertEqual(opcode[4], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[4], x2)
-
-        # fifth arg is x3, whose parent is the root
-        self.assertEqual(parent[5], 0)
-        self.assertEqual(opcode[5], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[5], x3)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            ProductExpression((ProductExpression((0.0, m.x1, m.x2, m.x3)),))
+        )
 
     def test_write_division(self):
         m = self.get_model()
@@ -311,21 +304,6 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertIs(expr.getVar2(0), x1)
         self.assertEqual(expr.getCoeff(0), 1.0)
 
-    def _get_nl_expr_tree(self, visitor, expr):
-        # This is a bit hacky, but the only way that I know to get the expression tree
-        # publicly is from a general nonlinear constraint. So we can create it, and
-        # then pull out the expression we just used to test it
-        grb_model = visitor.grb_model
-        aux = grb_model.addVar()
-        grb_model.addConstr(aux == expr)
-        grb_model.update()
-        constrs = grb_model.getGenConstrs()
-        self.assertEqual(len(constrs), 1)
-
-        aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(constrs[0])
-        self.assertIs(aux_var, aux)
-        return opcode, data, parent
-
     def test_write_nonquadratic_power_expression_var_const(self):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**3 >= 3)
@@ -333,28 +311,16 @@ class TestGurobiMINLPWalker(CommonTest):
         _, expr = visitor.walk_expression(m.c.body)
 
         # This is general nonlinear
-        x1 = visitor.var_map[id(m.x1)]
-
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        # three nodes
-        self.assertEqual(len(opcode), 3)
+        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        # the root is a power expression
-        self.assertEqual(parent[0], -1)  # means root
-        self.assertEqual(opcode[0], GRB.OPCODE_POW)
-        # pow has no additional data
-        self.assertEqual(data[0], -1)
-
-        # first child is x1
-        self.assertEqual(parent[1], 0)
-        self.assertIs(data[1], x1)
-        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
-
-        # second child is 3
-        self.assertEqual(parent[2], 0)
-        self.assertEqual(opcode[2], GRB.OPCODE_CONSTANT)
-        self.assertEqual(data[2], 3.0)  # the data is the constant's value
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            m.x1 ** 3.0
+        )
 
     def test_write_power_expression_var_var(self):
         m = self.get_model()
@@ -370,24 +336,14 @@ class TestGurobiMINLPWalker(CommonTest):
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        # three nodes
-        self.assertEqual(len(opcode), 3)
+        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        # the root is a power expression
-        self.assertEqual(parent[0], -1)  # means root
-        self.assertEqual(opcode[0], GRB.OPCODE_POW)
-        # pow has no additional data
-        self.assertEqual(data[0], -1)
-
-        # first child is x1
-        self.assertEqual(parent[1], 0)
-        self.assertIs(data[1], x1)
-        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
-
-        # second child is x2
-        self.assertEqual(parent[2], 0)
-        self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[2], x2)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            m.x1 ** m.x2
+        )
 
     def test_write_power_expression_const_var(self):
         m = self.get_model()
@@ -399,24 +355,14 @@ class TestGurobiMINLPWalker(CommonTest):
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        # three nodes
-        self.assertEqual(len(opcode), 3)
+        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        # the root is a power expression
-        self.assertEqual(parent[0], -1)  # means root
-        self.assertEqual(opcode[0], GRB.OPCODE_POW)
-        # pow has no additional data
-        self.assertEqual(data[0], -1)
-
-        # first child is 2
-        self.assertEqual(parent[1], 0)
-        self.assertEqual(data[1], 2.0)
-        self.assertEqual(opcode[1], GRB.OPCODE_CONSTANT)
-
-        # second child is x2
-        self.assertEqual(parent[2], 0)
-        self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[2], x2)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            2.0 ** m.x2
+        )
 
     def test_write_absolute_value_of_var(self):
         # Gurobi doesn't support abs of expressions, so we have to do a factorable
@@ -502,24 +448,14 @@ class TestGurobiMINLPWalker(CommonTest):
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        # three nodes
-        self.assertEqual(len(opcode), 3)
+        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        # the root is a power expression
-        self.assertEqual(parent[0], -1)  # means root
-        self.assertEqual(opcode[0], GRB.OPCODE_POW)
-        # pow has no additional data
-        self.assertEqual(data[0], -1)
-
-        # first child is 4
-        self.assertEqual(parent[1], 0)
-        self.assertEqual(data[1], 4.0)
-        self.assertEqual(opcode[1], GRB.OPCODE_CONSTANT)
-
-        # second child is x2
-        self.assertEqual(parent[2], 0)
-        self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[2], x2)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            4.0 ** m.x2
+        )
 
     def test_monomial_expression(self):
         m = self.get_model()
@@ -561,18 +497,14 @@ class TestGurobiMINLPWalker(CommonTest):
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        # two nodes
-        self.assertEqual(len(opcode), 2)
+        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        # the root is a power expression
-        self.assertEqual(parent[0], -1)  # means root
-        self.assertEqual(opcode[0], GRB.OPCODE_LOG)
-        self.assertEqual(data[0], -1)
-
-        # child is x1
-        self.assertEqual(parent[1], 0)
-        self.assertIs(data[1], x1)
-        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            log(m.x1)
+        )
 
     def test_handle_complex_number_sqrt(self):
         m = self.get_model()
