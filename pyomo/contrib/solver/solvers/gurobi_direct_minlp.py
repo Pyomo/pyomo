@@ -141,7 +141,7 @@ if gurobipy_available:
         )
     )
 
-    
+
 """
 In Gurobi 12:
 
