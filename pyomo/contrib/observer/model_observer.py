@@ -21,11 +21,11 @@ from pyomo.core.base.objective import ObjectiveData, Objective
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.component import ActiveComponent
 from pyomo.common.collections import ComponentMap
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.util import get_objective
 from pyomo.contrib.observer.component_collector import collect_components_from_expr
 from pyomo.common.numeric_types import native_numeric_types
-import gc
 
 
 """
@@ -730,10 +730,7 @@ class ModelChangeDetector:
 
     def _set_instance(self):
 
-        is_gc_enabled = gc.isenabled()
-        gc.disable()
-
-        try:
+        with PauseGC() as pgc:
             self._check_for_unknown_active_components()
 
             self._add_constraints(
@@ -757,9 +754,6 @@ class ModelChangeDetector:
                     )
                 )
             )
-        finally:
-            if is_gc_enabled:
-                gc.enable()
 
     def _remove_constraints(self, cons: List[ConstraintData]):
         for obs in self._observers:
@@ -1026,10 +1020,7 @@ class ModelChangeDetector:
             timer = HierarchicalTimer()
         config: AutoUpdateConfig = self.config(value=kwds, preserve_implicit=True)
 
-        is_gc_enabled = gc.isenabled()
-        gc.disable()
-
-        try:
+        with PauseGC() as pgc:
             self._check_for_unknown_active_components()
 
             added_cons = set()
@@ -1133,6 +1124,3 @@ class ModelChangeDetector:
                 if params_to_update:
                     self._update_parameters(params_to_update)
                 timer.stop('params')
-        finally:
-            if is_gc_enabled:
-                gc.enable()
