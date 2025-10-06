@@ -1208,6 +1208,6 @@ class ModelChangeDetector:
 
     def get_constraints_impacted_by_param(self, p: ParamData):
         return list(self._referenced_params[id(p)][0])
-    
+
     def get_constraints_impacted_by_var(self, v: VarData):
         return list(self._referenced_variables[id(v)][0])

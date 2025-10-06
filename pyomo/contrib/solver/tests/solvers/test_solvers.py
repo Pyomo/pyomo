@@ -1152,7 +1152,8 @@ class TestSolvers(unittest.TestCase):
                 ):
                     res.solution_loader.get_duals()
                 with self.assertRaisesRegex(
-                    NoReducedCostsError, '.*does not currently have valid reduced costs.*'
+                    NoReducedCostsError,
+                    '.*does not currently have valid reduced costs.*',
                 ):
                     res.solution_loader.get_reduced_costs()
 

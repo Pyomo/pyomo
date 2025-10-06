@@ -41,12 +41,12 @@ def load():
         name='highs', legacy_name='highs_v2', doc='Persistent interface to HiGHS'
     )(Highs)
     SolverFactory.register(
-        name='scip_direct', 
-        legacy_name='scip_direct_v2', 
+        name='scip_direct',
+        legacy_name='scip_direct_v2',
         doc='Direct interface pyscipopt',
     )(ScipDirect)
     SolverFactory.register(
-        name='scip_persistent', 
-        legacy_name='scip_persistent_v2', 
+        name='scip_persistent',
+        legacy_name='scip_persistent_v2',
         doc='Persistent interface pyscipopt',
     )(ScipPersistent)
