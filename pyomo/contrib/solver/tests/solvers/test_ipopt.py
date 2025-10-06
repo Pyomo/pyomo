@@ -741,7 +741,7 @@ class TestLegacyIpopt(unittest.TestCase):
             'Read Option: "bogus_option". It is not a valid option', LOG.getvalue()
         )
 
-        with self.assertRaisesRegex(ValueError, "unallowed ipopt option 'wantsol'"):
+        with self.assertRaisesRegex(ValueError, "unallowed Ipopt option 'wantsol'"):
             results = ipopt.LegacyIpoptSolver().solve(
                 model,
                 tee=True,

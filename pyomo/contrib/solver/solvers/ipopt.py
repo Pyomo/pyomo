@@ -334,7 +334,7 @@ class Ipopt(SolverBase):
     def _verify_ipopt_options(self, config: IpoptConfig) -> None:
         for key, msg in unallowed_ipopt_options.items():
             if key in config.solver_options:
-                raise ValueError(f"unallowed ipopt option '{key}': {msg}")
+                raise ValueError(f"unallowed Ipopt option '{key}': {msg}")
         # Map standard Pyomo solver options to Ipopt options: standard
         # options override ipopt-specific options.
         if config.time_limit is not None:
@@ -548,11 +548,7 @@ class Ipopt(SolverBase):
                         results.extra_info = parsed_output_data
                         iter_log = results.extra_info.get("iteration_log", None)
                         if iter_log is not None:
-                            # Only set if object supports the attribute
-                            try:
-                                iter_log._visibility = ADVANCED_OPTION
-                            except Exception:
-                                pass
+                            iter_log._visibility = ADVANCED_OPTION
                     except Exception as e:
                         logger.log(
                             logging.WARNING,
@@ -659,28 +655,26 @@ class Ipopt(SolverBase):
                 tokens = line.strip().split()
                 # IPOPT sometimes mashes the first two column values together
                 # (e.g., "2r-4.93e-03"). We need to split them.
-                if tokens and (('-' in tokens[0][1:]) or ('+' in tokens[0][1:])):
-                    m = re.match(
-                        r'^(\d+r?)([+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)$',
-                        tokens[0],
-                    )
-                    if m:
-                        tokens = [m.group(1), m.group(2)] + tokens[1:]
+                try:
+                    idx = tokens[0].index('-')
+                    tokens[:1] = (tokens[0][:idx], tokens[0][idx:])
+                except ValueError:
+                    # No '-' found, leave as-is
+                    pass
 
                 iter_data = dict(zip(columns, tokens))
                 extra_tokens = tokens[n_expected_columns:]
 
                 # Extract restoration flag from 'iter'
-                iter_str = iter_data.pop("iter")
-                restoration = iter_str.endswith("r")
+                iter_num = iter_data.pop("iter")
+                restoration = iter_num.endswith("r")
                 if restoration:
-                    iter_str = iter_str[:-1]
-
+                    iter_num = iter_num[:-1]
                 try:
-                    iter_num = int(iter_str)
+                    iter_num = int(iter_num)
                 except ValueError:
-                    logger.error(
-                        "Could not parse IPOPT iteration number from line:\n\t%s", line
+                    raise ValueError(
+                        f"Could not parse Ipopt iteration number: {iter_num}"
                     )
 
                 iter_data["restoration"] = restoration
@@ -704,10 +698,14 @@ class Ipopt(SolverBase):
                         )
 
                 # Attempt to cast all values to float where possible
-                for key in columns:
-                    if key == 'iter':
+                for key, val in iter_data.items():
+                    if key in {
+                        'iter',
+                        'restoration',
+                        'step_acceptance',
+                        'diagnostic_tags',
+                    }:
                         continue
-                    val = iter_data[key]
                     if val == '-':
                         iter_data[key] = None
                     else:
@@ -720,8 +718,8 @@ class Ipopt(SolverBase):
                             )
 
                 assert len(iterations) == iter_num, (
-                    f"Parsed row in the iterations table\n\t{line}\n"
-                    f"does not match the next expected iteration number ({len(iterations)})"
+                    f"Total number of iterations logged ({iterations}) does "
+                    f"not match the parsed number of iterations ({iter_num})."
                 )
                 iterations.append(iter_data)
 

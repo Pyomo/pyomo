@@ -139,8 +139,6 @@ class SolSolutionLoader(SolutionLoaderBase):
                 "have happened. Report this error to the Pyomo Developers."
             )
         res = {}
-        # Set a default scaling
-        obj_scale = 1
         scaling = self._nl_info.scaling
         if scaling:
             _iter = zip(
