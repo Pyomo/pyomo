@@ -106,14 +106,18 @@ class TestGurobiMixin(unittest.TestCase):
 
     def test_available_notfound(self):
         mixin = GurobiSolverMixin()
-        with unittest.mock.patch.object(GurobiSolverMixin, "_is_gp_available", False):
+        with unittest.mock.patch.object(
+            GurobiSolverMixin, "_is_gp_available", return_value=False
+        ):
             self.assertEqual(mixin.available(), Availability.NotFound)
 
     def test_available_full_license(self):
         opt = GurobiDirect()
         mock_gp = self.mocked_gurobipy("ok")
         with (
-            unittest.mock.patch.object(type(opt), "_is_gp_available", True),
+            unittest.mock.patch.object(
+                type(opt), "_is_gp_available", return_value=True
+            ),
             unittest.mock.patch(f"{self.MODULE_PATH}.gurobipy", mock_gp),
         ):
             with capture_output(capture_fd=True):
@@ -123,7 +127,9 @@ class TestGurobiMixin(unittest.TestCase):
         opt = GurobiDirect()
         mock_gp = self.mocked_gurobipy("too_large")
         with (
-            unittest.mock.patch.object(GurobiSolverMixin, "_is_gp_available", True),
+            unittest.mock.patch.object(
+                GurobiSolverMixin, "_is_gp_available", return_value=True
+            ),
             unittest.mock.patch(f"{self.MODULE_PATH}.gurobipy", mock_gp),
         ):
             with capture_output(capture_fd=True):
@@ -136,7 +142,9 @@ class TestGurobiMixin(unittest.TestCase):
         env_error = self.GurobiError("no gurobi license", errno=10009)
         mock_gp = self.mocked_gurobipy(license_status="ok", env_side_effect=env_error)
         with (
-            unittest.mock.patch.object(GurobiSolverMixin, "_is_gp_available", True),
+            unittest.mock.patch.object(
+                GurobiSolverMixin, "_is_gp_available", return_value=True
+            ),
             unittest.mock.patch(f"{self.MODULE_PATH}.gurobipy", mock_gp),
         ):
             with capture_output(capture_fd=True):
@@ -149,7 +157,9 @@ class TestGurobiMixin(unittest.TestCase):
         # FullLicense
         mock_full = self.mocked_gurobipy("ok")
         with (
-            unittest.mock.patch.object(GurobiSolverMixin, "_is_gp_available", True),
+            unittest.mock.patch.object(
+                GurobiSolverMixin, "_is_gp_available", return_value=True
+            ),
             unittest.mock.patch(f"{self.MODULE_PATH}.gurobipy", mock_full),
         ):
             self.assertEqual(opt.available(recheck=True), Availability.FullLicense)
