@@ -34,7 +34,7 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     Results,
 )
-from pyomo.contrib.solver.solvers.scip.scip_direct import SCIPDirect
+from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect, ScipPersistent
 from pyomo.contrib.solver.common.util import (
     NoDualsError,
     NoOptimalSolutionError,
@@ -60,30 +60,35 @@ all_solvers = [
     ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('ipopt', Ipopt),
     ('highs', Highs),
-    ('scip_direct', SCIPDirect),
+    ('scip_direct', ScipDirect),
+    ('scip_persistent', ScipPersistent),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('highs', Highs),
-    ('scip_direct', SCIPDirect),
+    ('scip_direct', ScipDirect),
+    ('scip_persistent', ScipPersistent),
 ]
 nlp_solvers = [
     ('ipopt', Ipopt),
-    ('scip_direct', SCIPDirect),
+    ('scip_direct', ScipDirect),
+    ('scip_persistent', ScipPersistent),
 ]
 qcp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('ipopt', Ipopt),
-    ('scip_direct', SCIPDirect),
+    ('scip_direct', ScipDirect),
+    ('scip_persistent', ScipPersistent),
 ]
 qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct_quadratic', GurobiDirectQuadratic),
-    ('scip_direct', SCIPDirect),
+    ('scip_direct', ScipDirect),
+    ('scip_persistent', ScipPersistent),
 ]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
