@@ -723,13 +723,10 @@ class ModelChangeDetector:
                 continue
             if ctype in self._known_active_ctypes:
                 continue
-            for comp in self._model.component_data_objects(
-                ctype, active=True, descend_into=True
-            ):
-                raise NotImplementedError(
-                    f'ModelChangeDetector does not know how to '
-                    'handle components with ctype {ctype}'
-                )
+            raise NotImplementedError(
+                f'ModelChangeDetector does not know how to '
+                'handle components with ctype {ctype}'
+            )
 
     def _set_instance(self):
 
