@@ -657,12 +657,13 @@ class Ipopt(SolverBase):
                 tokens = line.strip().split()
                 # IPOPT sometimes mashes the first two column values together
                 # (e.g., "2r-4.93e-03"). We need to split them.
-                m = re.match(
-                    r'^(\d+r?)([+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)$',
-                    tokens[0],
-                )
-                if m:
-                    tokens = [m.group(1), m.group(2)] + tokens[1:]
+                try:
+                    idx = tokens[0].index('-')
+                    head = tokens[0][:idx]
+                    if head and head.rstrip('r').isdigit():
+                        tokens[:1] = (head, tokens[0][idx:])
+                except ValueError:
+                    pass
 
                 iter_data = dict(zip(columns, tokens))
                 extra_tokens = tokens[n_expected_columns:]
