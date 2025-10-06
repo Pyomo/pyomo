@@ -292,13 +292,10 @@ class GurobiSolverMixin:
         Build a tiny model (>2000 vars) to test demo/community limits and
         classify license level.
         """
-        env = type(self)._gurobipy_env
-        if env is None:
-            # license handle couldn’t acquire an env (e.g., timeout)
-            return Availability.LicenseError
-
+        env = None
         m = None
         try:
+            env = gurobipy.Env()
             env.setParam("OutputFlag", 0)
             m = gurobipy.Model(env=env)
             m.Params.OutputFlag = 0
@@ -326,6 +323,11 @@ class GurobiSolverMixin:
             try:
                 if m is not None:
                     m.dispose()
+            except Exception:
+                pass
+            try:
+                if env is not None:
+                    env.close()
             except Exception:
                 pass
 
