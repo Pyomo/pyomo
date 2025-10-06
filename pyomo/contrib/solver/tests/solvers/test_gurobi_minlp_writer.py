@@ -533,10 +533,6 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(results.incumbent_objective, 0)
         self.assertEqual(results.objective_bound, 0)
 
-        # ESJ TODO: There's still a bug here, but it's with the
-        # expression type I'm passing through, not with the numpy
-        # situation now.
-
     def test_trivially_true_constraint(self):
         """
         We can pass trivially true things to Gurobi and it's fine
@@ -558,6 +554,3 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(results.incumbent_objective, 2)
         self.assertEqual(results.objective_bound, 2)
 
-
-# ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the
-# error in the solver log, so not sure what we want to do about that?

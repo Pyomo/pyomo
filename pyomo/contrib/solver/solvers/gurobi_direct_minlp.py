@@ -10,13 +10,6 @@
 #  ___________________________________________________________________________
 
 
-## TODO
-
-# Look into if I can piggyback off of ipopt writer and just plug in my walker
-# Move into contrib.solver: doc/onlinedoc/explanation/experimental has information about future solvers. Put some docs here.
-# Is there a half-matrix half-explicit way to give MINLPs to Gurobi? Soren thinks yes...
-# Open a PR into Miranda's fork.
-
 import datetime
 import io
 from operator import attrgetter, itemgetter
@@ -28,7 +21,7 @@ from pyomo.common.errors import InvalidValueError
 from pyomo.common.numeric_types import native_complex_types
 from pyomo.common.timing import HierarchicalTimer
 
-# ESJ TODO: We should move this somewhere sensible
+# ESJ TODO: Could we move this to util or somewhere less bizarre?
 from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
@@ -93,25 +86,21 @@ import sys
 
 
 """
-Even in Gurobi 12:
+In Gurobi 12:
 
 If you have f(x) == 0, you must write it as z == f(x) and then write z == 0.
 Basically, you must introduce auxiliary variables for all the general nonlinear
 parts. (And no worries about additively separable or anything--they do that 
 under the hood).
 
-Radhakrishna thinks we should replace the *entire* LHS of the constraint with the
+In this implementation, we replace the *entire* LHS of the constraint with the
 auxiliary variable rather than just the nonlinear part. Otherwise we would really
 need to keep track of what nonlinear subexpressions we had already replaced and make
-sure to use the same auxiliary variables.
+sure to use the same auxiliary variables, and from what we know, this is probably not
+worth it.
 
-Conclusion: So I think I should actually build on top of the linear walker and then
-replace anything that has a nonlinear part...
-
-Model.addConstr() doesn't have the three-arg version anymore.
-
-Let's not use the '.nl' attribute at all for now--seems like the exception rather than
-the rule that you would want to specifically tell Gurobi *not* to expand the expression.
+We are not using Gurobi's '.nl' attribute at all for now--its usage seems like the
+exception rather than the rule, so we will let Gurobi expand the expressions for now.
 """
 
 _CONSTANT = ExprType.CONSTANT
@@ -321,7 +310,7 @@ def _handle_abs_var(visitor, node, arg1):
 
 
 def _handle_abs_expression(visitor, node, arg1):
-    # we need auxiliary variable
+    # we need an auxiliary variable
     aux_arg = visitor.grb_model.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
     visitor.grb_model.addConstr(aux_arg == arg1[1])
     # This one truly is non-negative because it's an absolute value
@@ -379,7 +368,7 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         (_CONSTANT,): _handle_unary_constant,
     }
 
-    ## TODO: ExprIf, RangedExpressions (if we do exprif...
+    ## TODO: ExprIf, RangedExpressions (if we do exprif...)
     _exit_node_handlers[Expression] = {None: _handle_named_expression}
 
     # These are special because of quirks of Gurobi's current support for general

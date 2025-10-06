@@ -363,7 +363,7 @@ class TestGurobiMINLPWalker(CommonTest):
         _, expr = visitor.walk_expression(m.c.body)
 
         # You can't actually use this in a model in Gurobi 12, but you can build the
-        # expression... (It fails during the solve for some reason.)
+        # expression... (It fails during the solve.)
 
         x1 = visitor.var_map[id(m.x1)]
         x2 = visitor.var_map[id(m.x2)]
