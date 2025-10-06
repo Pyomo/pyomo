@@ -110,7 +110,7 @@ class ScipConfig(BranchAndBoundConfig):
         )
 
 
-def _handle_var(node, data, opt):
+def _handle_var(node, data, opt, visitor):
     if id(node) not in opt._pyomo_var_to_solver_var_map:
         scip_var = opt._add_var(node)
     else:
@@ -118,7 +118,13 @@ def _handle_var(node, data, opt):
     return scip_var
 
 
-def _handle_param(node, data, opt):
+def _handle_param(node, data, opt, visitor):
+    # for the persistent interface, we create scip variables in place
+    # of parameters. However, this makes things complicated for range 
+    # constraints because scip does not allow variables in the 
+    # lower and upper parts of range constraints
+    if visitor.in_range:
+        return node.value
     if not opt.is_persistent():
         return node.value
     if not node.mutable:
@@ -130,19 +136,19 @@ def _handle_param(node, data, opt):
     return scip_param
 
 
-def _handle_constant(node, data, opt):
+def _handle_constant(node, data, opt, visitor):
     return node.value
 
 
-def _handle_float(node, data, opt):
+def _handle_float(node, data, opt, visitor):
     return float(node)
 
 
-def _handle_negation(node, data, opt):
+def _handle_negation(node, data, opt, visitor):
     return -data[0]
 
 
-def _handle_pow(node, data, opt):
+def _handle_pow(node, data, opt, visitor):
     x, y = data  # x ** y = exp(log(x**y)) = exp(y*log(x))
     if is_constant(node.args[1]):
         return x**y
@@ -154,52 +160,52 @@ def _handle_pow(node, data, opt):
             return x**y  # scip will probably raise an error here
 
 
-def _handle_product(node, data, opt):
+def _handle_product(node, data, opt, visitor):
     assert len(data) == 2
     return data[0] * data[1]
 
 
-def _handle_division(node, data, opt):
+def _handle_division(node, data, opt, visitor):
     return data[0] / data[1]
 
 
-def _handle_sum(node, data, opt):
+def _handle_sum(node, data, opt, visitor):
     return sum(data)
 
 
-def _handle_exp(node, data, opt):
+def _handle_exp(node, data, opt, visitor):
     return scip.exp(data[0])
 
 
-def _handle_log(node, data, opt):
+def _handle_log(node, data, opt, visitor):
     return scip.log(data[0])
 
 
-def _handle_log10(node, data, opt):
+def _handle_log10(node, data, opt, visitor):
     return scip.log(data[0]) / math.log(10)
 
 
-def _handle_sin(node, data, opt):
+def _handle_sin(node, data, opt, visitor):
     return scip.sin(data[0])
 
 
-def _handle_cos(node, data, opt):
+def _handle_cos(node, data, opt, visitor):
     return scip.cos(data[0])
 
 
-def _handle_sqrt(node, data, opt):
+def _handle_sqrt(node, data, opt, visitor):
     return scip.sqrt(data[0])
 
 
-def _handle_abs(node, data, opt):
+def _handle_abs(node, data, opt, visitor):
     return abs(data[0])
 
 
-def _handle_tan(node, data, opt):
+def _handle_tan(node, data, opt, visitor):
     return scip.sin(data[0]) / scip.cos(data[0])
 
 
-def _handle_tanh(node, data, opt):
+def _handle_tanh(node, data, opt, visitor):
     x = data[0]
     _exp = scip.exp
     return (_exp(x) - _exp(-x)) / (_exp(x) + _exp(-x))
@@ -218,30 +224,32 @@ _unary_map = {
 }
 
 
-def _handle_unary(node, data, opt):
+def _handle_unary(node, data, opt, visitor):
     if node.getname() in _unary_map:
-        return _unary_map[node.getname()](node, data, opt)
+        return _unary_map[node.getname()](node, data, opt, visitor)
     else:
         raise NotImplementedError(f'unable to handle unary expression: {str(node)}')
 
 
-def _handle_equality(node, data, opt):
+def _handle_equality(node, data, opt, visitor):
     return data[0] == data[1]
 
 
-def _handle_ranged(node, data, opt):
+def _handle_ranged(node, data, opt, visitor):
+    # note that the lower and upper parts of the 
+    # range constraint cannot have variables
     return data[0] <= (data[1] <= data[2])
 
 
-def _handle_inequality(node, data, opt):
+def _handle_inequality(node, data, opt, visitor):
     return data[0] <= data[1]
 
 
-def _handle_named_expression(node, data, opt):
+def _handle_named_expression(node, data, opt, visitor):
     return data[0]
 
 
-def _handle_unit(node, data, opt):
+def _handle_unit(node, data, opt, visitor):
     return node.value
 
 
@@ -281,16 +289,26 @@ class _PyomoToScipVisitor(StreamBasedExpressionVisitor):
     def __init__(self, solver, **kwds):
         super().__init__(**kwds)
         self.solver = solver
+        self.in_range = False
+
+    def initializeWalker(self, expr):
+        self.in_range = False
+        return True, None
 
     def exitNode(self, node, data):
         nt = type(node)
         if nt in _operator_map:
-            return _operator_map[nt](node, data, self.solver)
+            return _operator_map[nt](node, data, self.solver, self)
         elif nt in native_numeric_types:
             _operator_map[nt] = _handle_float
-            return _handle_float(node, data, self.solver)
+            return _handle_float(node, data, self.solver, self)
         else:
             raise NotImplementedError(f'unrecognized expression type: {nt}')
+        
+    def enterNode(self, node):
+        if type(node) is RangedExpression:
+            self.in_range = True
+        return None, []
 
 
 logger = logging.getLogger("pyomo.solvers")
@@ -375,7 +393,7 @@ class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
             pyomo_model,
             opt,
         )
-        self._valid = False
+        self._valid = True
 
     def invalidate(self):
         self._valid = False
@@ -513,6 +531,7 @@ class ScipDirect(SolverBase):
 
             timer.start('optimize')
             with capture_output(TeeStream(*ostreams), capture_fd=True):
+                # scip_model.writeProblem(filename='foo.lp')
                 scip_model.optimize()
             timer.stop('optimize')
 
@@ -723,7 +742,7 @@ class ScipDirect(SolverBase):
                 vtype="C"
             )
 
-        if self._objective is not None:
+        if self._obj_con is not None:
             self._solver_model.delCons(self._obj_con)
 
         if obj is None:
@@ -850,7 +869,7 @@ class _ScipObserver(Observer):
         self.opt._add_variables(variables)
 
     def add_parameters(self, params: List[ParamData]):
-        pass
+        self.opt._add_parameters(params)
 
     def add_constraints(self, cons: List[ConstraintData]):
         self.opt._add_constraints(cons)
@@ -874,7 +893,7 @@ class _ScipObserver(Observer):
         self.opt._remove_variables(variables)
 
     def remove_parameters(self, params: List[ParamData]):
-        pass
+        self.opt._remove_parameters(params)
 
     def update_variables(self, variables: List[VarData]):
         self.opt._update_variables(variables)
@@ -893,13 +912,22 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
         self._observer = None
         self._change_detector = None
         self._last_results_object: Optional[Results] = None
-    
+        self._needs_reopt = False
+        self._range_constraints = set()
+
     def _clear(self):
         super()._clear()
         self._pyomo_model = None
         self._objective = None
         self._observer = None
         self._change_detector = None
+        self._needs_reopt = False
+
+    def _check_reopt(self):
+        if self._needs_reopt:
+            # self._solver_model.freeReoptSolve()  # when is it safe to use this one???
+            self._solver_model.freeTransform()
+            self._needs_reopt = False
 
     def _create_solver_model(self, pyomo_model):
         if pyomo_model is self._pyomo_model:
@@ -921,6 +949,7 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
 
     def solve(self, model, **kwds) -> Results:
         res = super().solve(model, **kwds)
+        self._needs_reopt = True
         return res
 
     def update(self):
@@ -957,19 +986,32 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
             self._last_results_object.solution_loader.invalidate()
 
     def _add_variables(self, variables: List[VarData]):
+        self._check_reopt()
         self._invalidate_last_results()
         for v in variables:
             self._add_var(v)
 
-    def _add_constraints(self, cons: List[ConstraintData]):
+    def _add_parameters(self, params: List[ParamData]):
+        self._check_reopt()
         self._invalidate_last_results()
+        for p in params:
+            self._add_param(p)
+
+    def _add_constraints(self, cons: List[ConstraintData]):
+        self._check_reopt()
+        self._invalidate_last_results()
+        for con in cons:
+            if type(con.expr) is RangedExpression:
+                self._range_constraints.add(con)
         super()._add_constraints(cons)
 
     def _add_sos_constraints(self, cons: List[SOSConstraintData]):
+        self._check_reopt()
         self._invalidate_last_results()
         return super()._add_sos_constraints(cons)
     
     def _add_objectives(self, objs: List[ObjectiveData]):
+        self._check_reopt()
         if len(objs) > 1:
             raise NotImplementedError(
                 'the persistent interface to gurobi currently '
@@ -994,6 +1036,7 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
         self._set_objective(obj)
 
     def _remove_objectives(self, objs: List[ObjectiveData]):
+        self._check_reopt()
         for obj in objs:
             if obj is not self._objective:
                 raise RuntimeError(
@@ -1005,23 +1048,41 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
                 self._set_objective(None)
 
     def _remove_constraints(self, cons: List[ConstraintData]):
+        self._check_reopt()
+        self._invalidate_last_results()
         for con in cons:
             scip_con = self._pyomo_con_to_solver_con_map.pop(con)
             self._solver_model.delCons(scip_con)
+            self._range_constraints.discard(con)
 
     def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
+        self._check_reopt()
+        self._invalidate_last_results()
         for con in cons:
             scip_con = self._pyomo_con_to_solver_con_map.pop(con)
             self._solver_model.delCons(scip_con)
 
     def _remove_variables(self, variables: List[VarData]):
+        self._check_reopt()
+        self._invalidate_last_results()
         for v in variables:
             vid = id(v)
             scip_var = self._pyomo_var_to_solver_var_map.pop(vid)
             self._solver_model.delVar(scip_var)
             self._vars.pop(vid)
 
+    def _remove_parameters(self, params: List[ParamData]):
+        self._check_reopt()
+        self._invalidate_last_results()
+        for p in params:
+            pid = id(p)
+            scip_var = self._pyomo_param_to_solver_param_map.pop(pid)
+            self._solver_model.delVar(scip_var)
+            self._params.pop(pid)
+
     def _update_variables(self, variables: List[VarData]):
+        self._check_reopt()
+        self._invalidate_last_results()
         for v in variables:
             vid = id(v)
             scip_var = self._pyomo_var_to_solver_var_map[vid]
@@ -1032,12 +1093,22 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
             self._solver_model.chgVarType(scip_var, vtype)
 
     def _update_parameters(self, params: List[ParamData]):
+        self._check_reopt()
+        self._invalidate_last_results()
         for p in params:
             pid = id(p)
             scip_var = self._pyomo_param_to_solver_param_map[pid]
             lb = ub = p.value
             self._solver_model.chgVarLb(scip_var, lb)
             self._solver_model.chgVarUb(scip_var, ub)
+            impacted_vars = self._change_detector.get_variables_impacted_by_param(p)
+            if impacted_vars:
+                self._update_variables(impacted_vars)
+            impacted_cons = self._change_detector.get_constraints_impacted_by_param(p)
+            for con in impacted_cons:
+                if con in self._range_constraints:
+                    self._remove_constraints([con])
+                    self._add_constraints([con])
 
     def add_variables(self, variables):
         if self._change_detector is None:
