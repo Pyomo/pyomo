@@ -12,13 +12,13 @@
 from pyomo.common.tee import capture_output
 from pyomo.common import unittest
 
-from pyomo.contrib.solver.solvers.gurobi_direct import (
-    gurobipy_available,
-    GurobiSolverMixin,
-    GurobiDirect,
-)
+from pyomo.contrib.solver.solvers.gurobi_direct import GurobiSolverMixin, GurobiDirect
 
 from pyomo.contrib.solver.common.base import Availability
+
+opt = GurobiDirect()
+if not opt.available():
+    raise unittest.SkipTest("Gurobi is not available")
 
 
 class TestGurobiMixin(unittest.TestCase):
@@ -185,7 +185,6 @@ class TestGurobiMixin(unittest.TestCase):
             self.assertIsNone(GurobiDirect._gurobipy_env)
 
 
-@unittest.skipIf(not gurobipy_available, "The 'gurobipy' module is not available.")
 class TestGurobiDirectInterface(unittest.TestCase):
     def test_available_cache(self):
         opt = GurobiDirect()
