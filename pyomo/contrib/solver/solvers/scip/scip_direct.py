@@ -830,7 +830,7 @@ class ScipDirect(SolverBase):
 
     def _mipstart(self):
         # TODO: it is also possible to specify continuous variables, but
-        #       I think we should have a differnt option for that
+        #       I think we should have a different option for that
         sol = self._solver_model.createPartialSol()
         for vid, scip_var in self._pyomo_var_to_solver_var_map.items():
             pyomo_var = self._vars[vid]
