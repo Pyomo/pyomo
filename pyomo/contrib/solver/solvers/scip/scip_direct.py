@@ -25,6 +25,7 @@ from pyomo.core.base.block import BlockData
 from pyomo.core.base.var import VarData, ScalarVar
 from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.base.constraint import Constraint, ConstraintData
+from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.base.sos import SOSConstraint, SOSConstraintData
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.expr.numeric_expr import (
@@ -72,7 +73,7 @@ from pyomo.common.config import ConfigValue
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.core.base.units_container import _PyomoUnit
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.contrib.observer.model_observer import Observer, ModelChangeDetector
+from pyomo.contrib.observer.model_observer import Observer, ModelChangeDetector, AutoUpdateConfig
 
 
 logger = logging.getLogger(__name__)
@@ -418,7 +419,6 @@ class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
     def load_import_suffixes(self, solution_id=None):
         self._assert_solution_still_valid()
         super().load_import_suffixes(solution_id)
-
 
 
 class ScipDirect(SolverBase):
@@ -822,7 +822,27 @@ class ScipDirect(SolverBase):
         self._solver_model.addSol(sol)
 
 
-class _SCIPObserver(Observer):
+class ScipPersistentConfig(ScipConfig):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        ScipConfig.__init__(
+            self,
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+        self.auto_updates: bool = self.declare('auto_updates', AutoUpdateConfig())
+
+
+class _ScipObserver(Observer):
     def __init__(self, opt: ScipPersistent) -> None:
         self.opt = opt
 
@@ -838,8 +858,11 @@ class _SCIPObserver(Observer):
     def add_sos_constraints(self, cons: List[SOSConstraintData]):
         self.opt._add_sos_constraints(cons)
 
-    def set_objective(self, obj: ObjectiveData | None):
-        self.opt._set_objective(obj)
+    def add_objectives(self, objs: List[ObjectiveData]):
+        self.opt._add_objectives(objs)
+
+    def remove_objectives(self, objs: List[ObjectiveData]):
+        self.opt._remove_objectives(objs)
 
     def remove_constraints(self, cons: List[ConstraintData]):
         self.opt._remove_constraints(cons)
@@ -862,39 +885,201 @@ class _SCIPObserver(Observer):
 
 class ScipPersistent(ScipDirect, PersistentSolverBase):
     _minimum_version = (5, 5, 0)  # this is probably conservative
-
-    CONFIG = ScipConfig()
+    CONFIG = ScipPersistentConfig()
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._pyomo_model = None
-        self._objective = None
-        self._observer = _SCIPObserver(self)
-        self._change_detector = ModelChangeDetector(observers=[self._observer])
-
-    @property
-    def auto_updates(self):
-        return self._change_detector.config
+        self._observer = None
+        self._change_detector = None
+        self._last_results_object: Optional[Results] = None
     
     def _clear(self):
         super()._clear()
         self._pyomo_model = None
         self._objective = None
+        self._observer = None
+        self._change_detector = None
 
-    def _create_solver_model(self, model):
-        if model is self._pyomo_model:
+    def _create_solver_model(self, pyomo_model):
+        if pyomo_model is self._pyomo_model:
             self.update()
         else:
-            self.set_instance(model=model)
+            self.set_instance(pyomo_model=pyomo_model)
 
         solution_loader = ScipPersistentSolutionLoader(
             solver_model=self._solver_model,
             var_id_map=self._vars,
             var_map=self._pyomo_var_to_solver_var_map,
             con_map=self._pyomo_con_to_solver_con_map,
-            pyomo_model=model,
+            pyomo_model=pyomo_model,
             opt=self,
         )
 
         has_obj = self._objective is not None
         return self._solver_model, solution_loader, has_obj
+
+    def solve(self, model, **kwds) -> Results:
+        res = super().solve(model, **kwds)
+        return res
+
+    def update(self):
+        if self.config.timer is None:
+            timer = HierarchicalTimer()
+        else:
+            timer = self.config.timer
+        if self._pyomo_model is None:
+            raise RuntimeError('must call set_instance or solve before update')
+        timer.start('update')
+        self._change_detector.update(timer=timer)
+        timer.stop('update')
+
+    def set_instance(self, pyomo_model):
+        if self.config.timer is None:
+            timer = HierarchicalTimer()
+        else:
+            timer = self.config.timer
+        self._clear()
+        self._pyomo_model = pyomo_model
+        self._solver_model = scip.Model()
+        self._observer = _ScipObserver(self)
+        timer.start('set_instance')
+        self._change_detector = ModelChangeDetector(
+            model=self._pyomo_model,
+            observers=[self._observer],
+            **dict(self.config.auto_updates),
+        )
+        self._change_detector.config = self.config.auto_updates
+        timer.stop('set_instance')
+
+    def _invalidate_last_results(self):
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
+
+    def _add_variables(self, variables: List[VarData]):
+        self._invalidate_last_results()
+        for v in variables:
+            self._add_var(v)
+
+    def _add_constraints(self, cons: List[ConstraintData]):
+        self._invalidate_last_results()
+        super()._add_constraints(cons)
+
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
+        self._invalidate_last_results()
+        return super()._add_sos_constraints(cons)
+    
+    def _add_objectives(self, objs: List[ObjectiveData]):
+        if len(objs) > 1:
+            raise NotImplementedError(
+                'the persistent interface to gurobi currently '
+                f'only supports single-objective problems; got {len(objs)}: '
+                f'{[str(i) for i in objs]}'
+            )
+
+        if len(objs) == 0:
+            return
+
+        obj = objs[0]
+
+        if self._objective is not None:
+            raise NotImplementedError(
+                'the persistent interface to gurobi currently '
+                'only supports single-objective problems; tried to add '
+                f'an objective ({str(obj)}), but there is already an '
+                f'active objective ({str(self._objective)})'
+            )
+
+        self._invalidate_last_results()
+        self._set_objective(obj)
+
+    def _remove_objectives(self, objs: List[ObjectiveData]):
+        for obj in objs:
+            if obj is not self._objective:
+                raise RuntimeError(
+                    'tried to remove an objective that has not been added: '
+                    f'{str(obj)}'
+                )
+            else:
+                self._invalidate_last_results()
+                self._set_objective(None)
+
+    def _remove_constraints(self, cons: List[ConstraintData]):
+        for con in cons:
+            scip_con = self._pyomo_con_to_solver_con_map.pop(con)
+            self._solver_model.delCons(scip_con)
+
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
+        for con in cons:
+            scip_con = self._pyomo_con_to_solver_con_map.pop(con)
+            self._solver_model.delCons(scip_con)
+
+    def _remove_variables(self, variables: List[VarData]):
+        for v in variables:
+            vid = id(v)
+            scip_var = self._pyomo_var_to_solver_var_map.pop(vid)
+            self._solver_model.delVar(scip_var)
+            self._vars.pop(vid)
+
+    def _update_variables(self, variables: List[VarData]):
+        for v in variables:
+            vid = id(v)
+            scip_var = self._pyomo_var_to_solver_var_map[vid]
+            vtype = self._scip_vtype_from_var(v)
+            lb, ub = self._scip_lb_ub_from_var(v)
+            self._solver_model.chgVarLb(scip_var, lb)
+            self._solver_model.chgVarUb(scip_var, ub)
+            self._solver_model.chgVarType(scip_var, vtype)
+
+    def _update_parameters(self, params: List[ParamData]):
+        for p in params:
+            pid = id(p)
+            scip_var = self._pyomo_param_to_solver_param_map[pid]
+            lb = ub = p.value
+            self._solver_model.chgVarLb(scip_var, lb)
+            self._solver_model.chgVarUb(scip_var, ub)
+
+    def add_variables(self, variables):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.add_variables(variables)
+
+    def add_constraints(self, cons):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.add_constraints(cons)
+
+    def add_sos_constraints(self, cons):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.add_sos_constraints(cons)
+
+    def set_objective(self, obj: ObjectiveData):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.add_objectives([obj])
+
+    def remove_constraints(self, cons):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.remove_constraints(cons)
+
+    def remove_sos_constraints(self, cons):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.remove_sos_constraints(cons)
+
+    def remove_variables(self, variables):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.remove_variables(variables)
+
+    def update_variables(self, variables):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.update_variables(variables)
+
+    def update_parameters(self, params):
+        if self._change_detector is None:
+            raise RuntimeError('call set_instance first')
+        self._change_detector.update_parameters(params)
