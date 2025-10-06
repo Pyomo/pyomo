@@ -648,6 +648,8 @@ class Ipopt(SolverBase):
                 "alpha_pr",
                 "ls",
             ]
+            numerical_columns = set(columns)
+            numerical_columns.remove('iter')
             iterations = []
             n_expected_columns = len(columns)
 
@@ -670,6 +672,7 @@ class Ipopt(SolverBase):
                 restoration = iter_num.endswith("r")
                 if restoration:
                     iter_num = iter_num[:-1]
+
                 try:
                     iter_num = int(iter_num)
                 except ValueError:
@@ -699,12 +702,7 @@ class Ipopt(SolverBase):
 
                 # Attempt to cast all values to float where possible
                 for key, val in iter_data.items():
-                    if key in {
-                        'iter',
-                        'restoration',
-                        'step_acceptance',
-                        'diagnostic_tags',
-                    }:
+                    if key not in numerical_columns:
                         continue
                     if val == '-':
                         iter_data[key] = None
@@ -718,9 +716,8 @@ class Ipopt(SolverBase):
                             )
 
                 assert len(iterations) == iter_num, (
-                    f"Total number of iterations logged ({len(iterations)}) does "
-                    f"not match the parsed number of iterations ({iter_num}). "
-                    f"Processed iterations: {iterations}"
+                    f"Total number of iterations parsed {len(iterations)}\n"
+                    f"does not match the expected iteration number ({iter_num})."
                 )
                 iterations.append(iter_data)
 
