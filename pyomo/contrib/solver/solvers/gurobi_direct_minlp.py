@@ -84,24 +84,12 @@ from pyomo.repn.util import (
 
 import sys
 
+### FIXME: Remove the following as soon as non-active components no
+### longer report active==True
+from pyomo.network import Port
+from pyomo.core.base import RangeSet, Set
 
-"""
-In Gurobi 12:
-
-If you have f(x) == 0, you must write it as z == f(x) and then write z == 0.
-Basically, you must introduce auxiliary variables for all the general nonlinear
-parts. (And no worries about additively separable or anything--they do that 
-under the hood).
-
-In this implementation, we replace the *entire* LHS of the constraint with the
-auxiliary variable rather than just the nonlinear part. Otherwise we would really
-need to keep track of what nonlinear subexpressions we had already replaced and make
-sure to use the same auxiliary variables, and from what we know, this is probably not
-worth it.
-
-We are not using Gurobi's '.nl' attribute at all for now--its usage seems like the
-exception rather than the rule, so we will let Gurobi expand the expressions for now.
-"""
+###
 
 _CONSTANT = ExprType.CONSTANT
 _GENERAL = ExprType.GENERAL
@@ -110,6 +98,7 @@ _QUADRATIC = ExprType.QUADRATIC
 _VARIABLE = ExprType.VARIABLE
 
 _function_map = {}
+_domain_map = ComponentMap()
 
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 if gurobipy_available:
@@ -140,25 +129,36 @@ if gurobipy_available:
         }
     )
 
-### FIXME: Remove the following as soon as non-active components no
-### longer report active==True
-from pyomo.network import Port
-from pyomo.core.base import RangeSet, Set
-
-###
-
-
-_domain_map = ComponentMap(
-    (
-        (Binary, (GRB.BINARY, -float('inf'), float('inf'))),
-        (Integers, (GRB.INTEGER, -float('inf'), float('inf'))),
-        (NonNegativeIntegers, (GRB.INTEGER, 0, float('inf'))),
-        (NonPositiveIntegers, (GRB.INTEGER, -float('inf'), 0)),
-        (NonNegativeReals, (GRB.CONTINUOUS, 0, float('inf'))),
-        (NonPositiveReals, (GRB.CONTINUOUS, -float('inf'), 0)),
-        (Reals, (GRB.CONTINUOUS, -float('inf'), float('inf'))),
+    _domain_map.update(
+        (
+            (Binary, (GRB.BINARY, -float('inf'), float('inf'))),
+            (Integers, (GRB.INTEGER, -float('inf'), float('inf'))),
+            (NonNegativeIntegers, (GRB.INTEGER, 0, float('inf'))),
+            (NonPositiveIntegers, (GRB.INTEGER, -float('inf'), 0)),
+            (NonNegativeReals, (GRB.CONTINUOUS, 0, float('inf'))),
+            (NonPositiveReals, (GRB.CONTINUOUS, -float('inf'), 0)),
+            (Reals, (GRB.CONTINUOUS, -float('inf'), float('inf'))),
+        )
     )
-)
+
+    
+"""
+In Gurobi 12:
+
+If you have f(x) == 0, you must write it as z == f(x) and then write z == 0.
+Basically, you must introduce auxiliary variables for all the general nonlinear
+parts. (And no worries about additively separable or anything--they do that 
+under the hood).
+
+In this implementation, we replace the *entire* LHS of the constraint with the
+auxiliary variable rather than just the nonlinear part. Otherwise we would really
+need to keep track of what nonlinear subexpressions we had already replaced and make
+sure to use the same auxiliary variables, and from what we know, this is probably not
+worth it.
+
+We are not using Gurobi's '.nl' attribute at all for now--its usage seems like the
+exception rather than the rule, so we will let Gurobi expand the expressions for now.
+"""
 
 
 def _create_grb_var(visitor, pyomo_var, name=""):
