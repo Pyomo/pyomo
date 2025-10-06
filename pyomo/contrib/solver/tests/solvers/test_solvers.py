@@ -2381,7 +2381,8 @@ class TestLegacySolverInterface(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.y)
         m.c1 = pyo.Constraint(expr=(0, m.y - m.a1 * m.x - m.b1, None))
         m.c2 = pyo.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
-        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        if (name, opt_class) in dual_solvers:
+            m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:
@@ -2393,8 +2394,9 @@ class TestLegacySolverInterface(unittest.TestCase):
             pyo.assert_optimal_termination(res)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-            self.assertAlmostEqual(m.dual[m.c1], (1 + a1 / (a2 - a1)))
-            self.assertAlmostEqual(m.dual[m.c2], a1 / (a2 - a1))
+            if (name, opt_class) in dual_solvers:
+                self.assertAlmostEqual(m.dual[m.c1], (1 + a1 / (a2 - a1)))
+                self.assertAlmostEqual(m.dual[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=all_solvers)
     def test_load_solutions(self, name: str, opt_class: Type[SolverBase]):
@@ -2405,11 +2407,14 @@ class TestLegacySolverInterface(unittest.TestCase):
         m.x = pyo.Var()
         m.obj = pyo.Objective(expr=m.x)
         m.c = pyo.Constraint(expr=(-1, m.x, 1))
-        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        if (name, opt_class) in dual_solvers:
+            m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         res = opt.solve(m, load_solutions=False)
         pyo.assert_optimal_termination(res)
         self.assertIsNone(m.x.value)
-        self.assertNotIn(m.c, m.dual)
+        if (name, opt_class) in dual_solvers:
+            self.assertNotIn(m.c, m.dual)
         m.solutions.load_from(res)
         self.assertAlmostEqual(m.x.value, -1)
-        self.assertAlmostEqual(m.dual[m.c], 1)
+        if (name, opt_class) in dual_solvers:
+            self.assertAlmostEqual(m.dual[m.c], 1)
