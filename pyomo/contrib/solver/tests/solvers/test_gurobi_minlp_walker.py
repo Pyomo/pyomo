@@ -11,9 +11,7 @@
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.core.expr import (
-    ProductExpression
-)
+from pyomo.core.expr import ProductExpression
 from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiMINLPVisitor
@@ -77,7 +75,7 @@ class TestGurobiMINLPWalker(CommonTest):
         aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(constrs[0])
         self.assertIs(aux_var, aux)
         return opcode, data, parent
-    
+
     def test_var_domains(self):
         m = self.get_model()
         e = m.x1 + m.x2 + m.x3 + m.y1 + m.y2 + m.y3 + m.z1
@@ -242,13 +240,13 @@ class TestGurobiMINLPWalker(CommonTest):
         # this is a "nonlinear"
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
         assertExpressionsEqual(
             self,
             pyo_expr,
-            ProductExpression((ProductExpression((0.0, m.x1, m.x2, m.x3)),))
+            ProductExpression((ProductExpression((0.0, m.x1, m.x2, m.x3)),)),
         )
 
     def test_write_division(self):
@@ -313,14 +311,10 @@ class TestGurobiMINLPWalker(CommonTest):
         # This is general nonlinear
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        assertExpressionsEqual(
-            self,
-            pyo_expr,
-            m.x1 ** 3.0
-        )
+        assertExpressionsEqual(self, pyo_expr, m.x1**3.0)
 
     def test_write_power_expression_var_var(self):
         m = self.get_model()
@@ -336,14 +330,10 @@ class TestGurobiMINLPWalker(CommonTest):
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        assertExpressionsEqual(
-            self,
-            pyo_expr,
-            m.x1 ** m.x2
-        )
+        assertExpressionsEqual(self, pyo_expr, m.x1**m.x2)
 
     def test_write_power_expression_const_var(self):
         m = self.get_model()
@@ -355,14 +345,10 @@ class TestGurobiMINLPWalker(CommonTest):
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        assertExpressionsEqual(
-            self,
-            pyo_expr,
-            2.0 ** m.x2
-        )
+        assertExpressionsEqual(self, pyo_expr, 2.0**m.x2)
 
     def test_write_absolute_value_of_var(self):
         # Gurobi doesn't support abs of expressions, so we have to do a factorable
@@ -448,14 +434,10 @@ class TestGurobiMINLPWalker(CommonTest):
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        assertExpressionsEqual(
-            self,
-            pyo_expr,
-            4.0 ** m.x2
-        )
+        assertExpressionsEqual(self, pyo_expr, 4.0**m.x2)
 
     def test_monomial_expression(self):
         m = self.get_model()
@@ -497,14 +479,10 @@ class TestGurobiMINLPWalker(CommonTest):
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
-        reverse_var_map = {grb_v : pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        assertExpressionsEqual(
-            self,
-            pyo_expr,
-            log(m.x1)
-        )
+        assertExpressionsEqual(self, pyo_expr, log(m.x1))
 
     def test_handle_complex_number_sqrt(self):
         m = self.get_model()
