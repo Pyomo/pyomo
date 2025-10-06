@@ -9,4 +9,3 @@ Solver Interfaces
    gurobi_direct.rst
    gurobi_persistent.rst
    xpress_persistent.rst
-   scip_persistent.rst
