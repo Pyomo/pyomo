@@ -326,7 +326,7 @@ class GurobiSolverMixin:
                 pass
 
     def version(self, recheck: bool = False) -> Optional[Tuple[int, int, int]]:
-        if not recheck and self._version is not None:
+        if not recheck and self._version_cache is not None:
             return self._version_cache
 
         if not self._gurobipy_available:
