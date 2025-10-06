@@ -68,8 +68,6 @@ def grb_nl_to_pyo_expr(opcode, data, parent, var_map):
             )
         if i:
             # there are two special cases here to account for minus and square
-            print(ans[parent].__class__)
-            print(ans[parent]._args_)
             ans[parent]._args_ = ans[parent]._args_ + [ans[-1]]
             if ans[parent].__class__ in nary_ops:
                 ans[parent]._nargs += 1
