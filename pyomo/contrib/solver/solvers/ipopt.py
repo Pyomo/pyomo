@@ -655,12 +655,12 @@ class Ipopt(SolverBase):
                 tokens = line.strip().split()
                 # IPOPT sometimes mashes the first two column values together
                 # (e.g., "2r-4.93e-03"). We need to split them.
-                try:
-                    idx = tokens[0].index('-')
-                    tokens[:1] = (tokens[0][:idx], tokens[0][idx:])
-                except ValueError:
-                    # No '-' found, leave as-is
-                    pass
+                m = re.match(
+                    r'^(\d+r?)([+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)$',
+                    tokens[0],
+                )
+                if m:
+                    tokens = [m.group(1), m.group(2)] + tokens[1:]
 
                 iter_data = dict(zip(columns, tokens))
                 extra_tokens = tokens[n_expected_columns:]
@@ -718,8 +718,9 @@ class Ipopt(SolverBase):
                             )
 
                 assert len(iterations) == iter_num, (
-                    f"Total number of iterations logged ({iterations}) does "
-                    f"not match the parsed number of iterations ({iter_num})."
+                    f"Total number of iterations logged ({len(iterations)}) does "
+                    f"not match the parsed number of iterations ({iter_num}). "
+                    f"Processed iterations: {iterations}"
                 )
                 iterations.append(iter_data)
 
