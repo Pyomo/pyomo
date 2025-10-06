@@ -553,4 +553,3 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(value(m.obj), 2)
         self.assertEqual(results.incumbent_objective, 2)
         self.assertEqual(results.objective_bound, 2)
-
