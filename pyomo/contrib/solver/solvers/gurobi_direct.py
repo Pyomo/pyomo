@@ -243,12 +243,18 @@ class GurobiSolverMixin:
     duplicate code.
     """
 
-    _gurobipy_available = gurobipy_available
     _num_gurobipy_env_clients = 0
     _gurobipy_env = None
 
     _available_cache = None
     _version_cache = None
+
+    def _is_gp_available(self) -> bool:
+        try:
+            # this triggers the deferred import
+            return bool(gurobipy_available)
+        except Exception:
+            return False
 
     def available(self, recheck: bool = False) -> Availability:
         """
@@ -260,14 +266,12 @@ class GurobiSolverMixin:
         """
         if not recheck and self._available_cache is not None:
             return self._available_cache
-        # this triggers the deferred import
-        #
         # Note that we set the _available_cache on the *most derived
         # class* and not on the instance, or on the base class.  That
         # allows different derived interfaces to have different
         # availability (e.g., persistent has a minimum version
         # requirement that the direct interface doesn't)
-        if not self._gurobipy_available:
+        if not self._is_gp_available():
             self.__class__._available_cache = Availability.NotFound
         else:
             with capture_output(capture_fd=True):
@@ -329,14 +333,14 @@ class GurobiSolverMixin:
         if not recheck and self._version_cache is not None:
             return self._version_cache
 
-        if not self._gurobipy_available:
+        if not self._is_gp_available():
             return None
-        else:
-            self.__class__._version_cache = (
-                gurobipy.GRB.VERSION_MAJOR,
-                gurobipy.GRB.VERSION_MINOR,
-                gurobipy.GRB.VERSION_TECHNICAL,
-            )
+
+        self.__class__._version_cache = (
+            gurobipy.GRB.VERSION_MAJOR,
+            gurobipy.GRB.VERSION_MINOR,
+            gurobipy.GRB.VERSION_TECHNICAL,
+        )
         return self._version_cache
 
     @classmethod
