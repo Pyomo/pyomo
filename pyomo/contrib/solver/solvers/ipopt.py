@@ -621,9 +621,6 @@ class Ipopt(SolverBase):
         if isinstance(output, io.StringIO):
             output = output.getvalue()
 
-        print("************* Raw output:\n")
-        print(output)
-
         # Stop parsing if there is nothing to parse
         if not output:
             logger.log(
@@ -639,7 +636,6 @@ class Ipopt(SolverBase):
         # Gather all the iteration data
         iter_table = re.findall(r'^(?:\s*\d+.*?)$', output, re.MULTILINE)
         if iter_table:
-            print("********* Full iteration table:\n", iter_table)
             columns = [
                 "iter",
                 "objective",
@@ -658,7 +654,6 @@ class Ipopt(SolverBase):
             n_expected_columns = len(columns)
 
             for line in iter_table:
-                print("********* Current line:\n", line)
                 tokens = line.strip().split()
                 # IPOPT sometimes mashes the first two column values together
                 # (e.g., "2r-4.93e-03"). We need to split them.
