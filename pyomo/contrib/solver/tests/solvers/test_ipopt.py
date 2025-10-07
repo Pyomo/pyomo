@@ -9,8 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import os
+import os, sys
 import subprocess
+from contextlib import contextmanager
 
 import pyomo.environ as pyo
 from pyomo.common.envvar import is_windows
@@ -27,6 +28,23 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.repn.plugins.nl_writer import NLWriter
 
 ipopt_available = ipopt.Ipopt().available()
+
+
+@contextmanager
+def windows_tee_buffer(size=1 << 20):
+    """Temporarily increase TeeStream buffer size on Windows"""
+    if not sys.platform.startswith("win"):
+        # Only windows has an issue
+        yield
+        return
+    import pyomo.common.tee as tee
+
+    old = tee._pipe_buffersize
+    tee._pipe_buffersize = size
+    try:
+        yield
+    finally:
+        tee._pipe_buffersize = old
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -586,20 +604,21 @@ class TestIpopt(unittest.TestCase):
         self.assertFalse(hasattr(result.extra_info, 'iteration_log'))
 
     def test_ipopt_loud_print_level(self):
-        model = self.create_model()
-        result = ipopt.Ipopt().solve(model, solver_options={'print_level': 8})
-        # Nothing unexpected should be in the results object at this point,
-        # except that the solver_log is significantly longer
-        self.assertEqual(result.iteration_count, 11)
-        self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
-        self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
-        self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
-        model = self.create_model()
-        result = ipopt.Ipopt().solve(model, solver_options={'print_level': 12})
-        self.assertEqual(result.iteration_count, 11)
-        self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
-        self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
-        self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
+        with windows_tee_buffer(1 << 20):
+            model = self.create_model()
+            result = ipopt.Ipopt().solve(model, solver_options={'print_level': 8})
+            # Nothing unexpected should be in the results object at this point,
+            # except that the solver_log is significantly longer
+            self.assertEqual(result.iteration_count, 11)
+            self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
+            self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
+            self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
+            model = self.create_model()
+            result = ipopt.Ipopt().solve(model, solver_options={'print_level': 12})
+            self.assertEqual(result.iteration_count, 11)
+            self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
+            self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
+            self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
 
     def test_ipopt_results(self):
         model = self.create_model()

@@ -37,7 +37,7 @@ _poll_rampup = 10
 # ~(13.1 * #threads) seconds
 _poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
 _poll_timeout_deadlock = 100  # seconds
-_pipe_buffersize = 1 << 10  # 1024
+_pipe_buffersize = 1 << 16  # 65536
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
 try:
@@ -47,7 +47,7 @@ try:
         from win32pipe import FdCreatePipe, PeekNamedPipe, SetNamedPipeHandleState
 
         # This constant from Microsoft SetNamedPipeHandleState documentation:
-        PIPE_NOWAIT = 0
+        PIPE_NOWAIT = 1
     else:
         from select import select
     _peek_available = True
