@@ -48,7 +48,7 @@ Citation
 --------
 If you use the ``pyomo.dae.flatten`` module in your research, we would appreciate
 you citing the following paper, which gives more detail about the motivation for
-and examples of using this functinoality.
+and examples of using this functionality.
 
 .. code-block:: bibtex
 

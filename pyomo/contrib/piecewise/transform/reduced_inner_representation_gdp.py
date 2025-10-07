@@ -45,7 +45,7 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationB
            targets must be Blocks and/or PiecewiseLinearFunctions.
         2) With 'descend_into_expressions' True. This is less computationally
            efficient, but will respect hierarchical structure by finding
-           uses of PiecewiseLinearFunctions in Constraint and Obective
+           uses of PiecewiseLinearFunctions in Constraint and Objective
            expressions and putting their transformed counterparts on the same
            parent Block as the component owning their parent expression. In
            this mode, targets must be Blocks, Constraints, and/or Objectives.
