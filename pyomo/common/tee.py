@@ -47,7 +47,7 @@ try:
         from win32pipe import FdCreatePipe, PeekNamedPipe, SetNamedPipeHandleState
 
         # This constant from Microsoft SetNamedPipeHandleState documentation:
-        PIPE_NOWAIT = 1
+        PIPE_NOWAIT = 0
     else:
         from select import select
     _peek_available = True
