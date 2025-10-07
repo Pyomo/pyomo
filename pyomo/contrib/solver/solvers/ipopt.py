@@ -677,7 +677,7 @@ class Ipopt(SolverBase):
                 try:
                     iter_num = int(iter_num)
                 except ValueError:
-                    raise ValueError(
+                    logger.warning(
                         f"Could not parse Ipopt iteration number: {iter_num}"
                     )
 
@@ -697,7 +697,7 @@ class Ipopt(SolverBase):
                     if all(tok in _DIAGNOSTIC_TAGS for tok in extra_tokens):
                         iter_data['diagnostic_tags'] = "".join(extra_tokens)
                     else:
-                        raise ValueError(
+                        logger.warning(
                             f"Unrecognized Ipopt diagnostic tags {extra_tokens} on line: {line}"
                         )
 
@@ -716,10 +716,11 @@ class Ipopt(SolverBase):
                                 f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
                             )
 
-                assert len(iterations) == iter_num, (
-                    f"Total number of iterations parsed {len(iterations)}\n"
-                    f"does not match the expected iteration number ({iter_num})."
-                )
+                if len(iterations) != iter_num:
+                    logger.warning(
+                        f"Total number of iterations parsed {len(iterations)} "
+                        f"does not match the expected iteration number ({iter_num})."
+                    )
                 iterations.append(iter_data)
 
             parsed_data['iteration_log'] = iterations
