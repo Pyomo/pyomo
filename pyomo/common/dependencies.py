@@ -346,7 +346,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
 
     def __bool__(self):
         self.resolve()
-        return self._available
+        return bool(self._available)
 
     def resolve(self):
         # Only attempt the import once, then cache some form of result
