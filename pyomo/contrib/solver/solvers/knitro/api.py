@@ -9,12 +9,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from typing import Optional
+
 from pyomo.common.dependencies import attempt_import
 
 knitro, KNITRO_AVAILABLE = attempt_import("knitro")
 
 
-def get_version() -> str:
+def get_version() -> Optional[str]:
     if not bool(KNITRO_AVAILABLE):
-        return "0.0.0"
+        return None
     return knitro.__version__

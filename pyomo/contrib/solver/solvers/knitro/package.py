@@ -61,14 +61,18 @@ class Package:
         return knitro.KN_new_lm(lmc)
 
     @staticmethod
-    def get_version() -> tuple[int, int, int]:
+    def get_version() -> Optional[tuple[int, int, int]]:
         """Get the version of the KNITRO solver as a tuple.
 
         Returns:
-            tuple[int, int, int]: The (major, minor, patch) version of KNITRO.
+            tuple[int, int, int]: The (major, minor, patch) version of KNITRO
+            or None if KNITRO version could not be determined.
 
         """
-        major, minor, patch = map(int, get_version().split("."))
+        version = get_version()
+        if version is None:
+            return None
+        major, minor, patch = map(int, version.split("."))
         return major, minor, patch
 
     @staticmethod
@@ -103,5 +107,5 @@ class PackageChecker:
             self._available_cache = Package.check_availability()
         return self._available_cache
 
-    def version(self) -> tuple[int, int, int]:
+    def version(self) -> Optional[tuple[int, int, int]]:
         return Package.get_version()
