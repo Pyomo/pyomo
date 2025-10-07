@@ -621,6 +621,9 @@ class Ipopt(SolverBase):
         if isinstance(output, io.StringIO):
             output = output.getvalue()
 
+        print("************* Raw output:\n")
+        print(output)
+
         # Stop parsing if there is nothing to parse
         if not output:
             logger.log(
