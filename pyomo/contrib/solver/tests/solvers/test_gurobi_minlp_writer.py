@@ -17,7 +17,7 @@ from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
 )
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.core.expr.numeric_expr import SumExpression
+from pyomo.core.expr.numeric_expr import SumExpression, ProductExpression
 from pyomo.environ import (
     Binary,
     BooleanVar,
@@ -477,36 +477,14 @@ class TestGurobiMINLPWriter(CommonTest):
         res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(c)
         # This is where we link into the linear inequality constraint
         self.assertIs(res_var, aux_var)
+        reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in var_map.items()}
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        self.assertEqual(len(opcode), 6)
-        self.assertEqual(parent[0], -1)  # root
-        self.assertEqual(opcode[0], GRB.OPCODE_MULTIPLY)
-        self.assertEqual(data[0], -1)  # no additional data
-
-        # first arg is another multiply with three children
-        self.assertEqual(parent[1], 0)
-        self.assertEqual(opcode[1], GRB.OPCODE_MULTIPLY)
-        self.assertEqual(data[0], -1)
-
-        # second arg is the constant
-        self.assertEqual(parent[2], 1)
-        self.assertEqual(opcode[2], GRB.OPCODE_CONSTANT)
-        self.assertEqual(data[2], 0)
-
-        # third arg is x1
-        self.assertEqual(parent[3], 1)
-        self.assertEqual(opcode[3], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[3], x1)
-
-        # fourth arg is x2
-        self.assertEqual(parent[4], 1)
-        self.assertEqual(opcode[4], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[4], x2)
-
-        # fifth arg is x3, whose parent is the root
-        self.assertEqual(parent[5], 0)
-        self.assertEqual(opcode[5], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[5], x3)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            ProductExpression((ProductExpression((0.0, m.x1, m.x2, m.x3)),)),
+        )
 
         opt = SolverFactory('gurobi_direct_minlp')
         opt.config.raise_exception_on_nonoptimal_result = False
