@@ -354,7 +354,7 @@ class FIMExternalGreyBox(
         # No constraints so this returns `None`
         return None
 
-    def evaluate_hessian_outputs(self, FIM=None):
+    def evaluate_hessian_outputs(self):
         # Compute the hessian of the objective function with
         # respect to the fisher information matrix. Then, return
         # a coo_matrix that aligns with what IPOPT will expect.
