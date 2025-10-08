@@ -318,12 +318,13 @@ class FIMExternalGreyBox(
         else:
             ObjectiveLib(self.objective_option)
 
-        # We are only using the triangle,
-        # so we need to add the off-diagonals
-        # twice.
+        # We are only using a symmetric, triangular
+        # representation of the FIM, so we need
+        # to add the off-diagonal elements twice.
         jac_M = 2 * jac_M - np.diag(np.diag(jac_M))
-        # Filter jac_M using the
-        # masking matrix
+        # Filter the Jacobian, jac_M, using the
+        # masking matrix to only select the
+        # symmetric, triangular components
         jac_M = jac_M[self._masking_matrix > 0]
         M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
         M_cols = np.arange(len(jac_M.flatten()))
