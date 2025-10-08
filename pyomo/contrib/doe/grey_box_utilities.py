@@ -407,7 +407,6 @@ class FIMExternalGreyBox(
             Minv_sq = Minv @ Minv
 
             for current_differential in input_differentials_2D:
-                # print(current_differential)
                 d1, d2 = current_differential
 
                 # Grabbing the ordered quadruple (i, j, k, l)
