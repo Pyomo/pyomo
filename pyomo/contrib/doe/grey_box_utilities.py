@@ -443,10 +443,9 @@ class FIMExternalGreyBox(
                 )
 
                 # Identify what index of the symmetric FIM
-                # Hessian arrays need to be updated
-                # Note, we have to account for lower triangular
-                # and only add to the element which is
-                # in that section.
+                # Hessian arrays need to be updated.
+                # Note: we are only interested in building
+                # the lower triangular portion of the Hessian.
                 row = max(
                     self.input_names().index(d1_symmetric),
                     self.input_names().index(d2_symmetric),
@@ -458,13 +457,13 @@ class FIMExternalGreyBox(
                 flattened_row_col_index = (row + 1) * row // 2 + col
 
                 # Hessian needs to be handled carefully because of
-                # the ``missing`` components when only passing
-                # a symmetric version of the FIM.
+                # the ``missing`` components from the full FIM
+                # when only passing a symmetric version of the FIM.
                 #
                 # When we reordered (i, j, k, l), we are correctly
                 # pointing to which index needs to be contributed to.
                 # However, when an element that is not included
-                # is being put into a diagonal element of the
+                # is being mapped to a diagonal element of the
                 # symmetric FIM hessian from the full FIM hessian,
                 # it needs to be counted twice. This only occurs
                 # when (i != j) and (k != l) and (i, j) and (k, l)
@@ -472,10 +471,12 @@ class FIMExternalGreyBox(
                 # (i == l) and (j == k).
                 #
                 # Otherwise, we only add the element once.
+
                 # Standard addition
                 hess_vals[flattened_row_col_index] += hess_contribution
 
-                # Duplicate check and addition
+                # Duplicate check and addition if
+                # criteria is satisfied.
                 if ((i != j) and (k != l)) and ((i == l) and (j == k)):
                     hess_vals[flattened_row_col_index] += hess_contribution
 
