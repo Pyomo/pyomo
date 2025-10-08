@@ -355,8 +355,9 @@ class FIMExternalGreyBox(
         return None
 
     def evaluate_hessian_outputs(self, FIM=None):
-        # TODO: significant bookkeeping if the hessian's require vectorized
-        # operations. Just need mapping that works well and we are good.
+        # Compute the hessian of the objective function with
+        # respect to the fisher information matrix. Then, return
+        # a coo_matrix that aligns with what IPOPT will expect.
         current_FIM = self._get_FIM()
 
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
