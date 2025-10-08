@@ -637,11 +637,12 @@ class FIMExternalGreyBox(
 
         elif self.objective_option == ObjectiveLib.condition_number:
             # Hessian for log condition number has 4
-            # terms. Two are multiples of the second
-            # derivative of the maximum and minimum
-            # eigenvalues. The other two are tensor products
+            # terms. The first and third terms are
+            # multiples of the second derivative of the
+            # maximum and minimum eigenvalues, respectively
+            # The other two are tensor products
             # of the first derivative of the maximum
-            # eigenvalue with itself, and minimum
+            # eigenvalue with itself, and the minimum
             # eigenvalue with itself.
             #
             # Grab eigenvalues and eigenvectors
