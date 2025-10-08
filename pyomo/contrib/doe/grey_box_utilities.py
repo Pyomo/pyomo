@@ -364,23 +364,35 @@ class FIMExternalGreyBox(
             self._n_params, self._n_params
         )
 
-        # Length of Hessian lists for the sparse
-        # matrix ar a function of number of parameters
+        # We will store the Hessian values in
+        # vectorized (flattened) format. The length
+        # of the vectorized Hessian for the symmetric
+        # FIM representation scales by the number of
+        # unknown parameters.
         hess_array_length = round(
             (((self._n_params + 1) * self._n_params / 2) + 1)
             * (((self._n_params + 1) * self._n_params / 2))
             / 2
         )
 
-        # Hessian with correct size for using only the
-        # lower (upper) triangle of the FIM
+        # Initializing lists of the correct length
+        # for the hessian values and the row and column
+        # of these data in the coo matrix to be returned
         hess_vals = [0] * hess_array_length
         hess_rows = [0] * hess_array_length
         hess_cols = [0] * hess_array_length
 
-        # Need to iterate over the unique
-        # differentials
+        # We are utilizing the symmetric Hessian, but we
+        # must consider the contribution from all elements.
+        # Therefore, we are required to use the full product
+        # space of the parameter names (full FIM) to compute
+        # to Hessian of the symmetric FIM.
         full_input_names = itertools.product(self._param_names, repeat=2)
+
+        # Here, we use combination with replacement to only
+        # consider the upper triangle of the Hessian for the
+        # full FIM. We will map these second derivative values
+        # back onto the symmetric FIM Hessian.
         input_differentials_2D = itertools.combinations_with_replacement(
             full_input_names, 2
         )
