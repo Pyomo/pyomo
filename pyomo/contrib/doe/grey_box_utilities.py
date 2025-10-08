@@ -246,7 +246,7 @@ class FIMExternalGreyBox(
 
     def evaluate_jacobian_outputs(self):
         # Compute the jacobian of the objective function with
-        # respect to the fisher information matrix. Then return
+        # respect to the fisher information matrix. Then, return
         # a coo_matrix that aligns with what IPOPT will expect.
         current_FIM = self._get_FIM()
 
@@ -312,13 +312,6 @@ class FIMExternalGreyBox(
             # expansion products.
             min_eig_term = min_eig_vec * np.transpose(min_eig_vec)
             max_eig_term = max_eig_vec * np.transpose(max_eig_vec)
-
-            min_eig_epsilon = 2e-16
-
-            # Computing a (hopefully) nonsingular
-            # condition number for the jacobian
-            # expression.
-            safe_cond_number = max_eig / (min_eig + np.sign(min_eig) * min_eig_epsilon)
 
             # Combining the expression
             jac_M = 1 / max_eig * max_eig_term - 1 / min_eig * min_eig_term
