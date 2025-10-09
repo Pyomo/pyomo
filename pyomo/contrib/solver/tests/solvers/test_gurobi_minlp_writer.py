@@ -421,13 +421,17 @@ class TestGurobiMINLPWriter(CommonTest):
         m.c = Constraint(expr=m.y == m.x**2)
         m.obj = Objective(expr=m.x + m.y, sense=maximize)
 
-        results = SolverFactory('gurobi_direct_minlp').solve(m)
+        results = SolverFactory('gurobi_direct_minlp').solve(m, tee=True)
 
         self.assertEqual(value(m.obj.expr), 2)
 
         self.assertEqual(value(m.x), 1)
         self.assertEqual(value(m.y), 1)
 
+        self.assertEqual(
+            results.termination_condition,
+            TerminationCondition.convergenceCriteriaSatisfied,
+        )
         self.assertEqual(results.incumbent_objective, 2)
         self.assertEqual(results.objective_bound, 2)
 
