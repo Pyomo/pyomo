@@ -409,7 +409,8 @@ class TestGurobiMINLPWalker(CommonTest):
     def test_write_absolute_value_of_constant(self):
         m = self.get_model()
         m.tricky = Param(initialize=-3.4, mutable=True)
-        m.c = Constraint(expr=abs(m.tricky) + m.x1 <= 7)
+        m.c = Constraint(expr=abs(m.tricky + m.x2) + m.x1 <= 7)
+        m.x2.fix(1)
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
@@ -417,7 +418,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
         self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
         self.assertEqual(expr.size(), 1)
-        self.assertEqual(expr.getConstant(), 3.4)
+        self.assertEqual(expr.getConstant(), 2.4)
         self.assertIs(expr.getVar(0), x1)
         self.assertEqual(expr.getCoeff(0), 1.0)
 
