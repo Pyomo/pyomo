@@ -3591,8 +3591,9 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
 
     def test_log_config_user_values_all_default(self):
         """
-        Test method for logging config user values logs
-        nothing if all values are set to default.
+        Test that the method for logging the user-specified
+        optional PyROS solver arguments logs nothing if
+        there are no such arguments.
         """
         pyros_solver = SolverFactory("pyros")
         config = pyros_solver.CONFIG(
