@@ -38,6 +38,7 @@ from pyomo.environ import (
     value,
     Var,
 )
+from pyomo.gdp import Disjunction
 from pyomo.opt import WriterFactory
 from pyomo.contrib.solver.solvers.gurobi_direct_minlp import (
     GurobiDirectMINLP,
@@ -531,3 +532,35 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(value(m.obj), 2)
         self.assertEqual(results.incumbent_objective, 2)
         self.assertEqual(results.objective_bound, 2)
+
+    def test_multiple_objective_error(self):
+        m = make_model()
+        m.obj2 = Objective(expr=m.x1 + m.x2)
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "More than one active objective defined for input model 'unknown': "
+                "Cannot write to gurobipy"
+        ):
+            results = SolverFactory('gurobi_direct_minlp').solve(m)
+
+    def test_unrecognized_component_error(self):
+        m = make_model()
+        m.disj = Disjunction(expr=[[m.x1 + m.x2 == 3], [m.x1 + m.x2 >= 7]])
+
+        with self.assertRaisesRegex(
+                ValueError,
+                r"The model \('unknown'\) contains the following active components "
+                r"that the Gurobi MINLP writer does not know how to process:" +
+                "\n\t" +
+	        r"<class 'pyomo.gdp.disjunct.Disjunction'>:" +
+                "\n\t\t" +
+		"disj\n\t" +
+	        r"\<class 'pyomo.gdp.disjunct.Disjunct'\>:" +
+                "\n\t\t" +
+		r"disj_disjuncts\[0\]" +
+                "\n\t\t" +
+		r"disj_disjuncts\[1\]" 
+        ):
+            results = SolverFactory('gurobi_direct_minlp').solve(m)
+            
