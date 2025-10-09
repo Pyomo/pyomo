@@ -11,7 +11,7 @@
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.core.expr import ProductExpression
+from pyomo.core.expr import ProductExpression, SumExpression
 from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiMINLPVisitor
@@ -285,13 +285,51 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertAlmostEqual(expr.getCoeff(1), 3 / 10)
         self.assertIs(expr.getVar(1), x2)
 
+    def test_write_linear_power_expression_var_const(self):
+        m = self.get_model()
+        m.devious = Param(initialize=1, mutable=True)
+        m.c = Constraint(expr=m.x1**m.devious >= 3)
+        visitor = self.get_visitor()
+        _, expr = visitor.walk_expression(m.c.body)
+
+        x1 = visitor.var_map[id(m.x1)]
+
+        # It's just a single var
+        self.assertIs(expr, x1)
+        self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
+
+        # now try a linear expression
+        m.c2 = Constraint(expr=(m.x1 + 2*m.x2)**m.devious >= 5)
+        _, lin_expr = visitor.walk_expression(m.c2.body)
+        self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
+        x2 = visitor.var_map[m.x2]
+        self.assertEqual(lin_expr.size(), 2)
+        self.assertEqual(lin_expr.getConstant(), 0)
+        self.assertIs(lin_expr.getVar(0), x1)
+        self.assertIs(lin_expr.getVar(1), x2)
+        self.assertEqual(lin_expr.getCoeff(0), 1.0)
+        self.assertEqual(lin_expr.getCoeff(1), 2.0)
+
+        # now do a quadratic expression
+        m.c3 = Constraint(expr=(m.x1**2 + 5.4)**m.devious >= 8)
+        _, quad_expr = visitor.walk_expression(m.c3.body)
+        self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
+        self.assertEqual(quad_expr.size(), 1)
+        expr = quad_expr.getLinExpr()
+        # no vars in linear part, just the constant
+        self.assertEqual(expr.size(), 0)
+        self.assertEqual(expr.getConstant(), 5.4)
+        self.assertIs(quad_expr.getVar1(0), x1)
+        self.assertIs(quad_expr.getVar2(0), x1)
+        self.assertEqual(quad_expr.getCoeff(0), 1.0)
+
     def test_write_quadratic_power_expression_var_const(self):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**2 >= 3)
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        # This is also quadratic
+        # This is quadratic
         x1 = visitor.var_map[id(m.x1)]
 
         self.assertEqual(expr.size(), 1)
@@ -301,6 +339,22 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertIs(expr.getVar1(0), x1)
         self.assertIs(expr.getVar2(0), x1)
         self.assertEqual(expr.getCoeff(0), 1.0)
+
+    def test_write_quadratic_constant_pow_expression(self):
+        m = self.get_model()
+        m.c = Constraint(expr=(m.x1**2 + 2*m.x2 + 3)**2 <= 7)
+        visitor = self.get_visitor()
+        _, expr = visitor.walk_expression(m.c.body)
+
+        # This is general nonlinear
+        opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
+
+        reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
+
+        assertExpressionsEqual(self, pyo_expr,
+                               SumExpression((3.0, ProductExpression((2.0, m.x2)),
+                                              m.x1**2))**2)
 
     def test_write_nonquadratic_power_expression_var_const(self):
         m = self.get_model()
