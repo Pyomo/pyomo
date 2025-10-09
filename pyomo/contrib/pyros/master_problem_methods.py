@@ -537,12 +537,6 @@ def minimize_dr_vars(master_data):
     # interested in the time and termination status for debugging
     # purposes
     config.progress_logger.debug(" Done solving DR polishing problem")
-    config.progress_logger.debug(
-        f"  Termination condition: {results.solver.termination_condition} "
-    )
-    config.progress_logger.debug(
-        f"  Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)} s"
-    )
 
     # === Process solution by termination condition
     acceptable = {tc.globallyOptimal, tc.optimal, tc.locallyOptimal}
