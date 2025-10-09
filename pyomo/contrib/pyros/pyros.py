@@ -249,7 +249,8 @@ class PyROS:
         user_values = list(
             filter(
                 # note: first clause of logical expression
-                #       accounts for bug(?) causing an iterate
+                #       accounts for issue shown in Pyomo/pyomo#3721,
+                #       which causes an iterate
                 #       of user_values to be the config dict itself
                 lambda val: bool(val.name()) and val.name() not in exclude_options,
                 config.user_values(),
