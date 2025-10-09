@@ -299,7 +299,7 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
 
         # now try a linear expression
-        m.c2 = Constraint(expr=(m.x1 + 2*m.x2)**m.devious >= 5)
+        m.c2 = Constraint(expr=(m.x1 + 2 * m.x2) ** m.devious >= 5)
         _, lin_expr = visitor.walk_expression(m.c2.body)
         self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
         x2 = visitor.var_map[m.x2]
@@ -311,7 +311,7 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(lin_expr.getCoeff(1), 2.0)
 
         # now do a quadratic expression
-        m.c3 = Constraint(expr=(m.x1**2 + 5.4)**m.devious >= 8)
+        m.c3 = Constraint(expr=(m.x1**2 + 5.4) ** m.devious >= 8)
         _, quad_expr = visitor.walk_expression(m.c3.body)
         self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
         self.assertEqual(quad_expr.size(), 1)
@@ -342,7 +342,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
     def test_write_quadratic_constant_pow_expression(self):
         m = self.get_model()
-        m.c = Constraint(expr=(m.x1**2 + 2*m.x2 + 3)**2 <= 7)
+        m.c = Constraint(expr=(m.x1**2 + 2 * m.x2 + 3) ** 2 <= 7)
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
@@ -352,9 +352,11 @@ class TestGurobiMINLPWalker(CommonTest):
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
 
-        assertExpressionsEqual(self, pyo_expr,
-                               SumExpression((3.0, ProductExpression((2.0, m.x2)),
-                                              m.x1**2))**2)
+        assertExpressionsEqual(
+            self,
+            pyo_expr,
+            SumExpression((3.0, ProductExpression((2.0, m.x2)), m.x1**2)) ** 2,
+        )
 
     def test_write_nonquadratic_power_expression_var_const(self):
         m = self.get_model()
