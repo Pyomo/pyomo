@@ -26,6 +26,7 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.util import get_objective
 from pyomo.contrib.observer.component_collector import collect_components_from_expr
 from pyomo.common.numeric_types import native_numeric_types
+import enum
 
 
 """
@@ -127,9 +128,7 @@ class AutoUpdateConfig(ConfigDict):
                 detected on subsequent solves. This includes changes to the lb, ub, 
                 domain, and fixed attributes of variables. Use False only when 
                 manually updating the observer with opt.update_variables() or when 
-                you are certain variables are not being modified. Note that changes 
-                to values of fixed variables is handled by 
-                update_parameters_and_fixed_vars.""",
+                you are certain variables are not being modified.""",
             ),
         )
         #: automatically detect changes to parameters on subsequent solves
@@ -173,6 +172,14 @@ class AutoUpdateConfig(ConfigDict):
                 modified.""",
             ),
         )
+
+
+class Reason(enum.Flag):
+    bounds = enum.auto()
+    fixed = enum.auto()
+    unfixed = enum.auto()
+    domain = enum.auto()
+    value = enum.auto()
 
 
 class Observer(abc.ABC):
@@ -325,7 +332,7 @@ class Observer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_variables(self, variables: List[VarData]):
+    def update_variables(self, variables: List[VarData], reasons: List[Reason]):
         """
         This method gets called by the ModelChangeDetector when it detects
         variables that have been modified in some way (e.g., the bounds
@@ -333,12 +340,17 @@ class Observer(abc.ABC):
         "inputs" to the model. For example, the value of the variable is
         considered an "output" (unless the variable is fixed), so changing
         the value of an unfixed variable will not cause this method to be
-        called.
+        called. 
 
         Parameters
         ----------
         variables: List[VarData]
             The list of variables that have been modified
+        reasons: List[Reason]
+            A list of reasons the variables changed. This list will be the 
+            same length as `variables`. The Reason enum is a Flag enum so 
+            that if multiple changes are made, this can be easily indicated
+            with the bitwise | operator.
         """
         pass
 
@@ -427,7 +439,7 @@ class ModelChangeDetector:
     ...     def remove_parameters(self, params):
     ...         for i in params:
     ...             print(f'{i} was removed from the model')
-    ...     def update_variables(self, variables):
+    ...     def update_variables(self, variables, reasons):
     ...         for i in variables:
     ...             print(f'{i} was modified')
     ...     def update_parameters(self, params):
@@ -835,7 +847,7 @@ class ModelChangeDetector:
             del self._referenced_params[p_id]
             del self._params[p_id]
 
-    def _update_variables(self, variables: List[VarData]):
+    def _update_variables(self, variables: List[VarData], reasons: List[Reason]):
         for v in variables:
             self._vars[id(v)] = (
                 v,
@@ -846,7 +858,7 @@ class ModelChangeDetector:
                 v.value,
             )
         for obs in self._observers:
-            obs.update_variables(variables)
+            obs.update_variables(variables, reasons)
 
     def _update_parameters(self, params):
         for p in params:
@@ -922,28 +934,23 @@ class ModelChangeDetector:
 
     def _check_for_var_changes(self):
         vars_to_update = []
-        cons_to_update = {}
-        objs_to_update = {}
+        reasons = []
         for vid, (v, _lb, _ub, _fixed, _domain_interval, _value) in self._vars.items():
-            if v.fixed != _fixed:
+            reason = Reason(0)
+            if _fixed and not v.fixed:
+                reason = reason | Reason.unfixed
+            elif not _fixed and v.fixed:
+                reason = reason | Reason.fixed
+            elif _fixed and (v.value != _value):
+                reason = reason | Reason.value
+            if v._lb is not _lb or v._ub is not _ub:
+                reason = reason | Reason.bounds
+            if _domain_interval != v.domain.get_interval():
+                reason = reason | Reason.domain
+            if reason:
                 vars_to_update.append(v)
-                for c in self._referenced_variables[vid][0]:
-                    cons_to_update[c] = None
-                for obj_id in self._referenced_variables[vid][2]:
-                    objs_to_update[obj_id] = None
-            elif _fixed and v.value != _value:
-                vars_to_update.append(v)
-            elif v._lb is not _lb:
-                vars_to_update.append(v)
-            elif v._ub is not _ub:
-                vars_to_update.append(v)
-            elif _domain_interval != v.domain.get_interval():
-                vars_to_update.append(v)
-        cons_to_update = list(cons_to_update.keys())
-        objs_to_update = [
-            self._objectives[obj_id][0] for obj_id in objs_to_update.keys()
-        ]
-        return vars_to_update, cons_to_update, objs_to_update
+                reasons.append(reason)
+        return vars_to_update, reasons
 
     def _check_for_param_changes(self):
         params_to_update = []
@@ -1023,9 +1030,54 @@ class ModelChangeDetector:
         with PauseGC() as pgc:
             self._check_for_unknown_active_components()
 
-            added_cons = set()
-            added_sos = set()
-            added_objs = {}
+            if config.update_vars:
+                timer.start('vars')
+                vars_to_update, reasons = self._check_for_var_changes()
+                if vars_to_update:
+                    self._update_variables(vars_to_update, reasons)
+                timer.stop('vars')
+
+            if config.update_parameters:
+                timer.start('params')
+                params_to_update = self._check_for_param_changes()
+                if params_to_update:
+                    self._update_parameters(params_to_update)
+                timer.stop('params')
+
+            if config.update_named_expressions:
+                timer.start('named expressions')
+                cons_to_update, objs_to_update = (
+                    self._check_for_named_expression_changes()
+                )
+                if cons_to_update:
+                    self._remove_constraints(cons_to_update)
+                    self._add_constraints(cons_to_update)
+                if objs_to_update:
+                    self._remove_objectives(objs_to_update)
+                    self._add_objectives(objs_to_update)
+                timer.stop('named expressions')
+
+            if config.update_constraints:
+                timer.start('cons')
+                cons_to_update = self._check_for_modified_constraints()
+                if cons_to_update:
+                    self._remove_constraints(cons_to_update)
+                    self._add_constraints(cons_to_update)
+                timer.stop('cons')
+                timer.start('sos')
+                sos_to_update = self._check_for_modified_sos()
+                if sos_to_update:
+                    self._remove_sos_constraints(sos_to_update)
+                    self._add_sos_constraints(sos_to_update)
+                timer.stop('sos')
+
+            if config.update_objectives:
+                timer.start('objective')
+                objs_to_update = self._check_for_modified_objectives()
+                if objs_to_update:
+                    self._remove_objectives(objs_to_update)
+                    self._add_objectives(objs_to_update)
+                timer.stop('objective')
 
             if config.check_for_new_or_removed_constraints:
                 timer.start('sos')
@@ -1034,7 +1086,6 @@ class ModelChangeDetector:
                     self._add_sos_constraints(new_sos)
                 if old_sos:
                     self._remove_sos_constraints(old_sos)
-                added_sos.update(new_sos)
                 timer.stop('sos')
                 timer.start('cons')
                 new_cons, old_cons = self._check_for_new_or_removed_constraints()
@@ -1042,24 +1093,7 @@ class ModelChangeDetector:
                     self._add_constraints(new_cons)
                 if old_cons:
                     self._remove_constraints(old_cons)
-                added_cons.update(new_cons)
                 timer.stop('cons')
-
-            if config.update_constraints:
-                timer.start('cons')
-                cons_to_update = self._check_for_modified_constraints()
-                if cons_to_update:
-                    self._remove_constraints(cons_to_update)
-                    self._add_constraints(cons_to_update)
-                added_cons.update(cons_to_update)
-                timer.stop('cons')
-                timer.start('sos')
-                sos_to_update = self._check_for_modified_sos()
-                if sos_to_update:
-                    self._remove_sos_constraints(sos_to_update)
-                    self._add_sos_constraints(sos_to_update)
-                added_sos.update(sos_to_update)
-                timer.stop('sos')
 
             if config.check_for_new_or_removed_objectives:
                 timer.start('objective')
@@ -1070,57 +1104,4 @@ class ModelChangeDetector:
                     self._remove_objectives(old_objs)
                 if new_objs:
                     self._add_objectives(new_objs)
-                added_objs.update((id(i), i) for i in new_objs)
                 timer.stop('objective')
-
-            if config.update_objectives:
-                timer.start('objective')
-                objs_to_update = self._check_for_modified_objectives()
-                if objs_to_update:
-                    self._remove_objectives(objs_to_update)
-                    self._add_objectives(objs_to_update)
-                added_objs.update((id(i), i) for i in objs_to_update)
-                timer.stop('objective')
-
-            if config.update_vars:
-                timer.start('vars')
-                vars_to_update, cons_to_update, objs_to_update = (
-                    self._check_for_var_changes()
-                )
-                if vars_to_update:
-                    self._update_variables(vars_to_update)
-                cons_to_update = [i for i in cons_to_update if i not in added_cons]
-                objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
-                if cons_to_update:
-                    self._remove_constraints(cons_to_update)
-                    self._add_constraints(cons_to_update)
-                added_cons.update(cons_to_update)
-                if objs_to_update:
-                    self._remove_objectives(objs_to_update)
-                    self._add_objectives(objs_to_update)
-                added_objs.update((id(i), i) for i in objs_to_update)
-                timer.stop('vars')
-
-            if config.update_named_expressions:
-                timer.start('named expressions')
-                cons_to_update, objs_to_update = (
-                    self._check_for_named_expression_changes()
-                )
-                cons_to_update = [i for i in cons_to_update if i not in added_cons]
-                objs_to_update = [i for i in objs_to_update if id(i) not in added_objs]
-                if cons_to_update:
-                    self._remove_constraints(cons_to_update)
-                    self._add_constraints(cons_to_update)
-                added_cons.update(cons_to_update)
-                if objs_to_update:
-                    self._remove_objectives(objs_to_update)
-                    self._add_objectives(objs_to_update)
-                added_objs.update((id(i), i) for i in objs_to_update)
-                timer.stop('named expressions')
-
-            if config.update_parameters:
-                timer.start('params')
-                params_to_update = self._check_for_param_changes()
-                if params_to_update:
-                    self._update_parameters(params_to_update)
-                timer.stop('params')
