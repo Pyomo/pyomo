@@ -406,6 +406,21 @@ class TestGurobiMINLPWalker(CommonTest):
 
         assertExpressionsEqual(self, pyo_expr, 2.0**m.x2)
 
+    def test_write_absolute_value_of_constant(self):
+        m = self.get_model()
+        m.tricky = Param(initialize=-3.4, mutable=True)
+        m.c = Constraint(expr=abs(m.tricky) + m.x1 <= 7)
+        visitor = self.get_visitor()
+        _, expr = visitor.walk_expression(m.c.body)
+
+        x1 = visitor.var_map[m.x1]
+
+        self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
+        self.assertEqual(expr.size(), 1)
+        self.assertEqual(expr.getConstant(), 3.4)
+        self.assertIs(expr.getVar(0), x1)
+        self.assertEqual(expr.getCoeff(0), 1.0)
+
     def test_write_absolute_value_of_var(self):
         # Gurobi doesn't support abs of expressions, so we have to do a factorable
         # programming thing...
