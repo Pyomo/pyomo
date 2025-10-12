@@ -23,7 +23,7 @@ def build_pynumero(user_args=[], parallel=None):
     )
 
 
-class PyNumeroBuilder(object):
+class PyNumeroBuilder:
     def __call__(self, parallel):
         return build_pynumero(parallel=parallel)
 

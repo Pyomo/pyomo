@@ -17,7 +17,7 @@ from pyomo.core.base.disable_methods import disable_methods
 from pyomo.common.modeling import NOTSET
 
 
-class LocalClass(object):
+class LocalClass:
     def __init__(self, name):
         self._name = name
 
@@ -28,7 +28,7 @@ class LocalClass(object):
 local_instance = LocalClass('local')
 
 
-class _simple(object):
+class _simple:
     def __init__(self, name):
         self.name = name
         self._d = 'd'

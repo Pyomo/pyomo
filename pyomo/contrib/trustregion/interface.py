@@ -95,7 +95,7 @@ class EFReplacement(ExpressionReplacementVisitor):
         return _output
 
 
-class TRFInterface(object):
+class TRFInterface:
     """
     Pyomo interface for Trust Region algorithm.
     """

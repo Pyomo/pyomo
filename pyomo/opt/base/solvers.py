@@ -55,7 +55,7 @@ def _extract_version(x, length=4):
     return None  # (0,0,0,0)[:length]
 
 
-class UnknownSolver(object):
+class UnknownSolver:
     def __init__(self, *args, **kwds):
         # super(UnknownSolver,self).__init__(**kwds)
 
@@ -250,7 +250,7 @@ def _raise_ephemeral_error(name, keyword=""):
     )
 
 
-class OptSolver(object):
+class OptSolver:
     """A generic optimization solver"""
 
     #
