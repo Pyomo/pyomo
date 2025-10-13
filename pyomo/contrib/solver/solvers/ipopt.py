@@ -63,43 +63,6 @@ logger = logging.getLogger(__name__)
 # Acceptable chars for the end of the alpha_pr column
 # in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
 _ALPHA_PR_CHARS = set("fFhHkKnNRwSstTr")
-_DIAGNOSTIC_TAGS = set(
-    {
-        "!",
-        "A",
-        "a",
-        "C",
-        "Dh",
-        "Dhj",
-        "Dj",
-        "dx",
-        "e",
-        "F-",
-        "F+",
-        "L",
-        "l",
-        "M",
-        "Nh",
-        "Nhj",
-        "Nj",
-        "NW",
-        "q",
-        "R",
-        "S",
-        "s",
-        "Tmax",
-        "W",
-        "w",
-        "Wb",
-        "We",
-        "Wp",
-        "Wr",
-        "Ws",
-        "WS",
-        "y",
-        "z",
-    }
-)
 
 
 class IpoptConfig(SolverConfig):
@@ -505,7 +468,6 @@ class Ipopt(SolverBase):
                 # This is the data we need to parse to get the iterations
                 # and time
                 parsed_output_data = self._parse_ipopt_output(ostreams[0])
-                parsed_output_message = f"Parsed solver data: {parsed_output_data}"
 
             if proven_infeasible:
                 results = Results()
@@ -554,7 +516,7 @@ class Ipopt(SolverBase):
                             logging.WARNING,
                             "The solver output data is empty or incomplete.\n"
                             f"Full error message: {e}\n"
-                            f"{parsed_output_message}\n",
+                            f"Parsed solver data: {parsed_output_data}\n",
                         )
         if (
             config.raise_exception_on_nonoptimal_result
@@ -648,8 +610,6 @@ class Ipopt(SolverBase):
                 "alpha_pr",
                 "ls",
             ]
-            numerical_columns = set(columns)
-            numerical_columns.remove('iter')
             iterations = []
             n_expected_columns = len(columns)
 
@@ -694,17 +654,11 @@ class Ipopt(SolverBase):
 
                 # Capture optional IPOPT diagnostic tags if present
                 if extra_tokens:
-                    if all(tok in _DIAGNOSTIC_TAGS for tok in extra_tokens):
-                        iter_data['diagnostic_tags'] = "".join(extra_tokens)
-                    else:
-                        logger.warning(
-                            f"Unrecognized Ipopt diagnostic tags {extra_tokens} on line: {line}"
-                        )
+                    iter_data['diagnostic_tags'] = " ".join(extra_tokens)
 
                 # Attempt to cast all values to float where possible
-                for key, val in iter_data.items():
-                    if key not in numerical_columns:
-                        continue
+                for key in columns[1:]:
+                    val = iter_data[key]
                     if val == '-':
                         iter_data[key] = None
                     else:
