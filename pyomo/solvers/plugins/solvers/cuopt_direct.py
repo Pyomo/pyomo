@@ -28,35 +28,99 @@ from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
 )
-from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.common.enums import minimize, maximize
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
-from pyomo.core.base.suffix import Suffix
 import time
 
-logger = logging.getLogger("pyomo.solvers")
+logger = logging.getLogger(__name__)
 
 
 cuopt, cuopt_available = attempt_import("cuopt")
 
+def toDict(model, json=False):
+
+    #if not isinstance(model, parser_wrapper.DataModel):
+    #    raise ValueError(
+    #        "model must be a cuopt_mps_parser.parser_wrapper.Datamodel"
+    #    )
+
+    # Replace numpy objects in generated data so that it is JSON serializable
+    def transform(data):
+        for key, value in data.items():
+            if isinstance(value, dict):
+                transform(value)
+            elif isinstance(value, list):
+                if np.inf in data[key] or -np.inf in data[key]:
+                    data[key] = [
+                        "inf" if x == np.inf else "ninf" if x == -np.inf else x
+                        for x in data[key]
+                    ]
+
+    if json is True:
+        problem_data = {
+            "csr_constraint_matrix": {
+                "offsets": model.A_offsets.tolist(),
+                "indices": model.A_indices.tolist(),
+                "values": model.A_values.tolist(),
+            },
+            "constraint_bounds": {
+                "bounds": model.b.tolist(),
+                "upper_bounds": model.constraint_upper_bounds.tolist(),
+                "lower_bounds": model.constraint_lower_bounds.tolist(),
+                "types": model.host_row_types.tolist(),
+            },
+            "objective_data": {
+                "coefficients": model.c.tolist(),
+                "scalability_factor": model.objective_scaling_factor,
+                "offset": model.objective_offset,
+            },
+            "variable_bounds": {
+                "upper_bounds": model.variable_upper_bounds.tolist(),
+                "lower_bounds": model.variable_lower_bounds.tolist(),
+            },
+            "maximize": model.maximize,
+            "variable_types": model.variable_types.tolist(),
+            "variable_names": model.variable_names.tolist(),
+        }
+        transform(problem_data)
+    else:
+        problem_data = {
+            "csr_constraint_matrix": {
+                "offsets": model.A_offsets,
+                "indices": model.A_indices,
+                "values": model.A_values,
+            },
+            "constraint_bounds": {
+                "bounds": model.b,
+                "upper_bounds": model.constraint_upper_bounds,
+                "lower_bounds": model.constraint_lower_bounds,
+                "types": model.host_row_types,
+            },
+            "objective_data": {
+                "coefficients": model.c,
+                "scalability_factor": model.objective_scaling_factor,
+                "offset": model.objective_offset,
+            },
+            "variable_bounds": {
+                "upper_bounds": model.variable_upper_bounds,
+                "lower_bounds": model.variable_lower_bounds,
+            },
+            "maximize": model.maximize,
+            "variable_types": model.variable_types,
+            "variable_names": model.variable_names,
+        }
+    return problem_data
 
 @SolverFactory.register("cuopt", doc="Direct python interface to CUOPT")
 class CUOPTDirect(DirectSolver):
     def __init__(self, **kwds):
         kwds["type"] = "cuoptdirect"
         super(CUOPTDirect, self).__init__(**kwds)
-        try:
-            import cuopt
-
-            self._version = tuple(int(k) for k in cuopt.__version__.split('.'))
-            self._python_api_exists = True
-        except ImportError:
-            self._python_api_exists = False
-        except Exception as e:
-            print("Import of cuopt failed - cuopt message=" + str(e) + "\n")
-            self._python_api_exists = False
+        self._version = cuopt.__version__.split('.')
+        self._python_api_exists = cuopt_available
         # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.integer = True
@@ -68,12 +132,13 @@ class CUOPTDirect(DirectSolver):
         if self._log_file:
             log_file = self._log_file
         t0 = time.time()
-        self.solution = cuopt.linear_programming.solver.Solve(self._solver_model)
+        settings = cuopt.linear_programming.solver_settings.SolverSettings()
+        self.solution = cuopt.linear_programming.solver.Solve(self._solver_model, settings)
         t1 = time.time()
         self._wallclock_time = t1 - t0
         return Bunch(rc=None, log=None)
 
-    def _add_constraint(self, constraints):
+    def _add_constraints(self, constraints):
         c_lb, c_ub = [], []
         matrix_data = []
         matrix_indptr = [0]
@@ -82,30 +147,32 @@ class CUOPTDirect(DirectSolver):
         con_idx = 0
         for con in constraints:
             if not con.active:
-                return None
+                continue
 
             if self._skip_trivial_constraints and is_fixed(con.body):
-                return None
+                continue
 
             if not con.has_lb() and not con.has_ub():
                 assert not con.equality
                 continue  # non-binding, so skip
 
+            lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
+
             conname = self._symbol_map.getSymbol(con, self._labeler)
             self._pyomo_con_to_solver_con_map[con] = con_idx
-            con_idx += 0
-            repn = generate_standard_repn(con.body, quadratic=False)
+            con_idx += 1
+            repn = generate_standard_repn(body, quadratic=False)
             matrix_data.extend(repn.linear_coefs)
             matrix_indices.extend(
-                [self.var_name_dict[str(i)] for i in repn.linear_vars]
+                self.var_name_dict[str(i)] for i in repn.linear_vars
             )
             self.referenced_vars.update(repn.linear_vars)
             matrix_indptr.append(len(matrix_data))
             c_lb.append(
-                value(con.lower) - repn.constant if con.lower is not None else -np.inf
+                lb - repn.constant if lb is not None else -np.inf
             )
             c_ub.append(
-                value(con.upper) - repn.constant if con.upper is not None else np.inf
+                ub - repn.constant if ub is not None else np.inf
             )
 
         if len(matrix_data) == 0:
@@ -121,23 +188,21 @@ class CUOPTDirect(DirectSolver):
         self._solver_model.set_constraint_lower_bounds(np.array(c_lb))
         self._solver_model.set_constraint_upper_bounds(np.array(c_ub))
 
-    def _add_var(self, variables):
+    def _add_variables(self, variables):
         # Map variable to index and get var bounds
         self.var_name_dict = {}
         v_lb, v_ub, v_type = [], [], []
 
         for i, v in enumerate(variables):
-            if v.is_binary():
+            lb, ub = v.bounds
+            if v.is_integer():
                 v_type.append("I")
-                v_lb.append(v.lb if v.lb is not None else 0)
-                v_ub.append(v.ub if v.ub is not None else 1)
+            elif v.is_continuous():
+                v_type.append("C")
             else:
-                if v.is_integer():
-                    v_type.append("I")
-                else:
-                    v_type.append("C")
-                v_lb.append(v.lb if v.lb is not None else -np.inf)
-                v_ub.append(v.ub if v.ub is not None else np.inf)
+                raise ValueError(f"Unallowable domain for variable {v.name}")
+            v_lb.append(lb if lb is not None else -np.inf)
+            v_ub.append(ub if ub is not None else np.inf)
             self.var_name_dict[str(v)] = i
             self._pyomo_var_to_ndx_map[v] = self._ndx_count
             self._ndx_count += 1
@@ -155,8 +220,7 @@ class CUOPTDirect(DirectSolver):
         for i, coeff in enumerate(repn.linear_coefs):
             obj_coeffs[self.var_name_dict[str(repn.linear_vars[i])]] = coeff
         self._solver_model.set_objective_coefficients(np.array(obj_coeffs))
-        if objective.sense == maximize:
-            self._solver_model.set_maximize(True)
+        self._solver_model.set_maximize(objective.sense == maximize)
 
     def _set_instance(self, model, kwds={}):
         DirectOrPersistentSolver._set_instance(self, model, kwds)
@@ -173,15 +237,16 @@ class CUOPTDirect(DirectSolver):
                 "Have you installed the Python "
                 "SDK for CUOPT?\n\n\t" + "Error message: {0}".format(e)
             )
+            raise Exception(msg)
         self._add_block(model)
 
     def _add_block(self, block):
-        self._add_var(
+        self._add_variables(
             block.component_data_objects(
                 ctype=Var, descend_into=True, active=True, sort=True
             )
         )
-        self._add_constraint(
+        self._add_constraints(
             block.component_data_objects(
                 ctype=Constraint, descend_into=True, active=True, sort=True
             )
@@ -225,35 +290,47 @@ class CUOPTDirect(DirectSolver):
 
         prob_type = solution.problem_category
 
-        if status in [1]:
+        # Termination Status
+        # 0 - CUOPT_TERIMINATION_STATUS_NO_TERMINATION
+        # 1 - CUOPT_TERIMINATION_STATUS_OPTIMAL
+        # 2 - CUOPT_TERIMINATION_STATUS_INFEASIBLE
+        # 3 - CUOPT_TERIMINATION_STATUS_UNBOUNDED
+        # 4 - CUOPT_TERIMINATION_STATUS_ITERATION_LIMIT
+        # 5 - CUOPT_TERIMINATION_STATUS_TIME_LIMIT
+        # 6 - CUOPT_TERIMINATION_STATUS_NUMERICAL_ERROR
+        # 7 - CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE
+        # 8 - CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND
+        # 9 - CUOPT_TERIMINATION_STATUS_CONCURRENT_LIMIT
+
+        if status == 1:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        elif status in [3]:
+        elif status == 3:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        elif status in [8]:
+        elif status == 8:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
-        elif status in [2]:
+        elif status == 2:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        elif status in [4]:
+        elif status == 4:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = (
                 TerminationCondition.maxIterations
             )
             soln.status = SolutionStatus.stoppedByLimit
-        elif status in [5]:
+        elif status == 5:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = (
                 TerminationCondition.maxTimeLimit
             )
             soln.status = SolutionStatus.stoppedByLimit
-        elif status in [7]:
+        elif status == 7:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.other
             soln.status = SolutionStatus.other
