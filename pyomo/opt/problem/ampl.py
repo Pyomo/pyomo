@@ -19,7 +19,7 @@ import os
 from pyomo.opt.base import ProblemFormat, convert_problem, guess_format
 
 
-class AmplModel(object):
+class AmplModel:
     """
     A class that provides a wrapper for AMPL models.
     """

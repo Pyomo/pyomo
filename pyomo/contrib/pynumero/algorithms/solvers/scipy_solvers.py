@@ -255,7 +255,7 @@ class SecantNewtonNlpSolver(NewtonNlpSolver):
         return results
 
 
-class PyomoScipySolver(object):
+class PyomoScipySolver:
     def __init__(self, options=None):
         if options is None:
             options = {}

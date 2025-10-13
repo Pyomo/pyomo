@@ -154,7 +154,7 @@ class Test(unittest.TestCase):
         labeler = TextLabeler()
         self.assertEqual('x', smap.getSymbol(self.instance.x, labeler))
 
-        class FOO(object):
+        class FOO:
             def __call__(self, *args):
                 return 'x'
 
