@@ -17,6 +17,6 @@ knitro, KNITRO_AVAILABLE = attempt_import("knitro")
 
 
 def get_version() -> Optional[str]:
-    if not bool(KNITRO_AVAILABLE):
+    if not KNITRO_AVAILABLE:
         return None
     return knitro.__version__
