@@ -158,7 +158,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
         Add inputted solution to SolutionPool.
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         Adds the converted Solution object to the pool dictionary.
-        ID value for the solution genenerated as next increment of instance PoolCounter.
+        ID value for the solution generated as next increment of instance PoolCounter.
 
         Parameters
         ----------
@@ -238,7 +238,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         Add inputted solution to SolutionPool.
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         Adds the converted Solution object to the pool dictionary.
-        ID value for the solution genenerated as next increment of instance PoolCounter.
+        ID value for the solution generated as next increment of instance PoolCounter.
         When pool size < max_pool_size, new solution is added without deleting old solutions.
         When pool size == max_pool_size, new solution is added and oldest solution deleted.
 
@@ -326,7 +326,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         If solution already present, new solution is not added.
         If input solution is new, the converted Solution object to the pool dictionary.
-        ID value for the solution genenerated as next increment of instance PoolCounter.
+        ID value for the solution generated as next increment of instance PoolCounter.
         When pool size < max_pool_size, new solution is added without deleting old solutions.
         When pool size == max_pool_size, new solution is added and oldest solution deleted.
 
@@ -472,7 +472,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         Relies on the instance as_solution conversion method to convert inputs to Solution Object.
         If solution already present or outside tolerance of the best objective value, new solution is not added.
         If input solution is new and within tolerance of the best objective value, the converted Solution object to the pool dictionary.
-        ID value for the solution genenerated as next increment of instance PoolCounter.
+        ID value for the solution generated as next increment of instance PoolCounter.
         When pool size < max_pool_size, new solution is added without deleting old solutions.
         When pool size == max_pool_size, new solution is added and oldest solution deleted.
 
