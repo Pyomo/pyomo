@@ -19,7 +19,7 @@ import subprocess
 import pyomo.common.unittest as unittest
 
 
-class ImportData(object):
+class ImportData:
     def __init__(self):
         self.tpl = {}
         self.pyomo = {}

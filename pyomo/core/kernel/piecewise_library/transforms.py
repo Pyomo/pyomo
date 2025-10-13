@@ -57,7 +57,7 @@ registered_transforms = {}
 
 # wrapper that allows a list containing parameters to be
 # used with the bisect module
-class _shadow_list(object):
+class _shadow_list:
     __slots__ = ("_x",)
 
     def __init__(self, x):
@@ -214,7 +214,7 @@ def piecewise(
     )
 
 
-class PiecewiseLinearFunction(object):
+class PiecewiseLinearFunction:
     """A piecewise linear function
 
     Piecewise linear functions are defined by a list of

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 inf = float('inf')
 
 
-class _bool_flag(object):
+class _bool_flag:
     def __init__(self, val):
         self._val = val
 
