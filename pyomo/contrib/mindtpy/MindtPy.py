@@ -70,7 +70,7 @@ from pyomo.contrib.mindtpy.config_options import _supported_algorithms
 @SolverFactory.register(
     'mindtpy', doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo'
 )
-class MindtPySolver(object):
+class MindtPySolver:
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 

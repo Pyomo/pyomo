@@ -40,7 +40,7 @@ def simplify_with_ginac(expr: NumericExpression, ginac_interface):
     return ginac_interface.from_ginac(ginac_expr.normal())
 
 
-class Simplifier(object):
+class Simplifier:
     class Mode(NamedIntEnum):
         auto = 0
         sympy = 1

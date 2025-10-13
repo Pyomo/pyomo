@@ -14,7 +14,7 @@ Containers for PyROS subproblem solve results.
 """
 
 
-class ROSolveResults(object):
+class ROSolveResults:
     """
     PyROS solver results object.
 

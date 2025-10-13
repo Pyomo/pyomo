@@ -47,7 +47,7 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
     m.c3 = pyo.Constraint(expr=2 / 9 * m.x + 2 >= m.y)
     m.c4 = pyo.Constraint(expr=-1 / 2 * m.x + 3 >= m.y)
 
-    # Continuous exteme points and bounds
+    # Continuous extreme points and bounds
     m.extreme_points = {
         (0.737704918, -4.590163934),
         (-5.869565217, 0.695652174),
@@ -59,7 +59,7 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
     m.continuous_bounds[m.x] = (-5.869565217, 7.578947368)
     m.continuous_bounds[m.y] = (-4.590163934, 2.307692308)
 
-    # Continuous exteme points and bounds for the case where an objective
+    # Continuous extreme points and bounds for the case where an objective
     # constraint is added within a 100% relative gap of optimality or an
     # absolute gap of 6.789473684
 

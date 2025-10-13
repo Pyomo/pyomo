@@ -549,7 +549,7 @@ def to_legal_filename(name, universal=False) -> str:
     return name
 
 
-class PathData(object):
+class PathData:
     """An object for storing and managing a :py:class:`PathManager` path"""
 
     def __init__(self, manager, name):
@@ -654,7 +654,7 @@ class ExecutableData(PathData):
         self.set_path(value)
 
 
-class PathManager(object):
+class PathManager:
     """The PathManager defines a registry class for path locations
 
     The :py:class:`PathManager` defines a class very similar to the
@@ -805,7 +805,7 @@ class PathManager(object):
 #
 # Define singleton objects for Pyomo / Users to interact with
 #
-class Executable(object):
+class Executable:
     """Singleton executable registry
 
     This class cannot be instantiated.  Instead, calling this type will
@@ -831,7 +831,7 @@ class Executable(object):
         return cls._manager.rehash()
 
 
-class Library(object):
+class Library:
     """Singleton library registry
 
     This class cannot be instantiated.  Instead, calling this type will
