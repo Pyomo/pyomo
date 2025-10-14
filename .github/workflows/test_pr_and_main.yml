@@ -334,6 +334,10 @@ jobs:
                 PACKAGES=${PACKAGES//$WORD / }
             done
         fi
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            PACKAGES="$PACKAGES setuptools<74.0.0"
+        fi
         python -m pip install --cache-dir cache/pip ${PACKAGES}
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
