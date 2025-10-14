@@ -723,7 +723,7 @@ class TestPyROSConfig(unittest.TestCase):
         exc_str = (
             # contents of the error message are version dependent
             "(cannot convert dictionary update sequence"
-            "|'int' object is not iterable)"
+            "|object is not iterable)"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             config.subproblem_format_options = [1, 2, 3]
