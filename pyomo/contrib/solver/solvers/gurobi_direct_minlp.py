@@ -529,10 +529,10 @@ class GurobiMINLPWriter:
         if components[Objective]:
             for block in components[Objective]:
                 for obj in block.component_data_objects(
-                        Objective,
-                        active=True,
-                        descend_into=False,
-                        sort=SortComponents.deterministic
+                    Objective,
+                    active=True,
+                    descend_into=False,
+                    sort=SortComponents.deterministic,
                 ):
                     active_objs.append(obj)
         if len(active_objs) > 1:
@@ -569,9 +569,11 @@ class GurobiMINLPWriter:
         if components[Constraint]:
             for block in components[Constraint]:
                 for cons in block.component_data_objects(
-                        Constraint, active=True,
-                        descend_into=False,
-                        sort=SortComponents.deterministic):
+                    Constraint,
+                    active=True,
+                    descend_into=False,
+                    sort=SortComponents.deterministic,
+                ):
                     lb, body, ub = cons.to_bounded_expression(evaluate_bounds=True)
                     expr_type, expr, nonlinear, aux = self._create_gurobi_expression(
                         body, cons, 0, grb_model, quadratic_visitor, visitor

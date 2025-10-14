@@ -565,6 +565,6 @@ class TestGurobiMINLPWriter(CommonTest):
             + "\n\t"
             + r"<class 'pyomo.gdp.disjunct.Disjunction'>:"
             + "\n\t\t"
-            + "disj"
+            + "disj",
         ):
             results = SolverFactory('gurobi_direct_minlp').solve(m)
