@@ -235,12 +235,7 @@ setup_kwargs = dict(
             # Note: minimum version from community_detection use of
             # matplotlib.pyplot.get_cmap()
             'matplotlib>=3.6.0,!=3.6.1',
-            # network, incidence_analysis, community_detection
-            # Note: networkx 3.2 is Python>-3.9, but there is a broken
-            # 3.2 package on conda-forge that will get implicitly
-            # installed on python 3.8
-            'networkx<3.2; python_version<"3.9"',
-            'networkx; python_version>="3.9"',
+            'networkx',  # network, incidence_analysis, community_detection
             'numpy',
             'openpyxl',  # dataportals
             'packaging',  # for checking other dependency versions
