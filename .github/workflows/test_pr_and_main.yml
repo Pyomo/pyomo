@@ -393,6 +393,8 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
+        # We need setuptools so we can run Pyomo's setup.py
+        conda install setuptools
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
