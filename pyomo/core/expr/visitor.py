@@ -78,7 +78,7 @@ class RevertToNonrecursive(Exception):
 # -------------------------------------------------------
 
 
-class StreamBasedExpressionVisitor(object):
+class StreamBasedExpressionVisitor:
     """This class implements a generic stream-based expression walker.
 
     This visitor walks an expression tree using a depth-first strategy
@@ -684,7 +684,7 @@ class StreamBasedExpressionVisitor(object):
     "Please use the StreamBasedExpressionVisitor instead.",
     version='6.9.0',
 )
-class SimpleExpressionVisitor(object):
+class SimpleExpressionVisitor:
     """
     Note:
         This class is a customization of the PyUtilib :class:`SimpleVisitor
@@ -819,7 +819,7 @@ class SimpleExpressionVisitor(object):
                     dq.append(c)
 
 
-class ExpressionValueVisitor(object):
+class ExpressionValueVisitor:
     """
     Note:
         This class is a customization of the PyUtilib :class:`ValueVisitor

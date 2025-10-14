@@ -90,7 +90,7 @@ def tuplize(d):
 
 
 @DataManagerFactory.register("json", "JSON file interface")
-class JSONDictionary(object):
+class JSONDictionary:
     def __init__(self):
         self._info = {}
         self.options = Bunch()
@@ -179,7 +179,7 @@ class JSONDictionary(object):
 
 
 @DataManagerFactory.register("yaml", "YAML file interface")
-class YamlDictionary(object):
+class YamlDictionary:
     def __init__(self):
         self._info = {}
         self.options = Bunch()

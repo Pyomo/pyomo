@@ -28,7 +28,7 @@ def _abstract_readonly_property(**kwds):
     return p
 
 
-class _no_ctype(object):
+class _no_ctype:
     """The default argument for methods that accept a ctype."""
 
     pass
@@ -162,7 +162,7 @@ class ICategorizedObject(AutoSlots.Mixin):
                 storage key into a string
                 representation. Default is the built-in
                 function str.
-            relative_to (object): When generating a fully
+            relative_to : When generating a fully
                 qualified name, generate the name relative
                 to this block.
 
