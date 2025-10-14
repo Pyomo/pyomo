@@ -254,8 +254,10 @@ class _BaseTestModel:
                         not abs(solution[var.name][suffix_name] - suffix.get(var))
                         < self.diff_tol
                     ):
-                        if _ex is not None and not suffix.get(var) and (
-                            not _ex[1] or con.name in _ex[1]
+                        if (
+                            _ex is not None
+                            and not suffix.get(var)
+                            and (not _ex[1] or con.name in _ex[1])
                         ):
                             continue
                         return (
@@ -311,8 +313,10 @@ class _BaseTestModel:
                         not abs(solution[con.name][suffix_name] - suffix.get(con))
                         < self.diff_tol
                     ):
-                        if _ex is not None and not suffix.get(con) and (
-                            not _ex[1] or con.name in _ex[1]
+                        if (
+                            _ex is not None
+                            and not suffix.get(con)
+                            and (not _ex[1] or con.name in _ex[1])
                         ):
                             continue
                         return (
