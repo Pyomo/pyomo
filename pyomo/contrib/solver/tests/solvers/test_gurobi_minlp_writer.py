@@ -557,13 +557,14 @@ class TestGurobiMINLPWriter(CommonTest):
             r"The model \('unknown'\) contains the following active components "
             r"that the Gurobi MINLP writer does not know how to process:"
             + "\n\t"
-            + r"<class 'pyomo.gdp.disjunct.Disjunction'>:"
-            + "\n\t\t"
-            + "disj\n\t"
             + r"\<class 'pyomo.gdp.disjunct.Disjunct'\>:"
             + "\n\t\t"
             + r"disj_disjuncts\[0\]"
             + "\n\t\t"
-            + r"disj_disjuncts\[1\]",
+            + r"disj_disjuncts\[1\]"
+            + "\n\t"
+            + r"<class 'pyomo.gdp.disjunct.Disjunction'>:"
+            + "\n\t\t"
+            + "disj"
         ):
             results = SolverFactory('gurobi_direct_minlp').solve(m)

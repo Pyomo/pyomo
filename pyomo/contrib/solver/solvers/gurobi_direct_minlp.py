@@ -21,8 +21,6 @@ from pyomo.common.errors import InvalidValueError
 from pyomo.common.numeric_types import native_complex_types
 from pyomo.common.timing import HierarchicalTimer
 
-# ESJ TODO: Could we move this to util or somewhere less bizarre?
-from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.contrib.solver.common.util import NoSolutionError
@@ -72,6 +70,7 @@ from pyomo.opt import WriterFactory
 from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import (
     apply_node_operation,
+    categorize_valid_components,
     ExprType,
     ExitNodeDispatcher,
     BeforeChildDispatcher,
@@ -483,14 +482,12 @@ class GurobiMINLPWriter:
     def write(self, model, **options):
         config = options.pop('config', self.config)(options)
 
-        components, unknown = collect_valid_components(
+        components, unknown = categorize_valid_components(
             model,
             active=True,
             sort=SortComponents.deterministic,
             valid={
                 Block,
-                Objective,
-                Constraint,
                 Expression,
                 Var,
                 BooleanVar,
@@ -528,7 +525,16 @@ class GurobiMINLPWriter:
             grb_model, symbolic_solver_labels=config.symbolic_solver_labels
         )
 
-        active_objs = components[Objective]
+        active_objs = []
+        if components[Objective]:
+            for block in components[Objective]:
+                for obj in block.component_data_objects(
+                        Objective,
+                        active=True,
+                        descend_into=False,
+                        sort=SortComponents.deterministic
+                ):
+                    active_objs.append(obj)
         if len(active_objs) > 1:
             raise ValueError(
                 "More than one active objective defined for "
@@ -559,35 +565,41 @@ class GurobiMINLPWriter:
         # write constraints
         pyo_cons = []
         grb_cons = []
-        for cons in components[Constraint]:
-            lb, body, ub = cons.to_bounded_expression(evaluate_bounds=True)
-            expr_type, expr, nonlinear, aux = self._create_gurobi_expression(
-                body, cons, 0, grb_model, quadratic_visitor, visitor
-            )
-            if nonlinear:
-                grb_model.addConstr(aux == expr)
-                expr = aux
-            elif expr_type == _CONSTANT:
-                # cast everything to a float in case there are numpy
-                # types because you can't do addConstr(np.True_)
-                expr = float(expr)
-                if lb is not None:
-                    lb = float(lb)
-                if ub is not None:
-                    ub = float(ub)
-            if cons.equality:
-                grb_cons.append(grb_model.addConstr(expr == lb))
-                pyo_cons.append(cons)
-            else:
-                # TODO: should be have special handling if expr is a
-                # GRB.LinExpr so that we can use the ranged linear
-                # constraint syntax (expr == [lb, ub])?
-                if lb is not None:
-                    grb_cons.append(grb_model.addConstr(expr >= lb))
-                    pyo_cons.append(cons)
-                if ub is not None:
-                    grb_cons.append(grb_model.addConstr(expr <= ub))
-                    pyo_cons.append(cons)
+
+        if components[Constraint]:
+            for block in components[Constraint]:
+                for cons in block.component_data_objects(
+                        Constraint, active=True,
+                        descend_into=False,
+                        sort=SortComponents.deterministic):
+                    lb, body, ub = cons.to_bounded_expression(evaluate_bounds=True)
+                    expr_type, expr, nonlinear, aux = self._create_gurobi_expression(
+                        body, cons, 0, grb_model, quadratic_visitor, visitor
+                    )
+                    if nonlinear:
+                        grb_model.addConstr(aux == expr)
+                        expr = aux
+                    elif expr_type == _CONSTANT:
+                        # cast everything to a float in case there are numpy
+                        # types because you can't do addConstr(np.True_)
+                        expr = float(expr)
+                        if lb is not None:
+                            lb = float(lb)
+                        if ub is not None:
+                            ub = float(ub)
+                    if cons.equality:
+                        grb_cons.append(grb_model.addConstr(expr == lb))
+                        pyo_cons.append(cons)
+                    else:
+                        # TODO: should be have special handling if expr is a
+                        # GRB.LinExpr so that we can use the ranged linear
+                        # constraint syntax (expr == [lb, ub])?
+                        if lb is not None:
+                            grb_cons.append(grb_model.addConstr(expr >= lb))
+                            pyo_cons.append(cons)
+                        if ub is not None:
+                            grb_cons.append(grb_model.addConstr(expr <= ub))
+                            pyo_cons.append(cons)
 
         grb_model.update()
         return grb_model, visitor.var_map, pyo_obj, grb_cons, pyo_cons
