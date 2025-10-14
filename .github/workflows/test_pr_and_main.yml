@@ -97,11 +97,6 @@ jobs:
         other: [""]
         category: [""]
 
-        # HACK: Avoid 3.13.7 on Windows. We exclude this originally...
-        exclude:
-        - os: windows-latest
-          python: 3.13
-
         include:
         - os: ubuntu-latest
           test_docs: 1
@@ -114,15 +109,6 @@ jobs:
           PYENV: pip
 
         - os: windows-latest
-          test_docs: 1
-          TARGET: win
-          PYENV: conda
-          PACKAGES: glpk pytest-qt filelock
-
-        # Now manually add 3.13.5 back in. Ergo, all other OS' will
-        # run 3.13.7, but windows, the problem child, will not
-        - os: windows-latest
-          python: '3.13.5'
           test_docs: 1
           TARGET: win
           PYENV: conda
