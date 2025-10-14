@@ -81,7 +81,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: [3.13]
+        python: [3.14]
         other: [""]
         category: [""]
 
