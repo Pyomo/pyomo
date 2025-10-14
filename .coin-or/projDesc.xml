@@ -286,7 +286,7 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 
 			<platform>
 				<operatingSystem>Any</operatingSystem>
-				<compiler>Python 3.9, 3.10, 3.11, 3.12, 3.13</compiler>
+				<compiler>Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14</compiler>
 			</platform>
 
 		</testedPlatforms>
