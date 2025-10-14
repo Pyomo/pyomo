@@ -1,6 +1,7 @@
 [build-system]
 requires = [
-    "setuptools>=65",
+    # setuptools 77 for core-metadata version 2.4
+    "setuptools>=77",
     "wheel",
     # leave Cython as an optional, runtime‑selectable extra
     # setuptools will still import it from setup.py when requested
@@ -15,7 +16,8 @@ build-backend = "setuptools.build_meta"
 name = "pyomo"
 description = "The Pyomo optimization modeling framework"
 readme = "README.md"
-license = { file = "LICENSE.md" }
+license = "BSD-3-Clause"
+license-files = [ "LICENSE.md" ]
 authors = [{name = "Pyomo Development Team", email = "pyomo-developers@googlegroups.com"}]
 requires-python = ">=3.9"
 keywords=['optimization']
@@ -23,7 +25,6 @@ classifiers=[
     'Development Status :: 5 - Production/Stable',
     'Intended Audience :: End Users/Desktop',
     'Intended Audience :: Science/Research',
-    'License :: OSI Approved :: BSD License',
     'Natural Language :: English',
     'Operating System :: MacOS',
     'Operating System :: Microsoft :: Windows',
@@ -35,6 +36,7 @@ classifiers=[
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
     'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
     'Programming Language :: Python :: Implementation :: CPython',
     'Programming Language :: Python :: Implementation :: PyPy',
     'Topic :: Scientific/Engineering :: Mathematics',
