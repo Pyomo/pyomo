@@ -81,25 +81,25 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: [3.13]
+        python: [3.14]
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: 3.13
+          python: 3.14
           test_docs: 1
           TARGET: linux
           PYENV: pip
 
         - os: macos-latest
-          python: 3.12
+          python: 3.13
           test_docs: 1
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.11
+          python: 3.12
           test_docs: 1
           TARGET: win
           PYENV: conda
@@ -269,7 +269,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        python -m pip install --cache-dir cache/pip setuptools
+        python -m pip install --cache-dir cache/pip --upgrade setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
@@ -281,6 +281,10 @@ jobs:
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
             done
+        fi
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            PACKAGES="$PACKAGES setuptools<74.0.0"
         fi
         python -m pip install --cache-dir cache/pip ${PACKAGES}
         python -m pip install --cache-dir cache/pip pymysql || \
@@ -341,6 +345,8 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
+        # We need setuptools so we can run Pyomo's setup.py
+        conda install setuptools
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`

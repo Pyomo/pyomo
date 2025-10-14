@@ -5,7 +5,7 @@ Installation
 
 Pyomo currently supports the following versions of Python:
 
-* CPython: 3.9, 3.10, 3.11, 3.12, 3.13
+* CPython: 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
 * PyPy: 3
 
 At the time of the first Pyomo release after the end-of-life of a minor Python

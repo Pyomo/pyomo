@@ -17,6 +17,7 @@ import logging
 import math
 import os
 import re
+import sys
 
 import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
@@ -452,10 +453,14 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         info = INFO()
         with LoggingIntercept() as LOG:
             repn = info.visitor.walk_expression((log(m.p), None, None, 1))
+        if sys.version_info[:2] < (3, 14):
+            msg = 'math domain error'
+        else:
+            msg = 'expected a positive input'
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'log(0)'\n"
-            "\tmessage: math domain error\n"
+            f"\tmessage: {msg}\n"
             "\texpression: log(p)\n",
         )
         self.assertEqual(repn.nl, None)
