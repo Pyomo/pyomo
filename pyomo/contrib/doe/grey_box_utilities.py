@@ -386,7 +386,7 @@ class FIMExternalGreyBox(
         # must consider the contribution from all elements.
         # Therefore, we are required to use the full product
         # space of the parameter names (full FIM) to compute
-        # to Hessian of the symmetric FIM.
+        # the Hessian of the symmetric FIM.
         full_input_names = itertools.product(self._param_names, repeat=2)
 
         # Here, we use combination with replacement to only
