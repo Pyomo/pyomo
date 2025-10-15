@@ -4256,8 +4256,8 @@ class TestCloneExpression(unittest.TestCase):
         f = e.clone()
         self.assertIsNot(e, f)
         # turns out that two empty tuples, a and b, return True for a is b
-        #self.assertIsNot(e.linear_coefs, f.linear_coefs)
-        #self.assertIsNot(e.linear_vars, f.linear_vars)
+        # self.assertIsNot(e.linear_coefs, f.linear_coefs)
+        # self.assertIsNot(e.linear_vars, f.linear_vars)
         self.assertIsNot(e._args_, f._args_)
         self.assertEqual(e.constant, f.constant)
         self.assertEqual(e.linear_coefs, f.linear_coefs)
