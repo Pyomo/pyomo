@@ -50,7 +50,7 @@ from pyomo.contrib.piecewise import PiecewiseLinearExpression, PiecewiseLinearFu
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
 from pyomo.repn.quadratic import QuadraticRepnVisitor
-from pyomo.repn.util import ExprType
+from pyomo.repn.util import ExprType, VarRecorder
 
 
 lineartree, lineartree_available = attempt_import('lineartree')
@@ -497,7 +497,7 @@ class NonlinearToPWL(Transformation):
         self._transformation_blocks = {}
         self._transformation_block_set = ComponentSet()
         self._quadratic_repn_visitor = QuadraticRepnVisitor(
-            subexpression_cache={}, var_map={}, var_order={}, sorter=None
+            subexpression_cache={}, var_recorder=VarRecorder(var_map={}, sorter=None)
         )
 
     def _apply_to(self, instance, **kwds):
