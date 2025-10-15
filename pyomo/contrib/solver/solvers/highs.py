@@ -750,7 +750,20 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     results.objective_bound = None
             else:
                 results.objective_bound = info.mip_dual_bound
-            results.iteration_count = info.simplex_iteration_count
+
+            if info.valid:
+                # The method that ran will have a non-negative iteration count
+                # and the others will be 0 or -1.
+                max_iters = max(
+                    info.simplex_iteration_count,
+                    info.ipm_iteration_count,
+                    info.mip_node_count,
+                    info.pdlp_iteration_count,
+                    info.qp_iteration_count,
+                )
+                results.iteration_count = max_iters if max_iters != -1 else 0
+            else:
+                results.iteration_count = 0
 
         if config.load_solutions:
             if has_feasible_solution:
