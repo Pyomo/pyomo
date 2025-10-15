@@ -78,7 +78,7 @@ from pyomo.repn.util import (
     initialize_exit_node_dispatcher,
     nan,
     OrderedVarRecorder,
-    check_constant
+    check_constant,
 )
 
 import sys

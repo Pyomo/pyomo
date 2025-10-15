@@ -23,7 +23,7 @@ from pyomo.repn.util import (
     ExitNodeDispatcher,
     ExprType,
     initialize_exit_node_dispatcher,
-    check_constant
+    check_constant,
 )
 import pyomo.repn.linear as linear
 import pyomo.repn.quadratic as quadratic

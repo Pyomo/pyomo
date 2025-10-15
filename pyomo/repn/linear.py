@@ -56,7 +56,7 @@ from pyomo.repn.util import (
     nan,
     sum_like_expression_types,
     val2str,
-    check_constant
+    check_constant,
 )
 
 _CONSTANT = ExprType.CONSTANT

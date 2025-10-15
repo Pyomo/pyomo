@@ -1009,7 +1009,5 @@ def check_constant(ans, obj, visitor):
                     ans, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
                 )
     if ans != ans:
-        return InvalidNumber(
-            nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-        )
+        return InvalidNumber(nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'")
     return ans
