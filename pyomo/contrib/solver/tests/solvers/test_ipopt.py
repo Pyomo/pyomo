@@ -9,8 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import os
+import os, sys
 import subprocess
+from contextlib import contextmanager
 
 import pyomo.environ as pyo
 from pyomo.common.envvar import is_windows
@@ -27,6 +28,23 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.repn.plugins.nl_writer import NLWriter
 
 ipopt_available = ipopt.Ipopt().available()
+
+
+@contextmanager
+def windows_tee_buffer(size=1 << 20):
+    """Temporarily increase TeeStream buffer size on Windows"""
+    if not sys.platform.startswith("win"):
+        # Only windows has an issue
+        yield
+        return
+    import pyomo.common.tee as tee
+
+    old = tee._pipe_buffersize
+    tee._pipe_buffersize = size
+    try:
+        yield
+    finally:
+        tee._pipe_buffersize = old
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -321,6 +339,99 @@ Ipopt 3.14.17: Optimal Solution Found
             logs.output[0],
         )
 
+    def test_parse_output_diagnostic_tags(self):
+        output = """******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit http://projects.coin-or.org/Ipopt
+
+This version of Ipopt was compiled from source code available at
+    https://github.com/IDAES/Ipopt as part of the Institute for the Design of
+    Advanced Energy Systems Process Systems Engineering Framework (IDAES PSE
+    Framework) Copyright (c) 2018-2019. See https://github.com/IDAES/idaes-pse.
+
+This version of Ipopt was compiled using HSL, a collection of Fortran codes
+    for large-scale scientific computation.  All technical papers, sales and
+    publicity material resulting from use of the HSL codes within IPOPT must
+    contain the following acknowledgement:
+        HSL, a collection of Fortran codes for large-scale scientific
+        computation. See http://www.hsl.rl.ac.uk/.
+******************************************************************************
+
+This is Ipopt version 3.13.2, running with linear solver ma57.
+
+Number of nonzeros in equality constraint Jacobian...:    77541
+Number of nonzeros in inequality constraint Jacobian.:        0
+Number of nonzeros in Lagrangian Hessian.............:    51855
+
+Total number of variables............................:    15468
+                     variables with only lower bounds:     3491
+                variables with lower and upper bounds:     5026
+                     variables with only upper bounds:      186
+Total number of equality constraints.................:    15417
+Total number of inequality constraints...............:        0
+        inequality constraints with only lower bounds:        0
+   inequality constraints with lower and upper bounds:        0
+        inequality constraints with only upper bounds:        0
+
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+   0  4.3126674e+00 1.34e+00 1.00e+00  -5.0 0.00e+00    -  0.00e+00 0.00e+00   0
+Reallocating memory for MA57: lfact (2247250)
+   1r 4.3126674e+00 1.34e+00 9.99e+02   0.1 0.00e+00  -4.0 0.00e+00 3.29e-10R  2
+   2r 3.0519246e+08 1.13e+00 9.90e+02   0.1 2.30e+02    -  2.60e-02 9.32e-03f  1
+   3r 2.2712595e+09 1.69e+00 9.73e+02   0.1 2.23e+02    -  2.54e-02 1.71e-02f  1 Nhj
+   4  2.2712065e+09 1.69e+00 1.37e+09  -5.0 3.08e+03    -  1.32e-05 1.17e-05f  1 q
+   5  1.9062986e+09 1.55e+00 1.25e+09  -5.0 5.13e+03    -  1.19e-01 8.38e-02f  1
+   6  1.7041594e+09 1.46e+00 1.18e+09  -5.0 5.66e+03    -  7.06e-02 5.45e-02f  1
+   7  1.4763158e+09 1.36e+00 1.10e+09  -5.0 3.94e+03    -  2.30e-01 6.92e-02f  1
+   8  8.5873108e+08 1.04e+00 8.41e+08  -5.0 2.38e+05    -  3.49e-06 2.37e-01f  1
+   9  4.4215572e+08 7.45e-01 6.03e+08  -5.0 1.63e+06    -  7.97e-02 2.82e-01f  1
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+  10  5.0251884e+01 1.65e-01 1.57e+04  -5.0 1.24e+06    -  3.92e-05 1.00e+00f  1
+  11  4.9121733e+01 4.97e-02 4.68e+03  -5.0 8.11e+04    -  4.31e-02 7.01e-01h  1
+  12  4.1483985e+01 2.24e-02 5.97e+03  -5.0 1.15e+06    -  5.93e-02 1.00e+00f  1
+  13  3.5762585e+01 1.75e-02 5.00e+03  -5.0 1.03e+06    -  1.25e-01 1.00e+00f  1
+  14  3.2291014e+01 1.08e-02 3.51e+03  -5.0 8.25e+05    -  6.68e-01 1.00e+00f  1
+  15  3.2274630e+01 3.31e-05 1.17e+00  -5.0 4.26e+04    -  9.92e-01 1.00e+00h  1
+  16  3.2274631e+01 7.45e-09 2.71e-03  -5.0 6.11e+02    -  8.97e-01 1.00e+00h  1
+  17  3.2274635e+01 7.45e-09 2.35e-03  -5.0 2.71e+04    -  1.32e-01 1.00e+00f  1
+  18  3.2274635e+01 7.45e-09 1.15e-04  -5.0 5.53e+03    -  9.51e-01 1.00e+00h  1
+  19  3.2274635e+01 7.45e-09 2.84e-05  -5.0 4.41e+04    -  7.54e-01 1.00e+00f  1
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+  20  3.2274635e+01 7.45e-09 8.54e-07  -5.0 1.83e+04    -  1.00e+00 1.00e+00h  1
+
+Number of Iterations....: 20
+
+                                   (scaled)                 (unscaled)
+Objective...............:   3.2274635418964841e+01    3.2274635418964841e+01
+Dual infeasibility......:   8.5365078678328669e-07    8.5365078678328669e-07
+Constraint violation....:   8.0780625068607930e-13    7.4505805969238281e-09
+Complementarity.........:   1.2275904566414160e-05    1.2275904566414160e-05
+Overall NLP error.......:   1.2275904566414160e-05    1.2275904566414160e-05
+
+
+Number of objective function evaluations             = 23
+Number of objective gradient evaluations             = 20
+Number of equality constraint evaluations            = 23
+Number of inequality constraint evaluations          = 0
+Number of equality constraint Jacobian evaluations   = 22
+Number of inequality constraint Jacobian evaluations = 0
+Number of Lagrangian Hessian evaluations             = 20
+Total CPU secs in IPOPT (w/o function evaluations)   =     10.450
+Total CPU secs in NLP function evaluations           =      1.651
+
+EXIT: Optimal Solution Found.
+    """
+        parsed_output = ipopt.Ipopt()._parse_ipopt_output(output)
+        self.assertEqual(parsed_output["iters"], 20)
+        self.assertEqual(len(parsed_output["iteration_log"]), 21)
+        self.assertEqual(parsed_output["incumbent_objective"], 3.2274635418964841e01)
+        self.assertEqual(parsed_output["iteration_log"][3]["diagnostic_tags"], 'Nhj')
+        self.assertIn("final_scaled_results", parsed_output.keys())
+        self.assertIn(
+            'IPOPT (w/o function evaluations)', parsed_output['cpu_seconds'].keys()
+        )
+
     def test_verify_ipopt_options(self):
         opt = ipopt.Ipopt(solver_options={'max_iter': 4})
         opt._verify_ipopt_options(opt.config)
@@ -478,6 +589,37 @@ class TestIpopt(unittest.TestCase):
         self.assertAlmostEqual(model.x.value, 1)
         self.assertAlmostEqual(model.y.value, 1)
 
+    def test_ipopt_quiet_print_level(self):
+        model = self.create_model()
+        result = ipopt.Ipopt().solve(model, solver_options={'print_level': 0})
+        # IPOPT doesn't tell us anything about the iters if the print level
+        # is set to 0
+        self.assertIsNone(result.iteration_count)
+        self.assertFalse(hasattr(result.extra_info, 'iteration_log'))
+        model = self.create_model()
+        result = ipopt.Ipopt().solve(model, solver_options={'print_level': 3})
+        # At a slightly higher level, we get some of the info, like
+        # iteration count, but NOT iteration_log
+        self.assertEqual(result.iteration_count, 11)
+        self.assertFalse(hasattr(result.extra_info, 'iteration_log'))
+
+    def test_ipopt_loud_print_level(self):
+        with windows_tee_buffer(1 << 20):
+            model = self.create_model()
+            result = ipopt.Ipopt().solve(model, solver_options={'print_level': 8})
+            # Nothing unexpected should be in the results object at this point,
+            # except that the solver_log is significantly longer
+            self.assertEqual(result.iteration_count, 11)
+            self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
+            self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
+            self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
+            model = self.create_model()
+            result = ipopt.Ipopt().solve(model, solver_options={'print_level': 12})
+            self.assertEqual(result.iteration_count, 11)
+            self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
+            self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
+            self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
+
     def test_ipopt_results(self):
         model = self.create_model()
         results = ipopt.Ipopt().solve(model)
@@ -612,14 +754,13 @@ class TestLegacyIpopt(unittest.TestCase):
                 solver_options={'OF_bogus_option': 5},
                 load_solutions=False,
             )
-        print(LOG.getvalue())
         self.assertIn('OPTION_INVALID', LOG.getvalue())
         # Note: OF_ is stripped
         self.assertIn(
             'Read Option: "bogus_option". It is not a valid option', LOG.getvalue()
         )
 
-        with self.assertRaisesRegex(ValueError, "unallowed ipopt option 'wantsol'"):
+        with self.assertRaisesRegex(ValueError, "unallowed Ipopt option 'wantsol'"):
             results = ipopt.LegacyIpoptSolver().solve(
                 model,
                 tee=True,
