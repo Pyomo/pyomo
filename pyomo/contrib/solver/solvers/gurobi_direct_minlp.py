@@ -76,9 +76,9 @@ from pyomo.repn.util import (
     BeforeChildDispatcher,
     complex_number_error,
     initialize_exit_node_dispatcher,
-    InvalidNumber,
     nan,
     OrderedVarRecorder,
+    check_constant
 )
 
 import sys
@@ -178,9 +178,7 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
     def _before_var(visitor, child):
         if child not in visitor.var_map:
             if child.fixed:
-                # ESJ TODO: I want the linear walker implementation of
-                # check_constant... Could it be in the base class or something?
-                return False, (_CONSTANT, visitor.check_constant(child.value, child))
+                return False, (_CONSTANT, check_constant(child.value, child, visitor))
             grb_var = _create_grb_var(
                 visitor,
                 child,
@@ -412,40 +410,6 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
 
     def finalizeResult(self, result):
         return result
-
-    # ESJ TODO: THIS IS COPIED FROM THE LINEAR WALKER--CAN WE PUT IT IN UTIL OR
-    # SOMETHING?
-    def check_constant(self, ans, obj):
-        if ans.__class__ not in EXPR.native_numeric_types:
-            # None can be returned from uninitialized Var/Param objects
-            if ans is None:
-                return InvalidNumber(
-                    None, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-                )
-            if ans.__class__ is InvalidNumber:
-                return ans
-            elif ans.__class__ in native_complex_types:
-                return complex_number_error(ans, self, obj)
-            else:
-                # It is possible to get other non-numeric types.  Most
-                # common are bool and 1-element numpy.array().  We will
-                # attempt to convert the value to a float before
-                # proceeding.
-                #
-                # TODO: we should check bool and warn/error (while bool is
-                # convertible to float in Python, they have very
-                # different semantic meanings in Pyomo).
-                try:
-                    ans = float(ans)
-                except:
-                    return InvalidNumber(
-                        ans, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-                    )
-        if ans != ans:
-            return InvalidNumber(
-                nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-            )
-        return ans
 
 
 @WriterFactory.register(
