@@ -247,14 +247,7 @@ class PyROS:
             exclude_options = set(exclude_options)
 
         user_values = list(
-            filter(
-                # note: first clause of logical expression
-                #       accounts for issue shown in Pyomo/pyomo#3721,
-                #       which causes an iterate
-                #       of user_values to be the config dict itself
-                lambda val: bool(val.name()) and val.name() not in exclude_options,
-                config.user_values(),
-            )
+            filter(lambda val: val.name() not in exclude_options, config.user_values())
         )
         if user_values:
             logger.log(msg="User-provided solver options:", **log_kwargs)
