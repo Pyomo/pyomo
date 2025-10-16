@@ -754,14 +754,20 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             if info.valid:
                 # The method that ran will have a non-negative iteration count
                 # and the others will be 0 or -1.
-                max_iters = max(
+                counts = [
                     info.simplex_iteration_count,
                     info.ipm_iteration_count,
                     info.mip_node_count,
                     info.pdlp_iteration_count,
                     info.qp_iteration_count,
-                )
-                results.iteration_count = max_iters if max_iters != -1 else 0
+                ]
+                assert (
+                    len([c for c in counts if c > 1]) <= 1
+                ), "Only one method should have a positive iteration count"
+                assert any(
+                    [c >= 0 for c in counts]
+                ), "Should have a non-negative count if info valid"
+                results.iteration_count = max(counts)
             else:
                 results.iteration_count = 0
 
