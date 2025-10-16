@@ -20,7 +20,7 @@ from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.base.objective import ObjectiveData, Objective
 from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.suffix import Suffix
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet, DefaultComponentMap
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.util import get_objective
