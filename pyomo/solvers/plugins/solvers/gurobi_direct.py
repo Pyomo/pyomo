@@ -236,23 +236,17 @@ class GurobiDirect(DirectSolver):
         else:
             return False
 
-    def _setParamIfChange(self, name: str, value) -> None:
-        "Set a Gurobi parameter, but only if the new value differs."
-        _, _, current, _, _, _ = self._solver_model.getParamInfo(name)
-        if current != value:
-            self._solver_model.setParam(name, value)
-
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
 
         if self._tee:
-            self._setParamIfChange('LogToConsole', 1)
+            self._solver_model.setParam('LogToConsole', 1)
         else:
-            self._setParamIfChange('LogToConsole', 0)
+            self._solver_model.setParam('LogToConsole', 0)
 
         if self._keepfiles:
             # Only save log file when the user wants to keep it.
-            self._setParamIfChange('LogFile', self._log_file)
+            self._solver_model.setParam('LogFile', self._log_file)
             print("Solver log file: " + self._log_file)
 
         # Only pass along changed parameters to the model
