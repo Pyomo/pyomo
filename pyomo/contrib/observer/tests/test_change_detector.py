@@ -23,6 +23,7 @@ from pyomo.contrib.observer.model_observer import (
     Observer,
     ModelChangeDetector,
     AutoUpdateConfig,
+    Reason,
 )
 from pyomo.common.collections import ComponentMap
 
@@ -112,7 +113,7 @@ class ObserverChecker(Observer):
             assert p.is_parameter_type()
         self._process(params, 'remove')
 
-    def update_variables(self, variables: List[VarData]):
+    def update_variables(self, variables: List[VarData], reasons: List[Reason]):
         for v in variables:
             assert v.is_variable_type()
         self._process(variables, 'update')
@@ -156,31 +157,11 @@ class TestChangeDetector(unittest.TestCase):
         m.x.fix(2)
         detector.update()
         expected[m.x]['update'] += 1
-        # the variable gets updated
-        # the objective must get removed and added
-        # that causes x,y, and p to all get removed
-        # and added
-        expected[m.obj]['remove'] += 1
-        expected[m.obj]['add'] += 1
-        expected[m.x]['remove'] += 1
-        expected[m.x]['add'] += 1
-        expected[m.y]['remove'] += 1
-        expected[m.y]['add'] += 1
-        expected[m.p]['remove'] += 1
-        expected[m.p]['add'] += 1
         obs.check(expected)
 
         m.x.unfix()
         detector.update()
         expected[m.x]['update'] += 1
-        expected[m.obj]['remove'] += 1
-        expected[m.obj]['add'] += 1
-        expected[m.x]['remove'] += 1
-        expected[m.x]['add'] += 1
-        expected[m.y]['remove'] += 1
-        expected[m.y]['add'] += 1
-        expected[m.p]['remove'] += 1
-        expected[m.p]['add'] += 1
         obs.check(expected)
 
         m.p.value = 2
@@ -239,21 +220,9 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.obj]['add'] += 1
         obs.check(expected)
 
-        # now fix a variable and make sure the
-        # constraint gets removed and added
         m.x.fix(1)
         detector.update()
-        expected[m.c1]['remove'] += 1
-        expected[m.c1]['add'] += 1
-        # because x and p are only used in the
-        # one constraint, they get removed when
-        # the constraint is removed and then
-        # added again when the constraint is added
         expected[m.x]['update'] += 1
-        expected[m.x]['remove'] += 1
-        expected[m.x]['add'] += 1
-        expected[m.p]['remove'] += 1
-        expected[m.p]['add'] += 1
         obs.check(expected)
 
     def test_sos(self):
@@ -328,21 +297,9 @@ class TestChangeDetector(unittest.TestCase):
         expected[m2.obj]['add'] += 1
         obs.check(expected)
 
-        # now fix a variable and make sure the
-        # constraint gets removed and added
         m1.x.fix(1)
         detector.update()
-        expected[m2.c1]['remove'] += 1
-        expected[m2.c1]['add'] += 1
-        # because x and p are only used in the
-        # one constraint, they get removed when
-        # the constraint is removed and then
-        # added again when the constraint is added
         expected[m1.x]['update'] += 1
-        expected[m1.x]['remove'] += 1
-        expected[m1.x]['add'] += 1
-        expected[m1.p]['remove'] += 1
-        expected[m1.p]['add'] += 1
         obs.check(expected)
 
     def test_named_expression(self):
