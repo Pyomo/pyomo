@@ -109,3 +109,43 @@ class TestBugs(unittest.TestCase):
         self.assertAlmostEqual(m.fx.value, 1, places=5)
         self.assertAlmostEqual(m.fy.value, 0, places=5)
         self.assertAlmostEqual(r.objective_bound, 0.5, places=5)
+
+
+class TestHighsMiniDemos(unittest.TestCase):
+    def test_lp_methods(self):
+        for method in ("simplex", "ipm", "pdlp"):
+            # Build LP
+            m = pyo.ConcreteModel()
+            m.x = pyo.Var(domain=pyo.NonNegativeReals)
+            m.y = pyo.Var(domain=pyo.NonNegativeReals)
+            m.c = pyo.Constraint(expr=m.x + m.y >= 1)
+            m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.minimize)
+
+            solver = Highs()
+            solver.config.solver_options["solver"] = (
+                method  # 'simplex' | 'ipm' | 'pdlp'
+            )
+
+            solver.solve(m, tee=False)
+
+    def test_mip_demo(self):
+        # Build MIP
+        m = pyo.ConcreteModel()
+        m.a = pyo.Var(domain=pyo.Binary)
+        m.b = pyo.Var(domain=pyo.Binary)
+        m.cap = pyo.Constraint(expr=m.a + m.b <= 1)
+        m.obj = pyo.Objective(expr=3 * m.a + 2 * m.b, sense=pyo.maximize)
+
+        solver = Highs()
+        solver.solve(m, tee=False)
+
+    def test_qp_demo(self):
+        # Build convex QP
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.Reals, bounds=(0, None))
+        m.y = pyo.Var(domain=pyo.Reals, bounds=(0, None))
+        m.c = pyo.Constraint(expr=m.x + m.y >= 1)
+        m.obj = pyo.Objective(expr=(m.x - 1) ** 2 + (m.y - 2) ** 2, sense=pyo.minimize)
+
+        solver = Highs()
+        solver.solve(m, tee=False)
