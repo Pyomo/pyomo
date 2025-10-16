@@ -1,7 +1,7 @@
 [![GitHub Actions Status](https://github.com/Pyomo/pyomo/actions/workflows/test_pr_and_main.yml/badge.svg?branch=main&event=push)](https://github.com/Pyomo/pyomo/actions/workflows/test_pr_and_main.yml?query=branch%3Amain+event%3Apush)
 [![Jenkins Status](https://github.com/Pyomo/jenkins-status/blob/main/pyomo_main.svg)](https://pyomo-jenkins.sandia.gov/)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/main/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
-[![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
+[![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](https://pyomo.readthedocs.org/en/latest/)
 [![Build services](https://github.com/Pyomo/jenkins-status/blob/main/pyomo_services.svg)](https://pyomo-jenkins.sandia.gov/)
 [![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
 [![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
@@ -38,10 +38,10 @@ Pyomo's modeling objects are embedded within a full-featured high-level
 programming language, which allows for transparent parallelization of
 subproblems using Python parallel communication libraries.
 
-* [Pyomo Home](http://www.pyomo.org)
-* [About Pyomo](http://www.pyomo.org/about)
-* [Download](http://www.pyomo.org/installation/)
-* [Documentation](http://www.pyomo.org/documentation/)
+* [Pyomo Home](https://www.pyomo.org)
+* [About Pyomo](https://www.pyomo.org/about)
+* [Download](https://www.pyomo.org/installation/)
+* [Documentation](https://www.pyomo.org/documentation/)
 * [Performance Plots](https://pyomo.github.io/performance/)
 
 Pyomo was formerly released as the Coopr software library.
