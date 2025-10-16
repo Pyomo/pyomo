@@ -13,6 +13,7 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.contrib.solver.solvers.highs import Highs
+from pyomo.contrib.solver.common.results import SolutionStatus
 
 opt = Highs()
 if not opt.available():
@@ -125,8 +126,9 @@ class TestHighsMiniDemos(unittest.TestCase):
             solver.config.solver_options["solver"] = (
                 method  # 'simplex' | 'ipm' | 'pdlp'
             )
-
-            solver.solve(m, tee=False)
+            results = solver.solve(m)
+            self.assertTrue(results.solution_status == SolutionStatus.optimal)
+            self.assertTrue(results.iteration_count >= 0)
 
     def test_mip_demo(self):
         # Build MIP
@@ -137,7 +139,9 @@ class TestHighsMiniDemos(unittest.TestCase):
         m.obj = pyo.Objective(expr=3 * m.a + 2 * m.b, sense=pyo.maximize)
 
         solver = Highs()
-        solver.solve(m, tee=False)
+        results = solver.solve(m)
+        self.assertTrue(results.solution_status == SolutionStatus.optimal)
+        self.assertTrue(results.iteration_count >= 0)
 
     def test_qp_demo(self):
         # Build convex QP
@@ -148,4 +152,6 @@ class TestHighsMiniDemos(unittest.TestCase):
         m.obj = pyo.Objective(expr=(m.x - 1) ** 2 + (m.y - 2) ** 2, sense=pyo.minimize)
 
         solver = Highs()
-        solver.solve(m, tee=False)
+        results = solver.solve(m)
+        self.assertTrue(results.solution_status == SolutionStatus.optimal)
+        self.assertTrue(results.iteration_count >= 0)
