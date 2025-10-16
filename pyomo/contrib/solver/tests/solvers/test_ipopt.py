@@ -343,7 +343,7 @@ Ipopt 3.14.17: Optimal Solution Found
         output = """******************************************************************************
 This program contains Ipopt, a library for large-scale nonlinear optimization.
  Ipopt is released as open source code under the Eclipse Public License (EPL).
-         For more information visit http://projects.coin-or.org/Ipopt
+         For more information visit [legacy Ipopt URL removed]
 
 This version of Ipopt was compiled from source code available at
     https://github.com/IDAES/Ipopt as part of the Institute for the Design of
