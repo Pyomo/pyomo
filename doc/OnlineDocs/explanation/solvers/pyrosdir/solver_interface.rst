@@ -222,7 +222,7 @@ the value of the optional ``objective_focus`` argument to the
   the nominal uncertain parameter realization
 * If ``objective_focus`` is set to
   :attr:`~pyomo.contrib.pyros.util.ObjectiveType.worst_case`,
-  then the objective is evaluated subject
+  then the objective is evaluated subject to
   the uncertain parameter realization that induces the worst-case
   objective value
 
