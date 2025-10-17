@@ -113,7 +113,7 @@ jobs:
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: '3.11'
+          python: 3.11
           other: /mpi
           mpi: 3
           TARGET: linux
@@ -855,16 +855,16 @@ jobs:
       with:
         path: artifacts
 
-    - name: Set up Python 3.10
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: 3.12
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above
       run: |
         python -c 'import sys;print(sys.executable)'
-        python -m pip install --cache-dir cache/pip --upgrade pip
+        python -m pip install --cache-dir cache/pip --upgrade pip setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "tests" | tail -1`
         python -m pip install --cache-dir cache/pip \
