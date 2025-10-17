@@ -6,7 +6,7 @@ optimization models.
 
 The following are highlights of the 6.9 release series:
 
-- Removed support for Python 3.8, 3.9
+- Removed support for Python 3.8
 - Added support for Python 3.14
 - New Logic-Based Discrete-Steepest Descent Algorithm in GDPOpt
 - New External Function for Cubic Spline Interpolation
