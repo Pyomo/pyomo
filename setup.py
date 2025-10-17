@@ -240,7 +240,7 @@ setup_kwargs = dict(
             'openpyxl',  # dataportals
             'packaging',  # for checking other dependency versions
             #'pathos',   # requested for #963, but PR currently closed
-            # pint causes a segfault on pypy
+            # pint causes a segfault only for one test (test_bad_units) on pypy
             'pint; implementation_name!="pypy"',  # units
             'plotly',  # incidence_analysis
             'python-louvain',  # community_detection
