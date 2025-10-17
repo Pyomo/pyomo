@@ -14,6 +14,7 @@ from .common.factory import SolverFactory
 from .solvers.ipopt import Ipopt, LegacyIpoptSolver
 from .solvers.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi_direct import GurobiDirect
+from .solvers.gurobi_direct_minlp import GurobiDirectMINLP
 from .solvers.highs import Highs
 from .solvers.knitro.direct import KnitroDirectSolver
 
@@ -32,6 +33,11 @@ def load():
         legacy_name="gurobi_direct_v2",
         doc="Direct (scipy-based) interface to Gurobi",
     )(GurobiDirect)
+    SolverFactory.register(
+        name='gurobi_direct_minlp',
+        legacy_name='gurobi_direct_minlp',
+        doc='Direct interface to Gurobi accommodating general MINLP',
+    )(GurobiDirectMINLP)
     SolverFactory.register(
         name="highs", legacy_name="highs", doc="Persistent interface to HiGHS"
     )(Highs)
