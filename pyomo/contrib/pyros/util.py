@@ -1163,6 +1163,51 @@ class ModelData:
         return priority
 
 
+def log_original_model_statistics(model_data, user_var_partitioning):
+    """
+    Log statistics for the original model (before preprocessing).
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    user_var_partitioning : VariablePartitioning
+        User-specified partitioning of the model variables.
+    """
+    config = model_data.config
+    original_model = model_data.original_model
+
+    # variables. we log the user partitioning
+    num_first_stage_vars = len(user_var_partitioning.first_stage_variables)
+    num_second_stage_vars = len(user_var_partitioning.second_stage_variables)
+    num_state_vars = len(user_var_partitioning.state_variables)
+    num_vars = num_first_stage_vars + num_second_stage_vars + num_state_vars
+
+    # uncertain parameters
+    num_uncertain_params = len(model_data.config.uncertain_params)
+
+    # constraints
+    num_cons, num_eq_cons, num_ineq_cons = 0, 0, 0
+    for con in original_model.component_data_objects(Constraint, active=True):
+        num_cons += 1
+        if con.equality:
+            num_eq_cons += 1
+        else:
+            num_ineq_cons += 1
+
+    info_log_func = config.progress_logger.info
+
+    info_log_func("Model Statistics (before preprocessing):")
+    info_log_func(f"  Number of variables : {num_vars}")
+    info_log_func(f"    First-stage variables : {num_first_stage_vars}")
+    info_log_func(f"    Second-stage variables : {num_second_stage_vars}")
+    info_log_func(f"    State variables : {num_state_vars}")
+    info_log_func(f"  Number of uncertain parameters : {num_uncertain_params}")
+    info_log_func(f"  Number of constraints : {num_cons}")
+    info_log_func(f"    Equality constraints : {num_eq_cons}")
+    info_log_func(f"    Inequality constraints : {num_ineq_cons}")
+
+
 def setup_quadratic_expression_visitor(
     wrt, subexpression_cache=None, var_map=None, var_order=None, sorter=None
 ):
@@ -2915,7 +2960,7 @@ def preprocess_model_data(model_data, user_var_partitioning):
     return robust_infeasible
 
 
-def log_model_statistics(model_data):
+def log_preprocessed_model_statistics(model_data):
     """
     Log statistics for the preprocessed model.
 
@@ -2967,37 +3012,38 @@ def log_model_statistics(model_data):
     num_first_stage_ineq_cons = len(working_model.first_stage.inequality_cons)
     num_second_stage_ineq_cons = len(working_model.second_stage.inequality_cons)
 
-    info_log_func = config.progress_logger.info
+    debug_log_func = config.progress_logger.debug
 
-    IterationLogRecord.log_header_rule(info_log_func)
-    info_log_func("Model Statistics:")
+    debug_log_func("Model Statistics (after preprocessing):")
 
-    info_log_func(f"  Number of variables : {num_vars}")
-    info_log_func(f"    Epigraph variable : {num_epigraph_vars}")
-    info_log_func(f"    First-stage variables : {num_first_stage_vars}")
-    info_log_func(
+    debug_log_func(f"  Number of variables : {num_vars}")
+    debug_log_func(f"    Epigraph variable : {num_epigraph_vars}")
+    debug_log_func(f"    First-stage variables : {num_first_stage_vars}")
+    debug_log_func(
         f"    Second-stage variables : {num_second_stage_vars} "
         f"({num_eff_second_stage_vars} adj.)"
     )
-    info_log_func(
+    debug_log_func(
         f"    State variables : {num_state_vars} " f"({num_eff_state_vars} adj.)"
     )
-    info_log_func(f"    Decision rule variables : {num_dr_vars}")
+    debug_log_func(f"    Decision rule variables : {num_dr_vars}")
 
-    info_log_func(
+    debug_log_func(
         f"  Number of uncertain parameters : {num_uncertain_params} "
         f"({num_eff_uncertain_params} eff.)"
     )
 
-    info_log_func(f"  Number of constraints : {num_cons}")
-    info_log_func(f"    Equality constraints : {num_eq_cons}")
-    info_log_func(f"      Coefficient matching constraints : {num_coeff_matching_cons}")
-    info_log_func(f"      Other first-stage equations : {num_other_first_stage_eqns}")
-    info_log_func(f"      Second-stage equations : {num_second_stage_eq_cons}")
-    info_log_func(f"      Decision rule equations : {num_dr_eq_cons}")
-    info_log_func(f"    Inequality constraints : {num_ineq_cons}")
-    info_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
-    info_log_func(f"      Second-stage inequalities : {num_second_stage_ineq_cons}")
+    debug_log_func(f"  Number of constraints : {num_cons}")
+    debug_log_func(f"    Equality constraints : {num_eq_cons}")
+    debug_log_func(
+        f"      Coefficient matching constraints : {num_coeff_matching_cons}"
+    )
+    debug_log_func(f"      Other first-stage equations : {num_other_first_stage_eqns}")
+    debug_log_func(f"      Second-stage equations : {num_second_stage_eq_cons}")
+    debug_log_func(f"      Decision rule equations : {num_dr_eq_cons}")
+    debug_log_func(f"    Inequality constraints : {num_ineq_cons}")
+    debug_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
+    debug_log_func(f"      Second-stage inequalities : {num_second_stage_ineq_cons}")
 
 
 def add_decision_rule_variables(model_data):
@@ -3338,6 +3384,18 @@ class IterationLogRecord:
         found during separation step.
     elapsed_time : float, optional
         Total time elapsed up to the current iteration, in seconds.
+    master_backup_solver : bool
+        True if a backup subordinate optimizer was used to solve the
+        master problem, False otherwise.
+    master_feasibility_success : bool
+        True if the master feasibility problem was solved
+        successfully, False otherwise.
+    separation_backup_local_solver : bool
+        True if a backup subordinate local optimizer was used
+        to solve at least one separation problem, False otherwise.
+    separation_backup_global_solver : bool
+        True if a backup subordinate global optimizer was used
+        to solve at least one separation problem, False otherwise.
 
     Attributes
     ----------
@@ -3377,6 +3435,18 @@ class IterationLogRecord:
         found during separation step.
     elapsed_time : float
         Total time elapsed up to the current iteration, in seconds.
+    master_backup_solver : bool
+        True if a backup subordinate optimizer was used to solve the
+        master problem, False otherwise.
+    master_feasibility_success : bool
+        True if the master feasibility problem was solved
+        successfully, False otherwise.
+    separation_backup_local_solver : bool
+        True if a backup subordinate local optimizer was used
+        to solve at least one separation problem, False otherwise.
+    separation_backup_global_solver : bool
+        True if a backup subordinate global optimizer was used
+        to solve at least one separation problem, False otherwise.
     """
 
     _LINE_LENGTH = 78
@@ -3412,6 +3482,10 @@ class IterationLogRecord:
         num_violated_cons,
         all_sep_problems_solved,
         global_separation,
+        master_backup_solver,
+        master_feasibility_success,
+        separation_backup_local_solver,
+        separation_backup_global_solver,
         max_violation,
         elapsed_time,
     ):
@@ -3425,6 +3499,10 @@ class IterationLogRecord:
         self.num_violated_cons = num_violated_cons
         self.all_sep_problems_solved = all_sep_problems_solved
         self.global_separation = global_separation
+        self.master_backup_solver = master_backup_solver
+        self.master_feasibility_success = master_feasibility_success
+        self.separation_backup_local_solver = separation_backup_local_solver
+        self.separation_backup_global_solver = separation_backup_global_solver
         self.max_violation = max_violation
         self.elapsed_time = elapsed_time
 
@@ -3464,7 +3542,18 @@ class IterationLogRecord:
             if attr_name in ["second_stage_var_shift", "dr_var_shift"]:
                 qual = "*" if not self.dr_polishing_success else ""
             elif attr_name == "num_violated_cons":
-                qual = "+" if not self.all_sep_problems_solved else ""
+                all_solved_qual = "+" if not self.all_sep_problems_solved else ""
+                bkp_qual = (
+                    "^"
+                    if self.separation_backup_local_solver
+                    or self.separation_backup_global_solver
+                    else ""
+                )
+                qual = all_solved_qual + bkp_qual
+            elif attr_name == "first_stage_var_shift":
+                qual = "*" if not self.master_feasibility_success else ""
+            elif attr_name == "objective":
+                qual = "^" if self.master_backup_solver else ""
             elif attr_name == "max_violation":
                 qual = "g" if self.global_separation else ""
             else:
