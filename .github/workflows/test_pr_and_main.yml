@@ -173,7 +173,7 @@ jobs:
           PACKAGES: pyutilib
 
         - os: ubuntu-latest
-          python: 'pypy-3.10'
+          python: 'pypy-3.11'
           TARGET: linux
           PYENV: pip
 
