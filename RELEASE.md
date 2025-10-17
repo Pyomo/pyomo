@@ -13,6 +13,7 @@ The following are highlights of the 6.9 release series:
 - New ASL External Functions Library
 - New solver interfaces:
   - `knitro_direct` KNITRO Python bindings interface
+  - Add `gurobi_direct` support for MINLP
   - v2: Ongoing solver interface refactor
 - ...and of course numerous minor bug fixes and performance enhancements
 

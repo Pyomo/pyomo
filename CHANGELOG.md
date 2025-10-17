@@ -25,6 +25,7 @@ CHANGELOG
 - Solver Interfaces
   - Set Gurobi LogToConsole instead of OutputFlag to handle "tee" (#3716)
   - New KNITRO direct solver interface (#3707)
+  - Add Gurobi direct support for MINLP (#3745)
   - Bugfix: IPOPT log parser and no objective case (#3738)
   - Add test to ensure `Results` object is populated fully (#3709)
   - Mark that AMPL Gurobi 12.0.3 returns incorrect dual values (#3750)
