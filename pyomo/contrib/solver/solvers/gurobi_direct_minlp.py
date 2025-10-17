@@ -233,8 +233,8 @@ def _handle_node_with_eval_expr_visitor_quadratic(visitor, node, *data):
 
 
 def _handle_node_with_eval_expr_visitor_nonlinear(visitor, node, *data):
-    # ESJ: _apply_operation for DivisionExpression expects that result is indexed, so
-    # I'm making it a tuple rather than a map.
+    # ESJ: _apply_operation for DivisionExpression expects that result
+    # supports __getitem__, so I'm expanding the map to a tuple.
     return (
         _GENERAL,
         visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), data))),
