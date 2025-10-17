@@ -52,7 +52,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: 3.11
     - name: Black Formatting Check
       run: |
         # Note v24.4.1 fails due to a bug in the parser. Project-level
