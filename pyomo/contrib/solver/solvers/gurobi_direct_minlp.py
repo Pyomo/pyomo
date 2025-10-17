@@ -553,7 +553,7 @@ class GurobiMINLPWriter:
                         grb_cons.append(grb_model.addConstr(expr == lb))
                         pyo_cons.append(cons)
                     else:
-                        # TODO: should be have special handling if expr is a
+                        # TODO: should we have special handling if expr is a
                         # GRB.LinExpr so that we can use the ranged linear
                         # constraint syntax (expr == [lb, ub])?
                         if lb is not None:
