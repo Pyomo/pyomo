@@ -7,7 +7,7 @@ for non-convex, two-stage adjustable robust optimization problems.
 
 It was developed by **Natalie M. Isenberg**, **Jason A. F. Sherman**,
 and **Chrysanthos E. Gounaris** of Carnegie Mellon University,
-in collaboration with **John D. Siirola** of Sandia National Labs.
+in collaboration with **John D. Siirola** of Sandia National Laboratories.
 The developers gratefully acknowledge support from the U.S. Department of Energy's
 `Institute for the Design of Advanced Energy Systems (IDAES) <https://idaes.org>`_
 and `Carbon Capture Simulation for Industry Impact (CCSI2)
