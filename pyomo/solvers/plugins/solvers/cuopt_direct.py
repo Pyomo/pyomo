@@ -89,8 +89,6 @@ class CUOPTDirect(DirectSolver):
             conname = self._symbol_map.getSymbol(con, self._labeler)
             self._pyomo_con_to_solver_con_map[con] = con_idx
             con_idx += 1
-            repn = LinearRepnVisitor({}, {}, {}, None).walk_expression(body)
-            print(dir(repn))
             repn = generate_standard_repn(body, quadratic=False)
             matrix_data.extend(repn.linear_coefs)
             matrix_indices.extend(
