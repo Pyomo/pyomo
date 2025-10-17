@@ -59,7 +59,7 @@ subclasses are provided below.
   
 .. list-table:: Mathematical definitions of PyROS uncertainty sets of dimension :math:`n`.
    :header-rows: 1
-   :class: scrollwide
+   :class: scrollwide-table
 
    * - Uncertainty Set Type
      - Input Data
