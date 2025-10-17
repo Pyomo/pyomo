@@ -98,19 +98,19 @@ _VARIABLE = ExprType.VARIABLE
 
 _function_map = {}
 
-gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
-if gurobipy_available:
-    from gurobipy import GRB, nlfunc
 
+def _finalize_gurobipy(gurobipy, available):
+    if not available:
+        return
     _function_map.update(
         {
-            'exp': (_GENERAL, nlfunc.exp),
-            'log': (_GENERAL, nlfunc.log),
-            'log10': (_GENERAL, nlfunc.log10),
-            'sin': (_GENERAL, nlfunc.sin),
-            'cos': (_GENERAL, nlfunc.cos),
-            'tan': (_GENERAL, nlfunc.tan),
-            'sqrt': (_GENERAL, nlfunc.sqrt),
+            'exp': (_GENERAL, gurobipy.nlfunc.exp),
+            'log': (_GENERAL, gurobipy.nlfunc.log),
+            'log10': (_GENERAL, gurobipy.nlfunc.log10),
+            'sin': (_GENERAL, gurobipy.nlfunc.sin),
+            'cos': (_GENERAL, gurobipy.nlfunc.cos),
+            'tan': (_GENERAL, gurobipy.nlfunc.tan),
+            'sqrt': (_GENERAL, gurobipy.nlfunc.sqrt),
             # Not supporting any of these right now--we'd have to build them from the
             # above:
             # 'asin': None,
@@ -126,6 +126,15 @@ if gurobipy_available:
             # 'floor': None,
         }
     )
+
+
+gurobipy, gurobipy_available = attempt_import(
+    'gurobipy',
+    deferred_submodules=['GRB'],
+    callback=_finalize_gurobipy,
+    minimum_version='12.0.0',
+)
+GRB = gurobipy.GRB
 
 
 """
