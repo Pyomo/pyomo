@@ -13,6 +13,7 @@ import copy
 import itertools
 import logging
 import pickle
+import sys
 from io import StringIO
 from collections import namedtuple as NamedTuple
 
@@ -955,7 +956,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         )
         self.assertEqual(RangeSet(0, 5, 1), m.I)
 
-        class _AlmostNumeric(object):
+        class _AlmostNumeric:
             def __init__(self, val):
                 self.val = val
 
@@ -1228,7 +1229,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
-        class _NonIterable(object):
+        class _NonIterable:
             def __init__(self):
                 self.data = set({1, 3, 5})
 
@@ -1410,7 +1411,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
-        class _NonIterable(object):
+        class _NonIterable:
             def __init__(self):
                 self.data = set({1, 3, 5})
 
@@ -1453,7 +1454,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
-        class _NonIterable(object):
+        class _NonIterable:
             def __init__(self):
                 self.data = set({1, 3, 5})
 
@@ -1496,7 +1497,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # But NOT non-iterable objects: we assume that everything that
         # does not implement isfinite() is a discrete set.
-        class _NonIterable(object):
+        class _NonIterable:
             def __init__(self):
                 self.data = set({1, 3, 5})
 
@@ -1549,7 +1550,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             i[-5]
 
         self.assertEqual(i.ord(3), 2)
-        with self.assertRaisesRegex(ValueError, "5 is not in list"):
+        if sys.version_info[:2] < (3, 14):
+            msg = "5 is not in list"
+        else:
+            msg = "x not in list"
+        with self.assertRaisesRegex(ValueError, msg):
             i.ord(5)
 
         self.assertEqual(i.first(), 1)
@@ -4327,7 +4332,7 @@ class TestSet(unittest.TestCase):
             list(m.K), [(1, 1), (2, 1), (2, 2), (3, 1), (3, 2), (3, 3), (0, 0)]
         )
 
-        # This tests a filter that matches the dimentionality of the
+        # This tests a filter that matches the dimensionality of the
         # component.  construct() needs to recognize that the filter is
         # returning a constant in construct() and re-assign it to be the
         # _filter for each SetData

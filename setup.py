@@ -173,7 +173,7 @@ class DependenciesCommand(Command):
         print(' '.join(deps))
 
     def _print_deps(self, deplist):
-        class version_cmp(object):
+        class version_cmp:
             ver = tuple(map(int, platform.python_version_tuple()[:2]))
 
             def __lt__(self, other):
@@ -225,26 +225,23 @@ setup_kwargs = dict(
         'optional': [
             'dill',  # No direct use, but improves lambda pickle
             'ipython',  # contrib.viewer
-            'linear-tree',  # contrib.piecewise
+            'linear-tree; python_version<"3.14"',  # contrib.piecewise
             # FIXME: This is a temporary pin that should be removed
             # when the linear-tree dependency is replaced
-            'scikit-learn<1.7.0; implementation_name!="pypy"',
+            'scikit-learn<1.7.0; implementation_name!="pypy" and python_version<"3.14"',
+            'scikit-learn; implementation_name!="pypy" and python_version>="3.14"',
             # Note: matplotlib 3.6.1 has bug #24127, which breaks
             # seaborn's histplot (triggering parmest failures)
             # Note: minimum version from community_detection use of
             # matplotlib.pyplot.get_cmap()
             'matplotlib>=3.6.0,!=3.6.1',
-            # network, incidence_analysis, community_detection
-            # Note: networkx 3.2 is Python>-3.9, but there is a broken
-            # 3.2 package on conda-forge that will get implicitly
-            # installed on python 3.8
-            'networkx<3.2; python_version<"3.9"',
-            'networkx; python_version>="3.9"',
+            'networkx',  # network, incidence_analysis, community_detection
             'numpy',
             'openpyxl',  # dataportals
             'packaging',  # for checking other dependency versions
             #'pathos',   # requested for #963, but PR currently closed
-            'pint',  # units
+            # pint causes a segfault on pypy
+            'pint; implementation_name!="pypy"',  # units
             'plotly',  # incidence_analysis
             'python-louvain',  # community_detection
             'pyyaml',  # core

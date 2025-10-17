@@ -90,7 +90,7 @@ def _merge_dict(dest_dict, src_dict, mult, flag):
                 dest_dict[vid] = mult * coef
 
 
-class LinearRepn(object):
+class LinearRepn:
     __slots__ = ("multiplier", "constant", "linear", "nonlinear")
 
     def __init__(self):

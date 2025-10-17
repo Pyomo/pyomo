@@ -162,7 +162,7 @@ def enable_expression_optimizations(zero=None, one=None):
             _zero_one_optimizations.discard(key)
 
 
-class mutable_expression(object):
+class mutable_expression:
     """Context manager for mutable sums.
 
     This context manager is used to compute a sum while treating the
@@ -1333,6 +1333,8 @@ class LinearExpression(SumExpression):
                 assert arg.is_potentially_variable()
                 coef.append(1)
                 var.append(arg)
+        coef = tuple(coef)
+        var = tuple(var)
         LinearExpression._cache = (self, const, coef, var)
 
     @property

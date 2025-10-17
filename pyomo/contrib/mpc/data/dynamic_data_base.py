@@ -38,7 +38,7 @@ def _is_iterable(obj):
                 raise err
 
 
-class _DynamicDataBase(object):
+class _DynamicDataBase:
     """
     A base class for storing data associated with time-indexed variables.
 

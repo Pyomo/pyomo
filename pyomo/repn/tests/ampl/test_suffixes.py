@@ -34,7 +34,7 @@ from ..nl_diff import load_and_compare_nl_baseline
 currdir = this_file_dir()
 
 
-class SuffixTester(object):
+class SuffixTester:
     @classmethod
     def setUpClass(cls):
         cls.context = TempfileManager.new_context()
