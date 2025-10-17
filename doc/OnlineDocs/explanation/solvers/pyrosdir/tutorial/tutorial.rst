@@ -344,7 +344,7 @@ variable values:
     ...
 
 And finally, a function to build the model and
-and initialize the variable values:
+initialize the variable values:
 
 .. code::
 
