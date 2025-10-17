@@ -240,7 +240,8 @@ setup_kwargs = dict(
             'openpyxl',  # dataportals
             'packaging',  # for checking other dependency versions
             #'pathos',   # requested for #963, but PR currently closed
-            'pint',  # units
+            # pint causes a segfault on pypy
+            'pint; implementation_name!="pypy"',  # units
             'plotly',  # incidence_analysis
             'python-louvain',  # community_detection
             'pyyaml',  # core

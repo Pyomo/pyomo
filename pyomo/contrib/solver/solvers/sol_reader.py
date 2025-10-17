@@ -122,6 +122,12 @@ class SolSolutionLoader(SolutionLoaderBase):
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.termination_condition and/or results.solution_status.'
             )
+        # If the NL instance has no objectives, report zeros
+        if not self._nl_info.objectives:
+            cons = (
+                cons_to_load if cons_to_load is not None else self._nl_info.constraints
+            )
+            return {c: 0.0 for c in cons}
         if len(self._nl_info.eliminated_vars) > 0:
             raise NotImplementedError(
                 'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
@@ -133,21 +139,20 @@ class SolSolutionLoader(SolutionLoaderBase):
                 "have happened. Report this error to the Pyomo Developers."
             )
         res = {}
-        if self._nl_info.scaling is None:
-            scale_list = [1] * len(self._nl_info.constraints)
-            obj_scale = 1
-        else:
-            scale_list = self._nl_info.scaling.constraints
+        scaling = self._nl_info.scaling
+        if scaling:
+            _iter = zip(
+                self._nl_info.constraints, self._sol_data.duals, scaling.constraints
+            )
             obj_scale = self._nl_info.scaling.objectives[0]
-        if cons_to_load is None:
-            cons_to_load = set(self._nl_info.constraints)
         else:
-            cons_to_load = set(cons_to_load)
-        for con, val, scale in zip(
-            self._nl_info.constraints, self._sol_data.duals, scale_list
-        ):
-            if con in cons_to_load:
-                res[con] = val * scale / obj_scale
+            _iter = zip(self._nl_info.constraints, self._sol_data.duals)
+        if cons_to_load is not None:
+            _iter = filter(lambda x: x[0] in cons_to_load, _iter)
+        if scaling:
+            res = {con: val * scale / obj_scale for con, val, scale in _iter}
+        else:
+            res = {con: val for con, val in _iter}
         return res
 
 
