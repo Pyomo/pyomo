@@ -25,7 +25,7 @@ mpirun -np 3 python farmer.py
 """
 
 
-class Farmer(object):
+class Farmer:
     def __init__(self):
         self.crops = ['WHEAT', 'CORN', 'SUGAR_BEETS']
         self.total_acreage = 500

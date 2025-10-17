@@ -535,7 +535,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Returns
         -------
         model : ConcreteModel
-            Bounding model, with an indexed mimimization sense
+            Bounding model, with an indexed minimization sense
             Objective with name 'param_var_objectives' consisting
             of `N` entries, all of which have been deactivated.
         """
