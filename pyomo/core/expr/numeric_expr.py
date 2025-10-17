@@ -1208,7 +1208,8 @@ class SumExpression(NumericExpression):
     def _apply_operation(self, result):
         # Avoid 0 being added to summations by specifying the start
         if result:
-            return sum(result[1:], start=result[0])
+            _iter = iter(result)
+            return sum(_iter, start=next(_iter))
         else:
             return 0
 
