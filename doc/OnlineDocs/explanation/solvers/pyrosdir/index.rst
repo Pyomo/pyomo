@@ -1,3 +1,5 @@
+.. _pyros_main_page:
+
 ============
 PyROS Solver 
 ============
