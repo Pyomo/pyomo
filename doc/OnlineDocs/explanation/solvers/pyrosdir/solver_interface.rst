@@ -270,4 +270,4 @@ is invoked to solve an RO problem,
 the progress and final result are reported through a highly
 configurable logging system.
 See the :ref:`Solver Output Log documentation <pyros_solver_log>`
-documentation for more information.
+for more information.
