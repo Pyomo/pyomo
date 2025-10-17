@@ -673,7 +673,7 @@ def categorize_valid_components(
                     ctype=ctype,
                     active=active,
                     descend_into=False,
-                    sort=SortComponents.unsorted,
+                    sort=SortComponents.deterministic,
                 )
             )
     return component_map, {k: v for k, v in unrecognized.items() if v}
