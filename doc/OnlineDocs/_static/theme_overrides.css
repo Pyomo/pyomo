@@ -72,6 +72,12 @@ dl.py.method dt em span.n {
    padding-right: 8px !important;
 }
 
+/* Define a new "scrollwide-table" class so that we allow tables
+   to scroll instead of overflow */
+.rst-content table.scrollwide-table {
+    overflow: scroll !important;
+    display: block;
+}
 
 /* OLD theme overrides
 

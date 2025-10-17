@@ -6,7 +6,7 @@ Solvers
 
    persistent
    gdpopt
-   pyros
+   pyros/index
    mindtpy
    mcpp
    multistart
