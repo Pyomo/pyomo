@@ -93,14 +93,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.9, '3.10', 3.11, 3.12, 3.13 ]
+        python: [ 3.9, '3.10', 3.11, 3.12, 3.13, 3.14 ]
         other: [""]
         category: [""]
-
-        # HACK: Avoid 3.13.7 on Windows. We exclude this originally...
-        exclude:
-        - os: windows-latest
-          python: 3.13
 
         include:
         - os: ubuntu-latest
@@ -114,15 +109,6 @@ jobs:
           PYENV: pip
 
         - os: windows-latest
-          test_docs: 1
-          TARGET: win
-          PYENV: conda
-          PACKAGES: glpk pytest-qt filelock
-
-        # Now manually add 3.13.5 back in. Ergo, all other OS' will
-        # run 3.13.7, but windows, the problem child, will not
-        - os: windows-latest
-          python: '3.13.5'
           test_docs: 1
           TARGET: win
           PYENV: conda
@@ -335,7 +321,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        python -m pip install --cache-dir cache/pip setuptools
+        python -m pip install --cache-dir cache/pip --upgrade setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
@@ -347,6 +333,10 @@ jobs:
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
             done
+        fi
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            PACKAGES="$PACKAGES setuptools<74.0.0"
         fi
         python -m pip install --cache-dir cache/pip ${PACKAGES}
         python -m pip install --cache-dir cache/pip pymysql || \
@@ -407,6 +397,8 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
+        # We need setuptools so we can run Pyomo's setup.py
+        conda install setuptools
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`

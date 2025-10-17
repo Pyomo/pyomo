@@ -95,7 +95,7 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
             return _ParameterizedLinearStandardFormCompiler_impl(config).write(model)
 
 
-class _SparseMatrixBase(object):
+class _SparseMatrixBase:
     def __init__(self, matrix_data, shape):
         (data, indices, indptr) = matrix_data
         (nrows, ncols) = shape

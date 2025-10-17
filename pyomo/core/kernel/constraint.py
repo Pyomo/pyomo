@@ -174,7 +174,7 @@ class IConstraint(ICategorizedObject):
         return self.lower, self.body, self.upper
 
 
-class _MutableBoundsConstraintMixin(object):
+class _MutableBoundsConstraintMixin:
     """
     Use as a base class for IConstraint implementations
     that allow adjusting the lb, ub, rhs, and equality

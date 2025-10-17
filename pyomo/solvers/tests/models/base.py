@@ -43,7 +43,7 @@ def register_model(cls):
     return cls
 
 
-class _BaseTestModel(object):
+class _BaseTestModel:
     """
     This is a base class for test models
     """
@@ -254,6 +254,12 @@ class _BaseTestModel(object):
                         not abs(solution[var.name][suffix_name] - suffix.get(var))
                         < self.diff_tol
                     ):
+                        if (
+                            _ex is not None
+                            and not suffix.get(var)
+                            and (not _ex[1] or con.name in _ex[1])
+                        ):
+                            continue
                         return (
                             False,
                             error_str.format(
@@ -307,6 +313,12 @@ class _BaseTestModel(object):
                         not abs(solution[con.name][suffix_name] - suffix.get(con))
                         < self.diff_tol
                     ):
+                        if (
+                            _ex is not None
+                            and not suffix.get(con)
+                            and (not _ex[1] or con.name in _ex[1])
+                        ):
+                            continue
                         return (
                             False,
                             error_str.format(
