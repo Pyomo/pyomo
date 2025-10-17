@@ -4255,14 +4255,16 @@ class TestCloneExpression(unittest.TestCase):
         e = LinearExpression()
         f = e.clone()
         self.assertIsNot(e, f)
-        self.assertIsNot(e.linear_coefs, f.linear_coefs)
-        self.assertIsNot(e.linear_vars, f.linear_vars)
+        # turns out that two empty tuples, a and b, return True for a is b
+        # self.assertIsNot(e.linear_coefs, f.linear_coefs)
+        # self.assertIsNot(e.linear_vars, f.linear_vars)
+        self.assertIsNot(e._args_, f._args_)
         self.assertEqual(e.constant, f.constant)
         self.assertEqual(e.linear_coefs, f.linear_coefs)
         self.assertEqual(e.linear_vars, f.linear_vars)
         self.assertEqual(f.constant, 0)
-        self.assertEqual(f.linear_coefs, [])
-        self.assertEqual(f.linear_vars, [])
+        self.assertEqual(f.linear_coefs, tuple())
+        self.assertEqual(f.linear_vars, tuple())
 
         e = LinearExpression(
             constant=5, linear_vars=[m.x, m.y[1]], linear_coefs=[10, 20]
@@ -4275,8 +4277,8 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual(e.linear_coefs, f.linear_coefs)
         self.assertEqual(e.linear_vars, f.linear_vars)
         self.assertEqual(f.constant, 5)
-        self.assertEqual(f.linear_coefs, [10, 20])
-        self.assertEqual(f.linear_vars, [m.x, m.y[1]])
+        self.assertEqual(f.linear_coefs, (10, 20))
+        self.assertEqual(f.linear_vars, (m.x, m.y[1]))
 
     def test_getitem(self):
         # Testing cloning of the abs() function
@@ -4824,13 +4826,13 @@ class TestLinearExpression(unittest.TestCase):
 
         e = LinearExpression(constant=5, linear_vars=[m.x, m.y], linear_coefs=[2, 3])
         self.assertEqual(e.constant, 5)
-        self.assertEqual(e.linear_vars, [m.x, m.y])
-        self.assertEqual(e.linear_coefs, [2, 3])
+        self.assertEqual(e.linear_vars, (m.x, m.y))
+        self.assertEqual(e.linear_coefs, (2, 3))
 
         f = LinearExpression([5, 2 * m.x, 3 * m.y])
         self.assertEqual(e.constant, 5)
-        self.assertEqual(e.linear_vars, [m.x, m.y])
-        self.assertEqual(e.linear_coefs, [2, 3])
+        self.assertEqual(e.linear_vars, (m.x, m.y))
+        self.assertEqual(e.linear_coefs, (2, 3))
 
         self.assertExpressionsEqual(e, f)
 
@@ -4840,8 +4842,8 @@ class TestLinearExpression(unittest.TestCase):
         self.assertEqual(OUT.getvalue(), "")
         self.assertIs(e._args_, args)
         self.assertEqual(e.constant, 10)
-        self.assertEqual(e.linear_vars, [m.y, m.x])
-        self.assertEqual(e.linear_coefs, [4, 5])
+        self.assertEqual(e.linear_vars, (m.y, m.x))
+        self.assertEqual(e.linear_coefs, (4, 5))
 
     def test_to_string(self):
         m = ConcreteModel()
