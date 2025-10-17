@@ -97,7 +97,6 @@ _QUADRATIC = ExprType.QUADRATIC
 _VARIABLE = ExprType.VARIABLE
 
 _function_map = {}
-_domain_map = ComponentMap()
 
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 if gurobipy_available:
@@ -128,18 +127,6 @@ if gurobipy_available:
         }
     )
 
-    _domain_map.update(
-        (
-            (Binary, (GRB.BINARY, -float('inf'), float('inf'))),
-            (Integers, (GRB.INTEGER, -float('inf'), float('inf'))),
-            (NonNegativeIntegers, (GRB.INTEGER, 0, float('inf'))),
-            (NonPositiveIntegers, (GRB.INTEGER, -float('inf'), 0)),
-            (NonNegativeReals, (GRB.CONTINUOUS, 0, float('inf'))),
-            (NonPositiveReals, (GRB.CONTINUOUS, -float('inf'), 0)),
-            (Reals, (GRB.CONTINUOUS, -float('inf'), float('inf'))),
-        )
-    )
-
 
 """
 In Gurobi 12:
@@ -162,14 +149,23 @@ exception rather than the rule, so we will let Gurobi expand the expressions for
 
 def _create_grb_var(visitor, pyomo_var, name=""):
     pyo_domain = pyomo_var.domain
-    if pyo_domain in _domain_map:
-        domain, domain_lb, domain_ub = _domain_map[pyo_domain]
-    else:
+    domain_lb, domain_ub, domain = pyo_domain.get_interval()
+    if domain not in (0, 1):
         raise ValueError(
-            "Unsupported domain for Var '%s': %s" % (pyomo_var.name, pyo_domain)
+            "Unsupported domain for Var '%s': %s" % (pyomo_var.name, pyomo_var.domain)
         )
-    lb = max(domain_lb, pyomo_var.lb) if pyomo_var.lb is not None else domain_lb
-    ub = min(domain_ub, pyomo_var.ub) if pyomo_var.ub is not None else domain_ub
+    domain = GRB.INTEGER if domain else GRB.CONTINUOUS
+    # We set binaries to be binary right now because we don't know if Gurbi cares
+    if pyo_domain is Binary:
+        domain = GRB.BINARY
+
+    # returns tigter of bounds from domain and bounds set on variable
+    lb, ub = pyomo_var.bounds
+    if lb is None:
+        lb = -float("inf")
+    if ub is None:
+        ub = float("inf")
+ 
     return visitor.grb_model.addVar(lb=lb, ub=ub, vtype=domain, name=name)
 
 
