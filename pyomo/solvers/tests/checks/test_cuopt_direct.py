@@ -22,16 +22,13 @@ from pyomo.environ import (
     value,
     minimize,
 )
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.unittest as unittest
 
-try:
-    import cuopt
 
-    cuopt_available = True
-except:
-    cuopt_available = False
+cuopt, cuopt_available = attempt_import("cuopt")
 
 
 class CUOPTTests(unittest.TestCase):

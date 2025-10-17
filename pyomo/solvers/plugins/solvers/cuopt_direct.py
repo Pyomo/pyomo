@@ -24,6 +24,7 @@ from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
+from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
@@ -40,79 +41,6 @@ logger = logging.getLogger(__name__)
 
 cuopt, cuopt_available = attempt_import("cuopt")
 
-def toDict(model, json=False):
-
-    #if not isinstance(model, parser_wrapper.DataModel):
-    #    raise ValueError(
-    #        "model must be a cuopt_mps_parser.parser_wrapper.Datamodel"
-    #    )
-
-    # Replace numpy objects in generated data so that it is JSON serializable
-    def transform(data):
-        for key, value in data.items():
-            if isinstance(value, dict):
-                transform(value)
-            elif isinstance(value, list):
-                if np.inf in data[key] or -np.inf in data[key]:
-                    data[key] = [
-                        "inf" if x == np.inf else "ninf" if x == -np.inf else x
-                        for x in data[key]
-                    ]
-
-    if json is True:
-        problem_data = {
-            "csr_constraint_matrix": {
-                "offsets": model.A_offsets.tolist(),
-                "indices": model.A_indices.tolist(),
-                "values": model.A_values.tolist(),
-            },
-            "constraint_bounds": {
-                "bounds": model.b.tolist(),
-                "upper_bounds": model.constraint_upper_bounds.tolist(),
-                "lower_bounds": model.constraint_lower_bounds.tolist(),
-                "types": model.host_row_types.tolist(),
-            },
-            "objective_data": {
-                "coefficients": model.c.tolist(),
-                "scalability_factor": model.objective_scaling_factor,
-                "offset": model.objective_offset,
-            },
-            "variable_bounds": {
-                "upper_bounds": model.variable_upper_bounds.tolist(),
-                "lower_bounds": model.variable_lower_bounds.tolist(),
-            },
-            "maximize": model.maximize,
-            "variable_types": model.variable_types.tolist(),
-            "variable_names": model.variable_names.tolist(),
-        }
-        transform(problem_data)
-    else:
-        problem_data = {
-            "csr_constraint_matrix": {
-                "offsets": model.A_offsets,
-                "indices": model.A_indices,
-                "values": model.A_values,
-            },
-            "constraint_bounds": {
-                "bounds": model.b,
-                "upper_bounds": model.constraint_upper_bounds,
-                "lower_bounds": model.constraint_lower_bounds,
-                "types": model.host_row_types,
-            },
-            "objective_data": {
-                "coefficients": model.c,
-                "scalability_factor": model.objective_scaling_factor,
-                "offset": model.objective_offset,
-            },
-            "variable_bounds": {
-                "upper_bounds": model.variable_upper_bounds,
-                "lower_bounds": model.variable_lower_bounds,
-            },
-            "maximize": model.maximize,
-            "variable_types": model.variable_types,
-            "variable_names": model.variable_names,
-        }
-    return problem_data
 
 @SolverFactory.register("cuopt", doc="Direct python interface to CUOPT")
 class CUOPTDirect(DirectSolver):
@@ -161,6 +89,8 @@ class CUOPTDirect(DirectSolver):
             conname = self._symbol_map.getSymbol(con, self._labeler)
             self._pyomo_con_to_solver_con_map[con] = con_idx
             con_idx += 1
+            repn = LinearRepnVisitor({}, {}, {}, None).walk_expression(body)
+            print(dir(repn))
             repn = generate_standard_repn(body, quadratic=False)
             matrix_data.extend(repn.linear_coefs)
             matrix_indices.extend(
@@ -230,8 +160,7 @@ class CUOPTDirect(DirectSolver):
 
         try:
             self._solver_model = cuopt.linear_programming.DataModel()
-        except Exception:
-            e = sys.exc_info()[1]
+        except Exception as e:
             msg = (
                 "Unable to create CUOPT model. "
                 "Have you installed the Python "
@@ -251,17 +180,13 @@ class CUOPTDirect(DirectSolver):
                 ctype=Constraint, descend_into=True, active=True, sort=True
             )
         )
-        for sub_block in block.block_data_objects(descend_into=True, active=True):
-            obj_counter = 0
-            for obj in sub_block.component_data_objects(
-                ctype=Objective, descend_into=False, active=True
-            ):
-                obj_counter += 1
-                if obj_counter > 1:
-                    raise ValueError(
-                        "Solver interface does not support multiple objectives."
-                    )
-                self._set_objective(obj)
+        objectives = list(
+            block.component_data_objects(Objective, descend_into=True, active=True)
+        )
+        if len(objectives) > 1:
+            raise ValueError("Solver interface does not support multiple objectives.")
+        elif objectives:
+            self._set_objective(objectives[0])
 
     def _postsolve(self):
         extract_duals = False
