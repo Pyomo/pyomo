@@ -13,6 +13,7 @@ import copy
 import itertools
 import logging
 import pickle
+import sys
 from io import StringIO
 from collections import namedtuple as NamedTuple
 
@@ -1549,7 +1550,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             i[-5]
 
         self.assertEqual(i.ord(3), 2)
-        with self.assertRaisesRegex(ValueError, "5 is not in list"):
+        if sys.version_info[:2] < (3, 14):
+            msg = "5 is not in list"
+        else:
+            msg = "x not in list"
+        with self.assertRaisesRegex(ValueError, msg):
             i.ord(5)
 
         self.assertEqual(i.first(), 1)
