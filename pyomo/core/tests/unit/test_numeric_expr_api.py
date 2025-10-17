@@ -640,13 +640,13 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual(e.constant, 2)
         cache = e._cache
-        self.assertEqual(e.linear_coefs, [0, 1, 2, 1])
+        self.assertEqual(e.linear_coefs, (0, 1, 2, 1))
         self.assertIs(cache, e._cache)
-        self.assertEqual(e.linear_vars, [m.x[0], m.x[1], m.x[2], m.y])
+        self.assertEqual(e.linear_vars, (m.x[0], m.x[1], m.x[2], m.y))
         self.assertIs(cache, e._cache)
 
         e = LinearExpression()
-        self.assertEqual(e.linear_coefs, [])
+        self.assertEqual(e.linear_coefs, tuple())
         self.assertIsNot(cache, e._cache)
         cache = e._cache
         e = LinearExpression()
@@ -654,7 +654,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertIsNot(cache, e._cache)
         cache = e._cache
         e = LinearExpression()
-        self.assertEqual(e.linear_vars, [])
+        self.assertEqual(e.linear_vars, tuple())
         self.assertIsNot(cache, e._cache)
 
         self.assertTrue(e.is_potentially_variable())
