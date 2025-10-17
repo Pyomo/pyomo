@@ -52,7 +52,7 @@ Consider the reactor-cooler system below.
    :alt: Reactor-cooler system.
 
    Reactor-cooler system process flowsheet,
-   adapted from `Djelassi (2020) <https://doi.org/10.18154/RWTH-2020-09163>`__.
+   adapted from [Dje20]_.
    Constants are set in boldface.
 
 A stream of chemical species :math:`E` enters the
@@ -89,12 +89,10 @@ We are interested in optimizing the design and operation of the system:
 - The operation of the system can be adjusted via the reactor outlet
   temperature :math:`T_1` and recycle stream flow rate :math:`F_1`.
 
-Modified from the formulations presented in `Halemane and Grossmann
-(1983) <https://doi.org/10.1002/aic.690290312>`__, `Yuan et
-al. (2017) <https://doi.org/10.1002/aic.15950>`__, `Djelassi
-(2020) <https://doi.org/10.18154/RWTH-2020-09163>`__, and `Isenberg et
-al. (2021) <https://doi.org/10.1002/aic.17175>`__, the deterministic
-optimization model for the system of interest can be written as
+Modified from the formulations presented in
+[HG83]_, [YLH18]_, [Dje20]_, and [IAE+21]_,
+the deterministic optimization model for the system of interest
+can be written as
 
 .. math::
 
