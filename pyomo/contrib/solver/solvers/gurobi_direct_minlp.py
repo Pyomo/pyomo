@@ -165,7 +165,7 @@ def _create_grb_var(visitor, pyomo_var, name=""):
         lb = -float("inf")
     if ub is None:
         ub = float("inf")
- 
+
     return visitor.grb_model.addVar(lb=lb, ub=ub, vtype=domain, name=name)
 
 

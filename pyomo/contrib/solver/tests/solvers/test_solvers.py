@@ -64,7 +64,11 @@ mip_solvers = [
     ('highs', Highs),
     ('knitro_direct', KnitroDirectSolver),
 ]
-nlp_solvers = [('gurobi_direct_minlp', GurobiDirectMINLP), ('ipopt', Ipopt), ('knitro_direct', KnitroDirectSolver)]
+nlp_solvers = [
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
+    ('ipopt', Ipopt),
+    ('knitro_direct', KnitroDirectSolver),
+]
 qcp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
