@@ -334,7 +334,7 @@ We can also query the results object's individual attributes:
    >>> results_1.iterations  # total number of iterations
    3
    >>> results_1.time  # total wallclock time; may vary # doctest: +SKIP
-   0.917
+   0.839
    >>> results_1.final_objective_value  # final objective value; may vary # doctest: +ELLIPSIS
    9661.6...
    >>> results_1.pyros_termination_condition  # termination condition
@@ -397,7 +397,7 @@ Inspecting the results:
    >>> print(results_2)  # output may vary  # doctest: +SKIP
    Termination stats:
     Iterations            : 5
-    Solve time (wall s)   : 2.730
+    Solve time (wall s)   : 1.956
     Final objective value : 6.5403e+03
     Termination condition : pyrosTerminationCondition.robust_optimal
 
