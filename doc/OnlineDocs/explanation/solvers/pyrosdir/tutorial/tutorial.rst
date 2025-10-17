@@ -307,7 +307,7 @@ model (with the variables uninitialized):
 
 
 For convenience, we also write a function to initialize the model's
-variables values:
+variable values:
 
 .. code::
 
