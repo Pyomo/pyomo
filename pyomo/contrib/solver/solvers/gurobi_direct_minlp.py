@@ -468,8 +468,11 @@ class GurobiMINLPWriter:
                 % (
                     model.name,
                     "\n\t".join(
-                        "%s:\n\t\t%s" % (k, "\n\t\t".join(map(attrgetter('name'), v)))
-                        for k, v in unknown.items()
+                        sorted(
+                            "%s:\n\t\t%s"
+                            % (k, "\n\t\t".join(sorted(map(attrgetter('name'), v))))
+                            for k, v in unknown.items()
+                        )
                     ),
                 )
             )
