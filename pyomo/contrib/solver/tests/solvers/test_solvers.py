@@ -10,36 +10,35 @@
 #  ___________________________________________________________________________
 
 import datetime
-import random
 import math
+import random
 from typing import Type
 
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
-import pyomo.common.unittest as unittest
-
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
-from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
-from pyomo.contrib.solver.solvers.highs import Highs
-from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.common.results import (
-    TerminationCondition,
-    SolutionStatus,
     Results,
+    SolutionStatus,
+    TerminationCondition,
 )
 from pyomo.contrib.solver.common.util import (
     NoDualsError,
-    NoSolutionError,
     NoReducedCostsError,
+    NoSolutionError,
 )
-from pyomo.core.expr.numeric_expr import LinearExpression
-from pyomo.core.expr.compare import assertExpressionsEqual
-
+from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
+from pyomo.contrib.solver.solvers.highs import Highs
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
+from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
 from pyomo.contrib.solver.tests.solvers import instances
+from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.core.expr.numeric_expr import LinearExpression
 
 np, numpy_available = attempt_import('numpy')
 parameterized, param_available = attempt_import('parameterized')
@@ -54,16 +53,25 @@ all_solvers = [
     ('gurobi_direct', GurobiDirect),
     ('ipopt', Ipopt),
     ('highs', Highs),
+    ('knitro_direct', KnitroDirectSolver),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('highs', Highs),
+    ('knitro_direct', KnitroDirectSolver),
 ]
-nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi_persistent', GurobiPersistent), ('ipopt', Ipopt)]
+nlp_solvers = [('ipopt', Ipopt), ('knitro_direct', KnitroDirectSolver)]
+qcp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('ipopt', Ipopt),
+    ('knitro_direct', KnitroDirectSolver),
+]
 qp_solvers = qcp_solvers + [("highs", Highs)]
-miqcqp_solvers = [('gurobi_persistent', GurobiPersistent)]
+miqcqp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('knitro_direct', KnitroDirectSolver),
+]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 
