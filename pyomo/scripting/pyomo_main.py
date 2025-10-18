@@ -11,7 +11,11 @@
 
 import sys
 import copy
+import logging
+import traceback
 from pyomo.common.deprecation import deprecation_warning
+
+logger = logging.getLogger(__name__)
 
 
 pyomo_commands = []
@@ -20,12 +24,7 @@ pyomo_commands = []
 def load_entry_points():
     import importlib.metadata
 
-    try:
-        # Python >= 3.10
-        ep_list = importlib.metadata.entry_points(group='pyomo.command')
-    except:
-        # Python 3.8 - 3.9
-        ep_list = importlib.metadata.entry_points().get('pyomo.command', [])
+    ep_list = importlib.metadata.entry_points(group='pyomo.command')
     for ep in ep_list:
         try:
             pyomo_commands.append(ep.load())
