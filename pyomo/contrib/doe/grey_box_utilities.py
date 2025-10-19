@@ -67,7 +67,8 @@ class FIMExternalGreyBox(
         logger_level:
            logging level to be specified if different from doe_object's logging level.
            default: None, or equivalently, use the logging level of doe_object.
-                    NOTE: Use logging.DEBUG for all messages.
+
+           NOTE: Use logging.DEBUG for all messages.
         """
 
         if doe_object is None:
