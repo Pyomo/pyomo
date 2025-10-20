@@ -44,18 +44,20 @@ def parse_bounds(
             if item.fixed:
                 bounds_map[BoundType.EQ][i] = value(item.value)
                 continue
-            if item.has_lb():
-                bounds_map[BoundType.LO][i] = value(item.lb)
-            if item.has_ub():
-                bounds_map[BoundType.UP][i] = value(item.ub)
+            lb, ub = item.bounds
+            if lb is not None:
+                bounds_map[BoundType.LO][i] = lb
+            if ub is not None:
+                bounds_map[BoundType.UP][i] = ub
         elif isinstance(item, ConstraintData):
+            lb, _, ub = item.to_bounded_expression(evaluate_bounds=True)
             if item.equality:
-                bounds_map[BoundType.EQ][i] = value(item.lower)
+                bounds_map[BoundType.EQ][i] = lb
                 continue
-            if item.has_lb():
-                bounds_map[BoundType.LO][i] = value(item.lower)
-            if item.has_ub():
-                bounds_map[BoundType.UP][i] = value(item.upper)
+            if lb is not None:
+                bounds_map[BoundType.LO][i] = lb
+            if ub is not None:
+                bounds_map[BoundType.UP][i] = ub
     return bounds_map
 
 
@@ -85,7 +87,7 @@ def api_set_param(param_type: int) -> Callable[..., None]:
         return knitro.KN_set_double_param
     elif param_type == knitro.KN_PARAMTYPE_STRING:
         return knitro.KN_set_char_param
-    raise DeveloperError()
+    raise DeveloperError(f"Unsupported KNITRO parameter type: {param_type}")
 
 
 def api_get_values(
@@ -101,7 +103,7 @@ def api_get_values(
             return knitro.KN_get_con_dual_values
         elif value_type == ValueType.PRIMAL:
             return knitro.KN_get_con_values
-    raise DeveloperError()
+    raise DeveloperError(f"Unsupported KNITRO item type or value type: {item_type}, {value_type}")
 
 
 def api_add_items(item_type: type[ItemType]) -> Callable[..., Optional[list[int]]]:
@@ -109,7 +111,7 @@ def api_add_items(item_type: type[ItemType]) -> Callable[..., Optional[list[int]
         return knitro.KN_add_vars
     elif item_type is ConstraintData:
         return knitro.KN_add_cons
-    raise DeveloperError()
+    raise DeveloperError(f"Unsupported KNITRO item type: {item_type}")
 
 
 def api_set_bnds(
@@ -129,13 +131,13 @@ def api_set_bnds(
             return knitro.KN_set_con_lobnds
         elif bound_type == BoundType.UP:
             return knitro.KN_set_con_upbnds
-    raise DeveloperError()
+    raise DeveloperError(f"Unsupported KNITRO item type or bound type: {item_type}, {bound_type}")
 
 
 def api_set_types(item_type: type[ItemType]) -> Callable[..., None]:
     if item_type is VarData:
         return knitro.KN_set_var_types
-    raise DeveloperError()
+    raise DeveloperError(f"Unsupported KNITRO item type: {item_type}")
 
 
 def api_add_struct(is_obj: bool, structure_type: StructureType) -> Callable[..., None]:
@@ -153,7 +155,7 @@ def api_add_struct(is_obj: bool, structure_type: StructureType) -> Callable[...,
             return knitro.KN_add_con_linear_struct
         elif structure_type == StructureType.QUADRATIC:
             return knitro.KN_add_con_quadratic_struct
-    raise DeveloperError()
+    raise DeveloperError(f"Unsupported KNITRO structure type: is_obj={is_obj}, structure_type={structure_type}")
 
 
 class Engine:
