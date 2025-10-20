@@ -761,12 +761,17 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     info.pdlp_iteration_count,
                     info.qp_iteration_count,
                 ]
-                assert (
-                    len([c for c in counts if c > 1]) <= 1
-                ), "Only one method should have a positive iteration count"
-                assert any(
-                    [c >= 0 for c in counts]
-                ), "Should have a non-negative count if info valid"
+                positive_iters = [c for c in counts if c > 0]
+                if not positive_iters:
+                    assert any(
+                        (c == 0 for c in counts)
+                    ), "At least one iteration count should have a non-negative value"
+                    results.iteration_count = 0
+                else:
+                    assert (
+                        len(positive_iters) == 1,
+                    ), "Only one iteration count should have a positive value"
+                    results.iteration_count = positive_iters[0]
                 results.iteration_count = max(counts)
             else:
                 results.iteration_count = 0
