@@ -114,8 +114,9 @@ jobs:
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
 
+        # Note: verify that pymumps is available when changing conda python version
         - os: ubuntu-latest
-          python: 3.13
+          python: 3.12
           other: /conda
           TARGET: linux
           PYENV: conda

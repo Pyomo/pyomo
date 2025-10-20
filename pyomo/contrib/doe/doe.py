@@ -98,9 +98,9 @@ class DesignOfExperiments:
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     ):
-        """
-        This package enables model-based design of experiments analysis with Pyomo.
-        Both direct optimization and enumeration modes are supported.
+        """This package enables model-based design of experiments analysis
+        with Pyomo.  Both direct optimization and enumeration modes are
+        supported.
 
         The package has been refactored from its original form as of August 24. See
         the documentation for more information.
@@ -110,9 +110,12 @@ class DesignOfExperiments:
         experiment:
             Experiment object that holds the model and labels all the components. The
             object should have a ``get_labeled_model`` where a model is returned with
-            the following labeled sets: ``unknown_parameters``,
-                                        ``experimental_inputs``,
-                                        ``experimental_outputs``
+            the following labeled sets:
+
+              - ``unknown_parameters``,
+              - ``experimental_inputs``,
+              - ``experimental_outputs``
+
         fd_formula:
             Finite difference formula for computing the sensitivity matrix. Must be
             one of [``central``, ``forward``, ``backward``], default: ``central``
@@ -173,6 +176,7 @@ class DesignOfExperiments:
             (i.e., compare an existing tool that uses the full FIM to this algorithm)
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
+
         """
         if experiment is None:
             raise ValueError("Experiment object must be provided to perform DoE.")
