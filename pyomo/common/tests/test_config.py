@@ -1599,6 +1599,24 @@ scenarios[1].detection""",
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         self.assertEqual(test, "")
 
+    def test_userValues_call_nonempty(self):
+        # See bug report in Pyomo/pyomo#3721
+        default = ConfigDict()
+        default.declare("filename", ConfigValue(default=None, domain=str))
+        cfg = default(value={"filename": "example.txt"})
+        names = [x.name(True) for x in cfg.user_values()]
+        self.assertEqual(names, ["filename"])
+        self.assertTrue(all(x is not cfg for x in cfg.user_values()))
+
+    def test_userValues_call_empty_then_set(self):
+        # See bug report in Pyomo/pyomo#3721
+        default = ConfigDict()
+        default.declare("filename", ConfigValue(default=None, domain=str))
+        cfg = default({})
+        cfg["filename"] = "example.txt"
+        names = [x.name(True) for x in cfg.user_values()]
+        self.assertEqual(names, ["filename"])
+
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplayAndValue_default(self):
         test = _display(self.config)

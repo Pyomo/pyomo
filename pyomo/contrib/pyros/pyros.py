@@ -24,7 +24,8 @@ from pyomo.contrib.pyros.util import (
     load_final_solution,
     pyrosTerminationCondition,
     validate_pyros_inputs,
-    log_model_statistics,
+    log_preprocessed_model_statistics,
+    log_original_model_statistics,
     IterationLogRecord,
     setup_pyros_logger,
     time_code,
@@ -33,7 +34,7 @@ from pyomo.contrib.pyros.util import (
 )
 
 
-__version__ = "1.3.10"
+__version__ = "1.3.11"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
@@ -78,18 +79,36 @@ def _get_pyomo_version_info():
 
 @SolverFactory.register(
     "pyros",
-    doc="Robust optimization (RO) solver implementing "
-    "the generalized robust cutting-set algorithm (GRCS)",
+    doc="Pyomo Robust Optimization Solver (PyROS): "
+    "implementation of a generalized robust cutting-set algorithm (GRCS)",
 )
-class PyROS:
-    '''
-    PyROS (Pyomo Robust Optimization Solver) implementing a
+class PyROS(object):
+    """
+    Pyomo Robust Optimization Solver (PyROS): implementation of a
     generalized robust cutting-set algorithm (GRCS)
-    to solve two-stage NLP optimization models under uncertainty.
-    '''
+    for the solution of two-stage nonlinear programs
+    under uncertainty.
+
+    We recommend instantiating this class as follows:
+
+    .. code::
+
+       >>> import pyomo.environ as pyo
+       >>> import pyomo.contrib.pyros as pyros
+       >>> pyros_solver = pyo.SolverFactory("pyros")
+
+    """
 
     CONFIG = pyros_config()
     _LOG_LINE_LENGTH = 78
+    _DEFAULT_CONFIG_USER_OPTIONS = [
+        "first_stage_variables",
+        "second_stage_variables",
+        "uncertain_params",
+        "uncertainty_set",
+        "local_solver",
+        "global_solver",
+    ]
 
     def available(self, exception_flag=True):
         """Check if solver is available."""
@@ -199,7 +218,7 @@ class PyROS:
         disclaimer_header = " DISCLAIMER ".center(self._LOG_LINE_LENGTH, "=")
 
         logger.log(msg=disclaimer_header, **log_kwargs)
-        logger.log(msg="PyROS is still under development. ", **log_kwargs)
+        logger.log(msg="PyROS is currently under active development. ", **log_kwargs)
         logger.log(
             msg=(
                 "Please provide feedback and/or report any issues by creating "
@@ -209,6 +228,43 @@ class PyROS:
         )
         logger.log(msg="https://github.com/Pyomo/pyomo/issues/new/choose", **log_kwargs)
         logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
+
+    def _log_config_user_values(
+        self, logger, config, exclude_options=None, **log_kwargs
+    ):
+        """
+        Log explicitly set PyROS solver options.
+
+        If there are no such options, or all such options
+        are to be excluded from consideration, then nothing is logged.
+
+        Parameters
+        ----------
+        logger : logging.Logger
+            Logger for the solver options.
+        config : ConfigDict
+            PyROS solver options.
+        exclude_options : None or iterable of str, optional
+            Options (keys of the ConfigDict) to exclude from
+            logging. If `None` passed, then the names of the
+            required arguments to ``self.solve()`` are skipped.
+        **log_kwargs : dict, optional
+            Keyword arguments to each statement of ``logger.log()``.
+        """
+        if exclude_options is None:
+            exclude_options = set(self._DEFAULT_CONFIG_USER_OPTIONS)
+        else:
+            exclude_options = set(exclude_options)
+
+        user_values = list(
+            filter(lambda val: val.name() not in exclude_options, config.user_values())
+        )
+        if user_values:
+            logger.log(msg="User-provided solver options:", **log_kwargs)
+            for val in user_values:
+                val_name, val_value = val.name(), val.value()
+                logger.log(msg=f" {val_name}={val_value!r}", **log_kwargs)
+            logger.log(msg="-" * self._LOG_LINE_LENGTH, **log_kwargs)
 
     def _log_config(self, logger, config, exclude_options=None, **log_kwargs):
         """
@@ -227,18 +283,12 @@ class PyROS:
         **log_kwargs : dict, optional
             Keyword arguments to each statement of ``logger.log()``.
         """
-        # log solver options
         if exclude_options is None:
-            exclude_options = [
-                "first_stage_variables",
-                "second_stage_variables",
-                "uncertain_params",
-                "uncertainty_set",
-                "local_solver",
-                "global_solver",
-            ]
+            exclude_options = set(self._DEFAULT_CONFIG_USER_OPTIONS)
+        else:
+            exclude_options = set(exclude_options)
 
-        logger.log(msg="Solver options:", **log_kwargs)
+        logger.log(msg="Full solver options:", **log_kwargs)
         for key, val in config.items():
             if key not in exclude_options:
                 logger.log(msg=f" {key}={val!r}", **log_kwargs)
@@ -273,10 +323,10 @@ class PyROS:
            through direct argument 'options'.
         2. Inter-argument validation.
         """
-        config = self.CONFIG(kwds.pop("options", {}))
-        config = config(kwds)
+        # prioritize entries of kwds over entries of kwds['options']
+        kwargs = {**kwds.pop("options", {}), **kwds}
+        config = self.CONFIG(value=kwargs)
         user_var_partitioning = validate_pyros_inputs(model, config)
-
         return config, user_var_partitioning
 
     @document_kwargs_from_configdict(
@@ -331,6 +381,13 @@ class PyROS:
             Summary of PyROS termination outcome.
 
         """
+        # use this to determine whether user provided
+        # nominal uncertain parameter values
+        nominal_param_vals_in_kwds = (
+            "nominal_uncertain_param_vals" in kwds
+            or "nominal_uncertain_param_vals" in kwds.get("options", {})
+        )
+
         model_data = ModelData(original_model=model, timing=TimingData(), config=None)
         with time_code(
             timing_data_obj=model_data.timing,
@@ -367,14 +424,26 @@ class PyROS:
             config, user_var_partitioning = self._resolve_and_validate_pyros_args(
                 model, **kwds
             )
+            self._log_config_user_values(
+                logger=config.progress_logger,
+                config=config,
+                exclude_options=(
+                    self._DEFAULT_CONFIG_USER_OPTIONS
+                    + ["nominal_uncertain_param_vals"]
+                    * (not nominal_param_vals_in_kwds)
+                ),
+                level=logging.INFO,
+            )
             self._log_config(
                 logger=config.progress_logger,
                 config=config,
                 exclude_options=None,
-                level=logging.INFO,
+                level=logging.DEBUG,
             )
             model_data.config = config
 
+            log_original_model_statistics(model_data, user_var_partitioning)
+            IterationLogRecord.log_header_rule(config.progress_logger.info)
             config.progress_logger.info("Preprocessing...")
             model_data.timing.start_timer("main.preprocessing")
             robust_infeasible = model_data.preprocess(user_var_partitioning)
@@ -385,7 +454,8 @@ class PyROS:
                 f"{preprocessing_time:.3f}s."
             )
 
-            log_model_statistics(model_data)
+            IterationLogRecord.log_header_rule(config.progress_logger.debug)
+            log_preprocessed_model_statistics(model_data)
 
             # === Solve and load solution into model
             return_soln = ROSolveResults()
@@ -435,8 +505,8 @@ class PyROS:
         # log termination-related messages
         config.progress_logger.info(return_soln.pyros_termination_condition.message)
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
-        config.progress_logger.info(f"Timing breakdown:\n\n{model_data.timing}")
-        config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
+        config.progress_logger.debug(f"Timing breakdown:\n\n{model_data.timing}")
+        config.progress_logger.debug("-" * self._LOG_LINE_LENGTH)
         config.progress_logger.info(return_soln)
         config.progress_logger.info("-" * self._LOG_LINE_LENGTH)
         config.progress_logger.info("All done. Exiting PyROS.")

@@ -23,6 +23,7 @@ from pyomo.repn.util import (
     ExitNodeDispatcher,
     ExprType,
     initialize_exit_node_dispatcher,
+    check_constant,
 )
 import pyomo.repn.linear as linear
 import pyomo.repn.quadratic as quadratic
@@ -88,7 +89,7 @@ class ParameterizedBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
                 # We aren't treating this Var as a Var for the purposes of this walker
                 return False, (_FIXED, child)
             if child.fixed:
-                return False, (_CONSTANT, visitor.check_constant(child.value, child))
+                return False, (_CONSTANT, check_constant(child.value, child, visitor))
             # This is a normal situation
             visitor.var_recorder.add(child)
         ans = visitor.Result()
