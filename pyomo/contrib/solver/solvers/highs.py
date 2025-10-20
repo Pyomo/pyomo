@@ -769,10 +769,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     results.iteration_count = 0
                 else:
                     assert (
-                        len(positive_iters) == 1,
+                        len(positive_iters) == 1
                     ), "Only one iteration count should have a positive value"
                     results.iteration_count = positive_iters[0]
-                results.iteration_count = max(counts)
             else:
                 results.iteration_count = 0
 

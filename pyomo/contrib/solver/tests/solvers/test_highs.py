@@ -126,9 +126,10 @@ class TestHighsMiniDemos(unittest.TestCase):
             solver.config.solver_options["solver"] = (
                 method  # 'simplex' | 'ipm' | 'pdlp'
             )
+            solver.config.solver_options["presolve"] = "off"
             results = solver.solve(m)
             self.assertTrue(results.solution_status == SolutionStatus.optimal)
-            self.assertTrue(results.iteration_count >= 0)
+            self.assertTrue(results.iteration_count > 0)
 
     def test_mip_demo(self):
         # Build MIP
@@ -139,9 +140,21 @@ class TestHighsMiniDemos(unittest.TestCase):
         m.obj = pyo.Objective(expr=3 * m.a + 2 * m.b, sense=pyo.maximize)
 
         solver = Highs()
+        solver.config.solver_options["presolve"] = "off"
         results = solver.solve(m)
         self.assertTrue(results.solution_status == SolutionStatus.optimal)
-        self.assertTrue(results.iteration_count >= 0)
+        self.assertTrue(results.iteration_count > 0)
+
+    def test_mip_pmedian(self):
+        # Build MIP
+        from pyomo.core.tests.examples.pmedian_concrete import create_model
+
+        M = create_model()
+
+        solver = Highs()
+        results = solver.solve(M)
+        self.assertEqual(results.solution_status, SolutionStatus.optimal)
+        self.assertTrue(results.iteration_count > 0)
 
     def test_qp_demo(self):
         # Build convex QP
@@ -152,6 +165,7 @@ class TestHighsMiniDemos(unittest.TestCase):
         m.obj = pyo.Objective(expr=(m.x - 1) ** 2 + (m.y - 2) ** 2, sense=pyo.minimize)
 
         solver = Highs()
+        solver.config.solver_options["presolve"] = "off"
         results = solver.solve(m)
         self.assertTrue(results.solution_status == SolutionStatus.optimal)
-        self.assertTrue(results.iteration_count >= 0)
+        self.assertTrue(results.iteration_count > 0)
