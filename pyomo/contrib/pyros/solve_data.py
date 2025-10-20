@@ -14,6 +14,9 @@ Containers for PyROS subproblem solve results.
 """
 
 
+from pyomo.opt import check_optimal_termination
+
+
 class ROSolveResults:
     """
     PyROS solver results object.
@@ -121,6 +124,24 @@ class MasterResults:
             self.master_results_list = list(master_results_list)
         self.pyros_termination_condition = pyros_termination_condition
 
+    @property
+    def backup_solver_used(self):
+        """
+        bool : True if a backup solver was used for the master problem,
+        False otherwise.
+        """
+        return len(self.master_results_list) > 1
+
+    @property
+    def feasibility_problem_success(self):
+        """
+        bool : True if the feasibility problem was solved
+        successfully, False otherwise.
+        """
+        return self.feasibility_problem_results is None or check_optimal_termination(
+            self.feasibility_problem_results
+        )
+
 
 class SeparationSolveCallResults:
     """
@@ -171,6 +192,8 @@ class SeparationSolveCallResults:
         `violating_param_realization` as listed in the
         `scenarios` attribute of a ``DiscreteScenarioSet``
         instance. If discrete set not used, pass None.
+    backup_solver_used : bool, optional
+        True if a backup solver was used, False otherwise.
 
     Attributes
     ----------
@@ -184,6 +207,7 @@ class SeparationSolveCallResults:
     time_out
     subsolver_error
     discrete_set_scenario_index
+    backup_solver_used
     """
 
     def __init__(
@@ -198,6 +222,7 @@ class SeparationSolveCallResults:
         time_out=None,
         subsolver_error=None,
         discrete_set_scenario_index=None,
+        backup_solver_used=None,
     ):
         """Initialize self (see class docstring)."""
         self.results_list = results_list
@@ -210,6 +235,7 @@ class SeparationSolveCallResults:
         self.time_out = time_out
         self.subsolver_error = subsolver_error
         self.discrete_set_scenario_index = discrete_set_scenario_index
+        self.backup_solver_used = backup_solver_used
 
     def termination_acceptable(self, acceptable_terminations):
         """
@@ -249,21 +275,30 @@ class DiscreteSeparationSolveCallResults:
     second_stage_ineq_con : Constraint
         Separation problem second-stage inequality constraint for which
         `self` was generated.
+    backup_solver_used : bool
+        True if backup solver was used to solve the problem,
+        False otherwise.
 
     Attributes
     ----------
     solved_globally
     solver_call_results
     second_stage_ineq_con
+    backup_solver_used
     """
 
     def __init__(
-        self, solved_globally, solver_call_results=None, second_stage_ineq_con=None
+        self,
+        solved_globally,
+        solver_call_results=None,
+        second_stage_ineq_con=None,
+        backup_solver_used=None,
     ):
         """Initialize self (see class docstring)."""
         self.solved_globally = solved_globally
         self.solver_call_results = solver_call_results
         self.second_stage_ineq_con = second_stage_ineq_con
+        self.backup_solver_used = backup_solver_used
 
     @property
     def time_out(self):
@@ -336,6 +371,18 @@ class SeparationLoopResults:
         self.solved_globally = solved_globally
         self.worst_case_ss_ineq_con = worst_case_ss_ineq_con
         self.all_discrete_scenarios_exhausted = all_discrete_scenarios_exhausted
+
+    @property
+    def backup_solver_used(self):
+        """
+        bool : True if a backup solver was used to obtain any of
+        the separation results contained in ``self``,
+        False otherwise.
+        """
+        return any(
+            solver_call_res.backup_solver_used
+            for solver_call_res in self.solver_call_results.values()
+        )
 
     @property
     def found_violation(self):
@@ -480,6 +527,28 @@ class SeparationResults:
         """Initialize self (see class docstring)."""
         self.local_separation_loop_results = local_separation_loop_results
         self.global_separation_loop_results = global_separation_loop_results
+
+    @property
+    def backup_local_solver_used(self):
+        """
+        bool : True if a backup solver was used for local separation,
+        False otherwise.
+        """
+        return (
+            self.local_separation_loop_results
+            and self.local_separation_loop_results.backup_solver_used
+        )
+
+    @property
+    def backup_global_solver_used(self):
+        """
+        bool : True if a backup solver was used for global separation,
+        False otherwise.
+        """
+        return (
+            self.global_separation_loop_results
+            and self.global_separation_loop_results.backup_solver_used
+        )
 
     @property
     def time_out(self):

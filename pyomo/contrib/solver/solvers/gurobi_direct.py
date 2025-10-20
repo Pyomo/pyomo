@@ -117,7 +117,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         if self._grb_model.SolCount == 0:
             raise NoSolutionError()
 
-        iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
+        iterator = zip(self._pyo_vars, map(operator.attrgetter('x'), self._grb_vars))
         if vars_to_load:
             vars_to_load = ComponentSet(vars_to_load)
             iterator = filter(lambda var_val: var_val[0] in vars_to_load, iterator)
@@ -130,7 +130,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         if self._grb_model.SolCount == 0:
             raise NoSolutionError()
 
-        iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
+        iterator = zip(self._pyo_vars, map(operator.attrgetter('x'), self._grb_vars))
         if vars_to_load:
             vars_to_load = ComponentSet(vars_to_load)
             iterator = filter(lambda var_val: var_val[0] in vars_to_load, iterator)
@@ -143,24 +143,26 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         def dedup(_iter):
             last = None
             for con_info_dual in _iter:
-                if not con_info_dual[1] and con_info_dual[0][0] is last:
+                if not con_info_dual[1] and con_info_dual[0] is last:
                     continue
-                last = con_info_dual[0][0]
+                last = con_info_dual[0]
                 yield con_info_dual
 
-        iterator = dedup(zip(self._pyo_cons, self._grb_cons.getAttr('Pi').tolist()))
+        iterator = dedup(
+            zip(self._pyo_cons, map(operator.attrgetter('Pi'), self._grb_cons))
+        )
         if cons_to_load:
             cons_to_load = set(cons_to_load)
             iterator = filter(
-                lambda con_info_dual: con_info_dual[0][0] in cons_to_load, iterator
+                lambda con_info_dual: con_info_dual[0] in cons_to_load, iterator
             )
-        return {con_info[0]: dual for con_info, dual in iterator}
+        return {con_info: dual for con_info, dual in iterator}
 
     def get_reduced_costs(self, vars_to_load=None):
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
             raise NoReducedCostsError()
 
-        iterator = zip(self._pyo_vars, self._grb_vars.getAttr('Rc').tolist())
+        iterator = zip(self._pyo_vars, map(operator.attrgetter('Rc'), self._grb_vars))
         if vars_to_load:
             vars_to_load = ComponentSet(vars_to_load)
             iterator = filter(lambda var_rc: var_rc[0] in vars_to_load, iterator)
@@ -374,7 +376,12 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
             timer,
             config,
             GurobiDirectSolutionLoader(
-                gurobi_model, A, x, repn.rows, repn.columns, repn.objectives
+                gurobi_model,
+                A,
+                x.tolist(),
+                list(map(operator.itemgetter(0), repn.rows)),
+                repn.columns,
+                repn.objectives,
             ),
         )
 

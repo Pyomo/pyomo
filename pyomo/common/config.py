@@ -1600,7 +1600,12 @@ class ConfigBase:
 
         # ... and set the value, if appropriate
         if value is not NOTSET:
+            # Note that because we are *creating* a new Config object,
+            # we do not want set_value() to change the current (default)
+            # userSet flag for this object/container (see #3721).
+            tmp = ans._userSet
             ans.set_value(value)
+            ans._userSet = tmp
         return ans
 
     def name(self, fully_qualified=False):

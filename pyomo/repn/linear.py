@@ -56,6 +56,7 @@ from pyomo.repn.util import (
     nan,
     sum_like_expression_types,
     val2str,
+    check_constant,
 )
 
 _CONSTANT = ExprType.CONSTANT
@@ -660,7 +661,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
-                return False, (_CONSTANT, visitor.check_constant(child.value, child))
+                return False, (_CONSTANT, check_constant(child.value, child, visitor))
             visitor.var_recorder.add(child)
         ans = visitor.Result()
         ans.linear[_id] = 1
@@ -675,7 +676,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
-                arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
+                arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
             except (ValueError, ArithmeticError):
                 return True, None
 
@@ -688,7 +689,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
             if arg2.fixed:
                 return False, (
                     _CONSTANT,
-                    arg1 * visitor.check_constant(arg2.value, arg2),
+                    arg1 * check_constant(arg2.value, arg2, visitor),
                 )
             visitor.var_recorder.add(arg2)
 
@@ -696,7 +697,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         # to a numeric value at the beginning of this method.
         if not arg1:
             if arg2.fixed:
-                arg2 = visitor.check_constant(arg2.value, arg2)
+                arg2 = check_constant(arg2.value, arg2, visitor)
                 if arg2.__class__ is InvalidNumber:
                     deprecation_warning(
                         f"Encountered {arg1}*{val2str(arg2)} in expression "
@@ -722,7 +723,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 arg1, arg2 = arg._args_
                 if arg1.__class__ not in native_types:
                     try:
-                        arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
+                        arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
                     except (ValueError, ArithmeticError):
                         return True, None
 
@@ -731,7 +732,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 # method.
                 if not arg1:
                     if arg2.fixed:
-                        arg2 = visitor.check_constant(arg2.value, arg2)
+                        arg2 = check_constant(arg2.value, arg2, visitor)
                         if arg2.__class__ is InvalidNumber:
                             deprecation_warning(
                                 f"Encountered {arg1}*{val2str(arg2)} in expression "
@@ -745,7 +746,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 _id = id(arg2)
                 if _id not in var_map:
                     if arg2.fixed:
-                        const += arg1 * visitor.check_constant(arg2.value, arg2)
+                        const += arg1 * check_constant(arg2.value, arg2, visitor)
                         continue
                     visitor.var_recorder.add(arg2)
                     linear[_id] = arg1
@@ -759,7 +760,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 _id = id(arg)
                 if _id not in var_map:
                     if arg.fixed:
-                        const += visitor.check_constant(arg.value, arg)
+                        const += check_constant(arg.value, arg, visitor)
                         continue
                     visitor.var_recorder.add(arg)
                     linear[_id] = 1
@@ -769,7 +770,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     linear[_id] = 1
             else:
                 try:
-                    const += visitor.check_constant(visitor.evaluate(arg), arg)
+                    const += check_constant(visitor.evaluate(arg), arg, visitor)
                 except (ValueError, ArithmeticError):
                     return True, None
         if linear:
@@ -795,7 +796,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         ans = visitor.Result()
         if all(is_fixed(arg) for arg in child.args):
             try:
-                ans.constant = visitor.check_constant(visitor.evaluate(child), child)
+                ans.constant = check_constant(visitor.evaluate(child), child, visitor)
                 return False, (_CONSTANT, ans)
             except:
                 pass
@@ -842,48 +843,6 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         self.var_map = var_recorder.var_map
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
-
-    def check_constant(self, ans, obj):
-        if ans.__class__ not in native_numeric_types:
-            # None can be returned from uninitialized Var/Param objects
-            if ans is None:
-                return InvalidNumber(
-                    None, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-                )
-            if ans.__class__ is InvalidNumber:
-                return ans
-            elif ans.__class__ in native_complex_types:
-                return complex_number_error(ans, self, obj)
-            else:
-                # It is possible to get other non-numeric types.  Most
-                # common are bool and 1-element numpy.array().  We will
-                # attempt to convert the value to a float before
-                # proceeding.
-                #
-                # Note that as of NumPy 1.25, blindly casting a
-                # 1-element ndarray to a float will generate a
-                # deprecation warning.  We will explicitly test for
-                # that, but want to do the test without triggering the
-                # numpy import
-                for cls in ans.__class__.__mro__:
-                    if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
-                        if len(ans) == 1:
-                            ans = ans[0]
-                        break
-                # TODO: we should check bool and warn/error (while bool is
-                # convertible to float in Python, they have very
-                # different semantic meanings in Pyomo).
-                try:
-                    ans = float(ans)
-                except:
-                    return InvalidNumber(
-                        ans, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-                    )
-        if ans != ans:
-            return InvalidNumber(
-                nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-            )
-        return ans
 
     def initializeWalker(self, expr):
         walk, result = self.beforeChild(None, expr, 0)

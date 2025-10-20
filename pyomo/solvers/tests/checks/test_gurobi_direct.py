@@ -134,9 +134,9 @@ class GurobiParameterTests(GurobiBase):
                 opt.solve(self.model, options={"MIPFocus": 2})
 
         # Method should not be set again, but MIPFocus was changed.
-        # OutputFlag is explicitly set on the model.
+        # LogToConsole is explicitly set on the model.
         assert envparams == {"Method": 2, "MIPFocus": 1}
-        assert modelparams == {"MIPFocus": 2, "OutputFlag": 0}
+        assert modelparams == {"MIPFocus": 2, "LogToConsole": 0}
 
     # Try an erroneous parameter setting to ensure parameters go through in all
     # cases. Expect an error to indicate pyomo tried to set the parameter.
