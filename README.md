@@ -51,7 +51,7 @@ Pyomo is available under the BSD License - see the
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+* CPython: 3.10, 3.11, 3.12, 3.13, 3.14
 * PyPy: 3.11
 
 _Testing and support policy_:
@@ -61,11 +61,11 @@ version, we will remove testing for that Python version.
 
 ### Installation
 
-#### PyPI [![PyPI version](https://img.shields.io/pypi/v/pyomo.svg?maxAge=3600)](https://pypi.org/project/Pyomo/) [![PyPI downloads](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=21600)](https://pypistats.org/packages/pyomo)
+#### PyPI &emsp; [![PyPI version](https://img.shields.io/pypi/v/pyomo.svg?maxAge=3600)](https://pypi.org/project/Pyomo/) [![PyPI downloads](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=21600)](https://pypistats.org/packages/pyomo)
 
     pip install pyomo
 
-#### Anaconda [![Anaconda version](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Anaconda downloads](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
+#### Anaconda &emsp; [![Anaconda version](https://img.shields.io/conda/vn/conda-forge/pyomo.svg)](https://anaconda.org/conda-forge/pyomo) [![Anaconda downloads](https://img.shields.io/conda/dn/conda-forge/pyomo.svg)](https://anaconda.org/conda-forge/pyomo)
 
     conda install -c conda-forge pyomo
 

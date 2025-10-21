@@ -208,8 +208,8 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 			     Use explicit overrides to disable use of automated
 			     version reporting.
 			-->
-			<stableVersionNumber>6.9.4</stableVersionNumber>
-			<releaseNumber>6.9.4</releaseNumber>
+			<stableVersionNumber>6.9.5</stableVersionNumber>
+			<releaseNumber>6.9.5</releaseNumber>
 
 		</developmentStatus>
 
@@ -268,7 +268,7 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 
 			<platform>
 				<operatingSystem>Any</operatingSystem>
-				<compiler>Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14</compiler>
+				<compiler>Python 3.10, 3.11, 3.12, 3.13, 3.14</compiler>
 			</platform>
 
 		</testedPlatforms>

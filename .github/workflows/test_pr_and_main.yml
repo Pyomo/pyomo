@@ -31,7 +31,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v250827.0
+  CACHE_VER: v251017.0
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: |
@@ -52,7 +52,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: 3.11
     - name: Black Formatting Check
       run: |
         # Note v24.4.1 fails due to a bug in the parser. Project-level
@@ -93,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.9, '3.10', 3.11, 3.12, 3.13, 3.14 ]
+        python: [ '3.10', 3.11, 3.12, 3.13, 3.14 ]
         other: [""]
         category: [""]
 
@@ -114,15 +114,16 @@ jobs:
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
 
+        # Note: verify that pymumps is available when changing conda python version
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.12
           other: /conda
           TARGET: linux
           PYENV: conda
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: 3.11
           other: /mpi
           mpi: 3
           TARGET: linux
@@ -138,7 +139,7 @@ jobs:
           PACKAGES: cython
 
         - os: windows-latest
-          python: 3.9
+          python: '3.10'
           other: /pip
           TARGET: win
           PYENV: pip
@@ -151,7 +152,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.10'
           other: /slim
           slim: 1
           TARGET: linux
@@ -831,7 +832,7 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.9/bare-env
+    name: linux/3.10/bare-env
     needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -839,10 +840,10 @@ jobs:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-version: 3.9
+        python-version: '3.10'
 
     - name: Install Pyomo
       run: |
@@ -901,23 +902,23 @@ jobs:
     #  id: pip-cache
     #  with:
     #    path: cache/pip
-    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.9
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.10
 
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: 3.9
+        python-version: 3.12
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above
       run: |
         python -c 'import sys;print(sys.executable)'
-        python -m pip install --cache-dir cache/pip --upgrade pip
+        python -m pip install --cache-dir cache/pip --upgrade pip setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "tests" | tail -1`
         python -m pip install --cache-dir cache/pip \
