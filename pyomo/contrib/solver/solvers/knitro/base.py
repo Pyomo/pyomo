@@ -229,7 +229,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         elif status == -500:
             return TerminationCondition.interrupted
         elif -500 > status >= -599:
-            return TerminationCondition.error 
+            return TerminationCondition.error
         else:
             return TerminationCondition.unknown
 
