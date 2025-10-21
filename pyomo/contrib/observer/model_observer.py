@@ -402,10 +402,10 @@ class ModelChangeDetector:
     ...     Reason,
     ... )
     >>> from pyomo.core.base import (
-    ...     VarData, 
-    ...     ParamData, 
-    ...     ConstraintData, 
-    ...     SOSConstraintData, 
+    ...     VarData,
+    ...     ParamData,
+    ...     ConstraintData,
+    ...     SOSConstraintData,
     ...     ObjectiveData,
     ... )
     >>> class PrintObserver(Observer):
