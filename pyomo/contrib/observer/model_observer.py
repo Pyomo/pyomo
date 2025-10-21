@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  __________________________________________________________________________
 
+from __future__ import annotations
 import abc
 from typing import List, Sequence, Optional, Mapping, MutableMapping, MutableSet, Tuple, Collection, Union
 
@@ -49,9 +50,9 @@ from collections import defaultdict
 #   - modified constraint expressions (relies on expressions being immutable)
 #   - modified objective expressions (relies on expressions being immutable)
 #   - modified objective sense
-#   - changes to variable bounds, domains, and "fixed" flags
+#   - changes to variable bounds, domains, "fixed" flags, and values for fixed variables
 #   - changes to named expressions (relies on expressions being immutable)
-#   - changes to parameter values and fixed variable values
+#   - changes to parameter values
 
 
 _param_types = {ParamData, ScalarParam}
@@ -281,12 +282,39 @@ def _default_reason():
 
 
 class _Updates:
-    def __init__(self) -> None:
+    def __init__(self, observers: Collection[Observer]) -> None:
         self.vars_to_update = DefaultComponentMap(_default_reason)
         self.params_to_update = DefaultComponentMap(_default_reason)
         self.cons_to_update = defaultdict(_default_reason)
         self.sos_to_update = defaultdict(_default_reason)
         self.objs_to_update = DefaultComponentMap(_default_reason)
+        self.observers = observers
+
+    def run(self):
+        # split up new, removed, and modified variables
+        new_vars = ComponentMap((k, v) for k, v in self.vars_to_update.items() if v & Reason.added)
+        other_vars = ComponentMap((k, v) for k, v in self.vars_to_update.items() if not (v & Reason.added))
+
+        new_params = ComponentMap((k, v) for k, v in self.params_to_update.items() if v & Reason.added)
+        other_params = ComponentMap((k, v) for k, v in self.params_to_update.items() if not (v & Reason.added))
+
+        for obs in observers:
+            if new_vars:
+                obs._update_variables(new_vars)
+            if new_params:
+                obs._update_parameters(new_params)
+            if self.cons_to_update:
+                obs._update_constraints(self.cons_to_update)
+            if self.sos_to_update:
+                obs._update_sos_constraints(self.sos_to_update)
+            if self.objs_to_update:
+                obs._update_objectives(self.objs_to_update)
+            if other_vars:
+                obs._update_variables(other_vars)
+            if other_params:
+                obs._update_parameters(other_params)
+
+        self.clear()
 
     def clear(self):
         self.vars_to_update.clear()
@@ -294,6 +322,27 @@ class _Updates:
         self.cons_to_update.clear()
         self.sos_to_update.clear()
         self.objs_to_update.clear()
+
+
+"""
+There are three stages:
+- identification of differences between the model and the internal data structures of the Change Detector
+- synchronization of the model with the internal data structures of the ChangeDetector
+- notification of the observers
+
+The first two really happen at the same time
+
+Update order when notifying the observers:
+  - add new variables
+  - add new constraints
+  - add new objectives
+  - remove old constraints
+  - remove old objectives
+  - remove old variables
+  - update modified constraints
+  - update modified objectives
+  - update modified variables
+"""
 
 
 class ModelChangeDetector:
@@ -484,20 +533,20 @@ class ModelChangeDetector:
         ] = ComponentMap()
 
         self._vars_referenced_by_con: MutableMapping[
-            Union[ConstraintData, SOSConstraintData], List[VarData]
+            Union[ConstraintData, SOSConstraintData], MutableSet[VarData]
         ] = {}
         self._vars_referenced_by_obj: MutableMapping[
-            ObjectiveData, List[VarData]
+            ObjectiveData, MutableSet[VarData]
         ] = ComponentMap()
         self._params_referenced_by_con: MutableMapping[
-            Union[ConstraintData, SOSConstraintData], List[ParamData]
+            Union[ConstraintData, SOSConstraintData], MutableSet[ParamData]
         ] = {}
         # for when parameters show up in variable bounds
         self._params_referenced_by_var: MutableMapping[
-            VarData, List[ParamData]
+            VarData, MutableSet[ParamData]
         ] = ComponentMap()
         self._params_referenced_by_obj: MutableMapping[
-            ObjectiveData, List[ParamData]
+            ObjectiveData, MutableSet[ParamData]
         ] = ComponentMap()
 
         self.config: AutoUpdateConfig = AutoUpdateConfig()(
@@ -509,11 +558,11 @@ class ModelChangeDetector:
         self._model: BlockData = model
         self._set_instance()
 
-    def add_variables(self, variables: Collection[VarData]):
-        params_to_check = ComponentSet()
+    def _add_variables(self, variables: Collection[VarData]):
         for v in variables:
             if v in self._referenced_variables:
                 raise ValueError(f'Variable {v.name} has already been added')
+            self._updates.vars_to_update[v] |= Reason.added
             self._referenced_variables[v] = (OrderedSet(), OrderedSet(), ComponentSet())
             self._vars[v] = (
                 v._lb,
@@ -541,172 +590,158 @@ class ModelChangeDetector:
                     raise NotImplementedError(
                         'ModelChangeDetector does not support external functions in the bounds of other variables'
                     )
-                params_to_check.update(parameters)
                 ref_params.update(parameters)
+            self._params_referenced_by_var[v] = ref_params
             if ref_params:
-                self._params_referenced_by_var[v] = list(ref_params)
-        self._check_for_new_params(params_to_check)
-        for v in variables:
-            if v not in self._params_referenced_by_var:
-                continue
-            parameters = self._params_referenced_by_var[v]
-            for p in parameters:
-                self._referenced_params[p][3].add(v)
-        for obs in self._observers:
-            obs._update_variables(ComponentMap((v, Reason.added) for v in variables))
+                self._check_for_new_params(ref_params)
+                for p in ref_params:
+                    self._referenced_params[p][3].add(v)
 
-    def add_parameters(self, params: Collection[ParamData]):
+    def add_variables(self, variables: Collection[VarData]):
+        self._add_variables(variables)
+        self._updates.run()
+
+    def _add_parameters(self, params: Collection[ParamData]):
         for p in params:
             if p in self._referenced_params:
                 raise ValueError(f'Parameter {p.name} has already been added')
+            self._updates.params_to_update[p] |= Reason.added
             self._referenced_params[p] = (OrderedSet(), OrderedSet(), ComponentSet(), ComponentSet())
             self._params[p] = p.value
-        for obs in self._observers:
-            obs._update_parameters(ComponentMap((p, Reason.added) for p in params))
+
+    def add_parameters(self, params: Collection[ParamData]):
+        self._add_parameters(params)
+        self._updates.run()
 
     def _check_for_new_vars(self, variables: Collection[VarData]):
         new_vars = ComponentSet(
             v for v in variables if v not in self._referenced_variables
         )
-        self.add_variables(new_vars)
+        self._add_variables(new_vars)
 
     def _check_to_remove_vars(self, variables: Collection[VarData]):
         vars_to_remove = ComponentSet()
         for v in variables:
             if not any(self._referenced_variables[v]):
                 vars_to_remove.add(v)
-        self.remove_variables(vars_to_remove)
+        self._remove_variables(vars_to_remove)
 
     def _check_for_new_params(self, params: Collection[ParamData]):
         new_params = ComponentSet(
             p for p in params if p not in self._referenced_params
         )
-        self.add_parameters(new_params)
+        self._add_parameters(new_params)
 
     def _check_to_remove_params(self, params: Collection[ParamData]):
         params_to_remove = ComponentSet()
         for p in params:
             if not any(self._referenced_params[p]):
                 params_to_remove.add(p)
-        self.remove_parameters(params_to_remove)
+        self._remove_parameters(params_to_remove)
 
-    def add_constraints(self, cons: Collection[ConstraintData]):
-        vars_to_check = ComponentSet()
-        params_to_check = ComponentSet()
+    def _add_constraints(self, cons: Collection[ConstraintData]):
         for con in cons:
             if con in self._active_constraints:
                 raise ValueError(f'Constraint {con.name} has already been added')
+            self._updates.cons_to_update[con] |= Reason.added
             self._active_constraints[con] = con.expr
             (named_exprs, variables, parameters, external_functions) = (
                 collect_components_from_expr(con.expr)
             )
-            vars_to_check.update(variables)
-            params_to_check.update(parameters)
+            self._check_for_new_vars(variables)
+            self._check_for_new_params(parameters)
             if named_exprs:
                 self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if external_functions:
                 self._external_functions[con] = external_functions
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = parameters
-        self._check_for_new_vars(vars_to_check)
-        self._check_for_new_params(params_to_check)
-        for con in cons:
-            variables = self._vars_referenced_by_con[con]
-            parameters = self._params_referenced_by_con[con]
             for v in variables:
                 self._referenced_variables[v][0].add(con)
             for p in parameters:
                 self._referenced_params[p][0].add(con)
-        for obs in self._observers:
-            obs._update_constraints({c: Reason.added for c in cons})
 
-    def add_sos_constraints(self, cons: Collection[SOSConstraintData]):
-        vars_to_check = ComponentSet()
-        params_to_check = ComponentSet()
+    def add_constraints(self, cons: Collection[ConstraintData]):
+        self._add_constraints(cons)
+        self._updates.run()
+
+    def _add_sos_constraints(self, cons: Collection[SOSConstraintData]):
         for con in cons:
             if con in self._active_sos:
                 raise ValueError(f'Constraint {con.name} has already been added')
+            self._updates.sos_to_update[con] |= Reason.added
             sos_items = list(con.get_items())
             self._active_sos[con] = (
                 [i[0] for i in sos_items],
                 [i[1] for i in sos_items],
             )
-            variables = []
-            params = []
+            variables = ComponentSet()
+            params = ComponentSet()
             for v, p in sos_items:
-                variables.append(v)
+                variables.add(v)
                 if type(p) in native_numeric_types:
                     continue
                 if p.is_parameter_type():
-                    params.append(p)
-            vars_to_check.update(variables)
-            params_to_check.update(params)
+                    params.add(p)
+            self._check_for_new_vars(variables)
+            self._check_for_new_params(params)
             self._vars_referenced_by_con[con] = variables
             self._params_referenced_by_con[con] = params
-        self._check_for_new_vars(vars_to_check)
-        self._check_for_new_params(params_to_check)
-        for con in cons:
-            variables = self._vars_referenced_by_con[con]
-            params = self._params_referenced_by_con[con]
             for v in variables:
                 self._referenced_variables[v][1].add(con)
             for p in params:
                 self._referenced_params[p][1].add(con)
-        for obs in self._observers:
-            obs._update_sos_constraints(ComponentMap((c, Reason.added) for c in cons))
 
-    def add_objectives(self, objs: Collection[ObjectiveData]):
-        vars_to_check = ComponentSet()
-        params_to_check = ComponentSet()
+    def add_sos_constraints(self, cons: Collection[SOSConstraintData]):
+        self._add_sos_constraints(cons)
+        self._updates.run()
+
+    def _add_objectives(self, objs: Collection[ObjectiveData]):
         for obj in objs:
+            self._updates.objs_to_update[obj] |= Reason.added
             self._objectives[obj] = (obj.expr, obj.sense)
             (named_exprs, variables, parameters, external_functions) = (
                 collect_components_from_expr(obj.expr)
             )
-            vars_to_check.update(variables)
-            params_to_check.update(parameters)
+            self._check_for_new_vars(variables)
+            self._check_for_new_params(parameters)
             if named_exprs:
                 self._obj_named_expressions[obj] = [(e, e.expr) for e in named_exprs]
             if external_functions:
                 self._external_functions[obj] = external_functions
             self._vars_referenced_by_obj[obj] = variables
             self._params_referenced_by_obj[obj] = parameters
-        self._check_for_new_vars(vars_to_check)
-        self._check_for_new_params(params_to_check)
-        for obj in objs:
-            variables = self._vars_referenced_by_obj[obj]
-            parameters = self._params_referenced_by_obj[obj]
             for v in variables:
                 self._referenced_variables[v][2].add(obj)
             for p in parameters:
                 self._referenced_params[p][2].add(obj)
-        for obs in self._observers:
-            obs._update_objectives(ComponentMap((obj, Reason.added) for obj in objs))
 
-    def remove_objectives(self, objs: Collection[ObjectiveData]):
-        for obs in self._observers:
-            obs._update_objectives(ComponentMap((obj, Reason.removed) for obj in objs))
+    def add_objectives(self, objs: Collection[ObjectiveData]):
+        self._add_objectives(objs)
+        self._updates.run()
 
-        vars_to_check = ComponentSet()
-        params_to_check = ComponentSet()
+    def _remove_objectives(self, objs: Collection[ObjectiveData]):
         for obj in objs:
             if obj not in self._objectives:
                 raise ValueError(
                     f'cannot remove objective {obj.name} - it was not added'
                 )
+            self._updates.objs_to_update[obj] |= Reason.removed
             for v in self._vars_referenced_by_obj[obj]:
                 self._referenced_variables[v][2].remove(obj)
             for p in self._params_referenced_by_obj[obj]:
                 self._referenced_params[p][2].remove(obj)
-            vars_to_check.update(self._vars_referenced_by_obj[obj])
-            params_to_check.update(self._params_referenced_by_obj[obj])
+            self._check_to_remove_vars(self._vars_referenced_by_obj[obj])
+            self._check_to_remove_params(self._params_referenced_by_obj[obj])
             del self._objectives[obj]
             self._obj_named_expressions.pop(obj, None)
             self._external_functions.pop(obj, None)
             self._vars_referenced_by_obj.pop(obj)
             self._params_referenced_by_obj.pop(obj)
-        self._check_to_remove_vars(vars_to_check)
-        self._check_to_remove_params(params_to_check)
+
+    def remove_objectives(self, objs: Collection[ObjectiveData]):
+        self._remove_objectives(objs)
+        self._updates.run()
 
     def _check_for_unknown_active_components(self):
         for ctype in self._model.collect_ctypes(active=True, descend_into=True):
@@ -749,82 +784,79 @@ class ModelChangeDetector:
                 )
             )
 
-    def remove_constraints(self, cons: Collection[ConstraintData]):
-        for obs in self._observers:
-            obs._update_constraints({c: Reason.removed for c in cons})
-        vars_to_check = ComponentSet()
-        params_to_check = ComponentSet()
+    def _remove_constraints(self, cons: Collection[ConstraintData]):
         for con in cons:
             if con not in self._active_constraints:
                 raise ValueError(
                     f'Cannot remove constraint {con.name} - it was not added'
                 )
+            self._updates.cons_to_update[con] |= Reason.removed
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[v][0].remove(con)
             for p in self._params_referenced_by_con[con]:
                 self._referenced_params[p][0].remove(con)
-            vars_to_check.update(self._vars_referenced_by_con[con])
-            params_to_check.update(self._params_referenced_by_con[con])
+            self._check_to_remove_vars(self._vars_referenced_by_con[con])
+            self._check_to_remove_params(self._params_referenced_by_con[con])
             self._active_constraints.pop(con)
             self._named_expressions.pop(con, None)
             self._external_functions.pop(con, None)
             self._vars_referenced_by_con.pop(con)
             self._params_referenced_by_con.pop(con)
-        self._check_to_remove_vars(vars_to_check)
-        self._check_to_remove_params(params_to_check)
 
-    def remove_sos_constraints(self, cons: Collection[SOSConstraintData]):
-        for obs in self._observers:
-            obs._update_sos_constraints({c: Reason.removed for c in cons})
-        vars_to_check = ComponentSet()
-        params_to_check = ComponentSet()
+    def remove_constraints(self, cons: Collection[ConstraintData]):
+        self._remove_constraints(cons)
+        self._updates.run()
+
+    def _remove_sos_constraints(self, cons: Collection[SOSConstraintData]):
         for con in cons:
             if con not in self._active_sos:
                 raise ValueError(
                     f'Cannot remove constraint {con.name} - it was not added'
                 )
+            self._updates.sos_to_update[con] |= Reason.removed
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[v][1].remove(con)
             for p in self._params_referenced_by_con[con]:
                 self._referenced_params[p][1].remove(con)
-            vars_to_check.update(self._vars_referenced_by_con[con])
-            params_to_check.update(self._params_referenced_by_con[con])
+            self._check_to_remove_vars(self._vars_referenced_by_con[con])
+            self._check_to_remove_params(self._params_referenced_by_con[con])
             self._active_sos.pop(con)
             self._vars_referenced_by_con.pop(con)
             self._params_referenced_by_con.pop(con)
-        self._check_to_remove_vars(vars_to_check)
-        self._check_to_remove_params(params_to_check)
 
-    def remove_variables(self, variables: Collection[VarData]):
-        for obs in self._observers:
-            obs._update_variables(ComponentMap((v, Reason.removed) for v in variables))
-        params_to_check = ComponentSet()
+    def remove_sos_constraints(self, cons: Collection[SOSConstraintData]):
+        self._remove_sos_constraints(cons)
+        self._updates.run()
+
+    def _remove_variables(self, variables: Collection[VarData]):
         for v in variables:
             if v not in self._referenced_variables:
                 raise ValueError(
                     f'Cannot remove variable {v.name} - it has not been added'
                 )
-            if v in self._params_referenced_by_var:
-                for p in self._params_referenced_by_var[v]:
-                    self._referenced_params[p][3].remove(v)
-                params_to_check.update(self._params_referenced_by_var[v])
-                self._params_referenced_by_var.pop(v)
+            self._updates.vars_to_update[v] |= Reason.removed
+            for p in self._params_referenced_by_var[v]:
+                self._referenced_params[p][3].remove(v)
+            self._check_to_remove_params(self._params_referenced_by_var[v])
+            self._params_referenced_by_var.pop(v)
             if any(self._referenced_variables[v]):
                 raise ValueError(
                     f'Cannot remove variable {v.name} - it is still being used by constraints/objectives'
                 )
             self._referenced_variables.pop(v)
             self._vars.pop(v)
-        self._check_to_remove_params(params_to_check)
+ 
+    def remove_variables(self, variables: Collection[VarData]):
+        self._remove_variables(variables)
+        self._updates.run()
 
-    def remove_parameters(self, params: Collection[ParamData]):
-        for obs in self._observers:
-            obs._update_parameters(ComponentMap((p, Reason.removed) for p in params))
+    def _remove_parameters(self, params: Collection[ParamData]):
         for p in params:
             if p not in self._referenced_params:
                 raise ValueError(
                     f'Cannot remove parameter {p.name} - it has not been added'
                 )
+            self._updates.params_to_update[p] |= Reason.removed
             if any(self._referenced_params[p]):
                 raise ValueError(
                     f'Cannot remove parameter {p.name} - it is still being used by constraints/objectives'
@@ -832,27 +864,287 @@ class ModelChangeDetector:
             self._referenced_params.pop(p)
             self._params.pop(p)
 
-    def update_variables(self, variables: Mapping[VarData, Reason]):
-        for v in variables:
-            self._vars[v] = (
-                v._lb,
-                v._ub,
-                v.fixed,
-                v.domain.get_interval(),
-                v.value,
+    def remove_parameters(self, params: Collection[ParamData]):
+        self._remove_parameters(params)
+        self._updates.run()
+
+    def _update_var_bounds(self, v: VarData):
+        ref_params = ComponentSet()
+        for bnd in (v._lb, v._ub):
+            if bnd is None or type(bnd) in native_numeric_types:
+                continue
+            (named_exprs, _vars, parameters, external_functions) = (
+                collect_components_from_expr(bnd)
             )
-        for obs in self._observers:
-            obs._update_variables(variables)
+            if _vars:
+                raise NotImplementedError(
+                    'ModelChangeDetector does not support variables in the bounds of other variables'
+                )
+            if named_exprs:
+                raise NotImplementedError(
+                    'ModelChangeDetector does not support Expressions in the bounds of other variables'
+                )
+            if external_functions:
+                raise NotImplementedError(
+                    'ModelChangeDetector does not support external functions in the bounds of other variables'
+                )
+            ref_params.update(parameters)
 
-    def update_parameters(self, params: Mapping[ParamData, Reason]):
+        _ref_params = self._params_referenced_by_var[v]
+        new_params = ref_params - _ref_params
+        old_params = _ref_params - ref_params
+
+        self._params_referenced_by_var[v] = ref_params
+
+        if new_params:
+            self._check_for_new_params(new_params)
+        if old_params:
+            self._check_to_remove_params(old_params)
+
+        for p in new_params:
+            self._referenced_params[p][3].add(v)
+        for p in old_params:
+            self._referenced_params[p][3].remove(v)
+
+    def _update_variables(self, variables: Optional[Collection[VarData]] = None):
+        if variables is None:
+            variables = self._vars
+        for v in variables:
+            _lb, _ub, _fixed, _domain_interval, _value = self._vars[v]
+            lb, ub, fixed, domain_interval, value = v._lb, v._ub, v.fixed, v.domain.get_interval(), v.value
+            reason = Reason.no_change
+            if _fixed != fixed:
+                reason |= Reason.fixed
+            elif _fixed and (value != _value):
+                reason |= Reason.value
+            if lb is not _lb or ub is not _ub:
+                reason |= Reason.bounds
+            if _domain_interval != domain_interval:
+                reason |= Reason.domain
+            if reason:
+                self._updates.vars_to_update[v] |= reason
+                self._vars[v] = (
+                    lb,
+                    ub,
+                    fixed,
+                    domain_interval,
+                    value,
+                )
+                if reason & Reason.bounds:
+                    self._update_var_bounds(v)
+
+    def update_variables(self, variables: Optional[Collection[VarData]] = None):
+        self._update_variables(variables)
+        self._updates.run()
+
+    def _update_parameters(self, params: Optional[Collection[ParamData]] = None):
+        if params is None:
+            params = self._params
         for p in params:
-            self._params[p] = p.value
-        for obs in self._observers:
-            obs._update_parameters(params)
+            _val = self._params[p]
+            val = p.value
+            reason = Reason.no_change
+            if _val != val:
+                reason |= Reason.value
+            if reason:
+                self._updates.params_to_update[p] |= reason
+                self._params[p] = val
 
-    def _check_for_new_or_removed_sos(self, sos_to_update=None):
-        if sos_to_update is None:
-            sos_to_update = defaultdict(_default_reason)
+    def update_parameters(self, params: Optional[Collection[ParamData]]):
+        self._update_parameters(params)
+        self._updates.run()
+
+    def _update_con(self, con: ConstraintData):
+        self._active_constraints[con] = con.expr
+        (named_exprs, variables, parameters, external_functions) = (
+            collect_components_from_expr(con.expr)
+        )
+        if named_exprs:
+            self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
+        else:
+            self._named_expressions.pop(con, None)
+        if external_functions:
+            self._external_functions[con] = external_functions
+        else:
+            self._external_functions.pop(con, None)
+        
+        _variables = self._vars_referenced_by_con[con]
+        _parameters = self._params_referenced_by_con[con]
+        new_vars = variables - _variables
+        old_vars = _variables - variables
+        new_params = parameters - _parameters
+        old_params = _parameters - parameters
+
+        self._vars_referenced_by_con[con] = variables
+        self._params_referenced_by_con[con] = parameters
+
+        if new_vars:
+            self._check_for_new_vars(new_vars)
+        if old_vars:
+            self._check_to_remove_vars(old_vars)
+        if new_params:
+            self._check_for_new_params(new_params)
+        if old_params:
+            self._check_to_remove_params(old_params)
+        
+        for v in new_vars:
+            self._referenced_variables[v][0].add(con)
+        for v in old_vars:
+            self._referenced_variables[v][0].remove(con)
+        for p in new_params:
+            self._referenced_params[p][0].add(con)
+        for p in old_params:
+            self._referenced_params[p][0].remove(con)
+
+    def _update_constraints(self, cons: Optional[Collection[ConstraintData]] = None):
+        if cons is None:
+            cons = self._active_constraints
+        for c in cons:
+            reason = Reason.no_change
+            if c.expr is not self._active_constraints[c]:
+                reason |= Reason.expr
+            if reason:
+                self._updates.cons_to_update[c] |= reason
+                self._update_con(c)
+
+    def update_constraints(self, cons: Optional[Collection[ConstraintData]] = None):
+        self._update_constraints(cons)
+        self._updates.run()
+
+    def _update_sos_con(self, con: SOSConstraintData):
+        sos_items = list(con.get_items())
+        self._active_sos[con] = (
+            [i[0] for i in sos_items],
+            [i[1] for i in sos_items],
+        )
+        variables = ComponentSet()
+        parameters = ComponentSet()
+        for v, p in sos_items:
+            variables.add(v)
+            parameters.add(p)
+        
+        _variables = self._vars_referenced_by_con[con]
+        _parameters = self._params_referenced_by_con[con]
+        new_vars = variables - _variables
+        old_vars = _variables - variables
+        new_params = parameters - _parameters
+        old_params = _parameters - parameters
+
+        self._vars_referenced_by_con[con] = variables
+        self._params_referenced_by_con[con] = parameters
+
+        if new_vars:
+            self._check_for_new_vars(new_vars)
+        if old_vars:
+            self._check_to_remove_vars(old_vars)
+        if new_params:
+            self._check_for_new_params(new_params)
+        if old_params:
+            self._check_to_remove_params(old_params)
+        
+        for v in new_vars:
+            self._referenced_variables[v][1].add(con)
+        for v in old_vars:
+            self._referenced_variables[v][1].remove(con)
+        for p in new_params:
+            self._referenced_params[p][1].add(con)
+        for p in old_params:
+            self._referenced_params[p][1].remove(con)
+
+    def _update_sos_constraints(self, cons: Optional[Collection[SOSConstraintData]] = None):
+        if cons is None:
+            cons = self._active_sos
+        for c in cons:
+            reason = Reason.no_change
+            _vlist, _plist = self._active_sos[c]
+            sos_items = list(c.get_items())
+            vlist = [i[0] for i in sos_items]
+            plist = [i[1] for i in sos_items]
+            needs_update = False
+            if len(_vlist) != len(vlist) or len(_plist) != len(plist):
+                needs_update = True
+            else:
+                for v1, v2 in zip(_vlist, vlist):
+                    if v1 is not v2:
+                        needs_update = True
+                        break
+                for p1, p2 in zip(_plist, plist):
+                    if p1 is not p2:
+                        needs_update = True
+                        break
+            if needs_update:
+                reason |= Reason.sos_items
+                self._updates.sos_to_update[c] |= reason
+                self._update_sos_con(c)
+
+    def update_sos_constraints(self, cons: Optional[Collection[SOSConstraintData]] = None):
+        self._update_sos_constraints(cons)
+        self._updates.run()
+
+    def _update_obj_expr(self, obj: ObjectiveData):
+        (named_exprs, variables, parameters, external_functions) = (
+            collect_components_from_expr(obj.expr)
+        )
+        if named_exprs:
+            self._obj_named_expressions[obj] = [(e, e.expr) for e in named_exprs]
+        else:
+            self._obj_named_expressions.pop(obj, None)
+        if external_functions:
+            self._external_functions[obj] = external_functions
+        else:
+            self._external_functions.pop(obj, None)
+        
+        _variables = self._vars_referenced_by_obj[obj]
+        _parameters = self._params_referenced_by_obj[obj]
+        new_vars = variables - _variables
+        old_vars = _variables - variables
+        new_params = parameters - _parameters
+        old_params = _parameters - parameters
+
+        self._vars_referenced_by_obj[obj] = variables
+        self._params_referenced_by_obj[obj] = parameters
+
+        if new_vars:
+            self._check_for_new_vars(new_vars)
+        if old_vars:
+            self._check_to_remove_vars(old_vars)
+        if new_params:
+            self._check_for_new_params(new_params)
+        if old_params:
+            self._check_to_remove_params(old_params)
+        
+        for v in new_vars:
+            self._referenced_variables[v][2].add(obj)
+        for v in old_vars:
+            self._referenced_variables[v][2].remove(obj)
+        for p in new_params:
+            self._referenced_params[p][2].add(obj)
+        for p in old_params:
+            self._referenced_params[p][2].remove(obj)
+
+    def _update_objectives(self, objs: Optional[Collection[ObjectiveData]] = None):
+        if objs is None:
+            objs = self._objectives
+        for obj in objs:
+            reason = Reason.no_change
+            _expr, _sense = self._objectives[obj]
+            if _expr is not obj.expr:
+                reason |= Reason.expr
+            if _sense != obj.sense:
+                reason |= Reason.sense
+            if reason:
+                self._updates.objs_to_update[obj] |= reason
+                self._objectives[obj] = (obj.expr, obj.sense)
+                if reason & Reason.expr:
+                    self._update_obj_expr(obj)
+
+    def update_objectives(self, objs: Optional[Collection[ObjectiveData]] = None):
+        self._update_objectives(objs)
+        self._updates.run()
+
+    def _check_for_new_or_removed_sos(self):
+        new_sos = []
+        old_sos = []
         current_sos_set = OrderedSet(
             self._model.component_data_objects(
                 SOSConstraint, descend_into=True, active=True
@@ -860,15 +1152,15 @@ class ModelChangeDetector:
         )
         for c in current_sos_set:
             if c not in self._active_sos:
-                sos_to_update[c] |= Reason.added
+                new_sos.append(c)
         for c in self._active_sos:
             if c not in current_sos_set:
-                sos_to_update[c] |= Reason.removed
-        return sos_to_update
+                old_sos.append(c)
+        return new_sos, old_sos
 
-    def _check_for_new_or_removed_constraints(self, cons_to_update=None):
-        if cons_to_update is None:
-            cons_to_update = defaultdict(_default_reason)
+    def _check_for_new_or_removed_constraints(self):
+        new_cons = []
+        old_cons = []
         current_cons_set = OrderedSet(
             self._model.component_data_objects(
                 Constraint, descend_into=True, active=True
@@ -876,91 +1168,29 @@ class ModelChangeDetector:
         )
         for c in current_cons_set:
             if c not in self._active_constraints:
-                cons_to_update[c] |= Reason.added
+                new_cons.append(c)
         for c in self._active_constraints:
             if c not in current_cons_set:
-                cons_to_update[c] |= Reason.removed
-        return cons_to_update
+                old_cons.append(c)
+        return new_cons, old_cons
 
-    def _check_for_modified_sos(self, sos_to_update=None):
-        if sos_to_update is None:
-            sos_to_update = defaultdict(_default_reason)
-        for c, (old_vlist, old_plist) in self._active_sos.items():
-            sos_items = list(c.get_items())
-            new_vlist = [i[0] for i in sos_items]
-            new_plist = [i[1] for i in sos_items]
-            if len(old_vlist) != len(new_vlist):
-                sos_to_update[c] |= Reason.sos_items
-            elif len(old_plist) != len(new_plist):
-                sos_to_update[c] |= Reason.sos_items
-            else:
-                needs_update = False
-                for v1, v2 in zip(old_vlist, new_vlist):
-                    if v1 is not v2:
-                        needs_update = True
-                        break
-                for p1, p2 in zip(old_plist, new_plist):
-                    if p1 is not p2:
-                        needs_update = True
-                        if needs_update:
-                            break
-                if needs_update:
-                    sos_to_update[c] |= Reason.sos_items
-        return sos_to_update
-
-    def _check_for_modified_constraints(self, cons_to_update=None):
-        if cons_to_update is None:
-            cons_to_update = defaultdict(_default_reason)
-        for c, expr in self._active_constraints.items():
-            if c.expr is not expr:
-                cons_to_update[c] |= Reason.expr
-        return cons_to_update
-
-    def _check_for_var_changes(self, vars_to_update=None):
-        if vars_to_update is None:
-            vars_to_update = DefaultComponentMap(_default_reason)
-        for v, (_lb, _ub, _fixed, _domain_interval, _value) in self._vars.items():
-            reason = Reason.no_change
-            if _fixed != v.fixed:
-                reason = reason | Reason.fixed
-            elif _fixed and (v.value != _value):
-                reason = reason | Reason.value
-            if v._lb is not _lb or v._ub is not _ub:
-                reason = reason | Reason.bounds
-            if _domain_interval != v.domain.get_interval():
-                reason = reason | Reason.domain
-            if reason:
-                vars_to_update[v] |= reason
-        return vars_to_update
-
-    def _check_for_param_changes(self, params_to_update=None):
-        if params_to_update is None:
-            params_to_update = DefaultComponentMap(_default_reason)
-        for p, val in self._params.items():
-            if p.value != val:
-                params_to_update[p] |= Reason.value
-        return params_to_update
-
-    def _check_for_named_expression_changes(self, cons_to_update=None, objs_to_update=None):
-        if cons_to_update is None:
-            cons_to_update = defaultdict(_default_reason)
-        if objs_to_update is None:
-            objs_to_update = DefaultComponentMap(_default_reason)
+    def _check_for_named_expression_changes(self):
         for con, ne_list in self._named_expressions.items():
             for named_expr, old_expr in ne_list:
                 if named_expr.expr is not old_expr:
-                    cons_to_update[con] |= Reason.expr
+                    self._updates.cons_to_update[con] |= Reason.expr
+                    self._update_con(con)
                     break
         for obj, ne_list in self._obj_named_expressions.items():
             for named_expr, old_expr in ne_list:
                 if named_expr.expr is not old_expr:
-                    objs_to_update[obj] |= Reason.expr
+                    self._updates.objs_to_update[obj] |= Reason.expr
+                    self._update_obj_expr(obj)
                     break
-        return cons_to_update, objs_to_update
 
-    def _check_for_new_or_removed_objectives(self, objs_to_update=None):
-        if objs_to_update is None:
-            objs_to_update = DefaultComponentMap(_default_reason)
+    def _check_for_new_or_removed_objectives(self):
+        new_objs = []
+        old_objs = []
         current_objs_set = ComponentSet(
             self._model.component_data_objects(
                 Objective, descend_into=True, active=True
@@ -968,21 +1198,11 @@ class ModelChangeDetector:
         )
         for obj in current_objs_set:
             if obj not in self._objectives:
-                objs_to_update[obj] |= Reason.added
-        for obj, (obj_expr, obj_sense) in self._objectives.items():
+                new_objs.append(obj)
+        for obj in self._objectives.keys():
             if obj not in current_objs_set:
-                objs_to_update[obj] |= Reason.removed
-        return objs_to_update
-
-    def _check_for_modified_objectives(self, objs_to_update=None):
-        if objs_to_update is None:
-            objs_to_update = DefaultComponentMap(_default_reason)
-        for obj, (obj_expr, obj_sense) in self._objectives.items():
-            if obj.expr is not obj_expr:
-                objs_to_update[obj] |= Reason.expr
-            if obj.sense != obj_sense:
-                objs_to_update[obj] |= Reason.sense
-        return objs_to_update
+                old_objs.append(obj)
+        return new_objs, old_objs
 
     def update(self, timer: Optional[HierarchicalTimer] = None, **kwds):
         """
@@ -1016,81 +1236,51 @@ class ModelChangeDetector:
         with PauseGC() as pgc:
             self._check_for_unknown_active_components()
 
-            if config.update_vars:
-                timer.start('vars')
-                vars_to_update = self._check_for_var_changes()
-                if vars_to_update:
-                    self.update_variables(vars_to_update, reasons)
-                timer.stop('vars')
-
-            if config.update_parameters:
-                timer.start('params')
-                params_to_update = self._check_for_param_changes()
-                if params_to_update:
-                    self.update_parameters(params_to_update)
-                timer.stop('params')
-
-            if config.update_named_expressions:
-                timer.start('named expressions')
-                cons_to_update, objs_to_update = (
-                    self._check_for_named_expression_changes()
-                )
-                if cons_to_update:
-                    self.remove_constraints(cons_to_update)
-                    self.add_constraints(cons_to_update)
-                if objs_to_update:
-                    self.remove_objectives(objs_to_update)
-                    self.add_objectives(objs_to_update)
-                timer.stop('named expressions')
-
-            if config.update_constraints:
-                timer.start('cons')
-                cons_to_update = self._check_for_modified_constraints()
-                if cons_to_update:
-                    self.remove_constraints(cons_to_update)
-                    self.add_constraints(cons_to_update)
-                timer.stop('cons')
-                timer.start('sos')
-                sos_to_update = self._check_for_modified_sos()
-                if sos_to_update:
-                    self.remove_sos_constraints(sos_to_update)
-                    self.add_sos_constraints(sos_to_update)
-                timer.stop('sos')
-
-            if config.update_objectives:
-                timer.start('objective')
-                objs_to_update = self._check_for_modified_objectives()
-                if objs_to_update:
-                    self.remove_objectives(objs_to_update)
-                    self.add_objectives(objs_to_update)
-                timer.stop('objective')
-
             if config.check_for_new_or_removed_constraints:
-                timer.start('sos')
-                new_sos, old_sos = self._check_for_new_or_removed_sos()
-                if new_sos:
-                    self.add_sos_constraints(new_sos)
-                if old_sos:
-                    self.remove_sos_constraints(old_sos)
-                timer.stop('sos')
-                timer.start('cons')
                 new_cons, old_cons = self._check_for_new_or_removed_constraints()
-                if new_cons:
-                    self.add_constraints(new_cons)
-                if old_cons:
-                    self.remove_constraints(old_cons)
-                timer.stop('cons')
+                new_sos, old_sos = self._check_for_new_or_removed_sos()
+            else:
+                new_cons = []
+                old_cons = []
+                new_sos = []
+                old_sos = []
 
             if config.check_for_new_or_removed_objectives:
-                timer.start('objective')
                 new_objs, old_objs = self._check_for_new_or_removed_objectives()
-                # many solvers require one objective, so we have to remove the
-                # old objective first
-                if old_objs:
-                    self.remove_objectives(old_objs)
-                if new_objs:
-                    self.add_objectives(new_objs)
-                timer.stop('objective')
+            else:
+                new_objs = []
+                old_objs = []
+
+            if new_cons:
+                self._add_constraints(new_cons)
+            if new_sos:
+                self._add_sos_constraints(new_sos)
+            if new_objs:
+                self._add_objectives(new_objs)
+
+            if old_cons:
+                self._remove_constraints(old_cons)
+            if old_sos:
+                self._remove_sos_constraints(old_sos)
+            if old_objs:
+                self._remove_objectives(old_objs)
+
+            if config.update_constraints:
+                self._update_constraints()
+                self._update_sos_constraints()
+            if config.update_objectives:
+                self._update_objectives()
+
+            if config.update_named_expressions:
+                self._check_for_named_expression_changes()
+
+            if config.update_vars:
+                self._update_variables()
+
+            if config.update_parameters:
+                self._update_parameters()
+
+            self._updates.run()
 
     def get_variables_impacted_by_param(self, p: ParamData):
         return [self._vars[vid][0] for vid in self._referenced_params[id(p)][3]]

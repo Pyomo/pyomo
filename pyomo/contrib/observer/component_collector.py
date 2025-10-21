@@ -33,25 +33,26 @@ from pyomo.core.base.var import VarData, ScalarVar
 from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.base.expression import ExpressionData, ScalarExpression
 from pyomo.repn.util import ExitNodeDispatcher
+from pyomo.common.collections import ComponentSet
 
 
 def handle_var(node, collector):
-    collector.variables[id(node)] = node
+    collector.variables.add(node)
     return None
 
 
 def handle_param(node, collector):
-    collector.params[id(node)] = node
+    collector.params.add(node)
     return None
 
 
 def handle_named_expression(node, collector):
-    collector.named_expressions[id(node)] = node
+    collector.named_expressions.add(node)
     return None
 
 
 def handle_external_function(node, collector):
-    collector.external_functions[id(node)] = node
+    collector.external_functions.add(node)
     return None
 
 
@@ -85,17 +86,17 @@ collector_handlers[float] = handle_skip
 
 class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
     def __init__(self, **kwds):
-        self.named_expressions = {}
-        self.variables = {}
-        self.params = {}
-        self.external_functions = {}
+        self.named_expressions = ComponentSet()
+        self.variables = ComponentSet()
+        self.params = ComponentSet()
+        self.external_functions = ComponentSet()
         super().__init__(**kwds)
 
     def exitNode(self, node, data):
         return collector_handlers[node.__class__](node, self)
 
     def beforeChild(self, node, child, child_idx):
-        if id(child) in self.named_expressions:
+        if child in self.named_expressions:
             return False, None
         return True, None
 
@@ -107,8 +108,8 @@ def collect_components_from_expr(expr):
     _visitor.__init__()
     _visitor.walk_expression(expr)
     return (
-        list(_visitor.named_expressions.values()),
-        list(_visitor.variables.values()),
-        list(_visitor.params.values()),
-        list(_visitor.external_functions.values()),
+        _visitor.named_expressions,
+        _visitor.variables,
+        _visitor.params,
+        _visitor.external_functions,
     )
