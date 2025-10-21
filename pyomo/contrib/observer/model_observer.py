@@ -1314,10 +1314,16 @@ class ModelChangeDetector:
             self._updates.run()
 
     def get_variables_impacted_by_param(self, p: ParamData):
-        return [self._vars[vid][0] for vid in self._referenced_params[id(p)][3]]
+        return list(self._referenced_params[p][3])
 
     def get_constraints_impacted_by_param(self, p: ParamData):
-        return list(self._referenced_params[id(p)][0])
+        return list(self._referenced_params[p][0])
 
     def get_constraints_impacted_by_var(self, v: VarData):
-        return list(self._referenced_variables[id(v)][0])
+        return list(self._referenced_variables[v][0])
+
+    def get_objectives_impacted_by_param(self, p: ParamData):
+        return list(self._referenced_params[p][2])
+
+    def get_objectives_impacted_by_var(self, v: VarData):
+        return list(self._referenced_variables[v][2])
