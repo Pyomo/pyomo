@@ -162,6 +162,21 @@ class TestChangeDetector(unittest.TestCase):
         expected[m.x][Reason.fixed] += 1
         obs.check(expected)
 
+        m.z = pyo.Var()
+        m.c1.set_value(m.y == 2*m.z)
+        detector.update()
+        expected[m.z][Reason.added] += 1
+        expected[m.c1][Reason.expr] += 1
+        expected[m.p][Reason.removed] += 1
+        expected[m.x][Reason.removed] += 1
+        obs.check(expected)
+
+        expected[m.c1][Reason.removed] += 1
+        del m.c1
+        detector.update()
+        expected[m.z][Reason.removed] += 1
+        obs.check(expected)
+
     def test_sos(self):
         m = pyo.ConcreteModel()
         m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
@@ -337,4 +352,35 @@ class TestChangeDetector(unittest.TestCase):
         detector.config.update_constraints = True
         detector.update()
         expected[m.c1][Reason.expr] += 1
+        obs.check(expected)
+
+    def test_param_in_bounds(self):
+        m = pyo.ConcreteModel()
+        m.y = pyo.Var()
+        m.p = pyo.Param(mutable=True, initialize=1)
+
+        obs = ObserverChecker()
+        detector = ModelChangeDetector(m, [obs])
+
+        expected = DefaultComponentMap(make_count_dict)
+        obs.check(expected)
+
+        m.obj = pyo.Objective(expr=m.y)
+        m.y.setlb(m.p - 1)
+        detector.update()
+        expected[m.y][Reason.added] += 1
+        expected[m.p][Reason.added] += 1
+        expected[m.obj][Reason.added] += 1
+        obs.check(expected)
+
+        m.p.value = 2
+        detector.update()
+        expected[m.p][Reason.value] += 1
+        obs.check(expected)
+
+        m.p2 = pyo.Param(mutable=True, initialize=1)
+        m.y.setub(m.p2 + 1)
+        detector.update()
+        expected[m.p2][Reason.added] += 1
+        expected[m.y][Reason.bounds] += 1
         obs.check(expected)
