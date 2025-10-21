@@ -214,6 +214,13 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             status == knitro.KN_RC_FEAS_NO_IMPROVE
             or status == knitro.KN_RC_ITER_LIMIT_FEAS
             or status == knitro.KN_RC_TIME_LIMIT_FEAS
+            or status == knitro.KN_FEAS_XTOL
+            or status == knitro.KN_FEAS_FTOL
+            or status == knitro.KN_RC_FEVAL_LIMIT_FEAS
+            or status == knitro.KN_RC_MIP_EXH_FEAS
+            or status == knitro.KN_RC_MIP_TERM_FEAS
+            or status == knitro.KN_RC_MIP_SOLVE_LIMIT_FEAS
+            or status == knitro.KN_RC_MIP_NODE_LIMIT_FEAS
         ):
             return SolutionStatus.feasible
         elif (
