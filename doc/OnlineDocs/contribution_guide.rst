@@ -75,6 +75,32 @@ at least 70% coverage of the lines modified in the PR and prefer coverage
 closer to 90%. We also require that all tests pass before a PR will be 
 merged.
 
+Tests must import the Pyomo test harness from
+``pyomo.common.unittest`` instead of using Python's built-in
+``unittest`` module directly. This wrapper extends the standard testing
+framework with Pyomo-specific capabilities, including automatic plugin
+discovery, solver availability checks, and improved test filtering
+controls. Using the provided interface ensures that all tests run
+consistently across Pyomo's multiple CI environments.
+A small example is shown below:
+
+.. code-block:: python
+
+   import pyomo.common.unittest as unittest
+
+   class TestSomething(unittest.TestCase):
+       def test_basic(self):
+           self.assertEqual(1 + 1, 2)
+
+Developers can also use any of the predefined ``pytest`` markers to categorize
+their tests appropriately.
+Markers are declared in ``pyproject.toml``. Some commonly used markers are:
+
+- ``expensive``: tests as expensive
+- ``mpi``: tests that require MPI
+- ``solver(name)``: dynamic marker to label a test for a specific solver,
+  e.g., ``@pytest.mark.solver("gurobi")``
+
 .. note::
    If you are having issues getting tests to pass on your Pull Request,
    please tag any of the core developers to ask for help.
@@ -336,7 +362,7 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
 ::
 
-  pip install -e .
+  pip install -e .[tests,docs,optional]
 
 These commands register the cloned code with the active python environment
 (``pyomodev``). This way, your changes to the source code for ``pyomo`` are
