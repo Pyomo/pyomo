@@ -11,7 +11,17 @@
 
 from __future__ import annotations
 import abc
-from typing import List, Sequence, Optional, Mapping, MutableMapping, MutableSet, Tuple, Collection, Union
+from typing import (
+    List,
+    Sequence,
+    Optional,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    Tuple,
+    Collection,
+    Union,
+)
 
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.config import ConfigDict, ConfigValue, document_configdict
@@ -26,7 +36,12 @@ from pyomo.core.base.suffix import Suffix
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.expr.numeric_expr import NumericValue
 from pyomo.core.expr.relational_expr import RelationalExpression
-from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet, DefaultComponentMap
+from pyomo.common.collections import (
+    ComponentMap,
+    ComponentSet,
+    OrderedSet,
+    DefaultComponentMap,
+)
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.util import get_objective
@@ -38,7 +53,7 @@ from collections import defaultdict
 
 
 # The ModelChangeDetector is meant to be used to automatically identify changes
-# in a Pyomo model or block. Here is a list of changes that will be detected. 
+# in a Pyomo model or block. Here is a list of changes that will be detected.
 # Note that inactive components (e.g., constraints) are treated as "removed".
 #   - new constraints that have been added to the model
 #   - constraints that have been removed from the model
@@ -200,12 +215,12 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def _update_variables(self, variables: Mapping[VarData, Reason]):
         """
-        This method gets called by the ModelChangeDetector when there are 
+        This method gets called by the ModelChangeDetector when there are
         any modifications to the set of "active" variables in the model being
         observed. By "active" variables, we mean variables
         that are used within an active component such as a constraint or
         an objective. Changes include new variables being added to the model,
-        variables being removed from the model, or changes to variables 
+        variables being removed from the model, or changes to variables
         already in the model
 
         Parameters
@@ -218,12 +233,12 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def _update_parameters(self, params: Mapping[ParamData, Reason]):
         """
-        This method gets called by the ModelChangeDetector when there are any 
+        This method gets called by the ModelChangeDetector when there are any
         modifications to the set of "active" parameters in the model being
-        observed. By "active" parameters, we mean parameters that are used within 
-        an active component such as a constraint or an objective. Changes include 
+        observed. By "active" parameters, we mean parameters that are used within
+        an active component such as a constraint or an objective. Changes include
         parameters being added to the model, parameters being removed from the model,
-        or changes to parameters already in the model 
+        or changes to parameters already in the model
 
         Parameters
         ----------
@@ -235,9 +250,9 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def _update_constraints(self, cons: Mapping[ConstraintData, Reason]):
         """
-        This method gets called by the ModelChangeDetector when there are any 
+        This method gets called by the ModelChangeDetector when there are any
         modifications to the set of active constraints in the model being observed.
-        Changes include constraints being added to the model, constraints being 
+        Changes include constraints being added to the model, constraints being
         removed from the model, or changes to constraints already in the model.
 
         Parameters
@@ -250,8 +265,8 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def _update_sos_constraints(self, cons: Mapping[SOSConstraintData, Reason]):
         """
-        This method gets called by the ModelChangeDetector when there are any 
-        modifications to the set of active SOS constraints in the model being 
+        This method gets called by the ModelChangeDetector when there are any
+        modifications to the set of active SOS constraints in the model being
         observed. Changes include constraints being added to the model, constraints
         being removed from the model, or changes to constraints already in the model.
 
@@ -265,9 +280,9 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def _update_objectives(self, objs: Mapping[ObjectiveData, Reason]):
         """
-        This method gets called by the ModelChangeDetector when there are any 
+        This method gets called by the ModelChangeDetector when there are any
         modifications to the set of active objectives in the model being observed.
-        Changes include objectives being added to the model, objectives being 
+        Changes include objectives being added to the model, objectives being
         removed from the model, or changes to objectives already in the model.
 
         Parameters
@@ -293,11 +308,19 @@ class _Updates:
 
     def run(self):
         # split up new, removed, and modified variables
-        new_vars = ComponentMap((k, v) for k, v in self.vars_to_update.items() if v & Reason.added)
-        other_vars = ComponentMap((k, v) for k, v in self.vars_to_update.items() if not (v & Reason.added))
+        new_vars = ComponentMap(
+            (k, v) for k, v in self.vars_to_update.items() if v & Reason.added
+        )
+        other_vars = ComponentMap(
+            (k, v) for k, v in self.vars_to_update.items() if not (v & Reason.added)
+        )
 
-        new_params = ComponentMap((k, v) for k, v in self.params_to_update.items() if v & Reason.added)
-        other_params = ComponentMap((k, v) for k, v in self.params_to_update.items() if not (v & Reason.added))
+        new_params = ComponentMap(
+            (k, v) for k, v in self.params_to_update.items() if v & Reason.added
+        )
+        other_params = ComponentMap(
+            (k, v) for k, v in self.params_to_update.items() if not (v & Reason.added)
+        )
 
         for obs in self.observers:
             if new_vars:
@@ -506,21 +529,23 @@ class ModelChangeDetector:
 
         # maps constraints/objectives to list of tuples (named_expr, named_expr.expr)
         self._named_expressions: MutableMapping[
-            ConstraintData, List[Tuple[ExpressionData, Union[NumericValue, float, int, None]]]
+            ConstraintData,
+            List[Tuple[ExpressionData, Union[NumericValue, float, int, None]]],
         ] = {}
         self._obj_named_expressions: MutableMapping[
-            ObjectiveData, List[Tuple[ExpressionData, Union[NumericValue, float, int, None]]]
+            ObjectiveData,
+            List[Tuple[ExpressionData, Union[NumericValue, float, int, None]]],
         ] = ComponentMap()
 
         self._external_functions = ComponentMap()
 
         self._referenced_variables: MutableMapping[
-            VarData, 
+            VarData,
             Tuple[
-                MutableSet[ConstraintData], 
-                MutableSet[SOSConstraintData], 
-                MutableSet[ObjectiveData]
-            ]
+                MutableSet[ConstraintData],
+                MutableSet[SOSConstraintData],
+                MutableSet[ObjectiveData],
+            ],
         ] = ComponentMap()
 
         self._referenced_params: MutableMapping[
@@ -530,7 +555,7 @@ class ModelChangeDetector:
                 MutableSet[SOSConstraintData],
                 MutableSet[ObjectiveData],
                 MutableSet[VarData],
-            ]
+            ],
         ] = ComponentMap()
 
         self._vars_referenced_by_con: MutableMapping[
@@ -565,13 +590,7 @@ class ModelChangeDetector:
                 raise ValueError(f'Variable {v.name} has already been added')
             self._updates.vars_to_update[v] |= Reason.added
             self._referenced_variables[v] = (OrderedSet(), OrderedSet(), ComponentSet())
-            self._vars[v] = (
-                v._lb,
-                v._ub,
-                v.fixed,
-                v.domain.get_interval(),
-                v.value,
-            )
+            self._vars[v] = (v._lb, v._ub, v.fixed, v.domain.get_interval(), v.value)
             ref_params = ComponentSet()
             for bnd in (v._lb, v._ub):
                 if bnd is None or type(bnd) in native_numeric_types:
@@ -607,7 +626,12 @@ class ModelChangeDetector:
             if p in self._referenced_params:
                 raise ValueError(f'Parameter {p.name} has already been added')
             self._updates.params_to_update[p] |= Reason.added
-            self._referenced_params[p] = (OrderedSet(), OrderedSet(), ComponentSet(), ComponentSet())
+            self._referenced_params[p] = (
+                OrderedSet(),
+                OrderedSet(),
+                ComponentSet(),
+                ComponentSet(),
+            )
             self._params[p] = p.value
 
     def add_parameters(self, params: Collection[ParamData]):
@@ -628,9 +652,7 @@ class ModelChangeDetector:
         self._remove_variables(vars_to_remove)
 
     def _check_for_new_params(self, params: Collection[ParamData]):
-        new_params = ComponentSet(
-            p for p in params if p not in self._referenced_params
-        )
+        new_params = ComponentSet(p for p in params if p not in self._referenced_params)
         self._add_parameters(new_params)
 
     def _check_to_remove_params(self, params: Collection[ParamData]):
@@ -751,10 +773,8 @@ class ModelChangeDetector:
             if ctype in self._known_active_ctypes:
                 continue
             if ctype is Suffix:
-                    warnings.warn(
-                        'ModelChangeDetector does not detect changes to suffixes'
-                    )
-                    continue
+                warnings.warn('ModelChangeDetector does not detect changes to suffixes')
+                continue
             raise NotImplementedError(
                 f'ModelChangeDetector does not know how to '
                 f'handle components with ctype {ctype}'
@@ -848,7 +868,7 @@ class ModelChangeDetector:
                 )
             self._referenced_variables.pop(v)
             self._vars.pop(v)
- 
+
     def remove_variables(self, variables: Collection[VarData]):
         self._remove_variables(variables)
         self._updates.run()
@@ -915,7 +935,13 @@ class ModelChangeDetector:
             variables = self._vars
         for v in variables:
             _lb, _ub, _fixed, _domain_interval, _value = self._vars[v]
-            lb, ub, fixed, domain_interval, value = v._lb, v._ub, v.fixed, v.domain.get_interval(), v.value
+            lb, ub, fixed, domain_interval, value = (
+                v._lb,
+                v._ub,
+                v.fixed,
+                v.domain.get_interval(),
+                v.value,
+            )
             reason = Reason.no_change
             if _fixed != fixed:
                 reason |= Reason.fixed
@@ -927,13 +953,7 @@ class ModelChangeDetector:
                 reason |= Reason.domain
             if reason:
                 self._updates.vars_to_update[v] |= reason
-                self._vars[v] = (
-                    lb,
-                    ub,
-                    fixed,
-                    domain_interval,
-                    value,
-                )
+                self._vars[v] = (lb, ub, fixed, domain_interval, value)
                 if reason & Reason.bounds:
                     self._update_var_bounds(v)
 
@@ -971,7 +991,7 @@ class ModelChangeDetector:
             self._external_functions[con] = external_functions
         else:
             self._external_functions.pop(con, None)
-        
+
         _variables = self._vars_referenced_by_con[con]
         _parameters = self._params_referenced_by_con[con]
         new_vars = variables - _variables
@@ -986,7 +1006,7 @@ class ModelChangeDetector:
             self._check_for_new_vars(new_vars)
         if new_params:
             self._check_for_new_params(new_params)
-        
+
         for v in new_vars:
             self._referenced_variables[v][0].add(con)
         for v in old_vars:
@@ -1018,10 +1038,7 @@ class ModelChangeDetector:
 
     def _update_sos_con(self, con: SOSConstraintData):
         sos_items = list(con.get_items())
-        self._active_sos[con] = (
-            [i[0] for i in sos_items],
-            [i[1] for i in sos_items],
-        )
+        self._active_sos[con] = ([i[0] for i in sos_items], [i[1] for i in sos_items])
         variables = ComponentSet()
         parameters = ComponentSet()
         for v, p in sos_items:
@@ -1030,7 +1047,7 @@ class ModelChangeDetector:
                 continue
             if p.is_parameter_type():
                 parameters.add(p)
-        
+
         _variables = self._vars_referenced_by_con[con]
         _parameters = self._params_referenced_by_con[con]
         new_vars = variables - _variables
@@ -1045,7 +1062,7 @@ class ModelChangeDetector:
             self._check_for_new_vars(new_vars)
         if new_params:
             self._check_for_new_params(new_params)
-        
+
         for v in new_vars:
             self._referenced_variables[v][1].add(con)
         for v in old_vars:
@@ -1060,7 +1077,9 @@ class ModelChangeDetector:
         if old_params:
             self._check_to_remove_params(old_params)
 
-    def _update_sos_constraints(self, cons: Optional[Collection[SOSConstraintData]] = None):
+    def _update_sos_constraints(
+        self, cons: Optional[Collection[SOSConstraintData]] = None
+    ):
         if cons is None:
             cons = self._active_sos
         for c in cons:
@@ -1086,7 +1105,9 @@ class ModelChangeDetector:
                 self._updates.sos_to_update[c] |= reason
                 self._update_sos_con(c)
 
-    def update_sos_constraints(self, cons: Optional[Collection[SOSConstraintData]] = None):
+    def update_sos_constraints(
+        self, cons: Optional[Collection[SOSConstraintData]] = None
+    ):
         self._update_sos_constraints(cons)
         self._updates.run()
 
@@ -1102,7 +1123,7 @@ class ModelChangeDetector:
             self._external_functions[obj] = external_functions
         else:
             self._external_functions.pop(obj, None)
-        
+
         _variables = self._vars_referenced_by_obj[obj]
         _parameters = self._params_referenced_by_obj[obj]
         new_vars = variables - _variables
@@ -1117,7 +1138,7 @@ class ModelChangeDetector:
             self._check_for_new_vars(new_vars)
         if new_params:
             self._check_for_new_params(new_params)
-        
+
         for v in new_vars:
             self._referenced_variables[v][2].add(obj)
         for v in old_vars:
