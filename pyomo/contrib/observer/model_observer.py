@@ -23,6 +23,7 @@ from pyomo.core.base.expression import ExpressionData
 from pyomo.core.base.objective import ObjectiveData, Objective
 from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.suffix import Suffix
+from pyomo.core.base.component import ActiveComponent
 from pyomo.core.expr.numeric_expr import NumericValue
 from pyomo.core.expr.relational_expr import RelationalExpression
 from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet, DefaultComponentMap
@@ -298,7 +299,7 @@ class _Updates:
         new_params = ComponentMap((k, v) for k, v in self.params_to_update.items() if v & Reason.added)
         other_params = ComponentMap((k, v) for k, v in self.params_to_update.items() if not (v & Reason.added))
 
-        for obs in observers:
+        for obs in self.observers:
             if new_vars:
                 obs._update_variables(new_vars)
             if new_params:
@@ -553,7 +554,7 @@ class ModelChangeDetector:
             value=kwds, preserve_implicit=True
         )
 
-        self._updates = _Updates()
+        self._updates = _Updates(self._observers)
 
         self._model: BlockData = model
         self._set_instance()
@@ -745,6 +746,8 @@ class ModelChangeDetector:
 
     def _check_for_unknown_active_components(self):
         for ctype in self._model.collect_ctypes(active=True, descend_into=True):
+            if not issubclass(ctype, ActiveComponent):
+                continue
             if ctype in self._known_active_ctypes:
                 continue
             if ctype is Suffix:
@@ -754,7 +757,7 @@ class ModelChangeDetector:
                     continue
             raise NotImplementedError(
                 f'ModelChangeDetector does not know how to '
-                'handle components with ctype {ctype}'
+                f'handle components with ctype {ctype}'
             )
 
     def _set_instance(self):
