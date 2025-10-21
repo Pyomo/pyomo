@@ -210,7 +210,11 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             or status == knitro.KN_RC_NEAR_OPT
         ):
             return SolutionStatus.optimal
-        elif status == knitro.KN_RC_FEAS_NO_IMPROVE:
+        elif (
+            status == knitro.KN_RC_FEAS_NO_IMPROVE
+            or status == knitro.KN_RC_ITER_LIMIT_FEAS
+            or status == knitro.KN_RC_TIME_LIMIT_FEAS
+        ):
             return SolutionStatus.feasible
         elif (
             status == knitro.KN_RC_INFEASIBLE
