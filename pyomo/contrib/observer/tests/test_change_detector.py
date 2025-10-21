@@ -163,7 +163,7 @@ class TestChangeDetector(unittest.TestCase):
         obs.check(expected)
 
         m.z = pyo.Var()
-        m.c1.set_value(m.y == 2*m.z)
+        m.c1.set_value(m.y == 2 * m.z)
         detector.update()
         expected[m.z][Reason.added] += 1
         expected[m.c1][Reason.expr] += 1
