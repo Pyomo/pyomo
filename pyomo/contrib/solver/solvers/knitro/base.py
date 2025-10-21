@@ -82,7 +82,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         if config.restore_variable_values_after_solve:
             self._save_var_values()
 
-        with capture_output(TeeStream(self._stream, *config.tee), capture_fd=False):
+        with capture_output(TeeStream(self._stream, *config.tee), capture_fd=True):
             self._solve(config, timer)
 
         if config.restore_variable_values_after_solve:
