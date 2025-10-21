@@ -901,13 +901,14 @@ class ModelChangeDetector:
 
         if new_params:
             self._check_for_new_params(new_params)
-        if old_params:
-            self._check_to_remove_params(old_params)
 
         for p in new_params:
             self._referenced_params[p][3].add(v)
         for p in old_params:
             self._referenced_params[p][3].remove(v)
+
+        if old_params:
+            self._check_to_remove_params(old_params)
 
     def _update_variables(self, variables: Optional[Collection[VarData]] = None):
         if variables is None:
@@ -983,12 +984,8 @@ class ModelChangeDetector:
 
         if new_vars:
             self._check_for_new_vars(new_vars)
-        if old_vars:
-            self._check_to_remove_vars(old_vars)
         if new_params:
             self._check_for_new_params(new_params)
-        if old_params:
-            self._check_to_remove_params(old_params)
         
         for v in new_vars:
             self._referenced_variables[v][0].add(con)
@@ -998,6 +995,11 @@ class ModelChangeDetector:
             self._referenced_params[p][0].add(con)
         for p in old_params:
             self._referenced_params[p][0].remove(con)
+
+        if old_vars:
+            self._check_to_remove_vars(old_vars)
+        if old_params:
+            self._check_to_remove_params(old_params)
 
     def _update_constraints(self, cons: Optional[Collection[ConstraintData]] = None):
         if cons is None:
@@ -1038,12 +1040,8 @@ class ModelChangeDetector:
 
         if new_vars:
             self._check_for_new_vars(new_vars)
-        if old_vars:
-            self._check_to_remove_vars(old_vars)
         if new_params:
             self._check_for_new_params(new_params)
-        if old_params:
-            self._check_to_remove_params(old_params)
         
         for v in new_vars:
             self._referenced_variables[v][1].add(con)
@@ -1053,6 +1051,11 @@ class ModelChangeDetector:
             self._referenced_params[p][1].add(con)
         for p in old_params:
             self._referenced_params[p][1].remove(con)
+
+        if old_vars:
+            self._check_to_remove_vars(old_vars)
+        if old_params:
+            self._check_to_remove_params(old_params)
 
     def _update_sos_constraints(self, cons: Optional[Collection[SOSConstraintData]] = None):
         if cons is None:
@@ -1109,12 +1112,8 @@ class ModelChangeDetector:
 
         if new_vars:
             self._check_for_new_vars(new_vars)
-        if old_vars:
-            self._check_to_remove_vars(old_vars)
         if new_params:
             self._check_for_new_params(new_params)
-        if old_params:
-            self._check_to_remove_params(old_params)
         
         for v in new_vars:
             self._referenced_variables[v][2].add(obj)
@@ -1124,6 +1123,11 @@ class ModelChangeDetector:
             self._referenced_params[p][2].add(obj)
         for p in old_params:
             self._referenced_params[p][2].remove(obj)
+
+        if old_vars:
+            self._check_to_remove_vars(old_vars)
+        if old_params:
+            self._check_to_remove_params(old_params)
 
     def _update_objectives(self, objs: Optional[Collection[ObjectiveData]] = None):
         if objs is None:
