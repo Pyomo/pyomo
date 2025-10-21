@@ -96,7 +96,7 @@ Developers can also use any of the predefined ``pytest`` markers to categorize
 their tests appropriately.
 Markers are declared in ``pyproject.toml``. Some commonly used markers are:
 
-- ``expensive``: tests as expensive
+- ``expensive``: tests that take a long time to run
 - ``mpi``: tests that require MPI
 - ``solver(name)``: dynamic marker to label a test for a specific solver,
   e.g., ``@pytest.mark.solver("gurobi")``
