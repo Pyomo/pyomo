@@ -857,7 +857,7 @@ class GurobiPersistent(
             ):
                 results.incumbent_objective = None
 
-        results.iteration_count = gprob.getAttr('IterCount')
+        results.extra_info.iteration_count = gprob.getAttr('IterCount')
 
         timer.start('load solution')
         if config.load_solutions:

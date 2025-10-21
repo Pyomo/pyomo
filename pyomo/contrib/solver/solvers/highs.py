@@ -750,7 +750,15 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     results.objective_bound = None
             else:
                 results.objective_bound = info.mip_dual_bound
-            results.iteration_count = info.simplex_iteration_count
+
+            if info.valid:
+                results.extra_info.iteration_counts = {
+                    'simplex_iteration_count': info.simplex_iteration_count,
+                    'ipm_iteration_count': info.ipm_iteration_count,
+                    'mip_node_count': info.mip_node_count,
+                    'pdlp_iteration_count': info.pdlp_iteration_count,
+                    'qp_iteration_count': info.qp_iteration_count,
+                }
 
         if config.load_solutions:
             if has_feasible_solution:
