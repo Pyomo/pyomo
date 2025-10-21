@@ -279,4 +279,6 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             return NoReducedCostsError
         elif item_type is ConstraintData and value_type == ValueType.DUAL:
             return NoDualsError
-        raise DeveloperError()
+        raise DeveloperError(
+            f"Unsupported KNITRO item type {item_type} and value type {value_type}."
+        )
