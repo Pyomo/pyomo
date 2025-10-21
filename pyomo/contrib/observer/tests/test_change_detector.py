@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import logging
-from typing import List
+from typing import List, Mapping
 
 import pyomo.environ as pyo
 from pyomo.core.base.constraint import ConstraintData
@@ -25,25 +25,25 @@ from pyomo.contrib.observer.model_observer import (
     AutoUpdateConfig,
     Reason,
 )
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import DefaultComponentMap, ComponentMap
 
 
 logger = logging.getLogger(__name__)
 
 
 def make_count_dict():
-    d = {'add': 0, 'remove': 0, 'update': 0, 'set': 0}
+    d = {i: 0 for i in Reason}
     return d
 
 
 class ObserverChecker(Observer):
     def __init__(self):
         super().__init__()
-        self.counts = ComponentMap()
+        self.counts = DefaultComponentMap(make_count_dict)
         """
         counts is a mapping from component (e.g., variable) to another 
-        mapping from string ('add', 'remove', 'update', or 'set') to an int that 
-        indicates the number of times the corresponding method has been called
+        mapping from Reason to an int that indicates the number of times 
+        the corresponding method has been called
         """
 
     def check(self, expected):
@@ -51,77 +51,31 @@ class ObserverChecker(Observer):
             first=expected, second=self.counts, places=7
         )
 
-    def _process(self, comps, key):
-        for c in comps:
-            if c not in self.counts:
-                self.counts[c] = make_count_dict()
-            self.counts[c][key] += 1
-
     def pprint(self):
         for k, d in self.counts.items():
             print(f'{k}:')
             for a, v in d.items():
                 print(f'  {a}: {v}')
 
-    def add_variables(self, variables: List[VarData]):
-        for v in variables:
-            assert v.is_variable_type()
-        self._process(variables, 'add')
+    def _update_variables(self, variables: Mapping[VarData, Reason]):
+        for v, reason in variables.items():
+            self.counts[v][reason] += 1
 
-    def add_parameters(self, params: List[ParamData]):
-        for p in params:
-            assert p.is_parameter_type()
-        self._process(params, 'add')
+    def _update_parameters(self, params: Mapping[ParamData, Reason]):
+        for p, reason in params.items():
+            self.counts[p][reason] += 1
 
-    def add_constraints(self, cons: List[ConstraintData]):
-        for c in cons:
-            assert isinstance(c, ConstraintData)
-        self._process(cons, 'add')
+    def _update_constraints(self, cons: Mapping[ConstraintData, Reason]):
+        for c, reason in cons.items():
+            self.counts[c][reason] += 1
 
-    def add_sos_constraints(self, cons: List[SOSConstraintData]):
-        for c in cons:
-            assert isinstance(c, SOSConstraintData)
-        self._process(cons, 'add')
+    def _update_sos_constraints(self, cons: Mapping[SOSConstraintData, Reason]):
+        for c, reason in cons.items():
+            self.counts[c][reason] += 1
 
-    def add_objectives(self, objs: List[ObjectiveData]):
-        for obj in objs:
-            assert isinstance(obj, ObjectiveData)
-        self._process(objs, 'add')
-
-    def remove_constraints(self, cons: List[ConstraintData]):
-        for c in cons:
-            assert isinstance(c, ConstraintData)
-        self._process(cons, 'remove')
-
-    def remove_objectives(self, objs: List[ObjectiveData]):
-        for obj in objs:
-            assert isinstance(obj, ObjectiveData)
-        self._process(objs, 'remove')
-
-    def remove_sos_constraints(self, cons: List[SOSConstraintData]):
-        for c in cons:
-            assert isinstance(c, SOSConstraintData)
-        self._process(cons, 'remove')
-
-    def remove_variables(self, variables: List[VarData]):
-        for v in variables:
-            assert v.is_variable_type()
-        self._process(variables, 'remove')
-
-    def remove_parameters(self, params: List[ParamData]):
-        for p in params:
-            assert p.is_parameter_type()
-        self._process(params, 'remove')
-
-    def update_variables(self, variables: List[VarData], reasons: List[Reason]):
-        for v in variables:
-            assert v.is_variable_type()
-        self._process(variables, 'update')
-
-    def update_parameters(self, params: List[ParamData]):
-        for p in params:
-            assert p.is_parameter_type()
-        self._process(params, 'update')
+    def _update_objectives(self, objs: Mapping[ObjectiveData, Reason]):
+        for obj, reason in objs.items():
+            self.counts[obj][reason] += 1
 
 
 class TestChangeDetector(unittest.TestCase):
@@ -134,63 +88,51 @@ class TestChangeDetector(unittest.TestCase):
         obs = ObserverChecker()
         detector = ModelChangeDetector(m, [obs])
 
-        expected = ComponentMap()
+        expected = DefaultComponentMap(make_count_dict)
         obs.check(expected)
 
         m.obj = pyo.Objective(expr=m.x**2 + m.p * m.y**2)
         detector.update()
-        expected[m.obj] = make_count_dict()
-        expected[m.obj]['add'] += 1
-        expected[m.x] = make_count_dict()
-        expected[m.x]['add'] += 1
-        expected[m.y] = make_count_dict()
-        expected[m.y]['add'] += 1
-        expected[m.p] = make_count_dict()
-        expected[m.p]['add'] += 1
+        expected[m.obj][Reason.added] += 1
+        expected[m.x][Reason.added] += 1
+        expected[m.y][Reason.added] += 1
+        expected[m.p][Reason.added] += 1
         obs.check(expected)
 
         m.y.setlb(0)
         detector.update()
-        expected[m.y]['update'] += 1
+        expected[m.y][Reason.bounds] += 1
         obs.check(expected)
 
         m.x.fix(2)
         detector.update()
-        expected[m.x]['update'] += 1
+        expected[m.x][Reason.fixed] += 1
         obs.check(expected)
 
         m.x.unfix()
         detector.update()
-        expected[m.x]['update'] += 1
+        expected[m.x][Reason.fixed] += 1
         obs.check(expected)
 
         m.p.value = 2
         detector.update()
-        expected[m.p]['update'] += 1
+        expected[m.p][Reason.value] += 1
         obs.check(expected)
 
         m.obj.expr = m.x**2 + m.y**2
         detector.update()
-        expected[m.obj]['remove'] += 1
-        expected[m.obj]['add'] += 1
-        expected[m.x]['remove'] += 1
-        expected[m.x]['add'] += 1
-        expected[m.y]['remove'] += 1
-        expected[m.y]['add'] += 1
-        expected[m.p]['remove'] += 1
+        expected[m.obj][Reason.expr] += 1
+        expected[m.p][Reason.removed] += 1
         obs.check(expected)
 
-        expected[m.obj]['remove'] += 1
+        expected[m.obj][Reason.removed] += 1
         del m.obj
         m.obj2 = pyo.Objective(expr=m.p * m.x)
         detector.update()
         # remember, m.obj is a different object now
-        expected[m.obj2] = make_count_dict()
-        expected[m.obj2]['add'] += 1
-        expected[m.x]['remove'] += 1
-        expected[m.x]['add'] += 1
-        expected[m.y]['remove'] += 1
-        expected[m.p]['add'] += 1
+        expected[m.obj2][Reason.added] += 1
+        expected[m.y][Reason.removed] += 1
+        expected[m.p][Reason.added] += 1
         obs.check(expected)
 
     def test_constraints(self):
@@ -202,27 +144,22 @@ class TestChangeDetector(unittest.TestCase):
         obs = ObserverChecker()
         detector = ModelChangeDetector(m, [obs])
 
-        expected = ComponentMap()
+        expected = DefaultComponentMap(make_count_dict)
         obs.check(expected)
 
         m.obj = pyo.Objective(expr=m.y)
         m.c1 = pyo.Constraint(expr=m.y >= (m.x - m.p) ** 2)
         detector.update()
-        expected[m.x] = make_count_dict()
-        expected[m.y] = make_count_dict()
-        expected[m.p] = make_count_dict()
-        expected[m.x]['add'] += 1
-        expected[m.y]['add'] += 1
-        expected[m.p]['add'] += 1
-        expected[m.c1] = make_count_dict()
-        expected[m.c1]['add'] += 1
-        expected[m.obj] = make_count_dict()
-        expected[m.obj]['add'] += 1
+        expected[m.x][Reason.added] += 1
+        expected[m.y][Reason.added] += 1
+        expected[m.p][Reason.added] += 1
+        expected[m.c1][Reason.added] += 1
+        expected[m.obj][Reason.added] += 1
         obs.check(expected)
 
         m.x.fix(1)
         detector.update()
-        expected[m.x]['update'] += 1
+        expected[m.x][Reason.fixed] += 1
         obs.check(expected)
 
     def test_sos(self):
@@ -236,17 +173,12 @@ class TestChangeDetector(unittest.TestCase):
         obs = ObserverChecker()
         detector = ModelChangeDetector(m, [obs])
 
-        expected = ComponentMap()
-        expected[m.obj] = make_count_dict()
+        expected = DefaultComponentMap(make_count_dict)
+        expected[m.obj][Reason.added] += 1
         for i in m.a:
-            expected[m.x[i]] = make_count_dict()
-        expected[m.y] = make_count_dict()
-        expected[m.c1] = make_count_dict()
-        expected[m.obj]['add'] += 1
-        for i in m.a:
-            expected[m.x[i]]['add'] += 1
-        expected[m.y]['add'] += 1
-        expected[m.c1]['add'] += 1
+            expected[m.x[i]][Reason.added] += 1
+        expected[m.y][Reason.added] += 1
+        expected[m.c1][Reason.added] += 1
         obs.check(expected)
 
         detector.update()
@@ -254,16 +186,12 @@ class TestChangeDetector(unittest.TestCase):
 
         m.c1.set_items([m.x[2], m.x[1], m.x[3]], [1, 2, 3])
         detector.update()
-        expected[m.c1]['remove'] += 1
-        expected[m.c1]['add'] += 1
-        for i in m.a:
-            expected[m.x[i]]['remove'] += 1
-            expected[m.x[i]]['add'] += 1
+        expected[m.c1][Reason.sos_items] += 1
         obs.check(expected)
 
         for i in m.a:
-            expected[m.x[i]]['remove'] += 1
-        expected[m.c1]['remove'] += 1
+            expected[m.x[i]][Reason.removed] += 1
+        expected[m.c1][Reason.removed] += 1
         del m.c1
         detector.update()
         obs.check(expected)
@@ -279,27 +207,22 @@ class TestChangeDetector(unittest.TestCase):
         obs = ObserverChecker()
         detector = ModelChangeDetector(m2, [obs])
 
-        expected = ComponentMap()
+        expected = DefaultComponentMap(make_count_dict)
         obs.check(expected)
 
         m2.obj = pyo.Objective(expr=m1.y)
         m2.c1 = pyo.Constraint(expr=m1.y >= (m1.x - m1.p) ** 2)
         detector.update()
-        expected[m1.x] = make_count_dict()
-        expected[m1.y] = make_count_dict()
-        expected[m1.p] = make_count_dict()
-        expected[m1.x]['add'] += 1
-        expected[m1.y]['add'] += 1
-        expected[m1.p]['add'] += 1
-        expected[m2.c1] = make_count_dict()
-        expected[m2.c1]['add'] += 1
-        expected[m2.obj] = make_count_dict()
-        expected[m2.obj]['add'] += 1
+        expected[m1.x][Reason.added] += 1
+        expected[m1.y][Reason.added] += 1
+        expected[m1.p][Reason.added] += 1
+        expected[m2.c1][Reason.added] += 1
+        expected[m2.obj][Reason.added] += 1
         obs.check(expected)
 
         m1.x.fix(1)
         detector.update()
-        expected[m1.x]['update'] += 1
+        expected[m1.x][Reason.fixed] += 1
         obs.check(expected)
 
     def test_named_expression(self):
@@ -311,39 +234,25 @@ class TestChangeDetector(unittest.TestCase):
         obs = ObserverChecker()
         detector = ModelChangeDetector(m, [obs])
 
-        expected = ComponentMap()
+        expected = DefaultComponentMap(make_count_dict)
         obs.check(expected)
 
         m.obj = pyo.Objective(expr=m.y)
         m.e = pyo.Expression(expr=m.x - m.p)
         m.c1 = pyo.Constraint(expr=m.y >= m.e)
         detector.update()
-        expected[m.x] = make_count_dict()
-        expected[m.y] = make_count_dict()
-        expected[m.p] = make_count_dict()
-        expected[m.x]['add'] += 1
-        expected[m.y]['add'] += 1
-        expected[m.p]['add'] += 1
-        expected[m.c1] = make_count_dict()
-        expected[m.c1]['add'] += 1
-        expected[m.obj] = make_count_dict()
-        expected[m.obj]['add'] += 1
+        expected[m.x][Reason.added] += 1
+        expected[m.y][Reason.added] += 1
+        expected[m.p][Reason.added] += 1
+        expected[m.c1][Reason.added] += 1
+        expected[m.obj][Reason.added] += 1
         obs.check(expected)
 
         # now modify the named expression and make sure the
         # constraint gets removed and added
         m.e.expr = (m.x - m.p) ** 2
         detector.update()
-        expected[m.c1]['remove'] += 1
-        expected[m.c1]['add'] += 1
-        # because x and p are only used in the
-        # one constraint, they get removed when
-        # the constraint is removed and then
-        # added again when the constraint is added
-        expected[m.x]['remove'] += 1
-        expected[m.x]['add'] += 1
-        expected[m.p]['remove'] += 1
-        expected[m.p]['add'] += 1
+        expected[m.c1][Reason.expr] += 1
         obs.check(expected)
 
     def test_update_config(self):
@@ -354,7 +263,7 @@ class TestChangeDetector(unittest.TestCase):
 
         obs = ObserverChecker()
         detector = ModelChangeDetector(m, [obs])
-        expected = ComponentMap()
+        expected = DefaultComponentMap(make_count_dict)
         obs.check(expected)
 
         detector.config.check_for_new_or_removed_constraints = False
@@ -374,20 +283,15 @@ class TestChangeDetector(unittest.TestCase):
 
         detector.config.check_for_new_or_removed_constraints = True
         detector.update()
-        expected[m.x] = make_count_dict()
-        expected[m.y] = make_count_dict()
-        expected[m.p] = make_count_dict()
-        expected[m.c1] = make_count_dict()
-        expected[m.x]['add'] += 1
-        expected[m.y]['add'] += 1
-        expected[m.p]['add'] += 1
-        expected[m.c1]['add'] += 1
+        expected[m.x][Reason.added] += 1
+        expected[m.y][Reason.added] += 1
+        expected[m.p][Reason.added] += 1
+        expected[m.c1][Reason.added] += 1
         obs.check(expected)
 
         detector.config.check_for_new_or_removed_objectives = True
         detector.update()
-        expected[m.obj] = make_count_dict()
-        expected[m.obj]['add'] += 1
+        expected[m.obj][Reason.added] += 1
         obs.check(expected)
 
         m.x.setlb(0)
@@ -396,7 +300,7 @@ class TestChangeDetector(unittest.TestCase):
 
         detector.config.update_vars = True
         detector.update()
-        expected[m.x]['update'] += 1
+        expected[m.x][Reason.bounds] += 1
         obs.check(expected)
 
         m.p.value = 2
@@ -405,7 +309,7 @@ class TestChangeDetector(unittest.TestCase):
 
         detector.config.update_parameters = True
         detector.update()
-        expected[m.p]['update'] += 1
+        expected[m.p][Reason.value] += 1
         obs.check(expected)
 
         m.e.expr += 1
@@ -414,8 +318,7 @@ class TestChangeDetector(unittest.TestCase):
 
         detector.config.update_named_expressions = True
         detector.update()
-        expected[m.c1]['remove'] += 1
-        expected[m.c1]['add'] += 1
+        expected[m.c1][Reason.expr] += 1
         obs.check(expected)
 
         m.obj.expr += 1
@@ -424,8 +327,7 @@ class TestChangeDetector(unittest.TestCase):
 
         detector.config.update_objectives = True
         detector.update()
-        expected[m.obj]['remove'] += 1
-        expected[m.obj]['add'] += 1
+        expected[m.obj][Reason.expr] += 1
         obs.check(expected)
 
         m.c1 = m.y >= m.e
@@ -434,6 +336,5 @@ class TestChangeDetector(unittest.TestCase):
 
         detector.config.update_constraints = True
         detector.update()
-        expected[m.c1]['remove'] += 1
-        expected[m.c1]['add'] += 1
+        expected[m.c1][Reason.expr] += 1
         obs.check(expected)

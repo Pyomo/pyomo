@@ -1026,7 +1026,10 @@ class ModelChangeDetector:
         parameters = ComponentSet()
         for v, p in sos_items:
             variables.add(v)
-            parameters.add(p)
+            if type(p) in native_numeric_types:
+                continue
+            if p.is_parameter_type():
+                parameters.add(p)
         
         _variables = self._vars_referenced_by_con[con]
         _parameters = self._params_referenced_by_con[con]
