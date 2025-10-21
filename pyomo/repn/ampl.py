@@ -48,11 +48,11 @@ from pyomo.repn.util import (
     BeforeChildDispatcher,
     ExitNodeDispatcher,
     ExprType,
-    InvalidNumber,
     apply_node_operation,
     complex_number_error,
     nan,
     sum_like_expression_types,
+    check_constant,
 )
 
 
@@ -970,7 +970,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         arg1, arg2 = child._args_
         if arg1.__class__ not in native_types:
             try:
-                arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
+                arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
             except (ValueError, ArithmeticError):
                 return True, None
 
@@ -1013,14 +1013,14 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 arg1, arg2 = arg._args_
                 if arg1.__class__ not in native_types:
                     try:
-                        arg1 = visitor.check_constant(visitor.evaluate(arg1), arg1)
+                        arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
                     except (ValueError, ArithmeticError):
                         return True, None
 
                 # Trap multiplication by 0 and nan.
                 if not arg1:
                     if arg2.fixed:
-                        arg2 = visitor.check_constant(arg2.value, arg2)
+                        arg2 = check_constant(arg2.value, arg2, visitor)
                         if arg2 != arg2:
                             deprecation_warning(
                                 f"Encountered {arg1}*{_inv2str(arg2)} in expression "
@@ -1062,7 +1062,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                     linear[_id] = 1
             else:
                 try:
-                    const += visitor.check_constant(visitor.evaluate(arg), arg)
+                    const += check_constant(visitor.evaluate(arg), arg, visitor)
                 except (ValueError, ArithmeticError):
                     return True, None
 
@@ -1120,50 +1120,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             self.Result = AMPLRepn
         self.template = self.Result.template
 
-    def check_constant(self, ans, obj):
-        if ans.__class__ not in native_numeric_types:
-            # None can be returned from uninitialized Var/Param objects
-            if ans is None:
-                return InvalidNumber(
-                    None, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-                )
-            if ans.__class__ is InvalidNumber:
-                return ans
-            elif ans.__class__ in native_complex_types:
-                return complex_number_error(ans, self, obj)
-            else:
-                # It is possible to get other non-numeric types.  Most
-                # common are bool and 1-element numpy.array().  We will
-                # attempt to convert the value to a float before
-                # proceeding.
-                #
-                # Note that as of NumPy 1.25, blindly casting a
-                # 1-element ndarray to a float will generate a
-                # deprecation warning.  We will explicitly test for
-                # that, but want to do the test without triggering the
-                # numpy import
-                for cls in ans.__class__.__mro__:
-                    if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
-                        if len(ans) == 1:
-                            ans = ans[0]
-                        break
-                # TODO: we should check bool and warn/error (while bool is
-                # convertible to float in Python, they have very
-                # different semantic meanings in Pyomo).
-                try:
-                    ans = float(ans)
-                except:
-                    return InvalidNumber(
-                        ans, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-                    )
-        if ans != ans:
-            return InvalidNumber(
-                nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
-            )
-        return ans
-
     def cache_fixed_var(self, _id, child):
-        val = self.check_constant(child.value, child)
+        val = check_constant(child.value, child, self)
         lb, ub = child.bounds
         if (lb is not None and lb - val > TOL) or (ub is not None and ub - val < -TOL):
             raise InfeasibleConstraintException(
@@ -1171,7 +1129,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 f"variable '{child.name}' (fixed value "
                 f"{val} outside bounds [{lb}, {ub}])."
             )
-        self.fixed_vars[_id] = self.check_constant(child.value, child)
+        self.fixed_vars[_id] = check_constant(child.value, child, self)
 
     def node_result_to_amplrepn(self, data):
         if data[0] is _GENERAL:
