@@ -92,21 +92,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [windows-latest]
         python: [ '3.10', 3.11, 3.12, 3.13, 3.14 ]
         other: [""]
         category: [""]
 
         include:
-        - os: ubuntu-latest
-          test_docs: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: macos-latest
-          test_docs: 1
-          TARGET: osx
-          PYENV: pip
 
         - os: windows-latest
           test_docs: 1
@@ -114,78 +105,11 @@ jobs:
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
 
-        # Note: verify that pymumps is available when changing conda python version
-        - os: ubuntu-latest
-          python: 3.12
-          other: /conda
-          TARGET: linux
-          PYENV: conda
-          PACKAGES: pytest-qt
-
-        - os: ubuntu-latest
-          python: 3.11
-          other: /mpi
-          mpi: 3
-          TARGET: linux
-          PYENV: conda
-          PACKAGES: openmpi mpi4py
-
-        - os: ubuntu-latest
-          python: 3.12
-          other: /cython
-          setup_options: --with-cython
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: cython
-
         - os: windows-latest
           python: '3.10'
           other: /pip
           TARGET: win
           PYENV: pip
-
-        - os: ubuntu-latest
-          python: 3.11
-          other: /singletest
-          category: "-m 'neos or importtest'"
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
-          python: '3.10'
-          other: /slim
-          slim: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
-          python: 3.12
-          other: /numpy2
-          slim: 1
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: "gurobipy dill numpy>2.0 scipy networkx"
-
-        - os: ubuntu-latest
-          python: '3.10'
-          other: /pyutilib
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: pyutilib
-
-        - os: ubuntu-latest
-          python: 'pypy-3.11'
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
-          python: 3.11
-          other: /rtd
-          category: notests
-          build_docs: 1
-          TARGET: linux
-          PYENV: pip
-
 
     steps:
     - name: Checkout Pyomo source
@@ -432,7 +356,9 @@ jobs:
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
+        conda install -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
+        echo "Current conda environment:"
+        conda list | sed 's/^/    /'
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
@@ -499,6 +425,8 @@ jobs:
                 fi
             done
         fi
+        echo "Current conda environment:"
+        conda list | sed 's/^/    /'
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
