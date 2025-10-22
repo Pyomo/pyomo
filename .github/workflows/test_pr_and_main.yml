@@ -354,12 +354,12 @@ jobs:
         if test "${{matrix.TARGET}}" == 'win'; then
             CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
         fi
-        # RUNS
+        # PASSES
         pip debug
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install -q -y pytest
-        # FAILS
+        conda install --update-deps -q -y python="${{matrix.python}}" pytest
+        # PANICS
         pip debug
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
