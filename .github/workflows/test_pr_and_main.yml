@@ -357,8 +357,6 @@ jobs:
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         conda install -q -y $CONDA_DEPENDENCIES
-        # PANICS
-        pip debug
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
@@ -423,6 +421,8 @@ jobs:
                 if test -z "$_BUILDS"; then
                     echo "WARNING: $PKG is not available"
                 fi
+                # PANICS
+                pip debug
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
