@@ -322,6 +322,8 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
+        # On 3.14, we need setuptools so we can run Pyomo's setup.py
+        conda install setuptools
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -373,7 +375,11 @@ jobs:
             TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps; do
+            SOLVER_LIST="'cplex>=12.10' docplex gurobi $XPRESS cyipopt pymumps"
+            if [[ ${{matrix.TARGET}} != win ]]; then
+                SOLVER_LIST="$SOLVER_LIST scip"
+            fi
+            for PKG in $SOLVER_LIST; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
