@@ -356,7 +356,7 @@ jobs:
         pip debug
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
+        conda install -q -y $CONDA_DEPENDENCIES
         # PANICS
         pip debug
         if test -z "${{matrix.slim}}"; then
