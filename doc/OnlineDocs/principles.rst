@@ -29,9 +29,10 @@ Stable, Supported APIs
 
 Functionality that is part of the Pyomo source tree but not explicitly
 included in the book is also expected to be stable if it resides outside
-the ``contrib`` (or future ``addons`` / ``devel``) directories.
+the ``contrib`` (or future ``addons`` / ``devel``) directories. This is
+referred to as "core" by the Pyomo development team.
 
-When changes to these APIs become necessary, we will endeavor to follow one
+When changes to core APIs become necessary, we will endeavor to follow one
 (or both) of the following steps:
 
 1. **Deprecation warnings** are added in advance of functionality removal.
@@ -69,6 +70,11 @@ distinguishes between two categories:
 The guiding philosophy is to protect users from surprises in stable
 interfaces while continuing to enable innovation and experimentation
 in development areas.
+
+.. note::
+
+   For procedural guidance on how to structure and submit new
+   contributions to Pyomo, please visit :doc:`contribution_guide`.
 
 Dependency Management
 ---------------------
@@ -133,42 +139,6 @@ availability table and installation guidance in
 :doc:`/getting_started/solvers`. This table lists solvers that can be
 installed via ``pip`` or ``conda`` where available, but Pyomo itself
 does not include or require any specific solver as a dependency.
-
-
-Contributed Packages
---------------------
-
-Pyomo has a long history of supporting community-developed extensions.
-Historically, all such contributions were placed under the
-``pyomo.contrib`` namespace. This structure allowed new modeling tools
-and algorithms to be shared quickly, but over time it has become difficult
-for users to distinguish between more stable, supported functionality and
-experimental or research-oriented code.
-
-As a result, Pyomo is transitioning to a more structured contribution
-model with two clear namespaces:
-
-* ``pyomo.addons`` – For mostly stable, supported extensions that build on
-  the Pyomo core. These packages are maintained by dedicated
-  contributors, follow Pyomo's coding and testing standards, and adhere
-  to the same deprecation policies as the rest of the codebase.
-
-* ``pyomo.devel`` – For experimental or rapidly evolving
-  contributions. These modules serve as early experimentation for research ideas,
-  prototypes, or specialized modeling components. Functionality under
-  this namespace may change or be removed between releases without
-  deprecation warnings.
-
-The long-term goal is to provide users and contributors with clearer
-expectations of code maturity and stability. Users can rely on
-``addons`` as stable extensions to Pyomo's core capabilities, while
-``devel`` packages remain a flexible space for experimentation.
-
-.. note::
-
-   For procedural guidance on how to structure and submit new
-   contributions to Pyomo, please visit :doc:`contribution_guide`.
-
 
 Miscellaneous Conventions
 -------------------------

@@ -374,21 +374,28 @@ Review Process
 
 After a PR is opened it will be reviewed by at least two members of the
 core development team. The core development team consists of anyone with
-write-access to the Pyomo repository. Pull requests opened by a core
+write-access to the Pyomo repository. PRs opened by a core
 developer only require one review. The reviewers will decide if they
 think a PR should be merged or if more changes are necessary.
 
 Reviewers look for:
-    
-    * Outside of ``pyomo.contrib``: Code rigor and standards, edge cases,
-      side effects, etc.
-    * Inside of ``pyomo.contrib``: No “glaringly obvious” problems with
-      the code
-    * Documentation and tests
 
-The core development team tries to review pull requests in a timely
-manner but we make no guarantees on review timeframes. In addition, PRs
-might not be reviewed in the order they are opened in. 
+* **Core and Addons:** Code rigor, standards compliance, appropriate test
+  coverage, and avoidance of unintended side effects
+* **Devel:** Basic code correctness and clarity, with an understanding that
+  these areas are experimental and evolving
+* **All areas:** Reasonable documentation and tests
+
+.. note::
+
+   For more information about Pyomo's development principles and the
+   stability expectations for ``addons`` and ``devel``, see
+   :doc:`/principles`.
+
+The core development team tries to review PRs in a timely
+manner, but we make no guarantees on review timeframes. In addition, PRs
+might not be reviewed in the order in which they are opened.
+
 
 Where to put contributed code 
 ----------------------------- 
@@ -398,58 +405,111 @@ git repository. Next, you should create a branch on your fork dedicated
 to the development of the new feature or bug fix you're interested
 in. Once you have this branch checked out, you can start coding. Bug
 fixes and minor enhancements to existing Pyomo functionality should be
-made in the appropriate files in the Pyomo code base. New examples,
-features, and packages built on Pyomo should be placed in
-``pyomo.contrib``. Follow the link below to find out if
-``pyomo.contrib`` is right for your code.
+made in the appropriate files in the Pyomo code base.
 
-``pyomo.contrib``
------------------
+Larger features, new modeling components, or experimental functionality
+should be placed in one of Pyomo's extension namespaces, described below.
 
-Pyomo uses the ``pyomo.contrib`` package to facilitate the inclusion
-of third-party contributions that enhance Pyomo's core functionality.
-The are two ways that ``pyomo.contrib`` can be used to integrate
-third-party packages:
+Namespaces for Contributed and Experimental Code
+++++++++++++++++++++++++++++++++++++++++++++++++
 
-* ``pyomo.contrib`` can provide wrappers for separate Python packages, thereby
-   allowing these packages to be imported as subpackages of pyomo.
+Pyomo has a long history of supporting community-developed extensions.
+Historically, all such contributions were placed under the
+``pyomo.contrib`` namespace. This structure allowed new modeling tools and
+algorithms to be shared quickly, but over time it became difficult for users
+to distinguish between more stable, supported functionality and
+experimental or research-oriented code.
 
-* ``pyomo.contrib`` can include contributed packages that are developed and
-   maintained outside of the Pyomo developer team.  
+As a result, Pyomo is transitioning to a more structured contribution
+model with two clear namespaces:
 
-Including contrib packages in the Pyomo source tree provides a
+* ``pyomo.addons`` – For mostly stable, supported extensions that build on
+  the Pyomo core. These packages are maintained by dedicated
+  contributors, follow Pyomo's coding and testing standards, and adhere
+  to the same deprecation policies as the rest of the codebase.
+
+* ``pyomo.devel`` – For experimental or rapidly evolving
+  contributions. These modules serve as early experimentation for research ideas,
+  prototypes, or specialized modeling components. Functionality under
+  this namespace may change or be removed between releases without
+  deprecation warnings.
+
+This two-tiered structure provides contributors a clear pathway from
+**experimentation to supported integration**, while protecting users from
+unexpected changes in stable areas of the codebase.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 30 50
+
+   * - Namespace
+     - Intended Use
+     - Stability
+   * - ``pyomo.devel``
+     - Active research and experimental code
+     - Unstable; APIs may change without warning
+   * - ``pyomo.addons``
+     - Mostly stable, supported extensions maintained by contributors
+     - Most stable APIs; follow Pyomo's standards
+   * - ``pyomo``
+     - Core Pyomo modeling framework
+     - Fully supported and versioned
+
+For specific inclusion requirements and maintenance expectations for each
+namespace, see:
+
+* :doc:`../../pyomo/addons/README`
+* :doc:`../../pyomo/devel/README`
+
+Submitting a Contributed Package
+--------------------------------
+
+Including contibuted packages in the Pyomo source tree provides a
 convenient mechanism for defining new functionality that can be
-optionally deployed by users.  We expect this mechanism to include
+optionally deployed by users. We expect this mechanism to include
 Pyomo extensions and experimental modeling capabilities.  However,
-contrib packages are treated as optional packages, which are not
-maintained by the Pyomo developer team.  Thus, it is the responsibility
+contributed packages are treated as optional packages, which are not
+maintained by the Pyomo developer team. Thus, it is the responsibility
 of the code contributor to keep these packages up-to-date.
 
-Contrib package contributions will be considered as pull-requests,
-which will be reviewed by the Pyomo developer team.  Specifically,
+Contributed package will be considered as pull requests,
+which will be reviewed by the Pyomo developer team. Specifically,
 this review will consider the suitability of the proposed capability,
 whether tests are available to check the execution of the code, and
 whether documentation is available to describe the capability.
-Contrib packages will be tested along with Pyomo.  If test failures
+Contributed packages will be tested along with Pyomo. If test failures
 arise, then these packages will be disabled and an issue will be
 created to resolve these test failures.
 
-Contrib Packages within Pyomo
-+++++++++++++++++++++++++++++
+When submitting a new contributed package (under either ``addons`` or
+``devel``), please ensure that:
+
+* The package has at least one maintainer responsible for its upkeep.
+* The code includes tests that can be run through Pyomo's
+  continuous integration framework.
+* The package includes a README or module-level documentation that
+  clearly describes its purpose and usage.
+* Optional dependencies are properly declared in ``setup.py``
+  under the appropriate ``[optional]`` section.
+* The contribution passes all standard style and formatting checks.
+
+Contributed Packages within Pyomo
++++++++++++++++++++++++++++++++++
 
 Third-party contributions can be included directly within the
-``pyomo.contrib`` package.  The ``pyomo/contrib/example`` package
+``pyomo.devel`` or ``pyomo.addons`` packages.
+The ``pyomo/devel/example`` package
 provides an example of how this can be done, including a directory
-for plugins and package tests.  For example, this package can be
-imported as a subpackage of ``pyomo.contrib``::
+for plugins and package tests. For example, this package can be
+imported as a subpackage of ``pyomo.devel``::
 
     import pyomo.environ as pyo
-    from pyomo.contrib.example import a
+    from pyomo.devel.example import a
 
     # Print the value of 'a' defined by this package
     print(a)
 
-Although ``pyomo.contrib.example`` is included in the Pyomo source
+Although ``pyomo.devel.example`` is included in the Pyomo source
 tree, it is treated as an optional package.  Pyomo will attempt to
 import this package, but if an import failure occurs, Pyomo will
 silently ignore it.  Otherwise, this pyomo package will be treated
@@ -458,4 +518,3 @@ like any other.  Specifically:
 * Plugin classes defined in this package are loaded when ``pyomo.environ`` is loaded.
 
 * Tests in this package are run with other Pyomo tests.
-

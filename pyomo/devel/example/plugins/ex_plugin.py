@@ -9,21 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-#
-# Import "public" symbols and sub-packages.
-#
-from pyomo.contrib.example.foo import *
-from pyomo.contrib.example import bar
+from pyomo.core.base import Transformation, TransformationFactory
 
-#
-# Register plugins from this sub-package.
-#
-# The pyomo.environ package normally calls the load() function in a
-# hard-coded list of pyomo.*.plugins and pyomo.contrib.*.plugins
-# modules.  However, This example is not included in that list, so we
-# will load (and register) the plugins when this module (or any
-# submodule) is imported.
-#
-from pyomo.contrib.example.plugins import load
 
-load()
+@TransformationFactory.register(
+    'devel.example.xfrm', doc="An example of a transformation in a pyomo.devel package"
+)
+class Xfrm_PyomoTransformation(Transformation):
+    def __init__(self):
+        super(Xfrm_PyomoTransformation, self).__init__()
+
+    def create_using(self, instance, **kwds):
+        # This transformation doesn't do anything...
+        return instance
