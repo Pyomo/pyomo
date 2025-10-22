@@ -464,7 +464,7 @@ namespace, see:
 Submitting a Contributed Package
 --------------------------------
 
-Including contibuted packages in the Pyomo source tree provides a
+Including contributed packages in the Pyomo source tree provides a
 convenient mechanism for defining new functionality that can be
 optionally deployed by users. We expect this mechanism to include
 Pyomo extensions and experimental modeling capabilities.  However,
