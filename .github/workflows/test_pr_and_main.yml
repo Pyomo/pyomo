@@ -322,23 +322,6 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
-        if test "${{matrix.TARGET}}" = 'win'; then
-            echo $USERPROFILE
-            # Make platformdirs use env vars instead of registry
-            export PLATFORMDIRS_PREFER_ENV=1
-            # Provide the dirs platformdirs/pip expect
-            export PROGRAMDATA='C:\ProgramData'
-            export ALLUSERSPROFILE='C:\ProgramData'
-            export APPDATA="$USERPROFILE\AppData\Roaming"
-            export LOCALAPPDATA="$USERPROFILE\AppData\Local"
-            # Ensure they exist (best effort)
-            mkdir -p "$APPDATA/pip" "$LOCALAPPDATA/pip" || true
-            # Point pip at an empty config so it doesn't enumerate site configs
-            export PIP_CONFIG_FILE="$RUNNER_TEMP/pip-empty.ini"
-            : > "$PIP_CONFIG_FILE"
-            # Avoid exercises that trigger config discovery
-            export PIP_DISABLE_PIP_VERSION_CHECK=1
-        fi
         # On 3.14, we need setuptools so we can run Pyomo's setup.py
         conda install setuptools
         # Note: some pypi packages are not available through conda
@@ -371,11 +354,19 @@ jobs:
         if test "${{matrix.TARGET}}" == 'win'; then
             CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
         fi
-        # PASSES
-        pip debug
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
+        if test "${{matrix.TARGET}}" = 'win'; then
+            echo "" > "$RUNNER_TEMP/pip-empty.ini"
+            export PIP_CONFIG_FILE="$RUNNER_TEMP/pip-empty.ini"
+            # persist for any subshells / subsequent steps that might run a replaced pip
+            echo "PIP_CONFIG_FILE=$RUNNER_TEMP/pip-empty.ini" >> "$GITHUB_ENV"
+            # belt & suspenders: set typical Windows dirs so platformdirs won't wander
+            export PROGRAMDATA="${PROGRAMDATA:-C:\\ProgramData}"
+            export APPDATA="${APPDATA:-$USERPROFILE\\AppData\\Roaming}"
+            export LOCALAPPDATA="${LOCALAPPDATA:-$USERPROFILE\\AppData\\Local}"
+        fi
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
@@ -445,7 +436,7 @@ jobs:
                     echo "WARNING: $PKG is not available"
                 fi
                 # PANICS
-                pip debug
+                pip list
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
