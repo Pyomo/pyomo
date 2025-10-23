@@ -323,7 +323,7 @@ jobs:
         which python
         python --version
         # On 3.14, we need setuptools so we can run Pyomo's setup.py
-        conda install setuptools 'pip<24'
+        conda install setuptools
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -359,6 +359,7 @@ jobs:
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
+        conda install -q -y 'pip<24.3'
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
