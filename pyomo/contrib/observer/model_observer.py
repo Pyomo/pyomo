@@ -598,10 +598,6 @@ class ModelChangeDetector:
                 for p in ref_params:
                     self._referenced_params[p][3].add(v)
 
-    def add_variables(self, variables: Collection[VarData]):
-        self._add_variables(variables)
-        self._updates.run()
-
     def _add_parameters(self, params: Collection[ParamData]):
         for p in params:
             if p in self._referenced_params:
@@ -614,10 +610,6 @@ class ModelChangeDetector:
                 ComponentSet(),
             )
             self._params[p] = p.value
-
-    def add_parameters(self, params: Collection[ParamData]):
-        self._add_parameters(params)
-        self._updates.run()
 
     def _check_for_new_vars(self, variables: Collection[VarData]):
         new_vars = ComponentSet(
@@ -850,10 +842,6 @@ class ModelChangeDetector:
             self._referenced_variables.pop(v)
             self._vars.pop(v)
 
-    def remove_variables(self, variables: Collection[VarData]):
-        self._remove_variables(variables)
-        self._updates.run()
-
     def _remove_parameters(self, params: Collection[ParamData]):
         for p in params:
             if p not in self._referenced_params:
@@ -867,10 +855,6 @@ class ModelChangeDetector:
                 )
             self._referenced_params.pop(p)
             self._params.pop(p)
-
-    def remove_parameters(self, params: Collection[ParamData]):
-        self._remove_parameters(params)
-        self._updates.run()
 
     def _update_var_bounds(self, v: VarData):
         ref_params = ComponentSet()
