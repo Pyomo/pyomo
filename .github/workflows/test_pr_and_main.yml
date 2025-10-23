@@ -323,7 +323,7 @@ jobs:
         which python
         python --version
         # On 3.14, we need setuptools so we can run Pyomo's setup.py
-        conda install setuptools 'pip<24.3'
+        conda install setuptools 'pip<24'
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
