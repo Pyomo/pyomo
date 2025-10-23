@@ -523,21 +523,23 @@ class TestChangeDetector(unittest.TestCase):
 
     def test_mutable_parameters_in_sos(self):
         """
-        There is logic in the ModelChangeDetector to handle 
+        There is logic in the ModelChangeDetector to handle
         mutable parameters in SOS constraints. However, we cannot
         currently test it because of #3769. For now, we will
         just make sure that an error is raised when attempting to
         use a mutable parameter in an SOS constraint. If #3769 is
-        resolved, we will just need to update this test to make 
+        resolved, we will just need to update this test to make
         sure the ModelChangeDetector does the right thing.
         """
         m = pyo.ConcreteModel()
-        m.a = pyo.Set(initialize=[1,2,3])
+        m.a = pyo.Set(initialize=[1, 2, 3])
         m.x = pyo.Var(m.a)
         m.p = pyo.Param(m.a, mutable=True)
         m.p[1].value = 1
         m.p[2].value = 2
         m.p[3].value = 3
 
-        with self.assertRaisesRegex(PyomoException, 'Cannot convert non-constant Pyomo expression .* to bool.*'):
+        with self.assertRaisesRegex(
+            PyomoException, 'Cannot convert non-constant Pyomo expression .* to bool.*'
+        ):
             m.c = pyo.SOSConstraint(var=m.x, sos=1, weights=m.p)
