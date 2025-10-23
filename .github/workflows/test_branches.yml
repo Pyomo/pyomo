@@ -375,8 +375,10 @@ jobs:
         echo ""
         echo "*** Install Pyomo dependencies ***"
         # For windows, cannot use newer setuptools because of APPSI compilation issues
+        # There are also issues with newer platformdirs on windows for 3.13/3.14,
+        # so pinning that plus a generally considered more "stable" pip version
         if test "${{matrix.TARGET}}" == 'win'; then
-            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs<3.0 pip<25.0"
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
