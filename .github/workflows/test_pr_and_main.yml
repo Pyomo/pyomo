@@ -358,14 +358,17 @@ jobs:
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test "${{matrix.TARGET}}" = 'win'; then
-            echo "" > "$RUNNER_TEMP/pip-empty.ini"
-            export PIP_CONFIG_FILE="$RUNNER_TEMP/pip-empty.ini"
-            # persist for any subshells / subsequent steps that might run a replaced pip
-            echo "PIP_CONFIG_FILE=$RUNNER_TEMP/pip-empty.ini" >> "$GITHUB_ENV"
-            # belt & suspenders: set typical Windows dirs so platformdirs won't wander
-            export PROGRAMDATA="${PROGRAMDATA:-C:\\ProgramData}"
-            export APPDATA="${APPDATA:-$USERPROFILE\\AppData\\Roaming}"
-            export LOCALAPPDATA="${LOCALAPPDATA:-$USERPROFILE\\AppData\\Local}"
+          # Ensure the registry keys that platformdirs looks for actually exist
+          reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" ^
+              /v "Common AppData" /t REG_SZ /d "C:\ProgramData" /f
+          reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" ^
+              /v "AppData" /t REG_EXPAND_SZ /d "%%USERPROFILE%%\AppData\Roaming" /f
+          reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" ^
+              /v "Local AppData" /t REG_EXPAND_SZ /d "%%USERPROFILE%%\AppData\Local" /f
+          # Helpful environment fallbacks (not strictly required once registry exists)
+          echo "PROGRAMDATA=C:\ProgramData" >> "$GITHUB_ENV"
+          echo "APPDATA=%USERPROFILE%\AppData\Roaming" >> "$GITHUB_ENV"
+          echo "LOCALAPPDATA=%USERPROFILE%\AppData\Local" >> "$GITHUB_ENV"
         fi
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
