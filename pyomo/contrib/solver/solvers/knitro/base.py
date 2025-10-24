@@ -33,7 +33,6 @@ from pyomo.contrib.solver.common.util import (
     NoReducedCostsError,
     NoSolutionError,
 )
-from pyomo.contrib.solver.solvers.knitro.api import knitro
 from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
 from pyomo.contrib.solver.solvers.knitro.engine import Engine
 from pyomo.contrib.solver.solvers.knitro.package import PackageChecker
@@ -82,7 +81,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         if config.restore_variable_values_after_solve:
             self._save_var_values()
 
-        with capture_output(TeeStream(self._stream, *config.tee), capture_fd=False):
+        with capture_output(TeeStream(self._stream, *config.tee), capture_fd=True):
             self._solve(config, timer)
 
         if config.restore_variable_values_after_solve:
@@ -204,57 +203,33 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
 
     @staticmethod
     def _get_solution_status(status: int) -> SolutionStatus:
-        if (
-            status == knitro.KN_RC_OPTIMAL
-            or status == knitro.KN_RC_OPTIMAL_OR_SATISFACTORY
-            or status == knitro.KN_RC_NEAR_OPT
-        ):
+        if status in {0, -100}:
             return SolutionStatus.optimal
-        elif status == knitro.KN_RC_FEAS_NO_IMPROVE:
+        elif -101 >= status >= -199 or -400 >= status >= -409:
             return SolutionStatus.feasible
-        elif (
-            status == knitro.KN_RC_INFEASIBLE
-            or status == knitro.KN_RC_INFEAS_CON_BOUNDS
-            or status == knitro.KN_RC_INFEAS_VAR_BOUNDS
-            or status == knitro.KN_RC_INFEAS_NO_IMPROVE
-        ):
+        elif status in {-200, -204, -205, -206}:
             return SolutionStatus.infeasible
         else:
             return SolutionStatus.noSolution
 
     @staticmethod
     def _get_termination_condition(status: int) -> TerminationCondition:
-        if (
-            status == knitro.KN_RC_OPTIMAL
-            or status == knitro.KN_RC_OPTIMAL_OR_SATISFACTORY
-            or status == knitro.KN_RC_NEAR_OPT
-        ):
+        if status in {0, -100}:
             return TerminationCondition.convergenceCriteriaSatisfied
-        elif status == knitro.KN_RC_INFEAS_NO_IMPROVE:
+        elif status == -202:
             return TerminationCondition.locallyInfeasible
-        elif (
-            status == knitro.KN_RC_INFEASIBLE
-            or status == knitro.KN_RC_INFEAS_CON_BOUNDS
-            or status == knitro.KN_RC_INFEAS_VAR_BOUNDS
-        ):
+        elif status in {-200, -204, -205}:
             return TerminationCondition.provenInfeasible
-        elif (
-            status == knitro.KN_RC_UNBOUNDED_OR_INFEAS
-            or status == knitro.KN_RC_UNBOUNDED
-        ):
+        elif status in {-300, -301}:
             return TerminationCondition.infeasibleOrUnbounded
-        elif (
-            status == knitro.KN_RC_ITER_LIMIT_FEAS
-            or status == knitro.KN_RC_ITER_LIMIT_INFEAS
-        ):
+        elif status in {-400, -410}:
             return TerminationCondition.iterationLimit
-        elif (
-            status == knitro.KN_RC_TIME_LIMIT_FEAS
-            or status == knitro.KN_RC_TIME_LIMIT_INFEAS
-        ):
+        elif status in {-401, -411}:
             return TerminationCondition.maxTimeLimit
-        elif status == knitro.KN_RC_USER_TERMINATION:
+        elif status == -500:
             return TerminationCondition.interrupted
+        elif -500 > status >= -599:
+            return TerminationCondition.error
         else:
             return TerminationCondition.unknown
 
@@ -268,4 +243,6 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             return NoReducedCostsError
         elif item_type is ConstraintData and value_type == ValueType.DUAL:
             return NoDualsError
-        raise DeveloperError()
+        raise DeveloperError(
+            f"Unsupported KNITRO item type {item_type} and value type {value_type}."
+        )
