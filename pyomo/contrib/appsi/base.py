@@ -16,6 +16,7 @@ import re
 import weakref
 
 from typing import (
+    TYPE_CHECKING,
     Sequence,
     Dict,
     Optional,
@@ -1713,6 +1714,10 @@ class SolverFactoryClass(Factory):
             return cls
 
         return decorator
+
+    if TYPE_CHECKING:
+        # NOTE: `Factory.__call__` can return None, but for the common case
+        def __call__(self, name, **kwds) -> Solver: ...
 
 
 SolverFactory = SolverFactoryClass()
