@@ -18,6 +18,7 @@ from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs
 from pyomo.contrib.solver.solvers.knitro.typing import Function
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintData
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.core.base.var import VarData
@@ -51,7 +52,7 @@ def get_active_constraints(block: BlockData) -> list[ConstraintData]:
 
     """
     generator = block.component_data_objects(
-        Constraint, descend_into=True, active=True, sort=True
+        Constraint, descend_into=True, active=True, sort=SortComponents.deterministic
     )
     return list(generator)
 
