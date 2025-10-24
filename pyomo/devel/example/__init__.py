@@ -10,18 +10,20 @@
 #  ___________________________________________________________________________
 
 #
-# Only run the tests in this package if the pyomo.contrib.example package
-# has been successfully imported.
+# Import "public" symbols and sub-packages.
 #
+from pyomo.devel.example.foo import *
+from pyomo.devel.example import bar
 
-import pyomo.contrib.example
-import pyomo.common.unittest as unittest
+#
+# Register plugins from this sub-package.
+#
+# The pyomo.environ package normally calls the load() function in a
+# hard-coded list of pyomo.*.plugins and pyomo.devel.*.plugins
+# modules.  However, This example is not included in that list, so we
+# will load (and register) the plugins when this module (or any
+# submodule) is imported.
+#
+from pyomo.devel.example.plugins import load
 
-
-class Tests(unittest.TestCase):
-    def test1(self):
-        pass
-
-
-if __name__ == "__main__":
-    unittest.main()
+load()
