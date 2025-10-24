@@ -442,7 +442,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
             results.incumbent_objective = None
             results.objective_bound = None
 
-        results.iteration_count = grb_model.getAttr('IterCount')
+        results.extra_info.iteration_count = grb_model.getAttr('IterCount')
 
         timer.start('load solution')
         if config.load_solutions:

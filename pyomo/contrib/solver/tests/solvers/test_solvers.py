@@ -604,9 +604,6 @@ class TestSolvers(unittest.TestCase):
         for v in res.solver_version:
             self.assertIsInstance(v, int)
 
-        # iteration_count is nonnegative
-        self.assertGreaterEqual(res.iteration_count, 0)
-
         # timing_info should exist
         self.assertIsNotNone(res.timing_info)
 
