@@ -19,6 +19,8 @@ from pyomo.contrib.piecewise import PiecewiseLinearFunction
 from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
     NonlinearToPWL,
     DomainPartitioningMethod,
+    lineartree_available,
+    sklearn_available,
 )
 from pyomo.core.base.expression import _ExpressionData
 from pyomo.core.expr.compare import (
@@ -45,8 +47,6 @@ gurobi_available = (
     SolverFactory('gurobi').available(exception_flag=False)
     and SolverFactory('gurobi').license_is_valid()
 )
-lineartree_available = attempt_import('lineartree')[1]
-sklearn_available = attempt_import('sklearn.linear_model')[1]
 
 
 class TestNonlinearToPWL_1D(unittest.TestCase):
