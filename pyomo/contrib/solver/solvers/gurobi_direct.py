@@ -361,8 +361,10 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                     gurobi_model.setParam('MIPGapAbs', config.abs_gap)
 
                 if config.use_mipstart:
-                    raise MouseTrap("MIPSTART not yet supported")
-
+                    for pyo_var, grb_var in zip(repn.columns, x.tolist()):
+                        if pyo_var.value is not None:
+                            grb_var.setAttr('Start', pyo_var.value)
+                    
                 for key, option in options.items():
                     gurobi_model.setParam(key, option)
 
