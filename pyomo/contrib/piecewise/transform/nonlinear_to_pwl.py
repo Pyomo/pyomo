@@ -56,7 +56,8 @@ from pyomo.repn.util import ExprType, OrderedVarRecorder
 def _lt_importer():
     import lineartree
     import importlib.metadata
-    # linear-tree through version 0.3.5 relied on a private method from
+
+    # linear-tree through version 0.3.5 relies on a private method from
     # scikit-learn.  That method was removed in scikit-learn version
     # 1.7.0.  We will report linear-tree as "unavailable" if
     # scikit-learn is "too new."
