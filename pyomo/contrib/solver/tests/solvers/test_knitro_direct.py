@@ -9,6 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
+from contextlib import redirect_stdout
+
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
@@ -86,6 +89,32 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
 class TestKnitroDirectSolver(unittest.TestCase):
     def setUp(self):
         self.opt = KnitroDirectSolver()
+
+    def test_solve_tee(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x), sense=pyo.minimize
+        )
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            self.opt.solve(m, tee=True)
+        output = stream.getvalue()
+        self.assertTrue(bool(output.strip()))
+
+    def test_solve_no_tee(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x), sense=pyo.minimize
+        )
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            self.opt.solve(m, tee=False)
+        output = stream.getvalue()
+        self.assertFalse(bool(output.strip()))
 
     def test_solve(self):
         m = pyo.ConcreteModel()
