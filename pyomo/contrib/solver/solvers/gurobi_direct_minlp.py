@@ -13,12 +13,14 @@
 import datetime
 import io
 from operator import attrgetter, itemgetter
+import os
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.errors import InvalidValueError
 from pyomo.common.numeric_types import native_complex_types
+from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -605,40 +607,45 @@ class GurobiDirectMINLP(GurobiDirect):
 
         StaleFlagManager.mark_all_as_stale()
 
-        timer.start('compile_model')
-
         writer = GurobiMINLPWriter()
-        grb_model, var_map, pyo_obj, grb_cons, pyo_cons = writer.write(
-            model, symbolic_solver_labels=config.symbolic_solver_labels
-        )
-
-        timer.stop('compile_model')
-
         ostreams = [io.StringIO()] + config.tee
 
-        # set options
-        options = config.solver_options
+        orig_cwd = os.getcwd()
+        try:
+            if config.working_dir:
+                os.chdir(config.working_dir)
+            with capture_output(TeeStream(*ostreams), capture_fd=False):
+                timer.start('compile_model')
+                grb_model, var_map, pyo_obj, grb_cons, pyo_cons = writer.write(
+                    model, symbolic_solver_labels=config.symbolic_solver_labels
+                )
+                timer.stop('compile_model')
 
-        grb_model.setParam('LogToConsole', 1)
+                # set options
+                options = config.solver_options
 
-        if config.threads is not None:
-            grb_model.setParam('Threads', config.threads)
-        if config.time_limit is not None:
-            grb_model.setParam('TimeLimit', config.time_limit)
-        if config.rel_gap is not None:
-            grb_model.setParam('MIPGap', config.rel_gap)
-        if config.abs_gap is not None:
-            grb_model.setParam('MIPGapAbs', config.abs_gap)
+                grb_model.setParam('LogToConsole', 1)
 
-        if config.warm_start:
-            for pyo_var, grb_var in var_map.items():
-                if pyo_var.value is not None:
-                    grb_var.setAttr('Start', pyo_var.value)
+                if config.threads is not None:
+                    grb_model.setParam('Threads', config.threads)
+                if config.time_limit is not None:
+                    grb_model.setParam('TimeLimit', config.time_limit)
+                if config.rel_gap is not None:
+                    grb_model.setParam('MIPGap', config.rel_gap)
+                if config.abs_gap is not None:
+                    grb_model.setParam('MIPGapAbs', config.abs_gap)
 
-        for key, option in options.items():
-            grb_model.setParam(key, option)
+                if config.warm_start:
+                    for pyo_var, grb_var in var_map.items():
+                        if pyo_var.value is not None:
+                            grb_var.setAttr('Start', pyo_var.value)
 
-        grbsol = grb_model.optimize()
+                for key, option in options.items():
+                    grb_model.setParam(key, option)
+
+                grbsol = grb_model.optimize()
+        finally:
+            os.chdir(orig_cwd)
 
         res = self._postsolve(
             timer,
