@@ -80,8 +80,9 @@ class TestGurobiWarmStart(unittest.TestCase):
         )
         self.check_optimal_soln(m)
 
-    @unittest.skipUnless(gurobi_direct_minlp.available(),
-                         "needs Gurobi Direct MINLP interface")
+    @unittest.skipUnless(
+        gurobi_direct_minlp.available(), "needs Gurobi Direct MINLP interface"
+    )
     def test_gurobi_minlp_warmstart(self):
         m = self.make_model()
 
