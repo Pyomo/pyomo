@@ -320,7 +320,9 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1])
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
-    @unittest.skipIf(xpd.xpress.__version__ == '9.8.0', "Test known to fail in 9.8")
+    @unittest.skipIf(
+        xpd.xpress.__version__ == '9.8.0', "Xpress 9.8 always runs global optimizer"
+    )
     def test_nonconvexqp_locally_optimal(self):
         """Test non-convex QP for which xpress_direct should find a locally
         optimal solution."""
