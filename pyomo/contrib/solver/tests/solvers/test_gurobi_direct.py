@@ -34,7 +34,7 @@ gurobi_direct = SolverFactory('gurobi_direct')
 
 @unittest.skipUnless(gurobi_direct.available(), "needs Gurobi Direct interface")
 class TestGurobiDirect(unittest.TestCase):
-    def test_mip_start(self):
+    def test_warm_start(self):
         m = ConcreteModel()
         m.S = Set(initialize=[1, 2, 3, 4, 5])
         m.y = Var(m.S, domain=Binary)
@@ -53,7 +53,7 @@ class TestGurobiDirect(unittest.TestCase):
             m.y[i] = 1
         # objective will be 4 + 4 + 12 + 8 + 20 = 48
 
-        gurobi_direct.config.use_mipstart = True
+        gurobi_direct.config.warm_start = True
         logger = logging.getLogger('tee')
         with LoggingIntercept(module='tee', level=logging.INFO) as LOG:
             gurobi_direct.solve(m, tee=logger)

@@ -53,13 +53,13 @@ class GurobiConfigMixin:
     """
 
     def __init__(self):
-        self.use_mipstart: bool = self.declare(
-            'use_mipstart',
+        self.warm_start: bool = self.declare(
+            'warm_start',
             ConfigValue(
                 default=False,
                 domain=bool,
                 description="If True, the current values of the integer variables "
-                "will be passed to Gurobi.",
+                "will be passed to Gurobi as a warm start.",
             ),
         )
 
@@ -360,7 +360,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
                 if config.abs_gap is not None:
                     gurobi_model.setParam('MIPGapAbs', config.abs_gap)
 
-                if config.use_mipstart:
+                if config.warm_start:
                     for pyo_var, grb_var in zip(repn.columns, x.tolist()):
                         if pyo_var.value is not None:
                             grb_var.setAttr('Start', pyo_var.value)
