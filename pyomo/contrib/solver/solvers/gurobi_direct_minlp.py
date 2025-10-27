@@ -630,8 +630,10 @@ class GurobiDirectMINLP(GurobiDirect):
         if config.abs_gap is not None:
             grb_model.setParam('MIPGapAbs', config.abs_gap)
 
-        if config.use_mipstart:
-            raise MouseTrap("MIPSTART not yet supported")
+        if config.warm_start:
+            for pyo_var, grb_var in var_map.items():
+                if pyo_var.value is not None:
+                    grb_var.setAttr('Start', pyo_var.value)
 
         for key, option in options.items():
             grb_model.setParam(key, option)
