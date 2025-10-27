@@ -10,14 +10,10 @@
 #  ___________________________________________________________________________
 
 import logging
-import math
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
-from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiDirectMINLP
 
-from pyomo.core.base.constraint import Constraint
 from pyomo.environ import (
     ConcreteModel,
     Var,
@@ -30,11 +26,11 @@ from pyomo.environ import (
 )
 
 gurobi_direct = SolverFactory('gurobi_direct')
+gurobi_direct_minlp = SolverFactory('gurobi_direct_minlp')
 
 
-@unittest.skipUnless(gurobi_direct.available(), "needs Gurobi Direct interface")
-class TestGurobiDirect(unittest.TestCase):
-    def test_warm_start(self):
+class TestGurobiWarmStart(unittest.TestCase):
+    def make_model(self):
         m = ConcreteModel()
         m.S = Set(initialize=[1, 2, 3, 4, 5])
         m.y = Var(m.S, domain=Binary)
@@ -53,14 +49,9 @@ class TestGurobiDirect(unittest.TestCase):
             m.y[i] = 1
         # objective will be 4 + 4 + 12 + 8 + 20 = 48
 
-        gurobi_direct.config.warm_start = True
-        logger = logging.getLogger('tee')
-        with LoggingIntercept(module='tee', level=logging.INFO) as LOG:
-            gurobi_direct.solve(m, tee=logger)
-        self.assertIn(
-            "User MIP start produced solution with objective 48", LOG.getvalue()
-        )
+        return m
 
+    def check_optimal_soln(self, m):
         # check that we got the optimal solution:
         # y[1] = 0, x[1] = 3
         # y[2] = 1, x[2] = 4
@@ -75,3 +66,30 @@ class TestGurobiDirect(unittest.TestCase):
             else:
                 self.assertEqual(value(m.y[i]), 0)
             self.assertEqual(value(m.x[i]), x[i])
+
+    @unittest.skipUnless(gurobi_direct.available(), "needs Gurobi Direct interface")
+    def test_gurobi_direct_warm_start(self):
+        m = self.make_model()
+
+        gurobi_direct.config.warm_start = True
+        logger = logging.getLogger('tee')
+        with LoggingIntercept(module='tee', level=logging.INFO) as LOG:
+            gurobi_direct.solve(m, tee=logger)
+        self.assertIn(
+            "User MIP start produced solution with objective 48", LOG.getvalue()
+        )
+        self.check_optimal_soln(m)
+
+    @unittest.skipUnless(gurobi_direct_minlp.available(),
+                         "needs Gurobi Direct MINLP interface")
+    def test_gurobi_minlp_warmstart(self):
+        m = self.make_model()
+
+        gurobi_direct_minlp.config.warm_start = True
+        logger = logging.getLogger('tee')
+        with LoggingIntercept(module='tee', level=logging.INFO) as LOG:
+            gurobi_direct_minlp.solve(m, tee=logger)
+        self.assertIn(
+            "User MIP start produced solution with objective 48", LOG.getvalue()
+        )
+        self.check_optimal_soln(m)
