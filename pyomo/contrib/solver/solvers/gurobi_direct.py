@@ -19,7 +19,7 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigValue
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
-from pyomo.common.errors import MouseTrap, ApplicationError
+from pyomo.common.errors import ApplicationError
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -58,7 +58,7 @@ class GurobiConfigMixin:
             ConfigValue(
                 default=False,
                 domain=bool,
-                description="If True, the current values of the integer variables "
+                description="If True, the current values of the variables "
                 "will be passed to Gurobi as a warm start.",
             ),
         )
