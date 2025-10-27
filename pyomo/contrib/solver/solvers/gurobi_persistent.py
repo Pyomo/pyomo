@@ -303,14 +303,22 @@ class GurobiPersistent(
             if config.abs_gap is not None:
                 self._solver_model.setParam('MIPGapAbs', config.abs_gap)
 
-            if config.use_mipstart:
+            if config.warm_start:
                 for (
                     pyomo_var_id,
                     gurobi_var,
                 ) in self._pyomo_var_to_solver_var_map.items():
                     pyomo_var = self._vars[pyomo_var_id][0]
-                    if pyomo_var.is_integer() and pyomo_var.value is not None:
+                    if pyomo_var.value is not None:
                         self.set_var_attr(pyomo_var, 'Start', pyomo_var.value)
+            # elif config.warm_start_integer_vars:
+            #     for (
+            #         pyomo_var_id,
+            #         gurobi_var,
+            #     ) in self._pyomo_var_to_solver_var_map.items():
+            #         pyomo_var = self._vars[pyomo_var_id][0]
+            #         if pyomo_var.is_integer() and pyomo_var.value is not None:
+            #             self.set_var_attr(pyomo_var, 'Start', pyomo_var.value)
 
             for key, option in options.items():
                 self._solver_model.setParam(key, option)
