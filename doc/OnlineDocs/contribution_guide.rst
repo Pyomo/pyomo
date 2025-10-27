@@ -450,7 +450,7 @@ unexpected changes in stable areas of the codebase.
      - Unstable; APIs may change without warning
    * - ``pyomo.addons``
      - Mostly stable, supported extensions maintained by contributors
-     - Most stable APIs; follow Pyomo's standards
+     - Mostly stable APIs; follow Pyomo's standards
    * - ``pyomo``
      - Core Pyomo modeling framework
      - Fully supported and versioned
