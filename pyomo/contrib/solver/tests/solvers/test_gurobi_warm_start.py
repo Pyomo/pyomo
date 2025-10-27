@@ -27,6 +27,7 @@ from pyomo.environ import (
 
 gurobi_direct = SolverFactory('gurobi_direct')
 gurobi_direct_minlp = SolverFactory('gurobi_direct_minlp')
+gurobi_persistent = SolverFactory('gurobi_persistent')
 
 
 class TestGurobiWarmStart(unittest.TestCase):
@@ -90,6 +91,22 @@ class TestGurobiWarmStart(unittest.TestCase):
         logger = logging.getLogger('tee')
         with LoggingIntercept(module='tee', level=logging.INFO) as LOG:
             gurobi_direct_minlp.solve(m, tee=logger)
+        self.assertIn(
+            "User MIP start produced solution with objective 48", LOG.getvalue()
+        )
+        self.check_optimal_soln(m)
+
+    @unittest.skipUnless(
+        gurobi_persistent.available(), "needs Gurobi persistent interface"
+    )
+    def test_gurobi_persistent_warmstart(self):
+        m = self.make_model()
+
+        gurobi_persistent.config.warm_start = True
+        gurobi_persistent.set_instance(m)
+        logger = logging.getLogger('tee')
+        with LoggingIntercept(module='tee', level=logging.INFO) as LOG:
+            gurobi_persistent.solve(m, tee=logger)
         self.assertIn(
             "User MIP start produced solution with objective 48", LOG.getvalue()
         )
