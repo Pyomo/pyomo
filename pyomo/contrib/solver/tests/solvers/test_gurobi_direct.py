@@ -40,6 +40,7 @@ class TestGurobiDirect(unittest.TestCase):
         m.y = Var(m.S, domain=Binary)
         m.x = Var(m.S, domain=NonNegativeReals)
         m.obj = Objective(expr=sum(m.x[i] for i in m.S))
+
         @m.Constraint(m.S)
         def cons(m, i):
             if i % 2 == 0:
@@ -57,8 +58,7 @@ class TestGurobiDirect(unittest.TestCase):
         with LoggingIntercept(module='tee', level=logging.INFO) as LOG:
             gurobi_direct.solve(m, tee=logger)
         self.assertIn(
-            "User MIP start produced solution with objective 48",
-            LOG.getvalue()
+            "User MIP start produced solution with objective 48", LOG.getvalue()
         )
 
         # check that we got the optimal solution:
