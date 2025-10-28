@@ -61,7 +61,9 @@ class CUOPTDirect(DirectSolver):
             log_file = self._log_file
         t0 = time.time()
         settings = cuopt.linear_programming.solver_settings.SolverSettings()
-        self.solution = cuopt.linear_programming.solver.Solve(self._solver_model, settings)
+        self.solution = cuopt.linear_programming.solver.Solve(
+            self._solver_model, settings
+        )
         t1 = time.time()
         self._wallclock_time = t1 - t0
         return Bunch(rc=None, log=None)
@@ -89,19 +91,15 @@ class CUOPTDirect(DirectSolver):
             conname = self._symbol_map.getSymbol(con, self._labeler)
             self._pyomo_con_to_solver_con_map[con] = con_idx
             con_idx += 1
+
             repn = generate_standard_repn(body, quadratic=False)
             matrix_data.extend(repn.linear_coefs)
-            matrix_indices.extend(
-                self.var_name_dict[str(i)] for i in repn.linear_vars
-            )
+            matrix_indices.extend(self.var_name_dict[str(i)] for i in repn.linear_vars)
             self.referenced_vars.update(repn.linear_vars)
+
             matrix_indptr.append(len(matrix_data))
-            c_lb.append(
-                lb - repn.constant if lb is not None else -np.inf
-            )
-            c_ub.append(
-                ub - repn.constant if ub is not None else np.inf
-            )
+            c_lb.append(lb - repn.constant if lb is not None else -np.inf)
+            c_ub.append(ub - repn.constant if ub is not None else np.inf)
 
         if len(matrix_data) == 0:
             matrix_data = [0]
@@ -211,7 +209,7 @@ class CUOPTDirect(DirectSolver):
         self.results.solver.name = "CUOPT"
         self.results.solver.wallclock_time = self._wallclock_time
 
-        prob_type = solution.problem_category
+        is_mip = solution.get_problem_category()
 
         # Termination Status
         # 0 - CUOPT_TERIMINATION_STATUS_NO_TERMINATION
@@ -269,11 +267,24 @@ class CUOPTDirect(DirectSolver):
 
         self.results.problem.upper_bound = None
         self.results.problem.lower_bound = None
-        try:
-            self.results.problem.upper_bound = solution.get_primal_objective()
-            self.results.problem.lower_bound = solution.get_primal_objective()
-        except Exception as e:
-            pass
+        if is_mip:
+            try:
+                ObjBound = solution.get_milp_stats()["solution_bound"]
+                ObjVal = solution.get_primal_objective()
+                if self._solver_model.maximize:
+                    self.results.problem.upper_bound = ObjBound
+                    self.results.problem.lower_bound = ObjVal
+                else:
+                    self.results.problem.upper_bound = ObjVal
+                    self.results.problem.lower_bound = ObjBound
+            except Exception as e:
+                pass
+        else:
+            try:
+                self.results.problem.upper_bound = solution.get_primal_objective()
+                self.results.problem.lower_bound = solution.get_primal_objective()
+            except Exception as e:
+                pass
 
         var_map = self._pyomo_var_to_ndx_map
         con_map = self._pyomo_con_to_solver_con_map
@@ -281,9 +292,9 @@ class CUOPTDirect(DirectSolver):
         primal_solution = solution.get_primal_solution().tolist()
         reduced_costs = None
         dual_solution = None
-        if extract_reduced_costs and solution.get_problem_category() == 0:
+        if extract_reduced_costs and not is_mip:
             reduced_costs = solution.get_reduced_cost()
-        if extract_duals and solution.get_problem_category() == 0:
+        if extract_duals and not is_mip:
             dual_solution = solution.get_dual_solution()
 
         if self._save_results:
