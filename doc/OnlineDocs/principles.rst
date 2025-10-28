@@ -158,6 +158,11 @@ up, so please refer regularly for updates:
 * **Circular imports:** Avoid importing from ``pyomo.core`` into any module
   in ``pyomo.common`` due to the potential for circular imports.
 
+* **Print statements:** Avoid printing directly to ``stdout``. Pyomo is a
+  library, not an application, and copious output can interfere with downstream
+  tools and workflows. Use the appropriate logger instead. Print
+  information only when the user has enabled or requested it.
+
 * **Pull Request naming:** Pull Request titles are added to the CHANGELOG
   and the release notes. The Pyomo development team reserves the right to
   alter titles as appropriate to ensure they fit the look and feel of
