@@ -92,16 +92,13 @@ def rescale_FIM(FIM, param_vals):
     return scaled_FIM
 
 
-def check_matrix(mat, check_pos_def=True):
+def check_matrix(mat):
     """
     Checks that the matrix is square, positive definite, and symmetric.
 
     Parameters
     ----------
     mat: 2D numpy array representing the matrix
-    check_pos_def: bool, optional
-        If True, checks if the matrix is positive definite.
-        Default: True.
 
     Returns
     -------
@@ -111,18 +108,15 @@ def check_matrix(mat, check_pos_def=True):
     if mat.ndim != 2 or mat.shape[0] != mat.shape[1]:
         raise ValueError("argument mat must be a 2D square matrix")
 
-    if check_pos_def:
-        # Compute the eigenvalues of the matrix
-        evals = np.linalg.eigvals(mat)
+    # Compute the eigenvalues of the matrix
+    evals = np.linalg.eigvals(mat)
 
-        # Check if the matrix is positive definite
-        if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
-            raise ValueError(
-                "Matrix provided is not positive definite. It has one or more negative "
-                + "eigenvalue(s) less than -{:.1e}".format(
-                    _SMALL_TOLERANCE_DEFINITENESS
-                )
-            )
+    # Check if the matrix is positive definite
+    if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
+        raise ValueError(
+            "Matrix provided is not positive definite. It has one or more negative "
+            + "eigenvalue(s) less than -{:.1e}".format(_SMALL_TOLERANCE_DEFINITENESS)
+        )
 
     # Check if the matrix is symmetric
     if not np.allclose(mat, mat.T, atol=_SMALL_TOLERANCE_SYMMETRY):
@@ -314,10 +308,11 @@ def compute_correlation_matrix(
     pandas.DataFrame/numpy.ndarray
         If `var_name` is provided, returns a pandas DataFrame with the correlation matrix
         and the specified variable names as both index and columns. If `var_name` is not
-        provided, returns a numpy array representing the correlation matrix.
+        provided, returns a numpy array representing the correlation matrix in the same
+        order as the covariance matrix.
     """
     # Check if covariance matrix is symmetric and square
-    check_matrix(covariance_matrix, check_pos_def=False)
+    check_matrix(covariance_matrix)
 
     if var_name:
         assert len(var_name) == covariance_matrix.shape[0], (

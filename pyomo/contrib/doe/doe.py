@@ -2046,11 +2046,11 @@ class DesignOfExperiments:
         try:
             scheme_enum = DesignSpaceTraversal(traversal_scheme)
         except ValueError:
-            self.logger.warning(
-                f"Initialization scheme '{traversal_scheme}' is not recognized. "
-                "Using `snake_traversal` as the default initialization scheme."
+            raise ValueError(
+                f"{traversal_scheme=} is not recognized. "
+                "Please use one of the following: "
+                f"{[e.value for e in DesignSpaceTraversal]}"
             )
-            scheme_enum = DesignSpaceTraversal.snake_traversal
 
         if scheme_enum == DesignSpaceTraversal.snake_traversal:
             factorial_points = snake_traversal_grid_sampling(*design_values)
