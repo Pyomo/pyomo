@@ -74,29 +74,11 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 		<!-- Fill in the URLS you would like use for your main         -->
 		<!-- home page. This could be either your Trac page or         -->
 		<!-- your static page (if you have one).                       -->
-		<!-- For example, for SYMPHONY, you would put                  -->
-		<!--                                                           -->
-		<!--                                                           -->
-		<!--<projectHomePage>					       -->
-		<!--   https://projects.coin-or.org/SYMPHONY                   -->
-		<!--</projectHomePage>                                         -->
-		<!--                                                           -->
-		<!--Fill in your text below (outside the comment block).       -->
 
 		<projectHomePage>https://www.pyomo.org/</projectHomePage>
 
 		<!-- Fill in the name of the license your project uses         -->
 		<!-- and a link to its page on www.opensource.org              -->
-		<!-- For example, if you use the CPL, you would put            -->
-		<!--                                                           -->
-		<!--<projectLicense>					       -->
-		<!--   Common Public License 1.0                               -->
-		<!--</projectLicense>                                          -->
-		<!--<projectLicenseURL>				               -->
-		<!--   http://www.opensource.org/licenses/cpl1.0.php           -->
-		<!--</projectLicenseURL>                                       -->
-		<!--                                                           -->
-		<!--Fill in your text below (outside the comment block).       -->
 
 		<projectLicense>BSD</projectLicense>
                 <!-- Note that while Pyomo is licensed under the
@@ -226,8 +208,8 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 			     Use explicit overrides to disable use of automated
 			     version reporting.
 			-->
-			<stableVersionNumber>6.9.4</stableVersionNumber>
-			<releaseNumber>6.9.4</releaseNumber>
+			<stableVersionNumber>6.9.5</stableVersionNumber>
+			<releaseNumber>6.9.5</releaseNumber>
 
 		</developmentStatus>
 
@@ -286,7 +268,7 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 
 			<platform>
 				<operatingSystem>Any</operatingSystem>
-				<compiler>Python 3.9, 3.10, 3.11, 3.12, 3.13</compiler>
+				<compiler>Python 3.10, 3.11, 3.12, 3.13, 3.14</compiler>
 			</platform>
 
 		</testedPlatforms>
@@ -313,37 +295,14 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 	<!--Below, you can specify the links for the left-hand side menu.      -->
 	<!--Note that these are optional, so if there is a blank, there will   -->
 	<!--be no corresponding menu item                                      -->
-	<!--                                                                   -->
-	<!--For SYMPHONY, this block would look like this:                     -->
-	<!--                                                                   -->
-	<!--<leftMenuLinks>                                                    -->
-	<!--                                                                   -->
-	<!--   <documentation>                                                 -->
-	<!--      http://www.coin-or.org/SYMPHONY/man-5.1                      -->
-	<!--   </documentation>                                                -->
-	<!--                                                                   -->
-	<!--   <sourceCodeDownload>                                            -->
-	<!--      http://www.coin-or.org/download/source/SYMPHONY              -->
-	<!--   </sourceCodeDownload>                                           -->
-	<!--                                                                   -->
-	<!--   <binaryDownload>                                                -->
-	<!--      http://www.coin-or.org/download/binary/SYMPHONY              -->
-	<!--   </binaryDownload>                                               -->
-	<!--                                                                   -->
-	<!--   <mailingList>                                                   -->
-	<!--      http://list.coin-or.org/mailman/listinfo/coin-symphony       -->
-	<!--   </mailingList>                                                  -->
-	<!--</leftMenuLinks>                                                   -->
-	<!--                                                                   -->
-	<!--Fill in your text below (outside the comment block).               -->
 
 	<leftMenuLinks>
 
 		<documentation>https://pyomo.readthedocs.org/</documentation>
 
-		<sourceCodeDownload>https://www.pyomo.org/installation</sourceCodeDownload>
+		<sourceCodeDownload>https://github.com/Pyomo/pyomo/releases/latest</sourceCodeDownload>
 
-		<binaryDownload>https://www.pyomo.org/installation</binaryDownload>
+		<binaryDownload>https://github.com/Pyomo/pyomo/releases/latest</binaryDownload>
 
 		<mailingList>https://groups.google.com/group/pyomo-forum</mailingList>
 

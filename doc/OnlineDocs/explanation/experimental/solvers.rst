@@ -54,6 +54,9 @@ with existing interfaces).
    * - HiGHS
      - ``highs``
      - ``highs``
+   * - KNITRO
+     - ``knitro_direct``
+     - ``knitro_direct``
 
 Using the new interfaces through the legacy interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
