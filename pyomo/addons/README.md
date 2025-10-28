@@ -30,7 +30,7 @@ following criteria.
 - The code must be **mostly stable** with minimal expected API changes.
 - There must be at least one **designated maintainer** responsible for upkeep,
   compatibility, and user support.
-- The package must not rely on deprecated or experimental Pyomo internals.
+- The package must not rely on deprecated or `pyomo.devel` functionality.
 
 ### Testing
 - Test coverage should be **at least 80%**, or comparable to similar supported modules.
@@ -41,7 +41,7 @@ following criteria.
 ### Documentation
 - Each addon must include:
   - (PREFERABLE) A **reference page** in the Pyomo online documentation.
-  - (MINIMUM) A **README.md** file in the addon directory summarizing:
+  - (MINIMUM) A **README.md** file summarizing:
     - Functionality
     - Example usage or link to docs
 

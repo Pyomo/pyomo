@@ -101,6 +101,9 @@ Markers are declared in ``pyproject.toml``. Some commonly used markers are:
 - ``solver(name)``: dynamic marker to label a test for a specific solver,
   e.g., ``@pytest.mark.solver("gurobi")``
 
+More details about Pyomo-defined default test behavior can be found in
+the `conftest.py file <https://github.com/Pyomo/pyomo/blob/main/conftest.py>`_.
+
 .. note::
    If you are having issues getting tests to pass on your Pull Request,
    please tag any of the core developers to ask for help.
@@ -365,9 +368,17 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
   pip install -e .[tests,docs,optional]
 
 These commands register the cloned code with the active python environment
-(``pyomodev``). This way, your changes to the source code for ``pyomo`` are
+(``pyomodev``) and installs all possible optional dependencies.
+This way, your changes to the source code for ``pyomo`` are
 automatically used by the active environment. You can create another conda
 environment to switch to alternate versions of pyomo (e.g., stable).
+
+.. note::
+
+   The ``optional`` and ``docs`` dependencies are not strictly required;
+   however, we recommend installing them to ensure that a large number of
+   tests can be run locally. Optional packages that are not available will
+   cause tests to skip.
 
 Review Process
 --------------
@@ -380,11 +391,11 @@ think a PR should be merged or if more changes are necessary.
 
 Reviewers look for:
 
-* **Core and Addons:** Code rigor, standards compliance, appropriate test
-  coverage, and avoidance of unintended side effects
+* **Core and Addons:** Code rigor, standards compliance, test coverage above
+  a threshold, and avoidance of unintended side effects (e.g., regressions)
 * **Devel:** Basic code correctness and clarity, with an understanding that
   these areas are experimental and evolving
-* **All areas:** Reasonable documentation and tests
+* **All areas:** Code formatting (using ``black``), documentation, and tests
 
 .. note::
 
@@ -426,7 +437,8 @@ model with two clear namespaces:
 * ``pyomo.addons`` – For mostly stable, supported extensions that build on
   the Pyomo core. These packages are maintained by dedicated
   contributors, follow Pyomo's coding and testing standards, and adhere
-  to the same deprecation policies as the rest of the codebase.
+  to the same backwards compatibility and deprecation policies as the
+  rest of the codebase.
 
 * ``pyomo.devel`` – For experimental or rapidly evolving
   contributions. These modules serve as early experimentation for research ideas,
@@ -456,10 +468,7 @@ unexpected changes in stable areas of the codebase.
      - Fully supported and versioned
 
 For specific inclusion requirements and maintenance expectations for each
-namespace, see:
-
-* :doc:`../../pyomo/addons/README`
-* :doc:`../../pyomo/devel/README`
+namespace, see each directory's accompanying ``README.md``.
 
 Submitting a Contributed Package
 --------------------------------
@@ -472,14 +481,15 @@ contributed packages are treated as optional packages, which are not
 maintained by the Pyomo developer team. Thus, it is the responsibility
 of the code contributor to keep these packages up-to-date.
 
-Contributed package will be considered as pull requests,
+Contributed packages will be considered as pull requests,
 which will be reviewed by the Pyomo developer team. Specifically,
 this review will consider the suitability of the proposed capability,
 whether tests are available to check the execution of the code, and
 whether documentation is available to describe the capability.
 Contributed packages will be tested along with Pyomo. If test failures
 arise, then these packages will be disabled and an issue will be
-created to resolve these test failures.
+created to resolve these test failures. The Pyomo team reserves the
+right to remove contributed packages that are not maintained.
 
 When submitting a new contributed package (under either ``addons`` or
 ``devel``), please ensure that:
@@ -497,7 +507,7 @@ Contributed Packages within Pyomo
 +++++++++++++++++++++++++++++++++
 
 Third-party contributions can be included directly within the
-``pyomo.devel`` or ``pyomo.addons`` packages.
+``pyomo.devel`` or ``pyomo.addons`` namespaces.
 The ``pyomo/devel/example`` package
 provides an example of how this can be done, including a directory
 for plugins and package tests. For example, this package can be

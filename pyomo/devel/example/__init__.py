@@ -12,7 +12,7 @@
 #
 # Import "public" symbols and sub-packages.
 #
-from pyomo.devel.example.foo import *
+from pyomo.devel.example.foo import a
 from pyomo.devel.example import bar
 
 #

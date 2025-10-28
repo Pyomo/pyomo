@@ -134,7 +134,7 @@ Solvers
 
 Pyomo does not bundle or directly distribute optimization solvers.
 We recognize that solver installation can be challenging for new users.
-To assist with this process, the documentation includes a solver
+To assist with this process, see the solver
 availability table and installation guidance in
 :doc:`/getting_started/solvers`. This table lists solvers that can be
 installed via ``pip`` or ``conda`` where available, but Pyomo itself
