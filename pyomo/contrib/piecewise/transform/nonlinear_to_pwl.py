@@ -39,7 +39,7 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, PositiveInt, InEnum
 from pyomo.common.dependencies import attempt_import
-from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import numpy as np, packaging
 from pyomo.common.enums import IntEnum
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numeric_expr import SumExpression
@@ -53,7 +53,28 @@ from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import ExprType, OrderedVarRecorder
 
 
-lineartree, lineartree_available = attempt_import('lineartree')
+def _lt_importer():
+    import lineartree
+    import importlib.metadata
+
+    # linear-tree through version 0.3.5 relies on a private method from
+    # scikit-learn.  That method was removed in scikit-learn version
+    # 1.7.0.  We will report linear-tree as "unavailable" if
+    # scikit-learn is "too new."
+    lt_ver = packaging.version.parse(importlib.metadata.version('linear-tree'))
+    if lt_ver <= packaging.version.Version('0.3.5'):
+        import sklearn
+
+        skl_ver = packaging.version.parse(sklearn.__version__)
+        if skl_ver >= packaging.version.Version('1.7.0'):
+            raise ImportError(
+                f"linear-tree<=0.3.5 (found {lt_ver}) is incompatible with "
+                f"scikit-learn>=1.7.0 (found {skl_ver})"
+            )
+    return lineartree
+
+
+lineartree, lineartree_available = attempt_import('lineartree', importer=_lt_importer)
 sklearn_lm, sklearn_available = attempt_import('sklearn.linear_model')
 
 logger = logging.getLogger(__name__)
