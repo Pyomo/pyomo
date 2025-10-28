@@ -23,7 +23,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v250827.0
+  CACHE_VER: v251017.0
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: branch
@@ -41,7 +41,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: 3.11
     - name: Black Formatting Check
       run: |
         # Note v24.4.1 fails due to a bug in the parser. Project-level
@@ -81,39 +81,40 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: [3.13]
+        python: [3.14]
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: 3.13
+          python: 3.14
           test_docs: 1
           TARGET: linux
           PYENV: pip
 
         - os: macos-latest
-          python: 3.12
+          python: 3.13
           test_docs: 1
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.11
+          python: 3.12
           test_docs: 1
           TARGET: win
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
 
+        # Note: verify that pymumps is available when changing conda python version
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.12
           other: /conda
           TARGET: linux
           PYENV: conda
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: 3.11
           other: /mpi
           mpi: 3
           TARGET: linux
@@ -129,7 +130,7 @@ jobs:
           PACKAGES: cython
 
         - os: windows-latest
-          python: 3.9
+          python: '3.10'
           other: /pip
           TARGET: win
           PYENV: pip
@@ -269,7 +270,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        python -m pip install --cache-dir cache/pip setuptools
+        python -m pip install --cache-dir cache/pip --upgrade setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
@@ -281,6 +282,10 @@ jobs:
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
             done
+        fi
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            PACKAGES="$PACKAGES setuptools<74.0.0"
         fi
         python -m pip install --cache-dir cache/pip ${PACKAGES}
         python -m pip install --cache-dir cache/pip pymysql || \
@@ -341,6 +346,8 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
+        # We need setuptools so we can run Pyomo's setup.py
+        conda install setuptools
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -773,17 +780,17 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.9/bare-env
+    name: linux/3.10/bare-env
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-version: 3.9
+        python-version: '3.10'
 
     - name: Install Pyomo
       run: |
@@ -842,23 +849,23 @@ jobs:
     #  id: pip-cache
     #  with:
     #    path: cache/pip
-    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.9
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.10
 
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: 3.9
+        python-version: 3.12
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above
       run: |
         python -c 'import sys;print(sys.executable)'
-        python -m pip install --cache-dir cache/pip --upgrade pip
+        python -m pip install --cache-dir cache/pip --upgrade pip setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "tests" | tail -1`
         python -m pip install --cache-dir cache/pip \

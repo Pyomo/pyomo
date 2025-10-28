@@ -49,7 +49,7 @@ def _to_iterable(item):
         yield item
 
 
-class DynamicModelInterface(object):
+class DynamicModelInterface:
     """A helper class for working with dynamic models, e.g. those where
     many components are indexed by some ordered set referred to as "time."
 

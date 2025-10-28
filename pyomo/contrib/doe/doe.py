@@ -107,9 +107,9 @@ class DesignOfExperiments:
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     ):
-        """
-        This package enables model-based design of experiments analysis with Pyomo.
-        Both direct optimization and enumeration modes are supported.
+        """This package enables model-based design of experiments analysis
+        with Pyomo.  Both direct optimization and enumeration modes are
+        supported.
 
         The package has been refactored from its original form as of August 24. See
         the documentation for more information.
@@ -119,9 +119,12 @@ class DesignOfExperiments:
         experiment:
             Experiment object that holds the model and labels all the components. The
             object should have a ``get_labeled_model`` where a model is returned with
-            the following labeled sets: ``unknown_parameters``,
-                                        ``experimental_inputs``,
-                                        ``experimental_outputs``
+            the following labeled sets:
+
+              - ``unknown_parameters``,
+              - ``experimental_inputs``,
+              - ``experimental_outputs``
+
         fd_formula:
             Finite difference formula for computing the sensitivity matrix. Must be
             one of [``central``, ``forward``, ``backward``], default: ``central``
@@ -182,6 +185,7 @@ class DesignOfExperiments:
             (i.e., compare an existing tool that uses the full FIM to this algorithm)
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
+
         """
         if experiment is None:
             raise ValueError("Experiment object must be provided to perform DoE.")
@@ -368,8 +372,7 @@ class DesignOfExperiments:
                         )
             # Set objective value
             if self.objective_option == ObjectiveLib.trace:
-                # Do safe inverse here?
-                trace_val = 1 / np.trace(np.array(self.get_FIM()))
+                trace_val = np.trace(np.linalg.pinv(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
             elif self.objective_option == ObjectiveLib.determinant:
                 det_val = np.linalg.det(np.array(self.get_FIM()))
@@ -380,7 +383,8 @@ class DesignOfExperiments:
                 eig, _ = np.linalg.eig(np.array(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
             elif self.objective_option == ObjectiveLib.condition_number:
-                cond_number = np.linalg.cond(np.array(self.get_FIM()))
+                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
+                cond_number = np.log(np.abs(np.max(eig) / np.min(eig)))
                 model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
 
         # If the model has L, initialize it with the solved FIM
@@ -744,7 +748,7 @@ class DesignOfExperiments:
         cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
         count = 0
         for k, v in model.measurement_error.items():
-            cov_y[count, count] = 1 / v
+            cov_y[count, count] = 1 / v**2
             count += 1
 
         # Compute and record FIM
@@ -835,7 +839,7 @@ class DesignOfExperiments:
         cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
         count = 0
         for k, v in model.measurement_error.items():
-            cov_y[count, count] = 1 / v
+            cov_y[count, count] = 1 / v**2
             count += 1
 
         # TODO: need to add a covariance matrix for measurements (sigma inverse)
@@ -1068,6 +1072,7 @@ class DesignOfExperiments:
                         / m.scenario_blocks[0].measurement_error[
                             pyo.ComponentUID(n).find_component_on(m.scenario_blocks[0])
                         ]
+                        ** 2
                         * m.sensitivity_jacobian[n, p]
                         * m.sensitivity_jacobian[n, q]
                         for n in m.output_names
@@ -1793,7 +1798,7 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+            (det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
                 compute_FIM_metrics(FIM)
             )
 

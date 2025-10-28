@@ -747,7 +747,7 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
     return FIM
 
 
-class Estimator(object):
+class Estimator:
     """
     Parameter estimation class
 
@@ -1657,7 +1657,7 @@ class Estimator(object):
                 "theta_est(): `calc_cov` and `cov_n` are deprecated options and "
                 "will be removed in the future. Please use the `cov_est()` function "
                 "for covariance calculation.",
-                version="6.9.4.dev0",
+                version="6.9.5",
             )
         else:
             calc_cov = False
@@ -2240,7 +2240,7 @@ def group_data(data, groupby_column_name, use_mean=None):
     return grouped_data
 
 
-class _DeprecatedSecondStageCostExpr(object):
+class _DeprecatedSecondStageCostExpr:
     """
     Class to pass objective expression into the Pyomo model
     """
@@ -2253,7 +2253,7 @@ class _DeprecatedSecondStageCostExpr(object):
         return self._ssc_function(model, self._data)
 
 
-class _DeprecatedEstimator(object):
+class _DeprecatedEstimator:
     """
     Parameter estimation class
 

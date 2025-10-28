@@ -50,7 +50,7 @@ from pyomo.contrib.piecewise import PiecewiseLinearExpression, PiecewiseLinearFu
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
 from pyomo.repn.quadratic import QuadraticRepnVisitor
-from pyomo.repn.util import ExprType
+from pyomo.repn.util import ExprType, OrderedVarRecorder
 
 
 lineartree, lineartree_available = attempt_import('lineartree')
@@ -419,7 +419,7 @@ class NonlinearToPWL(Transformation):
 
             It is recommended to leave this False as long as no nonlinear constraint 
             involves more than about 5-6 variables. For constraints with higher-
-            dimmensional nonlinear functions, additive decomposition will improve
+            dimensional nonlinear functions, additive decomposition will improve
             the scalability of the approximation (since partitioning the domain is
             subject to the curse of dimensionality).""",
         ),
@@ -497,7 +497,8 @@ class NonlinearToPWL(Transformation):
         self._transformation_blocks = {}
         self._transformation_block_set = ComponentSet()
         self._quadratic_repn_visitor = QuadraticRepnVisitor(
-            subexpression_cache={}, var_map={}, var_order={}, sorter=None
+            subexpression_cache={},
+            var_recorder=OrderedVarRecorder(var_map={}, var_order={}, sorter=None),
         )
 
     def _apply_to(self, instance, **kwds):

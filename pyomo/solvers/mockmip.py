@@ -17,7 +17,7 @@ from os.path import join, basename, dirname, isfile
 from pyomo.opt.base.solvers import _extract_version
 
 
-class MockMIP(object):
+class MockMIP:
     """Methods used to create a mock MIP solver used for testing"""
 
     def __init__(self, mockdir):

@@ -53,11 +53,11 @@ _log = logging.getLogger(__name__)
 # This lets the file be imported when the Qt UI is not available (or
 # when building docs), but you won't be able to use it.  Allowing this
 # will let some basic tests run (and pass) without PyQt
-class _MainWindowUI(object):
+class _MainWindowUI:
     pass
 
 
-class _MainWindow(object):
+class _MainWindow:
     pass
 
 
@@ -250,7 +250,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
         Other things that could be added
         * number of deactivated equalities
         * number of active inequality constraints
-        * number of deactivated inequality constratins
+        * number of deactivated inequality constraints
         * number of free variables not appearing in active constraints
         * number of fixed variables not appearing in active constraints
         * number of free variables not appearing in any constraints

@@ -215,7 +215,7 @@ def NonNegativeFloat(val):
     return ans
 
 
-class In(object):
+class In:
     """In(domain, cast=None)
     Domain validation class admitting a Container of possible values
 
@@ -279,7 +279,7 @@ class In(object):
             return f'In{_dn}'
 
 
-class InEnum(object):
+class InEnum:
     """Domain validation class admitting an enum value/name.
 
     This will admit any value that is in the specified Enum, including
@@ -312,7 +312,7 @@ class InEnum(object):
         return f'InEnum[{_domain_name(self._domain)}]'
 
 
-class IsInstance(object):
+class IsInstance:
     """
     Domain validator for type checking.
 
@@ -376,7 +376,7 @@ class IsInstance(object):
         return f"IsInstance[{', '.join(class_names)}]"
 
 
-class ListOf(object):
+class ListOf:
     """Domain validator for lists of a specified type
 
     Parameters
@@ -422,7 +422,7 @@ class ListOf(object):
         return f'ListOf[{_dn}]'
 
 
-class Module(object):
+class Module:
     """Domain validator for modules.
 
     Modules can be specified as module objects, by module name,
@@ -496,7 +496,7 @@ class Module(object):
         return import_file(path)
 
 
-class Path(object):
+class Path:
     """
     Domain validator for a
     :py:term:`path-like object <path-like object>`.
@@ -605,7 +605,7 @@ class PathList(Path):
             return [super(PathList, self).__call__(data)]
 
 
-class DynamicImplicitDomain(object):
+class DynamicImplicitDomain:
     """Implicit domain that can return a custom domain based on the key.
 
     This provides a mechanism for managing plugin-like systems, where
@@ -809,7 +809,7 @@ def _value2yaml(prefix, value, obj):
     return _str.rstrip()
 
 
-class _UnpickleableDomain(object):
+class _UnpickleableDomain:
     def __init__(self, obj):
         self._type = type(obj).__name__
         self._name = obj.name(True)
@@ -1008,7 +1008,7 @@ def _formatter_str_to_item_callback(pattern, formatter):
     return types.MethodType(_item_body_cb, formatter)
 
 
-class ConfigFormatter(object):
+class ConfigFormatter:
     def _initialize(self, indent_spacing, width, visibility):
         self.out = io.StringIO()
         self.indent_spacing = indent_spacing
@@ -1174,7 +1174,7 @@ def add_docstring_list(docstring, configdict, indent_by=4):
     )
 
 
-class document_kwargs_from_configdict(object):
+class document_kwargs_from_configdict:
     """Decorator to append the documentation of a ConfigDict to the docstring
 
     This adds the documentation of the specified :py:class:`ConfigDict`
@@ -1209,7 +1209,7 @@ class document_kwargs_from_configdict(object):
     >>> from pyomo.common.config import (
     ...     ConfigDict, ConfigValue, document_kwargs_from_configdict
     ... )
-    >>> class MyClass(object):
+    >>> class MyClass:
     ...     CONFIG = ConfigDict()
     ...     CONFIG.declare('iterlim', ConfigValue(
     ...         default=3000,
@@ -1403,7 +1403,7 @@ interact."""
         return super().__call__(cls)
 
 
-class UninitializedMixin(object):
+class UninitializedMixin:
     """Mixin class to support delayed data initialization.
 
     This mixin can be used to create a derived Config class that hides
@@ -1470,7 +1470,7 @@ class UninitializedMixin(object):
         self._data = value
 
 
-class ConfigBase(object):
+class ConfigBase:
     # Note: __getstate__ relies on this field ordering.  Do not change.
     __slots__ = (
         '_parent',
@@ -1490,7 +1490,7 @@ class ConfigBase(object):
     # we can tell if an argument is provided (and we can't use None as
     # None is a valid user-specified argument).  Making it a class helps
     # when Config objects are pickled.
-    class NoArgument(object):
+    class NoArgument:
         pass
 
     def __init__(
@@ -1600,7 +1600,12 @@ class ConfigBase(object):
 
         # ... and set the value, if appropriate
         if value is not NOTSET:
+            # Note that because we are *creating* a new Config object,
+            # we do not want set_value() to change the current (default)
+            # userSet flag for this object/container (see #3721).
+            tmp = ans._userSet
             ans.set_value(value)
+            ans._userSet = tmp
         return ans
 
     def name(self, fully_qualified=False):
@@ -2026,7 +2031,7 @@ class ImmutableConfigValue(ConfigValue):
             self._data = _data
 
 
-class MarkImmutable(object):
+class MarkImmutable:
     """
     Mark instances of ConfigValue as immutable.
 
