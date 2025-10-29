@@ -251,7 +251,9 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
-    def test_reactor_obj_cholesky_solve_bad_prior(self):
+    def DISABLE_test_reactor_obj_cholesky_solve_bad_prior(self):
+        # [10/2025] This test has been disabled because it frequently
+        # (and randomly) returns "infeasible" when run on Windows.
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
