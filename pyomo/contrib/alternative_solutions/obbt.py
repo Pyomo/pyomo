@@ -74,7 +74,7 @@ def obbt_analysis(
         {variable: (lower_bound, upper_bound)}. An exception is raised when
         the solver encountered an issue.
     """
-    bounds, poolmanager = obbt_analysis_bounds_and_solutions(
+    bounds, pool_manager = obbt_analysis_bounds_and_solutions(
         model,
         variables=variables,
         rel_opt_gap=rel_opt_gap,
@@ -99,7 +99,7 @@ def obbt_analysis_bounds_and_solutions(
     solver="gurobi",
     solver_options={},
     tee=False,
-    poolmanager=None,
+    pool_manager=None,
 ):
     """
     Calculates the bounds on each variable by solving a series of min and max
@@ -136,7 +136,7 @@ def obbt_analysis_bounds_and_solutions(
         Solver option-value pairs to be passed to the solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
-    poolmanager : None
+    pool_manager : None
         Optional pool manager that will be used to collect solution
 
     Returns
@@ -145,7 +145,7 @@ def obbt_analysis_bounds_and_solutions(
         A Pyomo ComponentMap containing the bounds for each variable.
         {variable: (lower_bound, upper_bound)}. An exception is raised when
         the solver encountered an issue.
-    poolmanager
+    pool_manager
         [PyomoPoolManager]
     """
 
@@ -153,9 +153,9 @@ def obbt_analysis_bounds_and_solutions(
 
     logger.info("STARTING OBBT ANALYSIS")
 
-    if poolmanager is None:
-        poolmanager = PyomoPoolManager()
-        poolmanager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
+    if pool_manager is None:
+        pool_manager = PyomoPoolManager()
+        pool_manager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
 
     if warmstart:
         assert (
@@ -249,7 +249,7 @@ def obbt_analysis_bounds_and_solutions(
         opt.update_config.treat_fixed_vars_as_params = False
 
     variable_bounds = pyo.ComponentMap()
-    poolmanager.add(variables=all_variables, objective=orig_objective)
+    pool_manager.add(variables=all_variables, objective=orig_objective)
 
     senses = [(pyo.minimize, "LB"), (pyo.maximize, "UB")]
 
@@ -291,7 +291,7 @@ def obbt_analysis_bounds_and_solutions(
                     results.solution_loader.load_vars(solution_number=0)
                 else:
                     model.solutions.load_from(results)
-                poolmanager.add(variables=all_variables, objective=orig_objective)
+                pool_manager.add(variables=all_variables, objective=orig_objective)
 
                 if warmstart:
                     _add_solution(solutions)
@@ -339,7 +339,7 @@ def obbt_analysis_bounds_and_solutions(
 
     logger.info("COMPLETED OBBT ANALYSIS")
 
-    return variable_bounds, poolmanager
+    return variable_bounds, pool_manager
 
 
 def _add_solution(solutions):

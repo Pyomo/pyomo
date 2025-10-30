@@ -30,7 +30,7 @@ def enumerate_linear_solutions(
     solver_options={},
     tee=False,
     seed=None,
-    poolmanager=None,
+    pool_manager=None,
 ):
     """
     Finds alternative optimal solutions a (mixed-integer) linear program by iteratively
@@ -74,12 +74,12 @@ def enumerate_linear_solutions(
         Boolean indicating that the solver output should be displayed.
     seed : int
         Optional integer seed for the numpy random number generator
-    poolmanager : None
+    pool_manager : None
         Optional pool manager that will be used to collect solution
 
     Returns
     -------
-    poolmanager
+    pool_manager
         A PyomoPoolManager object
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS")
@@ -100,9 +100,9 @@ def enumerate_linear_solutions(
     # variables doesn't really matter since we only really care about diversity
     # in the original problem and not in the slack space (I think)
 
-    if poolmanager is None:
-        poolmanager = PyomoPoolManager()
-        poolmanager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
+    if pool_manager is None:
+        pool_manager = PyomoPoolManager()
+        pool_manager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
 
     all_variables = aos_utils.get_model_variables(model)
     # else:
@@ -241,7 +241,7 @@ def enumerate_linear_solutions(
 
             for var, index in cb.var_map.items():
                 var.set_value(var.lb + cb.var_lower[index].value)
-            poolmanager.add(variables=all_variables, objective=orig_objective)
+            pool_manager.add(variables=all_variables, objective=orig_objective)
             orig_objective_value = pyo.value(orig_objective)
 
             if logger.isEnabledFor(logging.INFO):
@@ -332,4 +332,4 @@ def enumerate_linear_solutions(
 
     logger.info("COMPLETED LP ENUMERATION ANALYSIS")
 
-    return poolmanager
+    return pool_manager

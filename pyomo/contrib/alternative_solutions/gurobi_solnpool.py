@@ -29,7 +29,7 @@ def gurobi_generate_solutions(
     abs_opt_gap=None,
     solver_options={},
     tee=False,
-    poolmanager=None,
+    pool_manager=None,
     pool_search_mode=2,
 ):
     """
@@ -58,7 +58,7 @@ def gurobi_generate_solutions(
         Solver option-value pairs to be passed to the Gurobi solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
-    poolmanager : None
+    pool_manager : None
         Optional pool manager that will be used to collect solution
     pool_search_mode : 1 or 2
         The generation method for filling the pool.
@@ -67,7 +67,7 @@ def gurobi_generate_solutions(
 
     Returns
     -------
-    poolmanager
+    pool_manager
         A PyomoPoolManager object
     """
 
@@ -81,9 +81,9 @@ def gurobi_generate_solutions(
             "Running gurobi_solnpool with PoolSearchMode=1, best effort search may lead to unexpected behavior"
         )
 
-    if poolmanager is None:
-        poolmanager = PyomoPoolManager()
-        poolmanager.add_pool(name="gurobi_generate_solutions", policy="keep_all")
+    if pool_manager is None:
+        pool_manager = PyomoPoolManager()
+        pool_manager.add_pool(name="gurobi_generate_solutions", policy="keep_all")
     #
     # Setup gurobi
     #
@@ -125,6 +125,6 @@ def gurobi_generate_solutions(
         #
         # Pull the solution from the model, and cache it in a solution pool.
         #
-        poolmanager.add(variable=variables, objective=objective)
+        pool_manager.add(variable=variables, objective=objective)
 
-    return poolmanager
+    return pool_manager

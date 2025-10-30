@@ -33,7 +33,7 @@ class NoGoodCutGenerator:
         all_variables,
         orig_objective,
         num_solutions,
-        poolmanager,
+        pool_manager,
     ):
         self.model = model
         self.zero_threshold = zero_threshold
@@ -43,7 +43,7 @@ class NoGoodCutGenerator:
         self.all_variables = all_variables
         self.orig_objective = orig_objective
         self.num_solutions = num_solutions
-        self.poolmanager = poolmanager
+        self.pool_manager = pool_manager
         self.soln_count = 0
 
     def cut_generator_callback(self, cb_m, cb_opt, cb_where):
@@ -53,7 +53,7 @@ class NoGoodCutGenerator:
 
             for var, index in self.model.var_map.items():
                 var.set_value(var.lb + self.model.var_lower[index].value)
-            self.poolmanager.add(
+            self.pool_manager.add(
                 variables=self.all_variables, objective=self.orig_objective
             )
 
@@ -93,7 +93,7 @@ def gurobi_enumerate_linear_solutions(
     zero_threshold=1e-5,
     solver_options={},
     tee=False,
-    poolmanager=None,
+    pool_manager=None,
 ):
     """
     Finds alternative optimal solutions for a (mixed-binary) linear program
@@ -126,12 +126,12 @@ def gurobi_enumerate_linear_solutions(
         Solver option-value pairs to be passed to the solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
-    poolmanager : None
+    pool_manager : None
         Optional pool manager that will be used to collect solution
 
     Returns
     -------
-    poolmanager
+    pool_manager
         A PyomoPoolManager object
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
@@ -140,9 +140,9 @@ def gurobi_enumerate_linear_solutions(
     if num_solutions == 1:
         logger.warning("Running alternative_solutions method to find only 1 solution!")
 
-    if poolmanager is None:
-        poolmanager = PyomoPoolManager()
-        poolmanager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
+    if pool_manager is None:
+        pool_manager = PyomoPoolManager()
+        pool_manager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
 
     #
     # Setup gurobi
@@ -237,7 +237,7 @@ def gurobi_enumerate_linear_solutions(
         all_variables,
         orig_objective,
         num_solutions,
-        poolmanager,
+        pool_manager,
     )
 
     opt = appsi.solvers.Gurobi()
@@ -253,4 +253,4 @@ def gurobi_enumerate_linear_solutions(
     aos_block.deactivate()
     logger.info("COMPLETED LP ENUMERATION ANALYSIS")
 
-    return cut_generator.poolmanager
+    return cut_generator.pool_manager
