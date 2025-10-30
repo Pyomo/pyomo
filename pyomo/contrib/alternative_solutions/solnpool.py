@@ -15,8 +15,8 @@ import dataclasses
 import json
 import weakref
 
-from .aos_utils import MyMunch, _to_dict
-from .solution import Solution, PyomoSolution
+from pyomo.contrib.alternative_solutions.aos_utils import MyMunch, _to_dict
+from pyomo.contrib.alternative_solutions.solution import Solution, PyomoSolution
 
 nan = float("nan")
 
