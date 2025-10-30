@@ -141,7 +141,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         results.solution_status = self._get_solution_status(status)
         results.termination_condition = self._get_termination_condition(status)
         results.incumbent_objective = self._engine.get_obj_value()
-        results.iteration_count = self._engine.get_num_iters()
+        results.extra_info.iteration_count = self._engine.get_num_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
 
