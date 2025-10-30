@@ -39,6 +39,18 @@ class TimingHandler(logging.Handler):
     transformations.  It collects these records, extracts the timing
     information and adds it to the test data recorder.
 
+    Attributes:
+        _testRecord (OrderedDict): Current test's timing data collection
+        enabled (bool): Flag to enable/disable timing collection
+
+    Example timing data structure:
+        {
+            'ConstructionTimer': {
+                'build_variables': 0.123,
+                'build_constraints': [0.456, 0.789]  # Multiple entries for repeated operations
+            }
+        }
+
     """
 
     def __init__(self):
