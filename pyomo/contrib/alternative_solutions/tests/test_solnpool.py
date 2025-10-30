@@ -9,8 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pytest
-import pprint
+from pyomo.common.unittest import pytest
 
 from pyomo.contrib.alternative_solutions import (
     PoolManager,
