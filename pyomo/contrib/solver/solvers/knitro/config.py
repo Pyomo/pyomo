@@ -35,7 +35,13 @@ class KnitroConfig(SolverConfig):
             ConfigValue(
                 domain=Bool,
                 default=False,
-                doc="KNITRO solver does not allow variable removal. We can either make the variable a continuous free variable or rebuild the whole model when variable removal is attempted. When `rebuild_model_on_remove_var` is set to True, the model will be rebuilt.",
+                doc=(
+                    "KNITRO solver does not allow variable removal. We can "
+                    "either make the variable a continuous free variable or "
+                    "rebuild the whole model when variable removal is "
+                    "attempted. When `rebuild_model_on_remove_var` is set to "
+                    "True, the model will be rebuilt."
+                ),
             ),
         )
 
@@ -44,6 +50,11 @@ class KnitroConfig(SolverConfig):
             ConfigValue(
                 domain=Bool,
                 default=False,
-                doc="To evaluate non-linear constraints, KNITRO solver sets explicit values on variables. This option controls whether to restore the original variable values after solving.",
+                doc=(
+                    "To evaluate non-linear constraints, KNITRO solver sets "
+                    "explicit values on variables. This option controls "
+                    "whether to restore the original variable values after "
+                    "solving."
+                ),
             ),
         )

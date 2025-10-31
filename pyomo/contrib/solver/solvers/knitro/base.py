@@ -82,7 +82,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         if config.restore_variable_values_after_solve:
             self._save_var_values()
 
-        with capture_output(TeeStream(self._stream, *config.tee), capture_fd=False):
+        with capture_output(TeeStream(self._stream, *config.tee), capture_fd=True):
             self._solve(config, timer)
 
         if config.restore_variable_values_after_solve:
@@ -141,7 +141,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         results.solution_status = self._get_solution_status(status)
         results.termination_condition = self._get_termination_condition(status)
         results.incumbent_objective = self._engine.get_obj_value()
-        results.iteration_count = self._engine.get_num_iters()
+        results.extra_info.iteration_count = self._engine.get_num_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
 
@@ -268,4 +268,6 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             return NoReducedCostsError
         elif item_type is ConstraintData and value_type == ValueType.DUAL:
             return NoDualsError
-        raise DeveloperError()
+        raise DeveloperError(
+            f"Unsupported KNITRO item type {item_type} and value type {value_type}."
+        )
