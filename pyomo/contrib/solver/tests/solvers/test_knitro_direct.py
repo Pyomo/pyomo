@@ -13,10 +13,11 @@ import io
 from contextlib import redirect_stdout
 
 import pyomo.common.unittest as unittest
+import pyomo.environ as pyo
 
+from pyomo.contrib.solver.common.results import SolutionStatus, TerminationCondition
 from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
 from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
-import pyomo.environ as pyo
 
 avail = KnitroDirectSolver().available()
 
@@ -83,6 +84,54 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
         opt.available()
         self.assertTrue(opt._available_cache)
         self.assertIsNotNone(opt._available_cache)
+
+    def test_solution_status_mapping(self):
+        opt = KnitroDirectSolver()
+        for opt_status in [0, -100]:
+            status = opt._get_solution_status(opt_status)
+            self.assertEqual(status, SolutionStatus.optimal)
+
+        for opt_status in [*range(-101, -103, -1), *range(-400, -406, -1)]:
+            status = opt._get_solution_status(opt_status)
+            self.assertEqual(status, SolutionStatus.feasible)
+
+        for opt_status in [-200, -204, -205, -206]:
+            status = opt._get_solution_status(opt_status)
+            self.assertEqual(status, SolutionStatus.infeasible)
+
+        for opt_status in [-501, -99999, -1]:
+            status = opt._get_solution_status(opt_status)
+            self.assertEqual(status, SolutionStatus.noSolution)
+
+    def test_termination_condition_mapping(self):
+        opt = KnitroDirectSolver()
+        for opt_status in [0, -100]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(
+                term_cond, TerminationCondition.convergenceCriteriaSatisfied
+            )
+        term_cond = opt._get_termination_condition(-202)
+        self.assertEqual(term_cond, TerminationCondition.locallyInfeasible)
+        for opt_status in [-200, -204, -205]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.provenInfeasible)
+        for opt_status in [-300, -301]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.infeasibleOrUnbounded)
+        for opt_status in [-400, -410]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.iterationLimit)
+        for opt_status in [-401, -411]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.maxTimeLimit)
+        term_cond = opt._get_termination_condition(-500)
+        self.assertEqual(term_cond, TerminationCondition.interrupted)
+        for opt_status in [-501, -550, -599]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.error)
+        for opt_status in [-600, -99999, -1]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.unknown)
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
