@@ -11,11 +11,11 @@
 
 from collections import Counter
 
-from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common import unittest
+from pyomo.common.dependencies import numpy as np, numpy_available
+
 from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
 from pyomo.contrib.appsi.solvers import Gurobi
-
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 
 gurobipy_available = Gurobi().available()
@@ -39,20 +39,16 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         Confirm that an exception is thrown with a non-positive num solutions
         """
         m = tc.get_triangle_ip()
-        try:
+        with self.assertRaises(AssertionError):
             gurobi_generate_solutions(m, num_solutions=-1)
-        except AssertionError as e:
-            pass
 
     def test_search_mode(self):
         """
         Confirm that an exception is thrown with pool_search_mode not in [1,2]
         """
         m = tc.get_triangle_ip()
-        try:
+        with self.assertRaises(AssertionError):
             gurobi_generate_solutions(m, pool_search_mode=0)
-        except AssertionError as e:
-            pass
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_ip_feasibility(self):

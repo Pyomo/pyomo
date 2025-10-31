@@ -11,44 +11,46 @@
 
 from collections import Counter
 
+from pyomo.common import unittest
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as numpy, numpy_available
+import pyomo.opt
+
+parameterized, param_available = attempt_import('parameterized')
+if not param_available:
+    raise unittest.SkipTest('Parameterized is not available.')
+parameterized = parameterized.parameterized
 
 if numpy_available:
     from numpy.testing import assert_array_almost_equal
-
-from pyomo.common import unittest
-import pyomo.opt
 
 from pyomo.contrib.alternative_solutions import enumerate_binary_solutions
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 
 solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi", "appsi_gurobi"))
-pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
 
 
-@unittest.pytest.mark.default
-class TestBalasUnit:
+class TestBalasUnit(unittest.TestCase):
 
+    @parameterized.expand(input=solvers)
     def test_bad_solver(self, mip_solver):
         """
         Confirm that an exception is thrown with a bad solver name.
         """
         m = tc.get_triangle_ip()
-        try:
+        with self.assertRaises(pyomo.common.errors.ApplicationError):
             enumerate_binary_solutions(m, solver="unknown_solver")
-        except pyomo.common.errors.ApplicationError as e:
-            pass
 
+    @parameterized.expand(input=solvers)
     def test_non_positive_num_solutions(self, mip_solver):
         """
         Confirm that an exception is thrown with a non-positive num solutions
         """
         m = tc.get_triangle_ip()
-        try:
+        with self.assertRaises(AssertionError):
             enumerate_binary_solutions(m, num_solutions=-1, solver=mip_solver)
-        except AssertionError as e:
-            pass
 
+    @parameterized.expand(input=solvers)
     def test_ip_feasibility(self, mip_solver):
         """
         Enumerate solutions for an ip: triangle_ip.
@@ -62,6 +64,7 @@ class TestBalasUnit:
             assert soln.objective().value == unittest.pytest.approx(5)
 
     @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
+    @parameterized.expand(input=solvers)
     def test_no_time(self, mip_solver):
         """
         Enumerate solutions for an ip: triangle_ip.
@@ -75,6 +78,7 @@ class TestBalasUnit:
             )
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
+    @parameterized.expand(input=solvers)
     def test_knapsack_all(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -92,6 +96,7 @@ class TestBalasUnit:
         assert_array_almost_equal(unique_solns_by_obj, m.num_ranked_solns)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
+    @parameterized.expand(input=solvers)
     def test_knapsack_x0_x1(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -112,6 +117,7 @@ class TestBalasUnit:
         assert_array_almost_equal(unique_solns_by_obj, [1, 1, 1, 1])
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
+    @parameterized.expand(input=solvers)
     def test_knapsack_optimal_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -127,6 +133,7 @@ class TestBalasUnit:
         assert_array_almost_equal(objectives, m.ranked_solution_values[:3])
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
+    @parameterized.expand(input=solvers)
     def test_knapsack_hamming_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -144,6 +151,7 @@ class TestBalasUnit:
         assert_array_almost_equal(objectives, [6, 3, 1])
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
+    @parameterized.expand(input=solvers)
     def test_knapsack_random_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack

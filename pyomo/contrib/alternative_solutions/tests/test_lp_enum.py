@@ -12,8 +12,14 @@
 from pyomo.common.dependencies import numpy as numpy, numpy_available
 
 import pyomo.environ as pyo
-from pyomo.common import unittest
 import pyomo.opt
+from pyomo.common import unittest
+from pyomo.common.dependencies import attempt_import
+
+parameterized, param_available = attempt_import('parameterized')
+if not param_available:
+    raise unittest.SkipTest('Parameterized is not available.')
+parameterized = parameterized.parameterized
 
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 from pyomo.contrib.alternative_solutions import lp_enum
@@ -21,38 +27,33 @@ from pyomo.contrib.alternative_solutions import lp_enum
 #
 # Find available solvers. Just use GLPK if it's available.
 #
-solvers = list(
-    pyomo.opt.check_available_solvers("glpk", "gurobi")
-)  # , "appsi_gurobi"))
-pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
+solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi"))
 
 timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"}
 
 
-@unittest.pytest.mark.default
-class TestLPEnum:
+class TestLPEnum(unittest.TestCase):
 
+    @parameterized.expand(input=solvers)
     def test_bad_solver(self, mip_solver):
         """
         Confirm that an exception is thrown with a bad solver name.
         """
         m = tc.get_3d_polyhedron_problem()
-        try:
+        with self.assertRaises(pyomo.common.errors.ApplicationError):
             lp_enum.enumerate_linear_solutions(m, solver="unknown_solver")
-        except pyomo.common.errors.ApplicationError as e:
-            pass
 
+    @parameterized.expand(input=solvers)
     def test_non_positive_num_solutions(self, mip_solver):
         """
         Confirm that an exception is thrown with a non-positive num solutions
         """
         m = tc.get_3d_polyhedron_problem()
-        try:
+        with self.assertRaises(AssertionError):
             lp_enum.enumerate_linear_solutions(m, num_solutions=-1, solver=mip_solver)
-        except AssertionError as e:
-            pass
 
     @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
+    @parameterized.expand(input=solvers)
     def test_no_time(self, mip_solver):
         """
         Check that the correct bounds are found for a discrete problem where
@@ -64,6 +65,7 @@ class TestLPEnum:
                 m, solver=mip_solver, solver_options={timelimit[mip_solver]: 0}
             )
 
+    @parameterized.expand(input=solvers)
     def test_3d_polyhedron(self, mip_solver):
         m = tc.get_3d_polyhedron_problem()
         m.o.deactivate()
@@ -74,6 +76,7 @@ class TestLPEnum:
         for s in sols:
             assert s.objective().value == unittest.pytest.approx(4)
 
+    @parameterized.expand(input=solvers)
     def test_3d_polyhedron(self, mip_solver):
         m = tc.get_3d_polyhedron_problem()
         m.o.deactivate()
@@ -86,6 +89,7 @@ class TestLPEnum:
                 9
             ) or s.objective().value == unittest.pytest.approx(10)
 
+    @parameterized.expand(input=solvers)
     def test_2d_diamond_problem(self, mip_solver):
         m = tc.get_2d_diamond_problem()
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver, num_solutions=2)
@@ -96,6 +100,7 @@ class TestLPEnum:
         assert sols[1].objective().value == unittest.pytest.approx(3.6923076923076916)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
+    @parameterized.expand(input=solvers)
     def test_pentagonal_pyramid(self, mip_solver):
         n = tc.get_pentagonal_pyramid_mip()
         n.o.sense = pyo.minimize
@@ -108,6 +113,7 @@ class TestLPEnum:
         assert len(sols) == 6
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
+    @parameterized.expand(input=solvers)
     def test_pentagon(self, mip_solver):
         n = tc.get_pentagonal_lp()
 

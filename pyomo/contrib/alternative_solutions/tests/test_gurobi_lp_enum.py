@@ -19,8 +19,7 @@ from pyomo.opt import check_available_solvers
 
 import pyomo.environ as pyo
 
-# lp_enum_gurobi uses both 'gurobi' and 'appsi_gurobi'
-gurobi_available = len(check_available_solvers("gurobi", "appsi_gurobi")) == 2
+gurobi_available = len(check_available_solvers("gurobi")) == 2
 
 #
 # TODO: Setup detailed tests here
@@ -36,20 +35,15 @@ class TestLPEnumSolnpool(unittest.TestCase):
         Confirm that an exception is thrown with a non-positive num solutions
         """
         n = tc.get_pentagonal_pyramid_mip()
-        try:
+        with self.assertRaises(AssertionError):
             gurobi_enumerate_linear_solutions(n, num_solutions=-1)
-        except AssertionError as e:
-            pass
 
     def test_here(self):
         n = tc.get_pentagonal_pyramid_mip()
         n.x.domain = pyo.Reals
         n.y.domain = pyo.Reals
 
-        try:
-            sols = gurobi_enumerate_linear_solutions(n, tee=True)
-        except pyomo.common.errors.ApplicationError as e:
-            sols = []
+        sols = gurobi_enumerate_linear_solutions(n, tee=True)
 
         # TODO - Confirm how solnpools deal with duplicate solutions
         if gurobi_available:
