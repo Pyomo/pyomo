@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# A piewise approximiation of a nonconvex objective function.
+# A piecewise approximation of a nonconvex objective function.
 
 import pyomo.environ as pyo
 
