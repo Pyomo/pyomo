@@ -14,12 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
-from pyomo.contrib.alternative_solutions import (
-    aos_utils,
-    shifted_lp,
-    solution,
-    solnpool,
-)
+from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, PyomoPoolManager
 from pyomo.contrib import appsi
 
 
@@ -35,9 +30,11 @@ def enumerate_linear_solutions(
     solver_options={},
     tee=False,
     seed=None,
+    pool_manager=None,
 ):
     """
-    Finds alternative optimal solutions a (mixed-integer) linear program.
+    Finds alternative optimal solutions a (mixed-integer) linear program by iteratively
+    generating corners of the feasible polytope.
 
     This function implements the technique described here:
 
@@ -51,7 +48,7 @@ def enumerate_linear_solutions(
     model : ConcreteModel
         A concrete Pyomo model
     num_solutions : int
-        The maximum number of solutions to generate.
+        The maximum number of solutions to generate. Must be positive
     rel_opt_gap : float or None
         The relative optimality gap for the original objective for which
         variable bounds will be found. None indicates that a relative gap
@@ -77,14 +74,19 @@ def enumerate_linear_solutions(
         Boolean indicating that the solver output should be displayed.
     seed : int
         Optional integer seed for the numpy random number generator
+    pool_manager : None
+        Optional pool manager that will be used to collect solution
 
     Returns
     -------
-    solutions
-        A list of Solution objects.
-        [Solution]
+    pool_manager
+        A PyomoPoolManager object
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS")
+
+    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if num_solutions == 1:
+        logger.warning("Running alternative_solutions method to find only 1 solution!")
 
     assert search_mode in [
         "optimal",
@@ -97,6 +99,10 @@ def enumerate_linear_solutions(
     # in one implies diversity in the other. Diversity in the cb.basic_slack
     # variables doesn't really matter since we only really care about diversity
     # in the original problem and not in the slack space (I think)
+
+    if pool_manager is None:
+        pool_manager = PyomoPoolManager()
+        pool_manager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
 
     all_variables = aos_utils.get_model_variables(model)
     # else:
@@ -235,9 +241,8 @@ def enumerate_linear_solutions(
 
             for var, index in cb.var_map.items():
                 var.set_value(var.lb + cb.var_lower[index].value)
-            sol = solution.Solution(model, all_variables, objective=orig_objective)
-            solutions.append(sol)
-            orig_objective_value = sol.objective[1]
+            pool_manager.add(variables=all_variables, objective=orig_objective)
+            orig_objective_value = pyo.value(orig_objective)
 
             if logger.isEnabledFor(logging.INFO):
                 logger.info("Solved, objective = {}".format(orig_objective_value))
@@ -327,4 +332,4 @@ def enumerate_linear_solutions(
 
     logger.info("COMPLETED LP ENUMERATION ANALYSIS")
 
-    return solutions
+    return pool_manager

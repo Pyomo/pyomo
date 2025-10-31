@@ -12,15 +12,14 @@
 from pyomo.common.dependencies import numpy_available
 from pyomo.common import unittest
 
+import pyomo.common.errors
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
-from pyomo.contrib.alternative_solutions import lp_enum
-from pyomo.contrib.alternative_solutions import lp_enum_solnpool
+from pyomo.contrib.alternative_solutions import gurobi_enumerate_linear_solutions
 from pyomo.opt import check_available_solvers
 
 import pyomo.environ as pyo
 
-# lp_enum_solnpool uses both 'gurobi' and 'appsi_gurobi'
-gurobi_available = len(check_available_solvers('gurobi', 'appsi_gurobi')) == 2
+gurobi_available = len(check_available_solvers("gurobi")) == 2
 
 #
 # TODO: Setup detailed tests here
@@ -31,15 +30,20 @@ gurobi_available = len(check_available_solvers('gurobi', 'appsi_gurobi')) == 2
 @unittest.skipUnless(numpy_available, "NumPy not found")
 class TestLPEnumSolnpool(unittest.TestCase):
 
+    def test_non_positive_num_solutions(self):
+        """
+        Confirm that an exception is thrown with a non-positive num solutions
+        """
+        n = tc.get_pentagonal_pyramid_mip()
+        with self.assertRaises(AssertionError):
+            gurobi_enumerate_linear_solutions(n, num_solutions=-1)
+
     def test_here(self):
         n = tc.get_pentagonal_pyramid_mip()
         n.x.domain = pyo.Reals
         n.y.domain = pyo.Reals
 
-        try:
-            sols = lp_enum_solnpool.enumerate_linear_solutions_soln_pool(n, tee=True)
-        except pyomo.common.errors.ApplicationError as e:
-            sols = []
+        sols = gurobi_enumerate_linear_solutions(n, tee=True)
 
         # TODO - Confirm how solnpools deal with duplicate solutions
         if gurobi_available:

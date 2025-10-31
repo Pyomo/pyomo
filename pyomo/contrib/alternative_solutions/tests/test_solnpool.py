@@ -9,202 +9,963 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections import Counter
-
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.unittest import pytest
 from pyomo.common import unittest
-from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
-from pyomo.contrib.appsi.solvers import Gurobi
 
-import pyomo.contrib.alternative_solutions.tests.test_cases as tc
-from pyomo.common.log import LoggingIntercept
+from pyomo.contrib.alternative_solutions import (
+    PoolManager,
+    Solution,
+    VariableInfo,
+    ObjectiveInfo,
+)
 
-gurobipy_available = Gurobi().available()
-
-
-@unittest.skipIf(not gurobipy_available, "Gurobi MIP solver not available")
-class TestSolnPoolUnit(unittest.TestCase):
-    """
-    Cases to cover:
-
-        LP feasibility (for an LP just one solution should be returned since gurobi cannot enumerate over continuous vars)
-
-        Pass at least one solver option to make sure that work, e.g. time limit
-
-        We need a utility to check that a two sets of solutions are the same.
-        Maybe this should be an AOS utility since it may be a thing we will want to do often.
-    """
-
-    @unittest.skipIf(not numpy_available, "Numpy not installed")
-    def test_ip_feasibility(self):
-        """
-        Enumerate all solutions for an ip: triangle_ip.
-
-        Check that the correct number of alternate solutions are found.
-        """
-        m = tc.get_triangle_ip()
-        results = gurobi_generate_solutions(m, num_solutions=100)
-        objectives = [round(result.objective[1], 2) for result in results]
-        actual_solns_by_obj = m.num_ranked_solns
-        unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
-
-    def test_ip_num_solutions_best_effort(self):
-        """
-        Enumerate solutions for an ip: triangle_ip.
-        Test best effort mode in solution pool.
-
-        Check that the correct number of alternate solutions are found.
-        """
-        m = tc.get_triangle_ip()
-        with LoggingIntercept() as LOG:
-            results = gurobi_generate_solutions(
-                m, num_solutions=8, solver_options={"PoolSearchMode": 1}
-            )
-        self.assertRegex(
-            'Running gurobi_solnpool with PoolSearchMode=1, best effort search may lead to unexpected behavior\n',
-            LOG.getvalue(),
-        )
-        assert len(results) >= 1, 'Need to find some solutions'
-
-    def test_ip_num_solutions_standard_single_solution_solve(self):
-        """
-        Enumerate solutions for an ip: triangle_ip.
-        Test single solve mode in solution pool.
-
-        Check that the correct number of solutions (1) are found.
-        This is not the intended use case for this method.
-        This is a warning check.
-        """
-        m = tc.get_triangle_ip()
-        with LoggingIntercept() as LOG:
-            results = gurobi_generate_solutions(
-                m, num_solutions=8, solver_options={"PoolSearchMode": 0}
-            )
-        self.assertRegex(
-            'Running gurobi_solnpool with PoolSearchMode=0, this is single search mode and not the intended use case for gurobi_generate_solutions\n',
-            LOG.getvalue(),
-        )
-        assert len(results) == 1, 'Need to find only 1 solution'
-
-    def test_ip_num_solutions_seeking_one(self):
-        """
-        Enumerate solutions for an ip: triangle_ip.
-        Test case where only one solution is asked for.
-
-        This is not the intended use case for this code.
-        This is a warning check.
-        """
-        m = tc.get_triangle_ip()
-        with LoggingIntercept() as LOG:
-            results = gurobi_generate_solutions(m, num_solutions=1)
-        self.assertRegex(
-            'Running alternative_solutions method to find only 1 solution!\n',
-            LOG.getvalue(),
-        )
-        assert len(results) == 1, 'Need to find only 1 solution'
-
-    def test_ip_num_solutions_seeking_zero(self):
-        """
-        Enumerate solutions for an ip: triangle_ip.
-        Test case where zero solutions are asked for to check assert error.
-        """
-        m = tc.get_triangle_ip()
-        with self.assertRaisesRegex(
-            AssertionError, "num_solutions must be positive integer"
-        ):
-            gurobi_generate_solutions(m, num_solutions=0)
-
-    @unittest.skipIf(not numpy_available, "Numpy not installed")
-    def test_ip_num_solutions(self):
-        """
-        Enumerate 8 solutions for an ip: triangle_ip.
-
-        Check that the correct number of alternate solutions are found.
-        """
-        m = tc.get_triangle_ip()
-        results = gurobi_generate_solutions(m, num_solutions=8)
-        assert len(results) == 8
-        objectives = [round(result.objective[1], 2) for result in results]
-        actual_solns_by_obj = [6, 2]
-        unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
-
-    @unittest.skipIf(not numpy_available, "Numpy not installed")
-    def test_mip_feasibility(self):
-        """
-        Enumerate all solutions for a mip: indexed_pentagonal_pyramid_mip.
-
-        Check that the correct number of alternate solutions are found.
-        """
-        m = tc.get_indexed_pentagonal_pyramid_mip()
-        results = gurobi_generate_solutions(m, num_solutions=100)
-        objectives = [round(result.objective[1], 2) for result in results]
-        actual_solns_by_obj = m.num_ranked_solns
-        unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
-
-    @unittest.skipIf(not numpy_available, "Numpy not installed")
-    def test_mip_rel_feasibility(self):
-        """
-        Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
-
-        Check that only solutions within a relative tolerance of 0.2 are
-        found.
-        """
-        m = tc.get_pentagonal_pyramid_mip()
-        results = gurobi_generate_solutions(m, num_solutions=100, rel_opt_gap=0.2)
-        objectives = [round(result.objective[1], 2) for result in results]
-        actual_solns_by_obj = m.num_ranked_solns[0:2]
-        unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
-
-    @unittest.skipIf(not numpy_available, "Numpy not installed")
-    def test_mip_rel_feasibility_options(self):
-        """
-        Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
-
-        Check that only solutions within a relative tolerance of 0.2 are
-        found.
-        """
-        m = tc.get_pentagonal_pyramid_mip()
-        results = gurobi_generate_solutions(
-            m, num_solutions=100, solver_options={"PoolGap": 0.2}
-        )
-        objectives = [round(result.objective[1], 2) for result in results]
-        actual_solns_by_obj = m.num_ranked_solns[0:2]
-        unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
-
-    @unittest.skipIf(not numpy_available, "Numpy not installed")
-    def test_mip_abs_feasibility(self):
-        """
-        Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
-
-        Check that only solutions within an absolute tolerance of 1.99 are
-        found.
-        """
-        m = tc.get_pentagonal_pyramid_mip()
-        results = gurobi_generate_solutions(m, num_solutions=100, abs_opt_gap=1.99)
-        objectives = [round(result.objective[1], 2) for result in results]
-        actual_solns_by_obj = m.num_ranked_solns[0:3]
-        unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
-
-    @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
-    def test_mip_no_time(self):
-        """
-        Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
-
-        Check that no solutions are returned with a timelimit of 0.
-        """
-        m = tc.get_pentagonal_pyramid_mip()
-        # Use quiet=False to test error message
-        results = gurobi_generate_solutions(
-            m, num_solutions=100, solver_options={"TimeLimit": 0.0}, quiet=False
-        )
-        assert len(results) == 0
+# from pyomo.contrib.alternative_solutions.aos_utils import MyMunch
 
 
-if __name__ == "__main__":
-    unittest.main()
+def soln(value, objective):
+    return Solution(
+        variables=[VariableInfo(value=value)],
+        objectives=[ObjectiveInfo(value=objective)],
+    )
+
+
+class TestSolnPool(unittest.TestCase):
+
+    def test_pool_active_name(self):
+        pm = PoolManager()
+        assert pm.name == None, "Should only have the None pool"
+        pm.add_pool(name="pool_1", policy="keep_all")
+        assert pm.name == "pool_1", "Should only have 'pool_1'"
+
+    def test_get_pool_names(self):
+        pm = PoolManager()
+        assert pm.get_pool_names() == [None], "Should only be [None]"
+        pm.add_pool(name="pool_1", policy="keep_all")
+        assert pm.get_pool_names() == ["pool_1"], "Should only be ['pool_1']"
+        pm.add_pool(name="pool_2", policy="keep_latest", max_pool_size=1)
+        assert pm.get_pool_names() == [
+            "pool_1",
+            "pool_2",
+        ], "Should be ['pool_1', 'pool_2']"
+
+    def test_get_active_pool_policy(self):
+        pm = PoolManager()
+        assert pm.policy == "keep_best", "Should only be 'keep_best'"
+        pm.add_pool(name="pool_1", policy="keep_all")
+        assert pm.policy == "keep_all", "Should only be 'keep_best'"
+        pm.add_pool(name="pool_2", policy="keep_latest", max_pool_size=1)
+        assert pm.policy == "keep_latest", "Should only be 'keep_latest'"
+
+    def test_get_pool_policies(self):
+        pm = PoolManager()
+        assert pm.get_pool_policies() == {
+            None: "keep_best"
+        }, "Should only be {None : 'keep_best'}"
+        pm.add_pool(name="pool_1", policy="keep_all")
+        assert pm.get_pool_policies() == {
+            "pool_1": "keep_all"
+        }, "Should only be {'pool_1' : 'keep_best'}"
+        pm.add_pool(name="pool_2", policy="keep_latest", max_pool_size=1)
+        assert pm.get_pool_policies() == {
+            "pool_1": "keep_all",
+            "pool_2": "keep_latest",
+        }, "Should only be {'pool_1' : 'keep_best', 'pool_2' : 'keep_latest'}"
+
+    def test_get_max_pool_size(self):
+        pm = PoolManager()
+        assert pm.max_pool_size == None, "Should only be None"
+        pm.add_pool(name="pool_1", policy="keep_all")
+        assert pm.max_pool_size == None, "Should only be None"
+        pm.add_pool(name="pool_2", policy="keep_latest", max_pool_size=1)
+        assert pm.max_pool_size == 1, "Should only be 1"
+
+    def test_get_max_pool_sizes(self):
+        pm = PoolManager()
+        assert pm.get_max_pool_sizes() == {None: None}, "Should only be {None: None}"
+        pm.add_pool(name="pool_1", policy="keep_all")
+        assert pm.get_max_pool_sizes() == {
+            "pool_1": None
+        }, "Should only be {'pool_1': None}"
+        pm.add_pool(name="pool_2", policy="keep_latest", max_pool_size=1)
+        assert pm.get_max_pool_sizes() == {
+            "pool_1": None,
+            "pool_2": 1,
+        }, "Should only be {'pool_1': None, 'pool_2': 1}"
+
+    def test_get_pool_sizes(self):
+        pm = PoolManager()
+        pm.add_pool(name="pool_1", policy="keep_all")
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 3
+
+        pm.add_pool(name="pool_2", policy="keep_latest", max_pool_size=1)
+        retval = pm.add(soln(0, 0))
+        assert len(pm) == 1
+        retval = pm.add(soln(0, 1))
+
+        assert pm.get_pool_sizes() == {
+            "pool_1": 3,
+            "pool_2": 1,
+        }, "Should be {'pool_1' :3, 'pool_2' : 1}"
+
+    def test_multiple_pools(self):
+        pm = PoolManager()
+        pm.add_pool(name="pool_1", policy="keep_all")
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 3
+
+        assert pm.get_pool_dicts() == {
+            "pool_1": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool_1",
+                    "policy": "keep_all",
+                },
+                "pool_config": {},
+                "solutions": {
+                    0: {
+                        "id": 0,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 0}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 0,
+                            }
+                        ],
+                    },
+                    1: {
+                        "id": 1,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 0,
+                            }
+                        ],
+                    },
+                    2: {
+                        "id": 2,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 1,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
+        pm.add_pool(name="pool_2", policy="keep_latest", max_pool_size=1)
+        retval = pm.add(soln(0, 0))
+        assert len(pm) == 1
+        retval = pm.add(soln(0, 1))
+        assert pm.get_pool_dicts() == {
+            "pool_1": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool_1",
+                    "policy": "keep_all",
+                },
+                "solutions": {
+                    0: {
+                        "id": 0,
+                        "variables": [
+                            {
+                                "value": 0,
+                                "fixed": False,
+                                "name": None,
+                                "index": None,
+                                "discrete": False,
+                                "suffix": {},
+                            }
+                        ],
+                        "objectives": [
+                            {"value": 0, "name": None, "index": None, "suffix": {}}
+                        ],
+                        "suffix": {},
+                    },
+                    1: {
+                        "id": 1,
+                        "variables": [
+                            {
+                                "value": 0,
+                                "fixed": False,
+                                "name": None,
+                                "index": None,
+                                "discrete": False,
+                                "suffix": {},
+                            }
+                        ],
+                        "objectives": [
+                            {"value": 1, "name": None, "index": None, "suffix": {}}
+                        ],
+                        "suffix": {},
+                    },
+                    2: {
+                        "id": 2,
+                        "variables": [
+                            {
+                                "value": 1,
+                                "fixed": False,
+                                "name": None,
+                                "index": None,
+                                "discrete": False,
+                                "suffix": {},
+                            }
+                        ],
+                        "objectives": [
+                            {"value": 1, "name": None, "index": None, "suffix": {}}
+                        ],
+                        "suffix": {},
+                    },
+                },
+                "pool_config": {},
+            },
+            "pool_2": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool_2",
+                    "policy": "keep_latest",
+                },
+                "solutions": {
+                    4: {
+                        "id": 4,
+                        "variables": [
+                            {
+                                "value": 0,
+                                "fixed": False,
+                                "name": None,
+                                "index": None,
+                                "discrete": False,
+                                "suffix": {},
+                            }
+                        ],
+                        "objectives": [
+                            {"value": 1, "name": None, "index": None, "suffix": {}}
+                        ],
+                        "suffix": {},
+                    }
+                },
+                "pool_config": {"max_pool_size": 1},
+            },
+        }
+        assert len(pm) == 1
+
+    def test_keepall_add(self):
+        pm = PoolManager()
+        pm.add_pool(name="pool", policy="keep_all")
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 3
+
+        assert pm.get_pool_dicts() == {
+            "pool": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool",
+                    "policy": "keep_all",
+                },
+                "pool_config": {},
+                "solutions": {
+                    0: {
+                        "id": 0,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 0}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 0,
+                            }
+                        ],
+                    },
+                    1: {
+                        "id": 1,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 0,
+                            }
+                        ],
+                    },
+                    2: {
+                        "id": 2,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 1,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
+
+    def test_invalid_policy_1(self):
+        pm = PoolManager()
+        with self.assertRaises(ValueError):
+            pm.add_pool(name="pool", policy="invalid_policy")
+
+    def test_invalid_policy_2(self):
+        pm = PoolManager()
+        with self.assertRaises(ValueError):
+            pm.add_pool(name="pool", policy="invalid_policy", max_pool_size=-2)
+
+    def test_keeplatest_bad_max_pool_size(self):
+        pm = PoolManager()
+        with self.assertRaises(AssertionError):
+            pm.add_pool(name="pool", policy="keep_latest", max_pool_size=-2)
+
+    def test_keeplatest_add(self):
+        pm = PoolManager()
+        pm.add_pool(name="pool", policy="keep_latest", max_pool_size=2)
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        assert pm.get_pool_dicts() == {
+            "pool": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool",
+                    "policy": "keep_latest",
+                },
+                "pool_config": {"max_pool_size": 2},
+                "solutions": {
+                    1: {
+                        "id": 1,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 0,
+                            }
+                        ],
+                    },
+                    2: {
+                        "id": 2,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 1,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
+
+    def test_keeplatestunique_bad_max_pool_size(self):
+        pm = PoolManager()
+        with self.assertRaises(AssertionError):
+            pm.add_pool(name="pool", policy="keep_latest_unique", max_pool_size=-2)
+
+    def test_keeplatestunique_add(self):
+        pm = PoolManager()
+        pm.add_pool(name="pool", policy="keep_latest_unique", max_pool_size=2)
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))
+        assert retval is None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        assert pm.get_pool_dicts() == {
+            "pool": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool",
+                    "policy": "keep_latest_unique",
+                },
+                "pool_config": {"max_pool_size": 2},
+                "solutions": {
+                    0: {
+                        "id": 0,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 0}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 0,
+                            }
+                        ],
+                    },
+                    1: {
+                        "id": 1,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 1,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
+
+    def test_keepbest_bad_max_pool_size(self):
+        pm = PoolManager()
+        with self.assertRaises(AssertionError):
+            pm.add_pool(name="pool", policy="keep_best", max_pool_size=-2)
+
+    def test_pool_manager_to_dict_passthrough(self):
+        pm = PoolManager()
+        pm = PoolManager()
+        pm.add_pool(name="pool", policy="keep_best", abs_tolerance=1)
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))  # not unique
+        assert retval is None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        assert pm.to_dict() == {
+            "metadata": {
+                "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                "context_name": "pool",
+                "policy": "keep_best",
+            },
+            "pool_config": {
+                'abs_tolerance': 1,
+                'best_value': 0,
+                'max_pool_size': None,
+                'objective': 0,
+                'rel_tolerance': None,
+                'sense_is_min': True,
+            },
+            "solutions": {
+                0: {
+                    "id": 0,
+                    "objectives": [
+                        {"index": None, "name": None, "suffix": {}, "value": 0}
+                    ],
+                    "suffix": {},
+                    "variables": [
+                        {
+                            "discrete": False,
+                            "fixed": False,
+                            "index": None,
+                            "name": None,
+                            "suffix": {},
+                            "value": 0,
+                        }
+                    ],
+                },
+                1: {
+                    "id": 1,
+                    "objectives": [
+                        {"index": None, "name": None, "suffix": {}, "value": 1}
+                    ],
+                    "suffix": {},
+                    "variables": [
+                        {
+                            "discrete": False,
+                            "fixed": False,
+                            "index": None,
+                            "name": None,
+                            "suffix": {},
+                            "value": 1,
+                        }
+                    ],
+                },
+            },
+        }
+
+    def test_keepbest_add1(self):
+        pm = PoolManager()
+        pm.add_pool(name="pool", policy="keep_best", abs_tolerance=1)
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))  # not unique
+        assert retval is None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        assert pm.get_pool_dicts() == {
+            "pool": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool",
+                    "policy": "keep_best",
+                },
+                "pool_config": {
+                    'abs_tolerance': 1,
+                    'best_value': 0,
+                    'max_pool_size': None,
+                    'objective': 0,
+                    'rel_tolerance': None,
+                    'sense_is_min': True,
+                },
+                "solutions": {
+                    0: {
+                        "id": 0,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 0}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 0,
+                            }
+                        ],
+                    },
+                    1: {
+                        "id": 1,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 1,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
+
+    def test_keepbest_add2(self):
+        pm = PoolManager()
+        pm.add_pool(name="pool", policy="keep_best", abs_tolerance=1)
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))  # not unique
+        assert retval is None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        retval = pm.add(soln(2, -1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        retval = pm.add(soln(3, -0.5))
+        assert retval is not None
+        assert len(pm) == 3
+
+        assert pm.get_pool_dicts() == {
+            "pool": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool",
+                    "policy": "keep_best",
+                },
+                "pool_config": {
+                    'abs_tolerance': 1,
+                    'best_value': -1,
+                    'max_pool_size': None,
+                    'objective': 0,
+                    'rel_tolerance': None,
+                    'sense_is_min': True,
+                },
+                "solutions": {
+                    0: {
+                        "id": 0,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": 0}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 0,
+                            }
+                        ],
+                    },
+                    2: {
+                        "id": 2,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 2,
+                            }
+                        ],
+                    },
+                    3: {
+                        "id": 3,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -0.5}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 3,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
+
+        retval = pm.add(soln(4, -1.5))
+        assert retval is not None
+        assert len(pm) == 3
+
+        assert pm.get_pool_dicts() == {
+            "pool": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool",
+                    "policy": "keep_best",
+                },
+                "pool_config": {
+                    "abs_tolerance": 1,
+                    'best_value': -1.5,
+                    "max_pool_size": None,
+                    "objective": 0,
+                    "rel_tolerance": None,
+                    'sense_is_min': True,
+                },
+                "solutions": {
+                    2: {
+                        "id": 2,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 2,
+                            }
+                        ],
+                    },
+                    3: {
+                        "id": 3,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -0.5}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 3,
+                            }
+                        ],
+                    },
+                    4: {
+                        "id": 4,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -1.5}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 4,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
+
+    def test_keepbest_add3(self):
+        pm = PoolManager()
+        pm.add_pool(name="pool", policy="keep_best", abs_tolerance=1, max_pool_size=2)
+
+        retval = pm.add(soln(0, 0))
+        assert retval is not None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(0, 1))  # not unique
+        assert retval is None
+        assert len(pm) == 1
+
+        retval = pm.add(soln(1, 1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        retval = pm.add(soln(2, -1))
+        assert retval is not None
+        assert len(pm) == 2
+
+        retval = pm.add(soln(3, -0.5))
+        assert retval is not None
+        assert len(pm) == 2
+
+        assert pm.get_pool_dicts() == {
+            "pool": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool",
+                    "policy": "keep_best",
+                },
+                "pool_config": {
+                    "abs_tolerance": 1,
+                    'best_value': -1,
+                    "max_pool_size": 2,
+                    "objective": 0,
+                    "rel_tolerance": None,
+                    'sense_is_min': True,
+                },
+                "solutions": {
+                    2: {
+                        "id": 2,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 2,
+                            }
+                        ],
+                    },
+                    3: {
+                        "id": 3,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -0.5}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 3,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
+
+        retval = pm.add(soln(4, -1.5))
+        assert retval is not None
+        assert len(pm) == 2
+
+        assert pm.get_pool_dicts() == {
+            "pool": {
+                "metadata": {
+                    "as_solution_source": "pyomo.contrib.alternative_solutions.solnpool._as_solution",
+                    "context_name": "pool",
+                    "policy": "keep_best",
+                },
+                "pool_config": {
+                    "abs_tolerance": 1,
+                    'best_value': -1.5,
+                    "max_pool_size": 2,
+                    "objective": 0,
+                    "rel_tolerance": None,
+                    "sense_is_min": True,
+                },
+                "solutions": {
+                    2: {
+                        "id": 2,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -1}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 2,
+                            }
+                        ],
+                    },
+                    4: {
+                        "id": 4,
+                        "objectives": [
+                            {"index": None, "name": None, "suffix": {}, "value": -1.5}
+                        ],
+                        "suffix": {},
+                        "variables": [
+                            {
+                                "discrete": False,
+                                "fixed": False,
+                                "index": None,
+                                "name": None,
+                                "suffix": {},
+                                "value": 4,
+                            }
+                        ],
+                    },
+                },
+            }
+        }
