@@ -13,6 +13,7 @@ import datetime
 import io
 import math
 import os
+import logging
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigValue
@@ -43,6 +44,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
@@ -435,7 +437,9 @@ class GurobiDirectBase(SolverBase):
             results.incumbent_objective = None
             results.objective_bound = None
 
-        results.iteration_count = grb_model.getAttr('IterCount')
+        results.extra_info.IterCount = grb_model.getAttr('IterCount')
+        results.extra_info.BarIterCount = grb_model.getAttr('BarIterCount')
+        results.extra_info.NodeCount = grb_model.getAttr('NodeCount')
 
         self.config.timer.start('load solution')
         if self.config.load_solutions:
