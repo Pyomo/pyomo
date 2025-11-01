@@ -14,6 +14,7 @@ import io
 import math
 import os
 import logging
+from typing import Mapping, Optional, Sequence, Dict
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigValue
@@ -24,6 +25,7 @@ from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.base import VarData, ConstraintData
 
 from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import BranchAndBoundConfig
@@ -39,10 +41,8 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-import logging
+from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
-
-logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +80,8 @@ class GurobiConfig(BranchAndBoundConfig):
 def _load_suboptimal_mip_solution(solver_model, var_map, vars_to_load, solution_number):
     """
     solver_model: gurobipy.Model
-    var_map: Dict[int, gurobipy.Var]
-        Maps the id of the pyomo variable to the gurobipy variable
+    var_map: Mapping[VarData, gurobipy.Var]
+        Maps the pyomo variable to the gurobipy variable
     vars_to_load: List[VarData]
     solution_number: int
     """
@@ -92,11 +92,9 @@ def _load_suboptimal_mip_solution(solver_model, var_map, vars_to_load, solution_
         raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
     original_solution_number = solver_model.getParamInfo('SolutionNumber')[2]
     solver_model.setParam('SolutionNumber', solution_number)
-    gurobi_vars_to_load = [var_map[id(v)] for v in vars_to_load]
+    gurobi_vars_to_load = [var_map[v] for v in vars_to_load]
     vals = solver_model.getAttr("Xn", gurobi_vars_to_load)
-    res = ComponentMap()
-    for var, val in zip(vars_to_load, vals):
-        res[var] = val
+    res = ComponentMap(zip(vars_to_load, vals))
     solver_model.setParam('SolutionNumber', original_solution_number)
     return res
 
@@ -104,8 +102,8 @@ def _load_suboptimal_mip_solution(solver_model, var_map, vars_to_load, solution_
 def _load_vars(solver_model, var_map, vars_to_load, solution_number=0):
     """
     solver_model: gurobipy.Model
-    var_map: Dict[int, gurobipy.Var]
-        Maps the id of the pyomo variable to the gurobipy variable
+    var_map: Mapping[VarData, gurobipy.Var]
+        Maps the pyomo variable to the gurobipy variable
     vars_to_load: List[VarData]
     solution_number: int
     """
@@ -122,8 +120,8 @@ def _load_vars(solver_model, var_map, vars_to_load, solution_number=0):
 def _get_primals(solver_model, var_map, vars_to_load, solution_number=0):
     """
     solver_model: gurobipy.Model
-    var_map: Dict[int, gurobipy.Var]
-        Maps the id of the pyomo variable to the gurobipy variable
+    var_map: Mapping[Vardata, gurobipy.Var]
+        Maps the pyomo variable to the gurobipy variable
     vars_to_load: List[VarData]
     solution_number: int
     """
@@ -138,57 +136,120 @@ def _get_primals(solver_model, var_map, vars_to_load, solution_number=0):
             solution_number=solution_number,
         )
 
-    gurobi_vars_to_load = [var_map[id(v)] for v in vars_to_load]
+    gurobi_vars_to_load = [var_map[v] for v in vars_to_load]
     vals = solver_model.getAttr("X", gurobi_vars_to_load)
 
-    res = ComponentMap()
-    for var, val in zip(vars_to_load, vals):
-        res[var] = val
+    res = ComponentMap(zip(vars_to_load, vals))
     return res
 
 
 def _get_reduced_costs(solver_model, var_map, vars_to_load):
     """
     solver_model: gurobipy.Model
-    var_map: Dict[int, gurobipy.Var]
-        Maps the id of the pyomo variable to the gurobipy variable
+    var_map: Mapping[VarData, gurobipy.Var]
+        Maps the pyomo variable to the gurobipy variable
     vars_to_load: List[VarData]
     """
     if solver_model.Status != gurobipy.GRB.OPTIMAL:
         raise NoReducedCostsError()
+    if solver_model.IsMIP:
+        # this will also return True for continuous, nonconvex models
+        raise NoDualsError()
 
-    res = ComponentMap()
-    gurobi_vars_to_load = [var_map[id(v)] for v in vars_to_load]
+    gurobi_vars_to_load = [var_map[v] for v in vars_to_load]
     vals = solver_model.getAttr("Rc", gurobi_vars_to_load)
 
-    for var, val in zip(vars_to_load, vals):
-        res[var] = val
-
+    res = ComponentMap(zip(vars_to_load, vals))
     return res
 
 
-def _get_duals(solver_model, con_map, linear_cons_to_load, quadratic_cons_to_load):
+def _get_duals(solver_model, con_map, cons_to_load):
     """
     solver_model: gurobipy.Model
     con_map: Dict[ConstraintData, gurobipy.Constr]
         Maps the pyomo constraint to the gurobipy constraint
-    linear_cons_to_load: List[ConstraintData]
-    quadratic_cons_to_load: List[ConstraintData]
+    cons_to_load: List[ConstraintData]
     """
     if solver_model.Status != gurobipy.GRB.OPTIMAL:
         raise NoDualsError()
-
-    linear_gurobi_cons = [con_map[c] for c in linear_cons_to_load]
-    quadratic_gurobi_cons = [con_map[c] for c in quadratic_cons_to_load]
-    linear_vals = solver_model.getAttr("Pi", linear_gurobi_cons)
-    quadratic_vals = solver_model.getAttr("QCPi", quadratic_gurobi_cons)
-
+    if solver_model.IsMIP:
+        # this will also return True for continuous, nonconvex models
+        raise NoDualsError()
+    
+    qcons = set(solver_model.getQConstrs())
+    
     duals = {}
-    for c, val in zip(linear_cons_to_load, linear_vals):
-        duals[c] = val
-    for c, val in zip(quadratic_cons_to_load, quadratic_vals):
-        duals[c] = val
+    for c in cons_to_load:
+        gurobi_con = con_map[c]
+        if gurobi_con in qcons:
+            duals[c] = gurobi_con.QCPi
+        else:
+            duals[c] = gurobi_con.Pi
+
     return duals
+
+
+class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
+    def __init__(
+        self, solver_model, var_map, con_map,
+    ) -> None:
+        super().__init__()
+        self._solver_model = solver_model
+        self._var_map = var_map
+        self._con_map = con_map
+        GurobiDirectBase._register_env_client()
+
+    def __del__(self):
+        # Release the gurobi license if this is the last reference to
+        # the environment (either through a results object or solver
+        # interface)
+        GurobiDirectBase._release_env_client()
+
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+    ) -> None:
+        if vars_to_load is None:
+            vars_to_load = self._var_map
+        _load_vars(
+            solver_model=self._solver_model,
+            var_map=self._var_map,
+            vars_to_load=vars_to_load,
+            solution_number=solution_id,
+        )
+
+    def get_primals(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+    ) -> Mapping[VarData, float]:
+        if vars_to_load is None:
+            vars_to_load = self._var_map
+        return _get_primals(
+            solver_model=self._solver_model,
+            var_map=self._var_map,
+            vars_to_load=vars_to_load,
+            solution_number=solution_id,
+        )
+
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
+        if vars_to_load is None:
+            vars_to_load = self._var_map
+        return _get_reduced_costs(
+            solver_model=self._solver_model,
+            var_map=self._var_map,
+            vars_to_load=vars_to_load,
+        )
+
+    def get_duals(
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
+        if cons_to_load is None:
+            cons_to_load = self._con_map
+        return _get_duals(
+            solver_model=self._solver_model,
+            con_map=self._con_map,
+            cons_to_load=cons_to_load,
+        )
 
 
 class GurobiDirectBase(SolverBase):

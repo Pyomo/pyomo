@@ -24,10 +24,8 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.contrib.solver.common.util import NoSolutionError
-from pyomo.contrib.solver.solvers.gurobi_direct import (
-    GurobiDirect,
-    GurobiDirectSolutionLoader,
-)
+from .gurobi_direct_base import GurobiDirectBase
+from .gurobi_direct import GurobiDirectSolutionLoader
 
 from pyomo.core.base import (
     Binary,
@@ -584,27 +582,18 @@ class GurobiMINLPWriter:
     doc='Direct interface to Gurobi version 12 and up '
     'supporting general nonlinear expressions',
 )
-class GurobiDirectMINLP(GurobiDirect):
-    def solve(self, model, **kwds):
-        """Solve the model.
+class GurobiDirectMINLP(GurobiDirectBase):
+    _minimum_version = (12, 0, 0)
 
-        Args:
-            model (Block): a Pyomo model or Block to be solved
-        """
-        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        config = self.config(value=kwds, preserve_implicit=True)
-        if not self.available():
-            c = self.__class__
-            raise ApplicationError(
-                f'Solver {c.__module__}.{c.__qualname__} is not available '
-                f'({self.available()}).'
-            )
-        if config.timer is None:
-            config.timer = HierarchicalTimer()
-            timer = config.timer
+    def __init__(self, **kwds):
+        super().__init__(**kwds)
+        self._var_map = None
 
-        StaleFlagManager.mark_all_as_stale()
+    def _pyomo_gurobi_var_iter(self):
+        return self._var_map.items()
 
+    def _create_solver_model(self, pyomo_model):
+        timer = self.config.timer
         timer.start('compile_model')
 
         writer = GurobiMINLPWriter()
@@ -614,50 +603,11 @@ class GurobiDirectMINLP(GurobiDirect):
 
         timer.stop('compile_model')
 
-        ostreams = [io.StringIO()] + config.tee
+        self._var_map = var_map
+        con_map = dict(zip(pyo_cons, grb_cons))
 
-        # set options
-        options = config.solver_options
-
-        grb_model.setParam('LogToConsole', 1)
-
-        if config.threads is not None:
-            grb_model.setParam('Threads', config.threads)
-        if config.time_limit is not None:
-            grb_model.setParam('TimeLimit', config.time_limit)
-        if config.rel_gap is not None:
-            grb_model.setParam('MIPGap', config.rel_gap)
-        if config.abs_gap is not None:
-            grb_model.setParam('MIPGapAbs', config.abs_gap)
-
-        if config.use_mipstart:
-            raise MouseTrap("MIPSTART not yet supported")
-
-        for key, option in options.items():
-            grb_model.setParam(key, option)
-
-        grbsol = grb_model.optimize()
-
-        res = self._postsolve(
-            timer,
-            config,
-            GurobiDirectSolutionLoader(
-                grb_model,
-                grb_cons=grb_cons,
-                grb_vars=var_map.values(),
-                pyo_cons=pyo_cons,
-                pyo_vars=var_map.keys(),
-                pyo_obj=pyo_obj,
-            ),
+        solution_loader = GurobiDirectSolutionLoader(
+            solver_model=grb_model, var_map=var_map, con_map=con_map,
         )
 
-        res.solver_config = config
-        res.solver_name = 'Gurobi'
-        res.solver_version = self.version()
-        res.solver_log = ostreams[0].getvalue()
-
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        res.timing_info.start_timestamp = start_timestamp
-        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
-        res.timing_info.timer = timer
-        return res
+        return grb_model, solution_loader, bool(pyo_obj)

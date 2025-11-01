@@ -33,7 +33,6 @@ from pyomo.contrib.solver.common.util import (
 )
 from pyomo.contrib.solver.solvers.gurobi import (
     GurobiDirect,
-    GurobiDirectQuadratic,
     GurobiPersistent,
     GurobiDirectMINLP,
 )
@@ -55,7 +54,6 @@ if not param_available:
 all_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
-    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('highs', Highs),
@@ -64,7 +62,6 @@ all_solvers = [
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
-    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('highs', Highs),
     ('knitro_direct', KnitroDirectSolver),
@@ -77,7 +74,6 @@ nlp_solvers = [
 qcp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
-    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('ipopt', Ipopt),
     ('knitro_direct', KnitroDirectSolver),
 ]
@@ -85,7 +81,6 @@ qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('gurobi_persistent', GurobiPersistent),
-    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
     ('knitro_direct', KnitroDirectSolver),
 ]
 nl_solvers = [('ipopt', Ipopt)]
