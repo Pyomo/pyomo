@@ -40,7 +40,7 @@ from pyomo.environ import (
 )
 from pyomo.gdp import Disjunction
 from pyomo.opt import WriterFactory
-from pyomo.contrib.solver.solvers.gurobi_direct_minlp import (
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
     GurobiDirectMINLP,
     GurobiMINLPVisitor,
 )

@@ -12,9 +12,9 @@
 
 from .common.factory import SolverFactory
 from .solvers.ipopt import Ipopt, LegacyIpoptSolver
-from .solvers.gurobi_persistent import GurobiPersistent
-from .solvers.gurobi_direct import GurobiDirect
-from .solvers.gurobi_direct_minlp import GurobiDirectMINLP
+from .solvers.gurobi.gurobi_direct import GurobiDirect
+from .solvers.gurobi.gurobi_persistent import GurobiPersistent
+from .solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
 from .solvers.highs import Highs
 from .solvers.knitro.direct import KnitroDirectSolver
 
@@ -39,7 +39,7 @@ def load():
         doc='Direct interface to Gurobi accommodating general MINLP',
     )(GurobiDirectMINLP)
     SolverFactory.register(
-        name="highs", legacy_name="highs", doc="Persistent interface to HiGHS"
+        name="highs", legacy_name="highs_v2", doc="Persistent interface to HiGHS"
     )(Highs)
     SolverFactory.register(
         name="knitro_direct",

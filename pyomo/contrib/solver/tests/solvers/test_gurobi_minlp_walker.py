@@ -14,7 +14,7 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr import ProductExpression, SumExpression
 from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
-from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiMINLPVisitor
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import GurobiMINLPVisitor
 from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
 )
