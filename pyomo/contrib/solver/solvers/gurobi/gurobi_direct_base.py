@@ -175,9 +175,9 @@ def _get_duals(solver_model, con_map, cons_to_load):
     if solver_model.IsMIP:
         # this will also return True for continuous, nonconvex models
         raise NoDualsError()
-    
+
     qcons = set(solver_model.getQConstrs())
-    
+
     duals = {}
     for c in cons_to_load:
         gurobi_con = con_map[c]
@@ -200,9 +200,7 @@ def _get_duals(solver_model, con_map, cons_to_load):
 
 
 class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
-    def __init__(
-        self, solver_model, var_map, con_map,
-    ) -> None:
+    def __init__(self, solver_model, var_map, con_map) -> None:
         super().__init__()
         self._solver_model = solver_model
         self._var_map = var_map

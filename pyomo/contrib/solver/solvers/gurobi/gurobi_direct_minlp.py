@@ -607,7 +607,7 @@ class GurobiDirectMINLP(GurobiDirectBase):
         con_map = dict(zip(pyo_cons, grb_cons))
 
         solution_loader = GurobiDirectSolutionLoader(
-            solver_model=grb_model, var_map=var_map, con_map=con_map,
+            solver_model=grb_model, var_map=var_map, con_map=con_map
         )
 
         return grb_model, solution_loader, bool(pyo_obj)

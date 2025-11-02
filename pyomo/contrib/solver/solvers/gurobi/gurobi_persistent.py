@@ -50,12 +50,8 @@ logger = logging.getLogger(__name__)
 
 
 class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
-    def __init__(
-        self, solver_model, var_map, con_map,
-    ) -> None:
-        super().__init__(
-            solver_model, var_map, con_map,
-        )
+    def __init__(self, solver_model, var_map, con_map) -> None:
+        super().__init__(solver_model, var_map, con_map)
         self._valid = True
 
     def invalidate(self):
@@ -410,9 +406,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         self._solver_model = gurobipy.Model(env=self.env())
         timer.start('set_instance')
         self._change_detector = ModelChangeDetector(
-            model=self._pyomo_model,
-            observers=[self],
-            **dict(self.config.auto_updates),
+            model=self._pyomo_model, observers=[self], **dict(self.config.auto_updates)
         )
         self._change_detector.config = self.config.auto_updates
         timer.stop('set_instance')
@@ -737,14 +731,18 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
                 gurobipy_var.setAttr('ub', ub)
                 gurobipy_var.setAttr('vtype', vtype)
             if reason & Reason.fixed:
-                cons_to_reprocess.update(self._change_detector.get_constraints_impacted_by_var(v))
+                cons_to_reprocess.update(
+                    self._change_detector.get_constraints_impacted_by_var(v)
+                )
                 objs = self._change_detector.get_objectives_impacted_by_var(v)
                 if objs:
                     assert len(objs) == 1
                     assert objs[0] is self._objective
                     reprocess_obj = True
             elif (reason & Reason.value) and v.fixed:
-                cons_to_update.update(self._change_detector.get_constraints_impacted_by_var(v))
+                cons_to_update.update(
+                    self._change_detector.get_constraints_impacted_by_var(v)
+                )
                 objs = self._change_detector.get_objectives_impacted_by_var(v)
                 if objs:
                     assert len(objs) == 1
@@ -879,14 +877,18 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             if reason & Reason.removed:
                 continue
             if reason & Reason.value:
-                cons_to_update.update(self._change_detector.get_constraints_impacted_by_param(p))
+                cons_to_update.update(
+                    self._change_detector.get_constraints_impacted_by_param(p)
+                )
                 objs = self._change_detector.get_objectives_impacted_by_param(p)
                 if objs:
                     assert len(objs) == 1
                     assert objs[0] is self._objective
                     update_obj = True
-                vars_to_update.update(self._change_detector.get_variables_impacted_by_param(p))
-        
+                vars_to_update.update(
+                    self._change_detector.get_variables_impacted_by_param(p)
+                )
+
         for c in cons_to_update:
             if c in self._mutable_helpers:
                 for i in self._mutable_helpers[c]:

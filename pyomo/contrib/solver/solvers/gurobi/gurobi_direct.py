@@ -23,7 +23,11 @@ from pyomo.contrib.solver.common.util import (
     IncompatibleModelError,
 )
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
-from .gurobi_direct_base import GurobiDirectBase, gurobipy, GurobiDirectSolutionLoaderBase
+from .gurobi_direct_base import (
+    GurobiDirectBase,
+    gurobipy,
+    GurobiDirectSolutionLoaderBase,
+)
 import logging
 
 
@@ -123,7 +127,7 @@ class GurobiDirect(GurobiDirectBase):
             else:
                 con_map[pc] = gc
         solution_loader = GurobiDirectSolutionLoader(
-            solver_model=gurobi_model, var_map=var_map, con_map=con_map,
+            solver_model=gurobi_model, var_map=var_map, con_map=con_map
         )
         has_obj = len(repn.objectives) > 0
 
