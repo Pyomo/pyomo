@@ -182,11 +182,11 @@ Now we create a :py:class:`PyomoPoolManager` that is configured with a ``keep_la
 .. doctest::
    :skipif: not glpk_available
 
-   >>> poolmanager = aos.PyomoPoolManager()
-   >>> context = poolmanager.add_pool(policy='keep_latest', max_pool_size=3)
-   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk", poolmanager=poolmanager)
+   >>> pool_manager = aos.PyomoPoolManager()
+   >>> context = pool_manager.add_pool(policy='keep_latest', max_pool_size=3)
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk", pool_manager=pool_manager)
 
-   >>> assert id(poolmanager) == id(solns)
+   >>> assert id(pool_manager) == id(solns)
    >>> print( [soln.id for soln in solns] )
    [6, 7, 8]
 
