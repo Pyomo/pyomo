@@ -30,6 +30,8 @@ from pyomo.contrib.solver.common.util import (
     NoDualsError,
     NoReducedCostsError,
     NoSolutionError,
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
 )
 from pyomo.contrib.solver.solvers.gurobi import (
     GurobiDirect,
@@ -1089,10 +1091,12 @@ class TestSolvers(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.y)
         m.c1 = pyo.Constraint(expr=m.y >= m.x)
         m.c2 = pyo.Constraint(expr=m.y <= m.x - 1)
-        with self.assertRaises(Exception):
+        with self.assertRaises(NoOptimalSolutionError):
+            res = opt.solve(m)
+        opt.config.raise_exception_on_nonoptimal_result = False
+        with self.assertRaises(NoFeasibleSolutionError):
             res = opt.solve(m)
         opt.config.load_solutions = False
-        opt.config.raise_exception_on_nonoptimal_result = False
         res = opt.solve(m)
         self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
         if isinstance(opt, Ipopt):
