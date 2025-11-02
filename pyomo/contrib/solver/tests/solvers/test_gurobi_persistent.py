@@ -584,13 +584,6 @@ class TestManualMode(unittest.TestCase):
         self.assertEqual(opt.get_model_attr('NumConstrs'), 1)
         self.assertEqual(opt.get_model_attr('NumQConstrs'), 0)
 
-        m.z = pyo.Var()
-        opt.add_variables([m.z])
-        self.assertEqual(opt.get_model_attr('NumVars'), 3)
-        opt.remove_variables([m.z])
-        del m.z
-        self.assertEqual(opt.get_model_attr('NumVars'), 2)
-
     def test_update1(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()

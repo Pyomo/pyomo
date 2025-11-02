@@ -114,7 +114,14 @@ class GurobiDirect(GurobiDirectBase):
         self._gurobi_vars = x.tolist()
 
         var_map = ComponentMap(zip(repn.columns, self._gurobi_vars))
-        con_map = dict(zip([i.constraint for i in repn.rows], A.tolist()))
+        con_map = {}
+        for row, gc in zip(repn.rows, A.tolist()):
+            pc = row.constraint
+            if pc in con_map:
+                # range constraint
+                con_map[pc] = (con_map[pc], gc)
+            else:
+                con_map[pc] = gc
         solution_loader = GurobiDirectSolutionLoader(
             solver_model=gurobi_model, var_map=var_map, con_map=con_map,
         )

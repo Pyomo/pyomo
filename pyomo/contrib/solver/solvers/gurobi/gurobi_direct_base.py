@@ -181,10 +181,20 @@ def _get_duals(solver_model, con_map, cons_to_load):
     duals = {}
     for c in cons_to_load:
         gurobi_con = con_map[c]
-        if gurobi_con in qcons:
-            duals[c] = gurobi_con.QCPi
+        if type(gurobi_con) is tuple:
+            # only linear range constraints are supported
+            gc1, gc2 = gurobi_con
+            d1 = gc1.Pi
+            d2 = gc2.Pi
+            if abs(d1) > abs(d2):
+                duals[c] = d1
+            else:
+                duals[c] = d2
         else:
-            duals[c] = gurobi_con.Pi
+            if gurobi_con in qcons:
+                duals[c] = gurobi_con.QCPi
+            else:
+                duals[c] = gurobi_con.Pi
 
     return duals
 

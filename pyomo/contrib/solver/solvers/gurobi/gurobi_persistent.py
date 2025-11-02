@@ -437,8 +437,6 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             )
 
         if len(repn.linear_vars) > 0:
-            #missing_vars = [v for v in repn.linear_vars if id(v) not in self._vars]
-            #self._add_variables(missing_vars)
             coef_list = [value(i) for i in repn.linear_coefs]
             vlist = [self._pyomo_var_to_solver_var_map[v] for v in repn.linear_vars]
             new_expr = gurobipy.LinExpr(coef_list, vlist)
@@ -446,13 +444,6 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             new_expr = 0.0
 
         if len(repn.quadratic_vars) > 0:
-            # missing_vars = {}
-            # for x, y in repn.quadratic_vars:
-            #     for v in [x, y]:
-            #         vid = id(v)
-            #         if vid not in self._vars:
-            #             missing_vars[vid] = v
-            # self._add_variables(list(missing_vars.values()))
             for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
                 gurobi_x = self._pyomo_var_to_solver_var_map[x]
                 gurobi_y = self._pyomo_var_to_solver_var_map[y]
@@ -582,14 +573,8 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             gurobi_vars = []
             weights = []
 
-            missing_vars = {
-                id(v): v for v, w in con.get_items() if id(v) not in self._vars
-            }
-            self._add_variables(list(missing_vars.values()))
-
             for v, w in con.get_items():
-                v_id = id(v)
-                gurobi_vars.append(self._pyomo_var_to_solver_var_map[v_id])
+                gurobi_vars.append(self._pyomo_var_to_solver_var_map[v])
                 weights.append(w)
 
             gurobipy_con = self._solver_model.addSOS(sos_type, gurobi_vars, weights)
@@ -776,8 +761,9 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             self._update_quadratic_constraint(c)
 
         if reprocess_obj:
-            self._remove_objectives([self._objective])
-            self._add_objectives([self._objective])
+            obj = self._objective
+            self._remove_objectives([obj])
+            self._add_objectives([obj])
         elif update_obj:
             self._mutable_objective_update()
 
