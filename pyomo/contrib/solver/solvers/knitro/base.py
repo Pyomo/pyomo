@@ -203,6 +203,11 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
 
     @staticmethod
     def _get_solution_status(status: int) -> SolutionStatus:
+        """
+        Map KNITRO status codes to Pyomo SolutionStatus values.
+
+        See https://www.artelys.com/app/docs/knitro/3_referenceManual/returnCodes.html
+        """
         if status in {0, -100}:
             return SolutionStatus.optimal
         elif -101 >= status >= -199 or -400 >= status >= -409:
@@ -214,6 +219,11 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
 
     @staticmethod
     def _get_termination_condition(status: int) -> TerminationCondition:
+        """
+        Map KNITRO status codes to Pyomo TerminationCondition values.
+
+        See https://www.artelys.com/app/docs/knitro/3_referenceManual/returnCodes.html
+        """
         if status in {0, -100}:
             return TerminationCondition.convergenceCriteriaSatisfied
         elif status == -202:
