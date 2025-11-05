@@ -137,7 +137,7 @@ def obbt_analysis_bounds_and_solutions(
     tee : boolean
         Boolean indicating that the solver output should be displayed.
     pool_manager : None
-        Optional pool manager that will be used to collect solution
+        Optional pool manager that will be used to collect solutions
 
     Returns
     -------

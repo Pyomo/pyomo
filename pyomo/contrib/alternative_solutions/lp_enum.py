@@ -75,7 +75,7 @@ def enumerate_linear_solutions(
     seed : int
         Optional integer seed for the numpy random number generator
     pool_manager : None
-        Optional pool manager that will be used to collect solution
+        Optional pool manager that will be used to collect solutions
 
     Returns
     -------

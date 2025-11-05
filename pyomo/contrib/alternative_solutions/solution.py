@@ -18,13 +18,13 @@ import functools
 
 import pyomo.environ as pyo
 
-from .aos_utils import MyMunch, _to_dict
+from .aos_utils import MyMunch, to_dict
 
 nan = float("nan")
 
 
 def _custom_dict_factory(data):
-    return {k: _to_dict(v) for k, v in data}
+    return {k: to_dict(v) for k, v in data}
 
 
 if sys.version_info >= (3, 10):

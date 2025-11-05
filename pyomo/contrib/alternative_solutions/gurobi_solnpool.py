@@ -59,7 +59,7 @@ def gurobi_generate_solutions(
     tee : boolean
         Boolean indicating that the solver output should be displayed.
     pool_manager : None
-        Optional pool manager that will be used to collect solution
+        Optional pool manager that will be used to collect solutions
     pool_search_mode : 1 or 2
         The generation method for filling the pool.
         This parameter maps to the PoolSearchMode in gurobi.

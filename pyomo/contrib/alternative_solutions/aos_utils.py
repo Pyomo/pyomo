@@ -308,16 +308,16 @@ def get_model_variables(
 class MyMunch(Munch):
     # WEH, MPV needed to add a to_dict since Bunch did not have one
     def to_dict(self):
-        return _to_dict(self)
+        return to_dict(self)
 
 
-def _to_dict(x):
+def to_dict(x):
     xtype = type(x)
-    if xtype in [float, int, complex, str, list, bool] or x is None:
-        return x
-    elif xtype in [tuple, set, frozenset]:
+    if xtype in [tuple, set, frozenset]:
         return list(x)
     elif xtype in [dict, Munch, MyMunch]:
-        return {k: _to_dict(v) for k, v in x.items()}
-    else:
+        return {k: to_dict(v) for k, v in x.items()}
+    elif hasattr(x, "to_dict"):
         return x.to_dict()
+    else:
+        return x

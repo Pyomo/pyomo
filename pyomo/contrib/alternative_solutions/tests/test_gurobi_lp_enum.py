@@ -35,7 +35,7 @@ class TestLPEnumSolnpool(unittest.TestCase):
         Confirm that an exception is thrown with a non-positive num solutions
         """
         n = tc.get_pentagonal_pyramid_mip()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             gurobi_enumerate_linear_solutions(n, num_solutions=-1)
 
     def test_here(self):

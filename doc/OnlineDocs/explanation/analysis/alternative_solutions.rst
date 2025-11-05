@@ -99,11 +99,11 @@ arguments are used to limit the search to these solutions:
 
 * ``rel_opt_gap`` : non-negative float or None
 
-  * The relative optimality gap for allowable alternative solutions.  None implies that there is no limit on the relative optimality gap (i.e. that any feasible solution can be considered).
+  * The relative optimality gap for allowable alternative solutions.  Specifying a gap of ``None`` implies that there is no limit on the relative optimality gap (i.e. that any feasible solution can be considered).
 
 * ``abs_opt_gap`` : non-negative float or None
 
-  * The absolute optimality gap for allowable alternative solutions.  None implies that there is no limit on the absolute optimality gap (i.e. that any feasible solution can be considered).
+  * The absolute optimality gap for allowable alternative solutions.  Specifying a gap of ``None`` implies that there is no limit on the absolute optimality gap (i.e. that any feasible solution can be considered).
 
 For example, we can generate all optimal solutions as follows:
 
@@ -159,7 +159,7 @@ the best solutions might be stored along with all per-iteration solutions in an 
 in the *alternative-solutions library* return a :py:class:`PyomoPoolManager`.  By default, this pool manager uses a solution pool that keeps the best solutions.
 However, the user can provide a pool manager that is used to store solutions.
 
-For example, we can explicit create a pool manager that keeps the latest solutions.  Consider the previous example, where all
+For example, we can explicitly create a pool manager that keeps the latest solutions.  Consider the previous example, where all
 feasible solutions are generated:
 
 .. doctest::

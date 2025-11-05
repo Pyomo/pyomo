@@ -15,23 +15,31 @@ import dataclasses
 import json
 import weakref
 
-from pyomo.contrib.alternative_solutions.aos_utils import MyMunch, _to_dict
+from pyomo.contrib.alternative_solutions.aos_utils import MyMunch, to_dict
 from pyomo.contrib.alternative_solutions.solution import Solution, PyomoSolution
 
 nan = float("nan")
 
 
-def _as_solution(*args, **kwargs):
-    if len(args) == 1 and len(kwargs) == 0:
-        assert type(args[0]) is Solution, "Expected a single solution"
-        return args[0]
+def default_as_solution(*args, **kwargs):
+    """
+    A default function that creates a solution from the args and kwargs that
+    are passed-in to the add() method in a solution pool.
+
+    This passes arguments to the Solution() class constructor, so the API for this method is
+    the same as that method.
+    """
     return Solution(*args, **kwargs)
 
 
 def _as_pyomo_solution(*args, **kwargs):
-    if len(args) == 1 and len(kwargs) == 0:
-        assert type(args[0]) is Solution, "Expected a single solution"
-        return args[0]
+    """
+    A pyomo-specific function that creates a solution from the args and kwargs that
+    are passed-in to the add() method in a solution pool.
+
+    This passes arguments to the PyomoSolution() class constructor, so the API for this method is
+    the same as that method.
+    """
     return PyomoSolution(*args, **kwargs)
 
 
@@ -58,7 +66,7 @@ class SolutionPoolBase:
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution function being used.
+        A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -69,7 +77,7 @@ class SolutionPoolBase:
     def __init__(self, name, as_solution, counter, policy="unspecified"):
         self._solutions = {}
         if as_solution is None:
-            self._as_solution = _as_solution
+            self._as_solution = default_as_solution
         else:
             self._as_solution = as_solution
         if counter is None:
@@ -155,7 +163,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution function being used.
+        A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -181,7 +189,10 @@ class SolutionPool_KeepAll(SolutionPoolBase):
             The ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
-        soln = self._as_solution(*args, **kwargs)
+        if len(args) == 1 and len(kwargs) == 0 and type(args[0]) is Solution:
+            soln = args[0]
+        else:
+            soln = self._as_solution(*args, **kwargs)
         #
         soln.id = self._next_solution_counter()
         assert (
@@ -204,9 +215,9 @@ class SolutionPool_KeepAll(SolutionPoolBase):
             'pool_config' contains a dictionary of details conditional to the SolutionPool type.
         """
         return dict(
-            metadata=_to_dict(self.metadata),
-            solutions=_to_dict(self._solutions),
-            pool_config=_to_dict(self.pool_config),
+            metadata=to_dict(self.metadata),
+            solutions=to_dict(self._solutions),
+            pool_config=to_dict(self.pool_config),
         )
 
 
@@ -225,7 +236,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution function being used.
+        A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -246,10 +257,13 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
     def add(self, *args, **kwargs):
         """
-        Add inputted solution to SolutionPool.
-        Relies on the instance as_solution conversion method to convert inputs to Solution Object.
-        Adds the converted Solution object to the pool dictionary.
-        ID value for the solution generated as next increment of instance PoolCounter.
+        Add inputed solution to SolutionPool.
+
+        This method relies on the instance as_solution conversion function
+        to convert the inputs to a Solution object.  This solution is
+        added to the pool dictionary.  The ID value for the solution
+        generated is the next increment of instance PoolCounter.
+
         When pool size < max_pool_size, new solution is added without deleting old solutions.
         When pool size == max_pool_size, new solution is added and oldest solution deleted.
 
@@ -263,7 +277,10 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
             The ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
-        soln = self._as_solution(*args, **kwargs)
+        if len(args) == 1 and len(kwargs) == 0 and type(args[0]) is Solution:
+            soln = args[0]
+        else:
+            soln = self._as_solution(*args, **kwargs)
         #
         soln.id = self._next_solution_counter()
         assert (
@@ -291,9 +308,9 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
             'pool_config' contains a dictionary of details conditional to the SolutionPool type.
         """
         return dict(
-            metadata=_to_dict(self.metadata),
-            solutions=_to_dict(self._solutions),
-            pool_config=_to_dict(self.pool_config),
+            metadata=to_dict(self.metadata),
+            solutions=to_dict(self._solutions),
+            pool_config=to_dict(self.pool_config),
         )
 
 
@@ -311,7 +328,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution function being used
+        A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -352,7 +369,10 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
             When not present, the ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
-        soln = self._as_solution(*args, **kwargs)
+        if len(args) == 1 and len(kwargs) == 0 and type(args[0]) is Solution:
+            soln = args[0]
+        else:
+            soln = self._as_solution(*args, **kwargs)
         #
         # Return None if the solution has already been added to the pool
         #
@@ -387,9 +407,9 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
             'pool_config' contains a dictionary of details conditional to the SolutionPool type.
         """
         return dict(
-            metadata=_to_dict(self.metadata),
-            solutions=_to_dict(self._solutions),
-            pool_config=_to_dict(self.pool_config),
+            metadata=to_dict(self.metadata),
+            solutions=to_dict(self._solutions),
+            pool_config=to_dict(self.pool_config),
         )
 
 
@@ -415,7 +435,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
-        A value of None will result in the default _as_solution function being used.
+        A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
@@ -423,9 +443,8 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         Value of None results in no max pool limit based on number of solutions.
         If not None, the value must be a positive integer.
         The max_pool_size is the K value for keeping the latest K solutions.
-    objective : None or Function
-        The function to compare solutions based on.
-        None makes the objective be the constant function 0.
+    objective : int
+        The index of the objective function that is used to compare solutions.
     abs_tolerance : None or int
         absolute tolerance from best solution based on objective beyond which to reject a solution.
         None results in absolute tolerance test passing new solution.
@@ -447,7 +466,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         counter=None,
         *,
         max_pool_size=None,
-        objective=None,
+        objective=0,
         abs_tolerance=0.0,
         rel_tolerance=None,
         sense_is_min=True,
@@ -458,7 +477,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             max_pool_size >= 1
         ), "max_pool_size must be None or positive integer"
         self.max_pool_size = max_pool_size
-        self.objective = 0 if objective is None else objective
+        self.objective = objective
         self.abs_tolerance = abs_tolerance
         self.rel_tolerance = rel_tolerance
         self.sense_is_min = sense_is_min
@@ -498,7 +517,10 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             When not present, the ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
-        soln = self._as_solution(*args, **kwargs)
+        if len(args) == 1 and len(kwargs) == 0 and type(args[0]) is Solution:
+            soln = args[0]
+        else:
+            soln = self._as_solution(*args, **kwargs)
         #
         # Return None if the solution has already been added to the pool
         #
@@ -534,54 +556,52 @@ class SolutionPool_KeepBest(SolutionPoolBase):
                 # Keep if the absolute or relative difference with the best value is small enough
                 keep = True
 
-        if keep:
-            soln.id = self._next_solution_counter()
-            assert (
-                soln.id not in self._solutions
-            ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
-            #
-            self._solutions[soln.id] = soln
-            #
-            item = HeapItem(value=-value if self.sense_is_min else value, id=soln.id)
-            if self.max_pool_size is None or len(self._heap) < self.max_pool_size:
-                # There is room in the pool, so we just add it
-                heapq.heappush(self._heap, item)
-            else:
-                # We add the item to the pool and pop the worst item in the pool
-                item = heapq.heappushpop(self._heap, item)
-                del self._solutions[item.id]
+        if not keep:
+            return None
 
-            if new_best_value:
-                # We have a new best value, so we need to check that all existing solutions are close enough and re-heapify
-                tmp = []
-                for item in self._heap:
-                    value = -item.value if self.sense_is_min else item.value
-                    diff = (
-                        value - self.best_value
-                        if self.sense_is_min
-                        else self.best_value - value
+        soln.id = self._next_solution_counter()
+        assert (
+            soln.id not in self._solutions
+        ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+        #
+        self._solutions[soln.id] = soln
+        #
+        item = HeapItem(value=-value if self.sense_is_min else value, id=soln.id)
+        if self.max_pool_size is None or len(self._heap) < self.max_pool_size:
+            # There is room in the pool, so we just add it
+            heapq.heappush(self._heap, item)
+        else:
+            # We add the item to the pool and pop the worst item in the pool
+            item = heapq.heappushpop(self._heap, item)
+            del self._solutions[item.id]
+
+        if new_best_value:
+            # We have a new best value, so we need to check that all existing solutions are close enough and re-heapify
+            tmp = []
+            for item in self._heap:
+                value = -item.value if self.sense_is_min else item.value
+                diff = (
+                    value - self.best_value
+                    if self.sense_is_min
+                    else self.best_value - value
+                )
+                if ((self.abs_tolerance is None) or (diff <= self.abs_tolerance)) and (
+                    (self.rel_tolerance is None)
+                    or (
+                        diff / min(math.fabs(value), math.fabs(self.best_value))
+                        <= self.rel_tolerance
                     )
-                    if (
-                        (self.abs_tolerance is None) or (diff <= self.abs_tolerance)
-                    ) and (
-                        (self.rel_tolerance is None)
-                        or (
-                            diff / min(math.fabs(value), math.fabs(self.best_value))
-                            <= self.rel_tolerance
-                        )
-                    ):
-                        tmp.append(item)
-                    else:
-                        del self._solutions[item.id]
-                heapq.heapify(tmp)
-                self._heap = tmp
+                ):
+                    tmp.append(item)
+                else:
+                    del self._solutions[item.id]
+            heapq.heapify(tmp)
+            self._heap = tmp
 
-            assert len(self._solutions) == len(
-                self._heap
-            ), f"Num solutions is {len(self._solutions)} but the heap size is {len(self._heap)}"
-            return soln.id
-
-        return None
+        assert len(self._solutions) == len(
+            self._heap
+        ), f"Num solutions is {len(self._solutions)} but the heap size is {len(self._heap)}"
+        return soln.id
 
     def to_dict(self):
         """
@@ -596,9 +616,9 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             'pool_config' contains a dictionary of details conditional to the SolutionPool type.
         """
         return dict(
-            metadata=_to_dict(self.metadata),
-            solutions=_to_dict(self._solutions),
-            pool_config=_to_dict(self.pool_config),
+            metadata=to_dict(self.metadata),
+            solutions=to_dict(self._solutions),
+            pool_config=to_dict(self.pool_config),
         )
 
 
@@ -774,9 +794,9 @@ class PoolManager:
             This string indicates the policy that is enforced new solution pool.
             Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
             (Default is 'keep_best'.)
-        as_solution : None or Function
-            This function is used to create solution objects from raw data.
-            (Default is None, for which the _as_solution function is used.)
+        as_solution : Function or None
+            Method for converting inputs into Solution objects.
+            A value of None will result in the default_as_solution function being used.
         **kwds
             Other associated arguments that are used to initialize the solution pool.
 
@@ -838,7 +858,8 @@ class PoolManager:
             Metadata attribute of the now active SolutionPool
 
         """
-        assert name in self._pools, f"Unknown pool '{name}'"
+        if not name in self._pools:
+            raise ValueError(f"Unknown pool '{name}'")
         self._name = name
         return self.metadata
 
@@ -974,7 +995,8 @@ class PyomoPoolManager(PoolManager):
     """
     A subclass of PoolManager for handing pools of Pyomo solutions.
 
-    This class redefines the add_pool method to use the _as_pyomo_solution method to construct Solution objects.
+    This class redefines the add_pool method to use the
+    default_as_pyomo_solution method to construct Solution objects.
     Otherwise, this class inherits from PoolManager.
     """
 
@@ -993,9 +1015,9 @@ class PyomoPoolManager(PoolManager):
             This string indicates the policy that is enforced new solution pool.
             Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
             (Default is 'keep_best'.)
-        as_solution : None or Function
-            This function is used to create solution objects from raw data.
-            (Default is None, for which the _as_pyomo_solution method is used.)
+        as_solution : Function or None
+            Method for converting inputs into Solution objects.
+            A value of None will result in the _as_pyomo_solution function being used.
         **kwds
             Other associated arguments that are used to initialize the solution pool.
 
