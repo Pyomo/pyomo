@@ -41,7 +41,6 @@ class TimingHandler(logging.Handler):
 
     Attributes:
         _testRecord (OrderedDict): Current test's timing data collection
-        enabled (bool): Flag to enable/disable timing collection
 
     Example timing data structure:
         {
