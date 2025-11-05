@@ -598,7 +598,7 @@ class GurobiDirectMINLP(GurobiDirectBase):
 
         writer = GurobiMINLPWriter()
         grb_model, var_map, pyo_obj, grb_cons, pyo_cons = writer.write(
-            model, symbolic_solver_labels=config.symbolic_solver_labels
+            pyomo_model, symbolic_solver_labels=self.config.symbolic_solver_labels
         )
 
         timer.stop('compile_model')
