@@ -604,7 +604,13 @@ class GurobiDirectMINLP(GurobiDirectBase):
         timer.stop('compile_model')
 
         self._var_map = var_map
-        con_map = dict(zip(pyo_cons, grb_cons))
+        con_map = {}
+        for pc, gc in zip(pyo_cons, grb_cons):
+            if pc in con_map:
+                # range constraint
+                con_map[pc] = (con_map[pc], gc)
+            else:
+                con_map[pc] = gc
 
         solution_loader = GurobiDirectSolutionLoader(
             solver_model=grb_model, var_map=var_map, con_map=con_map
