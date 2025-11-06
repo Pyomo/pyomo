@@ -1,4 +1,3 @@
-
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -48,9 +47,7 @@ def _get_cuopt_version(cuopt, avail):
 
 
 cuopt, cuopt_available = attempt_import(
-    "cuopt",
-    catch_exceptions=(Exception,),
-    callback = _get_cuopt_version,
+    "cuopt", catch_exceptions=(Exception,), callback=_get_cuopt_version
 )
 
 
