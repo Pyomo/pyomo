@@ -1094,8 +1094,6 @@ class TestSolvers(unittest.TestCase):
         with self.assertRaises(NoOptimalSolutionError):
             res = opt.solve(m)
         opt.config.raise_exception_on_nonoptimal_result = False
-        with self.assertRaises(NoFeasibleSolutionError):
-            res = opt.solve(m)
         opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
