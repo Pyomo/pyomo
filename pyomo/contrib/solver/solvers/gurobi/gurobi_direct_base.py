@@ -66,8 +66,8 @@ class GurobiConfig(BranchAndBoundConfig):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.use_mipstart: bool = self.declare(
-            'use_mipstart',
+        self.warmstart_discrete_vars: bool = self.declare(
+            'warmstart_discrete_vars',
             ConfigValue(
                 default=False,
                 domain=bool,
@@ -411,7 +411,7 @@ class GurobiDirectBase(SolverBase):
                 if config.abs_gap is not None:
                     gurobi_model.setParam('MIPGapAbs', config.abs_gap)
 
-                if config.use_mipstart:
+                if config.warmstart_discrete_vars:
                     self._mipstart()
 
                 for key, option in options.items():
