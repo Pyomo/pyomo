@@ -52,6 +52,10 @@ pyomo_core_base_param, _ = attempt_import('pyomo.core.base.param')
 
 logger = logging.getLogger(__name__)
 
+# it is not clear what to import to get to the built-in "generator"
+# type.  We will just create a generator and query its __class__
+generator_like_types = {(_ for _ in ()).__class__, map}
+
 
 class _NotSpecified(object):
     pass
@@ -1079,6 +1083,10 @@ class _template_iter_context(object):
         return self._group
 
     def sum_template(self, generator):
+        if generator.__class__ not in generator_like_types:
+            raise TemplateExpressionError(
+                "Cannot generate templates of sums over non-generators"
+            )
         init_cache = len(self.cache)
         expr = next(generator)
         final_cache = len(self.cache)
