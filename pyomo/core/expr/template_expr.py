@@ -1213,7 +1213,11 @@ def templatize_rule(block, rule, index_set):
             if internal_error is not None:
                 logger.error(
                     "The following exception was raised when "
-                    "templatizing the rule '%s':\n\t%s" % (rule.name, internal_error[1])
+                    "templatizing the rule '%s':\n\t%s"
+                    % (
+                        getattr(rule, '_fcn', rule.__class__).__name__,
+                        internal_error[1],
+                    )
                 )
             raise TemplateExpressionError(
                 None,
