@@ -19,6 +19,7 @@ from pyomo.common.numeric_types import native_types, native_numeric_types
 import pyomo.core.expr as expr
 import pyomo.repn.linear as linear
 
+from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.expr import ExpressionType
 from pyomo.repn.linear import LinearRepn
 from pyomo.repn.util import ExprType, initialize_exit_node_dispatcher, val2str
@@ -391,8 +392,22 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             smap = self.symbolmap
             expr, indices = template_info
             args = [smap.getSymbol(i) for i in indices]
-            if expr.is_expression_type(ExpressionType.RELATIONAL):
-                lb, body, ub = obj.to_bounded_expression()
+            if expr is IndexedComponent.Skip:
+                body = lambda i, c, *ind: 0
+                lb = ub = None
+            elif expr.is_expression_type(ExpressionType.RELATIONAL):
+                try:
+                    lb, body, ub = obj.to_bounded_expression()
+                except InvalidConstraintError:
+                    # Ignore the variable lower/upper bound error (for
+                    # now).  We will check later that the individual
+                    # bounds contain no non-fixed linear terms.
+                    #
+                    # Note: the only way to get this exception is if the
+                    # obj is a RangedExpression, so we know that there
+                    # will be 3 args (and this will explicitly fail if
+                    # that is not the case)
+                    lb, body, ub = expr.args
                 if body is not None:
                     body = self.walk_expression(body).compile(
                         env, smap, self.expr_cache, args, False
@@ -405,13 +420,11 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
                     ub = self.walk_expression(ub).compile(
                         env, smap, self.expr_cache, args, True
                     )
-            elif expr is not None:
+            else:
                 lb = ub = None
                 body = self.walk_expression(expr).compile(
                     env, smap, self.expr_cache, args, False
                 )
-            else:
-                body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
 
         linear_indices = []
@@ -425,11 +438,33 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         if lb.__class__ is code_type:
             lb = lb(linear_indices, linear_data, *index)
             if linear_indices:
-                raise RuntimeError(f"Constraint {obj} has non-fixed lower bound")
+                # Note that we will only get here for Ranged constraints
+                # with potentially variable bounds.
+                vl = self.var_recorder.var_list
+                for i, coef in zip(linear_indices, linear_data):
+                    v = vl[i]
+                    if not v.fixed:
+                        raise RuntimeError(
+                            f"Constraint {obj} has non-fixed lower bound"
+                        )
+                    lb += v.value * coef
+                linear_indices = []
+                linear_data = []
         if ub.__class__ is code_type:
             ub = ub(linear_indices, linear_data, *index)
             if linear_indices:
-                raise RuntimeError(f"Constraint {obj} has non-fixed upper bound")
+                # Note that we will only get here for Ranged constraints
+                # with potentially variable bounds.
+                vl = self.var_recorder.var_list
+                for i, coef in zip(linear_indices, linear_data):
+                    v = vl[i]
+                    if not v.fixed:
+                        raise RuntimeError(
+                            f"Constraint {obj} has non-fixed upper bound"
+                        )
+                    ub += v.value * coef
+                linear_indices = []
+                linear_data = []
         return (
             body(linear_indices, linear_data, *index),
             linear_indices,
