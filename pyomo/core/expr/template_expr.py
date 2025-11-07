@@ -1090,7 +1090,10 @@ class _template_iter_context(object):
         init_cache = len(self.cache)
         expr = next(generator)
         final_cache = len(self.cache)
-        return TemplateSumExpression((expr,), self.npop_cache(final_cache - init_cache))
+        if init_cache == final_cache:
+            return _TemplateIterManager.builtin_sum(generator, start=expr)
+        iters = self.npop_cache(final_cache - init_cache)
+        return TemplateSumExpression((expr,), iters)
 
 
 class _template_iter_manager(object):
