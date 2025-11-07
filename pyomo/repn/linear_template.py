@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from copy import deepcopy
 from itertools import chain
 
@@ -190,35 +191,55 @@ class LinearTemplateRepn(LinearRepn):
             constant += subconst
         return ans, constant
 
-    def compile(self, env, smap, expr_cache, args, remove_fixed_vars=False):
+    def _build_evaluator_fcn(self, args, smap, expr_cache, remove_fixed_vars):
         ans, constant = self._build_evaluator(smap, expr_cache, 1, 1, remove_fixed_vars)
         if not ans:
-            return constant
+            return lambda _ind, _dat, *_args: constant, None
         indent = '\n    '
         if not constant and ans and ans[0].startswith('const +='):
             # Convert initial "const +=" to "const ="
-            ans[0] = ''.join(ans[0].split('+', 1))
+            const_init = ''.join(ans[0].split('+', 1))
+            fcn_body = indent.join(ans[1:])
         else:
-            ans.insert(0, 'const = ' + repr(constant))
-        fcn_body = indent.join(ans[1:])
+            const_init = 'const = ' + repr(constant)
+            fcn_body = indent.join(ans)
         if 'const' not in fcn_body:
             # No constants in the expression.  Move the initial const
             # term to the return value and avoid declaring the local
             # variable
-            ans = ['return ' + ans[0].split('=', 1)[1]]
-            if fcn_body:
-                ans.insert(0, fcn_body)
+            ret = 'return ' + const_init.split('=', 1)[1].strip()
+            const_init = None
         else:
-            ans = [ans[0], fcn_body, 'return const']
-        ans.insert(
-            0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
+            ret = 'return const'
+
+        fname = 'build_expr'
+        args = ', '.join(args)
+        return (
+            indent.join(
+                filter(
+                    None,
+                    (
+                        f"def {fname}(linear_indices, linear_data, {args}):",
+                        const_init,
+                        fcn_body,
+                        ret,
+                    ),
+                )
+            ),
+            fname,
         )
-        ans = indent.join(ans)
+
+    def compile(self, env, smap, expr_cache, args, remove_fixed_vars=False):
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
-        exec(ans, env)
-        return env.pop('build_expr')
+        fcn, fcn_name = self._build_evaluator_fcn(
+            args, smap, expr_cache, remove_fixed_vars
+        )
+        if not fcn_name:
+            return fcn
+        exec(fcn, env)
+        return env.pop(fcn_name)
 
 
 class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
