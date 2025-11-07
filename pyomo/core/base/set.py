@@ -2627,7 +2627,7 @@ class SetOf(SetData, Component):
     def dimen(self):
         if isinstance(self._ref, SetData):
             return self._ref.dimen
-        _iter = iter(self)
+        _iter = iter(self._ref)
         try:
             x = next(_iter)
             if type(x) is tuple:
@@ -2635,7 +2635,7 @@ class SetOf(SetData, Component):
             else:
                 ans = 1
         except:
-            return 0
+            return None
         for x in _iter:
             _this = len(x) if type(x) is tuple else 1
             if _this != ans:
