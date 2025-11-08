@@ -379,9 +379,10 @@ class _LinearStandardFormCompiler_impl(object):
         obj_index_ptr = [0]
         for obj in objectives:
             if hasattr(obj, 'template_expr'):
-                offset, linear_index, linear_data, _, _ = (
+                offset, linear_index, linear_data, lb, ub = (
                     template_visitor.expand_expression(obj, obj.template_expr())
                 )
+                assert lb is None and ub is None
                 N = len(linear_index)
                 obj_index.append(linear_index)
                 obj_data.append(linear_data)
@@ -433,7 +434,8 @@ class _LinearStandardFormCompiler_impl(object):
                 )
                 N = len(linear_data)
             else:
-                # Note: lb and ub could be a number, expression, or None
+                # Note: lb and ub could be a number, expression, or None.
+                # Non-fixed expressions will raise an InvalidConstraintError.
                 lb, body, ub = con.to_bounded_expression()
                 if lb.__class__ not in native_types:
                     lb = value(lb)
