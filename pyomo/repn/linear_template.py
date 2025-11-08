@@ -343,7 +343,7 @@ def _handle_templatesum(visitor, node, comp, *args):
         ans.linear_sum.append((comp[1], node.template_iters(), [a[1] for a in args]))
         return _LINEAR, ans
     else:
-        raise DeveloperError()
+        raise DeveloperError(comp)
 
 
 def define_exit_node_handlers(_exit_node_handlers=None):
