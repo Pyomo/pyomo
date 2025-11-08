@@ -816,6 +816,7 @@ class OrderedVarRecorder(object):
         self.var_map = var_map
         self.var_order = var_order
         self.sorter = sorter
+        assert len(var_map) == len(var_order)
 
     def add(self, var):
         # We always add all indices to the var_map at once so that
@@ -842,6 +843,7 @@ class TemplateVarRecorder(object):
     def __init__(self, var_map, sorter):
         self.var_map = var_map
         self._var_order = None
+        self._var_list = None
         self.sorter = sorter
         self.env = {None: 0}
         self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
@@ -875,6 +877,12 @@ class TemplateVarRecorder(object):
         if self._var_order is None:
             self._var_order = {vid: i for i, vid in enumerate(self.var_map)}
         return self._var_order
+
+    @property
+    def var_list(self):
+        if self._var_list is None or len(self._var_list) != len(self.var_map):
+            self._var_list = list(self.var_map.values())
+        return self._var_list
 
     def add(self, var):
         # Note: the following is mostly a copy of
