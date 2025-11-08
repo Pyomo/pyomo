@@ -298,7 +298,7 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         if child not in visitor.indexed_params:
             visitor.indexed_params.add(child)
             name = visitor.symbolmap.getSymbol(child)
-            visitor.env[name] = child.extract_values()
+            visitor.env[name] = child.extract_values_sparse()
         return False, (_CONSTANT, child)
 
     @staticmethod
