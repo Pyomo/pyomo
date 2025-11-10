@@ -1035,7 +1035,7 @@ class _set_iterator_template_generator:
         else:
             d = _set.dimen
         grp = context.next_group()
-        if not d or type(d) is not int:
+        if d is None or type(d) is not int:
             idx = (IndexTemplate(_set, None, context.next_id(), grp),)
         else:
             idx = tuple(
