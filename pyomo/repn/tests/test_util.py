@@ -255,7 +255,7 @@ class TestRepnUtils(unittest.TestCase):
             pyomo.repn.util.HALT_ON_EVALUATION_ERROR = _halt
 
     def test_complex_number_error(self):
-        class Visitor(object):
+        class Visitor:
             pass
 
         visitor = Visitor()
@@ -393,7 +393,7 @@ class TestRepnUtils(unittest.TestCase):
         )
 
     def test_initialize_var_map_from_column_order(self):
-        class MockConfig(object):
+        class MockConfig:
             column_order = None
             file_determinism = FileDeterminism(0)
 
@@ -521,7 +521,7 @@ class TestRepnUtils(unittest.TestCase):
         self.assertEqual(MockConfig.column_order, ref)
 
     def test_ordered_active_constraints(self):
-        class MockConfig(object):
+        class MockConfig:
             row_order = None
             file_determinism = FileDeterminism(0)
 
@@ -738,7 +738,7 @@ class TestRepnUtils(unittest.TestCase):
             def _before_named_expression(visitor, child):
                 return child
 
-        class VisitorTester(object):
+        class VisitorTester:
             def check_constant(self, value, node):
                 return value
 

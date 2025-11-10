@@ -61,7 +61,7 @@ RowEntry = collections.namedtuple('RowEntry', ['constraint', 'bound_type'])
 
 
 # TODO: make a proper base class
-class LinearStandardFormInfo(object):
+class LinearStandardFormInfo:
     """Return type for LinearStandardFormCompiler.write()
 
     Attributes
@@ -139,7 +139,7 @@ class LinearStandardFormInfo(object):
     'compile_standard_form',
     r'Compile an LP to standard form (:math:`\min c^Tx s.t. Ax \le b)`',
 )
-class LinearStandardFormCompiler(object):
+class LinearStandardFormCompiler:
     r"""Compiler to convert an LP to the matrix representation of the
     standard form:
 
@@ -269,7 +269,7 @@ class LinearStandardFormCompiler(object):
             return _LinearStandardFormCompiler_impl(config).write(model)
 
 
-class _LinearStandardFormCompiler_impl(object):
+class _LinearStandardFormCompiler_impl:
     # Making these methods class attributes so that others can change the hooks
     _get_visitor = LinearRepnVisitor
     _to_vector = None

@@ -414,14 +414,14 @@ class BeforeChildDispatcher(collections.defaultdict):
         try:
             return False, (
                 _CONSTANT,
-                visitor.check_constant(visitor.evaluate(child), child),
+                check_constant(visitor.evaluate(child), child, visitor),
             )
         except (ValueError, ArithmeticError):
             return True, None
 
     @staticmethod
     def _before_param(visitor, child):
-        return False, (_CONSTANT, visitor.check_constant(child.value, child))
+        return False, (_CONSTANT, check_constant(child.value, child, visitor))
 
     @staticmethod
     def _before_index_template(visitor, child):
@@ -673,7 +673,7 @@ def categorize_valid_components(
                     ctype=ctype,
                     active=active,
                     descend_into=False,
-                    sort=SortComponents.unsorted,
+                    sort=SortComponents.deterministic,
                 )
             )
     return component_map, {k: v for k, v in unrecognized.items() if v}
@@ -788,7 +788,7 @@ def ordered_active_constraints(model, config):
     return sorted(constraints, key=lambda x: _row_getter(id(x), _n))
 
 
-class VarRecorder(object):
+class VarRecorder:
     def __init__(self, var_map, sorter):
         self.var_map = var_map
         self.sorter = sorter
@@ -811,7 +811,7 @@ class VarRecorder(object):
                 vm[id(v)] = v
 
 
-class OrderedVarRecorder(object):
+class OrderedVarRecorder:
     def __init__(self, var_map, var_order, sorter):
         self.var_map = var_map
         self.var_order = var_order
@@ -839,7 +839,7 @@ class OrderedVarRecorder(object):
                 vm[vid] = v
 
 
-class TemplateVarRecorder(object):
+class TemplateVarRecorder:
     def __init__(self, var_map, sorter):
         self.var_map = var_map
         self._var_order = None
@@ -977,3 +977,49 @@ def ftoa(val, parenthesize_negative_values=False):
         return '(' + a[:i] + ')'
     else:
         return a[:i]
+
+
+def check_constant(ans, obj, visitor):
+    # [ESJ 10/15/25]: The only reason this takes the visitor as an
+    # argument is to pass it to the complex_number_error function, and
+    # the only reason it needs it is to get the name of the class. But
+    # it is public, so I'm not changing anything about that at the
+    # moment.
+    if ans.__class__ not in native_numeric_types:
+        # None can be returned from uninitialized Var/Param objects
+        if ans is None:
+            return InvalidNumber(
+                None, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
+            )
+        if ans.__class__ is InvalidNumber:
+            return ans
+        elif ans.__class__ in native_complex_types:
+            return complex_number_error(ans, visitor, obj)
+        else:
+            # It is possible to get other non-numeric types.  Most
+            # common are bool and 1-element numpy.array().  We will
+            # attempt to convert the value to a float before
+            # proceeding.
+            #
+            # Note that as of NumPy 1.25, blindly casting a
+            # 1-element ndarray to a float will generate a
+            # deprecation warning.  We will explicitly test for
+            # that, but want to do the test without triggering the
+            # numpy import
+            for cls in ans.__class__.__mro__:
+                if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
+                    if len(ans) == 1:
+                        ans = ans[0]
+                    break
+            # TODO: we should check bool and warn/error (while bool is
+            # convertible to float in Python, they have very
+            # different semantic meanings in Pyomo).
+            try:
+                ans = float(ans)
+            except:
+                return InvalidNumber(
+                    ans, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
+                )
+    if ans != ans:
+        return InvalidNumber(nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'")
+    return ans

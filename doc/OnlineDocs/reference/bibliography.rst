@@ -93,6 +93,11 @@ Bibliography
    *SIAM Journal on Applied Mathematics* 23(1), 61-19, 1972.
    DOI `10.1137/0123007 <https://doi.org/10.1137/0123007>`_
 
+.. [Dje20] H. Djelassi. "Discretization-based algorithms for the
+   global solution of hierarchical programs".
+   Dissertation, Rheinisch-Westfälische Technische Hochschule Aachen, 2020.
+   DOI `10.18154/RWTH-2020-09163 <https://doi.org/10.18154/RWTH-2020-09163>`_.
+
 .. [FGK02] R. Fourer, D. M. Gay, and B. W. Kernighan. *AMPL: A Modeling
    Language for Mathematical Programming*, 2nd Edition, Duxbury
    Press, 2002.
@@ -107,6 +112,10 @@ Bibliography
    of discrete-continuous optimization models through generalized
    disjunctive programming", *AIChE Journal*, 59(9),
    3276–3295. 2013.  DOI `10.1002/aic.14088 <https://doi.org/10.1002/aic.14088>`_
+
+.. [HG83] K. P. Halemane and I. E. Grossmann.  "Optimal process design
+   under uncertainty", *AIChE Journal*, 29(3), 425--433. 1983.
+   DOI `10.1002/aic.690290312 <https://doi.org/10.1002/aic.690290312>`_
 
 .. [IAE+21] N. M. Isenberg, P. Akula, J. C. Eslick, D. Bhattacharyya,
    D. C. Miller, and C. E. Gounaris.  "A generalized cutting‐set approach
@@ -157,6 +166,10 @@ Bibliography
 .. [Vie15] J. P. Vielma. "Mixed Integer Linear Programming Formluation
    Techniques", *SIAM Review*, 57(1), 3-57.  2015.  DOI
    `10.1137/130915303 <https://doi.org/10.1137/130915303>`_
+
+.. [YLH18] Y. Yuan, Z. Li, and B. Huang.  "Nonlinear robust optimization
+   for process design", *AIChE Journal*, 64(2), 481--494. 2018.
+   DOI `10.1002/aic.15950 <https://doi.org/10.1002/aic.15950>`_
 
 .. [NW99] Nocedal, Jorge, and Stephen J. Wright, eds. Numerical
    optimization. New York, NY: Springer New York, 1999.

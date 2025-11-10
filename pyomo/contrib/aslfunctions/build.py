@@ -23,7 +23,7 @@ def build_aslfunctions(user_args=[], parallel=None):
     )
 
 
-class LibASLFunctionsBuilder(object):
+class LibASLFunctionsBuilder:
     def __call__(self, parallel):
         return build_aslfunctions(parallel=parallel)
 

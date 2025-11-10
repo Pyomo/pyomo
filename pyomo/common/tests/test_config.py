@@ -87,7 +87,7 @@ def _display(obj, *args):
     return test.getvalue()
 
 
-class GlobalClass(object):
+class GlobalClass:
     "test class for test_known_types"
 
     pass
@@ -410,7 +410,7 @@ class TestConfigDomains(unittest.TestCase):
         c.b = '1'
         self.assertEqual(c.b, 1)
 
-        class Container(object):
+        class Container:
             def __init__(self, vals):
                 self._vals = vals
 
@@ -1428,7 +1428,7 @@ bar:
         )
 
     def test_display_nondata_type(self):
-        class NOOP(object):
+        class NOOP:
             def __getattr__(self, attr):
                 def noop(*args, **kwargs):
                     pass
@@ -1598,6 +1598,24 @@ scenarios[1].detection""",
         self.config['scenario'].declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         self.assertEqual(test, "")
+
+    def test_userValues_call_nonempty(self):
+        # See bug report in Pyomo/pyomo#3721
+        default = ConfigDict()
+        default.declare("filename", ConfigValue(default=None, domain=str))
+        cfg = default(value={"filename": "example.txt"})
+        names = [x.name(True) for x in cfg.user_values()]
+        self.assertEqual(names, ["filename"])
+        self.assertTrue(all(x is not cfg for x in cfg.user_values()))
+
+    def test_userValues_call_empty_then_set(self):
+        # See bug report in Pyomo/pyomo#3721
+        default = ConfigDict()
+        default.declare("filename", ConfigValue(default=None, domain=str))
+        cfg = default({})
+        cfg["filename"] = "example.txt"
+        names = [x.name(True) for x in cfg.user_values()]
+        self.assertEqual(names, ["filename"])
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplayAndValue_default(self):
@@ -2899,7 +2917,7 @@ c: 1.0
         self.assertEqual(mod_copy._visibility, 0)
 
     def test_template_nondata(self):
-        class NOOP(object):
+        class NOOP:
             def __getattr__(self, attr):
                 def noop(*args, **kwargs):
                     pass
@@ -3015,7 +3033,7 @@ c: 1.0
 
     def test_known_types(self):
         def local_fcn():
-            class LocalClass(object):
+            class LocalClass:
                 pass
 
             return LocalClass
@@ -3098,7 +3116,7 @@ c: 1.0
 
     def test_docstring_decorator(self):
         @document_kwargs_from_configdict('CONFIG')
-        class ExampleClass(object):
+        class ExampleClass:
             CONFIG = ExampleConfig()
 
             @document_kwargs_from_configdict(CONFIG)
@@ -3303,7 +3321,7 @@ option_2: int, default=5
         self.assertEqual(cfg.get('type').domain_name(), 'int')
 
     def test_deferred_initialization(self):
-        class Accumulator(object):
+        class Accumulator:
             def __init__(self):
                 self.data = []
 
@@ -3353,7 +3371,7 @@ option_2: int, default=5
         self.assertEqual(cfg.lb.value(), ['a', 'b'])
 
     def test_document_class_config(self):
-        class _base(object):
+        class _base:
             CONFIG = ConfigDict()
             CONFIG.declare(
                 'option_1', ConfigValue(default=1, domain=int, doc="class option 1")

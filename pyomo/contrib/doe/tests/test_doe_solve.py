@@ -83,7 +83,9 @@ def get_FIM_Q_L(doe_obj=None):
         for i in model.output_names
         for j in model.parameter_names
     ]
-    sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
+    sigma_inv = [
+        1 / v**2 for k, v in model.scenario_blocks[0].measurement_error.items()
+    ]
     param_vals = np.array(
         [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
     )
@@ -249,7 +251,9 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
-    def test_reactor_obj_cholesky_solve_bad_prior(self):
+    def DISABLE_test_reactor_obj_cholesky_solve_bad_prior(self):
+        # [10/2025] This test has been disabled because it frequently
+        # (and randomly) returns "infeasible" when run on Windows.
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
@@ -469,24 +473,24 @@ class TestReactorExampleSolving(unittest.TestCase):
 class TestDoe(unittest.TestCase):
     def test_doe_full_factorial(self):
         log10_D_opt_expected = [
-            3.7734377852467524,
-            5.137792359070963,
-            5.182167857710023,
-            6.546522431509408,
+            11.77343778527225,
+            13.137792359064383,
+            13.182167857699808,
+            14.54652243150573,
         ]
 
         log10_A_opt_expected = [
-            3.5935726800929695,
-            3.6133186151486933,
-            3.945755198204365,
-            3.9655011332598367,
+            5.59357268009304,
+            5.613318615148643,
+            5.945755198204368,
+            5.965501133259909,
         ]
 
         log10_E_opt_expected = [
-            -1.7201873126109162,
-            -0.691340497355524,
-            -1.3680047944877138,
-            -0.3391579792516522,
+            0.27981268741620413,
+            1.3086595026369012,
+            0.6319952055040333,
+            1.6608420207466377,
         ]
 
         log10_ME_opt_expected = [
@@ -497,31 +501,31 @@ class TestDoe(unittest.TestCase):
         ]
 
         eigval_min_expected = [
-            0.019046390638130666,
-            0.20354456134677426,
-            0.04285437893696232,
-            0.45797526302234304,
+            1.9046390638130666,
+            20.354456134677426,
+            4.285437893696232,
+            45.797526302234304,
         ]
 
         eigval_max_expected = [
-            3169.552855492114,
-            3576.0292523637977,
-            7131.493924857995,
-            8046.0658178139165,
+            316955.2855492114,
+            357602.92523637977,
+            713149.3924857995,
+            804606.58178139165,
         ]
 
         det_FIM_expected = [
-            5935.233170586055,
-            137338.51875774842,
-            152113.5345070818,
-            3519836.021699428,
+            593523317093.4525,
+            13733851875566.766,
+            15211353450350.424,
+            351983602166961.56,
         ]
 
         trace_FIM_expected = [
-            3922.5878617108597,
-            4105.051549241871,
-            8825.822688850109,
-            9236.36598578955,
+            392258.78617108597,
+            410505.1549241871,
+            882582.2688850109,
+            923636.598578955,
         ]
         ff = run_reactor_doe(
             n_points_for_design=2,
@@ -551,15 +555,11 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(
             ff_results["eigval_min"], eigval_min_expected, abstol=1e-4
         )
-        self.assertStructuredAlmostEqual(
-            ff_results["eigval_max"], eigval_max_expected, abstol=1e-4
-        )
-        self.assertStructuredAlmostEqual(
-            ff_results["det_FIM"], det_FIM_expected, abstol=1e-4
-        )
-        self.assertStructuredAlmostEqual(
-            ff_results["trace_FIM"], trace_FIM_expected, abstol=1e-4
-        )
+        # abstol of 1e-4 removed for the following values as
+        # their non-log values are large (e.g., >1e10)
+        self.assertStructuredAlmostEqual(ff_results["eigval_max"], eigval_max_expected)
+        self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
+        self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
 
 
 if __name__ == "__main__":

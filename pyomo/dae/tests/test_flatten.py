@@ -29,7 +29,7 @@ from pyomo.dae.flatten import (
 )
 
 
-class _TestFlattenBase(object):
+class _TestFlattenBase:
     """A base class to hold the common _hashRef utility method.
     We don't just derive from Test... classes directly as this
     causes tests to run twice.

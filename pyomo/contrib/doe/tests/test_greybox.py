@@ -88,7 +88,8 @@ def get_numerical_derivative(grey_box_object=None):
         vals_init, vecs_init = np.linalg.eig(current_FIM)
         unperturbed_value = np.min(vals_init)
     elif grey_box_object.objective_option == ObjectiveLib.condition_number:
-        unperturbed_value = np.linalg.cond(current_FIM)
+        vals_init, vecs_init = np.linalg.eig(current_FIM)
+        unperturbed_value = np.log(np.abs(np.max(vals_init) / np.min(vals_init)))
 
     # Calculate the numerical derivative, using forward difference
     numerical_derivative = np.zeros_like(current_FIM)
@@ -109,7 +110,8 @@ def get_numerical_derivative(grey_box_object=None):
                 vals, vecs = np.linalg.eig(FIM_perturbed)
                 new_value_ij = np.min(vals)
             elif grey_box_object.objective_option == ObjectiveLib.condition_number:
-                new_value_ij = np.linalg.cond(FIM_perturbed)
+                vals, vecs = np.linalg.eig(FIM_perturbed)
+                new_value_ij = np.log(np.abs(np.max(vals) / np.min(vals)))
 
             # Calculate the derivative value from forward difference
             diff = (new_value_ij - unperturbed_value) / _FD_EPSILON_FIRST
@@ -186,10 +188,14 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
                         grey_box_object.objective_option
                         == ObjectiveLib.condition_number
                     ):
-                        new_values[0] = np.linalg.cond(FIM_perturbed_1)
-                        new_values[1] = np.linalg.cond(FIM_perturbed_2)
-                        new_values[2] = np.linalg.cond(FIM_perturbed_3)
-                        new_values[3] = np.linalg.cond(FIM_perturbed_4)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_1)
+                        new_values[0] = np.log(np.abs(np.max(vals) / np.min(vals)))
+                        vals, vecs = np.linalg.eig(FIM_perturbed_2)
+                        new_values[1] = np.log(np.abs(np.max(vals) / np.min(vals)))
+                        vals, vecs = np.linalg.eig(FIM_perturbed_3)
+                        new_values[2] = np.log(np.abs(np.max(vals) / np.min(vals)))
+                        vals, vecs = np.linalg.eig(FIM_perturbed_4)
+                        new_values[3] = np.log(np.abs(np.max(vals) / np.min(vals)))
 
                     # Calculate the derivative value from second order difference formula
                     diff = (
@@ -206,18 +212,27 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
         #
         # Make ordered quads with no repeats
         # of the ordered pairs
-        ordered_pairs = itertools.combinations_with_replacement(range(4), 2)
+        ordered_pairs = itertools.product(range(4), repeat=2)
         ordered_pairs_list = list(itertools.combinations_with_replacement(range(4), 2))
         ordered_quads = itertools.combinations_with_replacement(ordered_pairs, 2)
 
         numerical_derivative_reduced = np.zeros((10, 10))
 
-        for i in ordered_quads:
-            row = ordered_pairs_list.index(i[0])
-            col = ordered_pairs_list.index(i[1])
-            numerical_derivative_reduced[row, col] = numerical_derivative[
-                i[0][0], i[0][1], i[1][0], i[1][1]
-            ]
+        for curr_quad in ordered_quads:
+            d1, d2 = curr_quad
+            i, j, k, l = d1[0], d1[1], d2[0], d2[1]
+
+            reordered_ijkl = grey_box_object._reorder_pairs(i, j, k, l)
+            row = ordered_pairs_list.index((reordered_ijkl[2], reordered_ijkl[3]))
+            col = ordered_pairs_list.index((reordered_ijkl[0], reordered_ijkl[1]))
+
+            numerical_derivative_reduced[row, col] += numerical_derivative[i, j, k, l]
+
+            # Duplicate check and addition
+            if ((i != j) and (k != l)) and ((i == l) and (j == k)):
+                numerical_derivative_reduced[row, col] += numerical_derivative[
+                    i, j, k, l
+                ]
 
         numerical_derivative_reduced += (
             numerical_derivative_reduced.transpose()
@@ -504,7 +519,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         grey_box_ME_opt = grey_box_object.evaluate_outputs()
 
-        ME_opt = np.linalg.cond(testing_matrix)
+        vals, vecs = np.linalg.eig(testing_matrix)
+        ME_opt = np.log(np.abs(np.max(vals) / np.min(vals)))
 
         self.assertTrue(np.isclose(grey_box_ME_opt, ME_opt))
 
@@ -524,7 +540,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Recover the Jacobian in Matrix Form
         jac = np.zeros_like(grey_box_object._get_FIM())
         jac[np.triu_indices_from(jac)] = utri_vals_jac
-        jac += jac.transpose() - np.diag(np.diag(jac))
+        jac += jac.transpose()
+        jac = jac / 2
 
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
@@ -547,7 +564,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Recover the Jacobian in Matrix Form
         jac = np.zeros_like(grey_box_object._get_FIM())
         jac[np.triu_indices_from(jac)] = utri_vals_jac
-        jac += jac.transpose() - np.diag(np.diag(jac))
+        jac += jac.transpose()
+        jac = jac / 2
 
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
@@ -570,7 +588,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Recover the Jacobian in Matrix Form
         jac = np.zeros_like(grey_box_object._get_FIM())
         jac[np.triu_indices_from(jac)] = utri_vals_jac
-        jac += jac.transpose() - np.diag(np.diag(jac))
+        jac += jac.transpose()
+        jac = jac / 2
 
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
@@ -593,7 +612,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Recover the Jacobian in Matrix Form
         jac = np.zeros_like(grey_box_object._get_FIM())
         jac[np.triu_indices_from(jac)] = utri_vals_jac
-        jac += jac.transpose() - np.diag(np.diag(jac))
+        jac += jac.transpose()
+        jac = jac / 2
 
         # Get numerical derivative matrix
         jac_FD = get_numerical_derivative(grey_box_object)
@@ -611,10 +631,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
-        # Grab the Jacobian values
+        # Grab the Hessian values
         hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
 
-        # Recover the Jacobian in Matrix Form
+        # Recover the Hessian in Matrix Form
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
@@ -633,10 +653,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
-        # Grab the Jacobian values
+        # Grab the Hessian values
         hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
 
-        # Recover the Jacobian in Matrix Form
+        # Recover the Hessian in Matrix Form
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
@@ -655,10 +675,32 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
-        # Grab the Jacobian values
+        # Grab the Hessian values
         hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
 
-        # Recover the Jacobian in Matrix Form
+        # Recover the Hessian in Matrix Form
+        hess_gb = hess_vals_from_gb
+        hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
+
+        # Get numerical derivative matrix
+        hess_FD = get_numerical_second_derivative(grey_box_object)
+
+        # assert that each component is close
+        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
+
+    def test_hessian_ME_opt(self):
+        objective_option = "condition_number"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Hessian values
+        hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
+
+        # Recover the Hessian in Matrix Form
         hess_gb = hess_vals_from_gb
         hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
 
@@ -877,7 +919,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
-        ME_opt_val = np.linalg.cond(testing_matrix + np.eye(4))
+        vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
+        ME_opt_val = np.log(np.abs(np.max(vals) / np.min(vals)))
 
         try:
             ME_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["ME-opt"].value
@@ -990,7 +1033,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # (time, optimal objective value)
         # Here, the objective value is
         # log-10(determinant) of the FIM
-        optimal_experimental_designs = [np.array([2.24, 4.33]), np.array([10.00, 4.35])]
+        optimal_experimental_designs = [
+            np.array([1.782, 4.34]),
+            np.array([10.00, 4.35]),
+        ]
         objective_option = "determinant"
         doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
             objective_option=objective_option
@@ -1001,12 +1047,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Solve the model
         doe_object.run_doe()
-
-        print("Termination Message")
-        print(doe_object.results["Termination Message"])
-        print(cyipopt_call_working)
-        print(bad_message in doe_object.results["Termination Message"])
-        print("End Message")
 
         optimal_time_val = doe_object.results["Experiment Design"][0]
         optimal_obj_val = np.log10(np.exp(pyo.value(doe_object.model.objective)))
@@ -1035,7 +1075,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Here, the objective value is
         # trace(inverse(FIM))
         optimal_experimental_designs = [
-            np.array([1.94, 0.0295]),
+            np.array([1.33, 0.0277]),
             np.array([9.9, 0.0366]),
         ]
         objective_option = "trace"
@@ -1076,7 +1116,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Here, the objective value is
         # minimum eigenvalue of the FIM
         optimal_experimental_designs = [
-            np.array([1.92, 36.018]),
+            np.array([1.30, 38.70]),
             np.array([10.00, 28.349]),
         ]
         objective_option = "minimum_eigenvalue"
@@ -1117,8 +1157,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Here, the objective value is
         # condition number of the FIM
         optimal_experimental_designs = [
-            np.array([1.59, 15.22]),
-            np.array([10.00, 27.675]),
+            np.array([0.943, np.log(13.524)]),
+            np.array([10.00, np.log(27.675)]),
         ]
         objective_option = "condition_number"
         doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(

@@ -197,14 +197,6 @@ class Results(ConfigDict):
                 description="A tuple representing the version of the solver in use.",
             ),
         )
-        self.iteration_count: Optional[int] = self.declare(
-            'iteration_count',
-            ConfigValue(
-                domain=NonNegativeInt,
-                default=None,
-                description="The total number of iterations.",
-            ),
-        )
         self.timing_info: ConfigDict = self.declare(
             'timing_info', ConfigDict(implicit=True)
         )
