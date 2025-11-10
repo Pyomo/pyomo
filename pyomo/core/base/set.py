@@ -2635,7 +2635,9 @@ class SetOf(SetData, Component):
             else:
                 ans = 1
         except StopIteration:
-            return None
+            # The referenced object is empty, so we can't infer / verify
+            # the dimensionality.
+            return UnknownSetDimen
         for x in _iter:
             _this = len(x) if type(x) is tuple else 1
             if _this != ans:

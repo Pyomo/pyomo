@@ -1035,7 +1035,10 @@ class _set_iterator_template_generator:
         else:
             d = _set.dimen
         grp = context.next_group()
-        if d is None or type(d) is not int:
+        if type(d) is not int:
+            # This covers None (jagged set) and UnknownSetDimen.  In
+            # both cases, we will not attempt to unpack the Set and just
+            # assume a single index template.
             idx = (IndexTemplate(_set, None, context.next_id(), grp),)
         else:
             idx = tuple(
