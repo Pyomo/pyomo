@@ -2634,8 +2634,8 @@ class SetOf(SetData, Component):
                 ans = len(x)
             else:
                 ans = 1
-        except:
-            return None
+        except StopIteration:
+            return 0
         for x in _iter:
             _this = len(x) if type(x) is tuple else 1
             if _this != ans:
