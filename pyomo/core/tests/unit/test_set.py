@@ -1714,7 +1714,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         )
 
     def test_dimen(self):
-        self.assertEqual(SetOf([]).dimen, 0)
+        self.assertEqual(SetOf([]).dimen, None)
         self.assertEqual(SetOf([1, 2, 3]).dimen, 1)
         self.assertEqual(SetOf([(1, 2), (2, 3), (4, 5)]).dimen, 2)
         self.assertEqual(SetOf([1, (2, 3)]).dimen, None)
