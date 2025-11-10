@@ -538,7 +538,7 @@ class TestLinearTemplate(unittest.TestCase):
 
     def test_iter_nonfinite_component(self):
         m = ConcreteModel()
-        m.x = Var(NonNegativeIntegers)
+        m.x = Var(NonNegativeIntegers, dense=False)
         m.p = Param(mutable=True, initialize=0)
         m.x[1] = 1
         m.x[2] = 2
@@ -788,7 +788,7 @@ class TestLinearTemplate(unittest.TestCase):
 
     def test_fcn_with_nonfinite(self):
         m = ConcreteModel()
-        m.x = Var(Any)
+        m.x = Var(Any, dense=False)
 
         @m.Constraint()
         def c(m):
@@ -959,7 +959,7 @@ class TestLinearTemplate(unittest.TestCase):
 
     def test_eval_with_nonfinite(self):
         m = ConcreteModel()
-        m.x = Var(Any)
+        m.x = Var(Any, dense=False)
 
         @m.Constraint()
         def c(m):
