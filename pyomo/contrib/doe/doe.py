@@ -2201,7 +2201,7 @@ class DesignOfExperiments:
         ax.set_xlabel(xlabel_text)
         im = ax.imshow(hes_a.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
-        ba.set_label("log10(trace(FIM))")
+        ba.set_label("log10(trace(cov))")
         plt.pyplot.title(title_text + ": A-optimality")
         if show_fig:
             plt.pyplot.show()
