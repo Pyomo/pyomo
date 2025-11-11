@@ -164,8 +164,10 @@ def compute_FIM_metrics(FIM):
     det_FIM = np.linalg.det(FIM)
     D_opt = np.log10(det_FIM)
 
-    trace_FIM = np.trace(FIM)
-    A_opt = np.log10(trace_FIM)
+    # Trace of FIM is not the proper definition of A-optimality, but the trace of
+    # covariance is
+    trace_cov = np.trace(np.linalg.pinv(FIM))
+    A_opt = np.log10(trace_cov)
 
     E_vals, E_vecs = np.linalg.eig(FIM)
     E_ind = np.argmin(E_vals.real)  # index of smallest eigenvalue
