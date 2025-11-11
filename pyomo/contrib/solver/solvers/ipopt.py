@@ -530,7 +530,6 @@ class Ipopt(SolverBase):
         results.solver_version = self.version(config)
 
         if config.load_solutions:
-            logger.error(f'solution_status: {results.solution_status}')
             if results.solution_status == SolutionStatus.noSolution:
                 raise NoFeasibleSolutionError()
             results.solution_loader.load_vars()
