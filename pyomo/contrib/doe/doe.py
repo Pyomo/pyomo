@@ -1668,7 +1668,7 @@ class DesignOfExperiments:
             - "eigval_min": list of minimum eigenvalues
             - "eigval_max": list of maximum eigenvalues
             - "det_FIM": list of determinants
-            - "trace_FIM": list of traces
+            - "trace_cov": list of traces
             - "solve_time": list of solve times
 
         Raises
@@ -1723,7 +1723,7 @@ class DesignOfExperiments:
                 "eigval_min": [],
                 "eigval_max": [],
                 "det_FIM": [],
-                "trace_FIM": [],
+                "trace_cov": [],
                 "solve_time": [],
             }
         )
@@ -1785,7 +1785,7 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            (det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
+            (det_FIM, trace_cov, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
                 compute_FIM_metrics(FIM)
             )
 
@@ -1800,7 +1800,7 @@ class DesignOfExperiments:
             fim_factorial_results["eigval_min"].append(E_vals.min())
             fim_factorial_results["eigval_max"].append(E_vals.max())
             fim_factorial_results["det_FIM"].append(det_FIM)
-            fim_factorial_results["trace_FIM"].append(trace_FIM)
+            fim_factorial_results["trace_cov"].append(trace_cov)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
         self.fim_factorial_results = fim_factorial_results

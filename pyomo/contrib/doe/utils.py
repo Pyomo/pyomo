@@ -141,7 +141,7 @@ def compute_FIM_metrics(FIM):
 
     det_FIM : float
         Determinant of the FIM.
-    trace_FIM : float
+    trace_cov : float
         Trace of the FIM.
     E_vals : numpy.ndarray
         1D array of eigenvalues of the FIM.
@@ -187,7 +187,7 @@ def compute_FIM_metrics(FIM):
 
     ME_opt = np.log10(np.linalg.cond(FIM))
 
-    return det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
+    return det_FIM, trace_cov, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
 
 
 # Standalone Function for user to calculate FIM metrics directly without using the class
@@ -205,7 +205,7 @@ def get_FIM_metrics(FIM):
 
     "Determinant of FIM" : float
         determinant of the FIM
-    "Trace of FIM" : float
+    "Trace of cov" : float
         trace of the FIM
     "Eigenvalues" : numpy.ndarray
         eigenvalues of the FIM
@@ -221,13 +221,13 @@ def get_FIM_metrics(FIM):
         log10(Modified E-optimality) metric
     """
 
-    (det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
+    (det_FIM, trace_cov, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
         compute_FIM_metrics(FIM)
     )
 
     return {
         "Determinant of FIM": det_FIM,
-        "Trace of FIM": trace_FIM,
+        "Trace of cov": trace_cov,
         "Eigenvalues": E_vals,
         "Eigenvectors": E_vecs,
         "log10(D-Optimality)": D_opt,
