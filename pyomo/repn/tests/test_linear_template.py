@@ -207,6 +207,63 @@ class TestLinearTemplate(unittest.TestCase):
             ans,
         )
 
+    def test_mixed_sum(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 1])
+        m.x = Var(range(3))
+
+        @m.Constraint()
+        def c(m):
+            return sum(m.x[i + j] for j in [0, 1] for i in m.I) >= 0
+
+        self.assertFalse(hasattr(m.c, 'template_expr'))
+        lb, body, ub = m.c.to_bounded_expression()
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, None)
+
+        ans, const = self._build_evaluator(body)
+        self.assertEqual(const, 0)
+        self.assertEqual(
+            [
+                'linear_indices.append(0)',
+                'linear_data.append(1)',
+                'linear_indices.append(1)',
+                'linear_data.append(2)',
+                'linear_indices.append(2)',
+                'linear_data.append(1)',
+            ],
+            ans,
+        )
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[(0, 0), (1, 1)])
+        m.x = Var(range(3), range(3), range(3))
+
+        @m.Constraint()
+        def c(m):
+            return sum(m.x[i, j] for j in [1, 2] for i in m.I) >= 0
+
+        self.assertFalse(hasattr(m.c, 'template_expr'))
+        lb, body, ub = m.c.to_bounded_expression()
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, None)
+
+        ans, const = self._build_evaluator(body)
+        self.assertEqual(const, 0)
+        self.assertEqual(
+            [
+                'linear_indices.append(4)',
+                'linear_data.append(1)',
+                'linear_indices.append(16)',
+                'linear_data.append(1)',
+                'linear_indices.append(5)',
+                'linear_data.append(1)',
+                'linear_indices.append(17)',
+                'linear_data.append(1)',
+            ],
+            ans,
+        )
+
     def test_sum_one_var(self):
         m = ConcreteModel()
         m.x = Var([1, 2, 3])

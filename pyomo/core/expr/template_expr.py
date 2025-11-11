@@ -52,9 +52,56 @@ pyomo_core_base_param, _ = attempt_import('pyomo.core.base.param')
 
 logger = logging.getLogger(__name__)
 
+
+def _validate_generator(generator):
+    # We are worried about users writing things like
+    #
+    #    sum(m.x[i, j] for i in [1, 2, 3] for j in m.J)
+    # or
+    #    sum(m.x[j] for i in [1, 2, 3] for j in m.J[i])
+    #
+    # If they do, we will not "see" the "i" as an IndexTemplate, so the
+    # expression would be reduced to
+    #
+    #    sum(m.x[1, j] for j in m.J)
+    # and
+    #    sum(m.x[j] for j in m.J[1])
+    #
+    # To guard against this, we will look into the generator code, and
+    # if there are any local variables declared that are not
+    # IndexTemplate objects (or tuples of them), then we will throw up
+    # our hands and expand the sum:
+    for lvar_name in generator.gi_frame.f_code.co_varnames:
+        if lvar_name == '.0':
+            # Skip the outer generator object
+            continue
+        lvar = generator.gi_frame.f_locals.get(lvar_name, None)
+        if lvar.__class__ is IndexTemplate:
+            continue
+        if lvar.__class__ is tuple and all(i.__class__ is IndexTemplate for i in lvar):
+            continue
+        return False
+    return True
+
+
+def _validate_map(generator):
+    # We would love to validate that the map is actually iterating over
+    # Pyom Set objects (and yielding IndexTemplate objects), but there
+    # doesn't appear to be a way to interrogate the results of the list
+    # / generator that the map is iterating over.  So, we will just have
+    # to trust the user <shudder>.
+    #
+    # FIXME: rework IndexedComponent to return custom generators that
+    # wrap map so we can only accept them and not all maps?
+    return True
+
+
 # it is not clear what to import to get to the built-in "generator"
 # type.  We will just create a generator and query its __class__
-generator_like_types = {(_ for _ in ()).__class__, map}
+generator_validators = {
+    (_ for _ in ()).__class__: _validate_generator,
+    map: _validate_map,
+}
 
 
 class _NotSpecified:
@@ -1086,14 +1133,24 @@ class _template_iter_context:
         return self._group
 
     def sum_template(self, generator):
-        if generator.__class__ not in generator_like_types:
+        try:
+            validator = generator_validators[generator.__class__]
+        except KeyError:
+            # We will only templatize sums over maps and generators.
+            # Expand everything else:
             return _TemplateIterManager.builtin_sum(generator)
-        init_cache = len(self.cache)
+        niters = -len(self.cache)
         expr = next(generator)
-        final_cache = len(self.cache)
-        if init_cache == final_cache:
+        niters += len(self.cache)
+        if niters:
+            iters = self.npop_cache(niters)
+        else:
+            # This didn't generate any new IndexTemplate objects; expand it:
             return _TemplateIterManager.builtin_sum(generator, start=expr)
-        iters = self.npop_cache(final_cache - init_cache)
+        if not validator(generator):
+            # See the validator implementions above for situations where
+            # we will not attempt to generate SumTemplate objects
+            return _TemplateIterManager.builtin_sum(generator, start=expr)
         return TemplateSumExpression((expr,), iters)
 
 
