@@ -121,9 +121,7 @@ class LinearTemplateRepn(LinearRepn):
                     term[0].multiplier *= mult
             self.linear_sum.extend(other.linear_sum)
 
-    def _build_evaluator(
-        self, smap, expr_cache, multiplier, repetitions, remove_fixed_vars
-    ):
+    def _build_evaluator(self, smap, expr_cache, multiplier, repetitions):
         assert self.nonlinear is None
         ans = []
         multiplier *= self.multiplier
@@ -153,15 +151,6 @@ class LinearTemplateRepn(LinearRepn):
                         # Directly substitute the expression into the
                         # 'linear[vid] = coef' below
                         k = k.to_string(smap=smap)
-                        # If we are removing fixed vars, add that logic here:
-                        if remove_fixed_vars:
-                            ans.append(f"v = {k}")
-                            ans.append('if v.__class__ is tuple:')
-                            ans.append('    const += v[0] * {coef}')
-                            ans.append('    v = None')
-                            ans.append('else:')
-                            k = 'v'
-                            indent = '    '
                 ans.append(indent + f'linear_indices.append({k})')
                 ans.append(indent + f'linear_data.append({coef})')
 
@@ -173,7 +162,7 @@ class LinearTemplateRepn(LinearRepn):
             except:
                 subrep = 0
             subans, subconst = subrepn._build_evaluator(
-                smap, expr_cache, multiplier, repetitions * subrep, remove_fixed_vars
+                smap, expr_cache, multiplier, repetitions * subrep
             )
             if subans:
                 ans.extend(
@@ -192,8 +181,8 @@ class LinearTemplateRepn(LinearRepn):
             constant += subconst
         return ans, constant
 
-    def _build_evaluator_fcn(self, args, smap, expr_cache, remove_fixed_vars):
-        ans, constant = self._build_evaluator(smap, expr_cache, 1, 1, remove_fixed_vars)
+    def _build_evaluator_fcn(self, args, smap, expr_cache):
+        ans, constant = self._build_evaluator(smap, expr_cache, 1, 1)
         if not ans:
             return lambda _ind, _dat, *_args: constant, None
         indent = '\n    '
@@ -230,13 +219,11 @@ class LinearTemplateRepn(LinearRepn):
             fname,
         )
 
-    def compile(self, env, smap, expr_cache, args, remove_fixed_vars=False):
+    def compile(self, env, smap, expr_cache, args):
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
-        fcn, fcn_name = self._build_evaluator_fcn(
-            args, smap, expr_cache, remove_fixed_vars
-        )
+        fcn, fcn_name = self._build_evaluator_fcn(args, smap, expr_cache)
         if not fcn_name:
             return fcn
         exec(fcn, env)
@@ -364,7 +351,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
 
-    def __init__(self, subexpression_cache, var_recorder, remove_fixed_vars=False):
+    def __init__(self, subexpression_cache, var_recorder):
         super().__init__(subexpression_cache, var_recorder=var_recorder)
         self.indexed_vars = set()
         self.indexed_params = set()
@@ -372,7 +359,6 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         self.env = var_recorder.env
         self.symbolmap = var_recorder.symbolmap
         self.expanded_templates = {}
-        self.remove_fixed_vars = remove_fixed_vars
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
@@ -410,20 +396,20 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
                     lb, body, ub = expr.args
                 if body is not None:
                     body = self.walk_expression(body).compile(
-                        env, smap, self.expr_cache, args, False
+                        env, smap, self.expr_cache, args
                     )
                 if lb is not None:
                     lb = self.walk_expression(lb).compile(
-                        env, smap, self.expr_cache, args, True
+                        env, smap, self.expr_cache, args
                     )
                 if ub is not None:
                     ub = self.walk_expression(ub).compile(
-                        env, smap, self.expr_cache, args, True
+                        env, smap, self.expr_cache, args
                     )
             else:
                 lb = ub = None
                 body = self.walk_expression(expr).compile(
-                    env, smap, self.expr_cache, args, False
+                    env, smap, self.expr_cache, args
                 )
             self.expanded_templates[id(template_info)] = body, lb, ub
 

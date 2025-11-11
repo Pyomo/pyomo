@@ -39,13 +39,13 @@ class TestLinearTemplate(unittest.TestCase):
     def _build_evaluator(self, expr):
         repn = self.visitor.walk_expression(expr)
         return repn._build_evaluator(
-            self.visitor.symbolmap, self.visitor.expr_cache, 1, 1, False
+            self.visitor.symbolmap, self.visitor.expr_cache, 1, 1
         )
 
     def _build_evaluator_fcn(self, expr, args):
         repn = self.visitor.walk_expression(expr)
         return repn._build_evaluator_fcn(
-            args, self.visitor.symbolmap, self.visitor.expr_cache, False
+            args, self.visitor.symbolmap, self.visitor.expr_cache
         )
 
     def _eval(self, obj):
