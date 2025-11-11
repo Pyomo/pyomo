@@ -179,6 +179,34 @@ class TestLinearTemplate(unittest.TestCase):
             ans,
         )
 
+    def test_explicit_sum(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1, 2, 3])
+        m.x = Var(range(5))
+
+        @m.Constraint(m.I)
+        def c(m, i):
+            return sum([m.x[i - 1], m.x[i], m.x[i + 1]]) >= 0
+
+        self.assertTrue(hasattr(m.c[1], 'template_expr'))
+        lb, body, ub = m.c[1].to_bounded_expression()
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, None)
+
+        ans, const = self._build_evaluator(body)
+        self.assertEqual(const, 0)
+        self.assertEqual(
+            [
+                'linear_indices.append(x1[x2 - 1])',
+                'linear_data.append(1)',
+                'linear_indices.append(x1[x2])',
+                'linear_data.append(1)',
+                'linear_indices.append(x1[x2 + 1])',
+                'linear_data.append(1)',
+            ],
+            ans,
+        )
+
     def test_sum_one_var(self):
         m = ConcreteModel()
         m.x = Var([1, 2, 3])

@@ -1087,9 +1087,7 @@ class _template_iter_context:
 
     def sum_template(self, generator):
         if generator.__class__ not in generator_like_types:
-            raise TemplateExpressionError(
-                "Cannot generate templates of sums over non-generators"
-            )
+            return _TemplateIterManager.builtin_sum(generator)
         init_cache = len(self.cache)
         expr = next(generator)
         final_cache = len(self.cache)
