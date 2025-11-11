@@ -1148,7 +1148,7 @@ class _template_iter_context:
             # This didn't generate any new IndexTemplate objects; expand it:
             return _TemplateIterManager.builtin_sum(generator, start=expr)
         if not validator(generator):
-            # See the validator implementions above for situations where
+            # See the validator implementations above for situations where
             # we will not attempt to generate SumTemplate objects
             return _TemplateIterManager.builtin_sum(generator, start=expr)
         return TemplateSumExpression((expr,), iters)
