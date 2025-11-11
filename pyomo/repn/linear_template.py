@@ -426,31 +426,17 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             if linear_indices:
                 # Note that we will only get here for Ranged constraints
                 # with potentially variable bounds.
-                vl = self.var_recorder.var_list
-                for i, coef in zip(linear_indices, linear_data):
-                    v = vl[i]
-                    if not v.fixed:
-                        raise RuntimeError(
-                            f"Constraint {obj} has non-fixed lower bound"
-                        )
-                    lb += v.value * coef
-                linear_indices = []
-                linear_data = []
+                lb += self._evaluate_fixed_vars(
+                    linear_indices, linear_data, obj, 'lower'
+                )
         if ub.__class__ is code_type:
             ub = ub(linear_indices, linear_data, *index)
             if linear_indices:
                 # Note that we will only get here for Ranged constraints
                 # with potentially variable bounds.
-                vl = self.var_recorder.var_list
-                for i, coef in zip(linear_indices, linear_data):
-                    v = vl[i]
-                    if not v.fixed:
-                        raise RuntimeError(
-                            f"Constraint {obj} has non-fixed upper bound"
-                        )
-                    ub += v.value * coef
-                linear_indices = []
-                linear_data = []
+                ub += self._evaluate_fixed_vars(
+                    linear_indices, linear_data, obj, 'upper'
+                )
         return (
             body(linear_indices, linear_data, *index),
             linear_indices,
@@ -458,3 +444,15 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             lb,
             ub,
         )
+
+    def _evaluate_fixed_vars(self, linear_indices, linear_data, obj, bound):
+        ans = 0
+        vl = self.var_recorder.var_list
+        for i, coef in zip(linear_indices, linear_data):
+            v = vl[i]
+            if not v.fixed:
+                raise RuntimeError(f"Constraint {obj} has non-fixed {bound} bound")
+            ans += v.value * coef
+        linear_indices.clear()
+        linear_data.clear()
+        return ans
