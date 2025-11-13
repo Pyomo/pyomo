@@ -12,6 +12,7 @@
 import datetime
 import multiprocessing
 import os
+import pickle
 import time
 
 import pyomo.common.unittest as unittest
@@ -218,7 +219,9 @@ class TestPyomoUnittest(unittest.TestCase):
             self.bound_function()
             return
         with LoggingIntercept() as LOG:
-            with self.assertRaises((TypeError, EOFError, AttributeError)):
+            with self.assertRaises(
+                (TypeError, EOFError, AttributeError, pickle.PicklingError)
+            ):
                 self.bound_function()
         self.assertIn("platform that does not support 'fork'", LOG.getvalue())
         self.assertIn("one of its arguments is not serializable", LOG.getvalue())
