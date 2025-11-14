@@ -2093,8 +2093,13 @@ class RegressionTest(unittest.TestCase):
             second_stage_variables=[],
             uncertain_params=[m.q1, m.q2],
             uncertainty_set=iset,
-            # note: using BARON, as this doesn't work with
-            #       IPOPT. will be addressed when subproblem
+            # note: using BARON instead of IPOPT.
+            #       when IPOPT is used, this test will fail,
+            #       as the discrete separation routine does not
+            #       account for the case where there are no
+            #       adjustable variables in the model
+            #       (i.e. separation models without any variables).
+            #       will be addressed later when the subproblem
             #       solve routines are refactored
             local_solver="baron",
             global_solver="baron",
@@ -2110,7 +2115,7 @@ class RegressionTest(unittest.TestCase):
         self.assertAlmostEqual(m.x1.value, 1)
         self.assertAlmostEqual(m.x2.value, 1)
 
-    @unittest.skipUnless(baron_available, "BARON is not available.")
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_pyros_intersection_aux_vars(self):
         """
         Test PyROS properly supports intersection set
@@ -2138,16 +2143,8 @@ class RegressionTest(unittest.TestCase):
             second_stage_variables=[],
             uncertain_params=[m.q1, m.q2],
             uncertainty_set=iset,
-            # note: using BARON instead of IPOPT.
-            #       when IPOPT is used, this test will fail,
-            #       as the discrete separation routine does not
-            #       account for the case where there are no
-            #       adjustable variables in the model
-            #       (i.e. separation models without any variables).
-            #       will be addressed later when the subproblem
-            #       solve routines are refactored
-            local_solver="baron",
-            global_solver="baron",
+            local_solver="ipopt",
+            global_solver="ipopt",
             solve_master_globally=True,
             objective_focus="worst_case",
         )
