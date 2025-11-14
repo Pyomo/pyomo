@@ -29,8 +29,6 @@ from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.unittest as unittest
 from pyomo.solvers.plugins.solvers.cuopt_direct import cuopt_available
 
-cuopt, cuopt_available = attempt_import("cuopt")
-
 
 class CUOPTTests(unittest.TestCase):
     @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
