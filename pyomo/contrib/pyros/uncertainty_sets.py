@@ -735,19 +735,27 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         m = ConcreteModel()
         uncertainty_quantification = self.set_as_constraint(block=m)
-        for var, val in zip(uncertainty_quantification.uncertain_param_vars, point):
+
+        main_vars = uncertainty_quantification.uncertain_param_vars
+        for var, val in zip(main_vars, point):
             var.set_value(val)
 
-        # since constraint expressions are relational,
-        # `value()` returns True if constraint satisfied, False else
-        # NOTE: this check may be inaccurate if there are auxiliary
-        #       variables and they have not been initialized to
-        #       feasible values
-        is_in_set = all(
-            value(con.expr) for con in uncertainty_quantification.uncertainty_cons
+        aux_vars = uncertainty_quantification.auxiliary_vars
+        aux_vals = self.compute_auxiliary_uncertain_param_vals(point)
+        for aux_var, aux_val in zip(aux_vars, aux_vals):
+            aux_var.set_value(aux_val)
+
+        all_vars_within_bounds = all(
+            (var.lb is None or var.value - var.lb >= -POINT_IN_UNCERTAINTY_SET_TOL)
+            and (var.ub is None or var.ub - var.value >= -POINT_IN_UNCERTAINTY_SET_TOL)
+            for var in main_vars + aux_vars
         )
 
-        return is_in_set
+        return all_vars_within_bounds and all(
+            con.lslack() > -POINT_IN_UNCERTAINTY_SET_TOL
+            and con.uslack() > -POINT_IN_UNCERTAINTY_SET_TOL
+            for con in uncertainty_quantification.uncertainty_cons
+        )
 
     def _compute_exact_parameter_bounds(self, solver, index=None):
         """

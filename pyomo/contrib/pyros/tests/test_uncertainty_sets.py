@@ -1079,6 +1079,16 @@ class TestFactorModelSet(unittest.TestCase):
                     "is not in the set."
                 ),
             )
+            # test base class method, as well
+            self.assertTrue(
+                UncertaintySet.point_in_set(fset, fset_pt_from_crit),
+                msg=(
+                    f"Base method {UncertaintySet.point_in_set.__name__!r} "
+                    f"returns wrong result for point {fset_pt_from_crit}"
+                    f"generated from critical point {aux_space_pt} of the "
+                    "auxiliary variable space"
+                ),
+            )
 
             fset_pt_from_neg_crit = fset.origin - fset.psi_mat @ aux_space_pt
             self.assertTrue(
@@ -1087,6 +1097,16 @@ class TestFactorModelSet(unittest.TestCase):
                     f"Point {fset_pt_from_neg_crit} generated from critical point "
                     f"{aux_space_pt} of the auxiliary variable space "
                     "is not in the set."
+                ),
+            )
+            # test base class method, as well
+            self.assertTrue(
+                UncertaintySet.point_in_set(fset, fset_pt_from_neg_crit),
+                msg=(
+                    f"Base method {UncertaintySet.point_in_set.__name__!r} "
+                    f"returns wrong result for point {fset_pt_from_neg_crit}"
+                    f"generated from critical point {aux_space_pt} of the "
+                    "auxiliary variable space"
                 ),
             )
 
