@@ -496,7 +496,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dim(self):
         """
-        Dimension of the uncertainty set (number of uncertain
+        int : Dimension of the uncertainty set (number of uncertain
         parameters in a corresponding optimization model of interest).
         """
         raise NotImplementedError
@@ -505,8 +505,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def geometry(self):
         """
-        Geometry of the uncertainty set. See the `Geometry` class
-        documentation.
+        Geometry : Geometry of the uncertainty set.
         """
         raise NotImplementedError
 
@@ -519,7 +518,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        : list of tuple
+        list of tuple
             If the bounds can be calculated, then the list is of
             length `N`, and each entry is a pair of numeric
             (lower, upper) bounds for the corresponding
@@ -713,7 +712,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        is_in_set : bool
+        bool
             True if the point lies in the uncertainty set,
             False otherwise.
 
@@ -1306,8 +1305,7 @@ class BoxSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the box set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the box set.
         """
         return Geometry.LINEAR
 
@@ -1319,7 +1317,7 @@ class BoxSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
+        list of tuple
             List, length `N`, of 2-tuples. Each tuple
             specifies the bounds in its corresponding
             dimension.
@@ -1550,8 +1548,7 @@ class CardinalitySet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the cardinality set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the cardinality set.
         """
         return Geometry.LINEAR
 
@@ -1562,7 +1559,7 @@ class CardinalitySet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
+        list of tuple
             List, length `N`, of 2-tuples. Each tuple
             specifies the bounds in its corresponding
             dimension.
@@ -1858,8 +1855,7 @@ class PolyhedralSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the polyhedral set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the polyhedral set.
         """
         return Geometry.LINEAR
 
@@ -2184,8 +2180,7 @@ class BudgetSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the budget set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the budget set.
         """
         return Geometry.LINEAR
 
@@ -2196,7 +2191,7 @@ class BudgetSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
+        list of tuple
             List, length `N`, of 2-tuples. Each tuple
             specifies the bounds in its corresponding
             dimension.
@@ -2522,8 +2517,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the factor model set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the factor model set.
         """
         return Geometry.LINEAR
 
@@ -2534,7 +2528,7 @@ class FactorModelSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
+        list of tuple
             List, length `N`, of 2-tuples. Each tuple
             specifies the bounds in its corresponding
             dimension.
@@ -2857,8 +2851,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the axis-aligned ellipsoidal set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the axis-aligned ellipsoidal set.
         """
         return Geometry.CONVEX_NONLINEAR
 
@@ -2869,7 +2862,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
+        list of tuple
             List, length `N`, of 2-tuples. Each tuple
             specifies the bounds in its corresponding
             dimension.
@@ -3263,8 +3256,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the ellipsoidal set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the ellipsoidal set.
         """
         return Geometry.CONVEX_NONLINEAR
 
@@ -3275,7 +3267,7 @@ class EllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
+        list of tuple
             List, length `N`, of 2-tuples. Each tuple
             specifies the bounds in its corresponding
             dimension.
@@ -3447,7 +3439,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def scenarios(self):
         """
-        list of tuples : Uncertain parameter realizations comprising the
+        list of tuple : Uncertain parameter realizations comprising the
         set.  Each tuple is an uncertain parameter realization.
 
         Note that the `scenarios` attribute may be modified, but
@@ -3488,8 +3480,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the discrete scenario set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the discrete scenario set.
         """
         return Geometry.DISCRETE_SCENARIOS
 
@@ -3500,7 +3491,7 @@ class DiscreteScenarioSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
+        list of tuple
             List, length `N`, of 2-tuples. Each tuple
             specifies the bounds in its corresponding
             dimension.
@@ -3702,17 +3693,17 @@ class IntersectionSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the intersection set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the intersection set.
         """
         return Geometry(max(uset.geometry.value for uset in self.all_sets))
 
     @property
     def scenarios(self):
         """
-        numpy.ndarray : If the set represented by `self` reduces to a
-        discrete uncertainty set, retrieve the scenarios comprising
-        the set. Otherwise, a ValueError is raised.
+        list of tuple : If the set represented by `self` reduces to a
+        discrete uncertainty set, then this attribute contains the
+        scenarios comprising the intersection.
+        Otherwise, a ValueError is raised.
         """
         if self.geometry == Geometry.DISCRETE_SCENARIOS:
             discrete_intersection = functools.reduce(self.intersect, self.all_sets)
@@ -3743,7 +3734,7 @@ class IntersectionSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
+        list of tuple
             If one of the sets to be intersected is discrete,
             then the bounds of the intersection set are returned
             as a list, with length ``self.dim``, of 2-tuples.
@@ -3784,7 +3775,7 @@ class IntersectionSet(UncertaintySet):
         Parameters
         ----------
         Q1, Q2 : UncertaintySet
-            Operand uncertainty sets.
+            Operand uncertainty set.
 
         Returns
         -------
