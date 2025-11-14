@@ -42,13 +42,11 @@ logger = logging.getLogger(__name__)
 def _get_cuopt_version(cuopt, avail):
     if not avail:
         return
-    CUOPTDirect._version = cuopt.__version__.split('.')
+    CUOPTDirect._version = tuple(cuopt.__version__.split('.'))
     CUOPTDirect._name = "cuOpt %s.%s%s" % CUOPTDirect._version
 
 
-cuopt, cuopt_available = attempt_import(
-    "cuopt", catch_exceptions=(Exception,), callback=_get_cuopt_version
-)
+cuopt, cuopt_available = attempt_import("cuopt", callback=_get_cuopt_version)
 
 
 @SolverFactory.register("cuopt", doc="Direct python interface to CUOPT")
