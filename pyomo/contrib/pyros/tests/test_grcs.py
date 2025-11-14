@@ -1260,7 +1260,7 @@ class RegressionTest(unittest.TestCase):
 
         with self.assertRaisesRegex(
             expected_exception=ValueError,
-            expected_regex="math domain error",
+            expected_regex="(math domain error)|(expected a positive input)",
             msg="Exception arising from math domain error not raised",
         ):
             # should raise math domain error:
@@ -1285,7 +1285,7 @@ class RegressionTest(unittest.TestCase):
         m.x2.setub(1 / m.q)
         with self.assertRaisesRegex(
             expected_exception=ZeroDivisionError,
-            expected_regex="float division by zero",
+            expected_regex="division by zero",
             msg="Exception arising from math domain error not raised",
         ):
             pyros_solver.solve(
