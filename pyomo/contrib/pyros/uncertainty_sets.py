@@ -21,6 +21,7 @@ literature.
 import abc
 import math
 import functools
+import itertools
 from numbers import Integral
 from collections import namedtuple
 from collections.abc import Iterable, MutableSequence
@@ -1339,6 +1340,10 @@ class BoxSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
     def validate(self, config):
         """
         Check BoxSet validity.
@@ -1879,6 +1884,10 @@ class PolyhedralSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
     def validate(self, config):
         """
         Check PolyhedralSet validity.
@@ -2195,6 +2204,10 @@ class BudgetSet(UncertaintySet):
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, **kwargs):
         return PolyhedralSet.set_as_constraint(self, **kwargs)
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
 
     def validate(self, config):
         """
@@ -2893,6 +2906,10 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
     def validate(self, config):
         """
         Check AxisAlignedEllipsoidalSet validity.
@@ -3316,6 +3333,10 @@ class EllipsoidalSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
     def validate(self, config):
         """
         Check EllipsoidalSet validity.
@@ -3515,6 +3536,10 @@ class DiscreteScenarioSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
     def point_in_set(self, point):
         """
         Determine whether a given point lies in the discrete
@@ -3672,17 +3697,56 @@ class IntersectionSet(UncertaintySet):
         Geometry of the intersection set.
         See the `Geometry` class documentation.
         """
-        return max(self.all_sets[i].geometry.value for i in range(len(self.all_sets)))
+        return Geometry(max(uset.geometry.value for uset in self.all_sets))
+
+    @property
+    def scenarios(self):
+        """
+        numpy.ndarray : If the set represented by `self` reduces to a
+        discrete uncertainty set, retrieve the scenarios comprising
+        the set. Otherwise, a ValueError is raised.
+        """
+        if self.geometry == Geometry.DISCRETE_SCENARIOS:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.scenarios
+
+        raise ValueError(
+            "Uncertainty set represented by `self` is not reducible "
+            "to a finite set of scenarios."
+        )
+
+    @property
+    def _PARAMETER_BOUNDS_EXACT(self):
+        """
+        bool : True if the coordinate value bounds returned by
+        ``self.parameter_bounds`` are exact
+        (i.e., specify the minimum bounding box),
+        False otherwise.
+
+        For the intersection set, parameter bounds are exact only
+        if the intersection turns out to be a discrete set.
+        """
+        return self.geometry == Geometry.DISCRETE_SCENARIOS
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the intersection
-        set.
+        Compute parameter bounds of the intersection set.
 
-        Currently, an empty list, as the bounds cannot, in general,
-        be computed without access to an optimization solver.
+        Returns
+        -------
+        : list of tuples
+            If one of the sets to be intersected is discrete,
+            then the bounds of the intersection set are returned
+            as a list, with length ``self.dim``, of 2-tuples.
+            Otherwise, an empty list is returned, as the bounds cannot,
+            in general, be computed without access to an optimization
+            solver.
         """
+        if self._PARAMETER_BOUNDS_EXACT:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.parameter_bounds
+
         return []
 
     def point_in_set(self, point):
@@ -3699,10 +3763,7 @@ class IntersectionSet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        if all(a_set.point_in_set(point=point) for a_set in self.all_sets):
-            return True
-        else:
-            return False
+        return all(a_set.point_in_set(point=point) for a_set in self.all_sets)
 
     # === Define pairwise intersection function
     @staticmethod
@@ -3727,7 +3788,7 @@ class IntersectionSet(UncertaintySet):
         for set1, set2 in zip((Q1, Q2), (Q2, Q1)):
             if isinstance(set1, DiscreteScenarioSet):
                 return DiscreteScenarioSet(
-                    scenarios=[pt for pt in set1.scenarios if set1.point_in_set(pt)]
+                    scenarios=[pt for pt in set1.scenarios if set2.point_in_set(pt)]
                 )
 
         # === This case is if both sets are continuous
@@ -3744,14 +3805,15 @@ class IntersectionSet(UncertaintySet):
             )
         )
 
-        intersection_set = functools.reduce(self.intersect, self.all_sets)
-        if isinstance(intersection_set, DiscreteScenarioSet):
-            return intersection_set.set_as_constraint(
+        # handle special case where the intersection is a discrete set
+        if self.geometry == Geometry.DISCRETE_SCENARIOS:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.set_as_constraint(
                 uncertain_params=uncertain_params, block=block
             )
 
         all_cons, all_aux_vars = [], []
-        for idx, unc_set in enumerate(intersection_set.all_sets):
+        for idx, unc_set in enumerate(self.all_sets):
             sub_block = Block()
             block.add_component(
                 unique_component_name(block, f"sub_block_{idx}"), sub_block
@@ -3768,6 +3830,16 @@ class IntersectionSet(UncertaintySet):
             uncertainty_cons=all_cons,
             auxiliary_vars=all_aux_vars,
         )
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        aux_param_vals_iter = itertools.chain(
+            *tuple(
+                uset.compute_auxiliary_uncertain_param_vals(point, solver=solver)
+                for uset in self.all_sets
+            )
+        )
+        return np.array(list(aux_param_vals_iter))
 
     def validate(self, config):
         """

@@ -2069,6 +2069,97 @@ class RegressionTest(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2, places=4)
         self.assertAlmostEqual(m.z.value, 2, places=4)
 
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_pyros_discrete_intersection(self):
+        """
+        Test PyROS properly supports intersection set involving
+        discrete set.
+        """
+        m = ConcreteModel()
+        m.q1 = Param(initialize=0.5, mutable=True)
+        m.q2 = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[0, 1])
+        m.x2 = Var(bounds=[0, 1])
+        m.obj = Objective(expr=m.x1 + m.x2)
+        m.con1 = Constraint(expr=m.x1 >= m.q1)
+        m.con2 = Constraint(expr=m.x2 >= m.q2)
+        iset = IntersectionSet(
+            set1=BoxSet(bounds=[[0, 2]] * 2),
+            set2=DiscreteScenarioSet([[0, 0], [0.5, 0.5], [1, 1], [3, 3]]),
+        )
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.q1, m.q2],
+            uncertainty_set=iset,
+            # note: using BARON, as this doesn't work with
+            #       IPOPT. will be addressed when subproblem
+            #       solve routines are refactored
+            local_solver="baron",
+            global_solver="baron",
+            solve_master_globally=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 2)
+        # check worst-case optimal solution
+        self.assertAlmostEqual(res.final_objective_value, 2)
+        self.assertAlmostEqual(m.x1.value, 1)
+        self.assertAlmostEqual(m.x2.value, 1)
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_pyros_intersection_aux_vars(self):
+        """
+        Test PyROS properly supports intersection set
+        in which at least one of the intersected sets
+        is defined with auxiliary variables.
+        """
+        m = ConcreteModel()
+        m.q1 = Param(initialize=0.5, mutable=True)
+        m.q2 = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[0, 1])
+        m.x2 = Var(bounds=[0, 1])
+        m.obj = Objective(expr=m.x1 + m.x2)
+        m.con1 = Constraint(expr=m.x1 >= m.q1)
+        m.con2 = Constraint(expr=m.x2 >= m.q2)
+        iset = IntersectionSet(
+            set1=AxisAlignedEllipsoidalSet(center=(0, 0), half_lengths=(1, 1)),
+            # factor model set requires auxiliary variables
+            set2=FactorModelSet(
+                origin=[0, 0], psi_mat=np.eye(2), number_of_factors=2, beta=0.5
+            ),
+        )
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.q1, m.q2],
+            uncertainty_set=iset,
+            # note: using BARON instead of IPOPT.
+            #       when IPOPT is used, this test will fail,
+            #       as the discrete separation routine does not
+            #       account for the case where there are no
+            #       adjustable variables in the model
+            #       (i.e. separation models without any variables).
+            #       will be addressed later when the subproblem
+            #       solve routines are refactored
+            local_solver="baron",
+            global_solver="baron",
+            solve_master_globally=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 3)
+        # check worst-case optimal solution
+        self.assertAlmostEqual(res.final_objective_value, 2, places=5)
+        self.assertAlmostEqual(m.x1.value, 1)
+        self.assertAlmostEqual(m.x2.value, 1)
+
 
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
 class TestPyROSSeparationPriorityOrder(unittest.TestCase):
