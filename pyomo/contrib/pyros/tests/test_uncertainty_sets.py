@@ -1448,6 +1448,8 @@ class TestIntersectionSet(unittest.TestCase):
         # assigning to slices should work fine
         all_sets[3:] = [BoxSet([[1, 1.5]]), BoxSet([[1, 3]])]
 
+        self.assertRegex(repr(all_sets), r"UncertaintySetList\(\[.*\]\)")
+
     def test_set_as_constraint(self):
         """
         Test method for setting up constraints works correctly.
