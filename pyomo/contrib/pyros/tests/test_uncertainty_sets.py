@@ -47,7 +47,6 @@ from pyomo.contrib.pyros.uncertainty_sets import (
 )
 
 from pyomo.contrib.pyros.config import pyros_config
-import time
 
 import logging
 
@@ -105,6 +104,12 @@ class TestBoxSet(unittest.TestCase):
         np.testing.assert_allclose(
             bounds, bset.bounds, err_msg="BoxSet bounds not as expected"
         )
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(bset.geometry, Geometry.LINEAR)
+        self.assertEqual(bset.type, "box")
+        self.assertEqual(bset.dim, 2)
+        self.assertEqual(bset.compute_auxiliary_uncertain_param_vals([0, 0]).size, 0)
 
         # check bounds update
         new_bounds = [[3, 4], [5, 6]]
@@ -475,6 +480,12 @@ class TestBudgetSet(unittest.TestCase):
         np.testing.assert_allclose([1, 3, 0, 0, 0], buset.rhs_vec)
         np.testing.assert_allclose(np.zeros(3), buset.origin)
 
+        # check defined attributes/methods inherited from base class
+        self.assertIs(buset.geometry, Geometry.LINEAR)
+        self.assertEqual(buset.type, "budget")
+        self.assertEqual(buset.dim, 3)
+        self.assertEqual(buset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
+
         # update the set
         buset.budget_membership_mat = [[1, 1, 0], [0, 0, 1]]
         buset.budget_rhs_vec = [3, 4]
@@ -814,6 +825,14 @@ class TestFactorModelSet(unittest.TestCase):
         np.testing.assert_allclose(fset.number_of_factors, 2)
         np.testing.assert_allclose(fset.beta, 0.1)
         self.assertEqual(fset.dim, 3)
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(fset.geometry, Geometry.LINEAR)
+        self.assertEqual(fset.type, "factor_model")
+        self.assertEqual(fset.dim, 3)
+        np.testing.assert_allclose(
+            fset.compute_auxiliary_uncertain_param_vals(fset.origin), [0] * 2
+        )
 
         # update the set
         fset.origin = [1, 1, 0]
@@ -1253,8 +1272,11 @@ class TestIntersectionSet(unittest.TestCase):
             ),
         )
 
-        # check geometry is as expected
+        # check defined attributes/methods inherited from base class
         self.assertIs(iset.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(iset.type, "intersection")
+        self.assertEqual(iset.dim, 3)
+        self.assertEqual(iset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
 
         # since intersection does not involve discrete sets,
         # expect error when trying to get scenarios
@@ -1778,7 +1800,14 @@ class TestCardinalitySet(unittest.TestCase):
         np.testing.assert_allclose(cset.origin, [0, 0])
         np.testing.assert_allclose(cset.positive_deviation, [1, 3])
         np.testing.assert_allclose(cset.gamma, 2)
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(cset.geometry, Geometry.LINEAR)
+        self.assertEqual(cset.type, "cardinality")
         self.assertEqual(cset.dim, 2)
+        np.testing.assert_allclose(
+            cset.compute_auxiliary_uncertain_param_vals(cset.origin), [0] * 2
+        )
 
         # update the set
         cset.origin = [1, 2]
@@ -2031,6 +2060,12 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         # check scenarios added appropriately
         np.testing.assert_allclose(scenarios, dset.scenarios)
 
+        # check defined attributes/methods inherited from base class
+        self.assertIs(dset.geometry, Geometry.DISCRETE_SCENARIOS)
+        self.assertEqual(dset.type, "discrete")
+        self.assertEqual(dset.dim, 3)
+        self.assertEqual(dset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
+
         # check scenarios updated appropriately
         new_scenarios = [[0, 1, 2], [1, 2, 0], [3, 5, 4]]
         dset.scenarios = new_scenarios
@@ -2206,6 +2241,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         center = [0, 0]
         half_lengths = [1, 3]
         aset = AxisAlignedEllipsoidalSet(center, half_lengths)
+
         np.testing.assert_allclose(
             center,
             aset.center,
@@ -2216,6 +2252,12 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
             aset.half_lengths,
             err_msg="AxisAlignedEllipsoidalSet half-lengths not as expected",
         )
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(aset.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(aset.type, "ellipsoidal")
+        self.assertEqual(aset.dim, 2)
+        self.assertEqual(aset.compute_auxiliary_uncertain_param_vals([0] * 2).size, 0)
 
         # check attributes update
         new_center = [-1, -3]
@@ -2432,6 +2474,13 @@ class TestEllipsoidalSet(unittest.TestCase):
         shape_matrix = [[1, 0], [0, 2]]
         scale = 2
         eset = EllipsoidalSet(center, shape_matrix, scale)
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(eset.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(eset.type, "ellipsoidal")
+        self.assertEqual(eset.dim, 2)
+        self.assertEqual(eset.compute_auxiliary_uncertain_param_vals([0] * 2).size, 0)
+
         np.testing.assert_allclose(
             center, eset.center, err_msg="EllipsoidalSet center not as expected"
         )
@@ -2847,6 +2896,12 @@ class TestPolyhedralSet(unittest.TestCase):
         rhs_vec = [1, 3]
 
         pset = PolyhedralSet(lhs_coefficients_mat, rhs_vec)
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(pset.geometry, Geometry.LINEAR)
+        self.assertEqual(pset.type, "polyhedral")
+        self.assertEqual(pset.dim, 3)
+        self.assertEqual(pset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
 
         # check attributes are as expected
         np.testing.assert_allclose(lhs_coefficients_mat, pset.coefficients_mat)
