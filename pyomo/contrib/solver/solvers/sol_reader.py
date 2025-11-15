@@ -18,9 +18,9 @@ from pyomo.core.base.var import VarData
 from pyomo.core.expr import value
 from pyomo.common.collections import ComponentMap
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.repn.plugins.nl_writer import NLWriterInfo
 from pyomo.core.expr.visitor import replace_expressions
+from pyomo.contrib.solver.common.util import SolverError
 from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
@@ -35,13 +35,18 @@ class SolFileData:
     """
 
     def __init__(self) -> None:
-        self.primals: List[float] = []
-        self.duals: List[float] = []
-        self.var_suffixes: Dict[str, Dict[int, Any]] = {}
-        self.con_suffixes: Dict[str, Dict[Any]] = {}
-        self.obj_suffixes: Dict[str, Dict[int, Any]] = {}
-        self.problem_suffixes: Dict[str, List[Any]] = {}
-        self.other: List(str) = []
+        self.message: str = None
+        self.objno: int = 0
+        self.solve_code: int = None
+        self.ampl_options: List[int | float] = None
+        self.primals: List[float] = None
+        self.duals: List[float] = None
+        self.var_suffixes: Dict[str, Dict[int, int | float]] = {}
+        self.con_suffixes: Dict[str, Dict[int, int | float]] = {}
+        self.obj_suffixes: Dict[str, Dict[int, int | float]] = {}
+        self.problem_suffixes: Dict[str, int | float] = {}
+        self.suffix_table: Dict[(int, str), List[int | float, str, ...]] = {}
+        self.unparsed: str = None
 
 
 class SolSolutionLoader(SolutionLoaderBase):
@@ -156,183 +161,225 @@ class SolSolutionLoader(SolutionLoaderBase):
         return res
 
 
-def parse_sol_file(
-    sol_file: io.TextIOBase, nl_info: NLWriterInfo, result: Results
-) -> Tuple[Results, SolFileData]:
+def ampl_solve_code_to_solution_status(sol_data: SolFileData, result: Results) -> None:
+    #
+    # This table (the values and the string interpretations) are from
+    # Chapter 14 in the AMPL Book:
+    #
+    code = sol_data.solve_code
+    status = SolutionStatus.unknown if sol_data.primals else SolutionStatus.noSolution
+    if code is None:
+        message = f"AMPL({code}): solver did not generate a SOL file"
+        term = TerminationCondition.error
+    elif (code >= 0) and (code <= 99):
+        # message = f"AMPL({code}:solved): optimal solution found"
+        message = ''
+        status = SolutionStatus.optimal
+        term = TerminationCondition.convergenceCriteriaSatisfied
+    elif (code >= 100) and (code <= 199):
+        message = f"AMPL({code}:solved?): optimal solution indicated, but error likely"
+        status = SolutionStatus.feasible
+        term = TerminationCondition.error
+    elif (code >= 200) and (code <= 299):
+        message = f"AMPL({code}:infeasible): constraints cannot be satisfied"
+        status = SolutionStatus.infeasible
+        term = TerminationCondition.locallyInfeasible
+    elif (code >= 300) and (code <= 399):
+        message = f"AMPL({code}:unbounded): objective can be improved without limit"
+        term = TerminationCondition.unbounded
+    elif (code >= 400) and (code <= 499):
+        message = f"AMPL({code}:limit): stopped by a limit that you set"
+        term = TerminationCondition.iterationLimit  # this is not always correct
+    elif (code >= 500) and (code <= 599):
+        message = f"AMPL({code}:failure): stopped by an error condition in the solver"
+        term = TerminationCondition.error
+    else:
+        message = f"AMPL({code}): unexpected solve code"
+        term = TerminationCondition.error
+
+    if sol_data.message:
+        # TBD: [JDS 10/2025]: Why do we convert newlines to semicolons?
+        result.extra_info.solver_message = sol_data.message.replace('\n', '; ')
+        if message:
+            result.extra_info.solver_message += '; ' + message
+    else:
+        result.extra_info.solver_message = message
+    result.solution_status = status
+    result.termination_condition = term
+
+
+def parse_sol_file(FILE: io.TextIOBase) -> SolFileData:
     """
     Parse a .sol file and populate to Pyomo objects
     """
     sol_data = SolFileData()
 
+    # Parse the initial solver message and the AMPL options sections
+    z = _parse_message_and_options(FILE, sol_data)
+
     #
+    # Parse the duals and variable values
+    #
+    num_duals = z[1]  # "m" in writesol.c
+    assert num_duals == z[0] or not num_duals
+    sol_data.duals = [float(FILE.readline()) for i in range(num_duals)]
+
+    num_primals = z[3]  # "n" in writesol.c
+    assert num_primals == z[2] or not num_primals
+    sol_data.primals = [float(FILE.readline()) for i in range(num_primals)]
+
+    # Parse the OBJNO (objective number and solver exit code)
+    _parse_objno_and_exitcode(FILE, sol_data)
+
+    # Parse the suffix data
+    _parse_suffixes(FILE, sol_data)
+
+    return sol_data
+
+
+def _parse_message_and_options(FILE: io.TextIOBase, data: SolFileData) -> List[int]:
+    msg = []
     # Some solvers (minto) do not write a message.  We will assume
-    # all non-blank lines up to the 'Options' line is the message.
-    # For backwards compatibility and general safety, we will parse all
-    # lines until "Options" appears. Anything before "Options" we will
-    # consider to be the solver message.
-    options_found = False
-    message = []
-    model_objects = []
-    for line in sol_file:
+    # all non-blank lines up the 'Options' line is the message.
+    while True:
+        line = FILE.readline()
         if not line:
-            break
+            # EOF
+            raise SolverError("Error reading `sol` file: no 'Options' line found.")
         line = line.strip()
-        if "Options" in line:
-            # Once "Options" appears, we must now read the content under it.
-            options_found = True
-            line = sol_file.readline()
-            number_of_options = int(line)
-            # We are adding in this DeveloperError to see if the alternative case
-            # is ever actually hit in the wild. In a previous iteration of the sol
-            # reader, there was logic to check for the number of options, but it
-            # was uncovered by tests and unclear if actually necessary.
-            if number_of_options > 4:
-                raise DeveloperError(
-                    """
-    The sol file reader has hit an unexpected error while parsing. The number of
-    options recorded is greater than 4. Please report this error to the Pyomo
-    developers.
-    """
-                )
-            for i in range(number_of_options + 4):
-                line = sol_file.readline()
-                model_objects.append(int(line))
+        if line == 'Options':
             break
-        message.append(line)
-    if not options_found:
-        raise PyomoException("ERROR READING `sol` FILE. No 'Options' line found.")
-    message = '\n'.join(message)
-    # Identify the total number of variables and constraints
-    number_of_cons = model_objects[number_of_options + 1]
-    number_of_vars = model_objects[number_of_options + 3]
-    assert number_of_cons == len(nl_info.constraints)
-    assert number_of_vars == len(nl_info.variables)
+        if line:
+            msg.append(line)
+    data.message = "\n".join(msg)
 
-    duals = [float(sol_file.readline()) for i in range(number_of_cons)]
-    variable_vals = [float(sol_file.readline()) for i in range(number_of_vars)]
+    # WARNING: This appears to be undocumented outside of the ASL
+    # writesol.c implemention.  Before changing this logic, please
+    # familiarize yourself with that code.
+    #
+    # The AMPL options are a sequence of ints, the first of which
+    # specifies the number of options to expect, followed by the
+    # options (all ints), followed by the 4 int-elements of "z".
+    #
+    n_opts = int(FILE.readline())
+    #
+    # The ASL will occasionally "lie" about the number of options: if
+    # the second option (not including the number of options) is "3",
+    # then the ASL will add 2 to the number of options reported, and
+    # will add *one* option (vbtol, a float) *after* the elements of
+    # "z".
+    #
+    # Because of this, we will read the first two options from the file
+    # first so we can know how to correctly parse the remaining options.
+    assert n_opts >= 2
+    ampl_options = [int(FILE.readline()) for i in range(2)]
+    read_vbtol = ampl_options[1] == 3
+    if read_vbtol:
+        n_opts -= 2
+    ampl_options.extend(int(FILE.readline()) for i in range(n_opts - 2))
+    # Note: "z" comes from the name used for this data structure in
+    # `writesol.c`.  It is unknown to us what motivated that name.
+    #
+    # Z: [ #cons; #duals, #vars, #var_vals ]
+    #    #duals will either be #cons or 0
+    #    #var_vals will either be #vars or 0
+    z = [int(FILE.readline()) for i in range(4)]
+    if read_vbtol:
+        ampl_options.append(float(FILE.readline()))
 
-    # Parse the exit code line and capture it
-    exit_code = [0, 0]
-    line = sol_file.readline()
-    if line and ('objno' in line):
-        exit_code_line = line.split()
-        if len(exit_code_line) != 3:
-            raise PyomoException(
-                f"ERROR READING `sol` FILE. Expected two numbers in `objno` line; received {line}."
-            )
-        exit_code = [int(exit_code_line[1]), int(exit_code_line[2])]
-    else:
-        raise PyomoException(
-            f"ERROR READING `sol` FILE. Expected `objno`; received {line}."
+    data.ampl_options = ampl_options
+    return z
+
+
+def _parse_objno_and_exitcode(FILE: io.TextIOBase, data: SolFileData) -> None:
+    line = FILE.readline().strip()
+    objno = line.split(maxsplit=2)
+    if not objno or objno[0] != 'objno':
+        raise SolverError(
+            f"Error reading `sol` file: expected 'objno'; received {line!r}."
         )
-    result.extra_info.solver_message = message.strip().replace('\n', '; ')
-    exit_code_message = ''
-    if (exit_code[1] >= 0) and (exit_code[1] <= 99):
-        result.solution_status = SolutionStatus.optimal
-        result.termination_condition = TerminationCondition.convergenceCriteriaSatisfied
-    elif (exit_code[1] >= 100) and (exit_code[1] <= 199):
-        exit_code_message = "Optimal solution indicated, but ERROR LIKELY!"
-        result.solution_status = SolutionStatus.feasible
-        result.termination_condition = TerminationCondition.error
-    elif (exit_code[1] >= 200) and (exit_code[1] <= 299):
-        exit_code_message = "INFEASIBLE SOLUTION: constraints cannot be satisfied!"
-        result.solution_status = SolutionStatus.infeasible
-        result.termination_condition = TerminationCondition.locallyInfeasible
-    elif (exit_code[1] >= 300) and (exit_code[1] <= 399):
-        exit_code_message = (
-            "UNBOUNDED PROBLEM: the objective can be improved without limit!"
+    elif len(objno) != 3:
+        # TBD: [JDS, 10/2025] there are paths where writesol.c will
+        # generate `objno` lines that contain only the objective number
+        # and not the solve_code.  It is not clear to me that we should
+        # generate an exception here.
+        raise SolverError(
+            "Error reading `sol` file: expected two numbers in 'objno' line; "
+            f"received {line!r}."
         )
-        result.solution_status = SolutionStatus.noSolution
-        result.termination_condition = TerminationCondition.unbounded
-    elif (exit_code[1] >= 400) and (exit_code[1] <= 499):
-        exit_code_message = (
-            "EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver "
-            "was stopped by a limit that you set!"
-        )
-        result.solution_status = SolutionStatus.infeasible
-        result.termination_condition = (
-            TerminationCondition.iterationLimit
-        )  # this is not always correct
-    elif (exit_code[1] >= 500) and (exit_code[1] <= 599):
-        exit_code_message = (
-            "FAILURE: the solver stopped by an error condition "
-            "in the solver routines!"
-        )
-        result.termination_condition = TerminationCondition.error
+    data.objno = int(objno[1])
+    data.solve_code = int(objno[2])
 
-    if result.extra_info.solver_message:
-        if exit_code_message:
-            result.extra_info.solver_message += '; ' + exit_code_message
-    else:
-        result.extra_info.solver_message = exit_code_message
 
-    if result.solution_status != SolutionStatus.noSolution:
-        sol_data.primals = variable_vals
-        sol_data.duals = duals
-        ### Read suffixes ###
-        line = sol_file.readline()
-        while line:
-            line = line.strip()
-            if line == "":
-                continue
-            line = line.split()
-            # Extra solver message processing
-            if line[0] != 'suffix':
-                # We assume this is the start of a
-                # section like kestrel_option, which
-                # comes after all suffixes.
-                remaining = ''
-                line = sol_file.readline()
-                while line:
-                    remaining += line.strip() + '; '
-                    line = sol_file.readline()
-                result.extra_info.solver_message += remaining
-                break
-            read_data_type = int(line[1])
-            data_type = read_data_type & 3  # 0-var, 1-con, 2-obj, 3-prob
-            convert_function = int
-            if (read_data_type & 4) == 4:
-                convert_function = float
-            number_of_entries = int(line[2])
-            # The third entry is name length, and it is length+1. This is unnecessary
-            # except for data validation.
-            # The fourth entry is table "length", e.g., memory size.
-            number_of_string_lines = int(line[5])
-            suffix_name = sol_file.readline().strip()
-            # Add any arbitrary string lines to the "other" list
-            for line in range(number_of_string_lines):
-                sol_data.other.append(sol_file.readline())
-            if data_type == 0:  # Var
-                sol_data.var_suffixes[suffix_name] = {}
-                for cnt in range(number_of_entries):
-                    suf_line = sol_file.readline().split()
-                    var_ndx = int(suf_line[0])
-                    sol_data.var_suffixes[suffix_name][var_ndx] = convert_function(
-                        suf_line[1]
-                    )
-            elif data_type == 1:  # Con
-                sol_data.con_suffixes[suffix_name] = {}
-                for cnt in range(number_of_entries):
-                    suf_line = sol_file.readline().split()
-                    con_ndx = int(suf_line[0])
-                    sol_data.con_suffixes[suffix_name][con_ndx] = convert_function(
-                        suf_line[1]
-                    )
-            elif data_type == 2:  # Obj
-                sol_data.obj_suffixes[suffix_name] = {}
-                for cnt in range(number_of_entries):
-                    suf_line = sol_file.readline().split()
-                    obj_ndx = int(suf_line[0])
-                    sol_data.obj_suffixes[suffix_name][obj_ndx] = convert_function(
-                        suf_line[1]
-                    )
-            elif data_type == 3:  # Prob
-                sol_data.problem_suffixes[suffix_name] = []
-                for cnt in range(number_of_entries):
-                    suf_line = sol_file.readline().split()
-                    sol_data.problem_suffixes[suffix_name].append(
-                        convert_function(suf_line[1])
-                    )
-            line = sol_file.readline()
+def _parse_suffixes(FILE: io.TextIOBase, data: SolFileData) -> None:
+    while line := FILE.readline():
+        line = line.strip()
+        if not line:
+            continue
 
-    return result, sol_data
+        line = line.split(maxsplit=6)
+        if line[0] != 'suffix':
+            # We assume this is the start of a section (like
+            # kestrel_option) that comes *after* all suffixes.  We
+            # will capture it (and everything after it) and return
+            # it as a single "unparsed" text string.
+            data.unparsed = ' '.join(line) + "\n" + ''.join(FILE)
+            break
+
+        # Each suffix is introduced by:
+        #
+        #   'suffix' <kind> <n> <namelen> <tablelen> <tablines>
+        #   <sufname>
+        #
+        # Where:
+        #   kind (int): bitmask indicating suffix data type and target
+        #   n (int): number of values returned
+        #   namelen (int): suffix name string length (including NULL termination)
+        #   tablelen (int): length of the "table" string (including NULL)
+        #   tablines (int): number of lines in the table
+        #   sufname (str): suffix name
+        kind = int(line[1])
+        value_converter = float if kind & 4 else int
+        suffix_target = kind & 3  # 0-var, 1-con, 2-obj, 3-prob
+
+        num_values = int(line[2])
+        # Note: we will use namelen to strip off the newline instead of
+        # strip() in case the suffix name actually ended with whitespace
+        # (evil, but technically allowed by the NL spec)
+        suffix_name = FILE.readline()[: int(line[3]) - 1]
+
+        # If the Suffix includes a value <-> string table, parse it.
+        # The table should be a series of <tablines> lines of the form:
+        #
+        #     <val> <str> <description>
+        #
+        # The string representation of a suffix value is the row in the
+        # table whose <val> is the largest value less than or equal to
+        # the suffix value.  The table should be ordered by <val>.
+        if int(line[4]):
+            data.suffix_table[suffix_target, suffix_name] = [
+                FILE.readline().strip().split(maxsplit=2) for _ in range(int(line[5]))
+            ]
+            for entry in data.suffix_table[suffix_target, suffix_name]:
+                entry[0] = value_converter(entry[0])
+
+        # Parse the actual suffix values
+        if suffix_target == 0:  # Var
+            data.var_suffixes[suffix_name] = suffix = {}
+        elif suffix_target == 1:  # Con
+            data.con_suffixes[suffix_name] = suffix = {}
+        elif suffix_target == 2:  # Obj
+            data.obj_suffixes[suffix_name] = suffix = {}
+        elif suffix_target == 3:  # Prob
+            suffix = {}
+        # else:  # Unreachable: kind & 3 can ONLY be 0..3
+
+        for cnt in range(num_values):
+            suf_line = FILE.readline().split(maxsplit=1)
+            suffix[int(suf_line[0])] = value_converter(suf_line[1])
+
+        if suffix_target == 3 and suffix:
+            assert len(suffix) == 1
+            data.problem_suffixes[suffix_name] = next(iter(suffix.values()))
+
+    return
