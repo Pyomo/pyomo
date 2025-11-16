@@ -154,7 +154,7 @@ def _get_reduced_costs(solver_model, var_map, vars_to_load):
         raise NoReducedCostsError()
     if solver_model.IsMIP:
         # this will also return True for continuous, nonconvex models
-        raise NoDualsError()
+        raise NoReducedCostsError()
 
     gurobi_vars_to_load = [var_map[v] for v in vars_to_load]
     vals = solver_model.getAttr("Rc", gurobi_vars_to_load)
