@@ -314,11 +314,11 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         self._change_detector = None
         self._constraint_ndx = 0
 
-    def _create_solver_model(self, pyomo_model):
+    def _create_solver_model(self, pyomo_model, config):
         if pyomo_model is self._pyomo_model:
-            self.update()
+            self.update(**config)
         else:
-            self.set_instance(pyomo_model)
+            self.set_instance(pyomo_model, **config)
 
         solution_loader = GurobiPersistentSolutionLoader(
             solver_model=self._solver_model,
@@ -395,33 +395,34 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         self._vars_added_since_update.update(variables)
         self._needs_updated = True
 
-    def set_instance(self, pyomo_model):
-        if self.config.timer is None:
+    def set_instance(self, pyomo_model, **kwds):
+        config = self.config(value=kwds, preserve_implicit=True)
+        if config.timer is None:
             timer = HierarchicalTimer()
         else:
-            timer = self.config.timer
+            timer = config.timer
         self._clear()
         self._register_env_client()
         self._pyomo_model = pyomo_model
         self._solver_model = gurobipy.Model(env=self.env())
         timer.start('set_instance')
         self._change_detector = ModelChangeDetector(
-            model=self._pyomo_model, observers=[self], **dict(self.config.auto_updates)
+            model=self._pyomo_model, observers=[self], **config.auto_updates
         )
-        self._change_detector.config = self.config.auto_updates
         timer.stop('set_instance')
 
-    def update(self):
-        if self.config.timer is None:
+    def update(self, **kwds):
+        config = self.config(value=kwds, preserve_implicit=True)
+        if config.timer is None:
             timer = HierarchicalTimer()
         else:
-            timer = self.config.timer
+            timer = config.timer
         if self._pyomo_model is None:
             raise RuntimeError('must call set_instance or solve before update')
         timer.start('update')
         if self._needs_updated:
             self._update_gurobi_model()
-        self._change_detector.update(timer=timer)
+        self._change_detector.update(timer=timer, **config.auto_updates)
         timer.stop('update')
 
     def _get_expr_from_pyomo_repn(self, repn):

@@ -592,13 +592,13 @@ class GurobiDirectMINLP(GurobiDirectBase):
     def _pyomo_gurobi_var_iter(self):
         return self._var_map.items()
 
-    def _create_solver_model(self, pyomo_model):
-        timer = self.config.timer
+    def _create_solver_model(self, pyomo_model, config):
+        timer = config.timer
         timer.start('compile_model')
 
         writer = GurobiMINLPWriter()
         grb_model, var_map, pyo_obj, grb_cons, pyo_cons = writer.write(
-            pyomo_model, symbolic_solver_labels=self.config.symbolic_solver_labels
+            pyomo_model, symbolic_solver_labels=config.symbolic_solver_labels
         )
 
         timer.stop('compile_model')

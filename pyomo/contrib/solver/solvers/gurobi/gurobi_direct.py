@@ -59,8 +59,8 @@ class GurobiDirect(GurobiDirectBase):
     def _pyomo_gurobi_var_iter(self):
         return zip(self._pyomo_vars, self._gurobi_vars)
 
-    def _create_solver_model(self, pyomo_model):
-        timer = self.config.timer
+    def _create_solver_model(self, pyomo_model, config):
+        timer = config.timer
 
         timer.start('compile_model')
         repn = LinearStandardFormCompiler().write(

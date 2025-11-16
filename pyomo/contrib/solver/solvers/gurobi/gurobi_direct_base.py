@@ -348,6 +348,8 @@ class GurobiDirectBase(SolverBase):
             model.dispose()
 
     def version(self):
+        if not gurobipy_available:
+            return None
         version = (
             gurobipy.GRB.VERSION_MAJOR,
             gurobipy.GRB.VERSION_MINOR,
@@ -355,7 +357,7 @@ class GurobiDirectBase(SolverBase):
         )
         return version
 
-    def _create_solver_model(self, pyomo_model):
+    def _create_solver_model(self, pyomo_model, config):
         # should return gurobi_model, solution_loader, has_objective
         raise NotImplementedError('should be implemented by derived classes')
 
@@ -370,21 +372,10 @@ class GurobiDirectBase(SolverBase):
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        orig_config = self.config
         orig_cwd = os.getcwd()
         try:
             config = self.config(value=kwds, preserve_implicit=True)
 
-            # hack to work around legacy solver wrapper __setattr__
-            # otherwise, this would just be self.config = config
-            object.__setattr__(self, 'config', config)
-
-            if not self.available():
-                c = self.__class__
-                raise ApplicationError(
-                    f'Solver {c.__module__}.{c.__qualname__} is not available '
-                    f'({self.available()}).'
-                )
             if config.timer is None:
                 config.timer = HierarchicalTimer()
             timer = config.timer
@@ -396,7 +387,8 @@ class GurobiDirectBase(SolverBase):
                 os.chdir(config.working_dir)
             with capture_output(TeeStream(*ostreams), capture_fd=False):
                 gurobi_model, solution_loader, has_obj = self._create_solver_model(
-                    model
+                    model,
+                    config,
                 )
                 options = config.solver_options
 
@@ -421,16 +413,11 @@ class GurobiDirectBase(SolverBase):
                 gurobi_model.optimize(self._callback)
                 timer.stop('optimize')
 
-            res = self._postsolve(
-                grb_model=gurobi_model, solution_loader=solution_loader, has_obj=has_obj
+            res = self._populate_results(
+                grb_model=gurobi_model, solution_loader=solution_loader, has_obj=has_obj, config=config
             )
         finally:
             os.chdir(orig_cwd)
-
-            # hack to work around legacy solver wrapper __setattr__
-            # otherwise, this would just be self.config = orig_config
-            object.__setattr__(self, 'config', orig_config)
-            self.config = orig_config
 
         res.solver_log = ostreams[0].getvalue()
         end_timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -461,7 +448,7 @@ class GurobiDirectBase(SolverBase):
             }
         return GurobiDirectBase._tc_map
 
-    def _postsolve(self, grb_model, solution_loader, has_obj):
+    def _populate_results(self, grb_model, solution_loader, has_obj, config):
         status = grb_model.Status
 
         results = Results()
@@ -483,7 +470,7 @@ class GurobiDirectBase(SolverBase):
         if (
             results.termination_condition
             != TerminationCondition.convergenceCriteriaSatisfied
-            and self.config.raise_exception_on_nonoptimal_result
+            and config.raise_exception_on_nonoptimal_result
         ):
             raise NoOptimalSolutionError()
 
@@ -510,19 +497,15 @@ class GurobiDirectBase(SolverBase):
         results.extra_info.BarIterCount = grb_model.getAttr('BarIterCount')
         results.extra_info.NodeCount = grb_model.getAttr('NodeCount')
 
-        self.config.timer.start('load solution')
-        if self.config.load_solutions:
+        config.timer.start('load solution')
+        if config.load_solutions:
             if grb_model.SolCount > 0:
                 results.solution_loader.load_vars()
             else:
                 raise NoFeasibleSolutionError()
-        self.config.timer.stop('load solution')
+        config.timer.stop('load solution')
 
-        # self.config gets copied a the beginning of
-        # solve and restored at the end, so modifying
-        # results.solver_config will not actually
-        # modify self.config
-        results.solver_config = self.config
+        results.solver_config = config
         results.solver_name = self.name
         results.solver_version = self.version()
 
