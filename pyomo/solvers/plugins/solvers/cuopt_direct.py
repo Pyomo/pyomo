@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_cuopt_version(cuopt, avail):
+    print(cuopt.__version__.split('.'), avail)
     if not avail:
         return
     CUOPTDirect._version = tuple(cuopt.__version__.split('.'))
@@ -59,6 +60,10 @@ class CUOPTDirect(DirectSolver):
         self._capabilities.linear = True
         self._capabilities.integer = True
         self.referenced_vars = ComponentSet()
+        # remove the instance-level definition of the cuopt version:
+        # because the version comes from an imported module, only one
+        # version of cuopt is supported (and stored as a class attribute)
+        del self._version
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
