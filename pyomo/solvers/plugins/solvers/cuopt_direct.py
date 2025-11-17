@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 
 
 def _get_cuopt_version(cuopt, avail):
-    print(cuopt.__version__.split('.'), avail)
     if not avail:
         return
     CUOPTDirect._version = tuple(cuopt.__version__.split('.'))
