@@ -664,11 +664,11 @@ class Ipopt(SolverBase):
 
             parsed_data['iteration_log'] = iterations
 
-            if len(iterations) != parsed_data.get('iters', 0):
+            if len(iterations) != parsed_data.get('iters', 0) + 1:
                 n_iter = parsed_data.get('iters', 0)
                 logger.warning(
                     f"Total number of iteration records parsed {len(iterations)} does "
-                    f"not match the number of iterations ({n_iter})."
+                    f"not match the number of iterations ({n_iter}) plus one."
                 )
 
         # Extract scaled and unscaled table
