@@ -147,7 +147,10 @@ class GurobiDirect(GurobiDirectBase):
         timer.stop('con map')
         timer.stop('create maps')
         solution_loader = GurobiDirectSolutionLoader(
-            solver_model=gurobi_model, pyomo_vars=self._pyomo_vars, gurobi_vars=self._gurobi_vars, con_map=con_map
+            solver_model=gurobi_model,
+            pyomo_vars=self._pyomo_vars,
+            gurobi_vars=self._gurobi_vars,
+            con_map=con_map,
         )
         has_obj = len(repn.objectives) > 0
 

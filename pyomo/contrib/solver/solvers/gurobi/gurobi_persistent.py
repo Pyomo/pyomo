@@ -58,10 +58,10 @@ class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
 
     def _var_pair_iter(self):
         return self._var_map.items()
-    
+
     def _get_var_map(self):
         return self._var_map
-    
+
     def _get_con_map(self):
         return self._con_map
 

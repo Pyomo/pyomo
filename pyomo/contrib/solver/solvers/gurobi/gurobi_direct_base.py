@@ -90,10 +90,10 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         Should iterate over pairs of (pyomo var, gurobipy var)
         """
         raise NotImplementedError('should be implemented by derived classes')
-    
+
     def _get_var_map(self):
         raise NotImplementedError('should be implemented by derived classes')
-    
+
     def _get_con_map(self):
         raise NotImplementedError('should be implemented by derived classes')
 
@@ -134,7 +134,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
             self._solver_model.getAttr('NumIntVars') == 0
             and self._solver_model.getAttr('NumBinVars') == 0
         ):
-            raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
+            raise ValueError(
+                'Cannot obtain suboptimal solutions for a continuous model'
+            )
         original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
         self._solver_model.setParam('SolutionNumber', solution_number)
         gvars = [j for i, j in self._var_pair_iter()]
@@ -149,7 +151,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
             self._solver_model.getAttr('NumIntVars') == 0
             and self._solver_model.getAttr('NumBinVars') == 0
         ):
-            raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
+            raise ValueError(
+                'Cannot obtain suboptimal solutions for a continuous model'
+            )
         original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
         self._solver_model.setParam('SolutionNumber', solution_number)
         var_map = self._get_var_map()
@@ -176,7 +180,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
             self._solver_model.getAttr('NumIntVars') == 0
             and self._solver_model.getAttr('NumBinVars') == 0
         ):
-            raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
+            raise ValueError(
+                'Cannot obtain suboptimal solutions for a continuous model'
+            )
         original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
         self._solver_model.setParam('SolutionNumber', solution_number)
         gvars = [j for i, j in self._var_pair_iter()]
@@ -190,7 +196,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
             self._solver_model.getAttr('NumIntVars') == 0
             and self._solver_model.getAttr('NumBinVars') == 0
         ):
-            raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
+            raise ValueError(
+                'Cannot obtain suboptimal solutions for a continuous model'
+            )
         original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
         self._solver_model.setParam('SolutionNumber', solution_number)
         var_map = self._get_var_map()
@@ -213,7 +221,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
             if solution_id == 0:
                 self._load_subset_vars_solution_0(vars_to_load=vars_to_load)
             else:
-                self._load_subset_vars_solution_N(vars_to_load=vars_to_load, solution_number=solution_id)
+                self._load_subset_vars_solution_N(
+                    vars_to_load=vars_to_load, solution_number=solution_id
+                )
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_primals(
@@ -230,7 +240,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
             if solution_id == 0:
                 res = self._get_subset_vars_solution_0(vars_to_load=vars_to_load)
             else:
-                res = self._get_subset_vars_solution_N(vars_to_load=vars_to_load, solution_number=solution_id)
+                res = self._get_subset_vars_solution_N(
+                    vars_to_load=vars_to_load, solution_number=solution_id
+                )
         return res
 
     def _get_rc_all_vars(self):
@@ -420,8 +432,7 @@ class GurobiDirectBase(SolverBase):
                 os.chdir(config.working_dir)
             with capture_output(TeeStream(*ostreams), capture_fd=False):
                 gurobi_model, solution_loader, has_obj = self._create_solver_model(
-                    model,
-                    config,
+                    model, config
                 )
                 options = config.solver_options
 
@@ -447,7 +458,10 @@ class GurobiDirectBase(SolverBase):
                 timer.stop('optimize')
 
             res = self._populate_results(
-                grb_model=gurobi_model, solution_loader=solution_loader, has_obj=has_obj, config=config
+                grb_model=gurobi_model,
+                solution_loader=solution_loader,
+                has_obj=has_obj,
+                config=config,
             )
         finally:
             os.chdir(orig_cwd)
