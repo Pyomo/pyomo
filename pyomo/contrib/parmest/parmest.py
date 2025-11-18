@@ -971,6 +971,91 @@ class Estimator:
         model = self._create_parmest_model(experiment_number)
         return model
 
+
+    def _create_scenario_blocks(self):
+        # Create scenario block structure
+        # Utility function for _Q_opt_simple
+        # Make a block of model scenarios, one for each experiment in exp_list 
+
+        # Create a parent model to hold scenario blocks
+        model = pyo.ConcreteModel()
+        model.Blocks = pyo.Block(range(len(self.exp_list)))
+        for i in range(len(self.exp_list)):
+            # Create parmest model for experiment i
+            parmest_model = self._create_parmest_model(i)
+            # Assign parmest model to block
+            model.Blocks[i].model = parmest_model
+
+            # Define objective for the block
+            def block_obj_rule(b):
+                return b.model.Total_Cost_Objective
+
+            model.Blocks[i].obj = pyo.Objective(rule=block_obj_rule, sense=pyo.minimize)
+
+        # Make an objective that sums over all scenario blocks
+        def total_obj(m):
+            return sum(block.obj for block in m.Blocks.values())
+        
+        model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
+
+        # Make sure all the parameters are linked across blocks
+        # for name in self.estimator_theta_names:
+        #     first_block_param = getattr(model.Blocks[0].model, name)
+        #     for i in range(1, len(self.exp_list)):
+        #         block_param = getattr(model.Blocks[i].model, name)
+        #         model.Blocks[i].model.add_constraint(
+        #             pyo.Constraint(expr=block_param == first_block_param)
+        #         )
+
+        return model
+
+
+
+    # Redesigning simpler version of _Q_opt
+    def _Q_opt_simple(
+        self,
+        return_values=None,
+        bootlist=None,
+        ThetaVals=None,
+        solver="ipopt",
+        calc_cov=NOTSET,
+        cov_n=NOTSET,
+        ):
+        '''
+        Making new version of _Q_opt that uses scenario blocks, similar to DoE.
+
+        Steps:
+        1. Load model - parmest model should be labeled
+        2. Create scenario blocks (biggest redesign) - clone model to have one per experiment
+        3. Define objective and constraints for the block
+        4. Solve the block as a single problem
+        5. Analyze results and extract parameter estimates
+
+        '''
+        
+        # Create scenario blocks using utility function       
+        model = self._create_scenario_blocks()
+
+        solver_instance = pyo.SolverFactory(solver)
+        for k, v in self.solver_options.items():
+            solver_instance.options[k] = v
+
+        solver_instance.solve(model, tee=self.tee)
+
+        assert_optimal_termination(solver_instance)
+
+        # Extract objective value
+        obj_value = pyo.value(model.Obj)
+        theta_estimates = {}
+        # Extract theta estimates from first block
+        first_block = model.Blocks[0].model
+        for name in self.estimator_theta_names:
+            theta_var = getattr(first_block, name)
+            theta_estimates[name] = pyo.value(theta_var)
+
+        return obj_value, theta_estimates
+
+
     def _Q_opt(
         self,
         ThetaVals=None,
@@ -1683,6 +1768,75 @@ class Estimator:
             cov_n=cov_n,
         )
 
+    def theta_est_simple(
+        self, solver="ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
+    ):
+        """
+        Parameter estimation using all scenarios in the data
+
+        Parameters
+        ----------
+        solver: str, optional
+            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
+        return_values: list, optional
+            List of Variable names, used to return values from the model
+            for data reconciliation
+        calc_cov: boolean, optional
+            DEPRECATED.
+
+            If True, calculate and return the covariance matrix
+            (only for "ef_ipopt" solver). Default is NOTSET
+        cov_n: int, optional
+            DEPRECATED.
+
+            If calc_cov=True, then the user needs to supply the number of datapoints
+            that are used in the objective function. Default is NOTSET
+
+        Returns
+        -------
+        obj_val: float
+            The objective function value
+        theta_vals: pd.Series
+            Estimated values for theta
+        var_values: pd.DataFrame
+            Variable values for each variable name in
+            return_values (only for solver='ipopt')
+        """
+        assert isinstance(solver, str)
+        assert isinstance(return_values, list)
+        assert (calc_cov is NOTSET) or isinstance(calc_cov, bool)
+
+        if calc_cov is not NOTSET:
+            deprecation_warning(
+                "theta_est(): `calc_cov` and `cov_n` are deprecated options and "
+                "will be removed in the future. Please use the `cov_est()` function "
+                "for covariance calculation.",
+                version="6.9.5",
+            )
+        else:
+            calc_cov = False
+
+        # check if we are using deprecated parmest
+        if self.pest_deprecated is not None and calc_cov:
+            return self.pest_deprecated.theta_est(
+                solver=solver,
+                return_values=return_values,
+                calc_cov=calc_cov,
+                cov_n=cov_n,
+            )
+        elif self.pest_deprecated is not None and not calc_cov:
+            return self.pest_deprecated.theta_est(
+                solver=solver, return_values=return_values
+            )
+
+        return self._Q_opt_simple(
+            solver=solver,
+            return_values=return_values,
+            bootlist=None,
+            calc_cov=calc_cov,
+            cov_n=cov_n,
+        )
+    
     def cov_est(self, method="finite_difference", solver="ipopt", step=1e-3):
         """
         Covariance matrix calculation using all scenarios in the data
