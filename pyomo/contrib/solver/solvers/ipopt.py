@@ -28,12 +28,12 @@ from pyomo.common.config import (
 )
 from pyomo.common.errors import (
     ApplicationError,
-    DeveloperError,
     InfeasibleConstraintException,
+    MouseTrap,
 )
 from pyomo.common.fileutils import to_legal_filename
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.timing import HierarchicalTimer, default_timer
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
@@ -45,12 +45,13 @@ from pyomo.contrib.solver.common.results import (
     TerminationCondition,
     SolutionStatus,
 )
-from pyomo.contrib.solver.solvers.sol_reader import parse_sol_file, SolSolutionLoader
-from pyomo.contrib.solver.common.util import (
-    NoFeasibleSolutionError,
-    NoOptimalSolutionError,
-    NoSolutionError,
+from pyomo.contrib.solver.solvers.sol_reader import (
+    ampl_solve_code_to_solution_status,
+    parse_sol_file,
+    SolFileData,
+    SolFileSolutionLoader,
 )
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError, NoSolutionError
 from pyomo.common.tee import TeeStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
@@ -328,7 +329,13 @@ class Ipopt(SolverBase):
     def solve(self, model, **kwds) -> Results:
         "Solve a model using Ipopt"
         # Begin time tracking
-        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        start_time = default_timer()
+        # Allocate the results object so we can populate it as we go
+        results = Results()
+        results.timing_info.start_timestamp = datetime.datetime.now(
+            datetime.timezone.utc
+        )
+
         # Update configuration options, based on keywords passed to solve
         config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
         # Check if solver is available
@@ -344,7 +351,7 @@ class Ipopt(SolverBase):
                 f"but this is not used by {self.__class__}.",
             )
         if config.timer is None:
-            timer = HierarchicalTimer()
+            timer = config.timer = HierarchicalTimer()
         else:
             timer = config.timer
         StaleFlagManager.mark_all_as_stale()
@@ -403,108 +410,29 @@ class Ipopt(SolverBase):
                     proven_infeasible = False
                 except InfeasibleConstraintException:
                     proven_infeasible = True
+                    nl_info = NLWriterInfo()
                 timer.stop('write_nl_file')
-            if not proven_infeasible and len(nl_info.variables) > 0:
-                # Get a copy of the environment to pass to the subprocess
-                env = os.environ.copy()
-                if nl_info.external_function_libraries:
-                    env['AMPLFUNC'] = amplfunc_merge(
-                        env, *nl_info.external_function_libraries
-                    )
-                self._verify_ipopt_options(config)
-                # Write the options file, if there should be one.  If
-                # the file was written, then 'options_file_name' was
-                # added to config.options (so we can correctly build the
-                # command line)
-                self._write_options_file(
-                    filename=basename + '.opt', options=config.solver_options
-                )
-                # Call ipopt - passing the files via the subprocess
-                cmd = self._create_command_line(basename=basename, config=config)
-                # this seems silly, but we have to give the subprocess slightly
-                # longer to finish than ipopt
-                if config.time_limit is not None:
-                    timeout = config.time_limit + min(
-                        max(1.0, 0.01 * config.time_limit), 100
-                    )
-                else:
-                    timeout = None
-
-                ostreams = [io.StringIO()] + config.tee
-                timer.start('subprocess')
-                try:
-                    with TeeStream(*ostreams) as t:
-                        process = subprocess.run(
-                            cmd,
-                            timeout=timeout,
-                            env=env,
-                            universal_newlines=True,
-                            stdout=t.STDOUT,
-                            stderr=t.STDERR,
-                            check=False,
-                        )
-                except OSError:
-                    err = sys.exc_info()[1]
-                    msg = 'Could not execute the command: %s\tError message: %s'
-                    raise ApplicationError(msg % (cmd, err))
-                finally:
-                    timer.stop('subprocess')
-
-                # This is the data we need to parse to get the iterations
-                # and time
-                parsed_output_data = self._parse_ipopt_output(ostreams[0])
 
             if proven_infeasible:
-                results = Results()
                 results.termination_condition = TerminationCondition.provenInfeasible
-                results.solution_loader = SolSolutionLoader(None, None)
+                results.solution_status = SolutionStatus.noSolution
                 results.extra_info.iteration_count = 0
-                results.timing_info.total_seconds = 0
-            elif len(nl_info.variables) == 0:
-                if len(nl_info.eliminated_vars) == 0:
-                    results = Results()
-                    results.termination_condition = TerminationCondition.emptyModel
-                    results.solution_loader = SolSolutionLoader(None, None)
-                else:
-                    results = Results()
+            elif not nl_info.variables:
+                if nl_info.eliminated_vars:
                     results.termination_condition = (
                         TerminationCondition.convergenceCriteriaSatisfied
                     )
                     results.solution_status = SolutionStatus.optimal
-                    results.solution_loader = SolSolutionLoader(None, nl_info=nl_info)
-                    results.extra_info.iteration_count = 0
-                    results.timing_info.total_seconds = 0
+                else:
+                    results.termination_condition = TerminationCondition.emptyModel
+                    results.solution_status = SolutionStatus.noSolution
+                results.extra_info.iteration_count = 0
+                results.solution_loader = IpoptSolutionLoader(
+                    sol_data=SolFileData(), nl_info=nl_info
+                )
             else:
-                if os.path.isfile(basename + '.sol'):
-                    with open(basename + '.sol', 'r', encoding='utf-8') as sol_file:
-                        timer.start('parse_sol')
-                        results = self._parse_solution(sol_file, nl_info)
-                        timer.stop('parse_sol')
-                else:
-                    results = Results()
-                if process.returncode != 0:
-                    results.extra_info.return_code = process.returncode
-                    results.termination_condition = TerminationCondition.error
-                    results.solution_loader = SolSolutionLoader(None, None)
-                else:
-                    try:
-                        results.extra_info.iteration_count = parsed_output_data.pop(
-                            'iters'
-                        )
-                        cpu_seconds = parsed_output_data.pop('cpu_seconds')
-                        for k, v in cpu_seconds.items():
-                            results.timing_info[k] = v
-                        results.extra_info = parsed_output_data
-                        iter_log = results.extra_info.get("iteration_log", None)
-                        if iter_log is not None:
-                            iter_log._visibility = ADVANCED_OPTION
-                    except Exception as e:
-                        logger.log(
-                            logging.WARNING,
-                            "The solver output data is empty or incomplete.\n"
-                            f"Full error message: {e}\n"
-                            f"Parsed solver data: {parsed_output_data}\n",
-                        )
+                self._run_ipopt(results, config, nl_info, basename, timer)
+
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
@@ -551,24 +479,90 @@ class Ipopt(SolverBase):
                 )
 
         results.solver_config = config
-        if not proven_infeasible and len(nl_info.variables) > 0:
-            results.solver_log = ostreams[0].getvalue()
 
         # Capture/record end-time / wall-time
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        results.timing_info.start_timestamp = start_timestamp
-        results.timing_info.wall_time = (
-            end_timestamp - start_timestamp
-        ).total_seconds()
         results.timing_info.timer = timer
+        results.timing_info.wall_time = default_timer() - start_time
         return results
 
-    def _parse_ipopt_output(self, output: Union[str, io.StringIO]) -> Dict[str, Any]:
-        parsed_data = {}
+    def _run_ipopt(self, results, config, nl_info, basename, timer):
+        # Get a copy of the environment to pass to the subprocess
+        env = os.environ.copy()
+        if nl_info.external_function_libraries:
+            env['AMPLFUNC'] = amplfunc_merge(env, *nl_info.external_function_libraries)
+        self._verify_ipopt_options(config)
+        # Write the options file, if there should be one.  If
+        # the file was written, then 'options_file_name' was
+        # added to config.options (so we can correctly build the
+        # command line)
+        self._write_options_file(
+            filename=basename + '.opt', options=config.solver_options
+        )
+        # Call ipopt - passing the files via the subprocess
+        cmd = self._create_command_line(basename=basename, config=config)
+        # this seems silly, but we have to give the subprocess slightly
+        # longer to finish than ipopt
+        if config.time_limit is not None:
+            timeout = config.time_limit + min(max(1.0, 0.01 * config.time_limit), 100)
+        else:
+            timeout = None
 
-        # Convert output to a string so we can parse it
-        if isinstance(output, io.StringIO):
-            output = output.getvalue()
+        ostreams = [io.StringIO()] + config.tee
+        timer.start('subprocess')
+        try:
+            with TeeStream(*ostreams) as t:
+                process = subprocess.run(
+                    cmd,
+                    timeout=timeout,
+                    env=env,
+                    universal_newlines=True,
+                    stdout=t.STDOUT,
+                    stderr=t.STDERR,
+                    check=False,
+                )
+        except OSError:
+            err = sys.exc_info()[1]
+            msg = 'Could not execute the command: %s\tError message: %s'
+            raise ApplicationError(msg % (cmd, err))
+        finally:
+            timer.stop('subprocess')
+
+        results.solver_log = ostreams[0].getvalue()
+        results.extra_info.return_code = process.returncode
+        if process.returncode:
+            results.termination_condition = TerminationCondition.error
+
+        # This is the data we need to parse to get the iterations
+        # and time
+        parsed_output_data = self._parse_ipopt_output(results.solver_log)
+        results.extra_info.iteration_count = parsed_output_data.pop('iters', None)
+        _timing = parsed_output_data.pop('cpu_seconds', None)
+        if _timing:
+            # results.timing_info.update(_timing)
+            for k, v in _timing.items():
+                results.timing_info[k] = v
+        results.extra_info = parsed_output_data
+        iter_log = results.extra_info.get("iteration_log", None)
+        if iter_log is not None:
+            iter_log._visibility = ADVANCED_OPTION
+
+        timer.start('parse_sol')
+        if os.path.isfile(basename + '.sol'):
+            with open(basename + '.sol', 'r', encoding='utf-8') as sol_file:
+                sol_data = parse_sol_file(sol_file)
+        else:
+            sol_data = SolFileData()
+        results.solution_loader = IpoptSolutionLoader(
+            sol_data=sol_data, nl_info=nl_info
+        )
+        timer.stop('parse_sol')
+
+        # Initialize the solver message, solution loader solution
+        # status and termination condition:
+        ampl_solve_code_to_solution_status(sol_data, results)
+
+    def _parse_ipopt_output(self, output: str) -> Dict[str, Any]:
+        parsed_data = {}
 
         # Stop parsing if there is nothing to parse
         if not output:
@@ -659,12 +653,23 @@ class Ipopt(SolverBase):
 
                 if len(iterations) != iter_num:
                     logger.warning(
-                        f"Total number of iterations parsed {len(iterations)} "
-                        f"does not match the expected iteration number ({iter_num})."
+                        f"Parsed iteration record {len(iterations)} "
+                        f"does not match the expected iteration number ({iter_num})"
+                        f"\n\t{line}"
                     )
+                    # Things have gotten fouled up.  There is no real
+                    # reason to continue to parse the iteration log
+                    break
                 iterations.append(iter_data)
 
             parsed_data['iteration_log'] = iterations
+
+            if len(iterations) != parsed_data.get('iters', 0):
+                n_iter = parsed_data.get('iters', 0)
+                logger.warning(
+                    f"Total number of iteration records parsed {len(iterations)} does "
+                    f"not match the number of iterations ({n_iter})."
+                )
 
         # Extract scaled and unscaled table
         scaled_unscaled_match = re.search(
@@ -715,23 +720,6 @@ class Ipopt(SolverBase):
         }
 
         return parsed_data
-
-    def _parse_solution(
-        self, instream: io.TextIOBase, nl_info: NLWriterInfo
-    ) -> Results:
-        results = Results()
-        res, sol_data = parse_sol_file(
-            sol_file=instream, nl_info=nl_info, result=results
-        )
-
-        if res.solution_status == SolutionStatus.noSolution:
-            res.solution_loader = SolSolutionLoader(None, None)
-        else:
-            res.solution_loader = IpoptSolutionLoader(
-                sol_data=sol_data, nl_info=nl_info
-            )
-
-        return res
 
 
 class LegacyIpoptSolver(LegacySolverWrapper, Ipopt):
