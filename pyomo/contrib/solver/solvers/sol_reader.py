@@ -118,7 +118,7 @@ class SolFileSolutionLoader(SolutionLoaderBase):
         # modify).  We will make use of an expression replacement
         # visitor to perform the substitution and computation.
         #
-        # It would be great if we could do this withough creating the
+        # It would be great if we could do this without creating the
         # entire (unfiltered) result, but we just don't (easily) know
         # which variable values we are going to need (either in the
         # vars_to_load list, or in any expression that might be needed
@@ -263,7 +263,7 @@ def _parse_message_and_options(FILE: io.TextIOBase, data: SolFileData) -> List[i
     data.message = "\n".join(msg)
 
     # WARNING: This appears to be undocumented outside of the ASL
-    # writesol.c implemention.  Before changing this logic, please
+    # writesol.c implementation.  Before changing this logic, please
     # familiarize yourself with that code.
     #
     # The AMPL options are a sequence of ints, the first of which
