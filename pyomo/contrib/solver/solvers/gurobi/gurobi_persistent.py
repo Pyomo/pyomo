@@ -51,8 +51,19 @@ logger = logging.getLogger(__name__)
 
 class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
     def __init__(self, solver_model, var_map, con_map) -> None:
-        super().__init__(solver_model, var_map, con_map)
+        super().__init__(solver_model)
+        self._var_map = var_map
+        self._con_map = con_map
         self._valid = True
+
+    def _var_pair_iter(self):
+        return self._var_map.items()
+    
+    def _get_var_map(self):
+        return self._var_map
+    
+    def _get_con_map(self):
+        return self._con_map
 
     def invalidate(self):
         self._valid = False

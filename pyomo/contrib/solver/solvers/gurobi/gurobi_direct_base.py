@@ -533,7 +533,7 @@ class GurobiDirectBase(SolverBase):
         config.timer.start('load solution')
         if config.load_solutions:
             if grb_model.SolCount > 0:
-                results.solution_loader.load_vars(timer=config.timer)
+                results.solution_loader.load_vars()
             else:
                 raise NoFeasibleSolutionError()
         config.timer.stop('load solution')
