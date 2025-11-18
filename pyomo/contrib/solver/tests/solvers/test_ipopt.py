@@ -17,7 +17,7 @@ import pyomo.environ as pyo
 from pyomo.common.envvar import is_windows
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict, ADVANCED_OPTION
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import MouseTrap
 from pyomo.common.tee import capture_output
 import pyomo.contrib.solver.solvers.ipopt as ipopt
 from pyomo.contrib.solver.common.util import NoSolutionError
@@ -25,7 +25,7 @@ from pyomo.contrib.solver.common.results import TerminationCondition, SolutionSt
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.common import unittest, Executable
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.repn.plugins.nl_writer import NLWriter
+from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 
 ipopt_available = ipopt.Ipopt().available()
 
@@ -82,24 +82,12 @@ class TestIpoptSolverConfig(unittest.TestCase):
 
 class TestIpoptSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
-        loader = ipopt.IpoptSolutionLoader(None, None)
-        with self.assertRaises(NoSolutionError):
-            loader.get_reduced_costs()
-
-        # Set _nl_info to something completely bogus but is not None
-        class NLInfo:
-            pass
-
-        loader._nl_info = NLInfo()
-        loader._nl_info.eliminated_vars = [1, 2, 3]
-        # This test may need to be altered if we enable returning duals
-        # when presolve is on
-        with self.assertRaises(NotImplementedError):
-            loader.get_reduced_costs()
-        # Reset _nl_info so we can ensure we get an error
-        # when _sol_data is None
-        loader._nl_info.eliminated_vars = []
-        with self.assertRaises(DeveloperError):
+        loader = ipopt.IpoptSolutionLoader(
+            ipopt.SolFileData(), NLWriterInfo(eliminated_vars=[1])
+        )
+        with self.assertRaisesRegex(
+            MouseTrap, "Complete reduced costs are not available"
+        ):
             loader.get_reduced_costs()
 
 
@@ -594,7 +582,7 @@ class TestIpopt(unittest.TestCase):
         result = ipopt.Ipopt().solve(model, solver_options={'print_level': 0})
         # IPOPT doesn't tell us anything about the iters if the print level
         # is set to 0
-        self.assertFalse(hasattr(result.extra_info, 'iteration_count'))
+        self.assertEqual(result.extra_info.iteration_count, None)
         self.assertFalse(hasattr(result.extra_info, 'iteration_log'))
         model = self.create_model()
         result = ipopt.Ipopt().solve(model, solver_options={'print_level': 3})
