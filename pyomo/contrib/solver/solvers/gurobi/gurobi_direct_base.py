@@ -83,7 +83,6 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         super().__init__()
         self._solver_model = solver_model
         GurobiDirectBase._register_env_client()
-        self.timer = HierarchicalTimer()
 
     def _var_pair_iter(self):
         """
@@ -104,29 +103,17 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         GurobiDirectBase._release_env_client()
 
     def _load_all_vars_solution_0(self):
-        self.timer.start('vars to load')
         gvars = [j for i, j in self._var_pair_iter()]
-        self.timer.stop('vars to load')
-        self.timer.start('getAttr')
         vals = self._solver_model.getAttr("X", gvars)
-        self.timer.stop('getAttr')
-        self.timer.start('set_value')
         for (pv, _), val in zip(self._var_pair_iter(), vals):
             pv.set_value(val, skip_validation=True)
-        self.timer.stop('set_value')
 
     def _load_subset_vars_solution_0(self, vars_to_load):
         var_map = self._get_var_map()
-        self.timer.start('vars_to_load')
         gvars = [var_map[i] for i in vars_to_load]
-        self.timer.stop('vars_to_load')
-        self.timer.start('getAttr')
         vals = self._solver_model.getAttr("X", gvars)
-        self.timer.stop('getAttr')
-        self.timer.start('set_value')
         for pv, val in zip(vars_to_load, vals):
             pv.set_value(val, skip_validation=True)
-        self.timer.stop('set_value')
 
     def _load_all_vars_solution_N(self, solution_number):
         assert solution_number != 0
