@@ -444,7 +444,7 @@ class Ipopt(SolverBase):
 
         if config.load_solutions:
             if results.solution_status == SolutionStatus.noSolution:
-                raise NoFeasibleSolutionError()
+                raise NoSolutionError()
             results.solution_loader.load_vars()
             if (
                 hasattr(model, 'dual')
