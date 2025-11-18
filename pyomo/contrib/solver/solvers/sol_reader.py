@@ -49,7 +49,7 @@ class SolFileData:
         self.unparsed: str = None
 
 
-class SolSolutionLoader(SolutionLoaderBase):
+class SolFileSolutionLoader(SolutionLoaderBase):
     """
     Loader for solvers that create .sol files (e.g., ipopt)
     """
@@ -59,14 +59,21 @@ class SolSolutionLoader(SolutionLoaderBase):
         self._nl_info = nl_info
 
     def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
-        if self._nl_info is None:
-            raise RuntimeError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
-        if self._sol_data is None:
+        if vars_to_load is not None:
+            # If we are given a list of variables to load, it is easiest
+            # to use the filtering in get_primals and then just set
+            # those values.
+            for var, val in self.get_primals(vars_to_load).items():
+                var.set_value(val, skip_validation=True)
+            StaleFlagManager.mark_all_as_stale(delayed=True)
+            return
+
+        if not self._sol_data.primals:
+            # SOL file contained no primal values
             assert len(self._nl_info.variables) == 0
         else:
+            # Load the primals provided by the SOL file (scaling if necessary)
+            assert len(self._nl_info.variables) == len(self._sol_data.primals)
             if self._nl_info.scaling:
                 for var, val, scale in zip(
                     self._nl_info.variables,
@@ -78,87 +85,89 @@ class SolSolutionLoader(SolutionLoaderBase):
                 for var, val in zip(self._nl_info.variables, self._sol_data.primals):
                     var.set_value(val, skip_validation=True)
 
+        # Compute all variables presolved out of the model
         for var, v_expr in self._nl_info.eliminated_vars:
-            var.value = value(v_expr)
+            var.set_value(value(v_expr), skip_validation=True)
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_primals(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        if self._nl_info is None:
-            raise RuntimeError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
-        val_map = {}
-        if self._sol_data is None:
+        result = ComponentMap()
+        if not self._sol_data.primals:
+            # SOL file contained no primal values
             assert len(self._nl_info.variables) == 0
         else:
-            if self._nl_info.scaling is None:
-                scale_list = [1] * len(self._nl_info.variables)
+            # Load the primals provided by the SOL file (scaling if necessary)
+            assert len(self._nl_info.variables) == len(self._sol_data.primals)
+            if self._nl_info.scaling:
+                for var, val, scale in zip(
+                    self._nl_info.variables,
+                    self._sol_data.primals,
+                    self._nl_info.scaling.variables,
+                ):
+                    result[var] = val / scale
             else:
-                scale_list = self._nl_info.scaling.variables
-            for var, val, scale in zip(
-                self._nl_info.variables, self._sol_data.primals, scale_list
-            ):
-                val_map[id(var)] = val / scale
+                for var, val in zip(self._nl_info.variables, self._sol_data.primals):
+                    result[var] = val
 
-        for var, v_expr in self._nl_info.eliminated_vars:
-            val = replace_expressions(v_expr, substitution_map=val_map)
-            v_id = id(var)
-            val_map[v_id] = val
+        # If we have eliminated variables, then we need to compute
+        # them.  Unfortunately, the expressions that we kept are in
+        # terms of the actual variable values (which we don't want to
+        # modify).  We will make use of an expression replacement
+        # visitor to perform the substitution and computation.
+        #
+        # It would be great if we could do this withough creating the
+        # entire (unfiltered) result, but we just don't (easily) know
+        # which variable values we are going to need (either in the
+        # vars_to_load list, or in any expression that might be needed
+        # to compute an eliminated variable value.  So to keep things
+        # simple (i.e., fewer bugs), we will go ahead and always compute
+        # everything.
+        if self._nl_info.eliminated_vars:
+            val_map = {id(k): v for k, v in result.items()}
+            for var, v_expr in self._nl_info.eliminated_vars:
+                val = value(replace_expressions(v_expr, substitution_map=val_map))
+                val_map[id(var)] = val
+                result[var] = val
 
-        res = ComponentMap()
-        if vars_to_load is None:
-            vars_to_load = self._nl_info.variables + [
-                var for var, _ in self._nl_info.eliminated_vars
-            ]
-        for var in vars_to_load:
-            res[var] = val_map[id(var)]
+        if vars_to_load is not None:
+            result = ComponentMap((v, result[v]) for v in vars_to_load)
 
-        return res
+        return result
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Dict[ConstraintData, float]:
-        if self._nl_info is None:
-            raise RuntimeError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
-        # If the NL instance has no objectives, report zeros
-        if not self._nl_info.objectives:
-            cons = (
-                cons_to_load if cons_to_load is not None else self._nl_info.constraints
-            )
-            return {c: 0.0 for c in cons}
         if len(self._nl_info.eliminated_vars) > 0:
-            raise NotImplementedError(
-                'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
-                'to get dual variable values.'
+            raise MouseTrap(
+                'Complete duals are not available when variables have '
+                'been presolved from the model.  Turn presolve off '
+                '(solver.config.writer_config.linear_presolve=False) to get '
+                'dual variable values.'
             )
-        if self._sol_data is None:
-            raise DeveloperError(
-                "Solution data is empty. This should not "
-                "have happened. Report this error to the Pyomo Developers."
-            )
-        res = {}
+
+        if not self._sol_data.duals:
+            return {}
+
         scaling = self._nl_info.scaling
         if scaling:
             _iter = zip(
                 self._nl_info.constraints, self._sol_data.duals, scaling.constraints
             )
-            obj_scale = self._nl_info.scaling.objectives[0]
+            inv_obj_scale = 1.0
+            if self._nl_info.scaling.objectives:
+                inv_obj_scale /= self._nl_info.scaling.objectives[self._sol_data.objno]
         else:
             _iter = zip(self._nl_info.constraints, self._sol_data.duals)
         if cons_to_load is not None:
+            cons_to_load = set(cons_to_load)
             _iter = filter(lambda x: x[0] in cons_to_load, _iter)
         if scaling:
-            res = {con: val * scale / obj_scale for con, val, scale in _iter}
+            return {con: val * scale * inv_obj_scale for con, val, scale in _iter}
         else:
-            res = {con: val for con, val in _iter}
-        return res
+            return {con: val for con, val in _iter}
 
 
 def ampl_solve_code_to_solution_status(sol_data: SolFileData, result: Results) -> None:

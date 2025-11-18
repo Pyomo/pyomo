@@ -96,65 +96,50 @@ class IpoptConfig(SolverConfig):
         )
 
 
-class IpoptSolutionLoader(SolSolutionLoader):
-    def _error_check(self):
-        if self._nl_info is None:
-            raise NoSolutionError()
-        if len(self._nl_info.eliminated_vars) > 0:
-            raise NotImplementedError(
-                'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
-                'to get dual variable values.'
-            )
-        if self._sol_data is None:
-            raise DeveloperError(
-                "Solution data is empty. This should not "
-                "have happened. Report this error to the Pyomo Developers."
-            )
-
+class IpoptSolutionLoader(SolFileSolutionLoader):
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        self._error_check()
-        # If the NL instance has no objectives, report zeros
-        if not len(self._nl_info.objectives):
-            return ComponentMap()
-        if self._nl_info.scaling is None:
-            scale_list = [1] * len(self._nl_info.variables)
-            obj_scale = 1
-        else:
-            scale_list = self._nl_info.scaling.variables
-            obj_scale = self._nl_info.scaling.objectives[0]
-        sol_data = self._sol_data
-        nl_info = self._nl_info
-        zl_map = sol_data.var_suffixes['ipopt_zL_out']
-        zu_map = sol_data.var_suffixes['ipopt_zU_out']
-        rc = {}
-        for ndx, v in enumerate(nl_info.variables):
-            scale = scale_list[ndx]
-            v_id = id(v)
-            rc[v_id] = (v, 0)
-            if ndx in zl_map:
-                zl = zl_map[ndx] * scale / obj_scale
-                if abs(zl) > abs(rc[v_id][1]):
-                    rc[v_id] = (v, zl)
-            if ndx in zu_map:
-                zu = zu_map[ndx] * scale / obj_scale
-                if abs(zu) > abs(rc[v_id][1]):
-                    rc[v_id] = (v, zu)
+        if self._nl_info.eliminated_vars:
+            raise MouseTrap(
+                'Complete reduced costs are not available when variables have '
+                'been presolved from the model.  Turn presolve off '
+                '(solver.config.writer_config.linear_presolve=False) to get '
+                'reduced costs.'
+            )
 
-        if vars_to_load is None:
-            res = ComponentMap(rc.values())
-            for v, _ in nl_info.eliminated_vars:
-                res[v] = 0
-        else:
-            res = ComponentMap()
-            for v in vars_to_load:
-                if id(v) in rc:
-                    res[v] = rc[id(v)][1]
-                else:
-                    # eliminated vars
-                    res[v] = 0
-        return res
+        zl_map = self._sol_data.var_suffixes.get('ipopt_zL_out', {})
+        zu_map = self._sol_data.var_suffixes.get('ipopt_zU_out', {})
+        # TBD: is it an error if Ipopt fails to return RC info?
+        # if not (zl_map or zu_map):
+        #     raise?
+        if self._nl_info.scaling:
+            # Unscale the zl and zu maps:
+            inv_obj_scale = 1.0
+            if self._nl_info.scaling.objectives:
+                inv_obj_scale /= self._nl_info.scaling.objectives[self._sol_data.objno]
+            var_scale = self._nl_info.scaling.variables
+            zl_map = {k: v * var_scale[k] * inv_obj_scale for k, v in zl_map.items()}
+            zu_map = {k: v * var_scale[k] * inv_obj_scale for k, v in zu_map.items()}
+
+        rc = ComponentMap()
+        for ndx, v in enumerate(self._nl_info.variables):
+            _rc = 0.0
+            if ndx in zl_map:
+                # Note *any* value in zl has an absolute value at least
+                # as big as 0.  No need to test and just overwrite _rc:
+                _rc = zl_map[ndx]
+            if ndx in zu_map:
+                zu = zu_map[ndx]
+                if abs(zu) > abs(_rc):
+                    _rc = zu
+            rc[v] = _rc
+
+        if vars_to_load is not None:
+            # Note vars_to_load could contain variables that were
+            # eliminated (so use get()):
+            rc = ComponentMap((v, rc.get(v, 0)) for v in vars_to_load)
+        return rc
 
 
 ipopt_command_line_options = {
