@@ -88,8 +88,8 @@ class IpoptConfig(SolverConfig):
             ConfigValue(
                 domain=Executable,
                 default='ipopt',
-                description="Preferred executable for ipopt. Defaults to searching the "
-                "``PATH`` for the first available ``ipopt``.",
+                description="Preferred executable for ipopt. Defaults to searching "
+                "the ``PATH`` for the first available ``ipopt``.",
             ),
         )
         self.writer_config: ConfigDict = self.declare(
