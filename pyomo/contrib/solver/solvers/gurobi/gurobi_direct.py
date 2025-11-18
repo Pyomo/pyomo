@@ -35,6 +35,21 @@ logger = logging.getLogger(__name__)
 
 
 class GurobiDirectSolutionLoader(GurobiDirectSolutionLoaderBase):
+    def __init__(self, solver_model, pyomo_vars, gurobi_vars, con_map) -> None:
+        super().__init__(solver_model)
+        self._pyomo_vars = pyomo_vars
+        self._gurobi_vars = gurobi_vars
+        self._con_map = con_map
+
+    def _var_pair_iter(self):
+        return zip(self._pyomo_vars, self._gurobi_vars)
+
+    def _get_var_map(self):
+        return ComponentMap(self._var_pair_iter())
+
+    def _get_con_map(self):
+        return self._con_map
+
     def __del__(self):
         super().__del__()
         if python_is_shutting_down():
@@ -115,9 +130,12 @@ class GurobiDirect(GurobiDirectBase):
         timer.stop('transfer_model')
 
         self._pyomo_vars = repn.columns
+        timer.start('tolist')
         self._gurobi_vars = x.tolist()
+        timer.stop('tolist')
 
-        var_map = ComponentMap(zip(repn.columns, self._gurobi_vars))
+        timer.start('create maps')
+        timer.start('con map')
         con_map = {}
         for row, gc in zip(repn.rows, A.tolist()):
             pc = row.constraint
@@ -126,8 +144,10 @@ class GurobiDirect(GurobiDirectBase):
                 con_map[pc] = (con_map[pc], gc)
             else:
                 con_map[pc] = gc
+        timer.stop('con map')
+        timer.stop('create maps')
         solution_loader = GurobiDirectSolutionLoader(
-            solver_model=gurobi_model, var_map=var_map, con_map=con_map
+            solver_model=gurobi_model, pyomo_vars=self._pyomo_vars, gurobi_vars=self._gurobi_vars, con_map=con_map
         )
         has_obj = len(repn.objectives) > 0
 

@@ -19,13 +19,13 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.errors import InvalidValueError
 from pyomo.common.numeric_types import native_complex_types
+from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
 
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.contrib.solver.common.util import NoSolutionError
-from .gurobi_direct_base import GurobiDirectBase
-from .gurobi_direct import GurobiDirectSolutionLoader
+from .gurobi_direct_base import GurobiDirectBase, GurobiDirectSolutionLoaderBase
 
 from pyomo.core.base import (
     Binary,
@@ -577,6 +577,34 @@ class GurobiMINLPWriter:
         return grb_model, visitor.var_map, pyo_obj, grb_cons, pyo_cons
 
 
+class GurobiDirectMINLPSolutionLoader(GurobiDirectSolutionLoaderBase):
+    def __init__(self, solver_model, var_map, con_map) -> None:
+        super().__init__(solver_model)
+        self._var_map = var_map
+        self._con_map = con_map
+
+    def _var_pair_iter(self):
+        return self._var_map.items()
+
+    def _get_var_map(self):
+        return self._var_map
+
+    def _get_con_map(self):
+        return self._con_map
+
+    def __del__(self):
+        super().__del__()
+        if python_is_shutting_down():
+            return
+        # Free the associated model
+        if self._solver_model is not None:
+            self._var_map = None
+            self._con_map = None
+            # explicitly release the model
+            self._solver_model.dispose()
+            self._solver_model = None
+
+
 @SolverFactory.register(
     'gurobi_direct_minlp',
     doc='Direct interface to Gurobi version 12 and up '
@@ -612,7 +640,7 @@ class GurobiDirectMINLP(GurobiDirectBase):
             else:
                 con_map[pc] = gc
 
-        solution_loader = GurobiDirectSolutionLoader(
+        solution_loader = GurobiDirectMINLPSolutionLoader(
             solver_model=grb_model, var_map=var_map, con_map=con_map
         )
 
