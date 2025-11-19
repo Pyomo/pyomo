@@ -112,6 +112,8 @@ class Solution:
     """
 
     def __init__(self, *, variables=None, objective=None, objectives=None, **kwargs):
+        if objective is not None and objectives is not None:
+            raise ValueError("The objective= and objectives= keywords cannot both be specified.")
         self.id = None
 
         self._variables = []
