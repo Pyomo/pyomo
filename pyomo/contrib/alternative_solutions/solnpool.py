@@ -64,7 +64,7 @@ class SolutionPoolBase:
     ----------
     name : str
         String name to describe the pool.
-    as_solution : Function or None
+    as_solution : Callable[..., Solution][..., Solution] or None
         Method for converting inputs into Solution objects.
         A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
@@ -161,7 +161,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
     ----------
     name : str
         String name to describe the pool.
-    as_solution : Function or None
+    as_solution : Callable[..., Solution] or None
         Method for converting inputs into Solution objects.
         A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
@@ -233,7 +233,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
     ----------
     name : str
         String name to describe the pool.
-    as_solution : Function or None
+    as_solution : Callable[..., Solution] or None
         Method for converting inputs into Solution objects.
         A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
@@ -325,7 +325,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
     ----------
     name : str
         String name to describe the pool.
-    as_solution : Function or None
+    as_solution : Callable[..., Solution] or None
         Method for converting inputs into Solution objects.
         A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
@@ -432,7 +432,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
     ----------
     name : str
         String name to describe the pool.
-    as_solution : Function or None
+    as_solution : Callable[..., Solution] or None
         Method for converting inputs into Solution objects.
         A value of None will result in the default_as_solution function being used.
     counter : PoolCounter or None
@@ -793,7 +793,7 @@ class PoolManager:
             This string indicates the policy that is enforced new solution pool.
             Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
             (Default is 'keep_best'.)
-        as_solution : Function or None
+        as_solution : Callable[..., Solution] or None
             Method for converting inputs into Solution objects.
             A value of None will result in the default_as_solution function being used.
         **kwds
@@ -1014,7 +1014,7 @@ class PyomoPoolManager(PoolManager):
             This string indicates the policy that is enforced new solution pool.
             Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
             (Default is 'keep_best'.)
-        as_solution : Function or None
+        as_solution : Callable[..., Solution] or None
             Method for converting inputs into Solution objects.
             A value of None will result in the _as_pyomo_solution function being used.
         **kwds
