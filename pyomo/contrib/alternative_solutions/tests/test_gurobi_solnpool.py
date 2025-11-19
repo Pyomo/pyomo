@@ -39,7 +39,7 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         Confirm that an exception is thrown with a non-positive num solutions
         """
         m = tc.get_triangle_ip()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             gurobi_generate_solutions(m, num_solutions=-1)
 
     def test_search_mode(self):
@@ -47,7 +47,7 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         Confirm that an exception is thrown with pool_search_mode not in [1,2]
         """
         m = tc.get_triangle_ip()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             gurobi_generate_solutions(m, pool_search_mode=0)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")

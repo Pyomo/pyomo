@@ -47,7 +47,7 @@ class TestBalasUnit(unittest.TestCase):
         Confirm that an exception is thrown with a non-positive num solutions
         """
         m = tc.get_triangle_ip()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(RuntimeError):
             enumerate_binary_solutions(m, num_solutions=-1, solver=mip_solver)
 
     @parameterized.expand(input=solvers)

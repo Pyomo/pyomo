@@ -807,7 +807,7 @@ class PoolManager:
         ----------
         name : str
             name key to pick the SolutionPool in the PoolManager object to the active pool
-            If name not a valid key then assertion error thrown
+            If name not a valid key then ValueError is thrown
         Returns
         ----------
         dict
@@ -917,7 +917,7 @@ class PoolManager:
         ----------
         json_filename : path-like
             File name to read in as SolutionPools for this PoolManager
-            If corresponding file does not exist, throws assertion error
+            If corresponding file does not exist, throws ValueError
 
         """
         # TODO: this does not set an active pool, should we do that?

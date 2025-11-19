@@ -66,7 +66,7 @@ class TestOBBTUnit(unittest.TestCase):
         ERROR: Cannot restrict variable list when warmstart is specified
         """
         m = tc.get_2d_diamond_problem()
-        with unittest.pytest.raises(AssertionError):
+        with unittest.pytest.raises(ValueError):
             obbt_analysis_bounds_and_solutions(m, variables=[m.x], solver=mip_solver)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")

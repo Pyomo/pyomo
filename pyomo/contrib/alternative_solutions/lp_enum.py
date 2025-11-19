@@ -89,15 +89,13 @@ def enumerate_linear_solutions(
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS")
 
-    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if not (num_solutions >= 1):
+        raise ValueError("num_solutions must be positive integer")
     if num_solutions == 1:
         logger.warning("Running alternative_solutions method to find only 1 solution!")
 
-    assert search_mode in [
-        "optimal",
-        "random",
-        "norm",
-    ], 'search mode must be "optimal", "random", or "norm".'
+    if not (search_mode in ["optimal", "random", "norm"]):
+        raise ValueError('search mode must be "optimal", "random", or "norm".')
     # TODO: Implement the random and norm objectives. I think it is sufficient
     # to only consider the cb.var_lower variables in the objective for these two
     # cases. The cb.var_upper variables are directly linked to these to diversity
@@ -129,7 +127,8 @@ def enumerate_linear_solutions(
 
     # TODO: Relax this if possible - Should allow for the mixed-binary case
     for var in all_variables:
-        assert var.is_continuous(), "Model must be an LP"
+        if not var.is_continuous():
+            raise RuntimeError("Model must be an LP")
 
     use_appsi = False
     if "appsi" in solver:

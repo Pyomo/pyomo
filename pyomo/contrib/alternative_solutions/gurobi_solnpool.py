@@ -71,11 +71,13 @@ def gurobi_generate_solutions(
         A PyomoPoolManager object
     """
 
-    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if not (num_solutions >= 1):
+        raise ValueError("num_solutions must be positive integer")
     if num_solutions == 1:
         logger.warning("Running alternative_solutions method to find only 1 solution!")
 
-    assert pool_search_mode in [1, 2], "pool_search_mode must be 1 or 2"
+    if not (pool_search_mode in [1, 2]):
+        raise ValueError("pool_search_mode must be 1 or 2")
     if pool_search_mode == 1:
         logger.warning(
             "Running gurobi_solnpool with PoolSearchMode=1, best effort search may lead to unexpected behavior"

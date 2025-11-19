@@ -160,9 +160,10 @@ def obbt_analysis_bounds_and_solutions(
         )
 
     if warmstart:
-        assert (
-            variables == None
-        ), "Cannot restrict variable list when warmstart is specified"
+        if not (variables == None):
+            raise ValueError(
+                "Cannot restrict variable list when warmstart is specified"
+            )
     all_variables = aos_utils.get_model_variables(model, include_fixed=False)
     if variables == None:
         variable_list = all_variables

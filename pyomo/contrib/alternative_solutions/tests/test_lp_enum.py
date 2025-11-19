@@ -49,7 +49,7 @@ class TestLPEnum(unittest.TestCase):
         Confirm that an exception is thrown with a non-positive num solutions
         """
         m = tc.get_3d_polyhedron_problem()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             lp_enum.enumerate_linear_solutions(m, num_solutions=-1, solver=mip_solver)
 
     @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")

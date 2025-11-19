@@ -83,15 +83,13 @@ def enumerate_binary_solutions(
     """
     logger.info("STARTING NO-GOOD CUT ANALYSIS")
 
-    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if not (num_solutions >= 1):
+        raise RuntimeError("num_solutions must be positive integer")
     if num_solutions == 1:
         logger.warning("Running alternative_solutions method to find only 1 solution!")
 
-    assert search_mode in [
-        "optimal",
-        "random",
-        "hamming",
-    ], 'search mode must be "optimal", "random", or "hamming".'
+    if not (search_mode in ["optimal", "random", "hamming"]):
+        raise ValueError('search mode must be "optimal", "random", or "hamming".')
 
     if seed is not None:
         aos_utils._set_numpy_rng(seed)
