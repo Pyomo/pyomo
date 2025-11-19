@@ -386,7 +386,7 @@ class TestSolnPool(unittest.TestCase):
 
     def test_keeplatest_bad_max_pool_size(self):
         pm = PoolManager()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             pm.add_pool(name="pool", policy=PoolPolicy.keep_latest, max_pool_size=-2)
 
     def test_keeplatest_add(self):
@@ -454,7 +454,7 @@ class TestSolnPool(unittest.TestCase):
 
     def test_keeplatestunique_bad_max_pool_size(self):
         pm = PoolManager()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             pm.add_pool(
                 name="pool", policy=PoolPolicy.keep_latest_unique, max_pool_size=-2
             )
@@ -524,7 +524,7 @@ class TestSolnPool(unittest.TestCase):
 
     def test_keepbest_bad_max_pool_size(self):
         pm = PoolManager()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             pm.add_pool(name="pool", policy=PoolPolicy.keep_best, max_pool_size=-2)
 
     def test_pool_manager_to_dict_passthrough(self):

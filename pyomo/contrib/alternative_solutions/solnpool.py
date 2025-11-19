@@ -228,9 +228,10 @@ class SolutionPool_KeepAll(SolutionPoolBase):
             soln = self._as_solution(*args, **kwargs)
         #
         soln.id = self._next_solution_counter()
-        assert (
-            soln.id not in self._solutions
-        ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+        if soln.id in self._solutions:
+            raise DeveloperError(
+                f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+            )
         #
         self._solutions[soln.id] = soln
         return soln.id
@@ -260,7 +261,8 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
     """
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
-        assert max_pool_size >= 1, "max_pool_size must be positive integer"
+        if not (max_pool_size >= 1):
+            raise ValueError("max_pool_size must be positive integer")
         super().__init__(name, as_solution, counter, policy=PoolPolicy.keep_latest)
         self.max_pool_size = max_pool_size
         self._int_deque = collections.deque()
@@ -297,9 +299,10 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
             soln = self._as_solution(*args, **kwargs)
         #
         soln.id = self._next_solution_counter()
-        assert (
-            soln.id not in self._solutions
-        ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+        if soln.id in self._solutions:
+            raise DeveloperError(
+                f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+            )
         #
         self._solutions[soln.id] = soln
         self._int_deque.append(soln.id)
@@ -334,7 +337,8 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
     """
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
-        assert max_pool_size >= 1, "max_pool_size must be positive integer"
+        if not (max_pool_size >= 1):
+            raise ValueError("max_pool_size must be positive integer")
         super().__init__(
             name, as_solution, counter, policy=PoolPolicy.keep_latest_unique
         )
@@ -380,9 +384,10 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         self._unique_solutions.add(tuple_repn)
         #
         soln.id = self._next_solution_counter()
-        assert (
-            soln.id not in self._solutions
-        ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+        if soln.id in self._solutions:
+            raise DeveloperError(
+                f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+            )
         #
         self._int_deque.append(soln.id)
         if len(self._int_deque) > self.max_pool_size:
@@ -453,9 +458,8 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         best_value=nan,
     ):
         super().__init__(name, as_solution, counter, policy=PoolPolicy.keep_best)
-        assert (max_pool_size is None) or (
-            max_pool_size >= 1
-        ), "max_pool_size must be None or positive integer"
+        if not ((max_pool_size is None) or (max_pool_size >= 1)):
+            raise ValueError("max_pool_size must be None or positive integer")
         self.max_pool_size = max_pool_size
         self.objective = objective
         self.abs_tolerance = abs_tolerance
@@ -540,9 +544,10 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             return None
 
         soln.id = self._next_solution_counter()
-        assert (
-            soln.id not in self._solutions
-        ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+        if soln.id in self._solutions:
+            raise DeveloperError(
+                f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
+            )
         #
         self._solutions[soln.id] = soln
         #
@@ -578,9 +583,10 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             heapq.heapify(tmp)
             self._heap = tmp
 
-        assert len(self._solutions) == len(
-            self._heap
-        ), f"Num solutions is {len(self._solutions)} but the heap size is {len(self._heap)}"
+        if len(self._solutions) != len(self._heap):
+            raise DeveloperError(
+                f"Num solutions is {len(self._solutions)} but the heap size is {len(self._heap)}"
+            )
         return soln.id
 
 
@@ -745,7 +751,8 @@ class PoolManager:
             Active pool object
 
         """
-        assert self._name in self._pools, f"Unknown pool '{self._name}'"
+        if self._name not in self._pools:
+            raise ValueError(f"Unknown pool '{self._name}'")
         return self._pools[self._name]
 
     def add_pool(
@@ -915,9 +922,8 @@ class PoolManager:
         """
         # TODO: this does not set an active pool, should we do that?
         # TODO: this does not seem to update the counter value, possibly leading to non-unique ids
-        assert os.path.exists(
-            json_filename
-        ), f"ERROR: file '{json_filename}' does not exist!"
+        if not os.path.exists(json_filename):
+            raise ValueError(f"ERROR: file '{json_filename}' does not exist!")
         with open(json_filename, "r") as INPUT:
             try:
                 data = json.load(INPUT)
