@@ -226,7 +226,6 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
     A subclass of SolutionPool with the policy of keep the latest k solutions.
     Added solutions are not checked for uniqueness.
 
-
     This class is designed to integrate with the alternative_solution generation methods.
     Additionally, groups of solution pools can be handled with the PoolManager class.
 

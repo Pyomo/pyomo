@@ -105,11 +105,13 @@ class Solution:
         A :py:class:`ObjectiveInfo` object. (default is None)
     objectives : None or list
         A list of :py:class:`ObjectiveInfo` objects. (default is None)
-    kwds : dict
-        A dictionary of auxiliary data that is stored with the core solution values.
+    kwargs : dict
+        A dictionary of auxiliary data that is stored with the core solution values.  If the 'suffix'
+        keyword is specified, then its value is use to define suffix data.  Otherwise, all
+        of the keyword arguments are treated as suffix data.
     """
 
-    def __init__(self, *, variables=None, objective=None, objectives=None, **kwds):
+    def __init__(self, *, variables=None, objective=None, objectives=None, **kwargs):
         self.id = None
 
         self._variables = []
@@ -133,10 +135,10 @@ class Solution:
                 if o.name is not None:
                     self.name_to_objective[o.name] = o
 
-        if "suffix" in kwds:
-            self.suffix = MyMunch(kwds.pop("suffix"))
+        if "suffix" in kwargs:
+            self.suffix = MyMunch(kwargs.pop("suffix"))
         else:
-            self.suffix = MyMunch(**kwds)
+            self.suffix = MyMunch(**kwargs)
 
     def variable(self, index):
         """Returns the specified variable.
@@ -252,42 +254,44 @@ class Solution:
         return self._tuple_repn() <= soln._tuple_repn()
 
 
-def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
-    #
-    # Q: Do we want to use an index relative to the list of variables specified here?  Or use the Pyomo variable ID?
-    # Q: Should this object cache the Pyomo variable object?  Or CUID?
-    #
-    # TODO: Capture suffix info here.
-    #
-    vlist = []
-    if variables is not None:
-        index = 0
-        for var in variables:
-            vlist.append(
-                VariableInfo(
-                    value=(
-                        pyo.value(var) if var.is_continuous() else round(pyo.value(var))
-                    ),
-                    fixed=var.is_fixed(),
-                    name=str(var),
-                    index=index,
-                    discrete=not var.is_continuous(),
+class PyomoSolution(Solution):
+
+    def __init__(self, *, variables=None, objective=None, objectives=None, **kwargs):
+        #
+        # Q: Do we want to use an index relative to the list of variables specified here?  Or use the Pyomo variable ID?
+        # Q: Should this object cache the Pyomo variable object?  Or CUID?
+        #
+        # TODO: Capture suffix info here.
+        #
+        vlist = []
+        if variables is not None:
+            index = 0
+            for var in variables:
+                vlist.append(
+                    VariableInfo(
+                        value=(
+                            pyo.value(var) if var.is_continuous() else round(pyo.value(var))
+                        ),
+                        fixed=var.is_fixed(),
+                        name=str(var),
+                        index=index,
+                        discrete=not var.is_continuous(),
+                    )
                 )
-            )
-            index += 1
+                index += 1
 
-    #
-    # TODO: Capture suffix info here.
-    #
-    if objective is not None:
-        objectives = [objective]
-    olist = []
-    if objectives is not None:
-        index = 0
-        for obj in objectives:
-            olist.append(
-                ObjectiveInfo(value=pyo.value(obj), name=str(obj), index=index)
-            )
-            index += 1
+        #
+        # TODO: Capture suffix info here.
+        #
+        if objective is not None:
+            objectives = [objective]
+        olist = []
+        if objectives is not None:
+            index = 0
+            for obj in objectives:
+                olist.append(
+                    ObjectiveInfo(value=pyo.value(obj), name=str(obj), index=index)
+                )
+                index += 1
 
-    return Solution(variables=vlist, objectives=olist, **kwds)
+        super().__init__(variables=vlist, objectives=olist, **kwargs)
