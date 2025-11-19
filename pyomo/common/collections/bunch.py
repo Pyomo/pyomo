@@ -170,6 +170,3 @@ class Bunch(dict):
             attrs.append("".join(text))
         attrs.sort()
         return "\n".join(attrs)
-
-    def toDict(self):
-        return self
