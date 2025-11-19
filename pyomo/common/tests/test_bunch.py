@@ -22,7 +22,7 @@ from pyomo.common.collections import Bunch
 
 
 class Test(unittest.TestCase):
-    def test_Bunch1(self):
+    def test_Bunch_fromString(self):
         opt = Bunch('a=None c=d e="1 2 3" f=" 5 "', foo=1, bar='x')
         self.assertEqual(opt.ll, None)
         self.assertEqual(opt.a, None)
@@ -97,7 +97,7 @@ yy: 2""",
         ):
             Bunch('a=5 foo = 6')
 
-    def test_Bunch2(self):
+    def test_Bunch_fromGenerator(self):
         data = dict(a=None, c='d', e="1 2 3", f=" 5 ", foo=1, bar='x')
         o1 = Bunch((k, v) for k, v in data.items())
         self.assertEqual(
