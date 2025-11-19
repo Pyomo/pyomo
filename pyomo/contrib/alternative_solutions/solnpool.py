@@ -62,7 +62,7 @@ class SolutionPoolBase:
 
     Parameters
     ----------
-    name : String
+    name : str
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
@@ -70,7 +70,7 @@ class SolutionPoolBase:
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
-    policy : String
+    policy : str
         String name to describe the pool construction and management policy.
     """
 
@@ -159,7 +159,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 
     Parameters
     ----------
-    name : String
+    name : str
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
@@ -189,7 +189,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
             The ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
-        if len(args) == 1 and len(kwargs) == 0 and type(args[0]) is Solution:
+        if len(args) == 1 and not kwargs and isinstance(args[0], Solution):
             soln = args[0]
         else:
             soln = self._as_solution(*args, **kwargs)
@@ -231,7 +231,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
     Parameters
     ----------
-    name : String
+    name : str
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
@@ -276,7 +276,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
             The ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
-        if len(args) == 1 and len(kwargs) == 0 and type(args[0]) is Solution:
+        if len(args) == 1 and not kwargs and isinstance(args[0], Solution):
             soln = args[0]
         else:
             soln = self._as_solution(*args, **kwargs)
@@ -323,7 +323,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
     Parameters
     ----------
-    name : String
+    name : str
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
@@ -368,7 +368,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
             When not present, the ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
-        if len(args) == 1 and len(kwargs) == 0 and type(args[0]) is Solution:
+        if len(args) == 1 and not kwargs and isinstance(args[0], Solution):
             soln = args[0]
         else:
             soln = self._as_solution(*args, **kwargs)
@@ -430,7 +430,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
 
     Parameters
     ----------
-    name : String
+    name : str
         String name to describe the pool.
     as_solution : Function or None
         Method for converting inputs into Solution objects.
@@ -516,7 +516,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             When not present, the ID value to match the added solution from the solution pool's PoolCounter.
             The ID value is also the pool dictionary key for this solution.
         """
-        if len(args) == 1 and len(kwargs) == 0 and type(args[0]) is Solution:
+        if len(args) == 1 and not kwargs and isinstance(args[0], Solution):
             soln = args[0]
         else:
             soln = self._as_solution(*args, **kwargs)
@@ -787,9 +787,9 @@ class PoolManager:
 
         Parameters
         ----------
-        name : String
+        name : str
             The name of the solution pool.  If name is already used then, then an error is generated.
-        policy : String
+        policy : str
             This string indicates the policy that is enforced new solution pool.
             Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
             (Default is 'keep_best'.)
@@ -848,7 +848,7 @@ class PoolManager:
 
         Parameters
         ----------
-        name : String
+        name : str
             name key to pick the SolutionPool in the PoolManager object to the active pool
             If name not a valid key then assertion error thrown
         Returns
@@ -941,7 +941,7 @@ class PoolManager:
             Name of file output location
             If filename exists, will overwrite.
             If filename does not exist, will create.
-        indent : int or String or None
+        indent : int or str or None
             Pass through indent type for json.dump indent
         sort_keys : Boolean
             Pass through sort_keys for json.dump
@@ -1008,9 +1008,9 @@ class PyomoPoolManager(PoolManager):
 
         Parameters
         ----------
-        name : String
+        name : str
             The name of the solution pool.  If name is already used then, then an error is generated.
-        policy : String
+        policy : str
             This string indicates the policy that is enforced new solution pool.
             Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
             (Default is 'keep_best'.)
