@@ -640,6 +640,13 @@ class PoolManager:
 
     """
 
+    _policy_dispatcher = {
+        "keep_all": SolutionPool_KeepAll,
+        "keep_best": SolutionPool_KeepBest,
+        "keep_latest": SolutionPool_KeepLatest,
+        "keep_latest_unique": SolutionPool_KeepLatestUnique,
+    }
+
     def __init__(self):
         self._name = None
         self._pools = {}
@@ -812,33 +819,12 @@ class PoolManager:
             if name is not None and None in self._pools and len(self._pools[None]) == 0:
                 del self._pools[None]
 
-            if policy == "keep_all":
-                self._pools[name] = SolutionPool_KeepAll(
-                    name=name, as_solution=as_solution, counter=weakref.proxy(self)
-                )
-            elif policy == "keep_best":
-                self._pools[name] = SolutionPool_KeepBest(
-                    name=name,
-                    as_solution=as_solution,
-                    counter=weakref.proxy(self),
-                    **kwds,
-                )
-            elif policy == "keep_latest":
-                self._pools[name] = SolutionPool_KeepLatest(
-                    name=name,
-                    as_solution=as_solution,
-                    counter=weakref.proxy(self),
-                    **kwds,
-                )
-            elif policy == "keep_latest_unique":
-                self._pools[name] = SolutionPool_KeepLatestUnique(
-                    name=name,
-                    as_solution=as_solution,
-                    counter=weakref.proxy(self),
-                    **kwds,
-                )
-            else:
+            if not policy in self._policy_dispatcher:
                 raise ValueError(f"Unknown pool policy: {policy}")
+            self._pools[name] = self._policy_dispatcher[policy](
+                name=name, as_solution=as_solution, counter=weakref.proxy(self), **kwds
+            )
+
         self._name = name
         return self.metadata
 

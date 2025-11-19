@@ -270,7 +270,9 @@ class PyomoSolution(Solution):
                 vlist.append(
                     VariableInfo(
                         value=(
-                            pyo.value(var) if var.is_continuous() else round(pyo.value(var))
+                            pyo.value(var)
+                            if var.is_continuous()
+                            else round(pyo.value(var))
                         ),
                         fixed=var.is_fixed(),
                         name=str(var),
