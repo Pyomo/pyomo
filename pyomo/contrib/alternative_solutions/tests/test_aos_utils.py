@@ -41,7 +41,7 @@ class TestAOSUtilsUnit(unittest.TestCase):
         assert_text = (
             "Model has 3 active objective functions, exactly one " "is required."
         )
-        with self.assertRaisesRegex(AssertionError, assert_text):
+        with self.assertRaisesRegex(RuntimeError, assert_text):
             au.get_active_objective(m)
 
     def test_no_objectives(self):
@@ -52,7 +52,7 @@ class TestAOSUtilsUnit(unittest.TestCase):
         assert_text = (
             "Model has 0 active objective functions, exactly one " "is required."
         )
-        with self.assertRaisesRegex(AssertionError, assert_text):
+        with self.assertRaisesRegex(RuntimeError, assert_text):
             au.get_active_objective(m)
 
     def test_one_objective(self):

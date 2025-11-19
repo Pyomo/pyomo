@@ -58,11 +58,10 @@ def get_active_objective(model):
     """
 
     active_objs = list(model.component_data_objects(pyo.Objective, active=True))
-    assert (
-        len(active_objs) == 1
-    ), "Model has {} active objective functions, exactly one is required.".format(
-        len(active_objs)
-    )
+    if len(active_objs) != 1:
+        raise RuntimeError(
+            f"Model has {len(active_objs)} active objective functions, exactly one is required."
+        )
 
     return active_objs[0]
 
@@ -82,12 +81,10 @@ def _add_objective_constraint(
     specified block.
     """
 
-    assert (
-        rel_opt_gap is None or rel_opt_gap >= 0.0
-    ), "rel_opt_gap must be None or >= 0.0"
-    assert (
-        abs_opt_gap is None or abs_opt_gap >= 0.0
-    ), "abs_opt_gap must be None or >= 0.0"
+    if not (rel_opt_gap is None or rel_opt_gap >= 0.0):
+        raise ValueError(f"rel_opt_gap ({rel_opt_gap}) must be None or >= 0.0")
+    if not (abs_opt_gap is None or abs_opt_gap >= 0.0):
+        raise ValueError(f"abs_opt_gap ({abs_opt_gap}) must be None or >= 0.0")
 
     objective_constraints = []
 
