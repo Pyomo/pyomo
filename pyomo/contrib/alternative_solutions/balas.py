@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
-from pyomo.contrib.alternative_solutions import PyomoPoolManager
+from pyomo.contrib.alternative_solutions import PyomoPoolManager, PoolPolicy
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
 
 
@@ -98,7 +98,7 @@ def enumerate_binary_solutions(
 
     if pool_manager is None:
         pool_manager = PyomoPoolManager()
-        pool_manager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
+        pool_manager.add_pool(name="enumerate_binary_solutions", policy=PoolPolicy.keep_all)
 
     all_variables = aos_utils.get_model_variables(model, include_fixed=True)
     if variables == None:

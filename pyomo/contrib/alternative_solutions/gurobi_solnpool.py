@@ -18,7 +18,7 @@ from pyomo.common.errors import ApplicationError
 
 from pyomo.contrib import appsi
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
-from pyomo.contrib.alternative_solutions import PyomoPoolManager
+from pyomo.contrib.alternative_solutions import PyomoPoolManager, PoolPolicy
 
 
 def gurobi_generate_solutions(
@@ -83,7 +83,7 @@ def gurobi_generate_solutions(
 
     if pool_manager is None:
         pool_manager = PyomoPoolManager()
-        pool_manager.add_pool(name="gurobi_generate_solutions", policy="keep_all")
+        pool_manager.add_pool(name="gurobi_generate_solutions", policy=PoolPolicy.keep_all)
     #
     # Setup gurobi
     #

@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import copy
+from enum import Enum
 import heapq
 import collections
 import dataclasses
@@ -52,6 +54,17 @@ class PoolCounter:
     solution_counter = 0
 
 
+class PoolPolicy(Enum):
+    unspecified = 'unspecified'
+    keep_all = 'keep_all'
+    keep_best = 'keep_best'
+    keep_latest = 'keep_latest'
+    keep_latest_unique = 'keep_latest_unique'
+
+    def __str__(self):
+        return f"{self.value}"
+
+
 class SolutionPoolBase:
     """
     A class to manage groups of solutions as a pool.
@@ -70,11 +83,11 @@ class SolutionPoolBase:
     counter : PoolCounter or None
         PoolCounter object to manage solution indexing.
         A value of None will result in a new PoolCounter object being created and used.
-    policy : str
-        String name to describe the pool construction and management policy.
+    policy : PoolPolicy
+        Enum value to describe the pool construction and management policy.
     """
 
-    def __init__(self, name, as_solution, counter, policy="unspecified"):
+    def __init__(self, name, as_solution, counter, policy=PoolPolicy.unspecified):
         self._solutions = {}
         if as_solution is None:
             self._as_solution = default_as_solution
@@ -149,6 +162,26 @@ class SolutionPoolBase:
         self.counter.solution_counter += 1
         return tmp
 
+    def to_dict(self):
+        """
+        Converts SolutionPool to a dictionary object.
+
+        Returns
+        ----------
+        dict
+            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
+            'metadata' contains a dictionary of information about SolutionPools that is always present.
+            'solutions' contains a dictionary of the pool's solutions.
+            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
+        """
+        md = copy.copy(self.metadata)
+        md.policy = str(md.policy)
+        return dict(
+            metadata=to_dict(md),
+            solutions=to_dict(self._solutions),
+            pool_config=to_dict(self.pool_config),
+        )
+
 
 class SolutionPool_KeepAll(SolutionPoolBase):
     """
@@ -170,7 +203,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
     """
 
     def __init__(self, name=None, as_solution=None, counter=None):
-        super().__init__(name, as_solution, counter, policy="keep_all")
+        super().__init__(name, as_solution, counter, policy=PoolPolicy.keep_all)
 
     def add(self, *args, **kwargs):
         """
@@ -202,24 +235,6 @@ class SolutionPool_KeepAll(SolutionPoolBase):
         self._solutions[soln.id] = soln
         return soln.id
 
-    def to_dict(self):
-        """
-        Converts SolutionPool to a dictionary object.
-
-        Returns
-        ----------
-        dict
-            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
-            'metadata' contains a dictionary of information about SolutionPools that is always present.
-            'solutions' contains a dictionary of the pool's solutions.
-            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
-        """
-        return dict(
-            metadata=to_dict(self.metadata),
-            solutions=to_dict(self._solutions),
-            pool_config=to_dict(self.pool_config),
-        )
-
 
 class SolutionPool_KeepLatest(SolutionPoolBase):
     """
@@ -246,7 +261,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
         assert max_pool_size >= 1, "max_pool_size must be positive integer"
-        super().__init__(name, as_solution, counter, policy="keep_latest")
+        super().__init__(name, as_solution, counter, policy=PoolPolicy.keep_latest)
         self.max_pool_size = max_pool_size
         self._int_deque = collections.deque()
 
@@ -294,24 +309,6 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
         #
         return soln.id
 
-    def to_dict(self):
-        """
-        Converts SolutionPool to a dictionary object.
-
-        Returns
-        ----------
-        dict
-            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
-            'metadata' contains a dictionary of information about SolutionPools that is always present.
-            'solutions' contains a dictionary of the pool's solutions.
-            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
-        """
-        return dict(
-            metadata=to_dict(self.metadata),
-            solutions=to_dict(self._solutions),
-            pool_config=to_dict(self.pool_config),
-        )
-
 
 class SolutionPool_KeepLatestUnique(SolutionPoolBase):
     """
@@ -338,7 +335,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
         assert max_pool_size >= 1, "max_pool_size must be positive integer"
-        super().__init__(name, as_solution, counter, policy="keep_latest_unique")
+        super().__init__(name, as_solution, counter, policy=PoolPolicy.keep_latest_unique)
         self.max_pool_size = max_pool_size
         self._int_deque = collections.deque()
         self._unique_solutions = set()
@@ -392,24 +389,6 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         #
         self._solutions[soln.id] = soln
         return soln.id
-
-    def to_dict(self):
-        """
-        Converts SolutionPool to a dictionary object.
-
-        Returns
-        ----------
-        dict
-            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
-            'metadata' contains a dictionary of information about SolutionPools that is always present.
-            'solutions' contains a dictionary of the pool's solutions.
-            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
-        """
-        return dict(
-            metadata=to_dict(self.metadata),
-            solutions=to_dict(self._solutions),
-            pool_config=to_dict(self.pool_config),
-        )
 
 
 @dataclasses.dataclass(order=True)
@@ -471,7 +450,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         sense_is_min=True,
         best_value=nan,
     ):
-        super().__init__(name, as_solution, counter, policy="keep_best")
+        super().__init__(name, as_solution, counter, policy=PoolPolicy.keep_best)
         assert (max_pool_size is None) or (
             max_pool_size >= 1
         ), "max_pool_size must be None or positive integer"
@@ -602,24 +581,6 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         ), f"Num solutions is {len(self._solutions)} but the heap size is {len(self._heap)}"
         return soln.id
 
-    def to_dict(self):
-        """
-        Converts SolutionPool to a dictionary object.
-
-        Returns
-        ----------
-        dict
-            Dictionary with three keys: 'metadata', 'solutions', 'pool_config'
-            'metadata' contains a dictionary of information about SolutionPools that is always present.
-            'solutions' contains a dictionary of the pool's solutions.
-            'pool_config' contains a dictionary of details conditional to the SolutionPool type.
-        """
-        return dict(
-            metadata=to_dict(self.metadata),
-            solutions=to_dict(self._solutions),
-            pool_config=to_dict(self.pool_config),
-        )
-
 
 class PoolManager:
     """
@@ -641,10 +602,10 @@ class PoolManager:
     """
 
     _policy_dispatcher = {
-        "keep_all": SolutionPool_KeepAll,
-        "keep_best": SolutionPool_KeepBest,
-        "keep_latest": SolutionPool_KeepLatest,
-        "keep_latest_unique": SolutionPool_KeepLatestUnique,
+        PoolPolicy.keep_all: SolutionPool_KeepAll,
+        PoolPolicy.keep_best: SolutionPool_KeepBest,
+        PoolPolicy.keep_latest: SolutionPool_KeepLatest,
+        PoolPolicy.keep_latest_unique: SolutionPool_KeepLatestUnique,
     }
 
     def __init__(self):
@@ -785,7 +746,7 @@ class PoolManager:
         assert self._name in self._pools, f"Unknown pool '{self._name}'"
         return self._pools[self._name]
 
-    def add_pool(self, *, name=None, policy="keep_best", as_solution=None, **kwds):
+    def add_pool(self, *, name=None, policy=PoolPolicy.keep_best, as_solution=None, **kwds):
         """
         Initializes a new solution pool and adds it to this pool manager.
 
@@ -796,10 +757,9 @@ class PoolManager:
         ----------
         name : str
             The name of the solution pool.  If name is already used then, then an error is generated.
-        policy : str
-            This string indicates the policy that is enforced new solution pool.
-            Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
-            (Default is 'keep_best'.)
+        policy : PoolPolicy
+            This enum value indicates the policy that is enforced new solution pool.
+            (Default is PoolPolicy.keep_best.)
         as_solution : Callable[..., Solution] or None
             Method for converting inputs into Solution objects.
             A value of None will result in the default_as_solution function being used.
@@ -820,7 +780,7 @@ class PoolManager:
                 del self._pools[None]
 
             if not policy in self._policy_dispatcher:
-                raise ValueError(f"Unknown pool policy: {policy}")
+                raise ValueError(f"Unknown pool policy: {policy} {type(policy)}")
             self._pools[name] = self._policy_dispatcher[policy](
                 name=name, as_solution=as_solution, counter=weakref.proxy(self), **kwds
             )
@@ -985,7 +945,7 @@ class PyomoPoolManager(PoolManager):
     Otherwise, this class inherits from PoolManager.
     """
 
-    def add_pool(self, *, name=None, policy="keep_best", as_solution=None, **kwds):
+    def add_pool(self, *, name=None, policy=PoolPolicy.keep_best, as_solution=None, **kwds):
         """
         Initializes a new solution pool and adds it to this pool manager.
 
@@ -996,10 +956,9 @@ class PyomoPoolManager(PoolManager):
         ----------
         name : str
             The name of the solution pool.  If name is already used then, then an error is generated.
-        policy : str
-            This string indicates the policy that is enforced new solution pool.
-            Supported values are ['keep_all', 'keep_best', 'keep_latest', 'keep_latest_unique'].
-            (Default is 'keep_best'.)
+        policy : PoolPolicy
+            This enum value indicates the policy that is enforced new solution pool.
+            (Default is PoolPolicy.keep_best.)
         as_solution : Callable[..., Solution] or None
             Method for converting inputs into Solution objects.
             A value of None will result in the _as_pyomo_solution function being used.

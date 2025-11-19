@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
 from pyomo.contrib.alternative_solutions import aos_utils
-from pyomo.contrib.alternative_solutions import PyomoPoolManager
+from pyomo.contrib.alternative_solutions import PyomoPoolManager, PoolPolicy
 from pyomo.contrib import appsi
 
 
@@ -155,7 +155,7 @@ def obbt_analysis_bounds_and_solutions(
 
     if pool_manager is None:
         pool_manager = PyomoPoolManager()
-        pool_manager.add_pool(name="enumerate_binary_solutions", policy="keep_all")
+        pool_manager.add_pool(name="enumerate_binary_solutions", policy=PoolPolicy.keep_all)
 
     if warmstart:
         assert (
