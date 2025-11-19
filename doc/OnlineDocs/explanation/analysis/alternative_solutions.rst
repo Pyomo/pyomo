@@ -9,21 +9,26 @@ to the user. However, there are many applications where a user needs
 more context than this result. For example,
 
 * alternative optimal solutions can be used to assess trade-offs between
-  competing objectives; 
- 
-* comparisons amongst alternative solutions provide 
-  insights into the efficacy of model predictions with 
-  inaccurate or untrusted optimization formulations; or 
- 
-* alternative solutions can be identified to support the future analysis of model revisions (e.g. to 
-  account for previously unexpressed constraints).
+  competing objectives;
+
+* comparisons amongst alternative solutions provide
+  insights into the efficacy of model predictions with inaccurate or
+  untrusted optimization formulations; or
+
+* alternative optimal solutions create an opportunity to understand a
+  design space, including assessments of unexpressed objectives and
+  constraints;
+
+* alternative solutions can be identified to support the future
+  analysis of model revisions (e.g. to account for previously unexpressed
+  constraints).
 
 The *alternative-solutions library* provides a variety of functions that
 can be used to generate optimal or near-optimal solutions for a pyomo
 model. Conceptually, these functions are like pyomo solvers. They can
 be configured with solver names and options, and they return a pool of
-solutions for the pyomo model. However, these functions are independent
-of pyomo's solver interface because they return a custom pool manager object.
+solutions for the pyomo model. However, these functions are independent of
+pyomo's solver interfaces because they return a custom pool manager object.
 
 The following functions are defined in the alternative-solutions library:
 
@@ -33,7 +38,9 @@ The following functions are defined in the alternative-solutions library:
 
 * :py:func:`enumerate_linear_solutions`
 
-    * Finds alternative optimal solutions for a (mixed-integer) linear program.
+    * Finds alternative optimal solutions for continuous variables in a
+      (mixed-integer) linear program using iterative solutions of an
+      integer programming formulation.
 
 * :py:func:`gurobi_enumerate_linear_solutions`
 
@@ -99,11 +106,11 @@ arguments are used to limit the search to these solutions:
 
 * ``rel_opt_gap`` : non-negative float or None
 
-  * The relative optimality gap for allowable alternative solutions.  Specifying a gap of ``None`` implies that there is no limit on the relative optimality gap (i.e. that any feasible solution can be considered).
+  * The relative optimality gap for allowable alternative solutions.  Specifying a gap of ``None`` indicates that there is no limit on the relative optimality gap (i.e. that any feasible solution can be considered).
 
 * ``abs_opt_gap`` : non-negative float or None
 
-  * The absolute optimality gap for allowable alternative solutions.  Specifying a gap of ``None`` implies that there is no limit on the absolute optimality gap (i.e. that any feasible solution can be considered).
+  * The absolute optimality gap for allowable alternative solutions.  Specifying a gap of ``None`` indicates that there is no limit on the absolute optimality gap (i.e. that any feasible solution can be considered).
 
 For example, we can generate all optimal solutions as follows:
 
@@ -136,7 +143,7 @@ The following types of solution pools are currently supported:
 
   * ``max_pool_size`` (non-negative integer) : The maximum number of solutions that are stored.
 
-* ``keep_latest_unique`` : This pool stores the latest ``max_pool_size`` unique solutions that are added to the pool.
+* ``keep_latest_unique`` : This pool stores the latest ``max_pool_size`` solutions, ignoring duplicate solutions.
 
   * ``max_pool_size`` (non-negative integer) : The maximum number of solutions that are stored.
 
@@ -152,15 +159,20 @@ The following types of solution pools are currently supported:
 
   * ``sense_is_min`` (bool) : If True, then the pool will keep solutions with the minimal objective values.
     
-  * ``best_value`` (float) : If specified, then this value is used to filter solutions when the absolute or relative tolerances are specified.
+  * ``best_value`` (float) : As solutions are added to this pool, it tracks the best solution value seen for tolerance comparisons.  If specified, then this value provides an initial value for the best solution value.
 
-A pool manager class is used to manage one-or-more solution pools. This allows for flexible collection of solutions with different criteria. For example, the
-the best solutions might be stored along with all per-iteration solutions in an optimization solver.  The solution generation functions 
-in the *alternative-solutions library* return a :py:class:`PyomoPoolManager`.  By default, this pool manager uses a solution pool that keeps the best solutions.
-However, the user can provide a pool manager that is used to store solutions.
+A pool manager class is used to manage one-or-more solution pools. This
+allows for flexible collection of solutions with different criteria. For
+example, the the best solutions might be stored along with all
+per-iteration solutions in an optimization solver.  The solution
+generation functions in the *alternative-solutions library* return
+a :py:class:`PyomoPoolManager`.  By default, this pool manager uses
+a solution pool that keeps the best solutions.  However, the user can
+provide a pool manager that is used to store solutions.
 
-For example, we can explicitly create a pool manager that keeps the latest solutions.  Consider the previous example, where all
-feasible solutions are generated:
+For example, we can explicitly create a pool manager that keeps the
+latest solutions.  Consider the previous example, where all feasible
+solutions are generated:
 
 .. doctest::
    :skipif: not glpk_available
@@ -196,8 +208,8 @@ pool is replaced.  Otherwise, if a solution pool is added with an
 existing name an error occurs.
 
 The pool manager always has an active pool.  The pool manager has the
-same API as a solution pool, and the envelope design pattern is used
-to expose the methods and data for the active pool.  The active pool
+same API as a solution pool, and the methods and data of the active
+pool are exposed to the user through the pool manager.  The active pool
 defaults to the pool that was most recently added to the pool manager.
 
 
