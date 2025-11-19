@@ -16,7 +16,11 @@ from pyomo.contrib.alternative_solutions.solution import (
     VariableInfo,
     ObjectiveInfo,
 )
-from pyomo.contrib.alternative_solutions.solnpool import PoolManager, PyomoPoolManager, PoolPolicy
+from pyomo.contrib.alternative_solutions.solnpool import (
+    PoolManager,
+    PyomoPoolManager,
+    PoolPolicy,
+)
 from pyomo.contrib.alternative_solutions.balas import enumerate_binary_solutions
 from pyomo.contrib.alternative_solutions.obbt import (
     obbt_analysis,

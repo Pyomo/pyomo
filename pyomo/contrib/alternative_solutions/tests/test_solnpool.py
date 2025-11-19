@@ -455,7 +455,9 @@ class TestSolnPool(unittest.TestCase):
     def test_keeplatestunique_bad_max_pool_size(self):
         pm = PoolManager()
         with self.assertRaises(AssertionError):
-            pm.add_pool(name="pool", policy=PoolPolicy.keep_latest_unique, max_pool_size=-2)
+            pm.add_pool(
+                name="pool", policy=PoolPolicy.keep_latest_unique, max_pool_size=-2
+            )
 
     def test_keeplatestunique_add(self):
         pm = PoolManager()
@@ -836,7 +838,9 @@ class TestSolnPool(unittest.TestCase):
 
     def test_keepbest_add3(self):
         pm = PoolManager()
-        pm.add_pool(name="pool", policy=PoolPolicy.keep_best, abs_tolerance=1, max_pool_size=2)
+        pm.add_pool(
+            name="pool", policy=PoolPolicy.keep_best, abs_tolerance=1, max_pool_size=2
+        )
 
         retval = pm.add(soln(0, 0))
         assert retval is not None

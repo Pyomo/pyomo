@@ -335,7 +335,9 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
     def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
         assert max_pool_size >= 1, "max_pool_size must be positive integer"
-        super().__init__(name, as_solution, counter, policy=PoolPolicy.keep_latest_unique)
+        super().__init__(
+            name, as_solution, counter, policy=PoolPolicy.keep_latest_unique
+        )
         self.max_pool_size = max_pool_size
         self._int_deque = collections.deque()
         self._unique_solutions = set()
@@ -746,7 +748,9 @@ class PoolManager:
         assert self._name in self._pools, f"Unknown pool '{self._name}'"
         return self._pools[self._name]
 
-    def add_pool(self, *, name=None, policy=PoolPolicy.keep_best, as_solution=None, **kwds):
+    def add_pool(
+        self, *, name=None, policy=PoolPolicy.keep_best, as_solution=None, **kwds
+    ):
         """
         Initializes a new solution pool and adds it to this pool manager.
 
@@ -945,7 +949,9 @@ class PyomoPoolManager(PoolManager):
     Otherwise, this class inherits from PoolManager.
     """
 
-    def add_pool(self, *, name=None, policy=PoolPolicy.keep_best, as_solution=None, **kwds):
+    def add_pool(
+        self, *, name=None, policy=PoolPolicy.keep_best, as_solution=None, **kwds
+    ):
         """
         Initializes a new solution pool and adds it to this pool manager.
 

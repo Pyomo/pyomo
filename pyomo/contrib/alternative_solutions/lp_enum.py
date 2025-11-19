@@ -14,7 +14,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
-from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, PyomoPoolManager, PoolPolicy
+from pyomo.contrib.alternative_solutions import (
+    aos_utils,
+    shifted_lp,
+    PyomoPoolManager,
+    PoolPolicy,
+)
 from pyomo.contrib import appsi
 
 
@@ -102,7 +107,9 @@ def enumerate_linear_solutions(
 
     if pool_manager is None:
         pool_manager = PyomoPoolManager()
-        pool_manager.add_pool(name="enumerate_binary_solutions", policy=PoolPolicy.keep_all)
+        pool_manager.add_pool(
+            name="enumerate_binary_solutions", policy=PoolPolicy.keep_all
+        )
 
     all_variables = aos_utils.get_model_variables(model)
     # else:
