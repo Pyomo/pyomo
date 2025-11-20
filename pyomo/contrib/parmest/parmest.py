@@ -974,6 +974,7 @@ class Estimator:
 
     def _create_scenario_blocks(self):
         # Create scenario block structure
+        # Code is still heavily hypothetical and needs to be thought over and debugged.
         # Utility function for _Q_opt_simple
         # Make a block of model scenarios, one for each experiment in exp_list 
 
@@ -1012,6 +1013,7 @@ class Estimator:
 
 
     # Redesigning simpler version of _Q_opt
+    # Still work in progress
     def _Q_opt_simple(
         self,
         return_values=None,
@@ -1768,6 +1770,8 @@ class Estimator:
             cov_n=cov_n,
         )
 
+    # Replicate of theta_est for testing simplified _Q_opt
+    # Still work in progress
     def theta_est_simple(
         self, solver="ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
     ):
