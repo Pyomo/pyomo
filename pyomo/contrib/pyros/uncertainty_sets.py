@@ -518,11 +518,11 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        list of tuple
-            If the bounds can be calculated, then the list is of
-            length `N`, and each entry is a pair of numeric
-            (lower, upper) bounds for the corresponding
-            (Cartesian) coordinate. Otherwise, the list is empty.
+        list[tuple[float, float]]
+            If the bounds can be calculated efficiently, then this list
+            should be of length ``self.dim`` and contain the
+            (lower, upper) bound pairs.
+            Otherwise, the list should be empty.
         """
         raise NotImplementedError
 
@@ -1317,10 +1317,9 @@ class BoxSet(UncertaintySet):
 
         Returns
         -------
-        list of tuple
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[float, float]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         return [tuple(bound) for bound in self.bounds]
 
@@ -1559,10 +1558,9 @@ class CardinalitySet(UncertaintySet):
 
         Returns
         -------
-        list of tuple
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[float, float]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         nom_val = self.origin
         deviation = self.positive_deviation
@@ -2191,10 +2189,9 @@ class BudgetSet(UncertaintySet):
 
         Returns
         -------
-        list of tuple
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[float, float]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         bounds = []
         for orig_val, col in zip(self.origin, self.budget_membership_mat.T):
@@ -2528,10 +2525,9 @@ class FactorModelSet(UncertaintySet):
 
         Returns
         -------
-        list of tuple
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[float, float]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         F = self.number_of_factors
         psi_mat = self.psi_mat
@@ -2862,10 +2858,9 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        list of tuple
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[float, float]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         nom_value = self.center
         half_length = self.half_lengths
@@ -3267,10 +3262,9 @@ class EllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        list of tuple
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[float, float]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         scale = self.scale
         nom_value = self.center
@@ -3491,10 +3485,9 @@ class DiscreteScenarioSet(UncertaintySet):
 
         Returns
         -------
-        list of tuple
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[float, float]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         parameter_bounds = [
             (min(s[i] for s in self.scenarios), max(s[i] for s in self.scenarios))
@@ -3734,10 +3727,10 @@ class IntersectionSet(UncertaintySet):
 
         Returns
         -------
-        list of tuple
+        list[tuple[float, float]]
             If one of the sets to be intersected is discrete,
-            then the bounds of the intersection set are returned
-            as a list, with length ``self.dim``, of 2-tuples.
+            then the list is of length ``self.dim`` and contains
+            the coordinate value (lower, upper) bound pairs.
             Otherwise, an empty list is returned, as the bounds cannot,
             in general, be computed without access to an optimization
             solver.
