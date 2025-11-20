@@ -212,7 +212,15 @@ setup_kwargs = dict(
         # There are certain tests that also require pytest-qt, but because those
         # tests are so environment/machine specific, we are leaving these out of
         # the dependencies.
-        'tests': ['coverage', 'parameterized', 'pybind11', 'pytest', 'pytest-parallel'],
+        'tests': [
+            'coverage',
+            'parameterized',
+            'pybind11',
+            # 9.0.0 breaks skipping individual tests; see
+            # https://github.com/pytest-dev/pytest/issues/13895
+            'pytest!=9.0.0',
+            'pytest-parallel',
+        ],
         'docs': [
             'Sphinx>4,!=8.2.0',
             'sphinx-copybutton',
