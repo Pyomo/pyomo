@@ -273,7 +273,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
     def add(self, *args, **kwargs):
         """
-        Add inputed solution to SolutionPool.
+        Add inputted solution to SolutionPool.
 
         This method relies on the instance as_solution conversion function
         to convert the inputs to a Solution object.  This solution is
