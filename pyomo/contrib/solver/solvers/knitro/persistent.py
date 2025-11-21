@@ -22,18 +22,24 @@ from pyomo.core.base.var import VarData
 
 
 class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
-    _model: BlockData
+    _model: BlockData | None
+    _staged_model_data: KnitroModelData
 
     def __init__(self, **kwds) -> None:
         PersistentSolverBase.__init__(self, **kwds)
         KnitroSolverBase.__init__(self, **kwds)
         self._model = None
+        self._staged_model_data = KnitroModelData()
 
     def _presolve(
         self, model: BlockData, config: KnitroConfig, timer: HierarchicalTimer
     ) -> None:
         if self._model is not model:
             self.set_instance(model)
+            self._staged_model_data.clear()
+
+        if self._staged_model_data:
+            self._update()
 
     def _solve(self, config: KnitroConfig, timer: HierarchicalTimer) -> None:
         self._engine.set_outlev()
@@ -62,28 +68,28 @@ class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
             self._engine.set_obj(self._model_data.objs[0])
 
     def add_block(self, block: BlockData):
-        block_data = KnitroModelData()
-        block_data.set_block(block)
-        self._model_data.add_block(block, clear_objs=True)
-        for var in block_data.variables:
-            self._engine.add_var(var)
-        for con in block_data.cons:
-            self._engine.add_con(con)
-        if block_data.objs:
-            self._engine.set_obj(block_data.objs[0])
+        self._staged_model_data.add_block(block, clear_objs=True)
 
     def add_variables(self, variables: list[VarData]):
-        self._model_data.variables.extend(variables)
-        self._engine.add_vars(variables)
+        self._staged_model_data.variables.extend(variables)
 
     def add_constraints(self, cons: list[ConstraintData]):
-        self._model_data.cons.extend(cons)
-        self._engine.add_cons(cons)
+        self._staged_model_data.cons.extend(cons)
 
     def set_objective(self, obj: ObjectiveData):
-        self._model_data.objs.clear()
-        self._model_data.objs.append(obj)
-        self._engine.set_obj(obj)
+        self._staged_model_data.objs.clear()
+        self._staged_model_data.objs.append(obj)
+
+    def _update(self):
+        self._model_data.variables.extend(self._staged_model_data.variables)
+        self._model_data.cons.extend(self._staged_model_data.cons)
+        self._engine.add_vars(self._staged_model_data.variables)
+        self._engine.add_cons(self._staged_model_data.cons)
+        if self._staged_model_data.objs:
+            self._model_data.objs.clear()
+            self._model_data.objs.extend(self._staged_model_data.objs)
+            self._engine.set_obj(self._model_data.objs[0])
+        self._staged_model_data.clear()
 
     def remove_variables(self, variables: list[VarData]):
         raise NotImplementedError(

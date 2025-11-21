@@ -39,10 +39,10 @@ class TestKnitroPersistentSolver(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 5)
         self.assertAlmostEqual(m.y.value, -5)
 
-    def test_incremental_add(self):
+    def test_incremental_add_variables(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
-        self.opt.set_instance(m)
+        self.opt.add_variables([m.x])
 
         # Add variable y incrementally
         m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
@@ -53,13 +53,12 @@ class TestKnitroPersistentSolver(unittest.TestCase):
             expr=(1.0 - m.x) + 100.0 * (m.y - m.x), sense=pyo.minimize
         )
         self.opt.set_objective(m.obj)
-
         res = self.opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, -1004)
         self.assertAlmostEqual(m.x.value, 5)
         self.assertAlmostEqual(m.y.value, -5)
 
-    def test_incremental_constraints(self):
+    def test_incremental_add_constraints(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
         m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
@@ -76,7 +75,7 @@ class TestKnitroPersistentSolver(unittest.TestCase):
         # Check feasibility
         self.assertTrue(pyo.value(m.x) ** 2 + pyo.value(m.y) ** 2 <= 4.0001)
 
-    def test_add_block(self):
+    def test_incremental_add_block(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=0, bounds=(-5, 5))
         m.obj = pyo.Objective(expr=m.x, sense=pyo.minimize)
@@ -97,3 +96,20 @@ class TestKnitroPersistentSolver(unittest.TestCase):
         # x=-5, y=-5 => obj = -10
         self.assertAlmostEqual(m.x.value, -5)
         self.assertAlmostEqual(m.b.y.value, -5)
+
+    def test_incremental_set_objective(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(expr=(m.x - m.y) ** 2, sense=pyo.minimize)
+
+        self.opt.set_objective(m.obj)
+
+        # Add constraint incrementally
+        m.c1 = pyo.Constraint(expr=m.x**2 + m.y**2 <= 4)
+        self.opt.add_constraints([m.c1])
+
+        results = self.opt.solve(m)
+        self.assertAlmostEqual(results.incumbent_objective, 0)
+        # Check feasibility
+        self.assertTrue(pyo.value(m.x) ** 2 + pyo.value(m.y) ** 2 <= 4.0001)

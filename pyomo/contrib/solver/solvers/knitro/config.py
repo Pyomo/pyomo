@@ -58,3 +58,17 @@ class KnitroConfig(SolverConfig):
                 ),
             ),
         )
+
+        self.auto_updates: bool = self.declare(
+            "auto_updates",
+            ConfigValue(
+                domain=Bool,
+                default=False,
+                doc=(
+                    "Auto updates are disabled by default. When enabled, "
+                    "the solver will automatically update the model when "
+                    "variables, constraints, or objectives are added or "
+                    "removed."
+                ),
+            ),
+        )

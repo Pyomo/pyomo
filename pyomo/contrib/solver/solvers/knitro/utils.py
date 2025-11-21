@@ -75,11 +75,11 @@ class KnitroModelData:
     variables: list[VarData]
     _vars: MutableSet[VarData]
 
-    def __init__(self, block: Optional[BlockData] = None) -> None:
+    def __init__(self, block: BlockData | None = None) -> None:
         """Initialize a Problem instance.
 
         Args:
-            block (Optional[BlockData]): Pyomo block to initialize from. If None,
+            block (BlockData | None): Pyomo block to initialize from. If None,
                 creates an empty problem that can be populated later.
 
         """
@@ -117,7 +117,7 @@ class KnitroModelData:
         """
         new_objs = get_active_objectives(block)
         new_cons = get_active_constraints(block)
-        if clear_objs:
+        if clear_objs and self.objs:
             self.objs.clear()
         self.objs.extend(new_objs)
         self.cons.extend(new_cons)
@@ -136,6 +136,9 @@ class KnitroModelData:
 
         # Update the variables list with unique variables only
         self.variables = list(self._vars)
+
+    def __bool__(self) -> bool:
+        return bool(self.objs or self.cons or self.variables)
 
 
 def set_var_values(

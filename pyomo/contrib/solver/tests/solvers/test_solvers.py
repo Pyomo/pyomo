@@ -37,6 +37,7 @@ from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
+from pyomo.contrib.solver.solvers.knitro.persistent import KnitroPersistentSolver
 from pyomo.contrib.solver.tests.solvers import instances
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -56,6 +57,7 @@ all_solvers = [
     ('ipopt', Ipopt),
     ('highs', Highs),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
@@ -63,23 +65,27 @@ mip_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('highs', Highs),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver)
 ]
 nlp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 qcp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('gurobi_persistent', GurobiPersistent),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
