@@ -971,20 +971,42 @@ class Estimator:
         model = self._create_parmest_model(experiment_number)
         return model
 
-    def _create_scenario_blocks(self):
+    def _create_scenario_blocks(self, bootlist=None,):
         # Create scenario block structure
-        # Code is still heavily hypothetical and needs to be thought over and debugged.
-        # Utility function for _Q_opt_simple
+        # Utility function for _Q_opt_blocks
         # Make a block of model scenarios, one for each experiment in exp_list
 
         # Create a parent model to hold scenario blocks
         model = pyo.ConcreteModel()
-        model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
+
+        if bootlist is not None:
+            model.exp_scenarios = pyo.Block(range(len(bootlist)))
+        else:
+            model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
+            
         for i in range(len(self.exp_list)):
             # Create parmest model for experiment i
             parmest_model = self._create_parmest_model(i)
             # Assign parmest model to block
             model.exp_scenarios[i].transfer_attributes_from(parmest_model)
+
+        # Transfer all the unknown parameters to the parent model
+        for name in self.estimator_theta_names:
+            # Get the variable from the first block
+            ref_var = getattr(model.exp_scenarios[0], name)
+            # Create a variable in the parent model with same bounds and initialization
+            parent_var = pyo.Var(
+                bounds=ref_var.bounds,
+                initialize=pyo.value(ref_var),
+            )
+            setattr(model, name, parent_var)
+            # Constrain the variable in the first block to equal the parent variable
+            model.add_component(
+                f"Link_{name}_Block0_Parent",
+                pyo.Constraint(
+                    expr=getattr(model.exp_scenarios[0], name) == parent_var
+                ),
+            )
 
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
@@ -996,14 +1018,13 @@ class Estimator:
 
         # Make sure all the parameters are linked across blocks
         for name in self.estimator_theta_names:
-            # Get the variable from the first block
-            ref_var = getattr(model.exp_scenarios[0], name)
             for i in range(1, len(self.exp_list)):
-                curr_var = getattr(model.exp_scenarios[i], name)
-                # Constrain current variable to equal reference variable
                 model.add_component(
-                    f"Link_{name}_Block0_Block{i}",
-                    pyo.Constraint(expr=curr_var == ref_var),
+                    f"Link_{name}_Block{i}_Parent",
+                    pyo.Constraint(
+                        expr=getattr(model.exp_scenarios[i], name)
+                        == getattr(model, name)
+                    ),
                 )
 
         # Deactivate the objective in each block to avoid double counting
@@ -1014,8 +1035,8 @@ class Estimator:
 
         return model
 
-    # Redesigning simpler version of _Q_opt
-    # Still work in progress
+    # Redesigning version of _Q_opt that uses scenario blocks
+    # Works, but still adding features from old _Q_opt
     def _Q_opt_blocks(
         self,
         return_values=None,
@@ -1038,14 +1059,15 @@ class Estimator:
         '''
 
         # Create scenario blocks using utility function
-        model = self._create_scenario_blocks()
+        model = self._create_scenario_blocks(bootlist=bootlist)
 
-        solver = SolverFactory('ipopt')
+        if solver == "ipopt":
+            sol = SolverFactory('ipopt')
         if self.solver_options is not None:
             for key in self.solver_options:
                 solver.options[key] = self.solver_options[key]
 
-        solve_result = solver.solve(model, tee=self.tee)
+        solve_result = sol.solve(model, tee=self.tee)
         assert_optimal_termination(solve_result)
 
         # Extract objective value
@@ -1054,6 +1076,14 @@ class Estimator:
         # Extract theta estimates from first block
         for name in self.estimator_theta_names:
             theta_estimates[name] = pyo.value(getattr(model.exp_scenarios[0], name))
+
+        # Check they are equal to the second block
+        for name in self.estimator_theta_names:
+            val_block1 = pyo.value(getattr(model.exp_scenarios[1], name))
+            assert theta_estimates[name] == val_block1, (
+                f"Parameter {name} estimate differs between blocks: "
+                f"{theta_estimates[name]} vs {val_block1}"
+            )
 
         return obj_value, theta_estimates
 
@@ -1832,7 +1862,7 @@ class Estimator:
                 solver=solver, return_values=return_values
             )
 
-        return self._Q_opt_simple(
+        return self._Q_opt_blocks(
             solver=solver,
             return_values=return_values,
             bootlist=None,
