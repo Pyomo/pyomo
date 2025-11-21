@@ -65,7 +65,9 @@ if sys.version_info[:2] < (3, 13):
         @classmethod
         @_fix_doc(int.from_bytes)
         def from_bytes(cls, bytes, byteorder='big', *, signed=False):
-            return super()(bytes, byteorder=byteorder, signed=signed)
+            return super(_int_bytes_doc_wrapper, cls).from_bytes(
+                bytes, byteorder=byteorder, signed=signed
+            )
 
     def _doc_updater(base):
         return (
