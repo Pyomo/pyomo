@@ -2777,9 +2777,9 @@ class ConfigDict(ConfigBase, MutableMapping):
     def declare(self, name, config):
         """Declare a new configuration item in the :class:`ConfigDict`"""
         _name = str(name).replace(' ', '_')
-        ans = self._add(name, config)
+        self._add(name, config)
         self._declared.add(_name)
-        return ans
+        return config
 
     def declare_from(self, other, skip=None):
         if not isinstance(other, ConfigDict):
