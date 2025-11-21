@@ -1538,19 +1538,20 @@ interact."""
 
         self.preamble += f"\n\n.. _{ref}:\n"
         if self.methods:
+            method_documenter = document_kwargs_from_configdict(
+                self.config,
+                indent_spacing=self.indent_spacing,
+                width=self.width,
+                visibility=self.visibility,
+                doc=self.doc,
+            )
             for method in self.methods:
                 if method not in vars(cls):
                     # If this method is inherited, we need to make a
                     # "local" version of it so we don't change the
                     # docstring on the base class.
                     setattr(cls, method, _method_wrapper(getattr(cls, method)))
-                document_kwargs_from_configdict(
-                    self.config,
-                    indent_spacing=self.indent_spacing,
-                    width=self.width,
-                    visibility=self.visibility,
-                    doc=self.doc,
-                )(getattr(cls, method))
+                method_documenter(getattr(cls, method))
         return super().__call__(cls)
 
 
