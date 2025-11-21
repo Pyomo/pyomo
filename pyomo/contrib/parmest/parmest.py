@@ -971,12 +971,11 @@ class Estimator:
         model = self._create_parmest_model(experiment_number)
         return model
 
-
     def _create_scenario_blocks(self):
         # Create scenario block structure
         # Code is still heavily hypothetical and needs to be thought over and debugged.
         # Utility function for _Q_opt_simple
-        # Make a block of model scenarios, one for each experiment in exp_list 
+        # Make a block of model scenarios, one for each experiment in exp_list
 
         # Create a parent model to hold scenario blocks
         model = pyo.ConcreteModel()
@@ -989,8 +988,10 @@ class Estimator:
 
         # Make an objective that sums over all scenario blocks
         def total_obj(m):
-            return sum(block.Total_Cost_Objective for block in m.exp_scenarios.values())/len(self.exp_list)
-        
+            return sum(
+                block.Total_Cost_Objective for block in m.exp_scenarios.values()
+            ) / len(self.exp_list)
+
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
 
         # Make sure all the parameters are linked across blocks
@@ -1002,7 +1003,7 @@ class Estimator:
                 # Constrain current variable to equal reference variable
                 model.add_component(
                     f"Link_{name}_Block0_Block{i}",
-                    pyo.Constraint(expr=curr_var == ref_var)
+                    pyo.Constraint(expr=curr_var == ref_var),
                 )
 
         # Deactivate the objective in each block to avoid double counting
@@ -1012,8 +1013,6 @@ class Estimator:
         model.pprint()
 
         return model
-
-
 
     # Redesigning simpler version of _Q_opt
     # Still work in progress
@@ -1025,7 +1024,7 @@ class Estimator:
         solver="ipopt",
         calc_cov=NOTSET,
         cov_n=NOTSET,
-        ):
+    ):
         '''
         Making new version of _Q_opt that uses scenario blocks, similar to DoE.
 
@@ -1037,8 +1036,8 @@ class Estimator:
         5. Analyze results and extract parameter estimates
 
         '''
-        
-        # Create scenario blocks using utility function       
+
+        # Create scenario blocks using utility function
         model = self._create_scenario_blocks()
 
         solver = SolverFactory('ipopt')
@@ -1057,7 +1056,6 @@ class Estimator:
             theta_estimates[name] = pyo.value(getattr(model.exp_scenarios[0], name))
 
         return obj_value, theta_estimates
-
 
     def _Q_opt(
         self,
@@ -1841,7 +1839,7 @@ class Estimator:
             calc_cov=calc_cov,
             cov_n=cov_n,
         )
-    
+
     def cov_est(self, method="finite_difference", solver="ipopt", step=1e-3):
         """
         Covariance matrix calculation using all scenarios in the data
