@@ -1699,8 +1699,6 @@ class ConfigBase:
         description=NOTSET,
         doc=NOTSET,
         visibility=NOTSET,
-        implicit=NOTSET,
-        implicit_domain=NOTSET,
         preserve_implicit=False,
     ):
         # We will pass through overriding arguments to the constructor.
@@ -1709,44 +1707,16 @@ class ConfigBase:
         # that code here.  Unfortunately, it means we need to do a bit
         # of logic to be sure we only pass through appropriate
         # arguments.
-        kwds = {}
-        fields = ('description', 'doc', 'visibility')
-        if isinstance(self, ConfigDict):
-            fields += (('implicit', '_implicit_declaration'), 'implicit_domain')
-            assert domain is NOTSET
-            assert default is NOTSET
-        else:
-            fields += ('domain',)
-            if default is NOTSET:
-                default = self.value()
-                if default is NOTSET:
-                    default = None
-            kwds['default'] = default
-            assert implicit is NOTSET
-            assert implicit_domain is NOTSET
-        for field in fields:
-            if type(field) is tuple:
-                field, attr = field
-            else:
-                attr = '_' + field
-            if locals()[field] is NOTSET:
-                kwds[field] = getattr(self, attr, NOTSET)
-            else:
-                kwds[field] = locals()[field]
+        kwds = {
+            'default': self.value() if default is NOTSET else default,
+            'domain': self._domain if domain is NOTSET else domain,
+            'description': self._description if description is NOTSET else description,
+            'doc': self._doc if doc is NOTSET else doc,
+            'visibility': self._visibility if visibility is NOTSET else visibility,
+        }
 
         # Initialize the new config object
         ans = self.__class__(**kwds)
-
-        if isinstance(self, ConfigDict):
-            # Copy over any Dict definitions
-            ans._domain = self._domain
-            for k, v in self._data.items():
-                if preserve_implicit or k in self._declared:
-                    ans._data[k] = _tmp = v(preserve_implicit=preserve_implicit)
-                    if k in self._declared:
-                        ans._declared.add(k)
-                    _tmp._parent = ans
-                    _tmp._name = v._name
 
         # ... and set the value, if appropriate
         if value is not NOTSET:
@@ -2610,6 +2580,55 @@ class ConfigDict(ConfigBase, Mapping):
             object.__setattr__(self, key, val)
         for x in self._data.values():
             x._parent = self
+
+    def __call__(
+        self,
+        value=NOTSET,
+        description=NOTSET,
+        doc=NOTSET,
+        visibility=NOTSET,
+        implicit=NOTSET,
+        implicit_domain=NOTSET,
+        preserve_implicit=False,
+    ):
+        # We will pass through overriding arguments to the constructor.
+        # This way if the constructor does special processing of any of
+        # the arguments (like implicit_domain), we don't have to repeat
+        # that code here.  Unfortunately, it means we need to do a bit
+        # of logic to be sure we only pass through appropriate
+        # arguments.
+        kwds = {
+            'description': self._description if description is NOTSET else description,
+            'doc': self._doc if doc is NOTSET else doc,
+            'visibility': self._visibility if visibility is NOTSET else visibility,
+            'implicit': self._implicit_declaration if implicit is NOTSET else implicit,
+            'implicit_domain': (
+                self._implicit_domain if implicit_domain is NOTSET else implicit_domain
+            ),
+        }
+
+        # Initialize the new config object
+        ans = self.__class__(**kwds)
+
+        # Copy over any Dict definitions
+        ans._domain = self._domain
+        for k, v in self._data.items():
+            if preserve_implicit or k in self._declared:
+                ans._data[k] = _tmp = v(preserve_implicit=preserve_implicit)
+                if k in self._declared:
+                    ans._declared.add(k)
+                _tmp._parent = ans
+                _tmp._name = v._name
+
+        # ... and set the value, if appropriate
+        if value is not NOTSET:
+            # Note that because we are *creating* a new Config object,
+            # we do not want set_value() to change the current (default)
+            # userSet flag for this object/container (see #3721).
+            tmp = ans._userSet
+            ans.set_value(value)
+            ans._userSet = tmp
+        return ans
 
     def __dir__(self):
         # Note that dir() returns the *normalized* names (i.e., no spaces)
