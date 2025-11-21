@@ -107,15 +107,18 @@ class KnitroModelData:
         self.clear()
         self.add_block(block)
 
-    def add_block(self, block: BlockData) -> None:
+    def add_block(self, block: BlockData, *, clear_objs: bool = False) -> None:
         """Add objectives, constraints, and variables from a block to the problem.
 
         Args:
             block (BlockData): The Pyomo block to extract data from.
+            clear_objs (bool): Whether to clear the objectives before adding new ones.
 
         """
         new_objs = get_active_objectives(block)
         new_cons = get_active_constraints(block)
+        if clear_objs:
+            self.objs.clear()
         self.objs.extend(new_objs)
         self.cons.extend(new_cons)
 
