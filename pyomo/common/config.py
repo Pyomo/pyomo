@@ -53,6 +53,7 @@ from pyomo.common.deprecation import (
 from pyomo.common.fileutils import import_file
 from pyomo.common.flags import building_documentation, NOTSET
 from pyomo.common.formatting import wrap_reStructuredText
+from pyomo.common.sorting import sorted_robust
 
 logger = logging.getLogger(__name__)
 
@@ -1937,7 +1938,7 @@ class ConfigBase:
         if content_filter not in ConfigDict.content_filters:
             raise ValueError(
                 "unknown content filter '%s'; valid values are %s"
-                % (content_filter, ConfigDict.content_filters)
+                % (content_filter, sorted_robust(ConfigDict.content_filters))
             )
         _blocks = []
         if ostream is None:
