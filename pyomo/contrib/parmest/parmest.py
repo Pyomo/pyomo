@@ -971,7 +971,7 @@ class Estimator:
         model = self._create_parmest_model(experiment_number)
         return model
 
-    def _create_scenario_blocks(self, bootlist=None,):
+    def _create_scenario_blocks(self, bootlist=None):
         # Create scenario block structure
         # Utility function for _Q_opt_blocks
         # Make a block of model scenarios, one for each experiment in exp_list
@@ -983,7 +983,7 @@ class Estimator:
             model.exp_scenarios = pyo.Block(range(len(bootlist)))
         else:
             model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
-            
+
         for i in range(len(self.exp_list)):
             # Create parmest model for experiment i
             parmest_model = self._create_parmest_model(i)
@@ -995,10 +995,7 @@ class Estimator:
             # Get the variable from the first block
             ref_var = getattr(model.exp_scenarios[0], name)
             # Create a variable in the parent model with same bounds and initialization
-            parent_var = pyo.Var(
-                bounds=ref_var.bounds,
-                initialize=pyo.value(ref_var),
-            )
+            parent_var = pyo.Var(bounds=ref_var.bounds, initialize=pyo.value(ref_var))
             setattr(model, name, parent_var)
             # Constrain the variable in the first block to equal the parent variable
             model.add_component(
