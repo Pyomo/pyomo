@@ -2796,7 +2796,7 @@ class ConfigDict(ConfigBase, MutableMapping):
                 )
             self.declare(key, other.get(key)())
 
-    def add(self, name, config):
+    def add(self, name, config, **kwargs):
         if not self._implicit_declaration:
             raise ValueError(
                 "Key '%s' not defined in ConfigDict '%s'"
@@ -2807,11 +2807,18 @@ class ConfigDict(ConfigBase, MutableMapping):
             if isinstance(config, ConfigBase):
                 ans = self._add(name, config)
             else:
-                ans = self._add(name, ConfigValue(config))
+                ans = self._add(name, ConfigValue(config, **kwargs))
+                kwargs = None
         elif type(self._implicit_domain) is DynamicImplicitDomain:
             ans = self._add(name, self._implicit_domain(name, config))
         else:
             ans = self._add(name, self._implicit_domain(config))
+        if kwargs:
+            if self._implicit_domain is None:
+                why = f'user-provided {config.__class__.__name__}'
+            else:
+                why = 'implicit domain'
+            logger.warning(f"user-defined Config attributes {kwargs} ignored by {why}")
         ans._userSet = True
         # Adding something to the container should not change the
         # userSet on the container (see Pyomo/pyomo#352; now
