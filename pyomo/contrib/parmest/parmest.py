@@ -980,33 +980,36 @@ class Estimator:
 
         # Create a parent model to hold scenario blocks
         model = pyo.ConcreteModel()
-        model.Blocks = pyo.Block(range(len(self.exp_list)))
+        model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
         for i in range(len(self.exp_list)):
             # Create parmest model for experiment i
             parmest_model = self._create_parmest_model(i)
             # Assign parmest model to block
-            model.Blocks[i].model = parmest_model
-
-            # Define objective for the block
-            def block_obj_rule(b):
-                return b.model.Total_Cost_Objective
-
-            model.Blocks[i].obj = pyo.Objective(rule=block_obj_rule, sense=pyo.minimize)
+            model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
         # Make an objective that sums over all scenario blocks
         def total_obj(m):
-            return sum(block.obj for block in m.Blocks.values())
+            return sum(block.Total_Cost_Objective for block in m.exp_scenarios.values())/len(self.exp_list)
         
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
 
         # Make sure all the parameters are linked across blocks
-        # for name in self.estimator_theta_names:
-        #     first_block_param = getattr(model.Blocks[0].model, name)
-        #     for i in range(1, len(self.exp_list)):
-        #         block_param = getattr(model.Blocks[i].model, name)
-        #         model.Blocks[i].model.add_constraint(
-        #             pyo.Constraint(expr=block_param == first_block_param)
-        #         )
+        for name in self.estimator_theta_names:
+            # Get the variable from the first block
+            ref_var = getattr(model.exp_scenarios[0], name)
+            for i in range(1, len(self.exp_list)):
+                curr_var = getattr(model.exp_scenarios[i], name)
+                # Constrain current variable to equal reference variable
+                model.add_component(
+                    f"Link_{name}_Block0_Block{i}",
+                    pyo.Constraint(expr=curr_var == ref_var)
+                )
+
+        # Deactivate the objective in each block to avoid double counting
+        for i in range(len(self.exp_list)):
+            model.exp_scenarios[i].Total_Cost_Objective.deactivate()
+
+        model.pprint()
 
         return model
 
@@ -1038,22 +1041,20 @@ class Estimator:
         # Create scenario blocks using utility function       
         model = self._create_scenario_blocks()
 
-        solver_instance = pyo.SolverFactory(solver)
-        for k, v in self.solver_options.items():
-            solver_instance.options[k] = v
+        solver = SolverFactory('ipopt')
+        if self.solver_options is not None:
+            for key in self.solver_options:
+                solver.options[key] = self.solver_options[key]
 
-        solver_instance.solve(model, tee=self.tee)
-
-        assert_optimal_termination(solver_instance)
+        solve_result = solver.solve(model, tee=self.tee)
+        assert_optimal_termination(solve_result)
 
         # Extract objective value
         obj_value = pyo.value(model.Obj)
         theta_estimates = {}
         # Extract theta estimates from first block
-        first_block = model.Blocks[0].model
         for name in self.estimator_theta_names:
-            theta_var = getattr(first_block, name)
-            theta_estimates[name] = pyo.value(theta_var)
+            theta_estimates[name] = pyo.value(getattr(model.exp_scenarios[0], name))
 
         return obj_value, theta_estimates
 
