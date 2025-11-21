@@ -1377,7 +1377,7 @@ class document_configdict(document_kwargs_from_configdict):
        Help on class MyConfig ...
        <BLANKLINE>
        class MyConfig(pyomo.common.config.ConfigDict)
-        |  MyConfig(description=None, doc=None, implicit=False, implicit_domain=None, visibility=0)
+        |  MyConfig(...)
         |
         |  Custom configuration object
         |
