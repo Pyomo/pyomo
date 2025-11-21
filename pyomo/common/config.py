@@ -2051,10 +2051,10 @@ class ConfigBase:
         item_start=None,
         item_body=None,
         item_end=None,
-        indent_spacing=2,
-        width=78,
-        visibility=None,
-        format='latex',
+        indent_spacing: int = 2,
+        width: int = 78,
+        visibility: int | None = None,
+        format: ConfigFormatter | str = 'latex',
     ):
         """Document the this Config object.
 
