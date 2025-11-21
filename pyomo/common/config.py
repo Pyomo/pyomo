@@ -1284,11 +1284,11 @@ class document_kwargs_from_configdict:
         fcn.__doc__ = (
             doc
             + f'{section}'
-            + config.generate_documentation(
+            + numpydoc_ConfigFormatter().generate(
+                config=config,
                 indent_spacing=self.indent_spacing,
                 width=self.width,
                 visibility=self.visibility,
-                format='numpydoc',
             )
         )
         return fcn
