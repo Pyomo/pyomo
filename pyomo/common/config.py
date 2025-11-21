@@ -44,7 +44,7 @@ import types
 
 from operator import attrgetter
 
-from pyomo.common.collections import Sequence, Mapping
+from pyomo.common.collections import Sequence, MutableMapping
 from pyomo.common.deprecation import (
     deprecated,
     deprecation_warning,
@@ -2502,7 +2502,7 @@ ConfigList._UninitializedClass = type(
 )
 
 
-class ConfigDict(ConfigBase, Mapping):
+class ConfigDict(ConfigBase, MutableMapping):
     """Store and manipulate a dictionary of configuration values.
 
     Parameters
