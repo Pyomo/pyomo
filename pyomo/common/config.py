@@ -1795,11 +1795,11 @@ class ConfigBase:
     def declare_as_argument(self, *args, **kwds):
         """Map this Config item to an argparse argument.
 
-        Valid arguments include all valid arguments to :mod:`argparse`'s
-        :meth:`~argparse.ArgumentParser.add_argument()` with the exception of
+        Valid arguments include all valid arguments to
+        :meth:`argparse.ArgumentParser.add_argument()` with the exception of
         ``default``.
 
-        In addition, you may provide a ``group` keyword argument that can be:
+        In addition, you may provide a `group` keyword argument that can be:
 
            - an argument group returned from
              `~argparse.ArgumentParser.add_argument_group`
