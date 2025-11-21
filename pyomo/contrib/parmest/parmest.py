@@ -986,7 +986,7 @@ class Estimator:
             # Assign parmest model to block
             model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
-        # Make an objective that sums over all scenario blocks
+        # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
             return sum(
                 block.Total_Cost_Objective for block in m.exp_scenarios.values()
@@ -1016,7 +1016,7 @@ class Estimator:
 
     # Redesigning simpler version of _Q_opt
     # Still work in progress
-    def _Q_opt_simple(
+    def _Q_opt_blocks(
         self,
         return_values=None,
         bootlist=None,
@@ -1771,7 +1771,7 @@ class Estimator:
 
     # Replicate of theta_est for testing simplified _Q_opt
     # Still work in progress
-    def theta_est_simple(
+    def theta_est_blocks(
         self, solver="ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
     ):
         """
