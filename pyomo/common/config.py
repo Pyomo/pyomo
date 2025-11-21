@@ -854,7 +854,7 @@ def _picklable(field, obj):
         # either: exceeding recursion depth raises a RuntimeError
         # through 3.4, then switches to a RecursionError (a derivative
         # of RuntimeError).
-        if isinstance(sys.exc_info()[0], RuntimeError):
+        if issubclass(sys.exc_info()[0], RuntimeError):
             raise
         if ftype not in _picklable.unknowable_types:
             _picklable.known[ftype] = False
