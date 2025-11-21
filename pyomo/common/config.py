@@ -715,6 +715,13 @@ def _dump(*args, **kwds):
                 return str(x).lower()
             if type(x) is type:
                 return str(type(x))
+            if isinstance(x, str):
+                # If the str is a number, then we need to quote it.
+                try:
+                    float(x)
+                    return repr(x)
+                except:
+                    return str(x)
             return str(x)
 
     assert '_dump' in globals()
