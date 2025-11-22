@@ -20,9 +20,6 @@ from pyomo.contrib.alternative_solutions import (
     ObjectiveInfo,
 )
 
-# from pyomo.contrib.alternative_solutions.aos_utils import MyMunch
-
-
 def soln(value, objective):
     return Solution(
         variables=[VariableInfo(value=value)],
