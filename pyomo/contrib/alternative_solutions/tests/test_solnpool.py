@@ -20,6 +20,7 @@ from pyomo.contrib.alternative_solutions import (
     ObjectiveInfo,
 )
 
+
 def soln(value, objective):
     return Solution(
         variables=[VariableInfo(value=value)],
