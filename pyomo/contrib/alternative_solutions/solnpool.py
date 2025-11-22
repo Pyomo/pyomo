@@ -888,49 +888,6 @@ class PoolManager:
         """
         return {k: len(v) for k, v in self._pools.items()}
 
-    def write(self, json_filename, indent=None, sort_keys=True):
-        """
-        Dumps PoolManager to json file using json.dump method
-
-        Parameters
-        ----------
-        json_filename : path-like
-            Name of file output location
-            If filename exists, will overwrite.
-            If filename does not exist, will create.
-        indent : int or str or None
-            Pass through indent type for json.dump indent
-        sort_keys : Boolean
-            Pass through sort_keys for json.dump
-            If true, keys from dict conversion will be sorted in json
-            If false, no sorting
-
-        """
-        with open(json_filename, "w") as OUTPUT:
-            json.dump(self.to_dict(), OUTPUT, indent=indent, sort_keys=sort_keys)
-
-    def read(self, json_filename):
-        """
-        Reads in a json to construct the PoolManager pools
-
-        Parameters
-        ----------
-        json_filename : path-like
-            File name to read in as SolutionPools for this PoolManager
-            If corresponding file does not exist, throws ValueError
-
-        """
-        # TODO: this does not set an active pool, should we do that?
-        # TODO: this does not seem to update the counter value, possibly leading to non-unique ids
-        if not os.path.exists(json_filename):
-            raise ValueError(f"ERROR: file '{json_filename}' does not exist!")
-        with open(json_filename, "r") as INPUT:
-            try:
-                data = json.load(INPUT)
-            except ValueError as e:
-                raise ValueError(f"Invalid JSON in file '{json_filename}': {e}")
-            self._pools = data.solutions
-
     #
     # The following methods treat the PoolManager as a PoolCounter.
     # This allows the PoolManager to be used to provide a global solution count
