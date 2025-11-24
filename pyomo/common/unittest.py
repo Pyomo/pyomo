@@ -318,10 +318,28 @@ def _runner(pipe, qualname):
         resultType = _RunnerResult.unittest
 
         def fcn():
-            s = _unittest.TestLoader().loadTestsFromName(qualname)
-            r = _unittest.TestResult()
-            s.run(r)
-            return r.errors + r.failures, r.skipped
+            suite = _unittest.TestLoader().loadTestsFromName(qualname)
+            result = _unittest.TestResult()
+            # Starting in Python 3.14, the default interface is
+            # forkserver, so timeout will fall back on spawn (getting us
+            # here).  Unfortunately, starting in pytest 9.0, if the
+            # test is expecting to fail, pytest will completely suppress
+            # recording the failure from the subTest, causing the main
+            # test to unexpectedly succeed.  We will resolve this by
+            # looking at the testmethod we just loaded and if we are
+            # expecting a failure, then we will turn that off *in the
+            # subTest* so that the result is properly propagated.
+            for test in suite:
+                test.__unittest_expecting_failure__ = False
+                # Note: fetch the unbound function off the class and not
+                # the bound method.
+                func = getattr(test.__class__, test._testMethodName)
+                if hasattr(func, '__unittest_expecting_failure__'):
+                    delattr(func, '__unittest_expecting_failure__')
+            # Now we can actually run the test (including all necessary
+            # setUp/tearDown)
+            suite.run(result)
+            return result.errors + result.failures, result.skipped
 
         args = ()
         kwargs = {}
