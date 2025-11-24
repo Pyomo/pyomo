@@ -518,7 +518,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             If the bounds can be calculated efficiently, then this list
             should be of length ``self.dim`` and contain the
             (lower, upper) bound pairs.
@@ -1317,7 +1317,7 @@ class BoxSet(UncertaintySet):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
@@ -1558,7 +1558,7 @@ class CardinalitySet(UncertaintySet):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
@@ -2189,7 +2189,7 @@ class BudgetSet(UncertaintySet):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
@@ -2525,7 +2525,7 @@ class FactorModelSet(UncertaintySet):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
@@ -2858,7 +2858,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
@@ -3262,7 +3262,7 @@ class EllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
@@ -3433,8 +3433,9 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def scenarios(self):
         """
-        list of tuple : Uncertain parameter realizations comprising the
-        set.  Each tuple is an uncertain parameter realization.
+        list[tuple[numbers.Real, ...]] : Uncertain parameter
+        realizations comprising the set. Each tuple is an uncertain
+        parameter realization.
 
         Note that the `scenarios` attribute may be modified, but
         only such that the dimension of the set remains unchanged.
@@ -3485,7 +3486,7 @@ class DiscreteScenarioSet(UncertaintySet):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
@@ -3693,9 +3694,9 @@ class IntersectionSet(UncertaintySet):
     @property
     def scenarios(self):
         """
-        list of tuple : If the set represented by `self` reduces to a
-        discrete uncertainty set, then this attribute contains the
-        scenarios comprising the intersection.
+        list[tuple[numbers.Real, ...]] : If the set represented by
+        `self` reduces to a discrete uncertainty set, then this attribute
+        contains the scenarios that comprise the set.
         Otherwise, a ValueError is raised.
         """
         if self.geometry == Geometry.DISCRETE_SCENARIOS:
@@ -3727,7 +3728,7 @@ class IntersectionSet(UncertaintySet):
 
         Returns
         -------
-        list[tuple[float, float]]
+        list[tuple[numbers.Real, numbers.Real]]
             If one of the sets to be intersected is discrete,
             then the list is of length ``self.dim`` and contains
             the coordinate value (lower, upper) bound pairs.
