@@ -34,13 +34,12 @@ methods which have been implemented in parmest.
     Where :math:`\boldsymbol{V}_{\boldsymbol{\theta}}` is the covariance matrix of the estimated
     parameters :math:`\hat{\boldsymbol{\theta}}`, :math:`\boldsymbol{y}` are observations of the measured variables,
     :math:`\hat{\boldsymbol{y}}` are model predictions of the measured variables,
-    :math:`n` is the number of experiments, :math:`\boldsymbol{x}` are the decision variables, and
-    :math:`\boldsymbol{\Sigma}_{\boldsymbol{y}}` is the measurement error covariance matrix, whose leading diagonal
-    contains the inverse of the variance of the measurement errors, :math:`\sigma^2`. When the standard deviation of
-    the measurement error is not supplied by the user, parmest approximates :math:`\sigma^2` as:
-    :math:`\hat{\sigma}^2 = \frac{1}{n-l} \sum_{i=1}^{n} e_i^2`, where :math:`l` is the number of fitted parameters,
-    and :math:`e_i` is the residual between :math:`\boldsymbol{y}` and :math:`\hat{\boldsymbol{y}}`
-    for experiment :math:`i`.
+    :math:`n` is the number of experiments, and :math:`\boldsymbol{\Sigma}_{\boldsymbol{y}}` is the measurement error
+    covariance matrix, whose leading diagonal contains the inverse of the variance of the measurement errors,
+    :math:`\sigma^2`. When the standard deviation of the measurement error is not supplied by the user, parmest
+    approximates :math:`\sigma^2` as: :math:`\hat{\sigma}^2 = \frac{1}{n-l} \sum_{i=1}^{n} e_i^2`, where :math:`l` is
+    the number of fitted parameters, and :math:`e_i` is the residual between the data and model prediction for
+    experiment :math:`i`.
 
     In parmest, this method computes the inverse of the Hessian by scaling the
     objective function (SSE or WSSE) with a constant probability factor, :math:`\frac{1}{n}`.
