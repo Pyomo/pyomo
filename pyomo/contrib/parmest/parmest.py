@@ -922,6 +922,7 @@ class Estimator:
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
 
         # Add objective function (optional)
+        # @Reviewers What is the purpose of the reserved_names? Can we discuss this in a meeting?
         if self.obj_function:
             # Check for component naming conflicts
             reserved_names = [
@@ -981,14 +982,23 @@ class Estimator:
 
         if bootlist is not None:
             model.exp_scenarios = pyo.Block(range(len(bootlist)))
+
+            for i in range(len(bootlist)):
+                # Create parmest model for experiment i
+                parmest_model = self._create_parmest_model(bootlist[i])
+                # Assign parmest model to block
+                model.exp_scenarios[i].transfer_attributes_from(parmest_model)
+
         else:
             model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
 
-        for i in range(len(self.exp_list)):
-            # Create parmest model for experiment i
-            parmest_model = self._create_parmest_model(i)
-            # Assign parmest model to block
-            model.exp_scenarios[i].transfer_attributes_from(parmest_model)
+            for i in range(len(self.exp_list)):
+                # Create parmest model for experiment i
+                parmest_model = self._create_parmest_model(i)
+                # parmest_model.pprint()
+                # Assign parmest model to block
+                model.exp_scenarios[i].transfer_attributes_from(parmest_model)
+                # model.exp_scenarios[i].pprint()
 
         # Transfer all the unknown parameters to the parent model
         for name in self.estimator_theta_names:
@@ -1015,20 +1025,33 @@ class Estimator:
 
         # Make sure all the parameters are linked across blocks
         for name in self.estimator_theta_names:
-            for i in range(1, len(self.exp_list)):
-                model.add_component(
-                    f"Link_{name}_Block{i}_Parent",
-                    pyo.Constraint(
-                        expr=getattr(model.exp_scenarios[i], name)
-                        == getattr(model, name)
-                    ),
-                )
+            if bootlist is not None:
+                for i in range(1, len(bootlist)):
+                    model.add_component(
+                        f"Link_{name}_Block{i}_Parent",
+                        pyo.Constraint(
+                            expr=getattr(model.exp_scenarios[i], name)
+                            == getattr(model, name)
+                        ),
+                    )
+                # Deactivate the objective in each block to avoid double counting
+                for i in range(len(bootlist)):
+                    model.exp_scenarios[i].Total_Cost_Objective.deactivate()
+            else:
+                for i in range(1, len(self.exp_list)):
+                    model.add_component(
+                        f"Link_{name}_Block{i}_Parent",
+                        pyo.Constraint(
+                            expr=getattr(model.exp_scenarios[i], name)
+                            == getattr(model, name)
+                        ),
+                    )
 
-        # Deactivate the objective in each block to avoid double counting
-        for i in range(len(self.exp_list)):
-            model.exp_scenarios[i].Total_Cost_Objective.deactivate()
+                # Deactivate the objective in each block to avoid double counting
+                for i in range(len(self.exp_list)):
+                    model.exp_scenarios[i].Total_Cost_Objective.deactivate()
 
-        model.pprint()
+        # model.pprint()
 
         return model
 
@@ -1989,6 +2012,81 @@ class Estimator:
             del bootstrap_theta['samples']
 
         return bootstrap_theta
+    
+    # Add theta_est_bootstrap_blocks
+    def theta_est_bootstrap_blocks(
+        self,
+        bootstrap_samples,
+        samplesize=None,
+        replacement=True,
+        seed=None,
+        return_samples=False,
+    ):
+        """
+        Parameter estimation using bootstrap resampling of the data
+
+        Parameters
+        ----------
+        bootstrap_samples: int
+            Number of bootstrap samples to draw from the data
+        samplesize: int or None, optional
+            Size of each bootstrap sample. If samplesize=None, samplesize will be
+            set to the number of samples in the data
+        replacement: bool, optional
+            Sample with or without replacement. Default is True.
+        seed: int or None, optional
+            Random seed
+        return_samples: bool, optional
+            Return a list of sample numbers used in each bootstrap estimation.
+            Default is False.
+
+        Returns
+        -------
+        bootstrap_theta: pd.DataFrame
+            Theta values for each sample and (if return_samples = True)
+            the sample numbers used in each estimation
+        """
+
+        # check if we are using deprecated parmest
+        if self.pest_deprecated is not None:
+            return self.pest_deprecated.theta_est_bootstrap(
+                bootstrap_samples,
+                samplesize=samplesize,
+                replacement=replacement,
+                seed=seed,
+                return_samples=return_samples,
+            )
+
+        assert isinstance(bootstrap_samples, int)
+        assert isinstance(samplesize, (type(None), int))
+        assert isinstance(replacement, bool)
+        assert isinstance(seed, (type(None), int))
+        assert isinstance(return_samples, bool)
+
+        if samplesize is None:
+            samplesize = len(self.exp_list)
+
+        if seed is not None:
+            np.random.seed(seed)
+
+        global_list = self._get_sample_list(samplesize, bootstrap_samples, replacement)
+
+        task_mgr = utils.ParallelTaskManager(bootstrap_samples)
+        local_list = task_mgr.global_to_local_data(global_list)
+
+        bootstrap_theta = list()
+        for idx, sample in local_list:
+            objval, thetavals = self._Q_opt_blocks(bootlist=list(sample))
+            thetavals['samples'] = sample
+            bootstrap_theta.append(thetavals)
+
+        global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
+        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
+
+        if not return_samples:
+            del bootstrap_theta['samples']
+
+        return bootstrap_theta
 
     def theta_est_leaveNout(
         self, lNo, lNo_samples=None, seed=None, return_samples=False
@@ -2039,6 +2137,67 @@ class Estimator:
         lNo_theta = list()
         for idx, sample in local_list:
             objval, thetavals = self._Q_opt(bootlist=list(sample))
+            lNo_s = list(set(range(len(self.exp_list))) - set(sample))
+            thetavals['lNo'] = np.sort(lNo_s)
+            lNo_theta.append(thetavals)
+
+        global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
+        lNo_theta = pd.DataFrame(global_bootstrap_theta)
+
+        if not return_samples:
+            del lNo_theta['lNo']
+
+        return lNo_theta
+
+    def theta_est_leaveNout_blocks(
+        self, lNo, lNo_samples=None, seed=None, return_samples=False
+    ):
+        """
+        Parameter estimation where N data points are left out of each sample
+
+        Parameters
+        ----------
+        lNo: int
+            Number of data points to leave out for parameter estimation
+        lNo_samples: int
+            Number of leave-N-out samples. If lNo_samples=None, the maximum
+            number of combinations will be used
+        seed: int or None, optional
+            Random seed
+        return_samples: bool, optional
+            Return a list of sample numbers that were left out. Default is False.
+
+        Returns
+        -------
+        lNo_theta: pd.DataFrame
+            Theta values for each sample and (if return_samples = True)
+            the sample numbers left out of each estimation
+        """
+
+        # check if we are using deprecated parmest
+        if self.pest_deprecated is not None:
+            return self.pest_deprecated.theta_est_leaveNout(
+                lNo, lNo_samples=lNo_samples, seed=seed, return_samples=return_samples
+            )
+
+        assert isinstance(lNo, int)
+        assert isinstance(lNo_samples, (type(None), int))
+        assert isinstance(seed, (type(None), int))
+        assert isinstance(return_samples, bool)
+
+        samplesize = len(self.exp_list) - lNo
+
+        if seed is not None:
+            np.random.seed(seed)
+
+        global_list = self._get_sample_list(samplesize, lNo_samples, replacement=False)
+
+        task_mgr = utils.ParallelTaskManager(len(global_list))
+        local_list = task_mgr.global_to_local_data(global_list)
+
+        lNo_theta = list()
+        for idx, sample in local_list:
+            objval, thetavals = self._Q_opt_blocks(bootlist=list(sample))
             lNo_s = list(set(range(len(self.exp_list))) - set(sample))
             thetavals['lNo'] = np.sort(lNo_s)
             lNo_theta.append(thetavals)
