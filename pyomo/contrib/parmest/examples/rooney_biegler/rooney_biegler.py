@@ -50,15 +50,17 @@ class RooneyBieglerExperiment(Experiment):
 
     def create_model(self):
         # rooney_biegler_model expects a dataframe
-        data_df = self.data.to_frame().transpose()
-        self.model = rooney_biegler_model(data_df)
+        # data_df = self.data.to_frame().transpose()
+        self.model = rooney_biegler_model(data=self.data)
 
     def label_model(self):
 
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
+        m.experiment_outputs.update(
+            [(m.y[t], self.data.loc[i, 'y']) for i, t in enumerate(self.data['hour'])]
+        )
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
@@ -66,7 +68,9 @@ class RooneyBieglerExperiment(Experiment):
         )
 
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y[self.data['hour']], self.measure_error)])
+        m.measurement_error.update(
+            [(m.y[t], self.measure_error) for t in self.data['hour']]
+        )
 
     def finalize_model(self):
 
@@ -90,7 +94,8 @@ def main():
         columns=['hour', 'y'],
     )
 
-    model = rooney_biegler_model(data)
+    # model = rooney_biegler_model(data)
+    model = RooneyBieglerExperiment(data).get_labeled_model()
     solver = pyo.SolverFactory('ipopt')
     solver.solve(model)
 
