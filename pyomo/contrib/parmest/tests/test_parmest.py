@@ -1349,7 +1349,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
     def setUp(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler_with_constraint import (
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
             RooneyBieglerExperiment,
         )
 
