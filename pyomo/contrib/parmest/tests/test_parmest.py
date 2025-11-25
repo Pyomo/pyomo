@@ -1360,10 +1360,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
 
         # Sum of squared error function
         def SSE(model):
-            expr = (
-                model.experiment_outputs[model.y]
-                - pyo.value(model.response_function[model.hour])
-            ) ** 2
+            expr = (model.experiment_outputs[model.y] - model.y) ** 2
 
             return expr
 
@@ -1377,11 +1374,6 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         self.pest = parmest.Estimator(
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
-
-        # debugging print
-        o, j = self.pest.theta_est()
-        print("Initial run obj:", o)
-        print("Initial run theta:", j)
 
     def test_theta_est_with_square_initialization(self):
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)

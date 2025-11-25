@@ -33,11 +33,6 @@ def rooney_biegler_model(data):
 
     model.response_function = pyo.Constraint(data.hour, rule=response_rule)
 
-    # def SSE_rule(m):
-    #     return (data.y - m.y) ** 2
-
-    # model.SSE = pyo.Objective(rule=SSE_rule, sense=pyo.minimize)
-
     return model
 
 
