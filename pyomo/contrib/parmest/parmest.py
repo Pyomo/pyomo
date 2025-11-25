@@ -2012,7 +2012,7 @@ class Estimator:
             del bootstrap_theta['samples']
 
         return bootstrap_theta
-    
+
     # Add theta_est_bootstrap_blocks
     def theta_est_bootstrap_blocks(
         self,
