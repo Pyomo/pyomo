@@ -33,11 +33,6 @@ class TestRooneyBieglerExamples(unittest.TestCase):
     def tearDownClass(self):
         pass
 
-    def test_model(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import rooney_biegler
-
-        rooney_biegler.main()
-
     @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_parameter_estimation_example(self):

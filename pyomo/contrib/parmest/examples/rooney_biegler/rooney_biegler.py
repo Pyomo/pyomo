@@ -26,17 +26,17 @@ def rooney_biegler_model(data):
     model.asymptote = pyo.Var(initialize=15)
     model.rate_constant = pyo.Var(initialize=0.5)
 
-    model.y = pyo.Var(data.hour, within=pyo.PositiveReals, initialize=5)
+    model.y = pyo.Var(within=pyo.PositiveReals, initialize=5)
 
     def response_rule(m, h):
-        return m.y[h] == m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
+        return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
 
     model.response_function = pyo.Constraint(data.hour, rule=response_rule)
 
-    def SSE_rule(m):
-        return sum((data.y[i] - m.y[data.hour[i]]) ** 2 for i in data.index)
+    # def SSE_rule(m):
+    #     return (data.y - m.y) ** 2
 
-    model.SSE = pyo.Objective(rule=SSE_rule, sense=pyo.minimize)
+    # model.SSE = pyo.Objective(rule=SSE_rule, sense=pyo.minimize)
 
     return model
 
@@ -50,17 +50,15 @@ class RooneyBieglerExperiment(Experiment):
 
     def create_model(self):
         # rooney_biegler_model expects a dataframe
-        # data_df = self.data.to_frame().transpose()
-        self.model = rooney_biegler_model(data=self.data)
+        data_df = self.data.to_frame().transpose()
+        self.model = rooney_biegler_model(data_df)
 
     def label_model(self):
 
         m = self.model
 
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update(
-            [(m.y[t], self.data.loc[i, 'y']) for i, t in enumerate(self.data['hour'])]
-        )
+        m.experiment_outputs.update([(m.y, self.data.loc['y'])])
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
@@ -68,9 +66,7 @@ class RooneyBieglerExperiment(Experiment):
         )
 
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update(
-            [(m.y[t], self.measure_error) for t in self.data['hour']]
-        )
+        m.measurement_error.update([(m.y, self.measure_error)])
 
     def finalize_model(self):
 
@@ -85,23 +81,3 @@ class RooneyBieglerExperiment(Experiment):
         self.finalize_model()
 
         return self.model
-
-
-def main():
-    # These were taken from Table A1.4 in Bates and Watts (1988).
-    data = pd.DataFrame(
-        data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-        columns=['hour', 'y'],
-    )
-
-    # model = rooney_biegler_model(data)
-    model = RooneyBieglerExperiment(data).get_labeled_model()
-    solver = pyo.SolverFactory('ipopt')
-    solver.solve(model)
-
-    print('asymptote = ', model.asymptote())
-    print('rate constant = ', model.rate_constant())
-
-
-if __name__ == '__main__':
-    main()

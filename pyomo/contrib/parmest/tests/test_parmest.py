@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyexpat import model
 import sys
 import os
 import subprocess
@@ -310,9 +311,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         # Sum of squared error function
         def SSE(model):
-            expr = (
-                model.experiment_outputs[model.y[model.hour]] - model.y[model.hour]
-            ) ** 2
+            expr = (model.experiment_outputs[model.y] - model.y) ** 2
             return expr
 
         # Create an experiment list
@@ -1363,8 +1362,9 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         def SSE(model):
             expr = (
                 model.experiment_outputs[model.y]
-                - model.response_function[model.experiment_outputs[model.hour]]
+                - pyo.value(model.response_function[model.hour])
             ) ** 2
+
             return expr
 
         exp_list = []
@@ -1378,9 +1378,18 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
 
+        # debugging print
+        o, j = self.pest.theta_est()
+        print("Initial run obj:", o)
+        print("Initial run theta:", j)
+
     def test_theta_est_with_square_initialization(self):
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
         objval, thetavals = self.pest.theta_est()
+        print("*" * 30)
+        print("objval:", objval)
+        print("thetavals:", thetavals)
+        print("*" * 30)
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
