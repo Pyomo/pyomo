@@ -158,7 +158,7 @@ class SolverBase:
         available: Availability
             An enum that indicates "how available" the solver is.
             Note that the enum can be cast to bool, which will
-            be True if the solver is runable at all and False
+            be True if the solver is runnable at all and False
             otherwise.
         """
         raise NotImplementedError(
@@ -408,7 +408,7 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
-    class _all_true(object):
+    class _all_true:
         # A mockup of Bunch that returns True for all attribute lookups
         # or containment tests.
         def __getattr__(self, name):
@@ -744,3 +744,15 @@ class LegacySolverWrapper:
 
     def default_variable_value(self):
         return None
+
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1

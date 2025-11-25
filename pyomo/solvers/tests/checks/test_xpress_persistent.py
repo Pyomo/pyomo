@@ -320,6 +320,10 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1])
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
+    @unittest.skipIf(
+        xpd.xpress_available and xpd.xpress.__version__ == '9.8.0',
+        "Xpress 9.8 always runs global optimizer",
+    )
     def test_nonconvexqp_locally_optimal(self):
         """Test non-convex QP for which xpress_direct should find a locally
         optimal solution."""
@@ -375,7 +379,7 @@ class TestXpressPersistent(unittest.TestCase):
         )
 
     def test_available(self):
-        class mock_xpress(object):
+        class mock_xpress:
             def __init__(self, importable, initable):
                 self._initable = initable
                 xpd.xpress_available = importable
