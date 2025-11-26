@@ -67,28 +67,31 @@ class RooneyBieglerExperiment(Experiment):
 
         m = self.model
 
+        # Add experiment outputs as a suffix
+        # Experiment outputs suffix is required for parest
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_outputs.update([(m.y, self.data.loc['y'])])
 
+        # Add unknown parameters as a suffix
+        # Unknown parameters suffix is required for both Pyomo.DoE and parmest
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
             (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
         )
 
+        # Add measurement error as a suffix
+        # Measurement error suffix is required for Pyomo.DoE and
+        #  `cov` estimation in parmest
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.measurement_error.update([(m.y, self.measure_error)])
 
         # Add hour as an experiment input
+        # Experiment inputs suffix is required for Pyomo.DoE
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_inputs.update([(m.hour, self.data.loc['hour'])])
 
     def finalize_model(self):
         pass
-
-        # m = self.model
-
-        # # Experiment input values
-        # m.hour = self.data['hour']
 
     def get_labeled_model(self):
         self.create_model()

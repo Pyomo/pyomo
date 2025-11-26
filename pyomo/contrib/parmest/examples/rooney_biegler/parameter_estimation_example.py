@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from numpy import cov
 from pyomo.common.dependencies import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
@@ -25,10 +24,12 @@ def main():
         columns=['hour', 'y'],
     )
 
+    # If desired, define a custom objective function, and then pass its name
+    # as a string to the Estimator constructor. e.g., obj_function= SSE
     # Sum of squared error function
-    def SSE(model):
-        expr = (model.experiment_outputs[model.y] - model.y) ** 2
-        return expr
+    # def SSE(model):
+    #     expr = (model.experiment_outputs[model.y] - model.y) ** 2
+    #     return expr
 
     # Create an experiment list
     exp_list = []
@@ -40,12 +41,11 @@ def main():
     # exp0_model.pprint()
 
     # Create an instance of the parmest estimator
-    pest = parmest.Estimator(exp_list, obj_function=SSE)
+    pest = parmest.Estimator(exp_list, obj_function="SSE")
 
     # Parameter estimation and covariance
-    n = 6  # total number of data points used in the objective (y in 6 scenarios)
     obj, theta = pest.theta_est()
-    # cov = pest.cov_est()
+    cov = pest.cov_est()
 
     if parmest.graphics.seaborn_available:
         parmest.graphics.pairwise_plot(
@@ -62,11 +62,11 @@ def main():
     relative_error = abs(theta['rate_constant'] - 0.5311) / 0.5311
     assert relative_error < 0.01
 
-    return obj, theta
+    return obj, theta, cov
 
 
 if __name__ == "__main__":
-    obj, theta = main()
+    obj, theta, cov = main()
     print("Estimated parameters (theta):", theta)
     print("Objective function value at theta:", obj)
-    # print("Covariance of parameter estimates:", cov)
+    print("Covariance of parameter estimates:", cov)
