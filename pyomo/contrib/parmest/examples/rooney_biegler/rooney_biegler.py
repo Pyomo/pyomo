@@ -20,15 +20,11 @@ import pyomo.environ as pyo
 from pyomo.contrib.parmest.experiment import Experiment
 
 
-def rooney_biegler_model(data, theta=None):
-    # if theta is  None:
-    #     theta = {}
-    #     theta['asymptote'] = 15
-    #     theta['rate constant'] = 0.5
+def rooney_biegler_model(data):
     model = pyo.ConcreteModel()
 
-    model.asymptote = pyo.Var(initialize=theta['asymptote'])
-    model.rate_constant = pyo.Var(initialize=theta['rate constant'])
+    model.asymptote = pyo.Var(initialize=15)
+    model.rate_constant = pyo.Var(initialize=0.5)
 
     model.y = pyo.Var(within=pyo.PositiveReals, initialize=5)
 
@@ -42,27 +38,15 @@ def rooney_biegler_model(data, theta=None):
 
 class RooneyBieglerExperiment(Experiment):
 
-    def __init__(self, data=None, measure_error=None, theta=None):
+    def __init__(self, data, measure_error=None):
         self.data = data
-
-        if measure_error is None:
-            self.measure_error = 1
-        else:
-            self.measure_error = measure_error
-
-        if theta is None:
-            self.theta = {}
-            self.theta['asymptote'] = 15.0
-            self.theta['rate constant'] = 0.5
-        else:
-            self.theta = theta
-
         self.model = None
+        self.measure_error = measure_error
 
     def create_model(self):
         # rooney_biegler_model expects a dataframe
         data_df = self.data.to_frame().transpose()
-        self.model = rooney_biegler_model(data_df, theta=self.theta)
+        self.model = rooney_biegler_model(data_df)
 
     def label_model(self):
 
