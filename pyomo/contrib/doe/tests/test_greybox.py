@@ -305,8 +305,9 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     obj_used = objective_option
 
     data = pd.DataFrame(data=[[2, 10.3]], columns=['hour', 'y'])
+    theta = {'asymptote': 19.143, 'rate_constant': 0.5311}
 
-    experiment = RooneyBieglerExperiment(data=data.loc[0, :])
+    experiment = RooneyBieglerExperiment(data=data.loc[0, :], theta=theta)
 
     DoE_args = get_standard_args(experiment, fd_method, obj_used)
     DoE_args["use_grey_box_objective"] = True
@@ -321,10 +322,11 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     DoE_args["grey_box_solver"] = grey_box_solver
 
     data = pd.DataFrame(data=[[1, 8.3], [7, 19.8]], columns=['hour', 'y'])
+    theta = {'asymptote': 19.143, 'rate_constant': 0.5311}
     FIM_prior = np.zeros((2, 2))
     # Calculate prior using existing experiments
     for i in range(len(data)):
-        prev_experiment = RooneyBieglerExperiment(data=data.loc[i, :])
+        prev_experiment = RooneyBieglerExperiment(data=data.loc[i, :], theta=theta)
         doe_obj = DesignOfExperiments(
             **get_standard_args(prev_experiment, fd_method, obj_used)
         )
