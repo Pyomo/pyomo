@@ -517,6 +517,9 @@ class Ipopt(SolverBase):
         )
         # Call ipopt - passing the files via the subprocess
         cmd = self._create_command_line(basename=basename, config=config)
+        results.extra_info.add(
+            'command_line', ConfigValue(cmd, visibility=ADVANCED_OPTION)
+        )
         # this seems silly, but we have to give the subprocess slightly
         # longer to finish than ipopt
         if config.time_limit is not None:
