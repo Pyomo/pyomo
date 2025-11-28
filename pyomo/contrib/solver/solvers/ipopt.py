@@ -16,6 +16,7 @@ import datetime
 import io
 import re
 import sys
+import time
 import threading
 from typing import Optional, Tuple, Union, Mapping, List, Dict, Any, Sequence
 
@@ -64,6 +65,18 @@ logger = logging.getLogger(__name__)
 # Acceptable chars for the end of the alpha_pr column
 # in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
 _ALPHA_PR_CHARS = set("fFhHkKnNRwSstTr")
+
+_charlist = '0123456789abcdefghijklmnopqrstuvwxyz'
+assert len(_charlist) >= 32
+
+
+def _encode_int(i: int) -> str:
+    ans = []
+    i = int(i)
+    while i:
+        ans.append(_charlist[i & 31])
+        i >>= 5
+    return ''.join(reversed(ans))
 
 
 class IpoptConfig(SolverConfig):
@@ -380,8 +393,11 @@ class Ipopt(SolverBase):
             # solver interfaces are not formally thread-safe (yet), so
             # this is a bit of future-proofing.
             basename = os.path.join(
-                dname, f"{basename}.{os.getpid()}.{threading.get_ident()}"
+                dname,
+                f"{basename}-{_encode_int(time.time()*1e6)}-"
+                f"{_encode_int(threading.get_native_id())}",
             )
+            results.extra_info.base_file_name = basename
             for ext in ('.nl', '.row', '.col', '.sol', '.opt'):
                 if os.path.exists(basename + ext):
                     raise RuntimeError(
