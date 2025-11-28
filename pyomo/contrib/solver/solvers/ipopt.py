@@ -22,9 +22,10 @@ from typing import Optional, Tuple, Union, Mapping, List, Dict, Any, Sequence
 
 from pyomo.common import Executable
 from pyomo.common.config import (
+    ConfigDict,
+    ConfigList,
     ConfigValue,
     document_class_CONFIG,
-    ConfigDict,
     ADVANCED_OPTION,
 )
 from pyomo.common.errors import (
@@ -557,10 +558,14 @@ class Ipopt(SolverBase):
             # results.timing_info.update(_timing)
             for k, v in _timing.items():
                 results.timing_info[k] = v
-        results.extra_info = parsed_output_data
-        iter_log = results.extra_info.get("iteration_log", None)
+        iter_log = parsed_output_data.pop('iteration_log', None)
         if iter_log is not None:
-            iter_log._visibility = ADVANCED_OPTION
+            results.extra_info.add(
+                'iteration_log', ConfigList(iter_log, visibility=ADVANCED_OPTION)
+            )
+        # results.extra_info.update(parsed_output_data)
+        for k, v in parsed_output_data.items():
+            results.extra_info[k] = v
 
         timer.start('parse_sol')
         if os.path.isfile(basename + '.sol'):
@@ -596,86 +601,80 @@ class Ipopt(SolverBase):
         iter_table = re.findall(r'^(?:\s*\d+.*?)$', output, re.MULTILINE)
         if iter_table:
             columns = [
-                "iter",
-                "objective",
-                "inf_pr",
-                "inf_du",
-                "lg_mu",
-                "d_norm",
-                "lg_rg",
-                "alpha_du",
-                "alpha_pr",
-                "ls",
+                ("iter", int),
+                ("objective", float),
+                ("inf_pr", float),
+                ("inf_du", float),
+                ("lg_mu", float),
+                ("d_norm", float),
+                ("lg_rg", float),
+                ("alpha_du", float),
+                ("alpha_pr", float),
+                ("ls", int),
             ]
             iterations = []
             n_expected_columns = len(columns)
+            iter_idx = columns.index(('iter', int))
+            alpha_pr_idx = columns.index(('alpha_pr', float))
 
             for line in iter_table:
                 tokens = line.strip().split()
                 # IPOPT sometimes mashes the first two column values together
                 # (e.g., "2r-4.93e-03"). We need to split them.
-                try:
-                    idx = tokens[0].index('-')
-                    head = tokens[0][:idx]
-                    if head and head.rstrip('r').isdigit():
-                        tokens[:1] = (head, tokens[0][idx:])
-                except ValueError:
-                    pass
-
-                iter_data = dict(zip(columns, tokens))
-                extra_tokens = tokens[n_expected_columns:]
+                if '-' in tokens[iter_idx]:
+                    # This happens rarely, so we are OK with this
+                    # portion of the parser being a little less
+                    # efficient (e.g., reallocating the tokens list, and
+                    # performing index math)
+                    tkn = tokens[iter_idx]
+                    idx = tkn.index('-')
+                    tokens[iter_idx : iter_idx + 1] = tkn[:idx], tkn[idx:]
 
                 # Extract restoration flag from 'iter'
-                iter_num = iter_data.pop("iter")
-                restoration = iter_num.endswith("r")
+                restoration = tokens[iter_idx].endswith("r")
                 if restoration:
-                    iter_num = iter_num[:-1]
-
-                try:
-                    iter_num = int(iter_num)
-                except ValueError:
-                    logger.warning(
-                        f"Could not parse Ipopt iteration number: {iter_num}"
-                    )
-
-                iter_data["restoration"] = restoration
-                iter_data["iter"] = iter_num
+                    tokens[iter_idx] = tokens[iter_idx][:-1]
 
                 # Separate alpha_pr into numeric part and optional tag (f, D, R, etc.)
-                step_acceptance_tag = iter_data['alpha_pr'][-1]
-                if step_acceptance_tag in _ALPHA_PR_CHARS:
-                    iter_data['step_acceptance'] = step_acceptance_tag
-                    iter_data['alpha_pr'] = iter_data['alpha_pr'][:-1]
+                step_acceptance = tokens[alpha_pr_idx][-1]
+                if step_acceptance in _ALPHA_PR_CHARS:
+                    tokens[alpha_pr_idx] = tokens[alpha_pr_idx][:-1]
                 else:
-                    iter_data['step_acceptance'] = None
+                    step_acceptance = None
+
+                try:
+                    iter_data = {
+                        key: None if t == '-' else cast(t)
+                        for (key, cast), t in zip(columns, tokens)
+                    }
+                except (ValueError, TypeError):
+                    logger.error(
+                        "Error parsing Ipopt log entry:\n"
+                        f"\t{sys.exc_info()[1]}\n\t{line}"
+                    )
+                    # Fall-back on a simpler (but slower) parse: extract
+                    # the fields, and cast to float what we can.  The
+                    # point here is the parser should never fail with an
+                    # exception (even if it fails to parse some of the
+                    # log)
+                    iter_data = {}
+                    for (key, cast), t in zip(columns, tokens):
+                        if t == '-':
+                            t = None
+                        else:
+                            try:
+                                t = cast(t)
+                            except:
+                                pass
+                        iter_data[key] = t
+
+                iter_data["restoration"] = restoration
+                iter_data["step_acceptance"] = step_acceptance
 
                 # Capture optional IPOPT diagnostic tags if present
-                if extra_tokens:
-                    iter_data['diagnostic_tags'] = " ".join(extra_tokens)
+                if len(tokens) > n_expected_columns:
+                    iter_data['diagnostic_tags'] = " ".join(tokens[n_expected_columns:])
 
-                # Attempt to cast all values to float where possible
-                for key in columns[1:]:
-                    val = iter_data[key]
-                    if val == '-':
-                        iter_data[key] = None
-                    else:
-                        try:
-                            iter_data[key] = float(val)
-                        except (ValueError, TypeError):
-                            logger.warning(
-                                "Error converting Ipopt log entry to "
-                                f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
-                            )
-
-                if len(iterations) != iter_num:
-                    logger.warning(
-                        f"Parsed iteration record {len(iterations)} "
-                        f"does not match the expected iteration number ({iter_num})"
-                        f"\n\t{line}"
-                    )
-                    # Things have gotten fouled up.  There is no real
-                    # reason to continue to parse the iteration log
-                    break
                 iterations.append(iter_data)
 
             parsed_data['iteration_log'] = iterations
