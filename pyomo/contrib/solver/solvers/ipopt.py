@@ -80,6 +80,22 @@ def _encode_int(i: int) -> str:
     return ''.join(reversed(ans))
 
 
+def _option_to_str(opt, val):
+    if isinstance(val, str):
+        if '"' not in val:
+            return f'{opt}="{val}"'
+        elif "'" not in val:
+            return f"{opt}='{val}'"
+        else:
+            raise ValueError(
+                f"solver_option '{opt}' contained value {val!r} with "
+                "both single and double quotes.  Ipopt cannot parse "
+                "command line options with escaped quote characters."
+            )
+    else:
+        return f'{opt}={val}'
+
+
 class IpoptConfig(SolverConfig):
     def __init__(
         self,
@@ -296,52 +312,6 @@ class Ipopt(SolverBase):
         )
         return 'running with linear solver' in results.solver_log
 
-    def _verify_ipopt_options(self, config: IpoptConfig) -> None:
-        for key, msg in unallowed_ipopt_options.items():
-            if key in config.solver_options:
-                raise ValueError(f"unallowed Ipopt option '{key}': {msg}")
-        # Map standard Pyomo solver options to Ipopt options: standard
-        # options override ipopt-specific options.
-        if config.time_limit is not None:
-            config.solver_options['max_cpu_time'] = config.time_limit
-
-    def _write_options_file(
-        self, filename: str, options: Mapping[str, Union[str, int, float]]
-    ) -> None:
-        # Look through the solver options and write them to a file.
-        # If they are command line options, ignore them; they will be
-        # added to the command line.
-        options_file_options = [
-            opt for opt in options if opt not in ipopt_command_line_options
-        ]
-        if not options_file_options:
-            return
-        with open(filename, 'w', encoding='utf-8') as OPT_FILE:
-            OPT_FILE.writelines(
-                f"{opt} {options[opt]}\n" for opt in options_file_options
-            )
-        options['option_file_name'] = filename
-
-    def _create_command_line(self, basename: str, config: IpoptConfig) -> List[str]:
-        cmd = [str(config.executable), basename + '.nl', '-AMPL']
-        for opt, val in config.solver_options.items():
-            if opt not in ipopt_command_line_options:
-                continue
-            if isinstance(val, str):
-                if '"' not in val:
-                    cmd.append(f'{opt}="{val}"')
-                elif "'" not in val:
-                    cmd.append(f"{opt}='{val}'")
-                else:
-                    raise ValueError(
-                        f"solver_option '{opt}' contained value {val!r} with "
-                        "both single and double quotes.  Ipopt cannot parse "
-                        "command line options with escaped quote characters."
-                    )
-            else:
-                cmd.append(f'{opt}={val}')
-        return cmd
-
     def solve(self, model, **kwds) -> Results:
         "Solve a model using Ipopt"
         # Begin time tracking
@@ -496,21 +466,53 @@ class Ipopt(SolverBase):
         results.timing_info.wall_time = default_timer() - start_time
         return results
 
+    def _process_options(
+        self, option_fname: str, options: dict[str, str | int | float]
+    ) -> list[str]:
+        # Look through the solver options and write them to a file.
+        # If they are command line options, ignore them; they will be
+        # added to the command line.
+        options_file_options = []
+        cmd_line_options = []
+        for key, val in options.items():
+            if key in ipopt_command_line_options:
+                cmd_line_options.append(_option_to_str(key, val))
+            elif key in unallowed_ipopt_options:
+                msg = unallowed_ipopt_options[key]
+                raise ValueError(f"unallowed Ipopt option '{key}': {msg}")
+            else:
+                options_file_options.append((key, val))
+
+        if options_file_options:
+            with open(option_fname, 'w', encoding='utf-8') as OPT_FILE:
+                OPT_FILE.writelines(
+                    f"{opt} {val}\n" for opt, val in options_file_options
+                )
+            cmd_line_options.append(_option_to_str('option_file_name', option_fname))
+        return cmd_line_options
+
     def _run_ipopt(self, results, config, nl_info, basename, timer):
         # Get a copy of the environment to pass to the subprocess
         env = os.environ.copy()
         if nl_info.external_function_libraries:
             env['AMPLFUNC'] = amplfunc_merge(env, *nl_info.external_function_libraries)
-        self._verify_ipopt_options(config)
-        # Write the options file, if there should be one.  If
-        # the file was written, then 'options_file_name' was
-        # added to config.options (so we can correctly build the
-        # command line)
-        self._write_options_file(
-            filename=basename + '.opt', options=config.solver_options
-        )
-        # Call ipopt - passing the files via the subprocess
-        cmd = self._create_command_line(basename=basename, config=config)
+
+        # Get the Ipopt executable and start building the command line
+        exe = config.executable.path()
+        if not exe:
+            raise ApplicationError('ipopt executable not found')
+        cmd = [exe, basename + '.nl', '-AMPL']
+
+        # Process ipopt options (splitting them between command line
+        # options and those that must be passed through the opt file)
+        options = config.solver_options.value()
+        # Map standard Pyomo solver options to Ipopt options: standard
+        # options override ipopt-specific options.
+        if config.time_limit is not None:
+            options['max_cpu_time'] = config.time_limit
+        cmd.extend(self._process_options(basename + '.opt', options))
+
+        results.solver_version = self._get_version(exe)
         results.extra_info.add(
             'command_line', ConfigValue(cmd, visibility=ADVANCED_OPTION)
         )
@@ -735,12 +737,13 @@ class Ipopt(SolverBase):
 
 
 class LegacyIpoptSolver(LegacySolverWrapper, Ipopt):
-    def _verify_ipopt_options(self, config: IpoptConfig) -> None:
+    def _process_options(
+        self, option_fname: str, options: dict[str, str | int | float]
+    ) -> list[str]:
         # The old Ipopt solver would map solver_options starting with
         # "OF_" to the options file.  That is no longer needed, so we
         # will strip off any "OF_" that we find
-        for opt, val in list(config.solver_options.items()):
+        for opt in list(options):
             if opt.startswith('OF_'):
-                config.solver_options[opt[3:]] = val
-                del config.solver_options[opt]
-        return super()._verify_ipopt_options(config)
+                options[opt[3:]] = options.pop(opt)
+        return super()._process_options(option_fname, options)
