@@ -981,6 +981,7 @@ class Estimator:
         model = pyo.ConcreteModel()
 
         if bootlist is not None:
+            n_scenarios = len(bootlist)
             model.exp_scenarios = pyo.Block(range(len(bootlist)))
 
             for i in range(len(bootlist)):
@@ -990,6 +991,7 @@ class Estimator:
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
         else:
+            n_scenarios = len(self.exp_list)
             model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
 
             for i in range(len(self.exp_list)):
@@ -1025,31 +1027,18 @@ class Estimator:
 
         # Make sure all the parameters are linked across blocks
         for name in self.estimator_theta_names:
-            if bootlist is not None:
-                for i in range(1, len(bootlist)):
-                    model.add_component(
-                        f"Link_{name}_Block{i}_Parent",
-                        pyo.Constraint(
-                            expr=getattr(model.exp_scenarios[i], name)
-                            == getattr(model, name)
-                        ),
-                    )
-                # Deactivate the objective in each block to avoid double counting
-                for i in range(len(bootlist)):
-                    model.exp_scenarios[i].Total_Cost_Objective.deactivate()
-            else:
-                for i in range(1, len(self.exp_list)):
-                    model.add_component(
-                        f"Link_{name}_Block{i}_Parent",
-                        pyo.Constraint(
-                            expr=getattr(model.exp_scenarios[i], name)
-                            == getattr(model, name)
-                        ),
-                    )
+            for i in range(1, n_scenarios):
+                model.add_component(
+                    f"Link_{name}_Block{i}_Parent",
+                    pyo.Constraint(
+                        expr=getattr(model.exp_scenarios[i], name)
+                        == getattr(model, name)
+                    ),
+                )
 
-                # Deactivate the objective in each block to avoid double counting
-                for i in range(len(self.exp_list)):
-                    model.exp_scenarios[i].Total_Cost_Objective.deactivate()
+            # Deactivate the objective in each block to avoid double counting
+            for i in range(n_scenarios):
+                model.exp_scenarios[i].Total_Cost_Objective.deactivate()
 
         # model.pprint()
 
