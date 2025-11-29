@@ -233,51 +233,53 @@ class Ipopt(SolverBase):
     #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
     CONFIG = IpoptConfig()
 
+    #: cache of availability / version information
+    _exec_cache: dict[str : tuple[int] | None] = {}
+
+    #: default timeout to use when attempting to get the ipopt version number
+    _version_timeout = 2
+
     def __init__(self, **kwds: Any) -> None:
         super().__init__(**kwds)
         self._writer = NLWriter()
-        self._available_cache = None
-        self._version_cache = None
-        self._version_timeout = 2
 
         #: Instance configuration;
         #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
         self.config = self.config
 
-    def available(self, config: Optional[IpoptConfig] = None) -> Availability:
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-        if self._available_cache is None or self._available_cache[0] != pth:
-            if pth is None:
-                self._available_cache = (None, Availability.NotFound)
-            else:
-                self._available_cache = (pth, Availability.FullLicense)
-        return self._available_cache[1]
+    def available(self) -> Availability:
+        return (
+            Availability.NotFound
+            if self.version() is None
+            else Availability.FullLicense
+        )
 
-    def version(
-        self, config: Optional[IpoptConfig] = None
-    ) -> Optional[Tuple[int, int, int]]:
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-        if self._version_cache is None or self._version_cache[0] != pth:
-            if pth is None:
-                self._version_cache = (None, None)
-            else:
-                results = subprocess.run(
-                    [str(pth), '--version'],
-                    timeout=self._version_timeout,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True,
-                    check=False,
-                )
-                version = results.stdout.splitlines()[0]
-                version = version.split(' ')[1].strip()
-                version = tuple(int(i) for i in version.split('.'))
-                self._version_cache = (pth, version)
-        return self._version_cache[1]
+    def version(self) -> Optional[tuple[int, int, int]]:
+        return self._get_version(self.config.executable.path())
+
+    def _get_version(self, pth):
+        try:
+            return self._exec_cache[pth]
+        except KeyError:
+            pass
+        if pth is None:
+            self._exec_cache[None] = None
+            return None
+        results = subprocess.run(
+            [str(pth), '--version'],
+            timeout=self._version_timeout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            check=False,
+        )
+        ipopt, ver, _ = results.stdout.split(maxsplit=2)
+        if ipopt.lower() != 'ipopt':
+            ver = None
+        else:
+            ver = tuple(int(i) for i in ver.split('.'))
+        self._exec_cache[pth] = ver
+        return ver
 
     def has_linear_solver(self, linear_solver: str) -> bool:
         import pyomo.core as AML
@@ -353,11 +355,6 @@ class Ipopt(SolverBase):
         # Update configuration options, based on keywords passed to solve
         config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
         # Check if solver is available
-        avail = self.available(config)
-        if not avail:
-            raise ApplicationError(
-                f'Solver {self.__class__} is not available ({avail}).'
-            )
         if config.threads:
             logger.log(
                 logging.WARNING,
@@ -455,9 +452,6 @@ class Ipopt(SolverBase):
             and results.solution_status != SolutionStatus.optimal
         ):
             raise NoOptimalSolutionError()
-
-        results.solver_name = self.name
-        results.solver_version = self.version(config)
 
         if config.load_solutions:
             if results.solution_status == SolutionStatus.noSolution:
