@@ -239,7 +239,7 @@ class Ipopt(SolverBase):
     CONFIG = IpoptConfig()
 
     #: cache of availability / version information
-    _exec_cache: dict[str : tuple[int] | None] = {}
+    _exe_cache: dict[str : tuple[int] | None] = {}
 
     #: default timeout to use when attempting to get the ipopt version number
     _version_timeout = 2
@@ -259,17 +259,20 @@ class Ipopt(SolverBase):
             else Availability.FullLicense
         )
 
-    def version(self) -> Optional[tuple[int, int, int]]:
+    def version(self) -> tuple[int, int, int] | None:
         return self._get_version(self.config.executable.path())
 
     def _get_version(self, pth):
         try:
-            return self._exec_cache[pth]
+            return self._exe_cache[pth]
         except KeyError:
             pass
         if pth is None:
-            self._exec_cache[None] = None
+            # No executable (either we couldn't find a matching file, or
+            # the file is not executable)
+            self._exe_cache[None] = None
             return None
+        # Run the executable and look for the version
         results = subprocess.run(
             [str(pth), '--version'],
             timeout=self._version_timeout,
@@ -278,12 +281,25 @@ class Ipopt(SolverBase):
             universal_newlines=True,
             check=False,
         )
-        ipopt, ver, _ = results.stdout.split(maxsplit=2)
-        if ipopt.lower() != 'ipopt':
+        # Note that we expect the command to run without error, AND that
+        # it returns a string starting "ipopt <version>".  That prevents
+        # us from tryying to use other (even ASL) executables as if they
+        # were ipopt
+        fields = results.stdout.split(maxsplit=2)
+        if results.returncode:
+            ver = None
+        elif len(fields) != 3 or fields[0].lower() != 'ipopt':
             ver = None
         else:
-            ver = tuple(int(i) for i in ver.split('.'))
-        self._exec_cache[pth] = ver
+            try:
+                ver = tuple(int(i) for i in fields[1].split('.'))
+            except (ValueError, TypeError):
+                ver = None
+        if ver is None:
+            logger.warning(
+                f"Failed parsing Ipopt version: '{exe} --version':\n\n{results.stdout}"
+            )
+        self._exe_cache[pth] = ver
         return ver
 
     def has_linear_solver(self, linear_solver: str) -> bool:
