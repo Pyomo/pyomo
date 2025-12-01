@@ -67,18 +67,6 @@ logger = logging.getLogger(__name__)
 # in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
 _ALPHA_PR_CHARS = set("fFhHkKnNRwSstTr")
 
-_charlist = '0123456789abcdefghijklmnopqrstuvwxyz'
-assert len(_charlist) >= 32
-
-
-def _encode_int(i: int) -> str:
-    ans = []
-    i = int(i)
-    while i:
-        ans.append(_charlist[i & 31])
-        i >>= 5
-    return ''.join(reversed(ans))
-
 
 def _option_to_str(opt, val):
     if isinstance(val, str):
@@ -351,22 +339,11 @@ class Ipopt(SolverBase):
             # generate a legal base name (unless, of course, the user
             # put double quotes somewhere else in the path)
             basename = to_legal_filename(model.name, universal=True)
-            # Strip off quotes - the command line parser will re-add them
-            if basename[0] in "'\"" and basename[0] == basename[-1]:
-                basename = basename[1:-1]
-            # The base file name for this interface is "model_name + PID
-            # + thread id", so that this is reasonably unique in both
-            # parallel and threaded environments (even when working_dir
-            # is set to a persistent directory).  Note that the Pyomo
-            # solver interfaces are not formally thread-safe (yet), so
-            # this is a bit of future-proofing.
-            basename = os.path.join(
-                dname,
-                f"{basename}-{_encode_int(time.time()*1e6)}-"
-                f"{_encode_int(threading.get_native_id())}",
+            nlfd, nl_fname = tempfile.mkstemp(
+                suffix='.nl', prefix=basename, dir=dname, text=True, delete=False
             )
-            results.extra_info.base_file_name = basename
-            for ext in ('.nl', '.row', '.col', '.sol', '.opt'):
+            results.extra_info.base_file_name = basename = nl_fname[:-3]
+            for ext in ('.row', '.col', '.sol', '.opt'):
                 if os.path.exists(basename + ext):
                     raise RuntimeError(
                         f"Solver interface file {basename + ext} already exists!"
@@ -377,7 +354,7 @@ class Ipopt(SolverBase):
             # disable universal newlines in the NL file to prevent
             # Python from mapping those '\n' to '\r\n' on Windows.
             with (
-                open(basename + '.nl', 'w', newline='\n', encoding='utf-8') as nl_file,
+                os.fdopen(nlfd, 'w', newline='\n', encoding='utf-8') as nl_file,
                 open(basename + '.row', 'w', encoding='utf-8') as row_file,
                 open(basename + '.col', 'w', encoding='utf-8') as col_file,
             ):
