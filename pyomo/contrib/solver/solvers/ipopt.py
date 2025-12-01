@@ -246,7 +246,6 @@ class Ipopt(SolverBase):
 
     def __init__(self, **kwds: Any) -> None:
         super().__init__(**kwds)
-        self._writer = NLWriter()
 
         #: Instance configuration;
         #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
@@ -379,13 +378,17 @@ class Ipopt(SolverBase):
                 open(basename + '.col', 'w', encoding='utf-8') as col_file,
             ):
                 timer.start('write_nl_file')
-                self._writer.config.set_value(config.writer_config)
                 try:
-                    nl_info = self._writer.write(
+                    # Note: this is mapping the top-level
+                    # symbolic_solver_labels onto the solver's writer
+                    # config, and then that config is being used (in
+                    # it's entirety) to set the NLWriter's CONFIG.
+                    nl_info = NLWriter().write(
                         model,
                         nl_file,
                         row_file,
                         col_file,
+                        config=config.writer_config,
                         symbolic_solver_labels=config.symbolic_solver_labels,
                     )
                     proven_infeasible = False
