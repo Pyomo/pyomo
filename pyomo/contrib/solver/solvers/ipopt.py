@@ -68,7 +68,8 @@ logger = logging.getLogger(__name__)
 _ALPHA_PR_CHARS = set("fFhHkKnNRwSstTr")
 
 
-def _option_to_str(opt, val):
+def _option_to_cmd(opt: str, val: str | int | float):
+    """Convert a opyion / value pair into a valid command line argument."""
     if isinstance(val, str):
         if '"' not in val:
             return f'{opt}="{val}"'
@@ -446,26 +447,25 @@ class Ipopt(SolverBase):
     def _process_options(
         self, option_fname: str, options: dict[str, str | int | float]
     ) -> list[str]:
-        # Look through the solver options and write them to a file.
-        # If they are command line options, ignore them; they will be
-        # added to the command line.
+        # Look through the solver options and separate the command line
+        # options from the options that must be sent via an options
+        # file.  Raise an exception for any unallowable options.
         options_file_options = []
         cmd_line_options = []
         for key, val in options.items():
-            if key in ipopt_command_line_options:
-                cmd_line_options.append(_option_to_str(key, val))
-            elif key in unallowed_ipopt_options:
+            if key in unallowed_ipopt_options:
                 msg = unallowed_ipopt_options[key]
                 raise ValueError(f"unallowed Ipopt option '{key}': {msg}")
+            elif key in ipopt_command_line_options:
+                cmd_line_options.append(_option_to_cmd(key, val))
             else:
-                options_file_options.append((key, val))
-
+                options_file_options.append(f"{key} {val}\n")
+        # create the options file (if we need it)
         if options_file_options:
             with open(option_fname, 'w', encoding='utf-8') as OPT_FILE:
-                OPT_FILE.writelines(
-                    f"{opt} {val}\n" for opt, val in options_file_options
-                )
-            cmd_line_options.append(_option_to_str('option_file_name', option_fname))
+                OPT_FILE.writelines(options_file_options)
+            cmd_line_options.append(_option_to_cmd('option_file_name', option_fname))
+        # Return the (formatted) command ine options
         return cmd_line_options
 
     def _run_ipopt(self, results, config, nl_info, basename, timer):
