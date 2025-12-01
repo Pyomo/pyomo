@@ -337,10 +337,9 @@ class Ipopt(SolverBase):
                 msg="The `threads` option was specified, "
                 f"but this is not used by {self.__class__}.",
             )
-        if config.timer is None:
+        timer = config.timer
+        if timer is None:
             timer = config.timer = HierarchicalTimer()
-        else:
-            timer = config.timer
 
         # As we are about to run a solver, update the stale flag
         StaleFlagManager.mark_all_as_stale()
@@ -513,13 +512,14 @@ class Ipopt(SolverBase):
         results.extra_info.add(
             'command_line', ConfigValue(cmd, visibility=ADVANCED_OPTION)
         )
-        # this seems silly, but we have to give the subprocess slightly
-        # longer to finish than ipopt
-        if config.time_limit is not None:
-            timeout = config.time_limit + min(max(1.0, 0.01 * config.time_limit), 100)
-        else:
-            timeout = None
 
+        # This seems silly, but we have to give the subprocess slightly
+        # longer to finish than ipopt, otherwise we may kill the
+        # subprocess before ipopt has a chance to write the SOL file.
+        # We will add 1% (with a min of 1 second and max of 100 seconds).
+        timeout = config.time_limit
+        if timeout is not None:
+            timeout = timeout + min(max(1.0, 0.01 * timeout), 100.0)
 
         # Call ipopt - passing the files via the subprocess
         ostreams = [io.StringIO()] + config.tee
