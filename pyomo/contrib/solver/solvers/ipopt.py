@@ -225,7 +225,7 @@ unallowed_ipopt_options = {
     'wantsol': 'The solver interface requires the sol file to be created',
     'option_file_name': (
         'Pyomo generates the ipopt options file as part of the `solve` '
-        'method.  Add all options to ipopt.config.solver_options instead.'
+        'method.  Add all options to config.solver_options instead.'
     ),
 }
 
@@ -340,7 +340,10 @@ class Ipopt(SolverBase):
             timer = config.timer = HierarchicalTimer()
         else:
             timer = config.timer
+
+        # As we are about to run a solver, update the stale flag
         StaleFlagManager.mark_all_as_stale()
+
         with TempfileManager.new_context() as tempfile:
             if config.working_dir is None:
                 dname = tempfile.mkdtemp()
@@ -516,6 +519,8 @@ class Ipopt(SolverBase):
         else:
             timeout = None
 
+
+        # Call ipopt - passing the files via the subprocess
         ostreams = [io.StringIO()] + config.tee
         timer.start('subprocess')
         try:
@@ -543,21 +548,26 @@ class Ipopt(SolverBase):
 
         # This is the data we need to parse to get the iterations
         # and time
+        timer.start('parse_log')
         parsed_output_data = self._parse_ipopt_output(results.solver_log)
         results.extra_info.iteration_count = parsed_output_data.pop('iters', None)
         _timing = parsed_output_data.pop('cpu_seconds', None)
         if _timing:
-            # results.timing_info.update(_timing)
+            # TODO: once #3790 is merged, this is just:
+            #   results.timing_info.update(_timing)
             for k, v in _timing.items():
                 results.timing_info[k] = v
+        # Save the iteration log, but mark it as an "advanced" result
         iter_log = parsed_output_data.pop('iteration_log', None)
         if iter_log is not None:
             results.extra_info.add(
                 'iteration_log', ConfigList(iter_log, visibility=ADVANCED_OPTION)
             )
-        # results.extra_info.update(parsed_output_data)
+        # TODO: once #3790 is merged, this is just:
+        #   results.extra_info.update(parsed_output_data)
         for k, v in parsed_output_data.items():
             results.extra_info[k] = v
+        timer.stop('parse_log')
 
         timer.start('parse_sol')
         if os.path.isfile(basename + '.sol'):
