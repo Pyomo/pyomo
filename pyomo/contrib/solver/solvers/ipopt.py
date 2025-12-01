@@ -326,6 +326,7 @@ class Ipopt(SolverBase):
         results.timing_info.start_timestamp = datetime.datetime.now(
             datetime.timezone.utc
         )
+        results.solver_name = self.name
 
         # Update configuration options, based on keywords passed to solve
         config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
