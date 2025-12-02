@@ -401,13 +401,13 @@ class Ipopt(SolverBase):
                         TerminationCondition.convergenceCriteriaSatisfied
                     )
                     results.solution_status = SolutionStatus.optimal
+                    results.solution_loader = IpoptSolutionLoader(
+                        sol_data=SolFileData(), nl_info=nl_info
+                    )
                 else:
                     results.termination_condition = TerminationCondition.emptyModel
                     results.solution_status = SolutionStatus.noSolution
                 results.extra_info.iteration_count = 0
-                results.solution_loader = IpoptSolutionLoader(
-                    sol_data=SolFileData(), nl_info=nl_info
-                )
             else:
                 self._run_ipopt(results, config, nl_info, basename, timer)
 
