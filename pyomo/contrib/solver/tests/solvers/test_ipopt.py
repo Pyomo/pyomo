@@ -184,6 +184,10 @@ class TestIpoptInterface(unittest.TestCase):
                 self.assertIsNone(solver.version())
                 self.assertEqual({None: None}, ipopt.Ipopt._exe_cache)
 
+                # the rest of this test is designed to work on *nix:
+                if sys.platform.startswith("win"):
+                    return
+
                 ipopt.Ipopt._exe_cache = {}
                 fname = os.path.join(dname, 'test2')
                 with open(fname, 'w') as F:
@@ -193,10 +197,6 @@ class TestIpoptInterface(unittest.TestCase):
                 self.assertEqual(ipopt.Availability.NotFound, solver.available())
                 self.assertIsNone(solver.version())
                 self.assertEqual({None: None}, ipopt.Ipopt._exe_cache)
-
-                # the rest of this test is designed to work on *nix:
-                if sys.platform.startswith("win"):
-                    return
 
                 # Found an executable, but --version errors
                 ipopt.Ipopt._exe_cache = {}
@@ -1824,7 +1824,10 @@ else:
                     fname = os.path.join(dname, 'testfile' + ext)
                     open(fname, 'w').close()
                     with self.assertRaisesRegex(
-                        RuntimeError, f"Solver interface file {fname} already exists"
+                        RuntimeError,
+                        f"Solver interface file "
+                        + fname.replace('\\', '\\\\')
+                        + " already exists",
                     ):
                         solver.solve(m, working_dir=dname)
                     os.unlink(fname)
