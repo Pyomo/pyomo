@@ -329,13 +329,7 @@ class Ipopt(SolverBase):
 
         # Update configuration options, based on keywords passed to solve
         config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
-        # Check if solver is available
-        if config.threads:
-            logger.log(
-                logging.WARNING,
-                msg="The `threads` option was specified, "
-                f"but this is not used by {self.__class__}.",
-            )
+
         timer = config.timer
         if timer is None:
             timer = config.timer = HierarchicalTimer()
@@ -507,6 +501,12 @@ class Ipopt(SolverBase):
         options = config.solver_options.value()
         # Map standard Pyomo solver options to Ipopt options: standard
         # options override ipopt-specific options.
+        if config.threads and config.threads != 1:
+            logger.log(
+                logging.WARNING,
+                msg=f"The `threads={config.threads}` option was specified, "
+                f"but this is not used by {self.__class__.__name__}.",
+            )
         if config.time_limit is not None:
             options['max_cpu_time'] = config.time_limit
         cmd.extend(self._process_options(basename + '.opt', options))
