@@ -31,9 +31,9 @@ from pyomo.contrib.solver.common.results import (
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
 
-class SolFileData:
+class ASLSolFileData:
     """
-    Defines the data types found within a .sol file
+    Defines the data types found within an ASL .sol file
     """
 
     def __init__(self) -> None:
@@ -51,12 +51,12 @@ class SolFileData:
         self.unparsed: str = None
 
 
-class SolFileSolutionLoader(SolutionLoaderBase):
+class ASLSolFileSolutionLoader(SolutionLoaderBase):
     """
-    Loader for solvers that create .sol files (e.g., ipopt)
+    Loader for solvers that create ASL .sol files (e.g., ipopt)
     """
 
-    def __init__(self, sol_data: SolFileData, nl_info: NLWriterInfo) -> None:
+    def __init__(self, sol_data: ASLSolFileData, nl_info: NLWriterInfo) -> None:
         self._sol_data = sol_data
         self._nl_info = nl_info
 
@@ -172,7 +172,9 @@ class SolFileSolutionLoader(SolutionLoaderBase):
             return {con: val for con, val in _iter}
 
 
-def ampl_solve_code_to_solution_status(sol_data: SolFileData, result: Results) -> None:
+def asl_solve_code_to_solution_status(
+    sol_data: ASLSolFileData, result: Results
+) -> None:
     #
     # This table (the values and the string interpretations) are from
     # Chapter 14 in the AMPL Book:
@@ -219,11 +221,11 @@ def ampl_solve_code_to_solution_status(sol_data: SolFileData, result: Results) -
     result.termination_condition = term
 
 
-def parse_sol_file(FILE: io.TextIOBase) -> SolFileData:
+def parse_asl_sol_file(FILE: io.TextIOBase) -> ASLSolFileData:
     """
-    Parse a .sol file and populate to Pyomo objects
+    Parse an ASL .sol file and populate to Pyomo objects
     """
-    sol_data = SolFileData()
+    sol_data = ASLSolFileData()
 
     # Parse the initial solver message and the AMPL options sections
     z = _parse_message_and_options(FILE, sol_data)
@@ -248,7 +250,7 @@ def parse_sol_file(FILE: io.TextIOBase) -> SolFileData:
     return sol_data
 
 
-def _parse_message_and_options(FILE: io.TextIOBase, data: SolFileData) -> List[int]:
+def _parse_message_and_options(FILE: io.TextIOBase, data: ASLSolFileData) -> List[int]:
     msg = []
     # Some solvers (minto) do not write a message.  We will assume
     # all non-blank lines up the 'Options' line is the message.
@@ -302,7 +304,7 @@ def _parse_message_and_options(FILE: io.TextIOBase, data: SolFileData) -> List[i
     return z
 
 
-def _parse_objno_and_exitcode(FILE: io.TextIOBase, data: SolFileData) -> None:
+def _parse_objno_and_exitcode(FILE: io.TextIOBase, data: ASLSolFileData) -> None:
     line = FILE.readline().strip()
     objno = line.split(maxsplit=2)
     if not objno or objno[0] != 'objno':
@@ -322,7 +324,7 @@ def _parse_objno_and_exitcode(FILE: io.TextIOBase, data: SolFileData) -> None:
     data.solve_code = int(objno[2])
 
 
-def _parse_suffixes(FILE: io.TextIOBase, data: SolFileData) -> None:
+def _parse_suffixes(FILE: io.TextIOBase, data: ASLSolFileData) -> None:
     while line := FILE.readline():
         line = line.strip()
         if not line:

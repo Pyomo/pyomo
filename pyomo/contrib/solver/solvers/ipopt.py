@@ -48,10 +48,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
 )
 from pyomo.contrib.solver.solvers.sol_reader import (
-    ampl_solve_code_to_solution_status,
-    parse_sol_file,
-    SolFileData,
-    SolFileSolutionLoader,
+    asl_solve_code_to_solution_status,
+    parse_asl_sol_file,
+    ASLSolFileData,
+    ASLSolFileSolutionLoader,
 )
 from pyomo.contrib.solver.common.util import NoOptimalSolutionError, NoSolutionError
 from pyomo.common.tee import TeeStream
@@ -116,7 +116,7 @@ class IpoptConfig(SolverConfig):
         )
 
 
-class IpoptSolutionLoader(SolFileSolutionLoader):
+class IpoptSolutionLoader(ASLSolFileSolutionLoader):
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
@@ -402,7 +402,7 @@ class Ipopt(SolverBase):
                     )
                     results.solution_status = SolutionStatus.optimal
                     results.solution_loader = IpoptSolutionLoader(
-                        sol_data=SolFileData(), nl_info=nl_info
+                        sol_data=ASLSolFileData(), nl_info=nl_info
                     )
                 else:
                     results.termination_condition = TerminationCondition.emptyModel
@@ -576,9 +576,9 @@ class Ipopt(SolverBase):
         timer.start('parse_sol')
         if os.path.isfile(basename + '.sol'):
             with open(basename + '.sol', 'r', encoding='utf-8') as sol_file:
-                sol_data = parse_sol_file(sol_file)
+                sol_data = parse_asl_sol_file(sol_file)
         else:
-            sol_data = SolFileData()
+            sol_data = ASLSolFileData()
         results.solution_loader = IpoptSolutionLoader(
             sol_data=sol_data, nl_info=nl_info
         )
@@ -586,7 +586,7 @@ class Ipopt(SolverBase):
 
         # Initialize the solver message, solution loader solution
         # status and termination condition:
-        ampl_solve_code_to_solution_status(sol_data, results)
+        asl_solve_code_to_solution_status(sol_data, results)
 
     def _parse_ipopt_output(self, output: str) -> Dict[str, Any]:
         parsed_data = {}

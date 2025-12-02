@@ -16,9 +16,9 @@ from pyomo.common import unittest
 from pyomo.common.collections import ComponentMap
 from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.solver.solvers.sol_reader import (
-    SolFileSolutionLoader,
-    SolFileData,
-    parse_sol_file,
+    ASLSolFileSolutionLoader,
+    ASLSolFileData,
+    parse_asl_sol_file,
 )
 from pyomo.contrib.solver.common.results import Results
 from pyomo.contrib.solver.common.util import SolverError
@@ -27,7 +27,7 @@ from pyomo.repn.plugins.nl_writer import NLWriterInfo, ScalingFactors
 
 class TestSolFileData(unittest.TestCase):
     def test_default_instantiation(self):
-        instance = SolFileData()
+        instance = ASLSolFileData()
         self.assertEqual(instance.message, None)
         self.assertEqual(instance.objno, 0)
         self.assertEqual(instance.solve_code, None)
@@ -68,7 +68,7 @@ Options
 30.0
 objno 0 100"""
         )
-        sol_data = parse_sol_file(stream)
+        sol_data = parse_asl_sol_file(stream)
 
         self.assertEqual("Solver message preamble", sol_data.message)
         self.assertEqual(0, sol_data.objno)
@@ -96,7 +96,7 @@ Options
 1.5
 objno 0 100"""
         )
-        sol_data = parse_sol_file(stream)
+        sol_data = parse_asl_sol_file(stream)
 
         self.assertEqual("Solver message preamble", sol_data.message)
         self.assertEqual(0, sol_data.objno)
@@ -137,7 +137,7 @@ extra data here
 and here
 """
         )
-        sol_data = parse_sol_file(stream)
+        sol_data = parse_asl_sol_file(stream)
 
         self.assertEqual(
             "CONOPT 3.17A: Optimal; objective 1\n"
@@ -190,7 +190,7 @@ sstatus
 
 """
         )
-        sol_data = parse_sol_file(stream)
+        sol_data = parse_asl_sol_file(stream)
 
         self.assertEqual(
             "CONOPT 3.17A: Optimal; objective 1\n"
@@ -226,7 +226,7 @@ sstatus
         with self.assertRaisesRegex(
             SolverError, "Error reading `sol` file: no 'Options' line found."
         ):
-            parse_sol_file(stream)
+            parse_asl_sol_file(stream)
 
     def test_error_malformed_options(self):
         # Contains "Options" but the required integer line is missing/blank
@@ -234,7 +234,7 @@ sstatus
         stream = io.StringIO(bad_text)
 
         with self.assertRaisesRegex(ValueError, "invalid literal"):
-            parse_sol_file(stream)
+            parse_asl_sol_file(stream)
 
     def test_error_objno_not_found(self):
         stream = io.StringIO(
@@ -255,7 +255,7 @@ objno 0"""
             SolverError,
             "Error reading `sol` file: expected 'objno'; " "received '1.5'.",
         ):
-            sol_data = parse_sol_file(stream)
+            sol_data = parse_asl_sol_file(stream)
 
     def test_error_objno_bad_format(self):
         stream = io.StringIO(
@@ -276,7 +276,7 @@ objno 0"""
             "Error reading `sol` file: expected two numbers in 'objno' line; "
             "received 'objno 0'.",
         ):
-            sol_data = parse_sol_file(stream)
+            sol_data = parse_asl_sol_file(stream)
 
 
 class TestSolFileSolutionLoader(unittest.TestCase):
@@ -285,7 +285,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         expected_list = ['load_vars', 'get_primals', 'get_duals', 'get_reduced_costs']
         method_list = [
             method
-            for method in dir(SolFileSolutionLoader)
+            for method in dir(ASLSolFileSolutionLoader)
             if not method.startswith('_')
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
@@ -296,9 +296,9 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         m.y = pyo.Var([1, 2, 3])
 
         nl_info = NLWriterInfo(var=[m.x, m.y[1], m.y[3]])
-        sol_data = SolFileData()
+        sol_data = ASLSolFileData()
         sol_data.primals = [3, 7, 5]
-        loader = SolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
 
         loader.load_vars()
         self.assertEqual(m.x.value, 3)
@@ -335,9 +335,9 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         nl_info = NLWriterInfo(
             var=[], eliminated_vars=[(m.y[3], 1.5), (m.y[2], 2 * m.y[3] + 1)]
         )
-        sol_data = SolFileData()
+        sol_data = ASLSolFileData()
         sol_data.primals = []
-        loader = SolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
 
         loader.load_vars()
         self.assertEqual(m.x.value, None)
@@ -351,9 +351,9 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         m.y = pyo.Var([1, 2, 3])
 
         nl_info = NLWriterInfo(var=[m.x, m.y[1], m.y[3]])
-        sol_data = SolFileData()
+        sol_data = ASLSolFileData()
         sol_data.primals = [3, 7, 5]
-        loader = SolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
 
         self.assertEqual(
             loader.get_primals(), ComponentMap([(m.x, 3), (m.y[1], 7), (m.y[3], 5)])
@@ -401,9 +401,9 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         nl_info = NLWriterInfo(
             var=[], eliminated_vars=[(m.y[3], 1.5), (m.y[2], 2 * m.y[3] + 1)]
         )
-        sol_data = SolFileData()
+        sol_data = ASLSolFileData()
         sol_data.primals = []
-        loader = SolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
 
         self.assertEqual(
             loader.get_primals(), ComponentMap([(m.y[2], 4), (m.y[3], 1.5)])
