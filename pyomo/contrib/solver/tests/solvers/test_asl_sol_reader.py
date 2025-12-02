@@ -15,7 +15,7 @@ import pyomo.environ as pyo
 from pyomo.common import unittest
 from pyomo.common.collections import ComponentMap
 from pyomo.common.fileutils import this_file_dir
-from pyomo.contrib.solver.solvers.sol_reader import (
+from pyomo.contrib.solver.solvers.asl_sol_reader import (
     ASLSolFileSolutionLoader,
     ASLSolFileData,
     parse_asl_sol_file,

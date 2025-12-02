@@ -47,7 +47,7 @@ from pyomo.contrib.solver.common.results import (
     TerminationCondition,
     SolutionStatus,
 )
-from pyomo.contrib.solver.solvers.sol_reader import (
+from pyomo.contrib.solver.solvers.asl_sol_reader import (
     asl_solve_code_to_solution_status,
     parse_asl_sol_file,
     ASLSolFileData,
