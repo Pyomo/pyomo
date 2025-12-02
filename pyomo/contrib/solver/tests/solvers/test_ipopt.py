@@ -1806,6 +1806,9 @@ else:
 
     def test_file_collision(self):
         class mock_tempfile:
+            def __init__(self):
+                self.fd = None
+
             def new_context(self):
                 return self
 
@@ -1813,11 +1816,13 @@ else:
                 return self
 
             def __exit__(self, et, ev, tb):
-                pass
+                if self.fd is not None:
+                    os.close(self.fd)
 
             def mkstemp(self, suffix, prefix, dir, text, delete):
                 fname = os.path.join(dir, "testfile" + suffix)
-                return os.open(fname, os.O_CREAT | os.O_RDWR), fname
+                self.fd = os.open(fname, os.O_CREAT | os.O_RDWR)
+                return self.fd, fname
 
         m = pyo.ConcreteModel()
         orig_TempfileManager = ipopt.TempfileManager
