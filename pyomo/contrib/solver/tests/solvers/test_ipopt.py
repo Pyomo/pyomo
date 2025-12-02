@@ -1872,7 +1872,7 @@ else:
                 solver.config.executable.rehash()
                 with self.assertRaisesRegex(
                     ApplicationError,
-                    f"Could not execute the command: \['{exe}'.*"
+                    f"Could not execute the command: \\['{exe}'.*"
                     f"Error message: .*No such file or directory: '{exe}'",
                 ):
                     solver.solve(m)
