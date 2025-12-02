@@ -25,6 +25,7 @@ from pyomo.common.config import (
     ConfigDict,
     ConfigList,
     ConfigValue,
+    document_configdict,
     document_class_CONFIG,
     ADVANCED_OPTION,
 )
@@ -69,7 +70,7 @@ _ALPHA_PR_CHARS = set("fFhHkKnNRwSstTr")
 
 
 def _option_to_cmd(opt: str, val: str | int | float):
-    """Convert a opyion / value pair into a valid command line argument."""
+    """Convert a option / value pair into a valid command line argument."""
     if isinstance(val, str):
         if '"' not in val:
             return f'{opt}="{val}"'
@@ -85,6 +86,7 @@ def _option_to_cmd(opt: str, val: str | int | float):
         return f'{opt}={val}'
 
 
+@document_configdict()
 class IpoptConfig(SolverConfig):
     def __init__(
         self,
@@ -162,6 +164,7 @@ class IpoptSolutionLoader(ASLSolFileSolutionLoader):
         return rc
 
 
+#: The set of all ipopt options that can be passed to Ipopt on the command line
 ipopt_command_line_options = {
     'acceptable_compl_inf_tol',
     'acceptable_constr_viol_tol',
@@ -221,6 +224,7 @@ ipopt_command_line_options = {
     'watchdog_shortened_iter_trigger',
 }
 
+#: The set of options we forbid the user from setting (with reasons)
 unallowed_ipopt_options = {
     'wantsol': 'The solver interface requires the sol file to be created',
     'option_file_name': (
@@ -282,7 +286,7 @@ class Ipopt(SolverBase):
         )
         # Note that we expect the command to run without error, AND that
         # it returns a string starting "ipopt <version>".  That prevents
-        # us from tryying to use other (even ASL) executables as if they
+        # us from trying to use other (even ASL) executables as if they
         # were ipopt
         fields = results.stdout.split(maxsplit=2)
         if results.returncode:
@@ -302,6 +306,19 @@ class Ipopt(SolverBase):
         return ver
 
     def has_linear_solver(self, linear_solver: str) -> bool:
+        """Determine if Ipopt has access to the specified linear solver
+
+        This solves a small problem to detect if the Ipopt executable
+        has access to the specified linear solver.
+
+        Parameters
+        ----------
+        linear_solver : str
+
+            The linear solver to test.  Accepts any string that is valid
+            for the ``linear_solver`` Ipopt option.
+
+        """
         import pyomo.core as AML
 
         m = AML.ConcreteModel()
@@ -481,7 +498,7 @@ class Ipopt(SolverBase):
             with open(option_fname, 'w', encoding='utf-8') as OPT_FILE:
                 OPT_FILE.writelines(options_file_options)
             cmd_line_options.append(_option_to_cmd('option_file_name', option_fname))
-        # Return the (formatted) command ine options
+        # Return the (formatted) command line options
         return cmd_line_options
 
     def _run_ipopt(self, results, config, nl_info, basename, timer):
