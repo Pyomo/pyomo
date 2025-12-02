@@ -261,19 +261,19 @@ class Ipopt(SolverBase):
     def version(self) -> tuple[int, int, int] | None:
         return self._get_version(self.config.executable.path())
 
-    def _get_version(self, pth):
+    def _get_version(self, exe):
         try:
-            return self._exe_cache[pth]
+            return self._exe_cache[exe]
         except KeyError:
             pass
-        if pth is None:
+        if exe is None:
             # No executable (either we couldn't find a matching file, or
             # the file is not executable)
             self._exe_cache[None] = None
             return None
         # Run the executable and look for the version
         results = subprocess.run(
-            [str(pth), '--version'],
+            [str(exe), '--version'],
             timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -298,7 +298,7 @@ class Ipopt(SolverBase):
             logger.warning(
                 f"Failed parsing Ipopt version: '{exe} --version':\n\n{results.stdout}"
             )
-        self._exe_cache[pth] = ver
+        self._exe_cache[exe] = ver
         return ver
 
     def has_linear_solver(self, linear_solver: str) -> bool:
