@@ -284,7 +284,7 @@ def _parse_message_and_options(FILE: io.TextIOBase, data: ASLSolFileData) -> lis
     # Because of this, we will read the first two options from the file
     # first so we can know how to correctly parse the remaining options.
     assert n_opts >= 2
-    ampl_options = [int(FILE.readline()) for i in range(2)]
+    ampl_options = [int(FILE.readline()), int(FILE.readline())]
     read_vbtol = ampl_options[1] == 3
     if read_vbtol:
         n_opts -= 2
