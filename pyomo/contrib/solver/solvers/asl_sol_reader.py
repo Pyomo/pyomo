@@ -9,9 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-from typing import Tuple, Dict, Any, List, Sequence, Optional, Mapping, NoReturn
 import io
+from typing import Sequence, Optional, Mapping
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap
@@ -40,14 +39,14 @@ class ASLSolFileData:
         self.message: str = None
         self.objno: int = 0
         self.solve_code: int = None
-        self.ampl_options: List[int | float] = None
-        self.primals: List[float] = None
-        self.duals: List[float] = None
-        self.var_suffixes: Dict[str, Dict[int, int | float]] = {}
-        self.con_suffixes: Dict[str, Dict[int, int | float]] = {}
-        self.obj_suffixes: Dict[str, Dict[int, int | float]] = {}
-        self.problem_suffixes: Dict[str, int | float] = {}
-        self.suffix_table: Dict[(int, str), List[int | float, str, ...]] = {}
+        self.ampl_options: list[int | float] = None
+        self.primals: list[float] = None
+        self.duals: list[float] = None
+        self.var_suffixes: dict[str, dict[int, int | float]] = {}
+        self.con_suffixes: dict[str, dict[int, int | float]] = {}
+        self.obj_suffixes: dict[str, dict[int, int | float]] = {}
+        self.problem_suffixes: dict[str, int | float] = {}
+        self.suffix_table: dict[(int, str), list[int | float, str, ...]] = {}
         self.unparsed: str = None
 
 
@@ -60,7 +59,7 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
         self._sol_data = sol_data
         self._nl_info = nl_info
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
+    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
         if vars_to_load is not None:
             # If we are given a list of variables to load, it is easiest
             # to use the filtering in get_primals and then just set
@@ -141,7 +140,7 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
-    ) -> Dict[ConstraintData, float]:
+    ) -> dict[ConstraintData, float]:
         if len(self._nl_info.eliminated_vars) > 0:
             raise MouseTrap(
                 'Complete duals are not available when variables have '
@@ -250,7 +249,7 @@ def parse_asl_sol_file(FILE: io.TextIOBase) -> ASLSolFileData:
     return sol_data
 
 
-def _parse_message_and_options(FILE: io.TextIOBase, data: ASLSolFileData) -> List[int]:
+def _parse_message_and_options(FILE: io.TextIOBase, data: ASLSolFileData) -> list[int]:
     msg = []
     # Some solvers (minto) do not write a message.  We will assume
     # all non-blank lines up the 'Options' line is the message.
