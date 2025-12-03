@@ -76,7 +76,7 @@ class RooneyBieglerExperiment(Experiment):
         # Unknown parameters suffix is required for both Pyomo.DoE and parmest
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
-            (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+            (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
         )
 
         # Add measurement error as a suffix
