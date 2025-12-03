@@ -15,6 +15,7 @@ from pyomo.contrib.parmest.graphics import matplotlib_available, seaborn_availab
 from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.opt import SolverFactory
 
+print("seaborn available", seaborn_available)
 ipopt_available = SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 

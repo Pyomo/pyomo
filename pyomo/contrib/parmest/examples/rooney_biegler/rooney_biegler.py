@@ -70,7 +70,7 @@ class RooneyBieglerExperiment(Experiment):
         # Add experiment outputs as a suffix
         # Experiment outputs suffix is required for parest
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.y, self.data.loc['y'])])
+        m.experiment_outputs.update([(m.y, self.data['y'])])
 
         # Add unknown parameters as a suffix
         # Unknown parameters suffix is required for both Pyomo.DoE and parmest
@@ -88,7 +88,7 @@ class RooneyBieglerExperiment(Experiment):
         # Add hour as an experiment input
         # Experiment inputs suffix is required for Pyomo.DoE
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_inputs.update([(m.hour, self.data.loc['hour'])])
+        m.experiment_inputs.update([(m.hour, self.data['hour'])])
 
     def finalize_model(self):
         pass
