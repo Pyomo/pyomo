@@ -16,9 +16,9 @@ import ply.lex
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
 from pyomo.common.deprecation import deprecated
-from pyomo.core.base.component_namer import (
-    literals,
-    special_chars,
+from pyomo.common.formatting import (
+    name_literals as literals,
+    name_special_chars,
     name_repr as __name_repr,
     index_repr as __index_repr,
     re_number as _re_number,
@@ -40,7 +40,7 @@ def _name_repr(x):
 
 
 def _index_repr(x):
-    return __index_repr(x, _pickle)
+    return '[' + __index_repr(x, _pickle) + ']'
 
 
 def _context_err(_type):
@@ -683,7 +683,7 @@ def t_NUMBER(t):
 # number of "non-special" characters.  This regex matches numbers as
 # well as more traditional string names, so it is important that it is
 # declared *after* t_NUMBER.
-@ply.lex.TOKEN(r'[a-zA-Z_0-9][^' + re.escape(special_chars) + r']*')
+@ply.lex.TOKEN(r'[a-zA-Z_0-9][^' + re.escape(name_special_chars) + r']*')
 def t_WORD(t):
     t.value = t.value.strip()
     return t

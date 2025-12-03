@@ -102,6 +102,88 @@ tostr.handlers = {
 }
 
 
+# Literals are used in parsing string names (and indicate tuples,
+# indexing, and token separators)
+name_literals = '()[],.'
+# Special characters are additional characters that if they appear in
+# the string force us to quote the string.  This includes the obvious
+# things like single and double quote characters, but also backslash
+# (indicates that the string contains escaped - possibly unicode -
+# characters), and the colon (used as a token separator in the old
+# ComponentUID "v1" format).
+name_special_chars = name_literals + '\'":\\'
+
+re_number = re.compile(
+    r'(?:[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?|-?inf|nan)'
+)
+re_name_special_char = re.compile(r'[' + re.escape(name_special_chars) + ']')
+
+
+def name_repr(x, unknown_handler=str):
+    """Generate a "friendly" string representation of a Pyomo name.
+
+    Convert ``x`` into a "user-friendly" string.  Numbers are converted
+    to strings.  Strings are left unquoted, *unless* the string contains
+    a "special" character that is used in parsing Pyomom component names
+    (currently any of ``{name_special_chars}``) or the string could be
+    interpreted as a number.
+
+    """
+    if x.__class__ is not str:
+        _repr = _repr_map.get(x.__class__, None)
+        if _repr is None:
+            if not isinstance(x, str):
+                return unknown_handler(x)
+        else:
+            return _repr(x)
+    # Special handling for strings: only quote the string if it contains
+    # "special" characters or looks like a number
+    quoted = repr(x)
+    if quoted[1] == '|':
+        return quoted
+    unquoted = quoted[1:-1]
+    if re_name_special_char.search(unquoted):
+        return quoted
+    if re_number.fullmatch(unquoted):
+        return quoted
+    return unquoted
+
+
+def tuple_repr(x, unknown_handler=str):
+    return (
+        '('
+        + ','.join(name_repr(_, unknown_handler) for _ in x)
+        + (',)' if len(x) == 1 else ')')
+    )
+
+
+def index_repr(idx, unknown_handler=str):
+    """Return a string representation of an index.
+
+    This will nominally return the :func:`name_repr` for the elements of
+    ``idx``.  For 1-tuples, the parens are omittted unless the tuple is
+    empty.
+
+    Note that the brackets (``[]``) normally associated with Pyomo
+    indexes are *not* included in the resulting string.
+
+    """
+    if idx.__class__ is tuple and len(idx) > 1:
+        return ",".join(name_repr(i, unknown_handler) for i in idx)
+    return name_repr(idx, unknown_handler)
+
+
+_repr_map = {
+    slice: lambda x: '*',
+    Ellipsis.__class__: lambda x: '**',
+    int: repr,
+    float: repr,
+    str: repr,
+    # Note: the function is unbound at this point; extract with __func__
+    tuple: tuple_repr,
+}
+
+
 def tabular_writer(ostream, prefix, data, header, row_generator):
     """Output data in tabular form
 
