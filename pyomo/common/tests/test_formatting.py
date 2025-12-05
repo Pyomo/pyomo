@@ -96,8 +96,8 @@ Key      : s                : val
         data = {(2,): (["a", 1], 1), (1, 3): ({1: 'a', 2: '2'}, '2')}
         tabular_writer(os, "", data.items(), [], lambda k, v: v)
         ref = u"""
-{1: 'a', 2: '2'} : 2
         ['a', 1] : 1
+{1: 'a', 2: '2'} : 2
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
 
