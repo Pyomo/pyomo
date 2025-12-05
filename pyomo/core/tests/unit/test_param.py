@@ -174,7 +174,7 @@ class ParamTester:
                 raise
 
     def test_setitem_preexisting(self):
-        keys = self.instance.A.sparse_keys()
+        keys = list(self.instance.A.sparse_keys())
         if not keys or None in keys:
             return
 

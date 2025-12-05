@@ -17,7 +17,7 @@ from typing import Union, Type
 from weakref import ref as weakref_ref
 
 from pyomo.common.autoslots import AutoSlots
-from pyomo.common.deprecation import deprecation_warning, RenamedClass
+from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types, value as expr_value
@@ -470,17 +470,32 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         finally:
             self._default_val = tmp
 
+    @deprecated(
+        "The sparse_iterkeys method is deprecated.  Use sparse_keys()",
+        # This should have been deprecated when we dropped Python 2.7
+        version='6.10.0.dev0',
+    )
     def sparse_iterkeys(self):
         """Return an iterator for the keys in the defined parameters"""
-        return self._data.keys()
+        return self.sparse_keys()
 
+    @deprecated(
+        "The sparse_itervalues method is deprecated.  Use sparse_values()",
+        # This should have been deprecated when we dropped Python 2.7
+        version='6.10.0.dev0',
+    )
     def sparse_itervalues(self):
         """Return an iterator for the defined param data objects"""
-        return self._data.values()
+        return self.sparse_values()
 
+    @deprecated(
+        "The sparse_iteritems method is deprecated.  Use sparse_items()",
+        # This should have been deprecated when we dropped Python 2.7
+        version='6.10.0.dev0',
+    )
     def sparse_iteritems(self):
         """Return an iterator of (index,data) tuples for defined parameters"""
-        return self._data.items()
+        return self.sparse_items()
 
     def extract_values(self):
         """
@@ -959,7 +974,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         ]
         if self._units is not None:
             headers.append(('Units', str(self._units)))
-        return (headers, self.sparse_iteritems(), ("Value",), dataGen)
+        return (headers, self.sparse_items(), ("Value",), dataGen)
 
 
 class ScalarParam(ParamData, Param):
