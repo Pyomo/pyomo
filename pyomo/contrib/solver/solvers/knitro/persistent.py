@@ -91,37 +91,37 @@ class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
             self._engine.set_obj(self._model_data.objs[0])
         self._staged_model_data.clear()
 
-    def remove_variables(self, variables: list[VarData]):
+    def remove_variables(self, variables: list[VarData]) -> None:
         raise NotImplementedError(
-            "KnitroPersistentSolver does not support removing variables yet."
+            "KnitroPersistentSolver does not support removing variables."
         )
 
-    def remove_constraints(self, cons: list[ConstraintData]):
+    def remove_constraints(self, cons: list[ConstraintData]) -> None:
         raise NotImplementedError(
-            "KnitroPersistentSolver does not support removing constraints yet."
+            "KnitroPersistentSolver does not support removing constraints."
         )
 
-    def update_variables(self, variables: list[VarData]):
+    def update_variables(self, variables: list[VarData]) -> None:
         raise NotImplementedError(
-            "KnitroPersistentSolver does not support updating variables yet."
+            "KnitroPersistentSolver does not support updating variables."
         )
 
-    def update_parameters(self):
+    def update_parameters(self) -> None:
         raise NotImplementedError(
-            "KnitroPersistentSolver does not support updating parameters yet."
+            "KnitroPersistentSolver does not support updating parameters."
         )
 
-    def add_parameters(self, params: list[ParamData]):
+    def add_parameters(self, params: list[ParamData]) -> None:
         raise NotImplementedError(
-            "KnitroPersistentSolver does not support adding parameters yet."
+            "KnitroPersistentSolver does not support adding parameters."
         )
 
-    def remove_parameters(self, params: list[ParamData]):
+    def remove_parameters(self, params: list[ParamData]) -> None:
         raise NotImplementedError(
-            "KnitroPersistentSolver does not support removing parameters yet."
+            "KnitroPersistentSolver does not support removing parameters."
         )
 
-    def remove_block(self, block: BlockData):
+    def remove_block(self, block: BlockData) -> None:
         raise NotImplementedError(
-            "KnitroPersistentSolver does not support removing blocks yet."
+            "KnitroPersistentSolver does not support removing blocks."
         )
