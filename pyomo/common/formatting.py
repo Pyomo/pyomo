@@ -271,7 +271,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
         _width[-1] = '%s'
     line_fmt = " : ".join(_width) + "\n"
 
-    for _key in sorted_robust(_rows):
+    for _key in _rows:
         _rowSet = _rows[_key]
         if not _rowSet:
             _rowSet = [(_key,) + (None,) * (len(_width) - 1)]

@@ -399,23 +399,34 @@ class ComponentBase(PyomoObject):
                 return
 
         if type(_fcn) is tuple:
+            # Exception to the standard formatter case: with two
+            # callbacks, we will use the first to generate the normal
+            # table, then call the second callback for each data.
+            # Currently only used by Complimentarity (which should be
+            # refactored to remove the need for this edge case)
             _fcn, _fcn2 = _fcn
         else:
             _fcn2 = None
 
         if _header is not None:
+            # This is a standard component, where all the component
+            # information is printed in a single table
             if _fcn2 is not None:
-                _data_dict = dict(_data)
-                _data = _data_dict.items()
+                _data = list(_data)
             tabular_writer(ostream, '', _data, _header, _fcn)
             if _fcn2 is not None:
-                for _key in sorted_robust(_data_dict):
-                    _fcn2(ostream, _key, _data_dict[_key])
+                for _key, _val in _data:
+                    _fcn2(ostream, _key, _val)
         elif _fcn is not None:
-            _data_dict = dict(_data)
-            for _key in sorted_robust(_data_dict):
-                _fcn(ostream, _key, _data_dict[_key])
+            # This is a non-standard component where we will not
+            # generate a table at all, and instead defer all formatting
+            # / printing to the callback.  This is primarily used by
+            # BLocks (and block-like things)
+            for _key, _val in _data:
+                _fcn(ostream, _key, _val)
         elif _data is not None:
+            # Catch all for everything else: assume that _pprint()
+            # returned a formatted string.
             ostream.write(_data)
 
 
