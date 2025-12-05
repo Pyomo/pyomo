@@ -356,73 +356,63 @@ class ParamTester:
                 raise
 
     def test_iterkeys(self):
-        test = self.instance.A.iterkeys()
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.iterkeys()
+        self.assertIn("The iterkeys method is deprecated.", LOG.getvalue())
         self.assertEqual(sorted(test), sorted(self.instance.A.keys()))
 
     def test_itervalues(self):
-        expectException = False
-        #                  len(self.sparse_data) < len(self.data) and \
-        #                  not self.instance.A._default_val is None and \
-        #                  not self.instance.A.mutable
-        try:
-            test = self.instance.A.values()
-            test = zip(self.instance.A.keys(), test)
-            if self.instance.A._default_val is NoValue:
-                self.validateDict(self.sparse_data.items(), test)
-            else:
-                self.validateDict(self.data.items(), test)
-            self.assertFalse(expectException)
-        except ValueError:
-            if not expectException:
-                raise
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.itervalues()
+        self.assertIn("The itervalues method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(self.instance.A.values()), list(test))
 
     def test_iteritems(self):
-        expectException = False
-        #                  len(self.sparse_data) < len(self.data) and \
-        #                  not self.instance.A._default_val is None and \
-        #                  not self.instance.A.mutable
-        try:
-            test = self.instance.A.items()
-            if self.instance.A._default_val is NoValue:
-                self.validateDict(self.sparse_data.items(), test)
-            else:
-                self.validateDict(self.data.items(), test)
-            self.assertFalse(expectException)
-        except ValueError:
-            if not expectException:
-                raise
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.iteritems()
+        self.assertIn("The iteritems method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(self.instance.A.items()), list(test))
 
     def test_sparse_keys(self):
         test = self.instance.A.sparse_keys()
-        self.assertEqual(type(test), list)
         self.assertEqual(sorted(test), sorted(self.sparse_data.keys()))
 
     def test_sparse_values(self):
-        # self.instance.pprint()
         test = self.instance.A.sparse_values()
-        self.assertEqual(type(test), list)
-        # print test
-        # print self.sparse_data.items()
         test = zip(self.instance.A.keys(), test)
         self.validateDict(self.sparse_data.items(), test)
 
     def test_sparse_items(self):
         test = self.instance.A.sparse_items()
-        self.assertEqual(type(test), list)
         self.validateDict(self.sparse_data.items(), test)
 
     def test_sparse_iterkeys(self):
-        test = self.instance.A.sparse_iterkeys()
-        self.assertEqual(sorted(test), sorted(self.sparse_data.keys()))
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.sparse_iterkeys()
+        self.assertIn("The sparse_iterkeys method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(test), list(self.instance.A.sparse_keys()))
 
     def test_sparse_itervalues(self):
-        test = self.instance.A.sparse_itervalues()
-        test = zip(self.instance.A.keys(), test)
-        self.validateDict(self.sparse_data.items(), test)
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.sparse_itervalues()
+        self.assertIn("The sparse_itervalues method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(test), list(self.instance.A.sparse_values()))
 
     def test_sparse_iteritems(self):
-        test = self.instance.A.sparse_iteritems()
-        self.validateDict(self.sparse_data.items(), test)
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.sparse_iteritems()
+        self.assertIn("The sparse_iteritems method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(test), list(self.instance.A.sparse_items()))
+
+    def test_extract_values(self):
+        if self.instance.A._default_val is NoValue:
+            ref = self.sparse_data
+        else:
+            ref = self.data
+        self.assertEqual(ref, self.instance.A.extract_values())
+
+    def test_extract_values_sparse(self):
+        self.assertEqual(self.sparse_data, self.instance.A.extract_values_sparse())
 
     def test_len(self):
         # """Check the use of len"""
