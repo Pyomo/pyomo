@@ -511,9 +511,15 @@ You can silence this warning by one of three ways:
 """
                 % (self.name,)
             )
+            return iter(self._data)
+        elif SortComponents.SORTED_INDICES in sort:
+            # We are sorting the indices (and this is a sparse
+            # IndexedComponent): we might as well just sort the sparse
+            # _data keys instead of iterating over the whole index.
+            return iter(sorted_robust(self._data))
         else:
             #
-            # Test each element of a sparse data with an ordered
+            # Test each element of a sparse _data with an ordered
             # index set in order.  This is potentially *slow*: if
             # the component is in fact very sparse, we could be
             # iterating over a huge (dense) index in order to sort a
@@ -591,7 +597,8 @@ You can silence this warning by one of three ways:
                 return self._data.items(sort)
             except TypeError:
                 pass
-        return ((s, self[s]) for s in self.keys(sort))
+        _getitem = self.__getitem__
+        return ((s, _getitem(s)) for s in self.keys(sort))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
     def iterkeys(self):
