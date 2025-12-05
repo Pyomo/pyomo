@@ -512,13 +512,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # Thus, we need to create a temporary dictionary that contains the
             # values from the ParamData objects.
             #
-            return {key: param_value() for key, param_value in self.items()}
-        elif not self.is_indexed():
-            #
-            # The parameter is a scalar, so we need to create a temporary
-            # dictionary using the value for this parameter.
-            #
-            return {None: self()}
+            return {key: param_data() for key, param_data in self.items()}
         else:
             #
             # The parameter is not mutable, so iteritems() can be
@@ -541,22 +535,13 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # Thus, we need to create a temporary dictionary that contains the
             # values from the ParamData objects.
             #
-            ans = {}
-            for key, param_value in self.sparse_iteritems():
-                ans[key] = param_value()
-            return ans
-        elif not self.is_indexed():
-            #
-            # The parameter is a scalar, so we need to create a temporary
-            # dictionary using the value for this parameter.
-            #
-            return {None: self()}
+            return {key: param_data() for key, param_data in self.sparse_items()}
         else:
             #
-            # The parameter is not mutable, so sparse_iteritems() can be
+            # The parameter is not mutable, so sparse_items() can be
             # converted into a dictionary containing parameter values.
             #
-            return dict(self.sparse_iteritems())
+            return dict(self.sparse_items())
 
     def store_values(self, new_values, check=True):
         """
