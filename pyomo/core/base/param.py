@@ -26,6 +26,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
@@ -432,17 +433,42 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     # only loop over the defined data.
     #
 
-    def sparse_keys(self):
+    def sparse_keys(self, sort=SortComponents.UNSORTED):
         """Return a list of keys in the defined parameters"""
-        return list(self._data.keys())
+        try:
+            # Temporarily remove the default value so that len(self) ==
+            # len(self._dict).  This will cause the base class
+            # implementation of keys() to only return values from
+            # self._data:
+            tmp = self._default_val
+            self._default_val = Param.NoValue
+            return self.keys(sort)
+        finally:
+            self._default_val = tmp
 
-    def sparse_values(self):
+    def sparse_values(self, sort=SortComponents.UNSORTED):
         """Return a list of the defined param data objects"""
-        return list(self._data.values())
+        # Implementing things this way for consistency with items() (and
+        # so that any changes in the base class implementation are
+        # picked up here, too):
+        try:
+            tmp = self._default_val
+            self._default_val = Param.NoValue
+            return self.values(sort)
+        finally:
+            self._default_val = tmp
 
-    def sparse_items(self):
+    def sparse_items(self, sort=SortComponents.UNSORTED):
         """Return a list (index,data) tuples for defined parameters"""
-        return list(self._data.items())
+        # The base class implements special handling for references.
+        # Instead of reimplementing that here, we will follow the
+        # pattern used for sparse_keys (and get len() to "lie")
+        try:
+            tmp = self._default_val
+            self._default_val = Param.NoValue
+            return self.items(sort)
+        finally:
+            self._default_val = tmp
 
     def sparse_iterkeys(self):
         """Return an iterator for the keys in the defined parameters"""
