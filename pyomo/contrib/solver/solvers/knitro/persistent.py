@@ -22,6 +22,7 @@ from pyomo.core.base.var import VarData
 
 
 class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
+
     _model: BlockData | None
     _staged_model_data: KnitroModelData
 
@@ -57,7 +58,7 @@ class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
         timer.stop("solve")
 
     def set_instance(self, model: BlockData):
-        if model is self._model:
+        if self._model is model:
             return
         self._model = model
         self._model_data.set_block(model)
@@ -71,24 +72,27 @@ class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
         self._staged_model_data.add_block(block, clear_objs=True)
 
     def add_variables(self, variables: list[VarData]):
-        self._staged_model_data.variables.extend(variables)
+        self._staged_model_data.add_vars(variables)
 
     def add_constraints(self, cons: list[ConstraintData]):
-        self._staged_model_data.cons.extend(cons)
+        self._staged_model_data.add_cons(cons, existing_vars=self._model_data.variables)
 
     def set_objective(self, obj: ObjectiveData):
         self._staged_model_data.objs.clear()
         self._staged_model_data.objs.append(obj)
 
     def _update(self):
-        self._model_data.variables.extend(self._staged_model_data.variables)
-        self._model_data.cons.extend(self._staged_model_data.cons)
+        self._model_data.add_vars(self._staged_model_data.variables)
+        self._model_data.add_cons(self._staged_model_data.cons)
+        
         self._engine.add_vars(self._staged_model_data.variables)
         self._engine.add_cons(self._staged_model_data.cons)
+
         if self._staged_model_data.objs:
             self._model_data.objs.clear()
             self._model_data.objs.extend(self._staged_model_data.objs)
             self._engine.set_obj(self._model_data.objs[0])
+        
         self._staged_model_data.clear()
 
     def remove_variables(self, variables: list[VarData]) -> None:

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.config import Bool, ConfigValue
-from pyomo.contrib.solver.common.config import SolverConfig
+from pyomo.contrib.solver.common.config import AutoUpdateConfig, SolverConfig
 
 
 class KnitroConfig(SolverConfig):
@@ -59,16 +59,6 @@ class KnitroConfig(SolverConfig):
             ),
         )
 
-        self.auto_updates: bool = self.declare(
-            "auto_updates",
-            ConfigValue(
-                domain=Bool,
-                default=False,
-                doc=(
-                    "Auto updates are disabled by default. When enabled, "
-                    "the solver will automatically update the model when "
-                    "variables, constraints, or objectives are added or "
-                    "removed."
-                ),
-            ),
+        self.auto_updates: AutoUpdateConfig = self.declare(
+            'auto_updates', AutoUpdateConfig()
         )

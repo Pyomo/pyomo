@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from abc import abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from io import StringIO
 from typing import Optional
@@ -194,7 +194,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
     def _get_vars(self) -> list[VarData]:
         return self._model_data.variables
 
-    def _get_items(self, item_type: type[ItemType]) -> Sequence[ItemType]:
+    def _get_items(self, item_type: type[ItemType]) -> Iterable[ItemType]:
         maps = {
             VarData: self._model_data.variables,
             ConstraintData: self._model_data.cons,

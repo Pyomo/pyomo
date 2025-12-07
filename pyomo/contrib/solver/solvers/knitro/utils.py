@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Iterable, Mapping, MutableSet, Sequence
-from typing import Optional
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.numeric_types import value
@@ -72,7 +71,6 @@ class KnitroModelData:
 
     objs: list[ObjectiveData]
     cons: list[ConstraintData]
-    variables: list[VarData]
     _vars: MutableSet[VarData]
 
     def __init__(self, block: BlockData | None = None) -> None:
@@ -86,7 +84,6 @@ class KnitroModelData:
         self._vars = ComponentSet()
         self.objs = []
         self.cons = []
-        self.variables = []
         if block is not None:
             self.add_block(block)
 
@@ -94,7 +91,6 @@ class KnitroModelData:
         """Clear all objectives, constraints, and variables from the problem."""
         self.objs.clear()
         self.cons.clear()
-        self.variables.clear()
         self._vars.clear()
 
     def set_block(self, block: BlockData) -> None:
@@ -124,18 +120,52 @@ class KnitroModelData:
 
         # Collect variables from objectives
         for obj in new_objs:
-            _, variables, _, _ = collect_vars_and_named_exprs(obj.expr)  # type: ignore
+            _, variables, _, _ = collect_vars_and_named_exprs(obj.expr)
             for var in variables:
                 self._vars.add(var)
 
         # Collect variables from constraints
         for con in new_cons:
-            _, variables, _, _ = collect_vars_and_named_exprs(con.body)  # type: ignore
+            _, variables, _, _ = collect_vars_and_named_exprs(con.body)
             for var in variables:
                 self._vars.add(var)
 
-        # Update the variables list with unique variables only
-        self.variables = list(self._vars)
+    def add_vars(self, variables: Iterable[VarData]) -> None:
+        """Add variables to the problem.
+
+        Args:
+            variables (list[VarData]): The list of variables to add.
+
+        """
+        for var in variables:
+            self._vars.add(var)
+
+    def add_cons(self, cons: Iterable[ConstraintData], *, existing_vars: MutableSet[VarData] | None = None) -> None:
+        """Add constraints to the problem.
+
+        Args:
+            cons (list[ConstraintData]): The list of constraints to add.
+            existing_vars (MutableSet[VarData] | None): Existing variable set to check
+                for already-tracked variables. New variables will be added to this 
+                instance's internal set.
+
+        """
+        self.cons.extend(cons)
+        for con in cons:
+            _, variables, _, _ = collect_vars_and_named_exprs(con.body)
+            for var in variables:
+                if existing_vars is None or var not in existing_vars:
+                    self._vars.add(var)
+
+    @property
+    def variables(self) -> MutableSet[VarData]:
+        """Get the list of variables in the problem.
+
+        Returns:
+            MutableSet[VarData]: The set of variables.
+
+        """
+        return self._vars
 
     def __bool__(self) -> bool:
         return bool(self.objs or self.cons or self.variables)
