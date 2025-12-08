@@ -49,8 +49,6 @@ from pyomo.core.staleflag import StaleFlagManager
 
 
 class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
-    CONFIG = KnitroConfig()
-    config: KnitroConfig
 
     _engine: Engine
     _model_data: KnitroModelData
@@ -96,7 +94,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         return results
 
     def _build_config(self, **kwds) -> KnitroConfig:
-        return self.config(value=kwds, preserve_implicit=True)  # type: ignore
+        return self.config(value=kwds, preserve_implicit=True)
 
     def _validate_problem(self) -> None:
         if len(self._model_data.objs) > 1:

@@ -12,7 +12,7 @@
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.contrib.solver.common.base import PersistentSolverBase
 from pyomo.contrib.solver.solvers.knitro.base import KnitroSolverBase
-from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
+from pyomo.contrib.solver.solvers.knitro.config import KnitroPersistentConfig
 from pyomo.contrib.solver.solvers.knitro.utils import KnitroModelData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import ConstraintData
@@ -22,6 +22,8 @@ from pyomo.core.base.var import VarData
 
 
 class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
+    CONFIG = KnitroPersistentConfig()
+    config: KnitroPersistentConfig
 
     _model: BlockData | None
     _staged_model_data: KnitroModelData
@@ -33,7 +35,7 @@ class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
         self._staged_model_data = KnitroModelData()
 
     def _presolve(
-        self, model: BlockData, config: KnitroConfig, timer: HierarchicalTimer
+        self, model: BlockData, config: KnitroPersistentConfig, timer: HierarchicalTimer
     ) -> None:
         if self._model is not model:
             self.set_instance(model)
@@ -42,7 +44,7 @@ class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
         if self._staged_model_data:
             self._update()
 
-    def _solve(self, config: KnitroConfig, timer: HierarchicalTimer) -> None:
+    def _solve(self, config: KnitroPersistentConfig, timer: HierarchicalTimer) -> None:
         self._engine.set_outlev()
         if config.threads is not None:
             self._engine.set_num_threads(config.threads)
@@ -84,7 +86,7 @@ class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
     def _update(self):
         self._model_data.add_vars(self._staged_model_data.variables)
         self._model_data.add_cons(self._staged_model_data.cons)
-        
+
         self._engine.add_vars(self._staged_model_data.variables)
         self._engine.add_cons(self._staged_model_data.cons)
 
@@ -92,7 +94,7 @@ class KnitroPersistentSolver(KnitroSolverBase, PersistentSolverBase):
             self._model_data.objs.clear()
             self._model_data.objs.extend(self._staged_model_data.objs)
             self._engine.set_obj(self._model_data.objs[0])
-        
+
         self._staged_model_data.clear()
 
     def remove_variables(self, variables: list[VarData]) -> None:

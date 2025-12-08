@@ -10,10 +10,12 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.config import Bool, ConfigValue
-from pyomo.contrib.solver.common.config import AutoUpdateConfig, SolverConfig
+from pyomo.contrib.solver.common.config import AutoUpdateConfig, PersistentSolverConfig, SolverConfig
 
 
 class KnitroConfig(SolverConfig):
+    """Configuration for the direct Knitro solver interface."""
+
     def __init__(
         self,
         description=None,
@@ -59,6 +61,26 @@ class KnitroConfig(SolverConfig):
             ),
         )
 
-        self.auto_updates: AutoUpdateConfig = self.declare(
-            'auto_updates', AutoUpdateConfig()
+
+class KnitroPersistentConfig(KnitroConfig, PersistentSolverConfig):
+    """Configuration for the persistent Knitro solver interface.
+
+    Extends KnitroConfig with persistent solver capabilities including
+    auto_updates configuration.
+    """
+
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ) -> None:
+        super().__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
         )
