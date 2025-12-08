@@ -119,7 +119,7 @@ jobs:
           mpi: 3
           TARGET: linux
           PYENV: conda
-          PACKAGES: openmpi mpi4py
+          PACKAGES: openmpi=*=*external_* mpi4py
 
         - os: ubuntu-latest
           python: 3.12
