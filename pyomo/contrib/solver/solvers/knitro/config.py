@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.config import Bool, ConfigValue
-from pyomo.contrib.solver.common.config import AutoUpdateConfig, PersistentSolverConfig, SolverConfig
+from pyomo.contrib.solver.common.config import PersistentSolverConfig, SolverConfig
 
 
 class KnitroConfig(SolverConfig):
@@ -30,21 +30,6 @@ class KnitroConfig(SolverConfig):
             implicit=implicit,
             implicit_domain=implicit_domain,
             visibility=visibility,
-        )
-
-        self.rebuild_model_on_remove_var: bool = self.declare(
-            "rebuild_model_on_remove_var",
-            ConfigValue(
-                domain=Bool,
-                default=False,
-                doc=(
-                    "KNITRO solver does not allow variable removal. We can "
-                    "either make the variable a continuous free variable or "
-                    "rebuild the whole model when variable removal is "
-                    "attempted. When `rebuild_model_on_remove_var` is set to "
-                    "True, the model will be rebuilt."
-                ),
-            ),
         )
 
         self.restore_variable_values_after_solve: bool = self.declare(
@@ -83,4 +68,19 @@ class KnitroPersistentConfig(KnitroConfig, PersistentSolverConfig):
             implicit=implicit,
             implicit_domain=implicit_domain,
             visibility=visibility,
+        )
+
+        self.rebuild_model_on_remove_var: bool = self.declare(
+            "rebuild_model_on_remove_var",
+            ConfigValue(
+                domain=Bool,
+                default=False,
+                doc=(
+                    "KNITRO solver does not allow variable removal. We can "
+                    "either make the variable a continuous free variable or "
+                    "rebuild the whole model when variable removal is "
+                    "attempted. When `rebuild_model_on_remove_var` is set to "
+                    "True, the model will be rebuilt."
+                ),
+            ),
         )

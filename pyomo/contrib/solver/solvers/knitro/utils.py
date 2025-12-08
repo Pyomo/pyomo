@@ -140,13 +140,18 @@ class KnitroModelData:
         for var in variables:
             self._vars.add(var)
 
-    def add_cons(self, cons: Iterable[ConstraintData], *, existing_vars: MutableSet[VarData] | None = None) -> None:
+    def add_cons(
+        self,
+        cons: Iterable[ConstraintData],
+        *,
+        existing_vars: MutableSet[VarData] | None = None,
+    ) -> None:
         """Add constraints to the problem.
 
         Args:
             cons (list[ConstraintData]): The list of constraints to add.
             existing_vars (MutableSet[VarData] | None): Existing variable set to check
-                for already-tracked variables. New variables will be added to this 
+                for already-tracked variables. New variables will be added to this
                 instance's internal set.
 
         """
