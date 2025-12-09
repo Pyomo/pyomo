@@ -1378,10 +1378,6 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
     def test_theta_est_with_square_initialization(self):
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
         objval, thetavals = self.pest.theta_est()
-        print("*" * 30)
-        print("objval:", objval)
-        print("thetavals:", thetavals)
-        print("*" * 30)
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
