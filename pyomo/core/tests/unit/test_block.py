@@ -2683,9 +2683,9 @@ class TestBlock(unittest.TestCase):
         a[1] : Active=True
             2 Block Declarations
                 c : Size=2, Index=a1_IDX, Active=True
-                    a[1].c[4] : Active=True
-                        0 Declarations: 
                     a[1].c[5] : Active=True
+                        0 Declarations: 
+                    a[1].c[4] : Active=True
                         0 Declarations: 
                 d : Size=1, Index=None, Active=True
                     0 Declarations: 

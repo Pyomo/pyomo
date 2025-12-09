@@ -6308,13 +6308,13 @@ CHOICES : Size=1, Index=None, Ordered=Insertion
     None :  None :    Any :    3 : {((1, 2, 3), 4, 3), ((1, 2, 2), 4, 3), ((1, 3, 3), 4, 3)}
 x : Size=3, Index=CHOICES
     Key               : Lower : Value : Upper : Fixed : Stale : Domain
-    ((1, 2, 2), 4, 3) :  None :  None :  None : False :  True :  Reals
     ((1, 2, 3), 4, 3) :  None :  None :  None : False :  True :  Reals
+    ((1, 2, 2), 4, 3) :  None :  None :  None : False :  True :  Reals
     ((1, 3, 3), 4, 3) :  None :  None :  None : False :  True :  Reals
 c : Size=3, Index=CHOICES, Active=True
     Key               : Lower : Body           : Upper : Active
-    ((1, 2, 2), 4, 3) :   0.0 : x[(1,2,2),4,3] :   0.0 :   True
     ((1, 2, 3), 4, 3) :   0.0 : x[(1,2,3),4,3] :   0.0 :   True
+    ((1, 2, 2), 4, 3) :   0.0 : x[(1,2,2),4,3] :   0.0 :   True
     ((1, 3, 3), 4, 3) :   0.0 : x[(1,3,3),4,3] :   0.0 :   True
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
@@ -6343,13 +6343,13 @@ CHOICES : Size=1, Index=None, Ordered=Insertion
     None :     5 :    Any :    3 : {(1, 2, 3, 4, 3), (1, 2, 2, 4, 3), (1, 3, 3, 4, 3)}
 x : Size=3, Index=CHOICES
     Key             : Lower : Value : Upper : Fixed : Stale : Domain
-    (1, 2, 2, 4, 3) :  None :  None :  None : False :  True :  Reals
     (1, 2, 3, 4, 3) :  None :  None :  None : False :  True :  Reals
+    (1, 2, 2, 4, 3) :  None :  None :  None : False :  True :  Reals
     (1, 3, 3, 4, 3) :  None :  None :  None : False :  True :  Reals
 c : Size=3, Index=CHOICES, Active=True
     Key             : Lower : Body         : Upper : Active
-    (1, 2, 2, 4, 3) :   0.0 : x[1,2,2,4,3] :   0.0 :   True
     (1, 2, 3, 4, 3) :   0.0 : x[1,2,3,4,3] :   0.0 :   True
+    (1, 2, 2, 4, 3) :   0.0 : x[1,2,2,4,3] :   0.0 :   True
     (1, 3, 3, 4, 3) :   0.0 : x[1,3,3,4,3] :   0.0 :   True
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
