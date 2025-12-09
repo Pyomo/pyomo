@@ -1,9 +1,11 @@
 Pyomo.DoE
 =========
+**Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design 
+of experiments using science-based models.
 
-**Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
-
-Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://github.com/CCSI-Toolset/>`_.
+Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the 
+University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact 
+(CCSI2) <https://github.com/CCSI-Toolset/>`_.
 project, funded through the U.S. Department Of Energy Office of Fossil Energy.
 
 If you use Pyomo.DoE, please cite:
@@ -15,28 +17,39 @@ AIChE Journal 68.12 (2022): e17813. `https://doi.org/10.1002/aic.17813`
 Methodology Overview
 ---------------------
 
-Model-based Design of Experiments (MBDoE) is a technique to maximize the information gain of experiments by directly using science-based models with physically meaningful parameters. It is one key component in the model calibration and uncertainty quantification workflow shown below:
+Model-based Design of Experiments (MBDoE) is a technique to maximize the information 
+gain of experiments by directly using science-based models with physically meaningful 
+parameters. It is one key component in the model calibration and uncertainty 
+quantification workflow shown below:
 
 .. figure:: flowchart.png
    :scale: 25 %
 
-   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DoE focuses on increasing parameter precision.
+   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are 
+   combined into an iterative framework to select, refine, and calibrate science-based 
+   mathematical models with quantified uncertainty. Currently, Pyomo.DoE focuses on 
+   increasing parameter precision.
 
-Pyomo.DoE provides the exploratory analysis and MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
+Pyomo.DoE provides the exploratory analysis and MBDoE capabilities to the 
+Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
 the allowable design spaces for design variables, and the assumed observation error model.
-During exploratory analysis, Pyomo.DoE checks if the model parameters can be inferred from the postulated measurements or preliminary data.
+During exploratory analysis, Pyomo.DoE checks if the model parameters can be 
+inferred from the postulated measurements or preliminary data.
 MBDoE then recommends optimized experimental conditions for collecting more data.
-Parameter estimation packages such as :ref:`Parmest <parmest>` can perform parameter estimation using the available data to infer values for parameters,
+Parameter estimation packages such as :ref:`Parmest <parmest>` can perform 
+parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
-If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
-If not, MBDoE recommends optimized experimental conditions to generate new data.
+If the parameter uncertainties are sufficiently small, the workflow terminates 
+and returns the final model with quantified parametric uncertainty.
+If not, MBDoE recommends optimized experimental conditions to generate new data 
+that will maximize information gain and eventually reduce parameter uncertainty.
 
 Below is an overview of the type of optimization models Pyomo.DoE can accommodate:
 
 * Pyomo.DoE is suitable for optimization models of **continuous** variables
 * Pyomo.DoE can handle **equality constraints** defining state variables
 * Pyomo.DoE supports (Partial) Differential-Algebraic Equations (PDAE) models via Pyomo.DAE
-* Pyomo.DoE also supports models with only algebraic constraints
+* Pyomo.DoE also supports models with only algebraic equations
 
 The general form of a DAE problem that can be passed into Pyomo.DoE is shown below:
 
