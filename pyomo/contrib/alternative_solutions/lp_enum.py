@@ -17,8 +17,8 @@ import pyomo.environ as pyo
 from pyomo.contrib.alternative_solutions import (
     aos_utils,
     shifted_lp,
-    solution,
-    solnpool,
+    PyomoPoolManager,
+    PoolPolicy,
 )
 from pyomo.contrib import appsi
 
@@ -35,9 +35,11 @@ def enumerate_linear_solutions(
     solver_options={},
     tee=False,
     seed=None,
+    pool_manager=None,
 ):
     """
-    Finds alternative optimal solutions a (mixed-integer) linear program.
+    Finds alternative optimal solutions a (mixed-integer) linear program by iteratively
+    generating corners of the feasible polytope.
 
     This function implements the technique described here:
 
@@ -51,7 +53,7 @@ def enumerate_linear_solutions(
     model : ConcreteModel
         A concrete Pyomo model
     num_solutions : int
-        The maximum number of solutions to generate.
+        The maximum number of solutions to generate. Must be positive
     rel_opt_gap : float or None
         The relative optimality gap for the original objective for which
         variable bounds will be found. None indicates that a relative gap
@@ -77,26 +79,35 @@ def enumerate_linear_solutions(
         Boolean indicating that the solver output should be displayed.
     seed : int
         Optional integer seed for the numpy random number generator
+    pool_manager : None
+        Optional pool manager that will be used to collect solutions
 
     Returns
     -------
-    solutions
-        A list of Solution objects.
-        [Solution]
+    pool_manager
+        A PyomoPoolManager object
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS")
 
-    assert search_mode in [
-        "optimal",
-        "random",
-        "norm",
-    ], 'search mode must be "optimal", "random", or "norm".'
+    if not (num_solutions >= 1):
+        raise ValueError("num_solutions must be positive integer")
+    if num_solutions == 1:
+        logger.warning("Running alternative_solutions method to find only 1 solution!")
+
+    if not (search_mode in ["optimal", "random", "norm"]):
+        raise ValueError('search mode must be "optimal", "random", or "norm".')
     # TODO: Implement the random and norm objectives. I think it is sufficient
     # to only consider the cb.var_lower variables in the objective for these two
     # cases. The cb.var_upper variables are directly linked to these to diversity
     # in one implies diversity in the other. Diversity in the cb.basic_slack
     # variables doesn't really matter since we only really care about diversity
     # in the original problem and not in the slack space (I think)
+
+    if pool_manager is None:
+        pool_manager = PyomoPoolManager()
+        pool_manager.add_pool(
+            name="enumerate_binary_solutions", policy=PoolPolicy.keep_all
+        )
 
     all_variables = aos_utils.get_model_variables(model)
     # else:
@@ -116,7 +127,8 @@ def enumerate_linear_solutions(
 
     # TODO: Relax this if possible - Should allow for the mixed-binary case
     for var in all_variables:
-        assert var.is_continuous(), "Model must be an LP"
+        if not var.is_continuous():
+            raise RuntimeError("Model must be an LP")
 
     use_appsi = False
     if "appsi" in solver:
@@ -235,9 +247,8 @@ def enumerate_linear_solutions(
 
             for var, index in cb.var_map.items():
                 var.set_value(var.lb + cb.var_lower[index].value)
-            sol = solution.Solution(model, all_variables, objective=orig_objective)
-            solutions.append(sol)
-            orig_objective_value = sol.objective[1]
+            pool_manager.add(variables=all_variables, objective=orig_objective)
+            orig_objective_value = pyo.value(orig_objective)
 
             if logger.isEnabledFor(logging.INFO):
                 logger.info("Solved, objective = {}".format(orig_objective_value))
@@ -327,4 +338,4 @@ def enumerate_linear_solutions(
 
     logger.info("COMPLETED LP ENUMERATION ANALYSIS")
 
-    return solutions
+    return pool_manager

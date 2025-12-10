@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
 from pyomo.contrib.alternative_solutions import aos_utils
-from pyomo.contrib.alternative_solutions import Solution
+from pyomo.contrib.alternative_solutions import PyomoPoolManager, PoolPolicy
 from pyomo.contrib import appsi
 
 
@@ -74,7 +74,7 @@ def obbt_analysis(
         {variable: (lower_bound, upper_bound)}. An exception is raised when
         the solver encountered an issue.
     """
-    bounds, solns = obbt_analysis_bounds_and_solutions(
+    bounds, pool_manager = obbt_analysis_bounds_and_solutions(
         model,
         variables=variables,
         rel_opt_gap=rel_opt_gap,
@@ -99,6 +99,7 @@ def obbt_analysis_bounds_and_solutions(
     solver="gurobi",
     solver_options={},
     tee=False,
+    pool_manager=None,
 ):
     """
     Calculates the bounds on each variable by solving a series of min and max
@@ -135,6 +136,8 @@ def obbt_analysis_bounds_and_solutions(
         Solver option-value pairs to be passed to the solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
+    pool_manager : None
+        Optional pool manager that will be used to collect solutions
 
     Returns
     -------
@@ -142,18 +145,25 @@ def obbt_analysis_bounds_and_solutions(
         A Pyomo ComponentMap containing the bounds for each variable.
         {variable: (lower_bound, upper_bound)}. An exception is raised when
         the solver encountered an issue.
-    solutions
-        [Solution]
+    pool_manager
+        [PyomoPoolManager]
     """
 
     # TODO - parallelization
 
     logger.info("STARTING OBBT ANALYSIS")
 
+    if pool_manager is None:
+        pool_manager = PyomoPoolManager()
+        pool_manager.add_pool(
+            name="enumerate_binary_solutions", policy=PoolPolicy.keep_all
+        )
+
     if warmstart:
-        assert (
-            variables == None
-        ), "Cannot restrict variable list when warmstart is specified"
+        if not (variables == None):
+            raise ValueError(
+                "Cannot restrict variable list when warmstart is specified"
+            )
     all_variables = aos_utils.get_model_variables(model, include_fixed=False)
     if variables == None:
         variable_list = all_variables
@@ -242,7 +252,7 @@ def obbt_analysis_bounds_and_solutions(
         opt.update_config.treat_fixed_vars_as_params = False
 
     variable_bounds = pyo.ComponentMap()
-    solns = [Solution(model, all_variables, objective=orig_objective)]
+    pool_manager.add(variables=all_variables, objective=orig_objective)
 
     senses = [(pyo.minimize, "LB"), (pyo.maximize, "UB")]
 
@@ -284,7 +294,7 @@ def obbt_analysis_bounds_and_solutions(
                     results.solution_loader.load_vars(solution_number=0)
                 else:
                     model.solutions.load_from(results)
-                solns.append(Solution(model, all_variables, objective=orig_objective))
+                pool_manager.add(variables=all_variables, objective=orig_objective)
 
                 if warmstart:
                     _add_solution(solutions)
@@ -332,7 +342,7 @@ def obbt_analysis_bounds_and_solutions(
 
     logger.info("COMPLETED OBBT ANALYSIS")
 
-    return variable_bounds, solns
+    return variable_bounds, pool_manager
 
 
 def _add_solution(solutions):
