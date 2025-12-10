@@ -507,17 +507,20 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         the contents of a parameter.
         """
         if self._mutable:
-            #
-            # The parameter is mutable, parameter data are ParamData types.
-            # Thus, we need to create a temporary dictionary that contains the
-            # values from the ParamData objects.
-            #
+            # The parameter is mutable so parameter data are ParamData
+            # types.  We need to evaluate the ParamData back to POD
+            # (numeric) data when creating the result.
             return {key: param_data() for key, param_data in self.items()}
+        elif not self.is_indexed():
+            # The scalar could be defined (in which case items() will
+            # return the ScalarParam, OR it could be defined by a
+            # default value (in which case items() will return the
+            # actual numeric value.  to cover both cases we will use
+            # value():
+            return {key: expr_value(param_data) for key, param_data in self.items()}
         else:
-            #
             # The parameter is not mutable, so iteritems() can be
             # converted into a dictionary containing parameter values.
-            #
             return dict(self.items())
 
     def extract_values_sparse(self):
@@ -529,18 +532,20 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         repeated __getitem__ calls are too expensive to extract
         the contents of a parameter.
         """
-        if self._mutable:
+        if self._mutable or not self.is_indexed():
+            # The parameter is mutable so parameter data are ParamData
+            # types.  We need to evaluate the ParamData back to POD
+            # (numeric) data when creating the result.
             #
-            # The parameter is mutable, parameter data are ParamData types.
-            # Thus, we need to create a temporary dictionary that contains the
-            # values from the ParamData objects.
-            #
+            # Note that if this is a scalar, sparse_items will return
+            # the ScalarParam only if it is explicitly defined (in which
+            # case it will still be evaluatable by calling it).
+            # ScalarParams whose value comes from the default are not
+            # returned by sparse_items()
             return {key: param_data() for key, param_data in self.sparse_items()}
         else:
-            #
             # The parameter is not mutable, so sparse_items() can be
             # converted into a dictionary containing parameter values.
-            #
             return dict(self.sparse_items())
 
     def store_values(self, new_values, check=True):
