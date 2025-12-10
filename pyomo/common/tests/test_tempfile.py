@@ -284,6 +284,32 @@ class Test_TempfileManager(unittest.TestCase):
         os.close(fd)
         context.release()
 
+    def test_mktemp_delete(self):
+        with self.TM.new_context() as context:
+            dname = context.mkdtemp()
+            with self.TM.new_context() as subcontext:
+                fd, fname1 = subcontext.mkstemp(dir=dname)
+                fd, fname2 = subcontext.mkstemp(dir=dname, delete=False)
+                # Note: because the context manager isn't going to
+                # delete fname2, we need to explicitly close the file
+                # here...
+                os.close(fd)
+                dname1 = subcontext.mkdtemp(dir=dname)
+                dname2 = subcontext.mkdtemp(dir=dname, delete=False)
+
+                self.assertTrue(os.path.exists(fname1))
+                self.assertTrue(os.path.exists(fname2))
+                self.assertTrue(os.path.exists(dname1))
+                self.assertTrue(os.path.exists(dname2))
+            self.assertFalse(os.path.exists(fname1))
+            self.assertTrue(os.path.exists(fname2))
+            self.assertFalse(os.path.exists(dname1))
+            self.assertTrue(os.path.exists(dname2))
+        self.assertFalse(os.path.exists(fname1))
+        self.assertFalse(os.path.exists(fname2))
+        self.assertFalse(os.path.exists(dname1))
+        self.assertFalse(os.path.exists(dname2))
+
     def test_create_tempdir(self):
         context = self.TM.push()
         fname = self.TM.create_tempdir("suffix", "prefix")

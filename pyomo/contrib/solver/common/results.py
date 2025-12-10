@@ -112,6 +112,9 @@ class SolutionStatus(enum.Enum):
     solutions was returned.
     """
 
+    unknown = 5
+    "Solution returned, but feasibility/optimality unknown."
+
     infeasible = 10
     "Solution point does not satisfy some domains and/or constraints."
 
