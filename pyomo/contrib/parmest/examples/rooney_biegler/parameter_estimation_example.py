@@ -24,21 +24,10 @@ def main():
         columns=['hour', 'y'],
     )
 
-    # If desired, define a custom objective function, and then pass its name
-    # as a string to the Estimator constructor. e.g., obj_function= SSE
-    # Sum of squared error function
-    # def SSE(model):
-    #     expr = (model.experiment_outputs[model.y] - model.y) ** 2
-    #     return expr
-
     # Create an experiment list
     exp_list = []
     for i in range(data.shape[0]):
         exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
-
-    # View one model
-    # exp0_model = exp_list[0].get_labeled_model()
-    # exp0_model.pprint()
 
     # Create an instance of the parmest estimator
     pest = parmest.Estimator(exp_list, obj_function="SSE")
