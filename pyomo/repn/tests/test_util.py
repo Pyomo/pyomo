@@ -46,6 +46,7 @@ from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
     InvalidNumber,
+    TemplateVarRecorder,
     apply_node_operation,
     categorize_valid_components,
     complex_number_error,
@@ -834,6 +835,50 @@ class TestRepnUtils(unittest.TestCase):
         self.assertIs(bcd[NPV_DivisionExpression], bcd._before_npv)
         self.assertIs(bcd[DivisionExpression], bcd._before_general_expression)
         self.assertEqual(len(bcd), 14)
+
+    def test_TemplateVarRecorder(self):
+        m = ConcreteModel()
+        m.x = Var([2, 3, 5, 1, 4])
+
+        vm = {}
+        vr = TemplateVarRecorder(vm, SortComponents.deterministic)
+        vr.add(m.x[4])
+        self.assertEqual(len(vm), 5)
+        self.assertEqual(
+            {id(m.x[2]): 0, id(m.x[3]): 1, id(m.x[5]): 2, id(m.x[1]): 3, id(m.x[4]): 4},
+            vr.var_order,
+        )
+
+        vm = {}
+        vr = TemplateVarRecorder(vm, SortComponents.indices)
+        vr.add(m.x[4])
+        self.assertEqual(len(vm), 5)
+        self.assertEqual(
+            {id(m.x[1]): 0, id(m.x[2]): 1, id(m.x[3]): 2, id(m.x[4]): 3, id(m.x[5]): 4},
+            vr.var_order,
+        )
+
+    def test_TemplateVarRecorder_user_varmap(self):
+        m = ConcreteModel()
+        m.x = Var([2, 3, 5, 1, 4])
+
+        vm = {id(m.x[5]): m.x[5], id(m.x[3]): m.x[3]}
+        vr = TemplateVarRecorder(vm, SortComponents.deterministic)
+        vr.add(m.x[4])
+        self.assertEqual(len(vm), 5)
+        self.assertEqual(
+            {id(m.x[5]): 0, id(m.x[3]): 1, id(m.x[2]): 2, id(m.x[1]): 3, id(m.x[4]): 4},
+            vr.var_order,
+        )
+
+        vm = {id(m.x[5]): m.x[5], id(m.x[3]): m.x[3]}
+        vr = TemplateVarRecorder(vm, SortComponents.indices)
+        vr.add(m.x[4])
+        self.assertEqual(len(vm), 5)
+        self.assertEqual(
+            {id(m.x[5]): 0, id(m.x[3]): 1, id(m.x[1]): 2, id(m.x[2]): 3, id(m.x[4]): 4},
+            vr.var_order,
+        )
 
 
 if __name__ == "__main__":

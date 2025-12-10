@@ -67,6 +67,22 @@ def sum_sq(args, fixed, fgh):
 
 
 class TestLinear(unittest.TestCase):
+    def test_repn_to_string(self):
+        m = ConcreteModel()
+        m.x = Var(range(3))
+        m.p = Param(initialize=5)
+
+        cfg = VisitorConfig()
+        repn = LinearRepnVisitor(**cfg).walk_expression(
+            m.p * m.x[0] + m.x[1] + m.x[2] ** 2 + 5
+        )
+
+        self.assertEqual(
+            str(repn),
+            "LinearRepn(mult=1, const=5, linear={%s: 5, %s: 1}, nonlinear=x[2]**2)"
+            % (id(m.x[0]), id(m.x[1])),
+        )
+
     def test_finalize(self):
         m = ConcreteModel()
         m.x = Var()
