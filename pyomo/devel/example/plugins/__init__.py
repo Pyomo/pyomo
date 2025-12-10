@@ -9,21 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-#
-# Import "public" symbols and sub-packages.
-#
-from pyomo.contrib.example.foo import *
-from pyomo.contrib.example import bar
+# Define a 'load()' function, which simply imports
+# sub-packages that define plugin classes.
 
-#
-# Register plugins from this sub-package.
-#
-# The pyomo.environ package normally calls the load() function in a
-# hard-coded list of pyomo.*.plugins and pyomo.contrib.*.plugins
-# modules.  However, This example is not included in that list, so we
-# will load (and register) the plugins when this module (or any
-# submodule) is imported.
-#
-from pyomo.contrib.example.plugins import load
 
-load()
+def load():
+    from pyomo.devel.example.plugins import ex_plugin
