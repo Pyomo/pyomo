@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import sys
 import typing
 
 _overloads = {}
@@ -18,9 +19,7 @@ def _get_fullqual_name(func: typing.Callable) -> str:
     return f"{func.__module__}.{func.__qualname__}"
 
 
-if typing.TYPE_CHECKING:
-    from typing import overload as overload
-else:
+if sys.version_info[:2] <= (3, 10) and not typing.TYPE_CHECKING:
 
     def overload(func: typing.Callable):
         """Wrap typing.overload that remembers the overloaded signatures
@@ -33,6 +32,8 @@ else:
         _overloads.setdefault(_get_fullqual_name(func), []).append(func)
         return typing.overload(func)
 
-
-def get_overloads_for(func: typing.Callable):
-    return _overloads.get(_get_fullqual_name(func), [])
+    def get_overloads_for(func: typing.Callable):
+        return _overloads.get(_get_fullqual_name(func), [])
+else:
+    from typing import get_overloads as get_overloads_for
+    from typing import overload as overload
