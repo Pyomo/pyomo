@@ -79,7 +79,7 @@ where:
 *  :math:`\mathbf{t} \in \mathbb{R}^{N_t \times 1}` is a union of all time sets.
 
 .. note::
-    * Parameters and design variables should be defined as Pyomo ``Var`` components on the model to use ``direct_kaug`` mode, and can be defined as Pyomo ``Param`` object if not using ``direct_kaug``.
+    * Parameters and design variables should be defined as Pyomo ``Var`` components when building the model in ``Experiment`` Class so that users can use both ``ParmEst`` and ``Pyomo.DoE`` seamlessly.
 
 Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
@@ -88,14 +88,14 @@ Based on the above notation, the form of the MBDoE problem addressed in Pyomo.Do
 
     \begin{equation}
     \begin{aligned}
-        \underset{\boldsymbol{\varphi}}{\max} \quad & \Psi (\mathbf{M}(\mathbf{\hat{y}}, \boldsymbol{\varphi})) \\
-        \text{s.t.} \quad & \mathbf{M}(\boldsymbol{\hat{\theta}}, \boldsymbol{\varphi}) = \sum_r^{N_r} \sum_{r'}^{N_r} \tilde{\sigma}_{(r,r')}\mathbf{Q}_r^\mathbf{T} \mathbf{Q}_{r'} + \mathbf{V}^{-1}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}}) \\
-        & \dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}}, \boldsymbol{\theta}) \\
-        & \mathbf{g}(\mathbf{x}(t),  \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta})=\mathbf{0} \\
-        & \mathbf{y} =\mathbf{h}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta}) \\
-        & \mathbf{f}^{\mathbf{0}}\left(\dot{\mathbf{x}}\left(t_{0}\right), \mathbf{x}\left(t_{0}\right), \mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta})\right)=\mathbf{0} \\
-        & \mathbf{g}^{\mathbf{0}}\left( \mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)=\mathbf{0}\\
-        &\mathbf{y}^{\mathbf{0}}\left(t_{0}\right)=\mathbf{h}\left(\mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)
+        \underset{\boldsymbol{\varphi}}{\max} \quad & \Psi (\mathbf{M}(\boldsymbol{\hat{\theta}}, \boldsymbol{\varphi})) \\
+        \text{s.t.} \quad & \mathbf{M}(\boldsymbol{\hat{\theta}}, \boldsymbol{\varphi}) = \sum_r^{N_r} \sum_{r'}^{N_r} \tilde{\sigma}_{(r,r')}\mathbf{Q}_r^\mathbf{T} \mathbf{Q}_{r'} + \mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1} \\
+        & \dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}}, \boldsymbol{\hat{\theta}}) \\
+        & \mathbf{g}(\mathbf{x}(t),  \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\hat{\theta}})=\mathbf{0} \\
+        & \mathbf{y} =\mathbf{h}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\hat{\theta}}) \\
+        & \mathbf{f}^{\mathbf{0}}\left(\dot{\mathbf{x}}\left(t_{0}\right), \mathbf{x}\left(t_{0}\right), \mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\hat{\theta}})\right)=\mathbf{0} \\
+        & \mathbf{g}^{\mathbf{0}}\left( \mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\hat{\theta}}\right)=\mathbf{0}\\
+        &\mathbf{y}^{\mathbf{0}}\left(t_{0}\right)=\mathbf{h}\left(\mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\hat{\theta}}\right)
     \end{aligned}
     \end{equation}
 
@@ -107,7 +107,7 @@ where:
 *  :math:`\Psi` is the design criteria to measure FIM.
 *  :math:`\mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1}` is the FIM of previous experiments.
 
-Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the size of FIM:
+Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the information in FIM:
 
 .. list-table:: Pyomo.DoE design criteria
     :header-rows: 1
@@ -116,8 +116,8 @@ Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the size of FIM
     * - Design criterion
       - Computation
       - Geometrical meaning
-    * - A-optimality
-      -   :math:`\text{trace}({\mathbf{M}})`
+    * - A-optimality [#]_
+      -   :math:`\text{trace}({\mathbf{M}}^{-1})`
       - Dimensions of the enclosing box of the confidence ellipse
     * - D-optimality
       -   :math:`\text{det}({\mathbf{M}})`
@@ -129,25 +129,35 @@ Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the size of FIM
       -   :math:`\text{cond}({\mathbf{M}})`
       - Ratio of the longest axis to the shortest axis of the confidence ellipse
 
+.. [#] A-optimality is implemented as minimizing the trace of the inverse of FIM.
+
 In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required input to the Pyomo.DoE solver is an ``Experiment`` object. The experiment object must have a ``get_labeled_model`` function which returns a Pyomo model with four ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, :ref:`Parmest <parmest>`. The four ``Suffix`` components are:
+The required input to the Pyomo.DoE solver is a subclass of the :ref:`Parmest <parmest>` ``Experiment`` class. The subclass must have a ``get_labeled_model`` method which returns a Pyomo model containing four Pyomo ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, :ref:`Parmest <parmest>`. The four Pyomo ``Suffix`` components are:
 
 * ``experiment_inputs`` - The experimental design decisions
 * ``experiment_outputs`` - The values measured during the experiment
 * ``measurement_error`` - The error associated with individual values measured during the experiment
 * ``unknown_parameters`` - Those parameters in the model that are estimated using the measured values during the experiment
 
-An example ``Experiment`` object that builds and labels the model is shown in the next few sections.
+An example of the subclassed ``Experiment`` object that builds and labels the model is shown in the next few sections.
 
 Pyomo.DoE Usage Example
 -----------------------
 
-We illustrate the use of Pyomo.DoE using a reaction kinetics example (Wang and Dowling, 2022).
-The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only species A is fed to the reactor.
+We illustrate the use of Pyomo.DoE using a reaction kinetics example (Wang and Dowling, 2022). 
 
+.. math::
+   :nowrap:
+
+   \begin{equation}
+       A \xrightarrow{k_1} B \xrightarrow{k_2} C
+   \end{equation}
+
+
+The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only species A is fed to the reactor.
 
 .. math::
    :nowrap:
@@ -174,14 +184,20 @@ The observation errors are assumed to be independent both in time and across mea
 
 Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. note::
+
+    This example uses the data file ``result.json``, located in the Pyomo repository at: 
+    ``pyomo/contrib/doe/examples/result.json``, which contains the nominal parameter values, and measurements for the reaction kinetics experiment.
 
 .. doctest::
 
-    >>> # === Required import ===
+    # === Required import ===
     >>> import pyomo.environ as pyo
     >>> from pyomo.contrib.doe import DesignOfExperiments
     >>> import numpy as np
 
+Subclass the :ref:`Parmest <parmest>` ``Experiment`` class to define the reaction kinetics experiment and build the Pyomo ConcreteModel.
+    
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: ========================
     :end-before: End constructor definition
@@ -189,7 +205,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The process model for the reaction kinetics problem is shown below. We build the model without any data or discretization.
+The process model for the reaction kinetics problem is shown below. Here, we build the model without any data or discretization.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: Create flexible model without data
@@ -198,7 +214,7 @@ The process model for the reaction kinetics problem is shown below. We build the
 Step 2: Finalize the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here we add data to the model and finalize the discretization. This step is required before the model can be labeled.
+Here, we add data to the model and finalize the discretization using a new method to the class. This step is required before the model can be labeled.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End equation definition
@@ -207,7 +223,7 @@ Here we add data to the model and finalize the discretization. This step is requ
 Step 3: Label the information needed for DoE analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We label the four important groups as defined before.
+We label the four important groups as defined before by adding a ``label_experiment`` method.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End model finalization
@@ -226,16 +242,27 @@ Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable,
-i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
+i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number. 
+Additionally, it helps to initialize the model for the optimal experimental design step. 
 
 Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` function.
-The ``compute_FIM_full_factorial`` function generates a grid over the design space as specified by the user. Each grid point represents an MBDoE problem solved using ``compute_FIM`` method. In this way, sensitivity of the FIM over the design space can be evaluated.
+The ``compute_FIM_full_factorial`` method generates a grid over the design space as specified by the user. Each grid point represents an MBDoE problem solved using ``compute_FIM`` method. In this way, sensitivity of the FIM over the design space can be evaluated.
 
 The following code executes the above problem description:
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
     :start-after: Read in file
+    :end-before: Make design ranges to compute the full factorial design
+    :dedent:
+
+.. code-block:: python
+
+    n_points_for_design = 9  # number of points for each design variable
+
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
+    :start-after: if compute_FIM_full_factorial:
     :end-before: End sensitivity analysis
+    :dedent:
 
 An example output of the code above, a design exploration for the initial concentration and temperature as experimental design variables with 9 values, produces the four figures summarized below:
 
