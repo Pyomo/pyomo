@@ -17,6 +17,9 @@ from pyomo.core.base.block import BlockData
 
 
 class KnitroDirectSolver(KnitroSolverBase):
+    CONFIG = KnitroConfig()
+    config: KnitroConfig
+
     def _presolve(
         self, model: BlockData, config: KnitroConfig, timer: HierarchicalTimer
     ) -> None:
