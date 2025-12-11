@@ -250,36 +250,122 @@ The ``compute_FIM_full_factorial`` method generates a grid over the design space
 
 The following code executes the above problem description:
 
-.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
-    :start-after: Read in file
-    :end-before: Make design ranges to compute the full factorial design
-    :dedent:
-
 .. code-block:: python
 
-    n_points_for_design = 9  # number of points for each design variable
+    # Read in file
+    DATA_DIR = pathlib.Path(__file__).parent
+    file_path = DATA_DIR / "result.json"
 
-.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
-    :start-after: if compute_FIM_full_factorial:
-    :end-before: End sensitivity analysis
-    :dedent:
+    with open(file_path) as f:
+        data_ex = json.load(f)
 
-An example output of the code above, a design exploration for the initial concentration and temperature as experimental design variables with 9 values, produces the four figures summarized below:
+    # Put temperature control time points into correct format for reactor experiment
+    data_ex["control_points"] = {
+        float(k): v for k, v in data_ex["control_points"].items()
+    }
 
-.. figure:: FIM_sensitivity.png
+    # Create a ReactorExperiment object; data and discretization information are part
+    # of the constructor of this object
+    experiment = ReactorExperiment(data=data_ex, nfe=10, ncp=3)
+
+    # Use a central difference, with step size 1e-3
+    fd_formula = "central"
+    step_size = 1e-3
+
+    # Use the determinant objective with scaled sensitivity matrix
+    objective_option = "determinant"
+    scale_nominal_param_value = True
+
+    # Create the DesignOfExperiments object
+    # We will not be passing any prior information in this example
+    # and allow the experiment object and the DesignOfExperiments
+    # call of ``run_doe`` perform model initialization.
+    doe_obj = DesignOfExperiments(
+        experiment,
+        fd_formula=fd_formula,
+        step=step_size,
+        objective_option=objective_option,
+        scale_constant_value=1,
+        scale_nominal_param_value=scale_nominal_param_value,
+        prior_FIM=None,
+        jac_initial=None,
+        fim_initial=None,
+        L_diagonal_lower_bound=1e-7,
+        solver=None,
+        tee=False,
+        get_labeled_model_args=None,
+        _Cholesky_option=True,
+        _only_compute_fim_lower=True,
+    )
+    # Make design ranges to compute the full factorial design
+    design_ranges = {
+        "CA[0]": [1, 5, 9],
+        "T[0]": [300, 700, 9],
+    }
+
+    # Compute the full factorial design with the sequential FIM calculation
+    doe_obj.compute_FIM_full_factorial(
+        design_ranges=design_ranges, method="sequential"
+    )
+    # Save the results and plot the figures
+    figure_file_name = "example_reactor_compute_FIM"
+
+
+    # Plot the results
+    doe_obj.draw_factorial_figure(
+        sensitivity_design_variables=["CA[0]", "T[0]"],
+        fixed_design_variables={
+            "T[0.125]": 300,
+            "T[0.25]": 300,
+            "T[0.375]": 300,
+            "T[0.5]": 300,
+            "T[0.625]": 300,
+            "T[0.75]": 300,
+            "T[0.875]": 300,
+            "T[1]": 300,
+        },
+        title_text="Reactor Example",
+        xlabel_text="Concentration of A (M)",
+        ylabel_text="Initial Temperature (K)",
+        figure_file_name=figure_file_name,
+        log_scale=False,
+    )
+
+
+An example output of the code above, a design exploration for the initial 
+concentration and temperature as experimental design variables with 9 
+values, produces the the four figures for four optimality criteria.
+Only D-optimality is shown here. 
+
+.. figure:: FIM_sensitivity_D-opt.png
    :scale: 50 %
 
-A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design space. Horizontal and vertical axes are the two experimental design variables, while the color of each grid shows the experimental information content. For A optimality (top left subfigure), the figure shows that the most informative region is around :math:`C_{A0}=5.0` M, :math:`T=300.0` K, while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=700.0` K.
+A heatmap shows the change of the objective function, a.k.a. the 
+experimental information content, in the design space. Horizontal 
+and vertical axes are the two experimental design variables, while 
+the color of each grid shows the experimental information content. 
+For D-optimality, the figure shows that the 
+most informative region is around :math:`C_{A0}=5.0` M, :math:`T=500.0` K with 
+a log-10 determinant of FIM being around 19, 
+while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=300.0` K, 
+with a log-10 determinant of FIM being around -5.
+
+``compute_FIM_full_factorial`` 
 
 Step 6: Performing an optimal experimental design
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In step 5, the DoE object was constructed to perform an exploratory sensitivity analysis. The same object can be used to design an optimal experiment with a single line of code.
+In step 5, the DoE object was constructed to perform an exploratory sensitivity analysis. 
+The same object can be used to design an optimal experiment with a single 
+line of code. We can initialize the model with the result we obtained from
+the exploratory analysis step to speed up convergence.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
     :start-after: Begin optimal DoE
     :end-before: Print out a results summary
 
-When run, the optimal design is an initial concentration of 5.0 mol/L and an initial temperature of 494 K with all other temperatures being 300 K. The corresponding log-10 determinant of the FIM is 13.75
+When run, the optimal design is an initial concentration of 5.0 mol/L and 
+an initial temperature of 494 K with all other temperatures being 300 K. 
+The corresponding log-10 determinant of the FIM is 19.32.
 
 
