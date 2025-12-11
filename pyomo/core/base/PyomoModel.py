@@ -574,7 +574,7 @@ class ModelSolutions:
 
 
 # NOTE: Python 3.11+ use `typing.Self`
-ModelT = TypeVar("ModelT", bound="Model")
+ModelType = TypeVar("ModelType", bound="Model")
 
 
 @ModelComponentFactory.register(
@@ -588,7 +588,7 @@ class Model(ScalarBlock):
 
     _Block_reserved_words = set()
 
-    def __new__(cls: type[ModelT], *args, **kwds) -> ModelT:
+    def __new__(cls: type[ModelType], *args, **kwds) -> ModelType:
         if cls != Model:
             return super(Model, cls).__new__(cls)  # type: ignore
 
