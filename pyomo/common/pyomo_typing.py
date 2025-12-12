@@ -34,6 +34,7 @@ if sys.version_info[:2] <= (3, 10) and not typing.TYPE_CHECKING:
 
     def get_overloads_for(func: typing.Callable):
         return _overloads.get(_get_fullqual_name(func), [])
+
 else:
     from typing import get_overloads as get_overloads_for
     from typing import overload as overload

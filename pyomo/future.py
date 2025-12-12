@@ -41,11 +41,7 @@ solver_factory_v1: _SolverFactoryClassV1 = _solvers.LegacySolverFactory
 solver_factory_v2: _SolverFactoryClassV2 = _appsi.SolverFactory
 solver_factory_v3: _SolverFactoryClassV3 = _contrib.SolverFactory
 
-_versions = {
-    1: solver_factory_v1,
-    2: solver_factory_v2,
-    3: solver_factory_v3,
-}
+_versions = {1: solver_factory_v1, 2: solver_factory_v2, 3: solver_factory_v3}
 
 
 def _get_environ_version() -> int:
