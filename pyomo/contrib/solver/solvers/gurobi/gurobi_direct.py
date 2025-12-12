@@ -36,7 +36,9 @@ logger = logging.getLogger(__name__)
 
 
 class GurobiDirectSolutionLoader(GurobiDirectSolutionLoaderBase):
-    def __init__(self, solver_model, pyomo_model, pyomo_vars, gurobi_vars, con_map) -> None:
+    def __init__(
+        self, solver_model, pyomo_model, pyomo_vars, gurobi_vars, con_map
+    ) -> None:
         super().__init__(solver_model, pyomo_model)
         self._pyomo_vars = pyomo_vars
         self._gurobi_vars = gurobi_vars

@@ -41,7 +41,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase, load_import_suffixes
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 import time
 
 
@@ -255,9 +258,7 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         return ComponentMap(zip(vars_to_load, vals))
 
     def get_reduced_costs(
-        self, 
-        vars_to_load: Optional[Sequence[VarData]] = None,
-        solution_id=None,
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
         if solution_id is not None and solution_id != 0:
             raise NoReducedCostsError('Can only get reduced costs for solution_id = 0')
@@ -273,9 +274,7 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         return res
 
     def get_duals(
-        self, 
-        cons_to_load: Optional[Sequence[ConstraintData]] = None,
-        solution_id=None,
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> Dict[ConstraintData, float]:
         if solution_id is not None and solution_id != 0:
             raise NoDualsError('Can only get duals for solution_id = 0')
