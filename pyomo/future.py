@@ -9,15 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from typing import TYPE_CHECKING, Any, Literal, overload
-
-import pyomo.environ as _environ
-
-if TYPE_CHECKING:
-    import pyomo.contrib.appsi.base as _appsi
-    import pyomo.contrib.solver.common.factory as _contrib
-    import pyomo.opt.base.solvers as _solvers
-
 __doc__ = """
 Preview capabilities through ``pyomo.__future__``
 =================================================
@@ -35,30 +26,53 @@ Currently supported ``__future__`` offerings include:
 
 """
 
-solver_factory_v1: "_solvers.SolverFactoryClass"
-solver_factory_v2: "_appsi.SolverFactoryClass"
-solver_factory_v3: "_contrib.SolverFactoryClass"
+from typing import Any, Literal, overload
+
+import pyomo.contrib.appsi.base as _appsi
+import pyomo.contrib.solver.common.factory as _contrib
+import pyomo.environ as _environ
+import pyomo.opt.base.solvers as _solvers
+
+_SolverFactoryClassV1 = _solvers.SolverFactoryClass
+_SolverFactoryClassV2 = _appsi.SolverFactoryClass
+_SolverFactoryClassV3 = _contrib.SolverFactoryClass
+
+solver_factory_v1: _SolverFactoryClassV1 = _solvers.LegacySolverFactory
+solver_factory_v2: _SolverFactoryClassV2 = _appsi.SolverFactory
+solver_factory_v3: _SolverFactoryClassV3 = _contrib.SolverFactory
+
+_versions = {
+    1: solver_factory_v1,
+    2: solver_factory_v2,
+    3: solver_factory_v3,
+}
 
 
-def __getattr__(name):
-    if name in ("solver_factory_v1", "solver_factory_v2", "solver_factory_v3"):
-        return solver_factory(int(name[-1]))
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+def _get_environ_version() -> int:
+    # Go look and see what it was initialized to in pyomo.environ
+    for ver, cls in _versions.items():
+        if cls._cls is _environ.SolverFactory._cls:
+            return ver
+    # If initialized correctly, never reached
+    raise NotImplementedError
+
+
+_active_version = _get_environ_version()
 
 
 @overload
 def solver_factory(version: None = None) -> int: ...
 @overload
-def solver_factory(version: Literal[1]) -> "_solvers.SolverFactoryClass": ...
+def solver_factory(version: Literal[1]) -> _SolverFactoryClassV1: ...
 @overload
-def solver_factory(version: Literal[2]) -> "_appsi.SolverFactoryClass": ...
+def solver_factory(version: Literal[2]) -> _SolverFactoryClassV2: ...
 @overload
-def solver_factory(version: Literal[3]) -> "_contrib.SolverFactoryClass": ...
+def solver_factory(version: Literal[3]) -> _SolverFactoryClassV3: ...
 @overload
 def solver_factory(version: int) -> Any: ...
 
 
-def solver_factory(version=None):
+def solver_factory(version: int | None = None):
     """Get (or set) the active implementation of the SolverFactory
 
     This allows users to query / set the current implementation of the
@@ -97,43 +111,21 @@ def solver_factory(version=None):
        >>> from pyomo.__future__ import solver_factory_v1
 
     """
-    import pyomo.opt.base.solvers as _solvers
-    import pyomo.contrib.solver.common.factory as _contrib
-    import pyomo.contrib.appsi.base as _appsi
+    global _active_version
 
-    versions = {
-        1: _solvers.LegacySolverFactory,
-        2: _appsi.SolverFactory,
-        3: _contrib.SolverFactory,
-    }
-
-    current = getattr(solver_factory, '_active_version', None)
-    # First time through, _active_version is not defined.  Go look and
-    # see what it was initialized to in pyomo.environ
-    if current is None:
-        for ver, cls in versions.items():
-            if cls._cls is _environ.SolverFactory._cls:
-                solver_factory._active_version = ver  # type: ignore
-                break
-        return solver_factory._active_version  # type: ignore
-    #
-    # The user is just asking what the current SolverFactory is; tell them.
     if version is None:
-        return solver_factory._active_version  # type: ignore
-    #
+        return _active_version
+
     # Update the current SolverFactory to be a shim around (shallow copy
     # of) the new active factory
-    src = versions.get(version, None)
-    if version is not None:
-        solver_factory._active_version = version  # type: ignore
-        for attr in ('_description', '_cls', '_doc'):
-            setattr(_environ.SolverFactory, attr, getattr(src, attr))
+    selected_factory = _versions.get(version, None)
+    if selected_factory is not None:
+        _active_version = version
+        for attr in ("_description", "_cls", "_doc"):
+            setattr(_environ.SolverFactory, attr, getattr(selected_factory, attr))
     else:
         raise ValueError(
             "Invalid value for target solver factory version; expected {1, 2, 3}, "
             f"received {version}"
         )
-    return src
-
-
-solver_factory._active_version = solver_factory()  # type: ignore
+    return selected_factory
