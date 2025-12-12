@@ -13,32 +13,34 @@
 from .common.factory import SolverFactory
 from .solvers.ipopt import Ipopt, LegacyIpoptSolver
 from .solvers.gurobi.gurobi_direct import GurobiDirect
-from .solvers.gurobi.gurobi_persistent import GurobiDirectQuadratic, GurobiPersistent
+from .solvers.gurobi.gurobi_persistent import GurobiPersistent
+from .solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
 from .solvers.highs import Highs
 from .solvers.scip.scip_direct import ScipDirect, ScipPersistent
+from .solvers.knitro.direct import KnitroDirectSolver
 
 
 def load():
     SolverFactory.register(
-        name='ipopt', legacy_name='ipopt_v2', doc='The IPOPT NLP solver'
+        name="ipopt", legacy_name="ipopt_v2", doc="The IPOPT NLP solver"
     )(Ipopt, LegacyIpoptSolver)
     SolverFactory.register(
-        name='gurobi_persistent',
-        legacy_name='gurobi_persistent_v2',
-        doc='Persistent interface to Gurobi',
+        name="gurobi_persistent",
+        legacy_name="gurobi_persistent_v2",
+        doc="Persistent interface to Gurobi",
     )(GurobiPersistent)
     SolverFactory.register(
-        name='gurobi_direct',
-        legacy_name='gurobi_direct_v2',
-        doc='Direct (scipy-based) interface to Gurobi',
+        name="gurobi_direct",
+        legacy_name="gurobi_direct_v2",
+        doc="Direct (scipy-based) interface to Gurobi",
     )(GurobiDirect)
     SolverFactory.register(
-        name='gurobi_direct_quadratic',
-        legacy_name='gurobi_direct_quadratic_v2',
-        doc='Direct interface to Gurobi',
-    )(GurobiDirectQuadratic)
+        name='gurobi_direct_minlp',
+        legacy_name='gurobi_direct_minlp',
+        doc='Direct interface to Gurobi accommodating general MINLP',
+    )(GurobiDirectMINLP)
     SolverFactory.register(
-        name='highs', legacy_name='highs_v2', doc='Persistent interface to HiGHS'
+        name="highs", legacy_name="highs", doc="Persistent interface to HiGHS"
     )(Highs)
     SolverFactory.register(
         name='scip_direct',
@@ -50,3 +52,8 @@ def load():
         legacy_name='scip_persistent_v2',
         doc='Persistent interface pyscipopt',
     )(ScipPersistent)
+    SolverFactory.register(
+        name="knitro_direct",
+        legacy_name="knitro_direct",
+        doc="Direct interface to KNITRO solver",
+    )(KnitroDirectSolver)

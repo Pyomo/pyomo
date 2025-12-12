@@ -16,6 +16,7 @@ Tests for the PyROS solver.
 import logging
 import math
 import os
+import textwrap
 import time
 
 import pyomo.common.unittest as unittest
@@ -36,7 +37,7 @@ from pyomo.common.dependencies import (
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import replace_expressions
-from pyomo.environ import assert_optimal_termination, maximize as pyo_max, units as u
+from pyomo.environ import assert_optimal_termination, maximize as pyo_max
 from pyomo.opt import (
     SolverResults,
     SolverStatus,
@@ -81,6 +82,9 @@ from pyomo.contrib.pyros.util import (
     IterationLogRecord,
     ObjectiveType,
     pyrosTerminationCondition,
+    log_original_model_statistics,
+    ModelData,
+    VariablePartitioning,
 )
 
 logger = logging.getLogger(__name__)
@@ -1256,7 +1260,7 @@ class RegressionTest(unittest.TestCase):
 
         with self.assertRaisesRegex(
             expected_exception=ValueError,
-            expected_regex="math domain error",
+            expected_regex="(math domain error)|(expected a positive input)",
             msg="Exception arising from math domain error not raised",
         ):
             # should raise math domain error:
@@ -1281,7 +1285,7 @@ class RegressionTest(unittest.TestCase):
         m.x2.setub(1 / m.q)
         with self.assertRaisesRegex(
             expected_exception=ZeroDivisionError,
-            expected_regex="float division by zero",
+            expected_regex="division by zero",
             msg="Exception arising from math domain error not raised",
         ):
             pyros_solver.solve(
@@ -2064,6 +2068,94 @@ class RegressionTest(unittest.TestCase):
         self.assertAlmostEqual(res.final_objective_value, 4, places=4)
         self.assertAlmostEqual(m.x.value, 2, places=4)
         self.assertAlmostEqual(m.z.value, 2, places=4)
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_pyros_discrete_intersection(self):
+        """
+        Test PyROS properly supports intersection set involving
+        discrete set.
+        """
+        m = ConcreteModel()
+        m.q1 = Param(initialize=0.5, mutable=True)
+        m.q2 = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[0, 1])
+        m.x2 = Var(bounds=[0, 1])
+        m.obj = Objective(expr=m.x1 + m.x2)
+        m.con1 = Constraint(expr=m.x1 >= m.q1)
+        m.con2 = Constraint(expr=m.x2 >= m.q2)
+        iset = IntersectionSet(
+            set1=BoxSet(bounds=[[0, 2]] * 2),
+            set2=DiscreteScenarioSet([[0, 0], [0.5, 0.5], [1, 1], [3, 3]]),
+        )
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.q1, m.q2],
+            uncertainty_set=iset,
+            # note: using BARON instead of IPOPT.
+            #       when IPOPT is used, this test will fail,
+            #       as the discrete separation routine does not
+            #       account for the case where there are no
+            #       adjustable variables in the model
+            #       (i.e. separation models without any variables).
+            #       will be addressed later when the subproblem
+            #       solve routines are refactored
+            local_solver="baron",
+            global_solver="baron",
+            solve_master_globally=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 2)
+        # check worst-case optimal solution
+        self.assertAlmostEqual(res.final_objective_value, 2)
+        self.assertAlmostEqual(m.x1.value, 1)
+        self.assertAlmostEqual(m.x2.value, 1)
+
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    def test_pyros_intersection_aux_vars(self):
+        """
+        Test PyROS properly supports intersection set
+        in which at least one of the intersected sets
+        is defined with auxiliary variables.
+        """
+        m = ConcreteModel()
+        m.q1 = Param(initialize=0.5, mutable=True)
+        m.q2 = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[0, 1])
+        m.x2 = Var(bounds=[0, 1])
+        m.obj = Objective(expr=m.x1 + m.x2)
+        m.con1 = Constraint(expr=m.x1 >= m.q1)
+        m.con2 = Constraint(expr=m.x2 >= m.q2)
+        iset = IntersectionSet(
+            set1=AxisAlignedEllipsoidalSet(center=(0, 0), half_lengths=(1, 1)),
+            # factor model set requires auxiliary variables
+            set2=FactorModelSet(
+                origin=[0, 0], psi_mat=np.eye(2), number_of_factors=2, beta=0.5
+            ),
+        )
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.q1, m.q2],
+            uncertainty_set=iset,
+            local_solver="ipopt",
+            global_solver="ipopt",
+            solve_master_globally=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 3)
+        # check worst-case optimal solution
+        self.assertAlmostEqual(res.final_objective_value, 2, places=5)
+        self.assertAlmostEqual(m.x1.value, 1)
+        self.assertAlmostEqual(m.x2.value, 1)
 
 
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
@@ -3062,6 +3154,63 @@ class TestSubsolverTiming(unittest.TestCase):
         )
 
 
+class TestLogOriginalModelStatistics(unittest.TestCase):
+    """
+    Test logging of model statistics (before preprocessing).
+    """
+
+    def test_log_model_statistics(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(bounds=[0, 10])
+        m.x2 = Var(bounds=[0, 10])
+        m.y = Var()
+        m.c1 = Constraint(expr=(1, m.x1 + m.x2, 2))
+        m.c2 = Constraint(expr=m.x1 * m.y <= 10)
+        m.c3 = Constraint(expr=(m.q, m.x1 + m.y, m.q))
+
+        # set up arguments to log function
+        model_data = ModelData(
+            original_model=m,
+            timing=None,
+            config=Bunch(
+                progress_logger=logger,
+                uncertainty_set=BoxSet([[1, 2]]),
+                uncertain_params=[m.q],
+            ),
+        )
+        user_var_partitioning = VariablePartitioning(
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            state_variables=[m.y],
+        )
+
+        expected_log_str = textwrap.dedent(
+            """
+            Model Statistics (before preprocessing):
+              Number of variables : 3
+                First-stage variables : 2
+                Second-stage variables : 0
+                State variables : 1
+              Number of uncertain parameters : 1
+              Number of constraints : 3
+                Equality constraints : 1
+                Inequality constraints : 2
+            """
+        )
+
+        with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
+            log_original_model_statistics(model_data, user_var_partitioning)
+
+        log_str = LOG.getvalue()
+        log_lines = log_str.splitlines()
+        expected_log_lines = expected_log_str.splitlines()[1:]
+
+        self.assertEqual(len(log_lines), len(expected_log_lines))
+        for line, expected_line in zip(log_lines, expected_log_lines):
+            self.assertEqual(line, expected_line)
+
+
 class TestIterationLogRecord(unittest.TestCase):
     """
     Test the PyROS `IterationLogRecord` class.
@@ -3087,7 +3236,7 @@ class TestIterationLogRecord(unittest.TestCase):
         """Test logging function for PyROS IterationLogRecord."""
 
         # for some fields, we choose floats with more than four
-        # four decimal points to ensure rounding also matches
+        # decimal points to ensure rounding also matches
         iter_record = IterationLogRecord(
             iteration=4,
             objective=1.234567,
@@ -3100,6 +3249,10 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=True,
             all_sep_problems_solved=True,
             global_separation=False,
+            master_backup_solver=False,
+            master_feasibility_success=True,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3117,10 +3270,48 @@ class TestIterationLogRecord(unittest.TestCase):
             msg="Iteration log record message does not match expected result",
         )
 
+    def test_log_iter_record_master_feasibility_failed(self):
+        """
+        Test iteration log record in event of master feasibility
+        problem failure.
+        """
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+            master_backup_solver=False,
+            master_feasibility_success=False,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00  2.3457e-08*  3.4568e-07   10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
     def test_log_iter_record_polishing_failed(self):
         """Test iteration log record in event of polishing failure."""
         # for some fields, we choose floats with more than four
-        # four decimal points to ensure rounding also matches
+        # decimal points to ensure rounding also matches
         iter_record = IterationLogRecord(
             iteration=4,
             objective=1.234567,
@@ -3133,6 +3324,10 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=False,
             all_sep_problems_solved=True,
             global_separation=False,
+            master_backup_solver=False,
+            master_feasibility_success=True,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3158,7 +3353,7 @@ class TestIterationLogRecord(unittest.TestCase):
         was bypassed.
         """
         # for some fields, we choose floats with more than four
-        # four decimal points to ensure rounding also matches
+        # decimal points to ensure rounding also matches
         iter_record = IterationLogRecord(
             iteration=4,
             objective=1.234567,
@@ -3171,6 +3366,10 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=True,
             all_sep_problems_solved=True,
             global_separation=True,
+            master_backup_solver=False,
+            master_feasibility_success=True,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3188,6 +3387,98 @@ class TestIterationLogRecord(unittest.TestCase):
             msg="Iteration log record message does not match expected result",
         )
 
+    def test_iter_log_record_master_backup(self):
+        # for some fields, we choose floats with more than four
+        # decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+            master_backup_solver=True,
+            master_feasibility_success=True,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
+        )
+
+        # now check record logged as expected
+        ans = (
+            "4     1.2346e+00^ 2.3457e-08   3.4568e-07   10      7.6543e-03   "
+            "21.200       \n"
+        )
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+
+        self.assertEqual(
+            ans,
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+    def test_iter_log_record_separation_backup(self):
+        # for some fields, we choose floats with more than four
+        # decimal points to ensure rounding also matches
+        iter_record = IterationLogRecord(
+            iteration=4,
+            objective=1.234567,
+            first_stage_var_shift=2.3456789e-8,
+            second_stage_var_shift=3.456789e-7,
+            dr_var_shift=1.234567e-7,
+            num_violated_cons=10,
+            max_violation=7.654321e-3,
+            elapsed_time=21.2,
+            dr_polishing_success=True,
+            all_sep_problems_solved=True,
+            global_separation=False,
+            master_backup_solver=False,
+            master_feasibility_success=True,
+            separation_backup_local_solver=True,
+            separation_backup_global_solver=False,
+        )
+
+        # backup solver for local separation only
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result = LOG.getvalue()
+        self.assertEqual(
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10^     7.6543e-03   "
+            "21.200       \n",
+            result,
+            msg="Iteration log record message does not match expected result",
+        )
+
+        # backup solver for global separation only
+        iter_record.separation_backup_global_solver = True
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result2 = LOG.getvalue()
+        self.assertEqual(
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10^     7.6543e-03   "
+            "21.200       \n",
+            result2,
+            msg="Iteration log record message does not match expected result",
+        )
+
+        # backup solver for local and global separation
+        iter_record.separation_backup_local_solver = False
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            iter_record.log(logger.info)
+        result3 = LOG.getvalue()
+        self.assertEqual(
+            "4     1.2346e+00  2.3457e-08   3.4568e-07   10^     7.6543e-03   "
+            "21.200       \n",
+            result3,
+            msg="Iteration log record message does not match expected result",
+        )
+
     def test_log_iter_record_not_all_sep_solved(self):
         """
         Test iteration log record in event not all separation problems
@@ -3199,7 +3490,7 @@ class TestIterationLogRecord(unittest.TestCase):
         inequality constraints found to be violated.
         """
         # for some fields, we choose floats with more than four
-        # four decimal points to ensure rounding also matches
+        # decimal points to ensure rounding also matches
         iter_record = IterationLogRecord(
             iteration=4,
             objective=1.234567,
@@ -3212,6 +3503,10 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=True,
             all_sep_problems_solved=False,
             global_separation=False,
+            master_backup_solver=False,
+            master_feasibility_success=True,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3235,7 +3530,7 @@ class TestIterationLogRecord(unittest.TestCase):
         separation failed.
         """
         # for some fields, we choose floats with more than four
-        # four decimal points to ensure rounding also matches
+        # decimal points to ensure rounding also matches
         iter_record = IterationLogRecord(
             iteration=4,
             objective=1.234567,
@@ -3248,6 +3543,10 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=False,
             all_sep_problems_solved=False,
             global_separation=True,
+            master_backup_solver=False,
+            master_feasibility_success=True,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3274,7 +3573,7 @@ class TestIterationLogRecord(unittest.TestCase):
         in which there is no first-stage shift or DR shift.
         """
         # for some fields, we choose floats with more than four
-        # four decimal points to ensure rounding also matches
+        # decimal points to ensure rounding also matches
         iter_record = IterationLogRecord(
             iteration=0,
             objective=-1.234567,
@@ -3287,6 +3586,10 @@ class TestIterationLogRecord(unittest.TestCase):
             dr_polishing_success=True,
             all_sep_problems_solved=False,
             global_separation=True,
+            master_backup_solver=False,
+            master_feasibility_success=True,
+            separation_backup_local_solver=False,
+            separation_backup_global_solver=False,
         )
 
         # now check record logged as expected
@@ -3374,17 +3677,83 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
     Test logging of introductory information by PyROS solver.
     """
 
+    def test_log_config_user_values_all_default(self):
+        """
+        Test that the method for logging the user-specified
+        optional PyROS solver arguments logs nothing if
+        there are no such arguments.
+        """
+        pyros_solver = SolverFactory("pyros")
+        config = pyros_solver.CONFIG(
+            dict(
+                # mandatory arguments to PyROS solver.
+                # by default, these should be excluded from the printout
+                first_stage_variables=[],
+                second_stage_variables=[],
+                uncertain_params=[],
+                uncertainty_set=BoxSet([[1, 2]]),
+                local_solver=SimpleTestSolver(),
+                global_solver=SimpleTestSolver(),
+                # no optional arguments
+            )
+        )
+        with LoggingIntercept(logger=logger, level=logging.INFO) as LOG:
+            pyros_solver._log_config_user_values(
+                logger=logger, config=config, level=logging.INFO
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+    def test_log_config_user_values(self):
+        """
+        Test method for logging config user values.
+        """
+        pyros_solver = SolverFactory("pyros")
+        config = pyros_solver.CONFIG(
+            dict(
+                # mandatory arguments to PyROS solver.
+                # by default, these should be excluded from the printout
+                first_stage_variables=[],
+                second_stage_variables=[],
+                uncertain_params=[],
+                uncertainty_set=BoxSet([[1, 2]]),
+                local_solver=SimpleTestSolver(),
+                global_solver=SimpleTestSolver(),
+                # optional arguments. these should be included
+                decision_rule_order=1,
+                objective_focus="worst_case",
+            )
+        )
+        with LoggingIntercept(logger=logger, level=logging.INFO) as LOG:
+            pyros_solver._log_config_user_values(
+                logger=logger, config=config, level=logging.INFO
+            )
+
+        ans = (
+            "User-provided solver options:\n"
+            f" objective_focus={ObjectiveType.worst_case!r}\n"
+            " decision_rule_order=1\n" + "-" * 78 + "\n"
+        )
+        logged_str = LOG.getvalue()
+        self.assertEqual(
+            logged_str,
+            ans,
+            msg=(
+                "Logger output for PyROS solver config (default case) "
+                "does not match expected result."
+            ),
+        )
+
     def test_log_config(self):
         """
         Test method for logging PyROS solver config dict.
         """
         pyros_solver = SolverFactory("pyros")
         config = pyros_solver.CONFIG(dict(nominal_uncertain_param_vals=[0.5]))
-        with LoggingIntercept(level=logging.INFO) as LOG:
-            pyros_solver._log_config(logger=logger, config=config, level=logging.INFO)
+        with LoggingIntercept(logger=logger, level=logging.DEBUG) as LOG:
+            pyros_solver._log_config(logger=logger, config=config, level=logging.DEBUG)
 
         ans = (
-            "Solver options:\n"
+            "Full solver options:\n"
             " time_limit=None\n"
             " keepfiles=False\n"
             " tee=False\n"
@@ -3486,7 +3855,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check regex main text
         self.assertRegex(
             " ".join(disclaimer_msg_lines[1:-1]),
-            r"PyROS is still under development.*ticket at.*",
+            r"PyROS is currently under active development.*ticket at.*",
         )
 
 
@@ -4411,6 +4780,40 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
 
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
 class TestResolveAndValidatePyROSInputs(unittest.TestCase):
+    def test_validate_pyros_inputs_config_options(self):
+        """
+        Test config setup order of precedence is as expected.
+        """
+        model = build_leyffer_two_cons()
+        box_set = BoxSet(bounds=[[0.25, 2]])
+        solver = SimpleTestSolver()
+        pyros_solver = SolverFactory("pyros")
+        config, _ = pyros_solver._resolve_and_validate_pyros_args(
+            model=model,
+            first_stage_variables=[model.x1, model.x2],
+            second_stage_variables=[],
+            uncertain_params=model.u,
+            uncertainty_set=box_set,
+            local_solver=solver,
+            global_solver=solver,
+            decision_rule_order=1,
+            bypass_local_separation=True,
+            options=dict(solve_master_globally=True, bypass_local_separation=False),
+        )
+        self.assertEqual(config.first_stage_variables, [model.x1, model.x2])
+        self.assertFalse(config.second_stage_variables)
+        self.assertEqual(config.uncertain_params, [model.u])
+        self.assertIs(config.uncertainty_set, box_set)
+        self.assertIs(config.local_solver, solver)
+        self.assertIs(config.global_solver, solver)
+        self.assertEqual(config.decision_rule_order, 1)
+        # was specified directly by keyword and indirectly
+        # through 'options'. value specified directly should
+        # take precedence
+        self.assertTrue(config.bypass_local_separation)
+        # was specified indirectly through "options"
+        self.assertTrue(config.solve_master_globally)
+
     def test_validate_pyros_inputs_config(self):
         """
         Test PyROS solver input validation sets up the

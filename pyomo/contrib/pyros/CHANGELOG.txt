@@ -4,6 +4,28 @@ PyROS CHANGELOG
 
 
 -------------------------------------------------------------------------------
+PyROS 1.3.12    15 Nov 2025
+-------------------------------------------------------------------------------
+- Fix implementation of PyROS IntersectionSet class,
+  particularly for cases involving discrete sets and/or sets defined
+  with auxiliary parameters
+- Tweak and more thoroughly test implementations of common
+  uncertainty set attributes
+
+
+-------------------------------------------------------------------------------
+PyROS 1.3.11    17 Oct 2025
+-------------------------------------------------------------------------------
+- Modify PyROS solver logging defaults
+- Expand and split up the PyROS online documentation pages
+- Add a new, extensive usage tutorial to the PyROS online documentation
+- Replace the original quickstart example with a problem that is smaller,
+  easier to write down, and less sensitive to the subsolver(s) used.
+- Add mathematical definitions of the uncertainty sets to the
+  uncertainty set class docstrings
+
+
+-------------------------------------------------------------------------------
 PyROS 1.3.10    24 Sep 2025
 -------------------------------------------------------------------------------
 - Ensure PyROS supports problems containing no variables/uncertain parameters

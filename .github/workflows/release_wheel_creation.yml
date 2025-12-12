@@ -29,12 +29,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         arch: [all]
-        wheel-version: ['cp39*', 'cp310*', 'cp311*', 'cp312*', 'cp313*']
+        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*']
 
         include:
-        - wheel-version: 'cp39*'
-          TARGET: 'py39'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp310*'
           TARGET: 'py310'
           GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
@@ -47,6 +44,9 @@ jobs:
         - wheel-version: 'cp313*'
           TARGET: 'py313'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+        - wheel-version: 'cp314*'
+          TARGET: 'py314'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
 
         # We use pure python for any Windows/python greater than 3.10
         exclude:
@@ -55,6 +55,8 @@ jobs:
         - wheel-version: 'cp312*'
           os: windows-latest
         - wheel-version: 'cp313*'
+          os: windows-latest
+        - wheel-version: 'cp314*'
           os: windows-latest
 
     steps:
@@ -84,12 +86,9 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         arch: [all]
-        wheel-version: ['cp39*', 'cp310*', 'cp311*', 'cp312*', 'cp313*']
+        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*']
 
         include:
-        - wheel-version: 'cp39*'
-          TARGET: 'py39'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp310*'
           TARGET: 'py310'
           GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
@@ -101,6 +100,9 @@ jobs:
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
         - wheel-version: 'cp313*'
           TARGET: 'py313'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+        - wheel-version: 'cp314*'
+          TARGET: 'py314'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
@@ -130,7 +132,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
@@ -162,7 +164,7 @@ jobs:
         include:
         - os: ubuntu-latest
           TARGET: generic_tarball
-        python-version: [3.9]
+        python-version: ['3.10']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -172,7 +174,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build twine wheel 'setuptools>=65' pybind11
+        pip install build twine wheel 'setuptools>=77' pybind11
     - name: Build generic tarball
       run: |
         export PYOMO_SETUP_ARGS=--without-cython

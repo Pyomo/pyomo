@@ -13,6 +13,8 @@ import datetime
 import io
 import math
 import os
+import logging
+from typing import Mapping, Optional, Sequence, Dict, List
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigValue
@@ -23,6 +25,7 @@ from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.base import VarData, ConstraintData
 
 from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import BranchAndBoundConfig
@@ -39,11 +42,14 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-import logging
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
+import time
 
 
 logger = logging.getLogger(__name__)
-
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
@@ -65,8 +71,8 @@ class GurobiConfig(BranchAndBoundConfig):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.use_mipstart: bool = self.declare(
-            'use_mipstart',
+        self.warmstart_discrete_vars: bool = self.declare(
+            'warmstart_discrete_vars',
             ConfigValue(
                 default=False,
                 domain=bool,
@@ -76,118 +82,238 @@ class GurobiConfig(BranchAndBoundConfig):
         )
 
 
-def _load_suboptimal_mip_solution(solver_model, var_map, vars_to_load, solution_number):
-    """
-    solver_model: gurobipy.Model
-    var_map: Dict[int, gurobipy.Var]
-        Maps the id of the pyomo variable to the gurobipy variable
-    vars_to_load: List[VarData]
-    solution_number: int
-    """
-    if (
-        solver_model.getAttr('NumIntVars') == 0
-        and solver_model.getAttr('NumBinVars') == 0
-    ):
-        raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
-    original_solution_number = solver_model.getParamInfo('SolutionNumber')[2]
-    solver_model.setParam('SolutionNumber', solution_number)
-    gurobi_vars_to_load = [var_map[id(v)] for v in vars_to_load]
-    vals = solver_model.getAttr("Xn", gurobi_vars_to_load)
-    res = ComponentMap()
-    for var, val in zip(vars_to_load, vals):
-        res[var] = val
-    solver_model.setParam('SolutionNumber', original_solution_number)
-    return res
+class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
+    def __init__(self, solver_model, pyomo_model) -> None:
+        super().__init__()
+        self._solver_model = solver_model
+        self._pyomo_model = pyomo_model  # needed for suffixes
+        GurobiDirectBase._register_env_client()
 
+    def get_number_of_solutions(self) -> int:
+        return self._solver_model.SolCount
 
-def _load_vars(solver_model, var_map, vars_to_load, solution_number=None):
-    """
-    solver_model: gurobipy.Model
-    var_map: Dict[int, gurobipy.Var]
-        Maps the id of the pyomo variable to the gurobipy variable
-    vars_to_load: List[VarData]
-    solution_number: int
-    """
-    for v, val in _get_vars(
-        solver_model=solver_model,
-        var_map=var_map,
-        vars_to_load=vars_to_load,
-        solution_number=solution_number,
-    ).items():
-        v.set_value(val, skip_validation=True)
-    StaleFlagManager.mark_all_as_stale(delayed=True)
+    def get_solution_ids(self) -> List:
+        return list(range(self.get_number_of_solutions()))
 
+    def _var_pair_iter(self):
+        """
+        Should iterate over pairs of (pyomo var, gurobipy var)
+        """
+        raise NotImplementedError('should be implemented by derived classes')
 
-def _get_vars(solver_model, var_map, vars_to_load, solution_number=None):
-    """
-    solver_model: gurobipy.Model
-    var_map: Dict[int, gurobipy.Var]
-        Maps the id of the pyomo variable to the gurobipy variable
-    vars_to_load: List[VarData]
-    solution_number: int
-    """
-    if solver_model.SolCount == 0:
-        raise NoSolutionError()
+    def _get_var_map(self):
+        raise NotImplementedError('should be implemented by derived classes')
 
-    if solution_number not in {0, None}:
-        return _load_suboptimal_mip_solution(
-            solver_model=solver_model,
-            var_map=var_map,
-            vars_to_load=vars_to_load,
-            solution_number=solution_number,
+    def _get_con_map(self):
+        raise NotImplementedError('should be implemented by derived classes')
+
+    def __del__(self):
+        # Release the gurobi license if this is the last reference to
+        # the environment (either through a results object or solver
+        # interface)
+        GurobiDirectBase._release_env_client()
+
+    def _load_all_vars_solution_0(self):
+        gvars = [j for i, j in self._var_pair_iter()]
+        vals = self._solver_model.getAttr("X", gvars)
+        for (pv, _), val in zip(self._var_pair_iter(), vals):
+            pv.set_value(val, skip_validation=True)
+
+    def _load_subset_vars_solution_0(self, vars_to_load):
+        var_map = self._get_var_map()
+        gvars = [var_map[i] for i in vars_to_load]
+        vals = self._solver_model.getAttr("X", gvars)
+        for pv, val in zip(vars_to_load, vals):
+            pv.set_value(val, skip_validation=True)
+
+    def _load_all_vars_solution_N(self, solution_number):
+        assert solution_number != 0
+        if (
+            self._solver_model.getAttr('NumIntVars') == 0
+            and self._solver_model.getAttr('NumBinVars') == 0
+        ):
+            raise ValueError(
+                'Cannot obtain suboptimal solutions for a continuous model'
+            )
+        original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
+        self._solver_model.setParam('SolutionNumber', solution_number)
+        gvars = [j for i, j in self._var_pair_iter()]
+        vals = self._solver_model.getAttr("Xn", gvars)
+        for (pv, _), val in zip(self._var_pair_iter(), vals):
+            pv.set_value(val, skip_validation=True)
+        self._solver_model.setParam('SolutionNumber', original_solution_number)
+
+    def _load_subset_vars_solution_N(self, vars_to_load, solution_number):
+        assert solution_number != 0
+        if (
+            self._solver_model.getAttr('NumIntVars') == 0
+            and self._solver_model.getAttr('NumBinVars') == 0
+        ):
+            raise ValueError(
+                'Cannot obtain suboptimal solutions for a continuous model'
+            )
+        original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
+        self._solver_model.setParam('SolutionNumber', solution_number)
+        var_map = self._get_var_map()
+        gvars = [var_map[i] for i in vars_to_load]
+        vals = self._solver_model.getAttr("Xn", gvars)
+        for (pv, _), val in zip(self._var_pair_iter(), vals):
+            pv.set_value(val, skip_validation=True)
+        self._solver_model.setParam('SolutionNumber', original_solution_number)
+
+    def _get_all_vars_solution_0(self):
+        gvars = [j for i, j in self._var_pair_iter()]
+        vals = self._solver_model.getAttr("X", gvars)
+        return ComponentMap((i[0], val) for i, val in zip(self._var_pair_iter(), vals))
+
+    def _get_subset_vars_solution_0(self, vars_to_load):
+        var_map = self._get_var_map()
+        gvars = [var_map[i] for i in vars_to_load]
+        vals = self._solver_model.getAttr("X", gvars)
+        return ComponentMap(zip(vars_to_load, vals))
+
+    def _get_all_vars_solution_N(self, solution_number):
+        assert solution_number != 0
+        if (
+            self._solver_model.getAttr('NumIntVars') == 0
+            and self._solver_model.getAttr('NumBinVars') == 0
+        ):
+            raise ValueError(
+                'Cannot obtain suboptimal solutions for a continuous model'
+            )
+        original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
+        self._solver_model.setParam('SolutionNumber', solution_number)
+        gvars = [j for i, j in self._var_pair_iter()]
+        vals = self._solver_model.getAttr("Xn", gvars)
+        self._solver_model.setParam('SolutionNumber', original_solution_number)
+        return ComponentMap((i[0], val) for i, val in zip(self._var_pair_iter(), vals))
+
+    def _get_subset_vars_solution_N(self, vars_to_load, solution_number):
+        assert solution_number != 0
+        if (
+            self._solver_model.getAttr('NumIntVars') == 0
+            and self._solver_model.getAttr('NumBinVars') == 0
+        ):
+            raise ValueError(
+                'Cannot obtain suboptimal solutions for a continuous model'
+            )
+        original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
+        self._solver_model.setParam('SolutionNumber', solution_number)
+        var_map = self._get_var_map()
+        gvars = [var_map[i] for i in vars_to_load]
+        vals = self._solver_model.getAttr("Xn", gvars)
+        self._solver_model.setParam('SolutionNumber', original_solution_number)
+        return ComponentMap(zip(vars_to_load, vals))
+
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> None:
+        if self._solver_model.SolCount == 0:
+            raise NoSolutionError()
+        if solution_id is None:
+            solution_id = 0
+        if vars_to_load is None:
+            if solution_id == 0:
+                self._load_all_vars_solution_0()
+            else:
+                self._load_all_vars_solution_N(solution_number=solution_id)
+        else:
+            if solution_id == 0:
+                self._load_subset_vars_solution_0(vars_to_load=vars_to_load)
+            else:
+                self._load_subset_vars_solution_N(
+                    vars_to_load=vars_to_load, solution_number=solution_id
+                )
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+
+    def get_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> Mapping[VarData, float]:
+        if self._solver_model.SolCount == 0:
+            raise NoSolutionError()
+        if solution_id is None:
+            solution_id = 0
+        if vars_to_load is None:
+            if solution_id == 0:
+                res = self._get_all_vars_solution_0()
+            else:
+                res = self._get_all_vars_solution_N(solution_number=solution_id)
+        else:
+            if solution_id == 0:
+                res = self._get_subset_vars_solution_0(vars_to_load=vars_to_load)
+            else:
+                res = self._get_subset_vars_solution_N(
+                    vars_to_load=vars_to_load, solution_number=solution_id
+                )
+        return res
+
+    def _get_rc_all_vars(self):
+        gvars = [j for _, j in self._var_pair_iter()]
+        vals = self._solver_model.getAttr("Rc", gvars)
+        return ComponentMap((i[0], val) for i, val in zip(self._var_pair_iter(), vals))
+
+    def _get_rc_subset_vars(self, vars_to_load):
+        var_map = self._get_var_map()
+        gvars = [var_map[i] for i in vars_to_load]
+        vals = self._solver_model.getAttr("Rc", gvars)
+        return ComponentMap(zip(vars_to_load, vals))
+
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> Mapping[VarData, float]:
+        if solution_id is not None and solution_id != 0:
+            raise NoReducedCostsError('Can only get reduced costs for solution_id = 0')
+        if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
+            raise NoReducedCostsError()
+        if self._solver_model.IsMIP:
+            # this will also return True for continuous, nonconvex models
+            raise NoReducedCostsError('Can only get reduced costs for convex problems')
+        if vars_to_load is None:
+            res = self._get_rc_all_vars()
+        else:
+            res = self._get_rc_subset_vars(vars_to_load=vars_to_load)
+        return res
+
+    def get_duals(
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
+    ) -> Dict[ConstraintData, float]:
+        if solution_id is not None and solution_id != 0:
+            raise NoDualsError('Can only get duals for solution_id = 0')
+        if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
+            raise NoDualsError()
+        if self._solver_model.IsMIP:
+            # this will also return True for continuous, nonconvex models
+            raise NoDualsError('Can only get duals for convex problems')
+
+        qcons = set(self._solver_model.getQConstrs())
+        con_map = self._get_con_map()
+        if cons_to_load is None:
+            cons_to_load = con_map.keys()
+
+        duals = {}
+        for c in cons_to_load:
+            gurobi_con = con_map[c]
+            if type(gurobi_con) is tuple:
+                # only linear range constraints are supported
+                gc1, gc2 = gurobi_con
+                d1 = gc1.Pi
+                d2 = gc2.Pi
+                if abs(d1) > abs(d2):
+                    duals[c] = d1
+                else:
+                    duals[c] = d2
+            else:
+                if gurobi_con in qcons:
+                    duals[c] = gurobi_con.QCPi
+                else:
+                    duals[c] = gurobi_con.Pi
+
+        return duals
+
+    def load_import_suffixes(self, solution_id=None):
+        load_import_suffixes(
+            pyomo_model=self._pyomo_model, solution_loader=self, solution_id=solution_id
         )
-
-    gurobi_vars_to_load = [var_map[id(v)] for v in vars_to_load]
-    vals = solver_model.getAttr("X", gurobi_vars_to_load)
-
-    res = ComponentMap()
-    for var, val in zip(vars_to_load, vals):
-        res[var] = val
-    return res
-
-
-def _get_reduced_costs(solver_model, var_map, vars_to_load):
-    """
-    solver_model: gurobipy.Model
-    var_map: Dict[int, gurobipy.Var]
-        Maps the id of the pyomo variable to the gurobipy variable
-    vars_to_load: List[VarData]
-    """
-    if solver_model.Status != gurobipy.GRB.OPTIMAL:
-        raise NoReducedCostsError()
-
-    res = ComponentMap()
-    gurobi_vars_to_load = [var_map[id(v)] for v in vars_to_load]
-    vals = solver_model.getAttr("Rc", gurobi_vars_to_load)
-
-    for var, val in zip(vars_to_load, vals):
-        res[var] = val
-
-    return res
-
-
-def _get_duals(solver_model, con_map, linear_cons_to_load, quadratic_cons_to_load):
-    """
-    solver_model: gurobipy.Model
-    con_map: Dict[ConstraintData, gurobipy.Constr]
-        Maps the pyomo constraint to the gurobipy constraint
-    linear_cons_to_load: List[ConstraintData]
-    quadratic_cons_to_load: List[ConstraintData]
-    """
-    if solver_model.Status != gurobipy.GRB.OPTIMAL:
-        raise NoDualsError()
-
-    linear_gurobi_cons = [con_map[c] for c in linear_cons_to_load]
-    quadratic_gurobi_cons = [con_map[c] for c in quadratic_cons_to_load]
-    linear_vals = solver_model.getAttr("Pi", linear_gurobi_cons)
-    quadratic_vals = solver_model.getAttr("QCPi", quadratic_gurobi_cons)
-
-    duals = {}
-    for c, val in zip(linear_cons_to_load, linear_vals):
-        duals[c] = val
-    for c, val in zip(quadratic_cons_to_load, quadratic_vals):
-        duals[c] = val
-    return duals
 
 
 class GurobiDirectBase(SolverBase):
@@ -278,6 +404,8 @@ class GurobiDirectBase(SolverBase):
             model.dispose()
 
     def version(self):
+        if not gurobipy_available:
+            return None
         version = (
             gurobipy.GRB.VERSION_MAJOR,
             gurobipy.GRB.VERSION_MINOR,
@@ -285,7 +413,7 @@ class GurobiDirectBase(SolverBase):
         )
         return version
 
-    def _create_solver_model(self, pyomo_model):
+    def _create_solver_model(self, pyomo_model, config):
         # should return gurobi_model, solution_loader, has_objective
         raise NotImplementedError('should be implemented by derived classes')
 
@@ -300,21 +428,10 @@ class GurobiDirectBase(SolverBase):
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        orig_config = self.config
         orig_cwd = os.getcwd()
         try:
             config = self.config(value=kwds, preserve_implicit=True)
 
-            # hack to work around legacy solver wrapper __setattr__
-            # otherwise, this would just be self.config = config
-            object.__setattr__(self, 'config', config)
-
-            if not self.available():
-                c = self.__class__
-                raise ApplicationError(
-                    f'Solver {c.__module__}.{c.__qualname__} is not available '
-                    f'({self.available()}).'
-                )
             if config.timer is None:
                 config.timer = HierarchicalTimer()
             timer = config.timer
@@ -326,7 +443,7 @@ class GurobiDirectBase(SolverBase):
                 os.chdir(config.working_dir)
             with capture_output(TeeStream(*ostreams), capture_fd=False):
                 gurobi_model, solution_loader, has_obj = self._create_solver_model(
-                    model
+                    model, config
                 )
                 options = config.solver_options
 
@@ -341,7 +458,7 @@ class GurobiDirectBase(SolverBase):
                 if config.abs_gap is not None:
                     gurobi_model.setParam('MIPGapAbs', config.abs_gap)
 
-                if config.use_mipstart:
+                if config.warmstart_discrete_vars:
                     self._mipstart()
 
                 for key, option in options.items():
@@ -351,17 +468,16 @@ class GurobiDirectBase(SolverBase):
                 gurobi_model.optimize(self._callback)
                 timer.stop('optimize')
 
-            res = self._postsolve(
-                grb_model=gurobi_model, solution_loader=solution_loader, has_obj=has_obj
+            res = self._populate_results(
+                grb_model=gurobi_model,
+                solution_loader=solution_loader,
+                has_obj=has_obj,
+                config=config,
             )
         except InfeasibleConstraintException:
-            res = self._get_infeasible_results()
+            res = self._get_infeasible_results(config=config)
         finally:
             os.chdir(orig_cwd)
-
-            # hack to work around legacy solver wrapper __setattr__
-            # otherwise, this would just be self.config = orig_config
-            object.__setattr__(self, 'config', orig_config)
 
         res.solver_log = ostreams[0].getvalue()
         end_timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -392,7 +508,7 @@ class GurobiDirectBase(SolverBase):
             }
         return GurobiDirectBase._tc_map
 
-    def _get_infeasible_results(self):
+    def _get_infeasible_results(self, config):
         res = Results()
         res.solution_loader = NoSolutionSolutionLoader()
         res.solution_status = SolutionStatus.noSolution
@@ -401,16 +517,16 @@ class GurobiDirectBase(SolverBase):
         res.objective_bound = None
         res.iteration_count = None
         res.timing_info.gurobi_time = None
-        res.solver_config = self.config
+        res.solver_config = config
         res.solver_name = self.name
         res.solver_version = self.version()
-        if self.config.raise_exception_on_nonoptimal_result:
+        if config.raise_exception_on_nonoptimal_result:
             raise NoOptimalSolutionError()
-        if self.config.load_solutions:
+        if config.load_solutions:
             raise NoFeasibleSolutionError()
         return res
 
-    def _postsolve(self, grb_model, solution_loader, has_obj):
+    def _populate_results(self, grb_model, solution_loader, has_obj, config):
         status = grb_model.Status
 
         results = Results()
@@ -432,7 +548,7 @@ class GurobiDirectBase(SolverBase):
         if (
             results.termination_condition
             != TerminationCondition.convergenceCriteriaSatisfied
-            and self.config.raise_exception_on_nonoptimal_result
+            and config.raise_exception_on_nonoptimal_result
         ):
             raise NoOptimalSolutionError()
 
@@ -455,21 +571,19 @@ class GurobiDirectBase(SolverBase):
             results.incumbent_objective = None
             results.objective_bound = None
 
-        results.iteration_count = grb_model.getAttr('IterCount')
+        results.extra_info.IterCount = grb_model.getAttr('IterCount')
+        results.extra_info.BarIterCount = grb_model.getAttr('BarIterCount')
+        results.extra_info.NodeCount = grb_model.getAttr('NodeCount')
 
-        self.config.timer.start('load solution')
-        if self.config.load_solutions:
+        config.timer.start('load solution')
+        if config.load_solutions:
             if grb_model.SolCount > 0:
                 results.solution_loader.load_solution()
             else:
                 raise NoFeasibleSolutionError()
-        self.config.timer.stop('load solution')
+        config.timer.stop('load solution')
 
-        # self.config gets copied a the beginning of
-        # solve and restored at the end, so modifying
-        # results.solver_config will not actually
-        # modify self.config
-        results.solver_config = self.config
+        results.solver_config = config
         results.solver_name = self.name
         results.solver_version = self.version()
 

@@ -180,6 +180,10 @@ def ROSolver_iterative_solve(model_data):
                 all_sep_problems_solved=None,
                 global_separation=None,
                 elapsed_time=get_main_elapsed_time(model_data.timing),
+                master_backup_solver=master_soln.backup_solver_used,
+                master_feasibility_success=master_soln.feasibility_problem_success,
+                separation_backup_local_solver=None,
+                separation_backup_global_solver=None,
             )
             iter_log_record.log(config.progress_logger.info)
             return GRCSResults(
@@ -226,6 +230,10 @@ def ROSolver_iterative_solve(model_data):
                 all_sep_problems_solved=None,
                 global_separation=None,
                 elapsed_time=model_data.timing.get_main_elapsed_time(),
+                master_backup_solver=master_soln.backup_solver_used,
+                master_feasibility_success=master_soln.feasibility_problem_success,
+                separation_backup_local_solver=None,
+                separation_backup_global_solver=None,
             )
             iter_log_record.log(config.progress_logger.info)
             return GRCSResults(
@@ -269,6 +277,12 @@ def ROSolver_iterative_solve(model_data):
             all_sep_problems_solved=all_sep_problems_solved,
             global_separation=separation_results.solved_globally,
             elapsed_time=get_main_elapsed_time(model_data.timing),
+            master_backup_solver=master_soln.backup_solver_used,
+            master_feasibility_success=master_soln.feasibility_problem_success,
+            separation_backup_local_solver=separation_results.backup_local_solver_used,
+            separation_backup_global_solver=(
+                separation_results.backup_global_solver_used
+            ),
         )
 
         # terminate on time limit

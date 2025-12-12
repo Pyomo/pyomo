@@ -157,7 +157,6 @@ class TestResults(unittest.TestCase):
         expected_declared = {
             'extra_info',
             'incumbent_objective',
-            'iteration_count',
             'objective_bound',
             'solution_loader',
             'solution_status',
@@ -182,7 +181,6 @@ class TestResults(unittest.TestCase):
         self.assertEqual(res.solution_status, results.SolutionStatus.noSolution)
         self.assertIsNone(res.solver_name)
         self.assertIsNone(res.solver_version)
-        self.assertIsNone(res.iteration_count)
         self.assertIsInstance(res.timing_info, ConfigDict)
         self.assertIsInstance(res.extra_info, ConfigDict)
         self.assertIsNone(res.timing_info.start_timestamp)
@@ -198,7 +196,6 @@ incumbent_objective: None
 objective_bound: None
 solver_name: None
 solver_version: None
-iteration_count: None
 timing_info:
   start_timestamp: None
   wall_time: None
