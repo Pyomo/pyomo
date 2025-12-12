@@ -5,7 +5,7 @@ of experiments using science-based models.
 
 Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the 
 University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact 
-(CCSI2) <https://github.com/CCSI-Toolset/>`_.
+(CCSI2) <https://github.com/CCSI-Toolset/>`_
 project, funded through the U.S. Department Of Energy Office of Fossil Energy.
 
 If you use Pyomo.DoE, please cite:
@@ -18,7 +18,7 @@ Methodology Overview
 ---------------------
 
 Model-based Design of Experiments (MBDoE) is a technique to maximize the information 
-gain of experiments by directly using science-based models with physically meaningful 
+gain from experiments by directly using science-based models with physically meaningful 
 parameters. It is one key component in the model calibration and uncertainty 
 quantification workflow shown below:
 
@@ -36,7 +36,7 @@ the allowable design spaces for design variables, and the assumed observation er
 During exploratory analysis, Pyomo.DoE checks if the model parameters can be 
 inferred from the postulated measurements or preliminary data.
 MBDoE then recommends optimized experimental conditions for collecting more data.
-Parameter estimation packages such as :ref:`Parmest <parmest>` can perform 
+Parameter estimation packages such as :ref:`ParmEst <parmest>` can perform 
 parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
 If the parameter uncertainties are sufficiently small, the workflow terminates 
@@ -79,7 +79,7 @@ where:
 *  :math:`\mathbf{t} \in \mathbb{R}^{N_t \times 1}` is a union of all time sets.
 
 .. note::
-    * Parameters and design variables should be defined as Pyomo ``Var`` components when building the model in ``Experiment`` Class so that users can use both ``ParmEst`` and ``Pyomo.DoE`` seamlessly.
+    * Parameters and design variables should be defined as Pyomo ``Var`` components when building the model in ``Experiment`` canlass so that users can use both ``ParmEst`` and ``Pyomo.DoE`` seamlessly.
 
 Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
@@ -116,8 +116,8 @@ Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the information
     * - Design criterion
       - Computation
       - Geometrical meaning
-    * - A-optimality [#]_
-      -   :math:`\text{trace}({\mathbf{M}}^{-1})`
+    * - Pseudo A-optimality
+      -   :math:`\text{trace}({\mathbf{M}})`
       - Dimensions of the enclosing box of the confidence ellipse
     * - D-optimality
       -   :math:`\text{det}({\mathbf{M}})`
@@ -129,17 +129,20 @@ Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the information
       -   :math:`\text{cond}({\mathbf{M}})`
       - Ratio of the longest axis to the shortest axis of the confidence ellipse
 
-.. [#] A-optimality is implemented as minimizing the trace of the inverse of FIM.
 
 In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required input to the Pyomo.DoE solver is a subclass of the :ref:`Parmest <parmest>` ``Experiment`` class. The subclass must have a ``get_labeled_model`` method which returns a Pyomo model containing four Pyomo ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, :ref:`Parmest <parmest>`. The four Pyomo ``Suffix`` components are:
+The required input to the Pyomo.DoE is a subclass of the :ref:`ParmEst <parmest>` ``Experiment`` class. 
+The subclass must have a ``get_labeled_model`` method which returns a Pyomo `ConcreteModel` 
+containing four Pyomo ``Suffix`` components identifying the parts of the model used in 
+MBDoE analysis. This is in line with the convention used in the parameter estimation tool,
+ :ref:`ParmEst <parmest>`. The four Pyomo ``Suffix`` components are:
 
 * ``experiment_inputs`` - The experimental design decisions
 * ``experiment_outputs`` - The values measured during the experiment
-* ``measurement_error`` - The error associated with individual values measured during the experiment
+* ``measurement_error`` - The error associated with individual values measured during the experiment. It is passed as a standard deviation or square root of the diagonal elements of the observation error covariance matrix. Pyomo.DoE currently assumes that the observation errors are Gaussain and independent both in time and across measurements.
 * ``unknown_parameters`` - Those parameters in the model that are estimated using the measured values during the experiment
 
 An example of the subclassed ``Experiment`` object that builds and labels the model is shown in the next few sections.
@@ -177,7 +180,7 @@ The Arrhenius equations model the temperature dependence of the reaction rate co
 
 
 :math:`C_A(t), C_B(t), C_C(t)` are the time-varying concentrations of the species A, B, C, respectively.
-:math:`k_1, k_2` are the rates for the two chemical reactions using an Arrhenius equation with activation energies :math:`E_1, E_2` and pre-exponential factors :math:`A_1, A_2`.
+:math:`k_1, k_2` are the rate constants for the two chemical reactions using an Arrhenius equation with activation energies :math:`E_1, E_2` and pre-exponential factors :math:`A_1, A_2`.
 The goal of MBDoE is to optimize the experiment design variables :math:`\boldsymbol{\varphi} = (C_{A0}, T(t))`, where :math:`C_{A0},T(t)` are the initial concentration of species A and the time-varying reactor temperature, to maximize the precision of unknown model parameters :math:`\boldsymbol{\theta} = (A_1, E_1, A_2, E_2)` by measuring :math:`\mathbf{y}(t)=(C_A(t), C_B(t), C_C(t))`.
 The observation errors are assumed to be independent both in time and across measurements with a constant standard deviation of 1 M for each species.
 
@@ -187,16 +190,21 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
 .. note::
 
     This example uses the data file ``result.json``, located in the Pyomo repository at: 
-    ``pyomo/contrib/doe/examples/result.json``, which contains the nominal parameter values, and measurements for the reaction kinetics experiment.
+    ``pyomo/contrib/doe/examples/result.json``, which contains the nominal parameter 
+    values, and measurements for the reaction kinetics experiment.
 
 .. doctest::
 
     # === Required import ===
     >>> import pyomo.environ as pyo
+    >>> from pyomo.dae import ContinuousSet, DerivativeVar
     >>> from pyomo.contrib.doe import DesignOfExperiments
+    >>> from pyomo.contrib.parmest.experiment import Experiment
+    >>> import pathlib
     >>> import numpy as np
+    >>> import json
 
-Subclass the :ref:`Parmest <parmest>` ``Experiment`` class to define the reaction kinetics experiment and build the Pyomo ConcreteModel.
+Subclass the :ref:`ParmEst <parmest>` ``Experiment`` class to define the reaction kinetics experiment and build the Pyomo ConcreteModel.
     
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: ========================
@@ -223,7 +231,8 @@ Here, we add data to the model and finalize the discretization using a new metho
 Step 3: Label the information needed for DoE analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We label the four important groups as defined before by adding a ``label_experiment`` method.
+We label the four important groups as Pyomo Suffix components as mentioned before by 
+adding a ``label_experiment`` method.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End model finalization
@@ -232,7 +241,8 @@ We label the four important groups as defined before by adding a ``label_experim
 Step 4: Implement the ``get_labeled_model`` method
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method utilizes the previous 3 steps and is used by `Pyomo.DoE` to build the model to perform optimal experimental design.
+This method utilizes the previous 3 steps and is used by `Pyomo.DoE` to build the model 
+to perform optimal experimental design.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End constructor definition
@@ -245,7 +255,7 @@ Exploratory analysis is suggested to enumerate the design space to check if the 
 i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number. 
 Additionally, it helps to initialize the model for the optimal experimental design step. 
 
-Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` function.
+Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` method.
 The ``compute_FIM_full_factorial`` method generates a grid over the design space as specified by the user. Each grid point represents an MBDoE problem solved using ``compute_FIM`` method. In this way, sensitivity of the FIM over the design space can be evaluated.
 
 The following code executes the above problem description:
@@ -334,23 +344,34 @@ The following code executes the above problem description:
 
 An example output of the code above, a design exploration for the initial 
 concentration and temperature as experimental design variables with 9 
-values, produces the the four figures for four optimality criteria.
-Only D-optimality is shown here. 
+values for each, produces the the four figures for four optimality criteria as shown below: 
 
-.. figure:: FIM_sensitivity_D-opt.png
-   :scale: 50 %
+|plot1| |plot2|
 
-A heatmap shows the change of the objective function, a.k.a. the 
+|plot3| |plot4|
+
+.. |plot1| image:: example_reactor_compute_FIM_D_opt.png
+   :width: 48 %
+
+.. |plot2| image:: example_reactor_compute_FIM_pseudo_A_opt.png
+   :width: 48 %
+
+.. |plot3| image:: example_reactor_compute_FIM_E_opt.png
+   :width: 48 %
+
+.. |plot4| image:: example_reactor_compute_FIM_ME_opt.png
+   :width: 48 %
+
+The heatmaps show the values of the objective functions, a.k.a. the 
 experimental information content, in the design space. Horizontal 
 and vertical axes are the two experimental design variables, while 
 the color of each grid shows the experimental information content. 
-For D-optimality, the figure shows that the 
+For D-optimality (upper left subplot), the figure shows that the 
 most informative region is around :math:`C_{A0}=5.0` M, :math:`T=500.0` K with 
-a log-10 determinant of FIM being around 19, 
+a :math:`\log_{10}` determinant of FIM being around 19, 
 while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=300.0` K, 
-with a log-10 determinant of FIM being around -5.
+with a :math:`\log_{10}` determinant of FIM being around -5.
 
-``compute_FIM_full_factorial`` 
 
 Step 6: Performing an optimal experimental design
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -360,12 +381,15 @@ The same object can be used to design an optimal experiment with a single
 line of code. We can initialize the model with the result we obtained from
 the exploratory analysis step to speed up convergence.
 
-.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
-    :start-after: Begin optimal DoE
-    :end-before: Print out a results summary
+.. code-block:: python
+    
+    doe_obj.run_doe()
+    # Print the optimal design and corresponding objective value
+    print(doe_obj.results)
+
 
 When run, the optimal design is an initial concentration of 5.0 mol/L and 
 an initial temperature of 494 K with all other temperatures being 300 K. 
-The corresponding log-10 determinant of the FIM is 19.32.
+The corresponding :math:`\log_{10}` determinant of the FIM is 19.32.
 
 
