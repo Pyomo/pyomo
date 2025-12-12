@@ -84,7 +84,7 @@ class TestSolParser(unittest.TestCase):
         # solver returned some (non-zero) duals, but we should zero them out
         sol_data = self._FakeSolData(duals=[123.0, -7.5])
 
-        loader = SolSolutionLoader(sol_data, nl_info)
+        loader = SolSolutionLoader(sol_data, nl_info, m)
         duals = loader.get_duals()
         self.assertEqual(duals[m.c1], 0.0)
         self.assertEqual(duals[m.c2], 0.0)
