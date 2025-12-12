@@ -107,20 +107,13 @@ def solver_factory(version: int | None = None) -> int | Any:
         2: _appsi.SolverFactory,
         3: _contrib.SolverFactory,
     }
-
-    # First time through, _active_solver_factory_version is not defined.
-    # Go look and see what it was initialized to in pyomo.environ
-    try:
-        _ = _active_solver_factory_version
-    except NameError:
-        for ver, cls in versions.items():
-            if cls._cls is _environ.SolverFactory._cls:
-                _active_solver_factory_version = ver
-                break
-        return _active_solver_factory_version
-    #
     # The user is just asking what the current SolverFactory is; tell them.
     if version is None:
+        if "_active_solver_factory_version" not in globals():
+            for ver, cls in versions.items():
+                if cls._cls is _environ.SolverFactory._cls:
+                    _active_solver_factory_version = ver
+                    break
         return _active_solver_factory_version
     #
     # Update the current SolverFactory to be a shim around (shallow copy
