@@ -58,7 +58,7 @@ def solver_factory(version: Literal[3]) -> "_contrib.SolverFactoryClass": ...
 def solver_factory(version: int) -> Any: ...
 
 
-def solver_factory(version=None):
+def solver_factory(version: int | None = None) -> int | Any:
     """Get (or set) the active implementation of the SolverFactory
 
     This allows users to query / set the current implementation of the
@@ -97,6 +97,7 @@ def solver_factory(version=None):
        >>> from pyomo.__future__ import solver_factory_v1
 
     """
+    global _active_solver_factory_version
     import pyomo.opt.base.solvers as _solvers
     import pyomo.contrib.solver.common.factory as _contrib
     import pyomo.contrib.appsi.base as _appsi
@@ -107,25 +108,26 @@ def solver_factory(version=None):
         3: _contrib.SolverFactory,
     }
 
-    current = getattr(solver_factory, '_active_version', None)
-    # First time through, _active_version is not defined.  Go look and
-    # see what it was initialized to in pyomo.environ
-    if current is None:
+    # First time through, _active_solver_factory_version is not defined.
+    # Go look and see what it was initialized to in pyomo.environ
+    try:
+        _ = _active_solver_factory_version
+    except NameError:
         for ver, cls in versions.items():
             if cls._cls is _environ.SolverFactory._cls:
-                solver_factory._active_version = ver  # type: ignore
+                _active_solver_factory_version = ver
                 break
-        return solver_factory._active_version  # type: ignore
+        return _active_solver_factory_version
     #
     # The user is just asking what the current SolverFactory is; tell them.
     if version is None:
-        return solver_factory._active_version  # type: ignore
+        return _active_solver_factory_version
     #
     # Update the current SolverFactory to be a shim around (shallow copy
     # of) the new active factory
     src = versions.get(version, None)
-    if version is not None:
-        solver_factory._active_version = version  # type: ignore
+    if src is not None:
+        _active_solver_factory_version = version
         for attr in ('_description', '_cls', '_doc'):
             setattr(_environ.SolverFactory, attr, getattr(src, attr))
     else:
@@ -136,4 +138,4 @@ def solver_factory(version=None):
     return src
 
 
-solver_factory._active_version = solver_factory()  # type: ignore
+_active_solver_factory_version = solver_factory()
