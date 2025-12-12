@@ -68,7 +68,7 @@ class RooneyBieglerExperiment(Experiment):
         m = self.model
 
         # Add experiment outputs as a suffix
-        # Experiment outputs suffix is required for parest
+        # Experiment outputs suffix is required for parmest
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_outputs.update([(m.y, self.data['y'])])
 
