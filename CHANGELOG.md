@@ -2,6 +2,47 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.9.5   (17 Oct 2025)
+-------------------------------------------------------------------------------
+
+SIGNIFICANT CHANGE NOTICE
+
+- This will be the last release to support Python 3.9
+- This is the first release to be tested against Python 3.14
+
+CHANGELOG
+
+- General
+  - Add Python 3.14 as a supported version (#3749, #3728)
+  - New Typos Updates (#3715, #3739)
+  - Modernization: Convert to new implicit standard for classes (#3654)
+  - Fix boolean conversion in DeferredImportIndicator class (#3746)
+- Core
+  - LinearExpression should return tuples instead of lists (#3751)
+  - Initializing Config containers shouldn't mark as "user set" (#3722)
+- Documentation
+  - Update URLs in source code (#3755)
+- Solver Interfaces
+  - Set Gurobi LogToConsole instead of OutputFlag to handle "tee" (#3716)
+  - New KNITRO direct solver interface (#3707)
+  - Add Gurobi direct support for MINLP (#3745)
+  - Bugfix: IPOPT log parser and no objective case (#3738)
+  - Add test to ensure `Results` object is populated fully (#3709)
+  - Mark that AMPL Gurobi 12.0.3 returns incorrect dual values (#3750)
+  - Gams gurobi valid solvers fix (#3714)
+  - Validate new api_version() method, implement on wrapper classes (#3717)
+- Testing
+  - Update to pypy3.11 and ignore pint (#3756)
+- Contributed Packages
+  - alternative_solutions: Gurobi solution pool tweak (#3726)
+  - DoE: Finish GreyBox / ME-opt Hessian (#3740, #3727)
+  - DoE: Measurement error convention correction (#3723)
+  - piecewise: Fix deprecation in NonlinearToPWL/LinearRepnVisitor (#3752)
+  - PyROS: Restructure and add tutorial to online documentation (#3733)
+  - PyROS: Modify the logging system (#3732)
+  - PyROS: Ensure support for problems With no Vars/uncertain Params (#3720)
+
+-------------------------------------------------------------------------------
 Pyomo 6.9.4   (27 Aug 2025)
 -------------------------------------------------------------------------------
 

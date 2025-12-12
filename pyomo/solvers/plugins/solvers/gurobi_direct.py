@@ -239,10 +239,13 @@ class GurobiDirect(DirectSolver):
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
 
-        if self._tee:
-            self._solver_model.setParam('OutputFlag', 1)
-        else:
-            self._solver_model.setParam('OutputFlag', 0)
+        # We would like to just set OutputFlag to turn off the console
+        # log, but that prevents users from using the Gurobi LogFile
+        # option (see #3589 / #3716).  BUT just setting LogToConsole
+        # triggers Gurobi to write a message to the console.  We will
+        # capture that message here:
+        with capture_output(capture_fd=True):
+            self._solver_model.setParam('LogToConsole', int(bool(self._tee)))
 
         if self._keepfiles:
             # Only save log file when the user wants to keep it.

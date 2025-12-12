@@ -10,7 +10,12 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.common.errors import format_exception, PyomoException
+from pyomo.common.errors import (
+    format_exception,
+    PyomoException,
+    DeveloperError,
+    MouseTrap,
+)
 
 
 class LocalException(Exception):
@@ -142,6 +147,19 @@ class TestFormatException(unittest.TestCase):
             "Hello world:\n    This is an epilog:",
         )
 
+    def test_format_empty_message(self):
+        msg = format_exception('')
+        self.assertEqual('', msg)
+
+        msg = format_exception(repr(''))
+        self.assertEqual("''", msg)
+
+        msg = format_exception('', prolog="dev error:")
+        self.assertEqual("dev error:", msg)
+
+        msg = format_exception(repr(''), prolog="dev error:")
+        self.assertEqual("dev error:\n    ''", msg)
+
 
 class TestPyomoException(unittest.TestCase):
     def test_default_message(self):
@@ -152,3 +170,28 @@ class TestPyomoException(unittest.TestCase):
         exception = CustomLocalException("Non-default message.")
         self.assertNotIn("Default message.", str(exception))
         self.assertIn("Non-default message.", str(exception))
+
+    def test_DeveloperError(self):
+        self.assertEqual(
+            "Internal Pyomo implementation error:\n"
+            "    Please report this to the Pyomo Developers.",
+            str(DeveloperError()),
+        )
+
+        self.assertEqual(
+            "Internal Pyomo implementation error:\n"
+            "        'Error message'\n"
+            "    Please report this to the Pyomo Developers.",
+            str(DeveloperError("Error message")),
+        )
+
+    def test_MouseTrap(self):
+        self.assertEqual(
+            """Sorry, mouse, no cookies here!
+        ''
+    This is functionality we think may be rational to support, but is not
+    yet implemented (possibly due to developer availability, complexity of
+    edge cases, or general practicality or tractability). However, please
+    feed the mice: pull requests are always welcome!""",
+            str(MouseTrap()),
+        )

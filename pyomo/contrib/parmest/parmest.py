@@ -1657,7 +1657,7 @@ class Estimator:
                 "theta_est(): `calc_cov` and `cov_n` are deprecated options and "
                 "will be removed in the future. Please use the `cov_est()` function "
                 "for covariance calculation.",
-                version="6.9.4.dev0",
+                version="6.9.5",
             )
         else:
             calc_cov = False

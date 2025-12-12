@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 
 # Acceptable chars for the end of the alpha_pr column
 # in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
-_ALPHA_PR_CHARS = set("fFhHkKnNRwstTr")
+_ALPHA_PR_CHARS = set("fFhHkKnNRwSstTr")
 
 
 class IpoptConfig(SolverConfig):
@@ -117,6 +117,9 @@ class IpoptSolutionLoader(SolSolutionLoader):
         self._error_check()
         if solution_id is not None:
             raise ValueError('IpoptSolutionLoader does not support solution_id')
+        # If the NL instance has no objectives, report zeros
+        if not len(self._nl_info.objectives):
+            return ComponentMap()
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
             obj_scale = 1
@@ -296,7 +299,7 @@ class Ipopt(SolverBase):
     def _verify_ipopt_options(self, config: IpoptConfig) -> None:
         for key, msg in unallowed_ipopt_options.items():
             if key in config.solver_options:
-                raise ValueError(f"unallowed ipopt option '{key}': {msg}")
+                raise ValueError(f"unallowed Ipopt option '{key}': {msg}")
         # Map standard Pyomo solver options to Ipopt options: standard
         # options override ipopt-specific options.
         if config.time_limit is not None:
@@ -472,7 +475,7 @@ class Ipopt(SolverBase):
                 results = Results()
                 results.termination_condition = TerminationCondition.provenInfeasible
                 results.solution_loader = SolSolutionLoader(None, None, model)
-                results.iteration_count = 0
+                results.extra_info.iteration_count = 0
                 results.timing_info.total_seconds = 0
             elif len(nl_info.variables) == 0:
                 if len(nl_info.eliminated_vars) == 0:
@@ -488,7 +491,7 @@ class Ipopt(SolverBase):
                     results.solution_loader = SolSolutionLoader(
                         None, nl_info=nl_info, pyomo_model=model
                     )
-                    results.iteration_count = 0
+                    results.extra_info.iteration_count = 0
                     results.timing_info.total_seconds = 0
             else:
                 if os.path.isfile(basename + '.sol'):
@@ -504,17 +507,17 @@ class Ipopt(SolverBase):
                     results.solution_loader = SolSolutionLoader(None, None, model)
                 else:
                     try:
-                        results.iteration_count = parsed_output_data.pop('iters')
+                        results.extra_info.iteration_count = parsed_output_data.pop(
+                            'iters'
+                        )
                         cpu_seconds = parsed_output_data.pop('cpu_seconds')
                         for k, v in cpu_seconds.items():
                             results.timing_info[k] = v
                         results.extra_info = parsed_output_data
-                        # Set iteration_log visibility to ADVANCED_OPTION because it's
-                        # a lot to print out with `display`
-                        results.extra_info.get("iteration_log")._visibility = (
-                            ADVANCED_OPTION
-                        )
-                    except KeyError as e:
+                        iter_log = results.extra_info.get("iteration_log", None)
+                        if iter_log is not None:
+                            iter_log._visibility = ADVANCED_OPTION
+                    except Exception as e:
                         logger.log(
                             logging.WARNING,
                             "The solver output data is empty or incomplete.\n"
@@ -602,42 +605,70 @@ class Ipopt(SolverBase):
                 "ls",
             ]
             iterations = []
+            n_expected_columns = len(columns)
 
             for line in iter_table:
                 tokens = line.strip().split()
-                if len(tokens) != len(columns):
-                    continue
+                # IPOPT sometimes mashes the first two column values together
+                # (e.g., "2r-4.93e-03"). We need to split them.
+                try:
+                    idx = tokens[0].index('-')
+                    head = tokens[0][:idx]
+                    if head and head.rstrip('r').isdigit():
+                        tokens[:1] = (head, tokens[0][idx:])
+                except ValueError:
+                    pass
+
                 iter_data = dict(zip(columns, tokens))
+                extra_tokens = tokens[n_expected_columns:]
 
                 # Extract restoration flag from 'iter'
-                iter_data['restoration'] = iter_data['iter'].endswith('r')
-                if iter_data['restoration']:
-                    iter_data['iter'] = iter_data['iter'][:-1]
+                iter_num = iter_data.pop("iter")
+                restoration = iter_num.endswith("r")
+                if restoration:
+                    iter_num = iter_num[:-1]
 
-                # Separate alpha_pr into numeric part and optional tag
-                iter_data['step_acceptance'] = iter_data['alpha_pr'][-1]
-                if iter_data['step_acceptance'] in _ALPHA_PR_CHARS:
+                try:
+                    iter_num = int(iter_num)
+                except ValueError:
+                    logger.warning(
+                        f"Could not parse Ipopt iteration number: {iter_num}"
+                    )
+
+                iter_data["restoration"] = restoration
+                iter_data["iter"] = iter_num
+
+                # Separate alpha_pr into numeric part and optional tag (f, D, R, etc.)
+                step_acceptance_tag = iter_data['alpha_pr'][-1]
+                if step_acceptance_tag in _ALPHA_PR_CHARS:
+                    iter_data['step_acceptance'] = step_acceptance_tag
                     iter_data['alpha_pr'] = iter_data['alpha_pr'][:-1]
                 else:
                     iter_data['step_acceptance'] = None
 
+                # Capture optional IPOPT diagnostic tags if present
+                if extra_tokens:
+                    iter_data['diagnostic_tags'] = " ".join(extra_tokens)
+
                 # Attempt to cast all values to float where possible
-                for key in columns:
-                    if iter_data[key] == '-':
+                for key in columns[1:]:
+                    val = iter_data[key]
+                    if val == '-':
                         iter_data[key] = None
                     else:
                         try:
-                            iter_data[key] = float(iter_data[key])
+                            iter_data[key] = float(val)
                         except (ValueError, TypeError):
                             logger.warning(
                                 "Error converting Ipopt log entry to "
                                 f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
                             )
 
-                assert len(iterations) == iter_data.pop('iter'), (
-                    f"Parsed row in the iterations table\n\t{line}\ndoes not "
-                    f"match the next expected iteration number ({len(iterations)})"
-                )
+                if len(iterations) != iter_num:
+                    logger.warning(
+                        f"Total number of iterations parsed {len(iterations)} "
+                        f"does not match the expected iteration number ({iter_num})."
+                    )
                 iterations.append(iter_data)
 
             parsed_data['iteration_log'] = iterations
@@ -666,7 +697,6 @@ class Ipopt(SolverBase):
                 "complementarity_error",
                 "overall_nlp_error",
             ]
-
             # Filter out None values and create final fields and values.
             # Nones occur in old-style IPOPT output (<= 3.13)
             zipped = [
@@ -676,10 +706,8 @@ class Ipopt(SolverBase):
                 )
                 if scaled is not None and unscaled is not None
             ]
-
             scaled = {k: float(s) for k, s, _ in zipped}
             unscaled = {k: float(u) for k, _, u in zipped}
-
             parsed_data.update(unscaled)
             parsed_data['final_scaled_results'] = scaled
 

@@ -10,40 +10,40 @@
 #  ___________________________________________________________________________
 
 import datetime
-import random
 import math
+import random
 from typing import Type
 
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
-import pyomo.common.unittest as unittest
-
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import (
-    GurobiPersistent,
-    GurobiDirectQuadratic,
-)
-from pyomo.contrib.solver.solvers.gurobi.gurobi_direct import GurobiDirect
-from pyomo.contrib.solver.solvers.highs import Highs
-from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.common.results import (
-    TerminationCondition,
-    SolutionStatus,
     Results,
+    SolutionStatus,
+    TerminationCondition,
 )
 from pyomo.contrib.solver.common.util import (
     NoDualsError,
-    NoOptimalSolutionError,
-    NoSolutionError,
     NoReducedCostsError,
+    NoSolutionError,
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
 )
-from pyomo.core.expr.numeric_expr import LinearExpression
-from pyomo.core.expr.compare import assertExpressionsEqual
-
+from pyomo.contrib.solver.solvers.gurobi import (
+    GurobiDirect,
+    GurobiPersistent,
+    GurobiDirectMINLP,
+)
+from pyomo.contrib.solver.solvers.highs import Highs
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
+from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
 from pyomo.contrib.solver.tests.solvers import instances
+from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.core.expr.numeric_expr import LinearExpression
 
 np, numpy_available = attempt_import('numpy')
 parameterized, param_available = attempt_import('parameterized')
@@ -56,26 +56,34 @@ if not param_available:
 all_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
-    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('highs', Highs),
+    ('knitro_direct', KnitroDirectSolver),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
-    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('highs', Highs),
+    ('knitro_direct', KnitroDirectSolver),
 ]
-nlp_solvers = [('ipopt', Ipopt)]
+nlp_solvers = [
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
+    ('ipopt', Ipopt),
+    ('knitro_direct', KnitroDirectSolver),
+]
 qcp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
-    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
+    ('knitro_direct', KnitroDirectSolver),
 ]
 qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('gurobi_persistent', GurobiPersistent),
-    ('gurobi_direct_quadratic', GurobiDirectQuadratic),
+    ('knitro_direct', KnitroDirectSolver),
 ]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
@@ -600,9 +608,6 @@ class TestSolvers(unittest.TestCase):
         for v in res.solver_version:
             self.assertIsInstance(v, int)
 
-        # iteration_count is nonnegative
-        self.assertGreaterEqual(res.iteration_count, 0)
-
         # timing_info should exist
         self.assertIsNotNone(res.timing_info)
 
@@ -1086,10 +1091,10 @@ class TestSolvers(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.y)
         m.c1 = pyo.Constraint(expr=m.y >= m.x)
         m.c2 = pyo.Constraint(expr=m.y <= m.x - 1)
-        with self.assertRaises(Exception):
+        with self.assertRaises(NoOptimalSolutionError):
             res = opt.solve(m)
-        opt.config.load_solutions = False
         opt.config.raise_exception_on_nonoptimal_result = False
+        opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
         if isinstance(opt, Ipopt):
@@ -1470,8 +1475,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
         m.y.unfix()
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 2**0.5)
-        self.assertAlmostEqual(m.y.value, 2**0.5)
+        self.assertAlmostEqual(m.x.value, 2**0.5, delta=1e-3)
+        self.assertAlmostEqual(m.y.value, 2**0.5, delta=1e-3)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_mutable_param_with_range(
@@ -1637,8 +1642,8 @@ class TestSolvers(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, -0.42630274815985264)
-        self.assertAlmostEqual(m.y.value, 0.6529186341994245)
+        self.assertAlmostEqual(m.x.value, -0.42630274815985264, delta=1e-3)
+        self.assertAlmostEqual(m.y.value, 0.6529186341994245, delta=1e-3)
 
     @parameterized.expand(input=_load_tests(nlp_solvers))
     def test_log(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
