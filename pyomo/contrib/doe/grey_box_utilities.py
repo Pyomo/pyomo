@@ -67,7 +67,8 @@ class FIMExternalGreyBox(
         logger_level:
            logging level to be specified if different from doe_object's logging level.
            default: None, or equivalently, use the logging level of doe_object.
-                    NOTE: Use logging.DEBUG for all messages.
+
+           NOTE: Use logging.DEBUG for all messages.
         """
 
         if doe_object is None:
@@ -122,6 +123,25 @@ class FIMExternalGreyBox(
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
         return current_FIM
+
+    def _reorder_pairs(self, i, j, k, l):
+        # Reorders the pairs (i, j) and
+        # (k, l) for considering only
+        # the symmetric portion of the FIM
+        # while calculating the Hessian
+
+        # If the pairs ((i, j), (k, l)) are not
+        # in increasing order, we reorder
+        # the pairs.
+        if i > j:
+            if k > l:
+                return [j, i, l, k]
+            else:
+                return [j, i, k, l]
+        else:
+            if k > l:
+                return [i, j, l, k]
+        return [i, j, k, l]
 
     def input_names(self):
         # Cartesian product gives us matrix indices flattened in row-first format
@@ -185,7 +205,7 @@ class FIMExternalGreyBox(
             obj_value = np.min(eig)
         elif self.objective_option == ObjectiveLib.condition_number:
             eig, _ = np.linalg.eig(M)
-            obj_value = np.max(eig) / np.min(eig)
+            obj_value = np.log(np.abs(np.max(eig) / np.min(eig)))
         else:
             ObjectiveLib(self.objective_option)
 
@@ -227,7 +247,7 @@ class FIMExternalGreyBox(
 
     def evaluate_jacobian_outputs(self):
         # Compute the jacobian of the objective function with
-        # respect to the fisher information matrix. Then return
+        # respect to the fisher information matrix. Then, return
         # a coo_matrix that aligns with what IPOPT will expect.
         current_FIM = self._get_FIM()
 
@@ -294,28 +314,18 @@ class FIMExternalGreyBox(
             min_eig_term = min_eig_vec * np.transpose(min_eig_vec)
             max_eig_term = max_eig_vec * np.transpose(max_eig_vec)
 
-            min_eig_epsilon = 2e-16
-
-            # Computing a (hopefully) nonsingular
-            # condition number for the jacobian
-            # expression.
-            safe_cond_number = max_eig / (min_eig + np.sign(min_eig) * min_eig_epsilon)
-
             # Combining the expression
-            jac_M = (
-                1
-                / (min_eig + np.sign(min_eig) * min_eig_epsilon)
-                * (max_eig_term - safe_cond_number * min_eig_term)
-            )
+            jac_M = 1 / max_eig * max_eig_term - 1 / min_eig * min_eig_term
         else:
             ObjectiveLib(self.objective_option)
 
-        # We are only using the triangle,
-        # so we need to add the off-diagonals
-        # twice.
+        # We are only using a symmetric, triangular
+        # representation of the FIM, so we need
+        # to add the off-diagonal elements twice.
         jac_M = 2 * jac_M - np.diag(np.diag(jac_M))
-        # Filter jac_M using the
-        # masking matrix
+        # Filter the Jacobian, jac_M, using the
+        # masking matrix to only select the
+        # symmetric, triangular components
         jac_M = jac_M[self._masking_matrix > 0]
         M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
         M_cols = np.arange(len(jac_M.flatten()))
@@ -345,25 +355,47 @@ class FIMExternalGreyBox(
         # No constraints so this returns `None`
         return None
 
-    def evaluate_hessian_outputs(self, FIM=None):
-        # TODO: significant bookkeeping if the hessian's require vectorized
-        # operations. Just need mapping that works well and we are good.
+    def evaluate_hessian_outputs(self):
+        # Compute the hessian of the objective function with
+        # respect to the fisher information matrix. Then, return
+        # a coo_matrix that aligns with what IPOPT will expect.
         current_FIM = self._get_FIM()
 
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
             self._n_params, self._n_params
         )
 
-        # Hessian with correct size for using only the
-        # lower (upper) triangle of the FIM
-        hess_vals = []
-        hess_rows = []
-        hess_cols = []
+        # We will store the Hessian values in
+        # vectorized (flattened) format. The length
+        # of the vectorized Hessian for the symmetric
+        # FIM representation scales by the number of
+        # unknown parameters.
+        hess_array_length = round(
+            (((self._n_params + 1) * self._n_params / 2) + 1)
+            * (((self._n_params + 1) * self._n_params / 2))
+            / 2
+        )
 
-        # Need to iterate over the unique
-        # differentials
+        # Initializing lists of the correct length
+        # for the hessian values and the row and column
+        # of these data in the coo matrix to be returned
+        hess_vals = [0] * hess_array_length
+        hess_rows = [0] * hess_array_length
+        hess_cols = [0] * hess_array_length
+
+        # We are utilizing the symmetric Hessian, but we
+        # must consider the contribution from all elements.
+        # Therefore, we are required to use the full product
+        # space of the parameter names (full FIM) to compute
+        # the Hessian of the symmetric FIM.
+        full_input_names = itertools.product(self._param_names, repeat=2)
+
+        # Here, we use combination with replacement to only
+        # consider the upper triangle of the Hessian for the
+        # full FIM. We will map these second derivative values
+        # back onto the symmetric FIM Hessian.
         input_differentials_2D = itertools.combinations_with_replacement(
-            self.input_names(), 2
+            full_input_names, 2
         )
 
         from pyomo.contrib.doe import ObjectiveLib
@@ -376,14 +408,7 @@ class FIMExternalGreyBox(
             Minv_sq = Minv @ Minv
 
             for current_differential in input_differentials_2D:
-                # Row will be the location of the
-                # first ordered pair (d1) in input names
-                #
-                # Col will be the location of the
-                # second ordered pair (d2) in input names
                 d1, d2 = current_differential
-                row = self.input_names().index(d2)
-                col = self.input_names().index(d1)
 
                 # Grabbing the ordered quadruple (i, j, k, l)
                 # `location` here refers to the index in the
@@ -400,29 +425,64 @@ class FIMExternalGreyBox(
 
                 # New Formula (tested with finite differencing)
                 # Will be cited from the Pyomo.DoE 2.0 paper
-                hess_vals.append(
-                    (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
+                hess_contribution = (Minv[i, l] * Minv_sq[k, j]) + (
+                    Minv_sq[i, l] * Minv[k, j]
                 )
-                hess_rows.append(row)
-                hess_cols.append(col)
+
+                # Since we are considering the full matrix in
+                # this loop, we need to point the contribution
+                # to the correct index for the symmetric FIM
+                # Hessian.
+                reordered_ijkl = self._reorder_pairs(i, j, k, l)
+                d1_symmetric = (
+                    self._param_names[reordered_ijkl[0]],
+                    self._param_names[reordered_ijkl[1]],
+                )
+                d2_symmetric = (
+                    self._param_names[reordered_ijkl[2]],
+                    self._param_names[reordered_ijkl[3]],
+                )
+
+                # Identify what index of the symmetric FIM
+                # Hessian arrays need to be updated.
+                # Note: we are only interested in building
+                # the lower triangular portion of the Hessian.
+                row = max(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                col = min(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                flattened_row_col_index = (row + 1) * row // 2 + col
 
                 # Hessian needs to be handled carefully because of
-                # the ``missing`` components when only passing
-                # a triangular version of the FIM.
+                # the ``missing`` components from the full FIM
+                # when only passing a symmetric version of the FIM.
                 #
-                # The general format is that fully diagonal elements
-                # (i == j AND k == l) require no additional counting
-                # of the computed term. Off-diagonal elements
-                # (i != j OR k != l) add one instance. Having two
-                # off-diagonal elements (i != j AND k != l) will add
-                # two instances. Finally, if the off-diagonal elements
-                # are not the same ((i != j AND k != l) AND (i != k))
-                # there is an additional element. A more detailed
-                # explanation is included in the documentation.
-                multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
-                hess_vals[-1] += multiplier * (
-                    (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
-                )
+                # When we reordered (i, j, k, l), we are correctly
+                # pointing to which index needs to be contributed to.
+                # However, when an element that is not included
+                # is being mapped to a diagonal element of the
+                # symmetric FIM hessian from the full FIM hessian,
+                # it needs to be counted twice. This only occurs
+                # when (i != j) and (k != l) and (i, j) and (k, l)
+                # are the conjugate of one another:
+                # (i == l) and (j == k).
+                #
+                # Otherwise, we only add the element once.
+
+                # Standard addition
+                hess_vals[flattened_row_col_index] += hess_contribution
+
+                # Duplicate check and addition if
+                # criteria is satisfied.
+                if ((i != j) and (k != l)) and ((i == l) and (j == k)):
+                    hess_vals[flattened_row_col_index] += hess_contribution
+
+                hess_rows[flattened_row_col_index] = row
+                hess_cols[flattened_row_col_index] = col
 
         elif self.objective_option == ObjectiveLib.determinant:
             # Grab inverse
@@ -433,8 +493,6 @@ class FIMExternalGreyBox(
                 # obtained identically as in the trace
                 # for loop above.
                 d1, d2 = current_differential
-                row = self.input_names().index(d2)
-                col = self.input_names().index(d1)
 
                 i = self._param_names.index(d1[0])
                 j = self._param_names.index(d1[1])
@@ -443,16 +501,48 @@ class FIMExternalGreyBox(
 
                 # New Formula (tested with finite differencing)
                 # Will be cited from the Pyomo.DoE 2.0 paper
-                hess_vals.append(-(Minv[i, l] * Minv[k, j]))
-                hess_rows.append(row)
-                hess_cols.append(col)
+                hess_contribution = -(Minv[i, l] * Minv[k, j])
 
-                # See explanation above in trace hessian code
-                # for more brief information. Also, you may
-                # consult the documentation for a detailed
-                # description.
-                multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
-                hess_vals[-1] += -multiplier * (Minv[i, l] * Minv[k, j])
+                # Since we are considering the full matrix in
+                # this loop, we need to point the contribution
+                # to the correct index for the symmetric FIM
+                # Hessian.
+                reordered_ijkl = self._reorder_pairs(i, j, k, l)
+                d1_symmetric = (
+                    self._param_names[reordered_ijkl[0]],
+                    self._param_names[reordered_ijkl[1]],
+                )
+                d2_symmetric = (
+                    self._param_names[reordered_ijkl[2]],
+                    self._param_names[reordered_ijkl[3]],
+                )
+
+                # Identify what index of the symmetric FIM
+                # Hessian arrays need to be updated
+                row = max(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                col = min(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                flattened_row_col_index = (row + 1) * row // 2 + col
+
+                # Hessian needs to be handled carefully because of
+                # the ``missing`` components when only passing
+                # a symmetric version of the FIM. For a more
+                # detailed explanation, please see the trace
+                # for loop above
+                hess_vals[flattened_row_col_index] += hess_contribution
+
+                # Duplicate check and addition
+                if ((i != j) and (k != l)) and ((i == l) and (j == k)):
+                    hess_vals[flattened_row_col_index] += hess_contribution
+
+                hess_rows[flattened_row_col_index] = row
+                hess_cols[flattened_row_col_index] = col
+
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             # Grab eigenvalues and eigenvectors
             # Also need the min location
@@ -469,17 +559,15 @@ class FIMExternalGreyBox(
                 # obtained identically as in the trace
                 # for loop above.
                 d1, d2 = current_differential
-                row = self.input_names().index(d2)
-                col = self.input_names().index(d1)
 
                 i = self._param_names.index(d1[0])
                 j = self._param_names.index(d1[1])
                 k = self._param_names.index(d2[0])
                 l = self._param_names.index(d2[1])
 
-                # For lop to iterate over all
+                # For loop to iterate over all
                 # eigenvalues/vectors
-                curr_hess_val = 0
+                hess_contribution = 0
                 for curr_eig in range(len(all_eig_vals)):
                     # Skip if we are at the minimum
                     # eigenvalue. Denominator is
@@ -488,7 +576,7 @@ class FIMExternalGreyBox(
                         continue
 
                     # Formula derived in Pyomo.DoE Paper
-                    curr_hess_val += (
+                    hess_contribution += (
                         1
                         * (
                             min_eig_vec[0, i]
@@ -498,7 +586,7 @@ class FIMExternalGreyBox(
                         )
                         / (min_eig - all_eig_vals[curr_eig])
                     )
-                    curr_hess_val += (
+                    hess_contribution += (
                         1
                         * (
                             min_eig_vec[0, k]
@@ -508,18 +596,220 @@ class FIMExternalGreyBox(
                         )
                         / (min_eig - all_eig_vals[curr_eig])
                     )
-                hess_vals.append(curr_hess_val)
-                hess_rows.append(row)
-                hess_cols.append(col)
 
-                # See explanation above in trace hessian code
-                # for more brief information. Also, you may
-                # consult the documentation for a detailed
-                # description.
-                multiplier = ((i != j) + (k != l)) + ((i != j) and (k != l)) * (i != k)
-                hess_vals[-1] += multiplier * curr_hess_val
+                # Since we are considering the full matrix in
+                # this loop, we need to point the contribution
+                # to the correct index for the symmetric FIM
+                # Hessian.
+                reordered_ijkl = self._reorder_pairs(i, j, k, l)
+                d1_symmetric = (
+                    self._param_names[reordered_ijkl[0]],
+                    self._param_names[reordered_ijkl[1]],
+                )
+                d2_symmetric = (
+                    self._param_names[reordered_ijkl[2]],
+                    self._param_names[reordered_ijkl[3]],
+                )
+
+                # Identify what index of the symmetric FIM
+                # Hessian arrays need to be updated
+                row = max(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                col = min(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                flattened_row_col_index = (row + 1) * row // 2 + col
+
+                # Hessian needs to be handled carefully because of
+                # the ``missing`` components when only passing
+                # a symmetric version of the FIM. See trace for loop
+                # for more detailed explanation
+                hess_vals[flattened_row_col_index] += hess_contribution
+
+                # Duplicate check and addition
+                if ((i != j) and (k != l)) and ((i == l) and (j == k)):
+                    hess_vals[flattened_row_col_index] += hess_contribution
+
+                hess_rows[flattened_row_col_index] = row
+                hess_cols[flattened_row_col_index] = col
+
         elif self.objective_option == ObjectiveLib.condition_number:
-            pass
+            # Hessian for log condition number has 4
+            # terms. The first and third terms are
+            # multiples of the second derivative of the
+            # maximum and minimum eigenvalues, respectively
+            # The other two are tensor products
+            # of the first derivative of the maximum
+            # eigenvalue with itself, and the minimum
+            # eigenvalue with itself.
+            #
+            # Grab eigenvalues and eigenvectors
+            # Also need the max and min locations
+            all_eig_vals, all_eig_vecs = np.linalg.eig(M)
+            min_eig_loc = np.argmin(all_eig_vals)
+            max_eig_loc = np.argmax(all_eig_vals)
+
+            # Grabbing min eigenvalue and corresponding
+            # eigenvector
+            min_eig = all_eig_vals[min_eig_loc]
+            min_eig_vec = np.array([all_eig_vecs[:, min_eig_loc]])
+
+            # Grabbing max eigenvalue and corresponding
+            # eigenvector
+            max_eig = all_eig_vals[max_eig_loc]
+            max_eig_vec = np.array([all_eig_vecs[:, max_eig_loc]])
+
+            for current_differential in input_differentials_2D:
+                # Row, Col and i, j, k, l values are
+                # obtained identically as in the trace
+                # for loop above.
+                d1, d2 = current_differential
+
+                i = self._param_names.index(d1[0])
+                j = self._param_names.index(d1[1])
+                k = self._param_names.index(d2[0])
+                l = self._param_names.index(d2[1])
+
+                # For loop to iterate over all
+                # eigenvalues/vectors for first
+                # term (second derivative of
+                # maximum eigenvalue)
+                log_cond_term_1 = 0
+                for curr_eig in range(len(all_eig_vals)):
+                    # Skip if we are at the maximum
+                    # eigenvalue. Denominator is
+                    # zero.
+                    if curr_eig == max_eig_loc:
+                        continue
+
+                    # Formula derived in Pyomo.DoE Paper
+                    log_cond_term_1 += (
+                        1
+                        * (
+                            max_eig_vec[0, i]
+                            * all_eig_vecs[j, curr_eig]
+                            * max_eig_vec[0, l]
+                            * all_eig_vecs[k, curr_eig]
+                        )
+                        / (max_eig - all_eig_vals[curr_eig])
+                    )
+                    log_cond_term_1 += (
+                        1
+                        * (
+                            max_eig_vec[0, k]
+                            * all_eig_vecs[i, curr_eig]
+                            * max_eig_vec[0, j]
+                            * all_eig_vecs[l, curr_eig]
+                        )
+                        / (max_eig - all_eig_vals[curr_eig])
+                    )
+
+                # For loop to iterate over all
+                # eigenvalues/vectors for third
+                # term (second derivative of
+                # minimum eigenvalue)
+                log_cond_term_3 = 0
+                for curr_eig in range(len(all_eig_vals)):
+                    # Skip if we are at the minimum
+                    # eigenvalue. Denominator is
+                    # zero.
+                    if curr_eig == min_eig_loc:
+                        continue
+
+                    # Formula derived in Pyomo.DoE Paper
+                    log_cond_term_3 += (
+                        1
+                        * (
+                            min_eig_vec[0, i]
+                            * all_eig_vecs[j, curr_eig]
+                            * min_eig_vec[0, l]
+                            * all_eig_vecs[k, curr_eig]
+                        )
+                        / (min_eig - all_eig_vals[curr_eig])
+                    )
+                    log_cond_term_3 += (
+                        1
+                        * (
+                            min_eig_vec[0, k]
+                            * all_eig_vecs[i, curr_eig]
+                            * min_eig_vec[0, j]
+                            * all_eig_vecs[l, curr_eig]
+                        )
+                        / (min_eig - all_eig_vals[curr_eig])
+                    )
+
+                # Computing each term of the hessian formula
+                # Second derivative of max eigenvalue term
+                log_cond_term_1 = 1 / max_eig * log_cond_term_1
+
+                # First derivative of max eigenvalue term
+                log_cond_term_2 = (
+                    1
+                    / (max_eig**2)
+                    * (max_eig_vec[0, l] * max_eig_vec[0, k])
+                    * (max_eig_vec[0, j] * max_eig_vec[0, i])
+                )
+
+                # Second derivative of min eigenvalue term
+                log_cond_term_3 = 1 / min_eig * log_cond_term_3
+
+                # First derivative of min eigenvalue term
+                log_cond_term_4 = (
+                    1
+                    / (min_eig**2)
+                    * (min_eig_vec[0, l] * min_eig_vec[0, k])
+                    * (min_eig_vec[0, j] * min_eig_vec[0, i])
+                )
+
+                # Combining all the components
+                hess_contribution = (
+                    log_cond_term_1
+                    - log_cond_term_2
+                    - log_cond_term_3
+                    + log_cond_term_4
+                )
+
+                # Since we are considering the full matrix in
+                # this loop, we need to point the contribution
+                # to the correct index for the symmetric FIM
+                # Hessian.
+                reordered_ijkl = self._reorder_pairs(i, j, k, l)
+                d1_symmetric = (
+                    self._param_names[reordered_ijkl[0]],
+                    self._param_names[reordered_ijkl[1]],
+                )
+                d2_symmetric = (
+                    self._param_names[reordered_ijkl[2]],
+                    self._param_names[reordered_ijkl[3]],
+                )
+
+                # Identify what index of the symmetric FIM
+                # Hessian arrays need to be updated
+                row = max(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                col = min(
+                    self.input_names().index(d1_symmetric),
+                    self.input_names().index(d2_symmetric),
+                )
+                flattened_row_col_index = (row + 1) * row // 2 + col
+
+                # Hessian needs to be handled carefully because of
+                # the ``missing`` components when only passing
+                # a symmetric version of the FIM. See trace for loop
+                # for more detailed explanation
+                hess_vals[flattened_row_col_index] += hess_contribution
+
+                # Duplicate check and addition
+                if ((i != j) and (k != l)) and ((i == l) and (j == k)):
+                    hess_vals[flattened_row_col_index] += hess_contribution
+
+                hess_rows[flattened_row_col_index] = row
+                hess_cols[flattened_row_col_index] = col
         else:
             ObjectiveLib(self.objective_option)
 

@@ -14,7 +14,7 @@ import logging
 from typing import Dict, List, Optional, Sequence, Mapping
 from collections.abc import Iterable
 
-from pyomo.common.collections import ComponentSet, OrderedSet
+from pyomo.common.collections import ComponentSet, OrderedSet, ComponentMap
 from pyomo.common.errors import PyomoException
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
@@ -38,135 +38,36 @@ from .gurobi_direct_base import (
     GurobiDirectBase,
     gurobipy,
     GurobiConfig,
-    _load_vars,
-    _get_vars,
-    _get_duals,
-    _get_reduced_costs,
+    GurobiDirectSolutionLoaderBase,
 )
+from .gurobi_direct import GurobiDirectSolutionLoader
 from pyomo.contrib.solver.common.util import get_objective
 from pyomo.contrib.observer.model_observer import (
     Observer,
     ModelChangeDetector,
     AutoUpdateConfig,
+    Reason,
 )
 
 
 logger = logging.getLogger(__name__)
 
 
-class GurobiDirectQuadraticSolutionLoader(SolutionLoaderBase):
-    def __init__(
-        self,
-        solver_model,
-        var_id_map,
-        var_map,
-        con_map,
-        linear_cons,
-        quadratic_cons,
-        pyomo_model,
-    ) -> None:
-        super().__init__()
-        self._solver_model = solver_model
-        self._vars = var_id_map
+class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
+    def __init__(self, solver_model, pyomo_model, var_map, con_map) -> None:
+        super().__init__(solver_model, pyomo_model)
         self._var_map = var_map
         self._con_map = con_map
-        self._linear_cons = linear_cons
-        self._quadratic_cons = quadratic_cons
-        self._pyomo_model = pyomo_model
-        GurobiDirectBase._register_env_client()
-
-    def __del__(self):
-        # Release the gurobi license if this is the last reference to
-        # the environment (either through a results object or solver
-        # interface)
-        GurobiDirectBase._release_env_client()
-
-    def get_number_of_solutions(self) -> int:
-        return self._solver_model.SolCount
-
-    def get_solution_ids(self) -> List:
-        return list(range(self.get_number_of_solutions()))
-
-    def load_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
-    ) -> None:
-        if vars_to_load is None:
-            vars_to_load = list(self._vars.values())
-        _load_vars(
-            solver_model=self._solver_model,
-            var_map=self._var_map,
-            vars_to_load=vars_to_load,
-            solution_number=solution_id,
-        )
-
-    def get_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
-    ) -> Mapping[VarData, float]:
-        if vars_to_load is None:
-            vars_to_load = list(self._vars.values())
-        return _get_vars(
-            solver_model=self._solver_model,
-            var_map=self._var_map,
-            vars_to_load=vars_to_load,
-            solution_number=solution_id,
-        )
-
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
-    ) -> Mapping[VarData, float]:
-        if vars_to_load is None:
-            vars_to_load = list(self._vars.values())
-        return _get_reduced_costs(
-            solver_model=self._solver_model,
-            var_map=self._var_map,
-            vars_to_load=vars_to_load,
-        )
-
-    def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
-    ) -> Dict[ConstraintData, float]:
-        if cons_to_load is None:
-            cons_to_load = list(self._con_map.keys())
-        linear_cons_to_load = []
-        quadratic_cons_to_load = []
-        for c in cons_to_load:
-            if c in self._linear_cons:
-                linear_cons_to_load.append(c)
-            else:
-                assert c in self._quadratic_cons
-                quadratic_cons_to_load.append(c)
-        return _get_duals(
-            solver_model=self._solver_model,
-            con_map=self._con_map,
-            linear_cons_to_load=linear_cons_to_load,
-            quadratic_cons_to_load=quadratic_cons_to_load,
-        )
-
-    def load_import_suffixes(self, solution_id=None):
-        load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
-
-
-class GurobiPersistentSolutionLoader(GurobiDirectQuadraticSolutionLoader):
-    def __init__(
-        self,
-        solver_model,
-        var_id_map,
-        var_map,
-        con_map,
-        linear_cons,
-        quadratic_cons,
-        pyomo_model,
-    ) -> None:
-        super().__init__(
-            solver_model,
-            var_id_map,
-            var_map,
-            con_map,
-            linear_cons,
-            quadratic_cons,
-            pyomo_model,
-        )
         self._valid = True
+
+    def _var_pair_iter(self):
+        return self._var_map.items()
+
+    def _get_var_map(self):
+        return self._var_map
+
+    def _get_con_map(self):
+        return self._con_map
 
     def invalidate(self):
         self._valid = False
@@ -370,73 +271,102 @@ class _MutableQuadraticCoefficient:
         return self.var_map[self.v2id]
 
 
-class GurobiDirectQuadratic(GurobiDirectBase):
+class GurobiPersistentConfig(GurobiConfig):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        GurobiConfig.__init__(
+            self,
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+        self.auto_updates: bool = self.declare('auto_updates', AutoUpdateConfig())
+
+
+class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
     _minimum_version = (7, 0, 0)
+    CONFIG = GurobiPersistentConfig()
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
+        # we actually want to only grab the license when
+        # set_instance is called
+        self._release_env_client()
         self._solver_model = None
-        self._vars = {}  # from id(v) to v
-        self._pyomo_var_to_solver_var_map = {}
+        self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = {}
-        self._linear_cons = set()
-        self._quadratic_cons = set()
         self._pyomo_sos_to_solver_sos_map = {}
-
-    def _create_solver_model(self, pyomo_model):
-        timer = self.config.timer
-        timer.start('create gurobipy model')
-        self._clear()
-        self._solver_model = gurobipy.Model(env=self.env())
-        timer.start('collect constraints')
-        cons = list(
-            pyomo_model.component_data_objects(
-                Constraint, descend_into=True, active=True
-            )
-        )
-        timer.stop('collect constraints')
-        timer.start('translate constraints')
-        self._add_constraints(cons)
-        timer.stop('translate constraints')
-        timer.start('sos')
-        sos = list(
-            pyomo_model.component_data_objects(
-                SOSConstraint, descend_into=True, active=True
-            )
-        )
-        self._add_sos_constraints(sos)
-        timer.stop('sos')
-        timer.start('get objective')
-        obj = get_objective(pyomo_model)
-        timer.stop('get objective')
-        timer.start('translate objective')
-        self._set_objective(obj)
-        timer.stop('translate objective')
-        has_obj = obj is not None
-        solution_loader = GurobiDirectQuadraticSolutionLoader(
-            solver_model=self._solver_model,
-            var_id_map=self._vars,
-            var_map=self._pyomo_var_to_solver_var_map,
-            con_map=self._pyomo_con_to_solver_con_map,
-            linear_cons=self._linear_cons,
-            quadratic_cons=self._quadratic_cons,
-            pyomo_model=pyomo_model,
-        )
-        timer.stop('create gurobipy model')
-        return self._solver_model, solution_loader, has_obj
+        self._pyomo_model = None
+        self._objective = None
+        self._mutable_helpers = {}
+        self._mutable_bounds = {}
+        self._mutable_quadratic_helpers = {}
+        self._mutable_objective = None
+        self._needs_updated = True
+        self._callback_func = None
+        self._constraints_added_since_update = OrderedSet()
+        self._vars_added_since_update = ComponentSet()
+        self._last_results_object: Optional[Results] = None
+        self._change_detector = None
+        self._constraint_ndx = 0
 
     def _clear(self):
+        release = False
+        if self._solver_model is not None:
+            release = True
         self._solver_model = None
-        self._vars = {}
-        self._pyomo_var_to_solver_var_map = {}
+        if release:
+            self._release_env_client()
+        self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = {}
-        self._linear_cons = set()
-        self._quadratic_cons = set()
         self._pyomo_sos_to_solver_sos_map = {}
+        self._pyomo_model = None
+        self._objective = None
+        self._mutable_helpers = {}
+        self._mutable_bounds = {}
+        self._mutable_quadratic_helpers = {}
+        self._mutable_objective = None
+        self._needs_updated = True
+        self._constraints_added_since_update = OrderedSet()
+        self._vars_added_since_update = ComponentSet()
+        self._last_results_object = None
+        self._change_detector = None
+        self._constraint_ndx = 0
+
+    def _create_solver_model(self, pyomo_model, config):
+        if pyomo_model is self._pyomo_model:
+            self.update(**config)
+        else:
+            self.set_instance(pyomo_model, **config)
+
+        solution_loader = GurobiPersistentSolutionLoader(
+            solver_model=self._solver_model,
+            pyomo_model=pyomo_model,
+            var_map=self._pyomo_var_to_solver_var_map,
+            con_map=self._pyomo_con_to_solver_con_map,
+        )
+        has_obj = self._objective is not None
+        return self._solver_model, solution_loader, has_obj
 
     def _pyomo_gurobi_var_iter(self):
-        for vid, v in self._vars.items():
-            yield v, self._pyomo_var_to_solver_var_map[vid]
+        return self._pyomo_var_to_solver_var_map.items()
+
+    def release_license(self):
+        self._clear()
+        super().release_license()
+
+    def solve(self, model, **kwds) -> Results:
+        res = super().solve(model, **kwds)
+        self._needs_updated = False
+        return res
 
     def _process_domain_and_bounds(self, var):
         lb, ub, step = var.domain.get_interval()
@@ -461,261 +391,6 @@ class GurobiDirectQuadratic(GurobiDirectBase):
                 lb = max(lb, value(var._lb))
             if var._ub is not None:
                 ub = min(ub, value(var._ub))
-        return lb, ub, vtype
-
-    def _add_variables(self, variables: List[VarData]):
-        vtypes = []
-        lbs = []
-        ubs = []
-        for ndx, var in enumerate(variables):
-            self._vars[id(var)] = var
-            lb, ub, vtype = self._process_domain_and_bounds(var)
-            vtypes.append(vtype)
-            lbs.append(lb)
-            ubs.append(ub)
-
-        gurobi_vars = self._solver_model.addVars(
-            len(variables), lb=lbs, ub=ubs, vtype=vtypes
-        ).values()
-
-        for pyomo_var, gurobi_var in zip(variables, gurobi_vars):
-            self._pyomo_var_to_solver_var_map[id(pyomo_var)] = gurobi_var
-
-    def _get_expr_from_pyomo_repn(self, repn):
-        if repn.nonlinear_expr is not None:
-            raise IncompatibleModelError(
-                f'GurobiDirectQuadratic only supports linear and quadratic expressions: {repn}.'
-            )
-
-        if len(repn.linear_vars) > 0:
-            missing_vars = [v for v in repn.linear_vars if id(v) not in self._vars]
-            self._add_variables(missing_vars)
-            coef_list = [value(i) for i in repn.linear_coefs]
-            vlist = [self._pyomo_var_to_solver_var_map[id(v)] for v in repn.linear_vars]
-            new_expr = gurobipy.LinExpr(coef_list, vlist)
-        else:
-            new_expr = 0.0
-
-        if len(repn.quadratic_vars) > 0:
-            missing_vars = {}
-            for x, y in repn.quadratic_vars:
-                for v in [x, y]:
-                    vid = id(v)
-                    if vid not in self._vars:
-                        missing_vars[vid] = v
-            self._add_variables(list(missing_vars.values()))
-            for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
-                gurobi_x = self._pyomo_var_to_solver_var_map[id(x)]
-                gurobi_y = self._pyomo_var_to_solver_var_map[id(y)]
-                new_expr += value(coef) * gurobi_x * gurobi_y
-
-        return new_expr
-
-    def _add_constraints(self, cons: List[ConstraintData]):
-        gurobi_expr_list = []
-        for con in cons:
-            lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
-            repn = generate_standard_repn(body, quadratic=True, compute_values=True)
-            if len(repn.quadratic_vars) > 0:
-                self._quadratic_cons.add(con)
-            else:
-                self._linear_cons.add(con)
-            gurobi_expr = self._get_expr_from_pyomo_repn(repn)
-            if lb is None and ub is None:
-                raise ValueError(
-                    "Constraint does not have a lower " f"or an upper bound: {con} \n"
-                )
-            elif lb is None:
-                gurobi_expr_list.append(gurobi_expr <= float(ub - repn.constant))
-            elif ub is None:
-                gurobi_expr_list.append(float(lb - repn.constant) <= gurobi_expr)
-            elif lb == ub:
-                gurobi_expr_list.append(gurobi_expr == float(lb - repn.constant))
-            else:
-                gurobi_expr_list.append(
-                    gurobi_expr
-                    == [float(lb - repn.constant), float(ub - repn.constant)]
-                )
-
-        gurobi_cons = self._solver_model.addConstrs(
-            (gurobi_expr_list[i] for i in range(len(gurobi_expr_list)))
-        ).values()
-        self._pyomo_con_to_solver_con_map.update(zip(cons, gurobi_cons))
-
-    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
-        for con in cons:
-            level = con.level
-            if level == 1:
-                sos_type = gurobipy.GRB.SOS_TYPE1
-            elif level == 2:
-                sos_type = gurobipy.GRB.SOS_TYPE2
-            else:
-                raise ValueError(
-                    f"Solver does not support SOS level {level} constraints"
-                )
-
-            gurobi_vars = []
-            weights = []
-
-            missing_vars = {
-                id(v): v for v, w in con.get_items() if id(v) not in self._vars
-            }
-            self._add_variables(list(missing_vars.values()))
-
-            for v, w in con.get_items():
-                v_id = id(v)
-                gurobi_vars.append(self._pyomo_var_to_solver_var_map[v_id])
-                weights.append(w)
-
-            gurobipy_con = self._solver_model.addSOS(sos_type, gurobi_vars, weights)
-            self._pyomo_sos_to_solver_sos_map[con] = gurobipy_con
-
-    def _set_objective(self, obj):
-        if obj is None:
-            sense = gurobipy.GRB.MINIMIZE
-            gurobi_expr = 0
-            repn_constant = 0
-        else:
-            if obj.sense == minimize:
-                sense = gurobipy.GRB.MINIMIZE
-            elif obj.sense == maximize:
-                sense = gurobipy.GRB.MAXIMIZE
-            else:
-                raise ValueError(f'Objective sense is not recognized: {obj.sense}')
-
-            repn = generate_standard_repn(obj.expr, quadratic=True, compute_values=True)
-            gurobi_expr = self._get_expr_from_pyomo_repn(repn)
-            repn_constant = repn.constant
-
-        self._solver_model.setObjective(gurobi_expr + repn_constant, sense=sense)
-
-
-class _GurobiObserver(Observer):
-    def __init__(self, opt: GurobiPersistent) -> None:
-        self.opt = opt
-
-    def add_variables(self, variables: List[VarData]):
-        self.opt._add_variables(variables)
-
-    def add_parameters(self, params: List[ParamData]):
-        pass
-
-    def add_constraints(self, cons: List[ConstraintData]):
-        self.opt._add_constraints(cons)
-
-    def add_sos_constraints(self, cons: List[SOSConstraintData]):
-        self.opt._add_sos_constraints(cons)
-
-    def add_objectives(self, objs: List[ObjectiveData]):
-        self.opt._add_objectives(objs)
-
-    def remove_objectives(self, objs: List[ObjectiveData]):
-        self.opt._remove_objectives(objs)
-
-    def remove_constraints(self, cons: List[ConstraintData]):
-        self.opt._remove_constraints(cons)
-
-    def remove_sos_constraints(self, cons: List[SOSConstraintData]):
-        self.opt._remove_sos_constraints(cons)
-
-    def remove_variables(self, variables: List[VarData]):
-        self.opt._remove_variables(variables)
-
-    def remove_parameters(self, params: List[ParamData]):
-        pass
-
-    def update_variables(self, variables: List[VarData]):
-        self.opt._update_variables(variables)
-
-    def update_parameters(self, params: List[ParamData]):
-        self.opt._update_parameters(params)
-
-
-class GurobiPersistentConfig(GurobiConfig):
-    def __init__(
-        self,
-        description=None,
-        doc=None,
-        implicit=False,
-        implicit_domain=None,
-        visibility=0,
-    ):
-        GurobiConfig.__init__(
-            self,
-            description=description,
-            doc=doc,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            visibility=visibility,
-        )
-        self.auto_updates: bool = self.declare('auto_updates', AutoUpdateConfig())
-
-
-class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
-    _minimum_version = (7, 0, 0)
-    CONFIG = GurobiPersistentConfig()
-
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-        self._pyomo_model = None
-        self._objective = None
-        self._mutable_helpers = {}
-        self._mutable_bounds = {}
-        self._mutable_quadratic_helpers = {}
-        self._mutable_objective = None
-        self._needs_updated = True
-        self._callback_func = None
-        self._constraints_added_since_update = OrderedSet()
-        self._vars_added_since_update = ComponentSet()
-        self._last_results_object: Optional[Results] = None
-        self._observer = None
-        self._change_detector = None
-        self._constraint_ndx = 0
-        self._should_update_parameters = False
-
-    def _clear(self):
-        super()._clear()
-        self._pyomo_model = None
-        self._objective = None
-        self._mutable_helpers = {}
-        self._mutable_bounds = {}
-        self._mutable_quadratic_helpers = {}
-        self._mutable_objective = None
-        self._needs_updated = True
-        self._constraints_added_since_update = OrderedSet()
-        self._vars_added_since_update = ComponentSet()
-        self._last_results_object = None
-        self._constraint_ndx = 0
-
-    def _create_solver_model(self, pyomo_model):
-        if pyomo_model is self._pyomo_model:
-            self.update()
-        else:
-            self.set_instance(pyomo_model)
-
-        solution_loader = GurobiPersistentSolutionLoader(
-            solver_model=self._solver_model,
-            var_id_map=self._vars,
-            var_map=self._pyomo_var_to_solver_var_map,
-            con_map=self._pyomo_con_to_solver_con_map,
-            linear_cons=self._linear_cons,
-            quadratic_cons=self._quadratic_cons,
-            pyomo_model=pyomo_model,
-        )
-        has_obj = self._objective is not None
-        return self._solver_model, solution_loader, has_obj
-
-    def release_license(self):
-        self._clear()
-        self.__class__.release_license()
-
-    def solve(self, model, **kwds) -> Results:
-        res = super().solve(model, **kwds)
-        self._needs_updated = False
-        return res
-
-    def _process_domain_and_bounds(self, var):
-        res = super()._process_domain_and_bounds(var)
         if not is_constant(var._lb):
             mutable_lb = _MutableLowerBound(
                 id(var), var.lower, self._pyomo_var_to_solver_var_map
@@ -726,46 +401,78 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
                 id(var), var.upper, self._pyomo_var_to_solver_var_map
             )
             self._mutable_bounds[id(var), 'ub'] = (var, mutable_ub)
-        return res
+        return lb, ub, vtype
 
     def _add_variables(self, variables: List[VarData]):
         self._invalidate_last_results()
-        super()._add_variables(variables)
+        vtypes = []
+        lbs = []
+        ubs = []
+        for ndx, var in enumerate(variables):
+            lb, ub, vtype = self._process_domain_and_bounds(var)
+            vtypes.append(vtype)
+            lbs.append(lb)
+            ubs.append(ub)
+
+        gurobi_vars = self._solver_model.addVars(
+            len(variables), lb=lbs, ub=ubs, vtype=vtypes
+        ).values()
+
+        for pyomo_var, gurobi_var in zip(variables, gurobi_vars):
+            self._pyomo_var_to_solver_var_map[pyomo_var] = gurobi_var
         self._vars_added_since_update.update(variables)
         self._needs_updated = True
 
-    def set_instance(self, pyomo_model):
-        if self.config.timer is None:
+    def set_instance(self, pyomo_model, **kwds):
+        config = self.config(value=kwds, preserve_implicit=True)
+        if config.timer is None:
             timer = HierarchicalTimer()
         else:
-            timer = self.config.timer
+            timer = config.timer
         self._clear()
+        self._register_env_client()
         self._pyomo_model = pyomo_model
         self._solver_model = gurobipy.Model(env=self.env())
-        self._observer = _GurobiObserver(self)
         timer.start('set_instance')
         self._change_detector = ModelChangeDetector(
-            model=self._pyomo_model,
-            observers=[self._observer],
-            **dict(self.config.auto_updates),
+            model=self._pyomo_model, observers=[self], **config.auto_updates
         )
-        self._change_detector.config = self.config.auto_updates
         timer.stop('set_instance')
 
-    def update(self):
-        if self.config.timer is None:
+    def update(self, **kwds):
+        config = self.config(value=kwds, preserve_implicit=True)
+        if config.timer is None:
             timer = HierarchicalTimer()
         else:
-            timer = self.config.timer
+            timer = config.timer
         if self._pyomo_model is None:
             raise RuntimeError('must call set_instance or solve before update')
         timer.start('update')
         if self._needs_updated:
             self._update_gurobi_model()
-        self._change_detector.update(timer=timer)
-        if self._should_update_parameters:
-            self._update_parameters([])
+        self._change_detector.update(timer=timer, **config.auto_updates)
         timer.stop('update')
+
+    def _get_expr_from_pyomo_repn(self, repn):
+        if repn.nonlinear_expr is not None:
+            raise IncompatibleModelError(
+                f'GurobiPersistent only supports linear and quadratic expressions: {repn}.'
+            )
+
+        if len(repn.linear_vars) > 0:
+            coef_list = [value(i) for i in repn.linear_coefs]
+            vlist = [self._pyomo_var_to_solver_var_map[v] for v in repn.linear_vars]
+            new_expr = gurobipy.LinExpr(coef_list, vlist)
+        else:
+            new_expr = 0.0
+
+        if len(repn.quadratic_vars) > 0:
+            for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
+                gurobi_x = self._pyomo_var_to_solver_var_map[x]
+                gurobi_y = self._pyomo_var_to_solver_var_map[y]
+                new_expr += value(coef) * gurobi_x * gurobi_y
+
+        return new_expr
 
     def _add_constraints(self, cons: List[ConstraintData]):
         self._invalidate_last_results()
@@ -773,10 +480,6 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
         for ndx, con in enumerate(cons):
             lb, body, ub = con.to_bounded_expression(evaluate_bounds=False)
             repn = generate_standard_repn(body, quadratic=True, compute_values=False)
-            if len(repn.quadratic_vars) > 0:
-                self._quadratic_cons.add(con)
-            else:
-                self._linear_cons.add(con)
             gurobi_expr = self._get_expr_from_pyomo_repn(repn)
             mutable_constant = None
             if lb is None and ub is None:
@@ -879,7 +582,26 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
 
     def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         self._invalidate_last_results()
-        super()._add_sos_constraints(cons)
+        for con in cons:
+            level = con.level
+            if level == 1:
+                sos_type = gurobipy.GRB.SOS_TYPE1
+            elif level == 2:
+                sos_type = gurobipy.GRB.SOS_TYPE2
+            else:
+                raise ValueError(
+                    f"Solver does not support SOS level {level} constraints"
+                )
+
+            gurobi_vars = []
+            weights = []
+
+            for v, w in con.get_items():
+                gurobi_vars.append(self._pyomo_var_to_solver_var_map[v])
+                weights.append(w)
+
+            gurobipy_con = self._solver_model.addSOS(sos_type, gurobi_vars, weights)
+            self._pyomo_sos_to_solver_sos_map[con] = gurobipy_con
         self._constraints_added_since_update.update(cons)
         self._needs_updated = True
 
@@ -997,53 +719,169 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
             v_id = id(var)
             if var in self._vars_added_since_update:
                 self._update_gurobi_model()
-            solver_var = self._pyomo_var_to_solver_var_map[v_id]
+            solver_var = self._pyomo_var_to_solver_var_map.pop(var)
             self._solver_model.remove(solver_var)
-            del self._pyomo_var_to_solver_var_map[v_id]
-            del self._vars[v_id]
-            self._mutable_bounds.pop(v_id, None)
+            self._mutable_bounds.pop((v_id, 'lb'), None)
+            self._mutable_bounds.pop((v_id, 'ub'), None)
         self._needs_updated = True
 
-    def _update_variables(self, variables: List[VarData]):
+    def _update_variables(self, variables: Mapping[VarData, Reason]):
         self._invalidate_last_results()
-        for var in variables:
-            var_id = id(var)
-            if var_id not in self._pyomo_var_to_solver_var_map:
-                raise ValueError(
-                    f'The Var provided to update_var needs to be added first: {var}'
+        new_vars = []
+        old_vars = []
+        mod_vars = []
+        for v, reason in variables.items():
+            if reason & Reason.added:
+                new_vars.append(v)
+            elif reason & Reason.removed:
+                old_vars.append(v)
+            else:
+                mod_vars.append(v)
+
+        if new_vars:
+            self._add_variables(new_vars)
+        if old_vars:
+            self._remove_variables(old_vars)
+
+        cons_to_reprocess = OrderedSet()
+        cons_to_update = OrderedSet()
+        reprocess_obj = False
+        update_obj = False
+
+        for v in mod_vars:
+            reason = variables[v]
+            if reason & (Reason.bounds | Reason.domain | Reason.fixed | Reason.value):
+                var_id = id(v)
+                self._mutable_bounds.pop((var_id, 'lb'), None)
+                self._mutable_bounds.pop((var_id, 'ub'), None)
+                gurobipy_var = self._pyomo_var_to_solver_var_map[v]
+                lb, ub, vtype = self._process_domain_and_bounds(v)
+                gurobipy_var.setAttr('lb', lb)
+                gurobipy_var.setAttr('ub', ub)
+                gurobipy_var.setAttr('vtype', vtype)
+            if reason & Reason.fixed:
+                cons_to_reprocess.update(
+                    self._change_detector.get_constraints_impacted_by_var(v)
                 )
-            self._mutable_bounds.pop((var_id, 'lb'), None)
-            self._mutable_bounds.pop((var_id, 'ub'), None)
-            gurobipy_var = self._pyomo_var_to_solver_var_map[var_id]
-            lb, ub, vtype = self._process_domain_and_bounds(var)
-            gurobipy_var.setAttr('lb', lb)
-            gurobipy_var.setAttr('ub', ub)
-            gurobipy_var.setAttr('vtype', vtype)
-            if var.fixed:
-                self._should_update_parameters = True
+                objs = self._change_detector.get_objectives_impacted_by_var(v)
+                if objs:
+                    assert len(objs) == 1
+                    assert objs[0] is self._objective
+                    reprocess_obj = True
+            elif (reason & Reason.value) and v.fixed:
+                cons_to_update.update(
+                    self._change_detector.get_constraints_impacted_by_var(v)
+                )
+                objs = self._change_detector.get_objectives_impacted_by_var(v)
+                if objs:
+                    assert len(objs) == 1
+                    assert objs[0] is self._objective
+                    update_obj = True
+
+        self._remove_constraints(cons_to_reprocess)
+        self._add_constraints(cons_to_reprocess)
+        cons_to_update -= cons_to_reprocess
+        for c in cons_to_update:
+            if c in self._mutable_helpers:
+                for i in self._mutable_helpers[c]:
+                    i.update()
+            self._update_quadratic_constraint(c)
+
+        if reprocess_obj:
+            obj = self._objective
+            self._remove_objectives([obj])
+            self._add_objectives([obj])
+        elif update_obj:
+            self._mutable_objective_update()
+
         self._needs_updated = True
 
-    def _update_parameters(self, params: List[ParamData]):
+    def _update_constraints(self, cons: Mapping[ConstraintData, Reason]):
         self._invalidate_last_results()
-        for con, helpers in self._mutable_helpers.items():
-            for helper in helpers:
-                helper.update()
-        for k, (v, helper) in self._mutable_bounds.items():
-            helper.update()
+        new_cons = []
+        old_cons = []
+        for c, reason in cons.items():
+            if reason & Reason.added:
+                new_cons.append(c)
+            elif reason & Reason.removed:
+                old_cons.append(c)
+            elif reason & Reason.expr:
+                old_cons.append(c)
+                new_cons.append(c)
 
-        for con, helper in self._mutable_quadratic_helpers.items():
-            if con in self._constraints_added_since_update:
+        if old_cons:
+            self._remove_constraints(old_cons)
+        if new_cons:
+            self._add_constraints(new_cons)
+        self._needs_updated = True
+
+    def _update_sos_constraints(self, cons: Mapping[SOSConstraintData, Reason]):
+        self._invalidate_last_results()
+        new_cons = []
+        old_cons = []
+        for c, reason in cons.items():
+            if reason & Reason.added:
+                new_cons.append(c)
+            elif reason & Reason.removed:
+                old_cons.append(c)
+            elif reason & Reason.sos_items:
+                old_cons.append(c)
+                new_cons.append(c)
+
+        if old_cons:
+            self._remove_sos_constraints(old_cons)
+        if new_cons:
+            self._add_sos_constraints(new_cons)
+        self._needs_updated = True
+
+    def _update_objectives(self, objs: Mapping[ObjectiveData, Reason]):
+        self._invalidate_last_results()
+        new_objs = []
+        old_objs = []
+        new_sense = []
+        for obj, reason in objs.items():
+            if reason & Reason.added:
+                new_objs.append(obj)
+            elif reason & Reason.removed:
+                old_objs.append(obj)
+            elif reason & Reason.expr:
+                old_objs.append(obj)
+                new_objs.append(obj)
+            elif reason & Reason.sense:
+                new_sense.append(obj)
+
+        if old_objs:
+            self._remove_objectives(old_objs)
+        if new_objs:
+            self._add_objectives(new_objs)
+        if new_sense:
+            assert len(new_sense) == 1
+            obj = new_sense[0]
+            assert obj is self._objective
+            if obj.sense == minimize:
+                sense = gurobipy.GRB.MINIMIZE
+            elif obj.sense == maximize:
+                sense = gurobipy.GRB.MAXIMIZE
+            else:
+                raise ValueError(f'Objective sense is not recognized: {obj.sense}')
+            self._solver_model.ModelSense = sense
+
+    def _update_quadratic_constraint(self, c: ConstraintData):
+        if c in self._mutable_quadratic_helpers:
+            if c in self._constraints_added_since_update:
                 self._update_gurobi_model()
+            helper = self._mutable_quadratic_helpers[c]
             gurobi_con = helper.gurobi_con
             new_gurobi_expr = helper.get_updated_expression()
             new_rhs = helper.get_updated_rhs()
             new_sense = gurobi_con.qcsense
             self._solver_model.remove(gurobi_con)
             new_con = self._solver_model.addQConstr(new_gurobi_expr, new_sense, new_rhs)
-            self._pyomo_con_to_solver_con_map[con] = new_con
-            helper.pyomo_con = con
-            self._constraints_added_since_update.add(con)
+            self._pyomo_con_to_solver_con_map[c] = new_con
+            assert helper.pyomo_con is c
+            self._constraints_added_since_update.add(c)
 
+    def _mutable_objective_update(self):
         if self._mutable_objective is not None:
             new_gurobi_expr = self._mutable_objective.get_updated_expression()
             if new_gurobi_expr is not None:
@@ -1056,7 +894,47 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
                 #       parts have mutable coefficients
                 self._solver_model.setObjective(new_gurobi_expr, sense=sense)
 
-        self._should_update_parameters = False
+    def _update_parameters(self, params: Mapping[ParamData, Reason]):
+        self._invalidate_last_results()
+
+        cons_to_update = OrderedSet()
+        update_obj = False
+        vars_to_update = ComponentSet()
+        for p, reason in params.items():
+            if reason & Reason.added:
+                continue
+            if reason & Reason.removed:
+                continue
+            if reason & Reason.value:
+                cons_to_update.update(
+                    self._change_detector.get_constraints_impacted_by_param(p)
+                )
+                objs = self._change_detector.get_objectives_impacted_by_param(p)
+                if objs:
+                    assert len(objs) == 1
+                    assert objs[0] is self._objective
+                    update_obj = True
+                vars_to_update.update(
+                    self._change_detector.get_variables_impacted_by_param(p)
+                )
+
+        for c in cons_to_update:
+            if c in self._mutable_helpers:
+                for i in self._mutable_helpers[c]:
+                    i.update()
+            self._update_quadratic_constraint(c)
+
+        if update_obj:
+            self._mutable_objective_update()
+
+        for v in vars_to_update:
+            vid = id(v)
+            if (vid, 'lb') in self._mutable_bounds:
+                self._mutable_bounds[(vid, 'lb')][1].update()
+            if (vid, 'ub') in self._mutable_bounds:
+                self._mutable_bounds[(vid, 'ub')][1].update()
+
+        self._needs_updated = True
 
     def _invalidate_last_results(self):
         if self._last_results_object is not None:
@@ -1458,9 +1336,6 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
     def reset(self):
         self._solver_model.reset()
 
-    def add_variables(self, variables):
-        self._change_detector.add_variables(variables)
-
     def add_constraints(self, cons):
         self._change_detector.add_constraints(cons)
 
@@ -1475,9 +1350,6 @@ class GurobiPersistent(GurobiDirectQuadratic, PersistentSolverBase):
 
     def remove_sos_constraints(self, cons):
         self._change_detector.remove_sos_constraints(cons)
-
-    def remove_variables(self, variables):
-        self._change_detector.remove_variables(variables)
 
     def update_variables(self, variables):
         self._change_detector.update_variables(variables)

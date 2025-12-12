@@ -1206,7 +1206,12 @@ class SumExpression(NumericExpression):
         return self.__class__(_args)
 
     def _apply_operation(self, result):
-        return sum(result)
+        # Avoid 0 being added to summations by specifying the start
+        if result:
+            _iter = iter(result)
+            return sum(_iter, start=next(_iter))
+        else:
+            return 0
 
     def _compute_polynomial_degree(self, result):
         # NB: We can't use max() here because None (non-polynomial)
@@ -1333,6 +1338,8 @@ class LinearExpression(SumExpression):
                 assert arg.is_potentially_variable()
                 coef.append(1)
                 var.append(arg)
+        coef = tuple(coef)
+        var = tuple(var)
         LinearExpression._cache = (self, const, coef, var)
 
     @property
