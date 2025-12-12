@@ -20,83 +20,77 @@ import pyomo.environ as pyo
 from pyomo.contrib.parmest.experiment import Experiment
 
 
-def rooney_biegler_model(data):
+def rooney_biegler_model(data, theta=None):
     model = pyo.ConcreteModel()
 
-    model.asymptote = pyo.Var(initialize=15)
-    model.rate_constant = pyo.Var(initialize=0.5)
+    if theta is None:
+        theta = {'asymptote': 15, 'rate_constant': 0.5}
 
-    model.y = pyo.Var(data.hour, within=pyo.PositiveReals, initialize=5)
+    model.asymptote = pyo.Var(initialize=theta['asymptote'])
+    model.rate_constant = pyo.Var(initialize=theta['rate_constant'])
 
-    def response_rule(m, h):
-        return m.y[h] == m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
+    # Fix the unknown parameters
+    model.asymptote.fix()
+    model.rate_constant.fix()
 
-    model.response_function = pyo.Constraint(data.hour, rule=response_rule)
+    # Add the experiment inputs
+    model.hour = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-    def SSE_rule(m):
-        return sum((data.y[i] - m.y[data.hour[i]]) ** 2 for i in data.index)
+    # Fix the experiment inputs
+    model.hour.fix()
 
-    model.SSE = pyo.Objective(rule=SSE_rule, sense=pyo.minimize)
+    # Add the response variable
+    model.y = pyo.Var(within=pyo.PositiveReals, initialize=data["y"].iloc[0])
+
+    def response_rule(m):
+        return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour))
+
+    model.response_function = pyo.Constraint(rule=response_rule)
 
     return model
 
 
 class RooneyBieglerExperiment(Experiment):
 
-    def __init__(self, data, measure_error=None):
+    def __init__(self, data, measure_error=None, theta=None):
         self.data = data
         self.model = None
         self.measure_error = measure_error
+        self.theta = theta
 
     def create_model(self):
         # rooney_biegler_model expects a dataframe
         data_df = self.data.to_frame().transpose()
-        self.model = rooney_biegler_model(data_df)
+        self.model = rooney_biegler_model(data_df, theta=self.theta)
 
     def label_model(self):
 
         m = self.model
 
+        # Add experiment outputs as a suffix
+        # Experiment outputs suffix is required for parmest
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
+        m.experiment_outputs.update([(m.y, self.data['y'])])
 
+        # Add unknown parameters as a suffix
+        # Unknown parameters suffix is required for both Pyomo.DoE and parmest
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
-            (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+            (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
         )
 
+        # Add measurement error as a suffix
+        # Measurement error suffix is required for Pyomo.DoE and
+        #  `cov` estimation in parmest
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y[self.data['hour']], self.measure_error)])
+        m.measurement_error.update([(m.y, self.measure_error)])
 
-    def finalize_model(self):
-
-        m = self.model
-
-        # Experiment input values
-        m.hour = self.data['hour']
+        # Add hour as an experiment input
+        # Experiment inputs suffix is required for Pyomo.DoE
+        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_inputs.update([(m.hour, self.data['hour'])])
 
     def get_labeled_model(self):
         self.create_model()
         self.label_model()
-        self.finalize_model()
-
         return self.model
-
-
-def main():
-    # These were taken from Table A1.4 in Bates and Watts (1988).
-    data = pd.DataFrame(
-        data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-        columns=['hour', 'y'],
-    )
-
-    model = rooney_biegler_model(data)
-    solver = pyo.SolverFactory('ipopt')
-    solver.solve(model)
-
-    print('asymptote = ', model.asymptote())
-    print('rate constant = ', model.rate_constant())
-
-
-if __name__ == '__main__':
-    main()
