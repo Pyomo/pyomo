@@ -90,12 +90,7 @@ class RooneyBieglerExperiment(Experiment):
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_inputs.update([(m.hour, self.data['hour'])])
 
-    def finalize_model(self):
-        pass
-
     def get_labeled_model(self):
         self.create_model()
         self.label_model()
-        self.finalize_model()
-
         return self.model
