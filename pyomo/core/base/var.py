@@ -576,13 +576,13 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     _ComponentDataClass = VarData
 
     @overload
-    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
-
-    @overload
     def __new__(cls: Type[ScalarVar], *args, **kwargs) -> ScalarVar: ...
 
     @overload
     def __new__(cls: Type[IndexedVar], *args, **kwargs) -> IndexedVar: ...
+
+    @overload
+    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
 
     def __new__(cls, *args, **kwargs):
         if cls is not Var:
