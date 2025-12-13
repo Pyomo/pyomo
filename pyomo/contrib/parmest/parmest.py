@@ -786,7 +786,6 @@ class Estimator:
         diagnostic_mode=False,
         solver_options=None,
     ):
-
         # check that we have a (non-empty) list of experiments
         assert isinstance(experiment_list, list)
         self.exp_list = experiment_list
@@ -850,7 +849,6 @@ class Estimator:
         diagnostic_mode=False,
         solver_options=None,
     ):
-
         deprecation_warning(
             "You're using the deprecated parmest interface (model_function, "
             "data, theta_names). This interface will be removed in a future release, "
@@ -873,26 +871,22 @@ class Estimator:
         """
         # check for deprecated inputs
         if self.pest_deprecated:
-
             # if fitted model parameter names differ from theta_names
             # created when Estimator object is created
             if hasattr(self, 'theta_names_updated'):
                 return self.pest_deprecated.theta_names_updated
 
             else:
-
                 # default theta_names, created when Estimator object is created
                 return self.pest_deprecated.theta_names
 
         else:
-
             # if fitted model parameter names differ from theta_names
             # created when Estimator object is created
             if hasattr(self, 'theta_names_updated'):
                 return self.theta_names_updated
 
             else:
-
                 # default theta_names, created when Estimator object is created
                 return self.estimator_theta_names
 
@@ -922,6 +916,7 @@ class Estimator:
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
 
         # Add objective function (optional)
+        # @Reviewers What is the purpose of the reserved_names? Can we discuss this in a meeting?
         if self.obj_function:
             # Check for component naming conflicts
             reserved_names = [
@@ -971,197 +966,130 @@ class Estimator:
         model = self._create_parmest_model(experiment_number)
         return model
 
-    def _Q_opt(
+    def _create_scenario_blocks(self, bootlist=None):
+        # Create scenario block structure
+        # Utility function for _Q_opt_blocks
+        # Make a block of model scenarios, one for each experiment in exp_list
+
+        # Create a parent model to hold scenario blocks
+        model = pyo.ConcreteModel()
+
+        if bootlist is not None:
+            n_scenarios = len(bootlist)
+            model.exp_scenarios = pyo.Block(range(len(bootlist)))
+
+            for i in range(len(bootlist)):
+                # Create parmest model for experiment i
+                parmest_model = self._create_parmest_model(bootlist[i])
+                # Assign parmest model to block
+                model.exp_scenarios[i].transfer_attributes_from(parmest_model)
+
+        else:
+            n_scenarios = len(self.exp_list)
+            model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
+
+            for i in range(len(self.exp_list)):
+                # Create parmest model for experiment i
+                parmest_model = self._create_parmest_model(i)
+                # parmest_model.pprint()
+                # Assign parmest model to block
+                model.exp_scenarios[i].transfer_attributes_from(parmest_model)
+                # model.exp_scenarios[i].pprint()
+
+        # Transfer all the unknown parameters to the parent model
+        for name in self.estimator_theta_names:
+            # Get the variable from the first block
+            ref_var = getattr(model.exp_scenarios[0], name)
+            # Create a variable in the parent model with same bounds and initialization
+            parent_var = pyo.Var(bounds=ref_var.bounds, initialize=pyo.value(ref_var))
+            setattr(model, name, parent_var)
+            # Constrain the variable in the first block to equal the parent variable
+            model.add_component(
+                f"Link_{name}_Block0_Parent",
+                pyo.Constraint(
+                    expr=getattr(model.exp_scenarios[0], name) == parent_var
+                ),
+            )
+
+        # Make an objective that sums over all scenario blocks and divides by number of experiments
+        def total_obj(m):
+            return sum(
+                block.Total_Cost_Objective for block in m.exp_scenarios.values()
+            ) / len(self.exp_list)
+
+        model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
+
+        # Make sure all the parameters are linked across blocks
+        for name in self.estimator_theta_names:
+            for i in range(1, n_scenarios):
+                model.add_component(
+                    f"Link_{name}_Block{i}_Parent",
+                    pyo.Constraint(
+                        expr=getattr(model.exp_scenarios[i], name)
+                        == getattr(model, name)
+                    ),
+                )
+
+            # Deactivate the objective in each block to avoid double counting
+            for i in range(n_scenarios):
+                model.exp_scenarios[i].Total_Cost_Objective.deactivate()
+
+        # model.pprint()
+
+        return model
+
+    # Redesigning version of _Q_opt that uses scenario blocks
+    # Works, but still adding features from old _Q_opt
+    # @Reviewers: Trying to find best way to integrate the ability to fix thetas
+    def _Q_opt_blocks(
         self,
-        ThetaVals=None,
-        solver="ef_ipopt",
-        return_values=[],
+        return_values=None,
         bootlist=None,
+        ThetaVals=None,
+        solver="ipopt",
         calc_cov=NOTSET,
         cov_n=NOTSET,
     ):
-        """
-        Set up all thetas as first stage Vars, return resulting theta
-        values as well as the objective function value.
+        '''
+        Making new version of _Q_opt that uses scenario blocks, similar to DoE.
 
-        """
-        if solver == "k_aug":
-            raise RuntimeError("k_aug no longer supported.")
+        Steps:
+        1. Load model - parmest model should be labeled
+        2. Create scenario blocks (biggest redesign) - clone model to have one per experiment
+        3. Define objective and constraints for the block
+        4. Solve the block as a single problem
+        5. Analyze results and extract parameter estimates
 
-        # (Bootstrap scenarios will use indirection through the bootlist)
-        if bootlist is None:
-            scenario_numbers = list(range(len(self.exp_list)))
-            scen_names = ["Scenario{}".format(i) for i in scenario_numbers]
-        else:
-            scen_names = ["Scenario{}".format(i) for i in range(len(bootlist))]
+        '''
 
-        # get the probability constant that is applied to the objective function
-        # parmest solves the estimation problem by applying equal probabilities to
-        # the objective function of all the scenarios from the experiment list
-        self.obj_probability_constant = len(scen_names)
+        # Create scenario blocks using utility function
+        model = self._create_scenario_blocks(bootlist=bootlist)
 
-        # tree_model.CallbackModule = None
-        outer_cb_data = dict()
-        outer_cb_data["callback"] = self._instance_creation_callback
-        if ThetaVals is not None:
-            outer_cb_data["ThetaVals"] = ThetaVals
-        if bootlist is not None:
-            outer_cb_data["BootList"] = bootlist
-        outer_cb_data["cb_data"] = None  # None is OK
-        outer_cb_data["theta_names"] = self.estimator_theta_names
+        if solver == "ipopt":
+            sol = SolverFactory('ipopt')
+        if self.solver_options is not None:
+            for key in self.solver_options:
+                solver.options[key] = self.solver_options[key]
 
-        options = {"solver": "ipopt"}
-        scenario_creator_options = {"cb_data": outer_cb_data}
-        if use_mpisppy:
-            ef = sputils.create_EF(
-                scen_names,
-                _experiment_instance_creation_callback,
-                EF_name="_Q_opt",
-                suppress_warnings=True,
-                scenario_creator_kwargs=scenario_creator_options,
+        solve_result = sol.solve(model, tee=self.tee)
+        assert_optimal_termination(solve_result)
+
+        # Extract objective value
+        obj_value = pyo.value(model.Obj)
+        theta_estimates = {}
+        # Extract theta estimates from first block
+        for name in self.estimator_theta_names:
+            theta_estimates[name] = pyo.value(getattr(model.exp_scenarios[0], name))
+
+        # Check they are equal to the second block
+        for name in self.estimator_theta_names:
+            val_block1 = pyo.value(getattr(model.exp_scenarios[1], name))
+            assert theta_estimates[name] == val_block1, (
+                f"Parameter {name} estimate differs between blocks: "
+                f"{theta_estimates[name]} vs {val_block1}"
             )
-        else:
-            ef = local_ef.create_EF(
-                scen_names,
-                _experiment_instance_creation_callback,
-                EF_name="_Q_opt",
-                suppress_warnings=True,
-                scenario_creator_kwargs=scenario_creator_options,
-            )
-        self.ef_instance = ef
 
-        # Solve the extensive form with ipopt
-        if solver == "ef_ipopt":
-            if calc_cov is NOTSET or not calc_cov:
-                # Do not calculate the reduced hessian
-
-                solver = SolverFactory('ipopt')
-                if self.solver_options is not None:
-                    for key in self.solver_options:
-                        solver.options[key] = self.solver_options[key]
-
-                solve_result = solver.solve(self.ef_instance, tee=self.tee)
-                assert_optimal_termination(solve_result)
-            elif calc_cov is not NOTSET and calc_cov:
-                # parmest makes the fitted parameters stage 1 variables
-                ind_vars = []
-                for nd_name, Var, sol_val in ef_nonants(ef):
-                    ind_vars.append(Var)
-                # calculate the reduced hessian
-                (solve_result, inv_red_hes) = (
-                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                        self.ef_instance,
-                        independent_variables=ind_vars,
-                        solver_options=self.solver_options,
-                        tee=self.tee,
-                    )
-                )
-
-            if self.diagnostic_mode:
-                print(
-                    '    Solver termination condition = ',
-                    str(solve_result.solver.termination_condition),
-                )
-
-            # assume all first stage are thetas...
-            theta_vals = {}
-            for nd_name, Var, sol_val in ef_nonants(ef):
-                # process the name
-                # the scenarios are blocks, so strip the scenario name
-                var_name = Var.name[Var.name.find(".") + 1 :]
-                theta_vals[var_name] = sol_val
-
-            obj_val = pyo.value(ef.EF_Obj)
-            self.obj_value = obj_val
-            self.estimated_theta = theta_vals
-
-            if calc_cov is not NOTSET and calc_cov:
-                # Calculate the covariance matrix
-
-                if not isinstance(cov_n, int):
-                    raise TypeError(
-                        f"Expected an integer for the 'cov_n' argument. "
-                        f"Got {type(cov_n)}."
-                    )
-                num_unknowns = max(
-                    [
-                        len(experiment.get_labeled_model().unknown_parameters)
-                        for experiment in self.exp_list
-                    ]
-                )
-                assert cov_n > num_unknowns, (
-                    "The number of datapoints must be greater than the "
-                    "number of parameters to estimate."
-                )
-
-                # Number of data points considered
-                n = cov_n
-
-                # Extract number of fitted parameters
-                l = len(theta_vals)
-
-                # Assumption: Objective value is sum of squared errors
-                sse = obj_val
-
-                '''Calculate covariance assuming experimental observation errors 
-                are independent and follow a Gaussian distribution 
-                with constant variance.
-
-                The formula used in parmest was verified against equations 
-                (7-5-15) and (7-5-16) in "Nonlinear Parameter Estimation", 
-                Y. Bard, 1974.
-
-                This formula is also applicable if the objective is scaled by a 
-                constant; the constant cancels out. 
-                (was scaled by 1/n because it computes an expected value.)
-                '''
-                cov = 2 * sse / (n - l) * inv_red_hes
-                cov = pd.DataFrame(
-                    cov, index=theta_vals.keys(), columns=theta_vals.keys()
-                )
-
-            theta_vals = pd.Series(theta_vals)
-
-            if len(return_values) > 0:
-                var_values = []
-                if len(scen_names) > 1:  # multiple scenarios
-                    block_objects = self.ef_instance.component_objects(
-                        Block, descend_into=False
-                    )
-                else:  # single scenario
-                    block_objects = [self.ef_instance]
-                for exp_i in block_objects:
-                    vals = {}
-                    for var in return_values:
-                        exp_i_var = exp_i.find_component(str(var))
-                        if (
-                            exp_i_var is None
-                        ):  # we might have a block such as _mpisppy_data
-                            continue
-                        # if value to return is ContinuousSet
-                        if type(exp_i_var) == ContinuousSet:
-                            temp = list(exp_i_var)
-                        else:
-                            temp = [pyo.value(_) for _ in exp_i_var.values()]
-                        if len(temp) == 1:
-                            vals[var] = temp[0]
-                        else:
-                            vals[var] = temp
-                    if len(vals) > 0:
-                        var_values.append(vals)
-                var_values = pd.DataFrame(var_values)
-                if calc_cov is not NOTSET and calc_cov:
-                    return obj_val, theta_vals, var_values, cov
-                elif calc_cov is NOTSET or not calc_cov:
-                    return obj_val, theta_vals, var_values
-
-            if calc_cov is not NOTSET and calc_cov:
-                return obj_val, theta_vals, cov
-            elif calc_cov is NOTSET or not calc_cov:
-                return obj_val, theta_vals
-
-        else:
-            raise RuntimeError("Unknown solver in Q_Opt=" + solver)
+        return obj_value, theta_estimates
 
     def _cov_at_theta(self, method, solver, step):
         """
@@ -1191,13 +1119,14 @@ class Estimator:
             for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
                 ind_vars.append(Var)
             # calculate the reduced hessian
-            (solve_result, inv_red_hes) = (
-                inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                    self.ef_instance,
-                    independent_variables=ind_vars,
-                    solver_options=self.solver_options,
-                    tee=self.tee,
-                )
+            (
+                solve_result,
+                inv_red_hes,
+            ) = inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                self.ef_instance,
+                independent_variables=ind_vars,
+                solver_options=self.solver_options,
+                tee=self.tee,
             )
 
             self.inv_red_hes = inv_red_hes
@@ -1486,10 +1415,14 @@ class Estimator:
                 if self.diagnostic_mode:
                     print('      Experiment = ', snum)
                     print('     First solve with special diagnostics wrapper')
-                    (status_obj, solved, iters, time, regu) = (
-                        utils.ipopt_solve_with_stats(
-                            instance, optimizer, max_iter=500, max_cpu_time=120
-                        )
+                    (
+                        status_obj,
+                        solved,
+                        iters,
+                        time,
+                        regu,
+                    ) = utils.ipopt_solve_with_stats(
+                        instance, optimizer, max_iter=500, max_cpu_time=120
                     )
                     print(
                         "   status_obj, solved, iters, time, regularization_stat = ",
@@ -1675,7 +1608,7 @@ class Estimator:
                 solver=solver, return_values=return_values
             )
 
-        return self._Q_opt(
+        return self._Q_opt_blocks(
             solver=solver,
             return_values=return_values,
             bootlist=None,
@@ -1794,7 +1727,7 @@ class Estimator:
 
         bootstrap_theta = list()
         for idx, sample in local_list:
-            objval, thetavals = self._Q_opt(bootlist=list(sample))
+            objval, thetavals = self._Q_opt_blocks(bootlist=list(sample))
             thetavals['samples'] = sample
             bootstrap_theta.append(thetavals)
 
@@ -1854,7 +1787,7 @@ class Estimator:
 
         lNo_theta = list()
         for idx, sample in local_list:
-            objval, thetavals = self._Q_opt(bootlist=list(sample))
+            objval, thetavals = self._Q_opt_blocks(bootlist=list(sample))
             lNo_s = list(set(range(len(self.exp_list))) - set(sample))
             thetavals['lNo'] = np.sort(lNo_s)
             lNo_theta.append(thetavals)
@@ -1931,7 +1864,6 @@ class Estimator:
 
         results = []
         for idx, sample in global_list:
-
             obj, theta = self.theta_est()
 
             bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples, seed=seed)
@@ -2493,13 +2425,14 @@ class _DeprecatedEstimator:
                 for ndname, Var, solval in ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
-                (solve_result, inv_red_hes) = (
-                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                        self.ef_instance,
-                        independent_variables=ind_vars,
-                        solver_options=self.solver_options,
-                        tee=self.tee,
-                    )
+                (
+                    solve_result,
+                    inv_red_hes,
+                ) = inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                    self.ef_instance,
+                    independent_variables=ind_vars,
+                    solver_options=self.solver_options,
+                    tee=self.tee,
                 )
 
             if self.diagnostic_mode:
@@ -2689,10 +2622,14 @@ class _DeprecatedEstimator:
                 if self.diagnostic_mode:
                     print('      Experiment = ', snum)
                     print('     First solve with special diagnostics wrapper')
-                    (status_obj, solved, iters, time, regu) = (
-                        utils.ipopt_solve_with_stats(
-                            instance, optimizer, max_iter=500, max_cpu_time=120
-                        )
+                    (
+                        status_obj,
+                        solved,
+                        iters,
+                        time,
+                        regu,
+                    ) = utils.ipopt_solve_with_stats(
+                        instance, optimizer, max_iter=500, max_cpu_time=120
                     )
                     print(
                         "   status_obj, solved, iters, time, regularization_stat = ",
