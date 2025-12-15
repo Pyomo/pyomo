@@ -113,7 +113,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
         prefix each generated line with this string
     data: iterable
         an iterable object that returns (key, value) pairs
-        (e.g., from items()) defining each row in the table
+        (e.g., from iteritems()) defining each row in the table
     header: List[str]
         list of column headers
     row_generator: function
@@ -162,21 +162,22 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
         if not _rows[_key]:
             _minWidth = 4
         elif not _width:
-            _width = [len(x) for x in _rows[_key][0]]
-        else:
-            for _row in _rows[_key]:
-                for col, x in enumerate(_row):
-                    _width[col] = max(_width[col], len(x))
-
-    if _minWidth:
-        for i in range(1, len(_width)):
-            _width[i] = max(_minWidth, _width[i])
+            _width = [0] * len(_rows[_key][0])
+        for _row in _rows[_key]:
+            for col, x in enumerate(_row):
+                _width[col] = max(_width[col], len(x), col and _minWidth)
 
     # NB: left-justify header entries
     if header:
         # Note: do not right-pad the last header with unnecessary spaces
-        line_fmt = " : ".join(f"%-{w}s" for w in _width[:-1]) + " : %s\n"
-        ostream.write(prefix + (line_fmt % header))
+        tmp = _width[-1]
+        _width[-1] = 0
+        ostream.write(
+            prefix
+            + " : ".join("%%-%ds" % _width[i] % x for i, x in enumerate(header))
+            + "\n"
+        )
+        _width[-1] = tmp
 
     # If there is no data, we are done...
     if not _rows:
@@ -184,17 +185,18 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
 
     # right-justify data, except for the last column if there are spaces
     # in the data (probably an expression or vector)
-    _width = [f"%{w}s" for w in _width]
+    _width = ["%" + str(i) + "s" for i in _width]
+
     if any(' ' in r[-1] for x in _rows.values() if x is not None for r in x):
         _width[-1] = '%s'
-    line_fmt = " : ".join(_width) + "\n"
-
     for _key in _rows:
         _rowSet = _rows[_key]
         if not _rowSet:
-            _rowSet = [(_key,) + (None,) * (len(_width) - 1)]
+            _rowSet = [[_key] + [None] * (len(_width) - 1)]
         for _data in _rowSet:
-            ostream.write(prefix + (line_fmt % _data))
+            ostream.write(
+                prefix + " : ".join(_width[i] % x for i, x in enumerate(_data)) + "\n"
+            )
 
 
 class StreamIndenter:
