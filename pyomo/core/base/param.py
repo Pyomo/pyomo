@@ -425,7 +425,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         return self._mutable
 
     def get_units(self):
-        """Return the units for this ParamData"""
+        """Return the units for this Param"""
         return self._units
 
     #
