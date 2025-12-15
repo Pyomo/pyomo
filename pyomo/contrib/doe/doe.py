@@ -64,6 +64,7 @@ from pyomo.opt import SolverStatus
 class ObjectiveLib(Enum):
     determinant = "determinant"
     trace = "trace"
+    pseudo_trace = "pseudo_trace"
     minimum_eigenvalue = "minimum_eigenvalue"
     condition_number = "condition_number"
     zero = "zero"
@@ -125,8 +126,9 @@ class DesignOfExperiments:
         objective_option:
             String representation of the objective option. Current available options
             are: ``determinant`` (for determinant, or D-optimality),
-            ``trace`` (for trace, or A-optimality), ``minimum_eigenvalue``, (for
-            E-optimality), or ``condition_number`` (for ME-optimality)
+            ``trace`` (for trace of covariance matrix, or A-optimality),
+            ``pseudo_trace`` (for trace of Fisher Information Matrix(FIM)),
+            ``minimum_eigenvalue``, (for E-optimality), or ``condition_number`` (for ME-optimality)
             Note: E-optimality and ME-optimality are only supported when using the
             grey box objective (i.e., ``grey_box_solver`` is True)
             default: ``determinant``
@@ -486,7 +488,8 @@ class DesignOfExperiments:
 
         # Saving some stats on the FIM for convenience
         self.results["Objective expression"] = str(self.objective_option).split(".")[-1]
-        self.results["log10 A-opt"] = np.log10(np.trace(fim_local))
+        self.results["log10 A-opt"] = np.log10(np.trace(np.linalg.inv(fim_local)))
+        self.results["log10 Trace of FIM"] = np.log10(np.trace(fim_local))
         self.results["log10 D-opt"] = np.log10(np.linalg.det(fim_local))
         self.results["log10 E-opt"] = np.log10(min(np.linalg.eig(fim_local)[0]))
         self.results["FIM Condition Number"] = np.linalg.cond(fim_local)
@@ -937,29 +940,62 @@ class DesignOfExperiments:
         # Initialize the FIM
         if self.fim_initial is not None:
             dict_fim_initialize = {
-                (bu, un): self.fim_initial[i][j]
+                (bu, un): self.fim_initial[i, j]
                 for i, bu in enumerate(model.parameter_names)
                 for j, un in enumerate(model.parameter_names)
             }
+            if self.objective_option == ObjectiveLib.trace:
+                fim_initial_inv = np.linalg.pinv(self.fim_initial)
+                dict_fim_inv_initialize = {
+                    (bu, un): fim_initial_inv[i, j]
+                    for i, bu in enumerate(model.parameter_names)
+                    for j, un in enumerate(model.parameter_names)
+                }
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
+
+        def initialize_fim_inv(m, j, d):
+            return dict_fim_inv_initialize[(j, d)]
 
         if self.fim_initial is not None:
             model.fim = pyo.Var(
                 model.parameter_names, model.parameter_names, initialize=initialize_fim
             )
+            if self.objective_option == ObjectiveLib.trace:
+                model.fim_inv = pyo.Var(
+                    model.parameter_names,
+                    model.parameter_names,
+                    initialize=initialize_fim_inv,
+                )
         else:
             model.fim = pyo.Var(
                 model.parameter_names, model.parameter_names, initialize=identity_matrix
             )
+            if self.objective_option == ObjectiveLib.trace:
+                model.fim_inv = pyo.Var(
+                    model.parameter_names,
+                    model.parameter_names,
+                    initialize=identity_matrix,
+                )
 
         # To-Do: Look into this functionality.....
         # if cholesky, define L elements as variables
-        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+        if self.Cholesky_option and self.objective_option in (
+            ObjectiveLib.determinant,
+            ObjectiveLib.trace,
+        ):
             model.L = pyo.Var(
                 model.parameter_names, model.parameter_names, initialize=identity_matrix
             )
+
+            # If trace objective, also need L inverse
+            if self.objective_option == ObjectiveLib.trace:
+                model.L_inv = pyo.Var(
+                    model.parameter_names,
+                    model.parameter_names,
+                    initialize=identity_matrix,
+                )
 
             # loop over parameter name
             for i, c in enumerate(model.parameter_names):
@@ -967,10 +1003,14 @@ class DesignOfExperiments:
                     # fix the 0 half of L matrix to be 0.0
                     if i < j:
                         model.L[c, d].fix(0.0)
+                        if self.objective_option == ObjectiveLib.trace:
+                            model.L_inv[c, d].fix(0.0)
                     # Give LB to the diagonal entries
                     if self.L_diagonal_lower_bound:
                         if c == d:
                             model.L[c, d].setlb(self.L_diagonal_lower_bound)
+                            if self.objective_option == ObjectiveLib.trace:
+                                model.L_inv[c, d].setlb(self.L_diagonal_lower_bound)
 
         # jacobian rule
         def jacobian_rule(m, n, p):
@@ -1286,6 +1326,7 @@ class DesignOfExperiments:
         if self.objective_option not in [
             ObjectiveLib.determinant,
             ObjectiveLib.trace,
+            ObjectiveLib.pseudo_trace,
             ObjectiveLib.zero,
         ]:
             raise DeveloperError(
@@ -1315,13 +1356,15 @@ class DesignOfExperiments:
         )
 
         ### Initialize the Cholesky decomposition matrix
-        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+        if self.Cholesky_option and self.objective_option in (
+            ObjectiveLib.determinant,
+            ObjectiveLib.trace,
+        ):
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
 
             # If the smallest eigenvalue is (practically) negative,
             # add a diagonal matrix to make it positive definite
-            small_number = 1e-10
             if min(eig) < small_number:
                 fim = fim + np.eye(len(model.parameter_names)) * (
                     small_number - min(eig)
@@ -1334,6 +1377,13 @@ class DesignOfExperiments:
             for i, c in enumerate(model.parameter_names):
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L[i, j]
+
+            # Compute L inverse for trace objective and initialize
+            if self.objective_option == ObjectiveLib.trace:
+                L_inv = np.linalg.inv(L)
+                for i, c in enumerate(model.parameter_names):
+                    for j, d in enumerate(model.parameter_names):
+                        model.L_inv[c, d].value = L_inv[i, j]
 
         def cholesky_imp(b, c, d):
             """
@@ -1353,12 +1403,85 @@ class DesignOfExperiments:
                 # This is the empty half of L above the diagonal
                 return pyo.Constraint.Skip
 
+        # If trace objective, need L inverse constraints
+        def cholesky_inv_imp(b, c, d):
+            """
+            Calculate Cholesky L inverse matrix using algebraic constraints
+            """
+            # If the row is greater than or equal to the column, we are in the
+            # lower triangle region of the L_inv matrix.
+            # This region is where our equations are well-defined.
+            m = b.model()
+            if list(m.parameter_names).index(c) >= list(m.parameter_names).index(d):
+                return m.fim_inv[c, d] == sum(
+                    m.L_inv[m.parameter_names.at(k + 1), c]
+                    * m.L_inv[m.parameter_names.at(k + 1), d]
+                    for k in range(
+                        list(m.parameter_names).index(c), len(m.parameter_names)
+                    )
+                )
+            else:
+                # This is the empty half of L_inv above the diagonal
+                return pyo.Constraint.Skip
+
+        # If trace objective, need L * L^-1 = Identity matrix constraints
+        def cholesky_LLinv_imp(b, c, d):
+            """
+            Calculate Cholesky L * L inverse matrix using algebraic constraints
+            """
+            # If the row is greater than or equal to the column, we are in the
+            # lower triangle region of the L and L_inv matrices.
+            # This region is where our equations are well-defined.
+            m = b.model()
+            if c == d:
+                return (
+                    sum(
+                        m.L[c, m.parameter_names.at(k + 1)]
+                        * m.L_inv[m.parameter_names.at(k + 1), d]
+                        for k in range(len(m.parameter_names))
+                    )
+                    == 1
+                )
+            else:
+                # This is the off diagonal entries of Identity matrix I = L * L_inv
+                return (
+                    sum(
+                        m.L[c, m.parameter_names.at(k + 1)]
+                        * m.L_inv[m.parameter_names.at(k + 1), d]
+                        for k in range(len(m.parameter_names))
+                    )
+                    == 0
+                )
+
+        # To improve round off error
+        def cholesky_fim_diag(b, c, d):
+            """
+            M[c,c] >= L[c,d]^2 to improve round off error
+            """
+            m = b.model()
+            return m.fim[c, c] >= m.L[c, d] ** 2
+
+        def cholesky_fim_inv_diag(b, c, d):
+            """
+            M_inv[c,c] >= L_inv[c,d]^2 to improve round off error
+            """
+            m = b.model()
+            return m.fim_inv[c, c] >= m.L_inv[c, d] ** 2
+
+        def cov_trace_calc(b):
+            """
+            Calculate trace of covariance matrix (inverse of FIM).
+            Can scale each element with 1000 for performance
+            """
+            m = b.model()
+            return m.cov_trace == sum(m.fim_inv[j, j] for j in m.parameter_names)
+
         def trace_calc(b):
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
             m = b.model()
-            return m.trace == sum(m.fim[j, j] for j in m.parameter_names)
+            return m.fim_trace == sum(m.fim[j, j] for j in m.parameter_names)
 
         def determinant_general(b):
             r"""Calculate determinant. Can be applied to FIM of any size.
@@ -1414,13 +1537,41 @@ class DesignOfExperiments:
                 expr=pyo.log10(model.determinant + 1e-6), sense=pyo.maximize
             )
 
-        elif self.objective_option == ObjectiveLib.trace:
+        elif self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
+            # if Cholesky and trace, calculating
+            # the OBJ with trace
+            model.cov_trace = pyo.Var(
+                initialize=np.trace(np.linalg.inv(fim)), bounds=(small_number, None)
+            )
+            model.obj_cons.cholesky_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_imp
+            )
+            model.obj_cons.cholesky_inv_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_inv_imp
+            )
+            model.obj_cons.cholesky_LLinv_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_LLinv_imp
+            )
+            model.obj_cons.cholesky_fim_diag_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_fim_diag
+            )
+            model.obj_cons.cholesky_fim_inv_diag_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_fim_inv_diag
+            )
+            model.obj_cons.cov_trace_rule = pyo.Constraint(rule=cov_trace_calc)
+            model.objective = pyo.Objective(
+                expr=pyo.log10(model.cov_trace), sense=pyo.minimize
+            )
+
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
             # if not determinant or Cholesky, calculating
             # the OBJ with trace
-            model.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
+            model.fim_trace = pyo.Var(
+                initialize=np.trace(fim), bounds=(small_number, None)
+            )
             model.obj_cons.trace_rule = pyo.Constraint(rule=trace_calc)
             model.objective = pyo.Objective(
-                expr=pyo.log10(model.trace), sense=pyo.maximize
+                expr=pyo.log10(model.fim_trace), sense=pyo.maximize
             )
 
         # TODO: Add warning (should be unreachable) if the user calls
