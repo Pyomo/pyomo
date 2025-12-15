@@ -98,6 +98,7 @@ class DesignOfExperiments:
         logger_level=logging.WARNING,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
+        _improve_cholesky_roundoff_error=False,
     ):
         """This package enables model-based design of experiments analysis
         with Pyomo.  Both direct optimization and enumeration modes are
@@ -249,6 +250,9 @@ class DesignOfExperiments:
         # Set the private options if passed (only developers should pass these)
         self.Cholesky_option = _Cholesky_option
         self.only_compute_fim_lower = _only_compute_fim_lower
+
+        # To improve round-off error in Cholesky-based objectives
+        self.improve_cholesky_roundoff_error = _improve_cholesky_roundoff_error
 
         # model attribute to avoid rebuilding models
         self.model = pyo.ConcreteModel()  # Build empty model
@@ -1123,6 +1127,8 @@ class DesignOfExperiments:
                 for ind_q, q in enumerate(model.parameter_names):
                     if ind_p < ind_q:
                         model.fim[p, q].fix(0.0)
+                        if self.objective_option == ObjectiveLib.trace:
+                            model.fim_inv[p, q].fix(0.0)
 
     # Create scenario block structure
     def _generate_scenario_blocks(self, model=None):
@@ -1433,40 +1439,39 @@ class DesignOfExperiments:
             # lower triangle region of the L and L_inv matrices.
             # This region is where our equations are well-defined.
             m = b.model()
-            if c == d:
-                return (
-                    sum(
-                        m.L[c, m.parameter_names.at(k + 1)]
-                        * m.L_inv[m.parameter_names.at(k + 1), d]
-                        for k in range(len(m.parameter_names))
-                    )
-                    == 1
-                )
-            else:
-                # This is the off diagonal entries of Identity matrix I = L * L_inv
-                return (
-                    sum(
-                        m.L[c, m.parameter_names.at(k + 1)]
-                        * m.L_inv[m.parameter_names.at(k + 1), d]
-                        for k in range(len(m.parameter_names))
-                    )
-                    == 0
-                )
+            param_list = list(model.parameter_names)
+            idx_c = param_list.index(c)
+            idx_d = param_list.index(d)
+            # Do not need to calculate upper triangle entries
+            if idx_c < idx_d:
+                return pyo.Constraint.Skip
 
-        # To improve round off error
-        def cholesky_fim_diag(b, c, d):
-            """
-            M[c,c] >= L[c,d]^2 to improve round off error
-            """
-            m = b.model()
-            return m.fim[c, c] >= m.L[c, d] ** 2
+            target_value = 1 if idx_c == idx_d else 0
+            return (
+                sum(
+                    m.L[c, m.parameter_names.at(k + 1)]
+                    * m.L_inv[m.parameter_names.at(k + 1), d]
+                    for k in range(len(m.parameter_names))
+                )
+                == target_value
+            )
 
-        def cholesky_fim_inv_diag(b, c, d):
-            """
-            M_inv[c,c] >= L_inv[c,d]^2 to improve round off error
-            """
-            m = b.model()
-            return m.fim_inv[c, c] >= m.L_inv[c, d] ** 2
+        # To improve round off error in Cholesky decomposition
+        if self.improve_cholesky_roundoff_error:
+
+            def cholesky_fim_diag(b, c, d):
+                """
+                M[c,c] >= L[c,d]^2 to improve round off error
+                """
+                m = b.model()
+                return m.fim[c, c] >= m.L[c, d] ** 2
+
+            def cholesky_fim_inv_diag(b, c, d):
+                """
+                M_inv[c,c] >= L_inv[c,d]^2 to improve round off error
+                """
+                m = b.model()
+                return m.fim_inv[c, c] >= m.L_inv[c, d] ** 2
 
         def cov_trace_calc(b):
             """
@@ -1552,16 +1557,17 @@ class DesignOfExperiments:
             model.obj_cons.cholesky_LLinv_cons = pyo.Constraint(
                 model.parameter_names, model.parameter_names, rule=cholesky_LLinv_imp
             )
-            model.obj_cons.cholesky_fim_diag_cons = pyo.Constraint(
-                model.parameter_names, model.parameter_names, rule=cholesky_fim_diag
-            )
-            model.obj_cons.cholesky_fim_inv_diag_cons = pyo.Constraint(
-                model.parameter_names, model.parameter_names, rule=cholesky_fim_inv_diag
-            )
+            if self.improve_cholesky_roundoff_error:
+                model.obj_cons.cholesky_fim_diag_cons = pyo.Constraint(
+                    model.parameter_names, model.parameter_names, rule=cholesky_fim_diag
+                )
+                model.obj_cons.cholesky_fim_inv_diag_cons = pyo.Constraint(
+                    model.parameter_names,
+                    model.parameter_names,
+                    rule=cholesky_fim_inv_diag,
+                )
             model.obj_cons.cov_trace_rule = pyo.Constraint(rule=cov_trace_calc)
-            model.objective = pyo.Objective(
-                expr=pyo.log10(model.cov_trace), sense=pyo.minimize
-            )
+            model.objective = pyo.Objective(expr=model.cov_trace, sense=pyo.minimize)
 
         elif self.objective_option == ObjectiveLib.pseudo_trace:
             # if not determinant or Cholesky, calculating
