@@ -62,8 +62,8 @@ The experimental data is given in the table below:
 To use parmest to estimate :math:`\theta_1` and :math:`\theta_2` from the data, the following
 detailed steps should be followed:
 
-Step 0: Import Pyomo, parmest, and the Experiment Class
--------------------------------------------------------
+Step 0: Import Pyomo, parmest, Experiment Class, and Pandas
+-----------------------------------------------------------
 
 Before solving the parameter estimation problem, the following code must be executed to import the
 required packages for parameter estimation in parmest:
@@ -74,6 +74,7 @@ required packages for parameter estimation in parmest:
     >>> import pyomo.environ as pyo
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> from pyomo.contrib.parmest.experiment import Experiment
+    >>> import pandas as pd
 
 .. _ExperimentClass:
 
