@@ -40,9 +40,10 @@ Where :math:`y` is the observation of the measured variable, :math:`t` is the ti
 is the asymptote, and :math:`\theta_2` is the rate constant.
 
 The experimental data is given in the table below:
-.. list-table:: Experimental Data
+
+.. list-table:: Data
    :header-rows: 1
-   :widths: 20 20
+   :widths: 30 30
 
    * - hour
      - y
@@ -59,8 +60,8 @@ The experimental data is given in the table below:
    * - 7
      - 19.8
 
-To use parmest to estimate :math:`\theta_1` and :math:`\theta_2` from the data, the following
-detailed steps should be followed:
+To use parmest to estimate :math:`\theta_1` and :math:`\theta_2` from the data, we provide the following
+detailed steps:
 
 Step 0: Import Pyomo, parmest, Experiment Class, and Pandas
 -----------------------------------------------------------

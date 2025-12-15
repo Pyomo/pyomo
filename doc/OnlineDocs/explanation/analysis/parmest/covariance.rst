@@ -12,17 +12,17 @@ following methods which have been implemented in parmest.
 
 1. Reduced Hessian Method
 
-    When the objective function is the sum of squared errors (SSE) defined as
-    :math:`\text{SSE} = \sum_{i = 1}^{n}
-    \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})\right)^2`,
-    the covariance matrix is:
+    When the objective function is the sum of squared errors (SSE) for homogeneous data, defined as
+    :math:`\text{SSE} = \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};
+    \boldsymbol{\theta})\right)^\text{T} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};
+    \boldsymbol{\theta})\right)`, the covariance matrix is:
 
     .. math::
        \boldsymbol{V}_{\boldsymbol{\theta}} = 2 \sigma^2 \left(\frac{\partial^2 \text{SSE}}
         {\partial \boldsymbol{\theta}^2}\right)^{-1}_{\boldsymbol{\theta}
         = \hat{\boldsymbol{\theta}}}
 
-    Similarly, when the objective function is the weighted SSE (WSSE) defined as
+    Similarly, when the objective function is the weighted SSE (WSSE) for heterogeneous data, defined as
     :math:`\text{WSSE} = \frac{1}{2} \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} -
     \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})\right)^\text{T} \boldsymbol{\Sigma}_{\boldsymbol{y}}^{-1}
     \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})\right)`,
@@ -34,12 +34,15 @@ following methods which have been implemented in parmest.
         = \hat{\boldsymbol{\theta}}}
 
     Where :math:`\boldsymbol{V}_{\boldsymbol{\theta}}` is the covariance matrix of the estimated
-    parameters :math:`\hat{\boldsymbol{\theta}}`, :math:`\boldsymbol{y}` are observations of the measured variables,
-    :math:`n` is the number of experiments, :math:`\boldsymbol{\Sigma}_{\boldsymbol{y}}` is the measurement error
-    covariance matrix, and :math:`\sigma^2` is the variance of the measurement error. When the standard deviation of
-    the measurement error is not supplied by the user, parmest approximates :math:`\sigma^2` as:
-    :math:`\hat{\sigma}^2 = \frac{1}{n-l} \sum_{i=1}^{n} e_i^2`, where :math:`l` is the number of fitted parameters,
-    and :math:`e_i` is the residual between the data and model for experiment :math:`i`.
+    parameters :math:`\hat{\boldsymbol{\theta}} \in \mathbb{R}^p`, :math:`\boldsymbol{y}_{i} \in \mathbb{R}^m` are
+    observations of the measured output variables, :math:`\boldsymbol{f}` is the model function,
+    :math:`\boldsymbol{x}_{i} \in \mathbb{R}^{q}` are the input variables, :math:`n` is the number of experiments,
+    :math:`\boldsymbol{\Sigma}_{\boldsymbol{y}}` is the measurement error covariance matrix, and :math:`\sigma^2`
+    is the variance of the measurement error. When the standard deviation of the measurement error is not supplied
+    by the user, parmest approximates :math:`\sigma^2` as:
+    :math:`\hat{\sigma}^2 = \frac{1}{n-p} \sum_{i=1}^{n} \boldsymbol{\varepsilon}_{i}(\boldsymbol{\theta})^{\text{T}}
+    \boldsymbol{\varepsilon}_{i}(\boldsymbol{\theta})`, and :math:`\boldsymbol{\varepsilon}_{i} \in \mathbb{R}^m`
+    are the residuals between the data and model for experiment :math:`i`.
 
     In parmest, this method computes the inverse of the Hessian by scaling the
     objective function (SSE or WSSE) with a constant probability factor, :math:`\frac{1}{n}`.
@@ -48,9 +51,9 @@ following methods which have been implemented in parmest.
 
     In this method, the covariance matrix, :math:`\boldsymbol{V}_{\boldsymbol{\theta}}`, is
     computed by differentiating the Hessian,
-    :math:`\frac{\partial^2 \text{SSE}}{\partial \boldsymbol{\theta} \partial \boldsymbol{\theta}}`
+    :math:`\frac{\partial^2 \text{SSE}}{\partial \boldsymbol{\theta}^2}`
     or
-    :math:`\frac{\partial^2 \text{WSSE}}{\partial \boldsymbol{\theta} \partial \boldsymbol{\theta}}`, and
+    :math:`\frac{\partial^2 \text{WSSE}}{\partial \boldsymbol{\theta}^2}`, and
     applying Gauss-Newton approximation which results in:
 
     .. math::
