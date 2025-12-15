@@ -106,62 +106,61 @@ mathematical model outlined in the introduction section of this Quick Start.
 .. doctest::
 
     >>> class RooneyBieglerExperiment(Experiment):
-
-            def __init__(self, data):
-                self.data = data
-                self.model = None
-
-            def create_model(self):
-                # the model expects a dataframe
-                data_df = self.data.to_frame().transpose()
-
-                # create the pyomo model
-                m = self.model = pyo.ConcreteModel()
-
-                # add asymptote and rate constant to the model
-                m.asymptote = pyo.Var(initialize=15)
-                m.rate_constant = pyo.Var(initialize=0.5)
-
-                # add the measured variable, y, to the model
-                m.y = pyo.Var(data_df.hour, within=pyo.PositiveReals, initialize=5)
-
-                # add the mathematical equation for predicting y
-                def response_rule(m, h):
-                    return m.y[h] == m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
-
-                m.response_function = pyo.Constraint(data_df.hour, rule=response_rule)
-
-                return m
-
-            def label_model(self):
-
-                m = self.model
-
-                # label the experiment outputs
-                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
-
-                # label the unknown parameters in the model
-                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.unknown_parameters.update(
-                    (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
-                )
-
-                # add the measurement error assumed to be constant and 0.1
-                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.measurement_error.update([(m.y[self.data['hour']], 0.1)])
-
-            def finalize_model(self):
-
-                m = self.model
-                pass
-
-            def get_labeled_model(self):
-                self.create_model()
-                self.label_model()
-                self.finalize_model()
-
-                return self.model
+    ...     def __init__(self, data):
+    ...         self.data = data
+    ...         self.model = None
+    ...
+    ...     def create_model(self):
+    ...         # the model expects a dataframe
+    ...         data_df = self.data.to_frame().transpose()
+    ...
+    ...         # create the pyomo model
+    ...         m = self.model = pyo.ConcreteModel()
+    ...
+    ...         # add asymptote and rate constant to the model
+    ...         m.asymptote = pyo.Var(initialize=15)
+    ...         m.rate_constant = pyo.Var(initialize=0.5)
+    ...
+    ...         # add the measured variable, y, to the model
+    ...         m.y = pyo.Var(data_df.hour, within=pyo.PositiveReals, initialize=5)
+    ...
+    ...         # add the mathematical equation for predicting y
+    ...         def response_rule(m, h):
+    ...             return m.y[h] == m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
+    ...
+    ...         m.response_function = pyo.Constraint(data_df.hour, rule=response_rule)
+    ...
+    ...         return m
+    ...
+    ...     def label_model(self):
+    ...
+    ...         m = self.model
+    ...
+    ...         # label the experiment outputs
+    ...         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+    ...         m.experiment_outputs.update([(m.y[self.data['hour']], self.data['y'])])
+    ...
+    ...         # label the unknown parameters in the model
+    ...         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+    ...         m.unknown_parameters.update(
+    ...             (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+    ...         )
+    ...
+    ...         # add the measurement error assumed to be constant and 0.1
+    ...         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+    ...         m.measurement_error.update([(m.y[self.data['hour']], 0.1)])
+    ...
+    ...     def finalize_model(self):
+    ...
+    ...         m = self.model
+    ...         pass
+    ...
+    ...     def get_labeled_model(self):
+    ...         self.create_model()
+    ...         self.label_model()
+    ...         self.finalize_model()
+    ...
+    ...         return self.model
 
 
 Step 2: Load the Data and Create a List of the Model's Experiment Class
@@ -174,10 +173,10 @@ created.
 .. doctest::
 
     >>> data = pd.DataFrame(data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-                    columns=["hour", "y"])
+    ...                     columns=["hour", "y"])
     >>> exp_list = []
     >>> for i in range(data.shape[0]):
-            exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
+    ...     exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
 .. _EstimatorObj:
 
