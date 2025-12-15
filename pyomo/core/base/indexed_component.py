@@ -562,7 +562,23 @@ You can silence this warning by one of three ways:
                 return self._data.values(sort)
             except TypeError:
                 pass
-        return map(self.__getitem__, self.keys(sort))
+        # We would like to look things up directly in _data (as that is
+        # fast, since we know that keys() will return valid entries).
+        # However, some components (notably Param with a default) have
+        # valid keys that do not have an entry in _data.  If we just
+        # rely on getitem, then we will hit issues for abstract
+        # components.  So we will use a custom getter that tries _data
+        # first (both for efficiency and to correctly handle
+        # AbstractScalar components), and then falls back on getitem.
+        _getdata = self._data.__getitem__
+
+        def getter(s):
+            try:
+                return _getdata(s)
+            except KeyError:
+                return self[s]
+
+        return map(getter, self.keys(sort))
 
     def items(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
         """Return an iterator of (index,data) component data tuples
@@ -597,8 +613,23 @@ You can silence this warning by one of three ways:
                 return self._data.items(sort)
             except TypeError:
                 pass
-        _getitem = self.__getitem__
-        return ((s, _getitem(s)) for s in self.keys(sort))
+        # We would like to look things up directly in _data (as that is
+        # fast, since we know that keys() will return valid entries).
+        # However, some components (notably Param with a default) have
+        # valid keys that do not have an entry in _data.  If we just
+        # rely on getitem, then we will hit issues in pprint for
+        # abstract components.  So we will use a custom getter that
+        # tries _data first (both for efficiency and to correctly handle
+        # AbstractScalar components), and then falls back on getitem.
+        _getdata = self._data.__getitem__
+
+        def getter(s):
+            try:
+                return s, _getdata(s)
+            except KeyError:
+                return s, self[s]
+
+        return map(getter, self.keys(sort))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
     def iterkeys(self):
