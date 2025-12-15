@@ -35,7 +35,7 @@ following methods which have been implemented in parmest.
 
     Where :math:`\boldsymbol{V}_{\boldsymbol{\theta}}` is the covariance matrix of the estimated
     parameters :math:`\hat{\boldsymbol{\theta}} \in \mathbb{R}^p`, :math:`\boldsymbol{y}_{i} \in \mathbb{R}^m` are
-    observations of the measured output variables, :math:`\boldsymbol{f}` is the model function,
+    observations of the measured variables, :math:`\boldsymbol{f}` is the model function,
     :math:`\boldsymbol{x}_{i} \in \mathbb{R}^{q}` are the input variables, :math:`n` is the number of experiments,
     :math:`\boldsymbol{\Sigma}_{\boldsymbol{y}}` is the measurement error covariance matrix, and :math:`\sigma^2`
     is the variance of the measurement error. When the standard deviation of the measurement error is not supplied
