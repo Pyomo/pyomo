@@ -2683,9 +2683,9 @@ class TestBlock(unittest.TestCase):
         a[1] : Active=True
             2 Block Declarations
                 c : Size=2, Index=a1_IDX, Active=True
-                    a[1].c[5] : Active=True
-                        0 Declarations: 
                     a[1].c[4] : Active=True
+                        0 Declarations: 
+                    a[1].c[5] : Active=True
                         0 Declarations: 
                 d : Size=1, Index=None, Active=True
                     0 Declarations: 
@@ -2712,6 +2712,116 @@ class TestBlock(unittest.TestCase):
 5 Declarations: a1_IDX a3_IDX c a b
 """
         self.assertEqual(ref, buf.getvalue())
+
+    def test_pprint_sorting(self):
+        m = ConcreteModel()
+        m.I = Set(ordered=False, initialize=[3, 'a', 1])
+        m.y = Var(m.I)
+        m.x = Var([3, 2, 1])
+
+        OUT = StringIO()
+        m.pprint(ostream=OUT, sort=False)
+        self.assertEqual(
+            """1 Set Declarations
+    I : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {%s, %s, %s}
+
+2 Var Declarations
+    y : Size=3, Index=I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          %s :  None :  None :  None : False :  True :  Reals
+          %s :  None :  None :  None : False :  True :  Reals
+          %s :  None :  None :  None : False :  True :  Reals
+    x : Size=3, Index={3, 2, 1}
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          1 :  None :  None :  None : False :  True :  Reals
+
+3 Declarations: I y x
+"""
+            % (tuple(repr(_) for _ in m.I.ordered_iter()) + tuple(m.I)),
+            OUT.getvalue(),
+        )
+
+        OUT = StringIO()
+        m.pprint(ostream=OUT, sort=SortComponents.ALPHABETICAL)
+        self.assertEqual(
+            """1 Set Declarations
+    I : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {%s, %s, %s}
+
+2 Var Declarations
+    x : Size=3, Index={3, 2, 1}
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          1 :  None :  None :  None : False :  True :  Reals
+    y : Size=3, Index=I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          %s :  None :  None :  None : False :  True :  Reals
+          %s :  None :  None :  None : False :  True :  Reals
+          %s :  None :  None :  None : False :  True :  Reals
+
+3 Declarations: I y x
+"""
+            % (tuple(repr(_) for _ in m.I.ordered_iter()) + tuple(m.I)),
+            OUT.getvalue(),
+        )
+
+        OUT = StringIO()
+        m.pprint(ostream=OUT, sort=SortComponents.ORDERED_INDICES)
+        self.assertEqual(
+            """1 Set Declarations
+    I : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {%s, %s, %s}
+
+2 Var Declarations
+    y : Size=3, Index=I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          3 :  None :  None :  None : False :  True :  Reals
+          a :  None :  None :  None : False :  True :  Reals
+    x : Size=3, Index={3, 2, 1}
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          1 :  None :  None :  None : False :  True :  Reals
+
+3 Declarations: I y x
+"""
+            % tuple(repr(_) for _ in m.I.ordered_iter()),
+            OUT.getvalue(),
+        )
+
+        OUT = StringIO()
+        m.pprint(ostream=OUT, sort=True)
+        self.assertEqual(
+            """1 Set Declarations
+    I : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {%s, %s, %s}
+
+2 Var Declarations
+    x : Size=3, Index={3, 2, 1}
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          3 :  None :  None :  None : False :  True :  Reals
+    y : Size=3, Index=I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          3 :  None :  None :  None : False :  True :  Reals
+          a :  None :  None :  None : False :  True :  Reals
+
+3 Declarations: I y x
+"""
+            % tuple(repr(_) for _ in m.I.ordered_iter()),
+            OUT.getvalue(),
+        )
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve1(self):

@@ -35,6 +35,7 @@ from pyomo.common.formatting import (
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.initializer import PartialInitializer
 
@@ -45,6 +46,7 @@ relocated_module_attribute(
 )
 
 _ref_types = {type(None), weakref_ref}
+DEFAULT_PPRINT_SORT = SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES
 
 
 class ModelComponentFactoryClass(Factory):
@@ -278,7 +280,7 @@ class ComponentBase(PyomoObject):
     def cname(self, *args, **kwds):
         return self.getname(*args, **kwds)
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
+    def pprint(self, ostream=None, verbose=False, prefix="", sort=NOTSET):
         """Print component information
 
         Note that this method is generally only reachable through
@@ -296,12 +298,13 @@ class ComponentBase(PyomoObject):
             _name = comp.local_name
         else:
             # restrict output to only this data object
-            _data = iter(((self.index(), self),))
+            _data = lambda _sort: iter(((self.index(), self),))
             _name = "{Member of %s}" % (comp.local_name,)
         self._pprint_base_impl(
             ostream,
             verbose,
             prefix,
+            sort,
             _name,
             comp.doc,
             comp.is_constructed(),
@@ -352,6 +355,7 @@ class ComponentBase(PyomoObject):
         ostream,
         verbose,
         prefix,
+        sort,
         _name,
         _doc,
         _constructed,
@@ -364,6 +368,10 @@ class ComponentBase(PyomoObject):
             ostream = sys.stdout
         if prefix:
             ostream = StreamIndenter(ostream, prefix)
+
+        if sort is NOTSET:
+            sort = DEFAULT_PPRINT_SORT
+        sort = SortComponents(sort)
 
         # FIXME: HACK for backwards compatibility with suppressing the
         # header for the top block
@@ -408,6 +416,9 @@ class ComponentBase(PyomoObject):
         else:
             _fcn2 = None
 
+        if hasattr(_data, '__call__'):
+            _data = _data(sort)
+
         if _header is not None:
             # This is a standard component, where all the component
             # information is printed in a single table
@@ -416,14 +427,14 @@ class ComponentBase(PyomoObject):
             tabular_writer(ostream, '', _data, _header, _fcn)
             if _fcn2 is not None:
                 for _key, _val in _data:
-                    _fcn2(ostream, _key, _val)
+                    _fcn2(ostream, sort, _key, _val)
         elif _fcn is not None:
             # This is a non-standard component where we will not
             # generate a table at all, and instead defer all formatting
             # / printing to the callback.  This is primarily used by
             # BLocks (and block-like things)
             for _key, _val in _data:
-                _fcn(ostream, _key, _val)
+                _fcn(ostream, sort, _key, _val)
         elif _data is not None:
             # Catch all for everything else: assume that _pprint()
             # returned a formatted string.
@@ -531,12 +542,13 @@ class Component(ComponentBase):
         """Return True if this can be used as a model component."""
         return True
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
+    def pprint(self, ostream=None, verbose=False, prefix="", sort=NOTSET):
         """Print component information"""
         self._pprint_base_impl(
             ostream,
             verbose,
             prefix,
+            sort,
             self.local_name,
             self.doc,
             self.is_constructed(),

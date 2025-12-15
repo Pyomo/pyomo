@@ -964,7 +964,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         ]
         if self._units is not None:
             headers.append(('Units', str(self._units)))
-        return (headers, self.sparse_items(), ("Value",), dataGen)
+        return (headers, self.sparse_items, ("Value",), dataGen)
 
 
 class ScalarParam(ParamData, Param):

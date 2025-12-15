@@ -1142,7 +1142,7 @@ value() function."""
                 ("Size", len(self)),
                 ("Index", self._index_set if self.is_indexed() else None),
             ],
-            self._data.items(),
+            self.items,
             ("Object",),
             lambda k, v: [type(v)],
         )

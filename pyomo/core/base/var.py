@@ -844,7 +844,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             headers.append(('Units', str(self._units)))
         return (
             headers,
-            self._data.items(),
+            self.items,
             ("Lower", "Value", "Upper", "Fixed", "Stale", "Domain"),
             lambda k, v: [
                 value(v.lb),

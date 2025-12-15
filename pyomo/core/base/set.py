@@ -2490,7 +2490,7 @@ class Set(IndexedComponent):
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Ordered", _ordered),
             ],
-            self._data.items(),
+            self.items,
             ("Dimen", "Domain", "Size", "Members"),
             lambda k, v: [
                 Set._pprint_dimen(v),
@@ -2659,7 +2659,7 @@ class SetOf(SetData, Component):
         """
         return (
             [("Dimen", self.dimen), ("Size", len(self)), ("Bounds", self.bounds())],
-            {None: self}.items(),
+            [(UnindexedComponent_index, self)],
             ("Ordered", "Members"),
             lambda k, v: [v.isordered(), str(v._ref)],
         )
@@ -3320,7 +3320,7 @@ class RangeSet(Component):
                 ("Size", len(self) if self.isfinite() else 'Inf'),
                 ("Bounds", self.bounds()),
             ],
-            {None: self}.items(),
+            [(UnindexedComponent_index, self)],
             ("Finite", "Members"),
             lambda k, v: [
                 v.isfinite(),  # isinstance(v, _FiniteSetMixin),
