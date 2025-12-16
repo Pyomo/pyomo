@@ -236,17 +236,28 @@ def get_FIM_metrics(FIM):
         log10(Modified E-optimality) metric
     """
 
-    (det_FIM, trace_cov, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
-        compute_FIM_metrics(FIM)
-    )
+    (
+        det_FIM,
+        trace_cov,
+        trace_FIM,
+        E_vals,
+        E_vecs,
+        D_opt,
+        A_opt,
+        pseudo_A_opt,
+        E_opt,
+        ME_opt,
+    ) = compute_FIM_metrics(FIM)
 
     return {
         "Determinant of FIM": det_FIM,
         "Trace of cov": trace_cov,
+        "Trace of FIM": trace_FIM,
         "Eigenvalues": E_vals,
         "Eigenvectors": E_vecs,
         "log10(D-Optimality)": D_opt,
         "log10(A-Optimality)": A_opt,
+        "log10(Pseudo A-Optimality)": pseudo_A_opt,
         "log10(E-Optimality)": E_opt,
         "log10(Modified E-Optimality)": ME_opt,
     }
