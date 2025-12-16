@@ -427,6 +427,21 @@ class DesignOfExperiments:
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L_vals_sq[i, j]
 
+            # Initialize the inverse of L if it exists
+            if hasattr(model, "L_inv"):
+                L_inv_vals = np.linalg.inv(L_vals_sq)
+
+                for i, c in enumerate(model.parameter_names):
+                    for j, d in enumerate(model.parameter_names):
+                        if i >= j:
+                            model.L_inv[c, d].value = L_inv_vals[i, j]
+                        else:
+                            model.L_inv[c, d].value = 0.0
+                # Initialize the cov_trace if it exists
+                if hasattr(model, "cov_trace"):
+                    initial_cov_trace = np.sum(L_inv_vals**2)
+                    model.cov_trace.value = initial_cov_trace
+
         if hasattr(model, "determinant"):
             model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
 
@@ -1457,7 +1472,10 @@ class DesignOfExperiments:
             )
 
         # To improve round off error in Cholesky decomposition
-        if self.improve_cholesky_roundoff_error:
+        if (
+            self.improve_cholesky_roundoff_error
+            and self.objective_option == ObjectiveLib.trace
+        ):
 
             def cholesky_fim_diag(b, c, d):
                 """
