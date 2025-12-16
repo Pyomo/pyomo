@@ -96,9 +96,9 @@ class DesignOfExperiments:
         grey_box_tee=False,
         get_labeled_model_args=None,
         logger_level=logging.WARNING,
+        improve_cholesky_roundoff_error=False,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
-        _improve_cholesky_roundoff_error=False,
     ):
         """This package enables model-based design of experiments analysis
         with Pyomo.  Both direct optimization and enumeration modes are
@@ -128,7 +128,7 @@ class DesignOfExperiments:
             String representation of the objective option. Current available options
             are: ``determinant`` (for determinant, or D-optimality),
             ``trace`` (for trace of covariance matrix, or A-optimality),
-            ``pseudo_trace`` (for trace of Fisher Information Matrix(FIM)),
+            ``pseudo_trace`` (for trace of Fisher Information Matrix(FIM), or pseudo A-optimality),
             ``minimum_eigenvalue``, (for E-optimality), or ``condition_number`` (for ME-optimality)
             Note: E-optimality and ME-optimality are only supported when using the
             grey box objective (i.e., ``grey_box_solver`` is True)
@@ -168,6 +168,11 @@ class DesignOfExperiments:
         get_labeled_model_args:
             Additional arguments for the ``get_labeled_model`` function on the
             Experiment object.
+        improve_cholesky_roundoff_error:
+            Boolean value of whether or not to improve round-off error. If True, it will
+            apply M[i,i] >= L[i,j]^2. Where, M is the FIM and L is the lower triangular matrix
+            from Cholesky factorization. If the round-off error is not significant, this
+            option can be turned off to improve performance by skipping this constraint.
         _Cholesky_option:
             Boolean value of whether or not to use the cholesky factorization to
             compute the determinant for the D-optimality criteria. This parameter
@@ -252,7 +257,7 @@ class DesignOfExperiments:
         self.only_compute_fim_lower = _only_compute_fim_lower
 
         # To improve round-off error in Cholesky-based objectives
-        self.improve_cholesky_roundoff_error = _improve_cholesky_roundoff_error
+        self.improve_cholesky_roundoff_error = improve_cholesky_roundoff_error
 
         # model attribute to avoid rebuilding models
         self.model = pyo.ConcreteModel()  # Build empty model
@@ -1838,6 +1843,7 @@ class DesignOfExperiments:
             - keys of model's experiment_inputs
             - "log10 D-opt": list of log10(D-optimality)
             - "log10 A-opt": list of log10(A-optimality)
+            - "log10 pseudo A-opt": list of log10(trace(FIM))
             - "log10 E-opt": list of log10(E-optimality)
             - "log10 ME-opt": list of log10(ME-optimality)
             - "eigval_min": list of minimum eigenvalues
@@ -1893,12 +1899,14 @@ class DesignOfExperiments:
             {
                 "log10 D-opt": [],
                 "log10 A-opt": [],
+                "log10 pseudo A-opt": [],
                 "log10 E-opt": [],
                 "log10 ME-opt": [],
                 "eigval_min": [],
                 "eigval_max": [],
                 "det_FIM": [],
                 "trace_cov": [],
+                "trace_FIM": [],
                 "solve_time": [],
             }
         )
@@ -1960,9 +1968,18 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            (det_FIM, trace_cov, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
-                compute_FIM_metrics(FIM)
-            )
+            (
+                det_FIM,
+                trace_cov,
+                trace_FIM,
+                E_vals,
+                E_vecs,
+                D_opt,
+                A_opt,
+                pseudo_A_opt,
+                E_opt,
+                ME_opt,
+            ) = compute_FIM_metrics(FIM)
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
@@ -1970,12 +1987,14 @@ class DesignOfExperiments:
 
             fim_factorial_results["log10 D-opt"].append(D_opt)
             fim_factorial_results["log10 A-opt"].append(A_opt)
+            fim_factorial_results["log10 pseudo A-opt"].append(pseudo_A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
             fim_factorial_results["eigval_min"].append(E_vals.min())
             fim_factorial_results["eigval_max"].append(E_vals.max())
             fim_factorial_results["det_FIM"].append(det_FIM)
             fim_factorial_results["trace_cov"].append(trace_cov)
+            fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
         self.fim_factorial_results = fim_factorial_results

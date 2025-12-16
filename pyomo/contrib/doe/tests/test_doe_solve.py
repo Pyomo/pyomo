@@ -140,7 +140,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 class TestReactorExampleSolving(unittest.TestCase):
     def test_reactor_fd_central_solve(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -185,7 +185,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     def test_reactor_fd_backward_solve(self):
         fd_method = "backward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -544,7 +544,7 @@ class TestDoe(unittest.TestCase):
             ff_results["log10 D-opt"], log10_D_opt_expected, abstol=1e-4
         )
         self.assertStructuredAlmostEqual(
-            ff_results["log10 A-opt"], log10_A_opt_expected, abstol=1e-4
+            ff_results["log10 pseudo A-opt"], log10_A_opt_expected, abstol=1e-4
         )
         self.assertStructuredAlmostEqual(
             ff_results["log10 E-opt"], log10_E_opt_expected, abstol=1e-4

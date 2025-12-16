@@ -135,7 +135,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 class TestReactorExampleBuild(unittest.TestCase):
     def test_reactor_fd_central_check_fd_eqns(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -174,7 +174,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_backward_check_fd_eqns(self):
         fd_method = "backward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -212,7 +212,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_forward_check_fd_eqns(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -250,7 +250,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_central_design_fixing(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -283,7 +283,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_backward_design_fixing(self):
         fd_method = "backward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -316,7 +316,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_forward_design_fixing(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -376,7 +376,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_update_FIM(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -398,7 +398,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_get_experiment_inputs_without_blocks(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -417,7 +417,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_get_experiment_outputs_without_blocks(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -436,7 +436,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_get_measurement_error_without_blocks(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -455,7 +455,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_get_unknown_parameters_without_blocks(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -475,7 +475,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_generate_blocks_without_model(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 

@@ -151,6 +151,8 @@ def compute_FIM_metrics(FIM):
         log10(D-optimality) metric.
     A_opt : float
         log10(A-optimality) metric.
+    pseudo_A_opt : float
+        log10(trace(FIM)) metric.
     E_opt : float
         log10(E-optimality) metric.
     ME_opt : float
@@ -164,8 +166,10 @@ def compute_FIM_metrics(FIM):
     det_FIM = np.linalg.det(FIM)
     D_opt = np.log10(det_FIM)
 
-    # Trace of FIM is not the proper definition of A-optimality, but the trace of
-    # covariance is
+    # Trace of FIM is the pseudo A-optimality, not the proper definition of A-optimality,
+    # The trace of covariance is the proper definition of A-optimality
+    trace_FIM = np.trace(FIM)
+    pseudo_A_opt = np.log10(trace_FIM)
     trace_cov = np.trace(np.linalg.pinv(FIM))
     A_opt = np.log10(trace_cov)
 
@@ -187,7 +191,18 @@ def compute_FIM_metrics(FIM):
 
     ME_opt = np.log10(np.linalg.cond(FIM))
 
-    return det_FIM, trace_cov, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
+    return (
+        det_FIM,
+        trace_cov,
+        trace_FIM,
+        E_vals,
+        E_vecs,
+        D_opt,
+        A_opt,
+        pseudo_A_opt,
+        E_opt,
+        ME_opt,
+    )
 
 
 # Standalone Function for user to calculate FIM metrics directly without using the class

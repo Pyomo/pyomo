@@ -76,7 +76,7 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 class TestReactorExampleErrors(unittest.TestCase):
     def test_experiment_none_error(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
         with self.assertRaisesRegex(
@@ -89,7 +89,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_get_labeled_model(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
         experiment = BadExperiment()
@@ -104,7 +104,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_experiment_outputs(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
@@ -121,7 +121,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_measurement_error(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 2  # Value for faulty model build mode - 2: No meas error
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
@@ -138,7 +138,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_experiment_inputs(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 3  # Value for faulty model build mode - 3: No exp inputs/design vars
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
@@ -155,7 +155,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_unknown_parameters(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 4  # Value for faulty model build mode - 4: No unknown params
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
@@ -172,7 +172,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_bad_prior_size(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 0  # Value for faulty model build mode - 0: full model
 
         prior_FIM = np.ones((5, 5))
@@ -197,7 +197,7 @@ class TestReactorExampleErrors(unittest.TestCase):
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 0  # Value for faulty model build mode - 0: full model
 
         prior_FIM = -np.ones((4, 4))
@@ -222,7 +222,7 @@ class TestReactorExampleErrors(unittest.TestCase):
         from pyomo.contrib.doe.utils import _SMALL_TOLERANCE_SYMMETRY
 
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 0  # Value for faulty model build mode - 0: full model
 
         prior_FIM = np.zeros((4, 4))
@@ -245,7 +245,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_bad_jacobian_init_size(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 0  # Value for faulty model build mode - 0: full model
 
         jac_init = np.ones((5, 5))
@@ -267,7 +267,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_unbuilt_update_FIM(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 0  # Value for faulty model build mode - 0: full model
 
         FIM_update = np.ones((4, 4))
@@ -287,7 +287,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_none_update_FIM(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 0  # Value for faulty model build mode - 0: full model
 
         FIM_update = None
@@ -306,7 +306,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_results_file_name(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 0  # Value for faulty model build mode - 0: Full model
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
@@ -322,7 +322,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_measurement_and_output_length_match(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             5  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -509,7 +509,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_FIM_without_FIM(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -529,7 +529,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_sens_mat_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -550,7 +550,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_exp_inputs_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -571,7 +571,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_exp_outputs_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -592,7 +592,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_unknown_params_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -613,7 +613,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_meas_error_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -634,7 +634,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_multiple_exp_not_implemented_seq(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -652,7 +652,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_multiple_exp_not_implemented_sim(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -670,7 +670,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_update_unknown_parameter_values_not_implemented_seq(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -689,7 +689,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_bad_FD_generate_scens(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -716,7 +716,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_bad_FD_seq_compute_FIM(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -742,7 +742,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_bad_objective(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -768,7 +768,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_no_model_for_objective(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
@@ -789,7 +789,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_bad_compute_FIM_option(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             0  # Value for faulty model build mode - 5: Mismatch error and output length
         )
