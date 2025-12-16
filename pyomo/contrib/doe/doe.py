@@ -1430,79 +1430,78 @@ class DesignOfExperiments:
                 return pyo.Constraint.Skip
 
         # If trace objective, need L inverse constraints
-        def cholesky_inv_imp(b, c, d):
-            """
-            Calculate Cholesky L inverse matrix using algebraic constraints
-            """
-            # If the row is greater than or equal to the column, we are in the
-            # lower triangle region of the L_inv matrix.
-            # This region is where our equations are well-defined.
-            m = b.model()
-            if list(m.parameter_names).index(c) >= list(m.parameter_names).index(d):
-                return m.fim_inv[c, d] == sum(
-                    m.L_inv[m.parameter_names.at(k + 1), c]
-                    * m.L_inv[m.parameter_names.at(k + 1), d]
-                    for k in range(
-                        list(m.parameter_names).index(c), len(m.parameter_names)
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
+
+            def cholesky_inv_imp(b, c, d):
+                """
+                Calculate Cholesky L inverse matrix using algebraic constraints
+                """
+                # If the row is greater than or equal to the column, we are in the
+                # lower triangle region of the L_inv matrix.
+                # This region is where our equations are well-defined.
+                m = b.model()
+                if list(m.parameter_names).index(c) >= list(m.parameter_names).index(d):
+                    return m.fim_inv[c, d] == sum(
+                        m.L_inv[m.parameter_names.at(k + 1), c]
+                        * m.L_inv[m.parameter_names.at(k + 1), d]
+                        for k in range(
+                            list(m.parameter_names).index(c), len(m.parameter_names)
+                        )
                     )
-                )
-            else:
-                # This is the empty half of L_inv above the diagonal
-                return pyo.Constraint.Skip
+                else:
+                    # This is the empty half of L_inv above the diagonal
+                    return pyo.Constraint.Skip
 
-        # If trace objective, need L * L^-1 = Identity matrix constraints
-        def cholesky_LLinv_imp(b, c, d):
-            """
-            Calculate Cholesky L * L inverse matrix using algebraic constraints
-            """
-            # If the row is greater than or equal to the column, we are in the
-            # lower triangle region of the L and L_inv matrices.
-            # This region is where our equations are well-defined.
-            m = b.model()
-            param_list = list(model.parameter_names)
-            idx_c = param_list.index(c)
-            idx_d = param_list.index(d)
-            # Do not need to calculate upper triangle entries
-            if idx_c < idx_d:
-                return pyo.Constraint.Skip
-
-            target_value = 1 if idx_c == idx_d else 0
-            return (
-                sum(
-                    m.L[c, m.parameter_names.at(k + 1)]
-                    * m.L_inv[m.parameter_names.at(k + 1), d]
-                    for k in range(len(m.parameter_names))
-                )
-                == target_value
-            )
-
-        # To improve round off error in Cholesky decomposition
-        if (
-            self.improve_cholesky_roundoff_error
-            and self.objective_option == ObjectiveLib.trace
-        ):
-
-            def cholesky_fim_diag(b, c, d):
+            # If trace objective, need L * L^-1 = Identity matrix constraints
+            def cholesky_LLinv_imp(b, c, d):
                 """
-                M[c,c] >= L[c,d]^2 to improve round off error
+                Calculate Cholesky L * L inverse matrix using algebraic constraints
+                """
+                # If the row is greater than or equal to the column, we are in the
+                # lower triangle region of the L and L_inv matrices.
+                # This region is where our equations are well-defined.
+                m = b.model()
+                param_list = list(model.parameter_names)
+                idx_c = param_list.index(c)
+                idx_d = param_list.index(d)
+                # Do not need to calculate upper triangle entries
+                if idx_c < idx_d:
+                    return pyo.Constraint.Skip
+
+                target_value = 1 if idx_c == idx_d else 0
+                return (
+                    sum(
+                        m.L[c, m.parameter_names.at(k + 1)]
+                        * m.L_inv[m.parameter_names.at(k + 1), d]
+                        for k in range(len(m.parameter_names))
+                    )
+                    == target_value
+                )
+
+            # To improve round off error in Cholesky decomposition
+            if self.improve_cholesky_roundoff_error:
+
+                def cholesky_fim_diag(b, c, d):
+                    """
+                    M[c,c] >= L[c,d]^2 to improve round off error
+                    """
+                    m = b.model()
+                    return m.fim[c, c] >= m.L[c, d] ** 2
+
+                def cholesky_fim_inv_diag(b, c, d):
+                    """
+                    M_inv[c,c] >= L_inv[c,d]^2 to improve round off error
+                    """
+                    m = b.model()
+                    return m.fim_inv[c, c] >= m.L_inv[c, d] ** 2
+
+            def cov_trace_calc(b):
+                """
+                Calculate trace of covariance matrix (inverse of FIM).
+                Can scale each element with 1000 for performance
                 """
                 m = b.model()
-                return m.fim[c, c] >= m.L[c, d] ** 2
-
-            def cholesky_fim_inv_diag(b, c, d):
-                """
-                M_inv[c,c] >= L_inv[c,d]^2 to improve round off error
-                """
-                m = b.model()
-                return m.fim_inv[c, c] >= m.L_inv[c, d] ** 2
-
-        def cov_trace_calc(b):
-            """
-            Calculate trace of covariance matrix (inverse of FIM).
-            Can scale each element with 1000 for performance
-            """
-            m = b.model()
-            return m.cov_trace == sum(m.fim_inv[j, j] for j in m.parameter_names)
+                return m.cov_trace == sum(m.fim_inv[j, j] for j in m.parameter_names)
 
         def trace_calc(b):
             """
@@ -1565,7 +1564,11 @@ class DesignOfExperiments:
                 expr=pyo.log10(model.determinant + 1e-6), sense=pyo.maximize
             )
 
-        elif self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
+        elif self.objective_option == ObjectiveLib.trace:
+            if not self.Cholesky_option:
+                raise ValueError(
+                    "objective_option='trace' currently only implemented with ``_Cholesky option=True``."
+                )
             # if Cholesky and trace, calculating
             # the OBJ with trace
             model.cov_trace = pyo.Var(
