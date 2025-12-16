@@ -27,7 +27,7 @@ a vector, :math:`\boldsymbol{\theta}`, to use in the functional form
 .. math::
       
    \boldsymbol{y}_i & = \boldsymbol{f}\left(\boldsymbol{x}_{i}, \boldsymbol{\theta}\right) +
-    \boldsymbol{\varepsilon}_i \quad \forall \; i \in \left\{1, \ldots, n}
+    \boldsymbol{\varepsilon}_i \quad \forall \; i \in \{1, \ldots, n\}
 
 where :math:`\boldsymbol{y}_{i} \in \mathbb{R}^m` are observations of the measured or output variables,
 :math:`\boldsymbol{f}` is the model function, :math:`\boldsymbol{x}_{i} \in \mathbb{R}^{q}` are the decision
