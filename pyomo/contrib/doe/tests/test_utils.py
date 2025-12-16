@@ -64,6 +64,13 @@ class TestUtilsFIM(unittest.TestCase):
 
     """Test the compute_FIM_metrics() from utils.py."""
 
+    ### Helper methods for test cases
+    # Sample FIM for testing
+    def _get_test_fim(self):
+        """Helper method returning test FIM matrix."""
+        return np.array([[10, 2], [2, 3]])
+
+    # Expected results for the test FIM
     def _get_expected_fim_results(self):
         """Helper method returning expected FIM computation results."""
         return {
@@ -78,10 +85,6 @@ class TestUtilsFIM(unittest.TestCase):
             'E_opt': 0.3924984205140895,
             'ME_opt': 0.6299765069426388,
         }
-
-    def _get_test_fim(self):
-        """Helper method returning test FIM matrix."""
-        return np.array([[10, 2], [2, 3]])
 
     def test_compute_FIM_metrics(self):
         # Create a sample Fisher Information Matrix (FIM)
