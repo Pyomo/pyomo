@@ -2209,6 +2209,9 @@ class DesignOfExperiments:
         # decide if the results are log scaled
         if log_scale:
             y_range_A = np.log10(self.figure_result_data["log10 A-opt"].values.tolist())
+            y_range_pseudo_A = np.log10(
+                self.figure_result_data["log10 pseudo A-opt"].values.tolist()
+            )
             y_range_D = np.log10(self.figure_result_data["log10 D-opt"].values.tolist())
             y_range_E = np.log10(self.figure_result_data["log10 E-opt"].values.tolist())
             y_range_ME = np.log10(
@@ -2216,6 +2219,9 @@ class DesignOfExperiments:
             )
         else:
             y_range_A = self.figure_result_data["log10 A-opt"].values.tolist()
+            y_range_pseudo_A = self.figure_result_data[
+                "log10 pseudo A-opt"
+            ].values.tolist()
             y_range_D = self.figure_result_data["log10 D-opt"].values.tolist()
             y_range_E = self.figure_result_data["log10 E-opt"].values.tolist()
             y_range_ME = self.figure_result_data["log10 ME-opt"].values.tolist()
@@ -2239,6 +2245,28 @@ class DesignOfExperiments:
         else:
             plt.pyplot.savefig(
                 pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+            )
+        # Draw pseudo A-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_pseudo_A)
+        ax.scatter(x_range, y_range_pseudo_A)
+        ax.set_ylabel("$log_{10}$ Trace")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": pseudo A-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                pathlib.Path(figure_file_name + "_pseudo_A_opt.png"),
+                format="png",
+                dpi=450,
             )
 
         # Draw D-optimality
@@ -2350,17 +2378,20 @@ class DesignOfExperiments:
 
         # extract the design criteria values
         A_range = self.figure_result_data["log10 A-opt"].values.tolist()
+        pseudo_A_range = self.figure_result_data["log10 pseudo A-opt"].values.tolist()
         D_range = self.figure_result_data["log10 D-opt"].values.tolist()
         E_range = self.figure_result_data["log10 E-opt"].values.tolist()
         ME_range = self.figure_result_data["log10 ME-opt"].values.tolist()
 
         # reshape the design criteria values for heatmaps
         cri_a = np.asarray(A_range).reshape(len(x_range), len(y_range))
+        cri_pseudo_a = np.asarray(pseudo_A_range).reshape(len(x_range), len(y_range))
         cri_d = np.asarray(D_range).reshape(len(x_range), len(y_range))
         cri_e = np.asarray(E_range).reshape(len(x_range), len(y_range))
         cri_e_cond = np.asarray(ME_range).reshape(len(x_range), len(y_range))
 
         self.cri_a = cri_a
+        self.cri_pseudo_a = cri_pseudo_a
         self.cri_d = cri_d
         self.cri_e = cri_e
         self.cri_e_cond = cri_e_cond
@@ -2368,11 +2399,13 @@ class DesignOfExperiments:
         # decide if log scaled
         if log_scale:
             hes_a = np.log10(self.cri_a)
+            hes_pseudo_a = np.log10(self.cri_pseudo_a)
             hes_e = np.log10(self.cri_e)
             hes_d = np.log10(self.cri_d)
             hes_e2 = np.log10(self.cri_e_cond)
         else:
             hes_a = self.cri_a
+            hes_pseudo_a = self.cri_pseudo_a
             hes_e = self.cri_e
             hes_d = self.cri_d
             hes_e2 = self.cri_e_cond
@@ -2405,6 +2438,34 @@ class DesignOfExperiments:
         else:
             plt.pyplot.savefig(
                 pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+            )
+
+        # pseudo A-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_pseudo_a.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(trace(FIM))")
+        plt.pyplot.title(title_text + ": pseudo A-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                pathlib.Path(figure_file_name + "_pseudo_A_opt.png"),
+                format="png",
+                dpi=450,
             )
 
         # D-optimality
