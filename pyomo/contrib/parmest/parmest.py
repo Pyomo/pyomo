@@ -2266,7 +2266,7 @@ class Estimator:
 
             obj, theta = self.theta_est()
 
-            bootstrap_theta = self.theta_est_bootstrap_blocks(bootstrap_samples, seed=seed)
+            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples, seed=seed)
 
             training, test = self.confidence_region_test(
                 bootstrap_theta,
