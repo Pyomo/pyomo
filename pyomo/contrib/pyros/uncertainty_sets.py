@@ -21,6 +21,7 @@ literature.
 import abc
 import math
 import functools
+import itertools
 from numbers import Integral
 from collections import namedtuple
 from collections.abc import Iterable, MutableSequence
@@ -495,7 +496,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dim(self):
         """
-        Dimension of the uncertainty set (number of uncertain
+        int : Dimension of the uncertainty set (number of uncertain
         parameters in a corresponding optimization model of interest).
         """
         raise NotImplementedError
@@ -504,8 +505,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def geometry(self):
         """
-        Geometry of the uncertainty set. See the `Geometry` class
-        documentation.
+        Geometry : Geometry of the uncertainty set.
         """
         raise NotImplementedError
 
@@ -518,11 +518,11 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        : list of tuple
-            If the bounds can be calculated, then the list is of
-            length `N`, and each entry is a pair of numeric
-            (lower, upper) bounds for the corresponding
-            (Cartesian) coordinate. Otherwise, the list is empty.
+        list[tuple[numbers.Real, numbers.Real]]
+            If the bounds can be calculated efficiently, then this list
+            should be of length ``self.dim`` and contain the
+            (lower, upper) bound pairs.
+            Otherwise, the list should be empty.
         """
         raise NotImplementedError
 
@@ -712,7 +712,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        is_in_set : bool
+        bool
             True if the point lies in the uncertainty set,
             False otherwise.
 
@@ -734,19 +734,27 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         m = ConcreteModel()
         uncertainty_quantification = self.set_as_constraint(block=m)
-        for var, val in zip(uncertainty_quantification.uncertain_param_vars, point):
+
+        main_vars = uncertainty_quantification.uncertain_param_vars
+        for var, val in zip(main_vars, point):
             var.set_value(val)
 
-        # since constraint expressions are relational,
-        # `value()` returns True if constraint satisfied, False else
-        # NOTE: this check may be inaccurate if there are auxiliary
-        #       variables and they have not been initialized to
-        #       feasible values
-        is_in_set = all(
-            value(con.expr) for con in uncertainty_quantification.uncertainty_cons
+        aux_vars = uncertainty_quantification.auxiliary_vars
+        aux_vals = self.compute_auxiliary_uncertain_param_vals(point)
+        for aux_var, aux_val in zip(aux_vars, aux_vals):
+            aux_var.set_value(aux_val)
+
+        all_vars_within_bounds = all(
+            (var.lb is None or var.value - var.lb >= -POINT_IN_UNCERTAINTY_SET_TOL)
+            and (var.ub is None or var.ub - var.value >= -POINT_IN_UNCERTAINTY_SET_TOL)
+            for var in main_vars + aux_vars
         )
 
-        return is_in_set
+        return all_vars_within_bounds and all(
+            con.lslack() > -POINT_IN_UNCERTAINTY_SET_TOL
+            and con.uslack() > -POINT_IN_UNCERTAINTY_SET_TOL
+            for con in uncertainty_quantification.uncertainty_cons
+        )
 
     def _compute_exact_parameter_bounds(self, solver, index=None):
         """
@@ -1297,8 +1305,7 @@ class BoxSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the box set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the box set.
         """
         return Geometry.LINEAR
 
@@ -1310,10 +1317,9 @@ class BoxSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         return [tuple(bound) for bound in self.bounds]
 
@@ -1338,6 +1344,10 @@ class BoxSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
 
     def validate(self, config):
         """
@@ -1537,8 +1547,7 @@ class CardinalitySet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the cardinality set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the cardinality set.
         """
         return Geometry.LINEAR
 
@@ -1549,10 +1558,9 @@ class CardinalitySet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         nom_val = self.origin
         deviation = self.positive_deviation
@@ -1845,8 +1853,7 @@ class PolyhedralSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the polyhedral set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the polyhedral set.
         """
         return Geometry.LINEAR
 
@@ -1878,6 +1885,10 @@ class PolyhedralSet(UncertaintySet):
             uncertainty_cons=list(conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
 
     def validate(self, config):
         """
@@ -2167,8 +2178,7 @@ class BudgetSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the budget set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the budget set.
         """
         return Geometry.LINEAR
 
@@ -2179,10 +2189,9 @@ class BudgetSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         bounds = []
         for orig_val, col in zip(self.origin, self.budget_membership_mat.T):
@@ -2195,6 +2204,10 @@ class BudgetSet(UncertaintySet):
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, **kwargs):
         return PolyhedralSet.set_as_constraint(self, **kwargs)
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
 
     def validate(self, config):
         """
@@ -2501,8 +2514,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the factor model set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the factor model set.
         """
         return Geometry.LINEAR
 
@@ -2513,10 +2525,9 @@ class FactorModelSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         F = self.number_of_factors
         psi_mat = self.psi_mat
@@ -2836,8 +2847,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the axis-aligned ellipsoidal set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the axis-aligned ellipsoidal set.
         """
         return Geometry.CONVEX_NONLINEAR
 
@@ -2848,10 +2858,9 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         nom_value = self.center
         half_length = self.half_lengths
@@ -2892,6 +2901,10 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
 
     def validate(self, config):
         """
@@ -3238,8 +3251,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the ellipsoidal set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the ellipsoidal set.
         """
         return Geometry.CONVEX_NONLINEAR
 
@@ -3250,10 +3262,9 @@ class EllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         scale = self.scale
         nom_value = self.center
@@ -3315,6 +3326,10 @@ class EllipsoidalSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
 
     def validate(self, config):
         """
@@ -3418,8 +3433,9 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def scenarios(self):
         """
-        list of tuples : Uncertain parameter realizations comprising the
-        set.  Each tuple is an uncertain parameter realization.
+        list[tuple[numbers.Real, ...]] : Uncertain parameter
+        realizations comprising the set. Each tuple is an uncertain
+        parameter realization.
 
         Note that the `scenarios` attribute may be modified, but
         only such that the dimension of the set remains unchanged.
@@ -3459,8 +3475,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the discrete scenario set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the discrete scenario set.
         """
         return Geometry.DISCRETE_SCENARIOS
 
@@ -3471,10 +3486,9 @@ class DiscreteScenarioSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         parameter_bounds = [
             (min(s[i] for s in self.scenarios), max(s[i] for s in self.scenarios))
@@ -3514,6 +3528,10 @@ class DiscreteScenarioSet(UncertaintySet):
             uncertain_param_vars=param_var_data_list,
             auxiliary_vars=aux_var_list,
         )
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
 
     def point_in_set(self, point):
         """
@@ -3669,20 +3687,59 @@ class IntersectionSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the intersection set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the intersection set.
         """
-        return max(self.all_sets[i].geometry.value for i in range(len(self.all_sets)))
+        return Geometry(max(uset.geometry.value for uset in self.all_sets))
+
+    @property
+    def scenarios(self):
+        """
+        list[tuple[numbers.Real, ...]] : If the set represented by
+        `self` reduces to a discrete uncertainty set, then this attribute
+        contains the scenarios that comprise the set.
+        Otherwise, a ValueError is raised.
+        """
+        if self.geometry == Geometry.DISCRETE_SCENARIOS:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.scenarios
+
+        raise ValueError(
+            "Uncertainty set represented by `self` is not reducible "
+            "to a finite set of scenarios."
+        )
+
+    @property
+    def _PARAMETER_BOUNDS_EXACT(self):
+        """
+        bool : True if the coordinate value bounds returned by
+        ``self.parameter_bounds`` are exact
+        (i.e., specify the minimum bounding box),
+        False otherwise.
+
+        For the intersection set, parameter bounds are exact only
+        if the intersection turns out to be a discrete set.
+        """
+        return self.geometry == Geometry.DISCRETE_SCENARIOS
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the intersection
-        set.
+        Compute parameter bounds of the intersection set.
 
-        Currently, an empty list, as the bounds cannot, in general,
-        be computed without access to an optimization solver.
+        Returns
+        -------
+        list[tuple[numbers.Real, numbers.Real]]
+            If one of the sets to be intersected is discrete,
+            then the list is of length ``self.dim`` and contains
+            the coordinate value (lower, upper) bound pairs.
+            Otherwise, an empty list is returned, as the bounds cannot,
+            in general, be computed without access to an optimization
+            solver.
         """
+        if self._PARAMETER_BOUNDS_EXACT:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.parameter_bounds
+
         return []
 
     def point_in_set(self, point):
@@ -3699,10 +3756,7 @@ class IntersectionSet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        if all(a_set.point_in_set(point=point) for a_set in self.all_sets):
-            return True
-        else:
-            return False
+        return all(a_set.point_in_set(point=point) for a_set in self.all_sets)
 
     # === Define pairwise intersection function
     @staticmethod
@@ -3715,7 +3769,7 @@ class IntersectionSet(UncertaintySet):
         Parameters
         ----------
         Q1, Q2 : UncertaintySet
-            Operand uncertainty sets.
+            Operand uncertainty set.
 
         Returns
         -------
@@ -3727,7 +3781,7 @@ class IntersectionSet(UncertaintySet):
         for set1, set2 in zip((Q1, Q2), (Q2, Q1)):
             if isinstance(set1, DiscreteScenarioSet):
                 return DiscreteScenarioSet(
-                    scenarios=[pt for pt in set1.scenarios if set1.point_in_set(pt)]
+                    scenarios=[pt for pt in set1.scenarios if set2.point_in_set(pt)]
                 )
 
         # === This case is if both sets are continuous
@@ -3744,14 +3798,15 @@ class IntersectionSet(UncertaintySet):
             )
         )
 
-        intersection_set = functools.reduce(self.intersect, self.all_sets)
-        if isinstance(intersection_set, DiscreteScenarioSet):
-            return intersection_set.set_as_constraint(
+        # handle special case where the intersection is a discrete set
+        if self.geometry == Geometry.DISCRETE_SCENARIOS:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.set_as_constraint(
                 uncertain_params=uncertain_params, block=block
             )
 
         all_cons, all_aux_vars = [], []
-        for idx, unc_set in enumerate(intersection_set.all_sets):
+        for idx, unc_set in enumerate(self.all_sets):
             sub_block = Block()
             block.add_component(
                 unique_component_name(block, f"sub_block_{idx}"), sub_block
@@ -3768,6 +3823,16 @@ class IntersectionSet(UncertaintySet):
             uncertainty_cons=all_cons,
             auxiliary_vars=all_aux_vars,
         )
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        aux_param_vals_iter = itertools.chain(
+            *tuple(
+                uset.compute_auxiliary_uncertain_param_vals(point, solver=solver)
+                for uset in self.all_sets
+            )
+        )
+        return np.array(list(aux_param_vals_iter))
 
     def validate(self, config):
         """
