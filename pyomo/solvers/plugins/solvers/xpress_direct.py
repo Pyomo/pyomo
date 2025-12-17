@@ -64,13 +64,6 @@ def _finalize_xpress_import(xpress, avail):
     xp = xpress
     XpressDirect._version = tuple(int(k) for k in xp.getversion().split('.'))
     XpressDirect._name = "Xpress %s.%s.%s" % XpressDirect._version
-    # in versions prior to 34, xpress raised a RuntimeError, but
-    # in more recent versions it raises a
-    # xpress.ModelError. We'll cache the appropriate one here
-    if XpressDirect._version[0] < 34:
-        XpressDirect.XpressException = RuntimeError
-    else:
-        XpressDirect.XpressException = xp.ModelError
     # In (pypi) versions prior to 8.13.0, the 'xp.rng' keyword was
     # 'xp.range'
     if not hasattr(xp, 'rng'):
@@ -429,13 +422,6 @@ class XpressDirect(DirectSolver):
         if self._keepfiles:
             print("Solver log file: " + self._log_file)
 
-        # Setting a log file in xpress disables all output
-        # in xpress versions less than 36.
-        # This callback prints all messages to stdout
-        # when using those xpress versions.
-        if self._tee and XpressDirect._version[0] < 36:
-            self._solver_model.addcbmessage(_print_message, None, 0)
-
         # set xpress options
         # if the user specifies a 'mipgap', set it, and
         # set xpress's related options to 0.
@@ -452,7 +438,7 @@ class XpressDirect(DirectSolver):
                 continue
             try:
                 self._solver_model.setControl(key, option)
-            except XpressDirect.XpressException:
+            except xpress.ModelError:
                 # take another try, converting to its type
                 # we'll wrap this in a function to raise the
                 # xpress error
@@ -475,8 +461,6 @@ class XpressDirect(DirectSolver):
         self._opt_time = time.time() - start_time
 
         self._setLogFile(self._solver_model, '')
-        if self._tee and XpressDirect._version[0] < 36:
-            self._solver_model.removecbmessage(_print_message, None)
 
         # FIXME: can we get a return code indicating if XPRESS had a
         # significant failure?
@@ -573,20 +557,20 @@ class XpressDirect(DirectSolver):
         if xprob_attrs.objsense == 1.0:  # minimizing MIP
             try:
                 results.problem.upper_bound = xprob_attrs.mipbestobjval
-            except (XpressDirect.XpressException, AttributeError):
+            except (xpress.ModelError, AttributeError):
                 pass
             try:
                 results.problem.lower_bound = xprob_attrs.bestbound
-            except (XpressDirect.XpressException, AttributeError):
+            except (xpress.ModelError, AttributeError):
                 pass
         elif xprob_attrs.objsense == -1.0:  # maximizing MIP
             try:
                 results.problem.upper_bound = xprob_attrs.bestbound
-            except (XpressDirect.XpressException, AttributeError):
+            except (xpress.ModelError, AttributeError):
                 pass
             try:
                 results.problem.lower_bound = xprob_attrs.mipbestobjval
-            except (XpressDirect.XpressException, AttributeError):
+            except (xpress.ModelError, AttributeError):
                 pass
 
         return mip_sols > 0
@@ -676,7 +660,7 @@ class XpressDirect(DirectSolver):
         try:
             results.problem.upper_bound = xprob_attrs.lpobjval
             results.problem.lower_bound = xprob_attrs.lpobjval
-        except (XpressDirect.XpressException, AttributeError):
+        except (xpress.ModelError, AttributeError):
             pass
 
         # Not all solution information will be available in all cases, it is
@@ -790,7 +774,7 @@ class XpressDirect(DirectSolver):
                 results.problem.upper_bound = xprob_attrs.xslp_objval
             if xprob_attrs.objsense < 0.0 or optimal:  # maximizing
                 results.problem.lower_bound = xprob_attrs.xslp_objval
-        except (XpressDirect.XpressException, AttributeError):
+        except (xpress.ModelError, AttributeError):
             pass
 
         return have_soln

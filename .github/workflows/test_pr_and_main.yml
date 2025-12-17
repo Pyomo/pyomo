@@ -452,7 +452,7 @@ jobs:
             TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" 'xpress<9.3' cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
