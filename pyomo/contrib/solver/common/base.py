@@ -321,22 +321,6 @@ class PersistentSolverBase(SolverBase):
             f"Derived class {self.__class__.__name__} failed to implement required method 'set_objective'."
         )
 
-    def add_variables(self, variables: List[VarData]):
-        """
-        Add variables to the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'add_variables'."
-        )
-
-    def add_parameters(self, params: List[ParamData]):
-        """
-        Add parameters to the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'add_parameters'."
-        )
-
     def add_constraints(self, cons: List[ConstraintData]):
         """
         Add constraints to the model.
@@ -351,22 +335,6 @@ class PersistentSolverBase(SolverBase):
         """
         raise NotImplementedError(
             f"Derived class {self.__class__.__name__} failed to implement required method 'add_block'."
-        )
-
-    def remove_variables(self, variables: List[VarData]):
-        """
-        Remove variables from the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_variables'."
-        )
-
-    def remove_parameters(self, params: List[ParamData]):
-        """
-        Remove parameters from the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_parameters'."
         )
 
     def remove_constraints(self, cons: List[ConstraintData]):
@@ -604,15 +572,10 @@ class LegacySolverWrapper:
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True
         if load_solutions:
-            if hasattr(model, 'dual') and model.dual.import_enabled():
-                for con, val in results.solution_loader.get_duals().items():
-                    model.dual[con] = val
-            if hasattr(model, 'rc') and model.rc.import_enabled():
-                for var, val in results.solution_loader.get_reduced_costs().items():
-                    model.rc[var] = val
+            results.solution_loader.load_import_suffixes()
         elif results.incumbent_objective is not None:
             delete_legacy_soln = False
-            for var, val in results.solution_loader.get_primals().items():
+            for var, val in results.solution_loader.get_vars().items():
                 legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for con, val in results.solution_loader.get_duals().items():
