@@ -1461,7 +1461,7 @@ class DesignOfExperiments:
                 # lower triangle region of the L and L_inv matrices.
                 # This region is where our equations are well-defined.
                 m = b.model()
-                param_list = list(model.parameter_names)
+                param_list = list(m.parameter_names)
                 idx_c = param_list.index(c)
                 idx_d = param_list.index(d)
                 # Do not need to calculate upper triangle entries
