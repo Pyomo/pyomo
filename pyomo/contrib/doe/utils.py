@@ -142,6 +142,8 @@ def compute_FIM_metrics(FIM):
     det_FIM : float
         Determinant of the FIM.
     trace_cov : float
+        Trace of the covariance matrix.
+    trace_FIM : float
         Trace of the FIM.
     E_vals : numpy.ndarray
         1D array of eigenvalues of the FIM.
@@ -221,6 +223,8 @@ def get_FIM_metrics(FIM):
     "Determinant of FIM" : float
         determinant of the FIM
     "Trace of cov" : float
+        trace of the covariance matrix
+    "Trace of FIM" : float
         trace of the FIM
     "Eigenvalues" : numpy.ndarray
         eigenvalues of the FIM
@@ -230,6 +234,8 @@ def get_FIM_metrics(FIM):
         log10(D-optimality) metric
     "log10(A-Optimality)" : float
         log10(A-optimality) metric
+    "log10(Pseudo A-Optimality)" : float
+        log10(trace(FIM)) metric
     "log10(E-Optimality)" : float
         log10(E-optimality) metric
     "log10(Modified E-Optimality)" : float

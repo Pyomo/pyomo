@@ -513,7 +513,7 @@ class DesignOfExperiments:
         # Saving some stats on the FIM for convenience
         self.results["Objective expression"] = str(self.objective_option).split(".")[-1]
         self.results["log10 A-opt"] = np.log10(np.trace(np.linalg.inv(fim_local)))
-        self.results["log10 Trace of FIM"] = np.log10(np.trace(fim_local))
+        self.results["log10 pseudo A-opt"] = np.log10(np.trace(fim_local))
         self.results["log10 D-opt"] = np.log10(np.linalg.det(fim_local))
         self.results["log10 E-opt"] = np.log10(min(np.linalg.eig(fim_local)[0]))
         self.results["FIM Condition Number"] = np.linalg.cond(fim_local)
@@ -1852,7 +1852,8 @@ class DesignOfExperiments:
             - "eigval_min": list of minimum eigenvalues
             - "eigval_max": list of maximum eigenvalues
             - "det_FIM": list of determinants
-            - "trace_cov": list of traces
+            - "trace_cov": list of traces of covariance matrix
+            - "trace_FIM": list of traces of FIM
             - "solve_time": list of solve times
 
         Raises
