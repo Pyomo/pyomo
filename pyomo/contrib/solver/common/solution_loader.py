@@ -51,7 +51,7 @@ class SolutionLoaderBase:
         """
         If there are multiple solutions available, this will return a
         list of the solution ids which can then be used with other
-        methods like `load_soltuion`. If only one solution is
+        methods like `load_solution`. If only one solution is
         available, this will return [None]. If no solutions
         are available, this will return None
 
