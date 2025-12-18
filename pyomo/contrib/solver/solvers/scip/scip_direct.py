@@ -85,6 +85,7 @@ from pyomo.contrib.observer.model_observer import (
     Observer,
     ModelChangeDetector,
     AutoUpdateConfig,
+    Reason,
 )
 
 
@@ -111,8 +112,8 @@ class ScipConfig(BranchAndBoundConfig):
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.use_mipstart: bool = self.declare(
-            'use_mipstart',
+        self.warmstart_discrete_vars: bool = self.declare(
+            'warmstart_discrete_vars',
             ConfigValue(
                 default=False,
                 domain=bool,
@@ -328,11 +329,10 @@ logger = logging.getLogger("pyomo.solvers")
 
 class ScipDirectSolutionLoader(SolutionLoaderBase):
     def __init__(
-        self, solver_model, var_id_map, var_map, con_map, pyomo_model, opt
+        self, solver_model, var_map, con_map, pyomo_model, opt
     ) -> None:
         super().__init__()
         self._solver_model = solver_model
-        self._vars = var_id_map
         self._var_map = var_map
         self._con_map = con_map
         self._pyomo_model = pyomo_model
@@ -359,13 +359,13 @@ class ScipDirectSolutionLoader(SolutionLoaderBase):
         if self.get_number_of_solutions() == 0:
             raise NoSolutionError()
         if vars_to_load is None:
-            vars_to_load = list(self._vars.values())
+            vars_to_load = list(self._var_map.keys())
         if solution_id is None:
             solution_id = 0
         sol = self._solver_model.getSols()[solution_id]
         res = ComponentMap()
         for v in vars_to_load:
-            sv = self._var_map[id(v)]
+            sv = self._var_map[v]
             res[v] = sol[sv]
         return res
 
@@ -385,9 +385,9 @@ class ScipDirectSolutionLoader(SolutionLoaderBase):
 
 class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
     def __init__(
-        self, solver_model, var_id_map, var_map, con_map, pyomo_model, opt
+        self, solver_model, var_map, con_map, pyomo_model, opt
     ) -> None:
-        super().__init__(solver_model, var_id_map, var_map, con_map, pyomo_model, opt)
+        super().__init__(solver_model, var_map, con_map, pyomo_model, opt)
         self._valid = True
 
     def invalidate(self):
@@ -445,13 +445,11 @@ class ScipDirect(SolverBase):
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._solver_model = None
-        self._vars = {}  # var id to var
-        self._params = {}  # param id to param
-        self._pyomo_var_to_solver_var_map = {}  # var id to scip var
+        self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = {}
         self._pyomo_param_to_solver_param_map = (
-            {}
-        )  # param id to scip var with equal bounds
+            ComponentMap()
+        )  # param to scip var with equal bounds
         self._pyomo_sos_to_solver_sos_map = {}
         self._expr_visitor = _PyomoToScipVisitor(self)
         self._objective = None  # pyomo objective
@@ -462,11 +460,9 @@ class ScipDirect(SolverBase):
 
     def _clear(self):
         self._solver_model = None
-        self._vars = {}
-        self._params = {}
-        self._pyomo_var_to_solver_var_map = {}
+        self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = {}
-        self._pyomo_param_to_solver_param_map = {}
+        self._pyomo_param_to_solver_param_map = ComponentMap()
         self._pyomo_sos_to_solver_sos_map = {}
         self._objective = None
         self._obj_var = None
@@ -490,15 +486,8 @@ class ScipDirect(SolverBase):
 
     def solve(self, model: BlockData, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        orig_config = self.config
-        if not self.available():
-            raise ApplicationError(f'{self.name} is not available: {self.available()}')
         try:
             config = self.config(value=kwds, preserve_implicit=True)
-
-            # hack to work around legacy solver wrapper __setattr__
-            # otherwise, this would just be self.config = config
-            object.__setattr__(self, 'config', config)
 
             StaleFlagManager.mark_all_as_stale()
 
@@ -508,7 +497,7 @@ class ScipDirect(SolverBase):
 
             ostreams = [io.StringIO()] + config.tee
 
-            scip_model, solution_loader, has_obj = self._create_solver_model(model)
+            scip_model, solution_loader, has_obj = self._create_solver_model(model, config)
 
             scip_model.hideOutput(quiet=False)
             if config.threads is not None:
@@ -520,7 +509,7 @@ class ScipDirect(SolverBase):
             if config.abs_gap is not None:
                 scip_model.setParam('limits/absgap', config.abs_gap)
 
-            if config.use_mipstart:
+            if config.warmstart_discrete_vars:
                 self._mipstart()
 
             for key, option in config.solver_options.items():
@@ -532,13 +521,10 @@ class ScipDirect(SolverBase):
                 scip_model.optimize()
             timer.stop('optimize')
 
-            results = self._postsolve(scip_model, solution_loader, has_obj)
+            results = self._populate_results(scip_model, solution_loader, has_obj, config)
         except InfeasibleConstraintException:
+            # is it possible to hit this?
             results = self._get_infeasible_results()
-        finally:
-            # hack to work around legacy solver wrapper __setattr__
-            # otherwise, this would just be self.config = orig_config
-            object.__setattr__(self, 'config', orig_config)
 
         results.solver_log = ostreams[0].getvalue()
         end_timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -612,16 +598,14 @@ class ScipDirect(SolverBase):
 
         scip_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype)
 
-        self._vars[id(var)] = var
-        self._pyomo_var_to_solver_var_map[id(var)] = scip_var
+        self._pyomo_var_to_solver_var_map[var] = scip_var
         return scip_var
 
     def _add_param(self, p):
         vtype = "C"
         lb = ub = p.value
         scip_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype)
-        self._params[id(p)] = p
-        self._pyomo_param_to_solver_param_map[id(p)] = scip_var
+        self._pyomo_param_to_solver_param_map[p] = scip_var
         return scip_var
 
     def __del__(self):
@@ -638,8 +622,8 @@ class ScipDirect(SolverBase):
         for on in cons:
             self._add_sos_constraint(con)
 
-    def _create_solver_model(self, model):
-        timer = self.config.timer
+    def _create_solver_model(self, model, config):
+        timer = config.timer
         timer.start('create scip model')
         self._clear()
         self._solver_model = scip.Model()
@@ -666,7 +650,6 @@ class ScipDirect(SolverBase):
         has_obj = obj is not None
         solution_loader = ScipDirectSolutionLoader(
             solver_model=self._solver_model,
-            var_id_map=self._vars,
             var_map=self._pyomo_var_to_solver_var_map,
             con_map=self._pyomo_con_to_solver_con_map,
             pyomo_model=model,
@@ -758,8 +741,8 @@ class ScipDirect(SolverBase):
         self._solver_model.setObjective(self._obj_var, sense=sense)
         self._objective = obj
 
-    def _postsolve(
-        self, scip_model, solution_loader: ScipDirectSolutionLoader, has_obj
+    def _populate_results(
+        self, scip_model, solution_loader: ScipDirectSolutionLoader, has_obj, config
     ):
 
         results = Results()
@@ -783,7 +766,7 @@ class ScipDirect(SolverBase):
         if (
             results.termination_condition
             != TerminationCondition.convergenceCriteriaSatisfied
-            and self.config.raise_exception_on_nonoptimal_result
+            and config.raise_exception_on_nonoptimal_result
         ):
             raise NoOptimalSolutionError()
 
@@ -813,16 +796,16 @@ class ScipDirect(SolverBase):
             results.incumbent_objective = None
             results.objective_bound = None
 
-        self.config.timer.start('load solution')
-        if self.config.load_solutions:
+        config.timer.start('load solution')
+        if config.load_solutions:
             if solution_loader.get_number_of_solutions() > 0:
                 solution_loader.load_solution()
             else:
                 raise NoFeasibleSolutionError()
-        self.config.timer.stop('load solution')
+        config.timer.stop('load solution')
 
-        results.iteration_count = scip_model.getNNodes()
-        results.solver_config = self.config
+        results.extra_info['NNodes'] = scip_model.getNNodes()
+        results.solver_config = config
         results.solver_name = self.name
         results.solver_version = self.version()
 
@@ -832,8 +815,7 @@ class ScipDirect(SolverBase):
         # TODO: it is also possible to specify continuous variables, but
         #       I think we should have a different option for that
         sol = self._solver_model.createPartialSol()
-        for vid, scip_var in self._pyomo_var_to_solver_var_map.items():
-            pyomo_var = self._vars[vid]
+        for pyomo_var, scip_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.is_integer():
                 sol[scip_var] = pyomo_var.value
         self._solver_model.addSol(sol)
@@ -859,55 +841,13 @@ class ScipPersistentConfig(ScipConfig):
         self.auto_updates: bool = self.declare('auto_updates', AutoUpdateConfig())
 
 
-class _ScipObserver(Observer):
-    def __init__(self, opt: ScipPersistent) -> None:
-        self.opt = opt
-
-    def add_variables(self, variables: List[VarData]):
-        self.opt._add_variables(variables)
-
-    def add_parameters(self, params: List[ParamData]):
-        self.opt._add_parameters(params)
-
-    def add_constraints(self, cons: List[ConstraintData]):
-        self.opt._add_constraints(cons)
-
-    def add_sos_constraints(self, cons: List[SOSConstraintData]):
-        self.opt._add_sos_constraints(cons)
-
-    def add_objectives(self, objs: List[ObjectiveData]):
-        self.opt._add_objectives(objs)
-
-    def remove_objectives(self, objs: List[ObjectiveData]):
-        self.opt._remove_objectives(objs)
-
-    def remove_constraints(self, cons: List[ConstraintData]):
-        self.opt._remove_constraints(cons)
-
-    def remove_sos_constraints(self, cons: List[SOSConstraintData]):
-        self.opt._remove_sos_constraints(cons)
-
-    def remove_variables(self, variables: List[VarData]):
-        self.opt._remove_variables(variables)
-
-    def remove_parameters(self, params: List[ParamData]):
-        self.opt._remove_parameters(params)
-
-    def update_variables(self, variables: List[VarData]):
-        self.opt._update_variables(variables)
-
-    def update_parameters(self, params: List[ParamData]):
-        self.opt._update_parameters(params)
-
-
-class ScipPersistent(ScipDirect, PersistentSolverBase):
+class ScipPersistent(ScipDirect, PersistentSolverBase, Observer):
     _minimum_version = (5, 5, 0)  # this is probably conservative
     CONFIG = ScipPersistentConfig()
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._pyomo_model = None
-        self._observer = None
         self._change_detector = None
         self._last_results_object: Optional[Results] = None
         self._needs_reopt = False
@@ -916,10 +856,9 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
     def _clear(self):
         super()._clear()
         self._pyomo_model = None
-        self._objective = None
-        self._observer = None
         self._change_detector = None
         self._needs_reopt = False
+        self._range_constraints = set()
 
     def _check_reopt(self):
         if self._needs_reopt:
@@ -927,15 +866,14 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
             self._solver_model.freeTransform()
             self._needs_reopt = False
 
-    def _create_solver_model(self, pyomo_model):
+    def _create_solver_model(self, pyomo_model, config):
         if pyomo_model is self._pyomo_model:
-            self.update()
+            self.update(**config)
         else:
-            self.set_instance(pyomo_model=pyomo_model)
+            self.set_instance(pyomo_model, **config)
 
         solution_loader = ScipPersistentSolutionLoader(
             solver_model=self._solver_model,
-            var_id_map=self._vars,
             var_map=self._pyomo_var_to_solver_var_map,
             con_map=self._pyomo_con_to_solver_con_map,
             pyomo_model=pyomo_model,
@@ -950,38 +888,127 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
         self._needs_reopt = True
         return res
 
-    def update(self):
-        if self.config.timer is None:
+    def update(self, **kwds):
+        config = self.config(value=kwds, preserve_implicit=True)
+        if config.timer is None:
             timer = HierarchicalTimer()
         else:
-            timer = self.config.timer
+            timer = config.timer
         if self._pyomo_model is None:
             raise RuntimeError('must call set_instance or solve before update')
         timer.start('update')
-        self._change_detector.update(timer=timer)
+        self._change_detector.update(timer=timer, **config.auto_updates)
         timer.stop('update')
 
-    def set_instance(self, pyomo_model):
-        if self.config.timer is None:
+    def set_instance(self, pyomo_model, **kwds):
+        config = self.config(value=kwds, preserve_implicit=True)
+        if config.timer is None:
             timer = HierarchicalTimer()
         else:
-            timer = self.config.timer
+            timer = config.timer
         self._clear()
         self._pyomo_model = pyomo_model
         self._solver_model = scip.Model()
-        self._observer = _ScipObserver(self)
         timer.start('set_instance')
         self._change_detector = ModelChangeDetector(
             model=self._pyomo_model,
-            observers=[self._observer],
-            **dict(self.config.auto_updates),
+            observers=[self],
+            **config.auto_updates,
         )
-        self._change_detector.config = self.config.auto_updates
         timer.stop('set_instance')
 
     def _invalidate_last_results(self):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
+
+    def _update_variables(self, variables: Mapping[VarData, Reason]):
+        new_vars = []
+        old_vars = []
+        mod_vars = []
+        for v, reason in variables.items():
+            if reason & Reason.added:
+                new_vars.append(v)
+            elif reason & Reason.removed:
+                old_vars.append(v)
+            else:
+                mod_vars.append(v)
+
+        if new_vars:
+            self._add_variables(new_vars)
+        if old_vars:
+            self._remove_variables(old_vars)
+        if mod_vars:
+            self._update_vars_for_real(mod_vars)
+
+    def _update_parameters(self, params: Mapping[ParamData, Reason]):
+        new_params = []
+        old_params = []
+        mod_params = []
+        for p, reason in params.items():
+            if reason & Reason.added:
+                new_params.append(p)
+            elif reason & Reason.removed:
+                old_params.append(p)
+            else:
+                mod_params.append(p)
+        
+        if new_params:
+            self._add_parameters(new_params)
+        if old_params:
+            self._remove_parameters(old_params)
+        if mod_params:
+            self._update_params_for_real(mod_params)
+
+    def _update_constraints(self, cons: Mapping[ConstraintData, Reason]):
+        new_cons = []
+        old_cons = []
+        for c, reason in cons.items():
+            if reason & Reason.added:
+                new_cons.append(c)
+            elif reason & Reason.removed:
+                old_cons.append(c)
+            elif reason & Reason.expr:
+                old_cons.append(c)
+                new_cons.append(c)
+
+        if old_cons:
+            self._remove_constraints(old_cons)
+        if new_cons:
+            self._add_constraints(new_cons)
+
+    def _update_sos_constraints(self, cons: Mapping[SOSConstraintData, Reason]):
+        new_cons = []
+        old_cons = []
+        for c, reason in cons.items():
+            if reason & Reason.added:
+                new_cons.append(c)
+            elif reason & Reason.removed:
+                old_cons.append(c)
+            elif reason & Reason.sos_items:
+                old_cons.append(c)
+                new_cons.append(c)
+
+        if old_cons:
+            self._remove_sos_constraints(old_cons)
+        if new_cons:
+            self._add_sos_constraints(new_cons)
+
+    def _update_objectives(self, objs: Mapping[ObjectiveData, Reason]):
+        new_objs = []
+        old_objs = []
+        for obj, reason in objs.items():
+            if reason & Reason.added:
+                new_objs.append(obj)
+            elif reason & Reason.removed:
+                old_objs.append(obj)
+            elif reason & (Reason.expr | Reason.sense):
+                old_objs.append(obj)
+                new_objs.append(obj)
+
+        if old_objs:
+            self._remove_objectives(old_objs)
+        if new_objs:
+            self._add_objectives(new_objs)
 
     def _add_variables(self, variables: List[VarData]):
         self._check_reopt()
@@ -1024,7 +1051,7 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
 
         if self._objective is not None:
             raise NotImplementedError(
-                'the persistent interface to gurobi currently '
+                'the persistent interface to scip currently '
                 'only supports single-objective problems; tried to add '
                 f'an objective ({str(obj)}), but there is already an '
                 f'active objective ({str(self._objective)})'
@@ -1064,38 +1091,32 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
         self._check_reopt()
         self._invalidate_last_results()
         for v in variables:
-            vid = id(v)
-            scip_var = self._pyomo_var_to_solver_var_map.pop(vid)
+            scip_var = self._pyomo_var_to_solver_var_map.pop(v)
             self._solver_model.delVar(scip_var)
-            self._vars.pop(vid)
 
     def _remove_parameters(self, params: List[ParamData]):
         self._check_reopt()
         self._invalidate_last_results()
         for p in params:
-            pid = id(p)
-            scip_var = self._pyomo_param_to_solver_param_map.pop(pid)
+            scip_var = self._pyomo_param_to_solver_param_map.pop(p)
             self._solver_model.delVar(scip_var)
-            self._params.pop(pid)
 
-    def _update_variables(self, variables: List[VarData]):
+    def _update_vars_for_real(self, variables: List[VarData]):
         self._check_reopt()
         self._invalidate_last_results()
         for v in variables:
-            vid = id(v)
-            scip_var = self._pyomo_var_to_solver_var_map[vid]
+            scip_var = self._pyomo_var_to_solver_var_map[v]
             vtype = self._scip_vtype_from_var(v)
             lb, ub = self._scip_lb_ub_from_var(v)
             self._solver_model.chgVarLb(scip_var, lb)
             self._solver_model.chgVarUb(scip_var, ub)
             self._solver_model.chgVarType(scip_var, vtype)
 
-    def _update_parameters(self, params: List[ParamData]):
+    def _update_params_for_real(self, params: List[ParamData]):
         self._check_reopt()
         self._invalidate_last_results()
         for p in params:
-            pid = id(p)
-            scip_var = self._pyomo_param_to_solver_param_map[pid]
+            scip_var = self._pyomo_param_to_solver_param_map[p]
             lb = ub = p.value
             self._solver_model.chgVarLb(scip_var, lb)
             self._solver_model.chgVarUb(scip_var, ub)
@@ -1107,11 +1128,6 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
                 if con in self._range_constraints:
                     self._remove_constraints([con])
                     self._add_constraints([con])
-
-    def add_variables(self, variables):
-        if self._change_detector is None:
-            raise RuntimeError('call set_instance first')
-        self._change_detector.add_variables(variables)
 
     def add_constraints(self, cons):
         if self._change_detector is None:
@@ -1137,11 +1153,6 @@ class ScipPersistent(ScipDirect, PersistentSolverBase):
         if self._change_detector is None:
             raise RuntimeError('call set_instance first')
         self._change_detector.remove_sos_constraints(cons)
-
-    def remove_variables(self, variables):
-        if self._change_detector is None:
-            raise RuntimeError('call set_instance first')
-        self._change_detector.remove_variables(variables)
 
     def update_variables(self, variables):
         if self._change_detector is None:
