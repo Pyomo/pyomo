@@ -14,7 +14,10 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr import ProductExpression, SumExpression
 from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
-from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiMINLPVisitor
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
+    GurobiMINLPVisitor,
+    GurobiDirectMINLP,
+)
 from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
 )
@@ -39,6 +42,9 @@ gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.
 
 if gurobipy_available:
     from gurobipy import GRB
+
+    if not GurobiDirectMINLP().available():
+        gurobipy_available = False
 
 
 class CommonTest(unittest.TestCase):
