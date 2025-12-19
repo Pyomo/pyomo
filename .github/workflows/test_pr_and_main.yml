@@ -446,13 +446,17 @@ jobs:
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
                 #  - "<=9.5.0|>9.5.1" (conda seg faults)
                 XPRESS='xpress>=9.5.2'
+            elif [[ ${{matrix.TARGET}} == linux && ${{matrix.python}} == 3.10 ]]; then
+                # Test with older Xpress version to get coverage data and verify backward compatibility.
+                # Targeting Linux Python 3.10 ensures latest Xpress is still tested in other jobs.
+                XPRESS='xpress<9.3'
             else
                 XPRESS='xpress'
             fi
             TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" 'xpress<9.3' cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
