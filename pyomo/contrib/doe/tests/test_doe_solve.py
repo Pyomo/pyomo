@@ -38,6 +38,9 @@ if scipy_available:
         FullReactorExperimentBad,
     )
 from pyomo.contrib.doe.utils import rescale_FIM
+from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
+    run_rooney_biegler_doe,
+)
 
 import pyomo.environ as pyo
 
@@ -560,6 +563,22 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(ff_results["eigval_max"], eigval_max_expected)
         self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
         self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
+
+    def test_doe_A_optimality(self):
+        A_opt_value_expected = -2.2364242059539663
+        A_opt_design_value_expected = 9.999955457176451
+
+        A_opt_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
+            "optimization"
+        ]["A"]["log10 A-opt"]
+        A_opt_design_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
+            "optimization"
+        ]["A"]["Experiment Design"][0]
+
+        self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
+        self.assertAlmostEqual(
+            A_opt_design_value, A_opt_design_value_expected, places=2
+        )
 
 
 if __name__ == "__main__":
