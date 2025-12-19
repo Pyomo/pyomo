@@ -53,6 +53,7 @@ def run_rooney_biegler_doe(
         objective_option="determinant",
         tee=tee,
         prior_FIM=FIM,
+        improve_cholesky_roundoff_error=True,
     )
 
     if optimize_experiment_D:
