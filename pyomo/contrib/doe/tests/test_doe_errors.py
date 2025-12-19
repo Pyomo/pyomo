@@ -33,6 +33,9 @@ if scipy_available:
         FullReactorExperiment,
     )
 
+from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
+    run_rooney_biegler_doe,
+)
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
@@ -65,7 +68,8 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     solver.options["max_iter"] = 3000
     args['solver'] = solver
     args['tee'] = False
-    args['get_labeled_model_args'] = {"flag": flag}
+    if flag is not None:
+        args['get_labeled_model_args'] = {"flag": flag}
     args['_Cholesky_option'] = True
     args['_only_compute_fim_lower'] = True
     return args
@@ -807,6 +811,23 @@ class TestReactorExampleErrors(unittest.TestCase):
             ),
         ):
             doe_obj.compute_FIM(method="Bad Method")
+
+    def test_invalid_trace_without_cholesky(self):
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        DoE_args['_Cholesky_option'] = False
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
+        ):
+            doe_obj.create_doe_model()
 
 
 if __name__ == "__main__":

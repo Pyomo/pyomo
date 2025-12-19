@@ -31,6 +31,12 @@ if scipy_available:
         ReactorExperiment as FullReactorExperiment,
     )
 
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
+from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
+    run_rooney_biegler_doe,
+)
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
@@ -500,6 +506,25 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Check that the suffix object has been updated correctly
         for i, v in enumerate(suffix_obj.values()):
             self.assertAlmostEqual(v, new_vals[i], places=6)
+
+
+class TestDoEObjectiveOptions(unittest.TestCase):
+    def test_invalid_trace_without_cholesky(self):
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args['_Cholesky_option'] = False
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
+        ):
+            doe_obj.create_doe_model()
 
 
 if __name__ == "__main__":

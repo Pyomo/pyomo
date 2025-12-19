@@ -17,6 +17,7 @@ def run_rooney_biegler_doe(
 ):
     # Initialize a container for all potential results
     results_container = {
+        "experiment": None,
         "results_dict": {},
         "optimization": {},  # Will hold D/A optimization results if run
         "plots": [],  # Store figure objects if created
@@ -45,6 +46,7 @@ def run_rooney_biegler_doe(
     rooney_biegler_experiment = RooneyBieglerExperiment(
         data=data.loc[0, :], theta=theta, measure_error=measurement_error
     )
+    results_container["experiment"] = rooney_biegler_experiment
 
     rooney_biegler_doe = DesignOfExperiments(
         experiment=rooney_biegler_experiment,
