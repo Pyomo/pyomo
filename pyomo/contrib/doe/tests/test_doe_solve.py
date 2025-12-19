@@ -18,11 +18,13 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pandas_available,
     scipy_available,
-    matplotlib,
-    matplotlib_available,
+    attempt_import,
 )
 
-matplotlib.use("Agg")  # Use non-interactive backend (for CI testing purposes
+# Safely try to import matplotlib
+matplotlib, matplotlib_available = attempt_import('matplotlib')
+if matplotlib_available:
+    matplotlib.use("Agg")  # Use non-interactive backend (for CI testing purposes
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
