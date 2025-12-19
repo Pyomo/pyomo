@@ -18,8 +18,13 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pandas_available,
     scipy_available,
+    attempt_import,
 )
 
+# Safely try to import matplotlib
+matplotlib, matplotlib_available = attempt_import('matplotlib')
+if matplotlib_available:
+    matplotlib.use("Agg")  # Use non-interactive backend (for CI testing purposes
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
@@ -38,6 +43,9 @@ if scipy_available:
         FullReactorExperimentBad,
     )
 from pyomo.contrib.doe.utils import rescale_FIM
+from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
+    run_rooney_biegler_doe,
+)
 
 import pyomo.environ as pyo
 
@@ -140,7 +148,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 class TestReactorExampleSolving(unittest.TestCase):
     def test_reactor_fd_central_solve(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -185,7 +193,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     def test_reactor_fd_backward_solve(self):
         fd_method = "backward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -544,7 +552,7 @@ class TestDoe(unittest.TestCase):
             ff_results["log10 D-opt"], log10_D_opt_expected, abstol=1e-4
         )
         self.assertStructuredAlmostEqual(
-            ff_results["log10 A-opt"], log10_A_opt_expected, abstol=1e-4
+            ff_results["log10 pseudo A-opt"], log10_A_opt_expected, abstol=1e-4
         )
         self.assertStructuredAlmostEqual(
             ff_results["log10 E-opt"], log10_E_opt_expected, abstol=1e-4
@@ -560,6 +568,66 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(ff_results["eigval_max"], eigval_max_expected)
         self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
         self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
+
+    def test_doe_A_optimality(self):
+        A_opt_value_expected = -2.2364242059539663
+        A_opt_design_value_expected = 9.999955457176451
+
+        A_opt_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
+            "optimization"
+        ]["A"]["log10 A-opt"]
+        A_opt_design_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
+            "optimization"
+        ]["A"]["Experiment Design"][0]
+
+        self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
+        self.assertAlmostEqual(
+            A_opt_design_value, A_opt_design_value_expected, places=2
+        )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
+@unittest.skipIf(not matplotlib_available, "Matplotlib is not available")
+class TestDoEFactorialFigure(unittest.TestCase):
+    def test_trace_plot_runs_without_error(self):
+        plt = matplotlib.pyplot
+        """
+        Test that the plotting function executes without error and
+        creates a matplotlib figure. We do NOT test visual correctness.
+        """
+
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        doe_obj.create_doe_model()
+        doe_obj.create_objective_function()
+        doe_obj.compute_FIM_full_factorial(design_ranges={'hour': [0, 10, 5]})
+
+        # Call the plotting function
+        # Replace this with your actual plotting function
+        fig = doe_obj.draw_factorial_figure(
+            sensitivity_design_variables=['hour'],
+            fixed_design_variables={},
+            log_scale=False,
+            figure_file_name="rooney_biegler",
+        )
+
+        # If the function returns a figure
+        if fig is not None:
+            self.assertIsInstance(fig, plt.Figure)
+
+        # Otherwise, ensure a figure was created
+        self.assertGreater(len(plt.get_fignums()), 0)
+
+        # Cleanup
+        plt.close("all")
 
 
 if __name__ == "__main__":
