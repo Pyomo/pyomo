@@ -83,33 +83,24 @@ class TestXpressPersistent(unittest.TestCase):
         m.x.setlb(-5)
         m.x.setub(5)
         opt.update_var(m.x)
-        # a nice wrapper for xpress isn't implemented,
-        # so we'll do this directly
-        x_idx = opt._solver_model.getIndex(opt._pyomo_var_to_solver_var_map[m.x])
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        ub = []
-        opt._solver_model.getub(ub, x_idx, x_idx)
-        self.assertEqual(lb[0], -5)
-        self.assertEqual(ub[0], 5)
+        lb = opt._get_lb(m.x)
+        ub = opt._get_ub(m.x)
+        self.assertEqual(lb, -5)
+        self.assertEqual(ub, 5)
 
         m.x.fix(0)
         opt.update_var(m.x)
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        ub = []
-        opt._solver_model.getub(ub, x_idx, x_idx)
-        self.assertEqual(lb[0], 0)
-        self.assertEqual(ub[0], 0)
+        lb = opt._get_lb(m.x)
+        ub = opt._get_ub(m.x)
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, 0)
 
         m.x.unfix()
         opt.update_var(m.x)
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        ub = []
-        opt._solver_model.getub(ub, x_idx, x_idx)
-        self.assertEqual(lb[0], -5)
-        self.assertEqual(ub[0], 5)
+        lb = opt._get_lb(m.x)
+        ub = opt._get_ub(m.x)
+        self.assertEqual(lb, -5)
+        self.assertEqual(ub, 5)
 
         m.c2 = pyo.Constraint(expr=m.y >= m.x**2)
         opt.add_constraint(m.c2)
@@ -141,17 +132,14 @@ class TestXpressPersistent(unittest.TestCase):
         m.x.fix(1)
         opt.update_var(m.x)
 
-        x_idx = opt._solver_model.getIndex(opt._pyomo_var_to_solver_var_map[m.x])
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        self.assertEqual(lb[0], 1)
+        lb = opt._get_lb(m.x)
+        self.assertEqual(lb, 1)
 
         m.x.domain = pyo.Binary
         opt.update_var(m.x)
 
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        self.assertEqual(lb[0], 1)
+        lb = opt._get_lb(m.x)
+        self.assertEqual(lb, 1)
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_qconstraint(self):
