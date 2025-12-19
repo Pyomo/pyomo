@@ -812,6 +812,7 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.compute_FIM(method="Bad Method")
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_invalid_trace_without_cholesky(self):
         fd_method = "central"
         obj_used = "trace"
@@ -822,12 +823,13 @@ class TestReactorExampleErrors(unittest.TestCase):
         DoE_args['_Cholesky_option'] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.create_doe_model()
 
         with self.assertRaisesRegex(
             ValueError,
             "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
         ):
-            doe_obj.create_doe_model()
+            doe_obj.create_objective_function()
 
 
 if __name__ == "__main__":

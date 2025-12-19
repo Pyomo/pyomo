@@ -508,23 +508,118 @@ class TestReactorExampleBuild(unittest.TestCase):
             self.assertAlmostEqual(v, new_vals[i], places=6)
 
 
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestDoEObjectiveOptions(unittest.TestCase):
-    def test_invalid_trace_without_cholesky(self):
+    def test_trace_constraints(self):
         fd_method = "central"
         obj_used = "trace"
 
-        experiment = run_rooney_biegler_doe["experiment"]
+        experiment = run_rooney_biegler_doe()["experiment"]
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args['_Cholesky_option'] = False
-
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        with self.assertRaisesRegex(
-            ValueError,
-            "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
-        ):
-            doe_obj.create_doe_model()
+        doe_obj.create_doe_model()
+        doe_obj.create_objective_function()
+
+        model = doe_obj.model
+
+        # Basic objects exist
+        self.assertTrue(hasattr(model, "objective"))
+        self.assertTrue(hasattr(model, "cov_trace"))
+        self.assertTrue(hasattr(model, "fim_inv"))
+        self.assertTrue(hasattr(model, "L"))
+        self.assertTrue(hasattr(model, "L_inv"))
+
+        # Constraints live under obj_cons block
+        self.assertTrue(hasattr(model, "obj_cons"))
+
+        # Cholesky-related constraints
+        self.assertTrue(hasattr(model.obj_cons, "cholesky_cons"))
+        self.assertTrue(hasattr(model.obj_cons, "cholesky_inv_cons"))
+        self.assertTrue(hasattr(model.obj_cons, "cholesky_LLinv_cons"))
+        self.assertTrue(hasattr(model.obj_cons, "cov_trace_rule"))
+
+        self.assertIsInstance(model.obj_cons.cholesky_cons, pyo.Constraint)
+        self.assertIsInstance(model.obj_cons.cholesky_inv_cons, pyo.Constraint)
+        self.assertIsInstance(model.obj_cons.cholesky_LLinv_cons, pyo.Constraint)
+        self.assertIsInstance(model.obj_cons.cov_trace_rule, pyo.Constraint)
+
+        # Indexing logic: lower triangle only
+        params = list(model.parameter_names)
+
+        for i, c in enumerate(params):
+            for j, d in enumerate(params):
+                # cholesky_inv_imp: only defined for i >= j
+                if i >= j:
+                    self.assertIn(
+                        (c, d),
+                        model.obj_cons.cholesky_inv_cons,
+                        msg=f"Missing cholesky_inv_cons[{c},{d}]",
+                    )
+                else:
+                    self.assertNotIn(
+                        (c, d),
+                        model.obj_cons.cholesky_inv_cons,
+                        msg=f"Unexpected cholesky_inv_cons[{c},{d}]",
+                    )
+
+                # cholesky_LLinv_imp: only defined for i >= j
+                if i >= j:
+                    self.assertIn(
+                        (c, d),
+                        model.obj_cons.cholesky_LLinv_cons,
+                        msg=f"Missing cholesky_LLinv_cons[{c},{d}]",
+                    )
+                else:
+                    self.assertNotIn(
+                        (c, d),
+                        model.obj_cons.cholesky_LLinv_cons,
+                        msg=f"Unexpected cholesky_LLinv_cons[{c},{d}]",
+                    )
+
+        # Objective definition sanity
+        self.assertIsInstance(model.objective, pyo.Objective)
+        self.assertEqual(model.objective.sense, pyo.minimize)
+        self.assertIs(model.objective.expr, model.cov_trace)
+
+    def test_trace_initialization_consistency(self):
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        doe_obj.create_doe_model()
+        doe_obj.create_objective_function()
+
+        model = doe_obj.model
+        params = list(model.parameter_names)
+
+        # Check cov_trace initialization
+        cov_trace_from_fim_inv = sum(pyo.value(model.fim_inv[j, j]) for j in params)
+
+        self.assertAlmostEqual(
+            pyo.value(model.cov_trace), cov_trace_from_fim_inv, places=4
+        )
+
+        # Check L * L_inv ≈ I (lower triangle)
+        for i, c in enumerate(params):
+            for j, d in enumerate(params):
+                if i < j:
+                    continue  # upper triangle skipped by design
+
+                val = sum(
+                    pyo.value(model.L[c, params[k]])
+                    * pyo.value(model.L_inv[params[k], d])
+                    for k in range(len(params))
+                )
+
+                expected = 1.0 if i == j else 0.0
+                self.assertAlmostEqual(val, expected, places=4)
 
 
 if __name__ == "__main__":

@@ -94,6 +94,8 @@ def run_rooney_biegler_doe(
         if print_output:
             print("Full Factorial Design Results:\n", results_container["results_dict"])
 
+    # Custom Plotting Functionality that shows the optimal designs and
+    # the max/min from the full factorial results
     # Plotting Block
     if plot_optimal_design:
         plt = matplotlib.pyplot
@@ -103,8 +105,7 @@ def run_rooney_biegler_doe(
 
         # D-Optimality Plot
         fig1, ax1 = plt.subplots(figsize=(10, 5))
-
-        # Locate Star values (max/min)
+        # Locate Star values (max)
         id_max_D = np.argmax(res_dict["log10 D-opt"])
 
         ax1.plot(res_dict["hour"], res_dict["log10 D-opt"])
@@ -132,6 +133,7 @@ def run_rooney_biegler_doe(
 
         # A-Optimality Plot
         fig2, ax2 = plt.subplots(figsize=(10, 5))
+        # Locate Star values (min)
         id_min_A = np.argmin(res_dict["log10 A-opt"])
 
         ax2.plot(res_dict["hour"], res_dict["log10 A-opt"])

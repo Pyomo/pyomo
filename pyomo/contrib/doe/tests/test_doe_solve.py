@@ -18,8 +18,11 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pandas_available,
     scipy_available,
+    matplotlib,
+    matplotlib_available,
 )
 
+matplotlib.use("Agg")  # Use non-interactive backend (for CI testing purposes
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
@@ -579,6 +582,50 @@ class TestDoe(unittest.TestCase):
         self.assertAlmostEqual(
             A_opt_design_value, A_opt_design_value_expected, places=2
         )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
+@unittest.skipIf(not matplotlib_available, "Matplotlib is not available")
+class TestDoEFactorialFigure(unittest.TestCase):
+    def test_trace_plot_runs_without_error(self):
+        plt = matplotlib.pyplot
+        """
+        Test that the plotting function executes without error and
+        creates a matplotlib figure. We do NOT test visual correctness.
+        """
+
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        doe_obj.create_doe_model()
+        doe_obj.create_objective_function()
+        doe_obj.compute_FIM_full_factorial(design_ranges={'hour': [0, 10, 5]})
+
+        # Call the plotting function
+        # Replace this with your actual plotting function
+        fig = doe_obj.draw_factorial_figure(
+            sensitivity_design_variables=['hour'],
+            fixed_design_variables={},
+            log_scale=False,
+            figure_file_name="rooney_biegler",
+        )
+
+        # If the function returns a figure
+        if fig is not None:
+            self.assertIsInstance(fig, plt.Figure)
+
+        # Otherwise, ensure a figure was created
+        self.assertGreater(len(plt.get_fignums()), 0)
+
+        # Cleanup
+        plt.close("all")
 
 
 if __name__ == "__main__":
