@@ -309,7 +309,7 @@ class LogicalConstraint(ActiveIndexedComponent):
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Active", self.active),
             ],
-            self.items(),
+            self.items,
             ("Body", "Active"),
             lambda k, v: [v.body, v.active],
         )
