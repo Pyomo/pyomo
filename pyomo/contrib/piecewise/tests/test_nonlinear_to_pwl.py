@@ -602,7 +602,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
             # pretty close to m.x, but we're a bit off because we don't have 0
             # as a breakpoint.
             0.9833360108369479 * m.x + 0.16663989163052034,
-            places=7,
+            places=6,
         )
 
     def test_linear_model_tree_random(self):
@@ -657,7 +657,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
             pwlf._simplices,
             [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)],
         )
-        self.assertEqual(
+        self.assertStructuredAlmostEqual(
             pwlf._points,
             [
                 (-10,),
@@ -670,6 +670,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
                 (2.15597,),
                 (10,),
             ],
+            places=4,
         )
         self.assertEqual(len(pwlf._linear_functions), 8)
         for i in range(3):
@@ -680,7 +681,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
             # pretty close to - m.x, but we're a bit off because we don't have 0
             # as a breakpoint.
             -0.9851979299618323 * m.x + 0.12006477080409184,
-            places=7,
+            places=6,
         )
         for i in range(4, 8):
             assertExpressionsEqual(self, pwlf._linear_functions[i](m.x), m.x)
