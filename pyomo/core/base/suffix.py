@@ -410,9 +410,6 @@ class Suffix(ComponentMap, ActiveComponent):
     # complications with __setstate__
     #
 
-    def pprint(self, *args, **kwds):
-        return ActiveComponent.pprint(self, *args, **kwds)
-
     def __str__(self):
         return ActiveComponent.__str__(self)
 
