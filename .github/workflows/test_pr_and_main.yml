@@ -506,10 +506,17 @@ jobs:
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
+        find `python -c "import os, os.path; print(os.path.dirname(os.__file__))"` -name '*.conda_trash'
+        echo "LS LIB"
+        ls -l C:\\Miniconda\\envs\\test\\Lib\\*
+        echo "LS LIB/CTYPES"
+        ls -l C:\\Miniconda\\envs\\test\\Lib\\ctypes\\*
         conda install -q -y --force-reinstall libffi python
+        echo "LS LIB"
+        ls -l C:\\Miniconda\\envs\\test\\Lib\\*
+        echo "LS LIB/CTYPES"
+        ls -l C:\\Miniconda\\envs\\test\\Lib\\ctypes\\*
         if test -n "$PYPI_DEPENDENCIES"; then
-            find `python -c "import os, os.path; print(os.path.dirname(os.__file__))"` -name \*conda_trash
-            ls -l "C:\Miniconda\envs\test\Lib\ctypes"
             python -c "import ctypes; print(ctypes.__file__)"
             python -c "import pip; print(pip.__version__, pip.__file__)"
             python -c "from pip._vendor import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
