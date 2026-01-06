@@ -118,17 +118,6 @@ class GAMSConfig(SolverConfig):
         self.writer_config: ConfigDict = self.declare(
             'writer_config', GAMSWriter.CONFIG()
         )
-        # NOTE: Taken from the lp_writer
-        self.declare(
-            'row_order',
-            ConfigValue(
-                default=None,
-                description='Preferred constraint ordering',
-                doc="""
-                To use with ordered_active_constraints function.""",
-            ),
-        )
-
 
 class GAMSResults(Results):
     def __init__(self):
@@ -307,7 +296,8 @@ class GAMS(SolverBase):
         # local variable to hold the working directory name and flags
         dname = None
         lst = "output.lst"
-        model_name = "GAMS_MODEL"
+        model_name = "model"
+
         output_filename = None
         with TempfileManager.new_context() as tempfile:
             # IMPORTANT - only delete the whole tmpdir if the solver was the one
@@ -349,7 +339,7 @@ class GAMS(SolverBase):
                 # NOTE: omit InfeasibleConstraintException for now
                 timer.stop(f'write_{output_filename}_file')
             if self._writer.config.put_results_format == 'gdx':
-                results_filename = os.path.join(dname, f"{model_name}_p.gdx")
+                results_filename = os.path.join(dname, f"GAMS_MODEL_p.gdx")
                 statresults_filename = os.path.join(
                     dname, "%s_s.gdx" % (self._writer.config.put_results,)
                 )
@@ -366,23 +356,25 @@ class GAMS(SolverBase):
             ####################################################################
             exe_path = config.executable.path()
             command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
+            
+            # default behaviour of gams is to print to console, for
+            # compatibility with windows and *nix we want to explicitly log to
+            # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
+            log_levels = {
+                (True,  False): "lo=3",
+                (False, False): "lo=0",
+                (False, True):  "lo=2",
+                (True,  True):  "lo=4",
+            }
+            # handled tee and logfile based on the length of list and string respectively
+            command.append(log_levels[(len(config.tee) > 0, len(config.logfile)>0)])
 
-            if config.tee and not config.logfile:
-                # default behaviour of gams is to print to console, for
-                # compatibility with windows and *nix we want to explicitly log to
-                # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
-                command.append("lo=3")
-            elif not config.tee and not config.logfile:
-                command.append("lo=0")
-            elif not config.tee and config.logfile:
-                command.append("lo=2")
-            elif config.tee and config.logfile:
-                command.append("lo=4")
             if config.logfile:
                 command.append(f"lf={self._rewrite_path_win8p3(config.logfile)}")
             ostreams = [StringIO()]
             if config.tee:
                 ostreams.append(sys.stdout)
+            
             with TeeStream(*ostreams) as t:
                 timer.start('subprocess')
                 subprocess_result = subprocess.run(
