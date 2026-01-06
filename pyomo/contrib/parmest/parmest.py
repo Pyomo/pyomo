@@ -911,7 +911,7 @@ class Estimator:
 
         return model_theta_list
 
-    def _create_parmest_model(self, experiment_number):
+    def _create_parmest_model(self, experiment_number, fix_theta=False):
         """
         Modify the Pyomo model for parameter estimation
         """
@@ -964,7 +964,9 @@ class Estimator:
 
         # Convert theta Params to Vars, and unfix theta Vars
         theta_names = [k.name for k, v in model.unknown_parameters.items()]
-        parmest_model = utils.convert_params_to_vars(model, theta_names, fix_vars=False)
+        parmest_model = utils.convert_params_to_vars(
+            model, theta_names, fix_vars=fix_theta
+        )
 
         return parmest_model
 
@@ -981,7 +983,7 @@ class Estimator:
         model = pyo.ConcreteModel()
 
         if bootlist is not None:
-            n_scenarios = len(bootlist)
+            self.obj_probability_constant = len(bootlist)
             model.exp_scenarios = pyo.Block(range(len(bootlist)))
 
             for i in range(len(bootlist)):
@@ -991,7 +993,7 @@ class Estimator:
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
         else:
-            n_scenarios = len(self.exp_list)
+            self.obj_probability_constant = len(self.exp_list)
             model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
 
             for i in range(len(self.exp_list)):
@@ -1027,7 +1029,7 @@ class Estimator:
 
         # Make sure all the parameters are linked across blocks
         for name in self.estimator_theta_names:
-            for i in range(1, n_scenarios):
+            for i in range(1, self.obj_probability_constant):
                 model.add_component(
                     f"Link_{name}_Block{i}_Parent",
                     pyo.Constraint(
@@ -1037,10 +1039,13 @@ class Estimator:
                 )
 
             # Deactivate the objective in each block to avoid double counting
-            for i in range(n_scenarios):
+            for i in range(self.obj_probability_constant):
                 model.exp_scenarios[i].Total_Cost_Objective.deactivate()
 
         # model.pprint()
+
+        # Calling the model "ef_instance" to make it compatible with existing code
+        self.ef_instance = model
 
         return model
 
@@ -1051,7 +1056,7 @@ class Estimator:
         return_values=None,
         bootlist=None,
         ThetaVals=None,
-        solver="ipopt",
+        solver="ef_ipopt",
         calc_cov=NOTSET,
         cov_n=NOTSET,
     ):
@@ -1070,7 +1075,7 @@ class Estimator:
         # Create scenario blocks using utility function
         model = self._create_scenario_blocks(bootlist=bootlist)
 
-        if solver == "ipopt":
+        if solver == "ef_ipopt":
             sol = SolverFactory('ipopt')
         if self.solver_options is not None:
             for key in self.solver_options:
