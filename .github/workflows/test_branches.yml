@@ -455,6 +455,7 @@ jobs:
         echo ""
         echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
+            python -m pip --version
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
         # remember this python interpreter
