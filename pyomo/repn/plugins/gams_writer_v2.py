@@ -57,7 +57,6 @@ logger = logging.getLogger(__name__)
 inf = float('inf')
 neg_inf = float('-inf')
 
-
 class GAMSWriterInfo(object):
     """Return type for GAMSWriter.write()
 
@@ -425,17 +424,14 @@ class _GMSWriter_impl(object):
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
             # Note: Constraint.to_bounded_expression(evaluate_bounds=True)
-            # guarantee a return value that is either a (finite)
+            # guarantees a return value that is either a (finite)
             # native_numeric_type, or None
             lb, body, ub = con.to_bounded_expression(True)
 
-            if lb is None and ub is None:
-                # WIP: handling unbounded variable
-                continue
             repn = visitor.walk_expression(body)
             if repn.nonlinear is not None:
                 raise ValueError(
-                    f"Model constraint ({con.name}) contains nonlinear terms that is currently not supported in the new gams_writer"
+                    f"Model constraint ({con.name}) contains nonlinear terms which are currently not supported in the new gams_writer"
                 )
 
             # Pull out the constant: we will move it to the bounds
@@ -583,14 +579,50 @@ class _GMSWriter_impl(object):
         #
         # Handling variable bounds
         #
+        warn_int_bounds = False
         for v, (lb, ub) in var_bounds.items():
             pyomo_v = self.var_symbol_map.bySymbol[v]
             if lb is not None:
                 ostream.write(f'{v}.lo = {lb};\n')
             if ub is not None:
                 ostream.write(f'{v}.up = {ub};\n')
+            if lb is None:
+                if v in integer_vars:
+                    warn_int_bounds = True
+                    logger.warning(
+                        "Lower bound for integer variable %s set "
+                        "to -1.0E+100." % v
+                    )
+                    ostream.write("%s.lo = -1.0E+100;\n" % (v))        
+                else:
+                    ostream.write("%s.lo = %s;\n" % (v, ftoa(lb, False)))
+            if ub is None:
+                if v in integer_vars:
+                    warn_int_bounds = True
+                    # GAMS has an option value called IntVarUp that is the
+                    # default upper integer bound, which it applies if the
+                    # integer's upper bound is INF. This option maxes out at
+                    # 2147483647, so we can go higher by setting the bound.
+                    logger.warning(
+                        "Upper bound for integer variable %s set "
+                        "to +1.0E+100." % v
+                    )
+                    ostream.write("%s.up = +1.0E+100;\n" % (v))                
+                else:
+                    ostream.write("%s.up = %s;\n" % (v, ftoa(ub, False)))
+
             if warmstart and pyomo_v.value is not None:
                 ostream.write("%s.l = %s;\n" % (v, ftoa(pyomo_v.value, False)))
+
+        if warn_int_bounds:
+            logger.warning(
+                "GAMS requires finite bounds for integer variables. 1.0E100 "
+                "is as extreme as GAMS will define, and should be enough to "
+                "appear unbounded. If the solver cannot handle this bound, "
+                "explicitly set a smaller bound on the pyomo model, or try a "
+                "different GAMS solver."
+            )
+
         ostream.write(f'\nModel {model_name} / all /;\n')
         ostream.write(f'{model_name}.limrow = 0;\n')
         ostream.write(f'{model_name}.limcol = 0;\n')
