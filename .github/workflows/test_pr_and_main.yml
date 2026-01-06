@@ -507,7 +507,8 @@ jobs:
         echo ""
         echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
-            python -m pip --version
+            python -c "import pip; print(pip.__version__, pip.__file__)"
+            python -c "import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
         # remember this python interpreter
