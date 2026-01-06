@@ -506,10 +506,10 @@ jobs:
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
+        conda install -q -y --force-reinstall libffi
         if test -n "$PYPI_DEPENDENCIES"; then
+            find `python -c "import os, os.path; print(os.path.dirname(os.__path__))"` -name \*conda_trash
             python -c "import ctypes; print(ctypes.__path__)"
-            python -c "import ctypes.windll"
-            find `python -c "import os.path, ctypes; print(os.path.dirname(ctypes.__path__))"`
             python -c "import pip; print(pip.__version__, pip.__file__)"
             python -c "from pip._vendor import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
             python -c "import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
