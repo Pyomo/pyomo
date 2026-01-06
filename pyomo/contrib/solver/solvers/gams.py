@@ -179,38 +179,6 @@ class GAMS(SolverBase):
         if self._available_cache is not NOTSET and rehash == False:
             return self._available_cache[1]
 
-    def _run_simple_model(self, config, n):
-        solver_exec = config.executable.path()
-        if solver_exec is None:
-            return False
-        with TempfileManager.new_context() as tempfile:
-            tmpdir = tempfile.mkdtemp()
-            test = os.path.join(tmpdir, 'test.gms')
-            with open(test, 'w') as FILE:
-                FILE.write(self._simple_model(n))
-            result = subprocess.run(
-                [solver_exec, test, "curdir=" + tmpdir, 'lo=0'],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            return not result.returncode
-
-    def _simple_model(self, n):
-        return """
-            option limrow = 0;
-            option limcol = 0;
-            option solprint = off;
-            set I / 1 * %s /;
-            variables ans;
-            positive variables x(I);
-            equations obj;
-            obj.. ans =g= sum(I, x(I));
-            model test / all /;
-            solve test using lp minimizing ans;
-            """ % (
-            n,
-        )
-
     def version(
         self, config: Optional[GAMSConfig] = None, rehash: bool = False
     ) -> Optional[Tuple[int, int, int]]:
@@ -241,32 +209,6 @@ class GAMS(SolverBase):
 
         if self._version_cache is not NOTSET and rehash == False:
             return self._version_cache[1]
-
-    def _rewrite_path_win8p3(self, path):
-        """
-        Return the 8.3 short path on Windows; unchanged elsewhere.
-
-        This change is in response to Pyomo/pyomo#3579 which reported
-        that GAMS (direct) fails on Windows if there is a space in
-        the path. This utility converts paths to their 8.3 short-path version
-        (which never have spaces).
-        """
-        if not sys.platform.startswith("win"):
-            return str(path)
-
-        import ctypes, ctypes.wintypes as wt
-
-        GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
-        GetShortPathNameW.argtypes = [wt.LPCWSTR, wt.LPWSTR, wt.DWORD]
-
-        # the file must exist, or Windows will not create a short name
-        pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
-        pathlib.Path(path).touch(exist_ok=True)
-
-        buf = ctypes.create_unicode_buffer(260)
-        if GetShortPathNameW(str(path), buf, 260):
-            return buf.value
-        return str(path)
 
     def solve(self, model, **kwds):
         ####################################################################
