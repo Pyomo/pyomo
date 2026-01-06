@@ -588,40 +588,17 @@ class _GMSWriter_impl(object):
                 ostream.write(f'{v}.up = {ub};\n')
             if lb is None:
                 if v in integer_vars:
-                    warn_int_bounds = True
-                    logger.warning(
-                        "Lower bound for integer variable %s set "
-                        "to -1.0E+100." % v
-                    )
-                    ostream.write("%s.lo = -1.0E+100;\n" % (v))        
+                    ostream.write("%s.lo = -INF;\n" % (v))        
                 else:
                     ostream.write("%s.lo = %s;\n" % (v, ftoa(lb, False)))
             if ub is None:
                 if v in integer_vars:
-                    warn_int_bounds = True
-                    # GAMS has an option value called IntVarUp that is the
-                    # default upper integer bound, which it applies if the
-                    # integer's upper bound is INF. This option maxes out at
-                    # 2147483647, so we can go higher by setting the bound.
-                    logger.warning(
-                        "Upper bound for integer variable %s set "
-                        "to +1.0E+100." % v
-                    )
-                    ostream.write("%s.up = +1.0E+100;\n" % (v))                
+                    ostream.write("%s.up = +INF;\n" % (v))                
                 else:
                     ostream.write("%s.up = %s;\n" % (v, ftoa(ub, False)))
 
             if warmstart and pyomo_v.value is not None:
                 ostream.write("%s.l = %s;\n" % (v, ftoa(pyomo_v.value, False)))
-
-        if warn_int_bounds:
-            logger.warning(
-                "GAMS requires finite bounds for integer variables. 1.0E100 "
-                "is as extreme as GAMS will define, and should be enough to "
-                "appear unbounded. If the solver cannot handle this bound, "
-                "explicitly set a smaller bound on the pyomo model, or try a "
-                "different GAMS solver."
-            )
 
         ostream.write(f'\nModel {model_name} / all /;\n')
         ostream.write(f'{model_name}.limrow = 0;\n')
