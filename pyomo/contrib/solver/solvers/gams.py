@@ -367,7 +367,7 @@ class GAMS(SolverBase):
                 (True,  True):  "lo=4",
             }
             # handled tee and logfile based on the length of list and string respectively
-            command.append(log_levels[(len(config.tee) > 0, len(config.logfile)>0)])
+            command.append(log_levels[(len(config.tee) > 0, config.logfile is not None)])
 
             if config.logfile:
                 command.append(f"lf={self._rewrite_path_win8p3(config.logfile)}")
