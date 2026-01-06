@@ -507,6 +507,9 @@ jobs:
         echo ""
         echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
+            python -c "import ctypes; print(ctypes.__path__)"
+            python -c "import ctypes.windll"
+            find `python -c "import os.path, ctypes; print(os.path.dirname(ctypes.__path__))"`
             python -c "import pip; print(pip.__version__, pip.__file__)"
             python -c "from pip._vendor import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
             python -c "import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
