@@ -432,7 +432,7 @@ jobs:
         # as of 2025-12-12. pip 25.3 now packages the problematic platformdirs
         # version so excluding that also.
         if test "${{matrix.TARGET}}" == 'win'; then
-            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs!=4.5.0,!=4.5.1 pip<25.0"
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs!=4.5.0,!=4.5.1 libffi<3.5"
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
@@ -509,6 +509,7 @@ jobs:
         conda install -q -y --force-reinstall libffi python
         if test -n "$PYPI_DEPENDENCIES"; then
             find `python -c "import os, os.path; print(os.path.dirname(os.__file__))"` -name \*conda_trash
+            ls -l "C:\Miniconda\envs\test\Lib\ctypes"
             python -c "import ctypes; print(ctypes.__file__)"
             python -c "import pip; print(pip.__version__, pip.__file__)"
             python -c "from pip._vendor import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
