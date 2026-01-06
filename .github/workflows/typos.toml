@@ -65,6 +65,8 @@ MCH = "MCH"
 # Ignore RO
 ro = "ro"
 RO = "RO"
+# Ignore bimap
+bimap = "bimap"
 # Ignore EOF - end of file
 EOF = "EOF"
 # Ignore lst as shorthand for list
