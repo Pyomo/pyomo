@@ -380,7 +380,7 @@ jobs:
         # as of 2025-12-12, pip 25.3 now packages the problematic platformdirs
         # version so excluding that also.
         if test "${{matrix.TARGET}}" == 'win'; then
-            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs!=4.5.0,!=4.5.1 pip!=25.3"
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs!=4.5.0,!=4.5.1 pip<25.0"
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
