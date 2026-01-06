@@ -53,10 +53,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
 
     def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
         if self._gms_info is None:
-            raise NoSolutionError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
+            raise NoSolutionError()
         if self._gdx_data is None:
             assert len(self._gms_info.var_symbol_map.bySymbol) == 0
         else:
@@ -71,10 +68,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
         if self._gms_info is None:
-            raise RuntimeError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
+            raise RuntimeError()
         val_map = {}
         if self._gdx_data is None:
             assert len(self._gms_info.var_symbol_map.bySymbol) == 0
@@ -98,15 +92,9 @@ class GMSSolutionLoader(SolutionLoaderBase):
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
     ) -> Dict[ConstraintData, float]:
         if self._gms_info is None:
-            raise NoDualsError(
-                'Solution loader does not currently have valid duals. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
+            raise NoDualsError()
         if self._gdx_data is None:
-            raise NoDualsError(
-                'Solution loader does not currently have valid duals. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
+            raise NoDualsError()
 
         con_map = {}
         if self._gdx_data is None:
@@ -132,15 +120,9 @@ class GMSSolutionLoader(SolutionLoaderBase):
 
     def get_reduced_costs(self, vars_to_load=None):
         if self._gms_info is None:
-            raise NoReducedCostsError(
-                'Solution loader does not currently have valid reduced costs. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
+            raise NoReducedCostsError()
         if self._gdx_data is None:
-            raise NoReducedCostsError(
-                'Solution loader does not currently have valid reduced costs. Please '
-                'check results.termination_condition and/or results.solution_status.'
-            )
+            raise NoReducedCostsError()
 
         var_map = {}
         if self._gdx_data is None:
