@@ -387,6 +387,8 @@ jobs:
                 conda config --set solver libmamba
             fi
         fi
+        conda update --all
+        python -c "import ctypes; print('CTYPES', ctypes.__file__)"
         # Pin libffi (updating it can break pip on windows)
         conda config --env --append pinned_packages `conda list | grep libffi | sed -r 's/\s+(\S+).*/=\1/'`
         python -c "import ctypes; print('CTYPES', ctypes.__file__)"
