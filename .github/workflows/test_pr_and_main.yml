@@ -368,6 +368,7 @@ jobs:
       if: matrix.PYENV == 'conda'
       run: |
         # Set up environment
+        python -c "import ctypes; print(ctypes.__file__)"
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --set channel_priority strict
@@ -386,6 +387,7 @@ jobs:
                 conda config --set solver libmamba
             fi
         fi
+        python -c "import ctypes; print(ctypes.__file__)"
         # Add the rest of the channels
         conda config --append channels gurobi
         conda config --append channels ibmdecisionoptimization
@@ -506,16 +508,8 @@ jobs:
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
-        find `python -c "import os, os.path; print(os.path.dirname(os.__file__))"` -name '*.conda_trash'
-        echo "LS /c/Miniconda/envs/test"
-        ls /c/Miniconda/envs/test
-        echo "LS /c/Miniconda/envs/test/Lib"
-        ls /c/Miniconda/envs/test/Lib
-        echo "LS /c/Miniconda/envs/test/Lib/ctypes"
-        ls /c/Miniconda/envs/test/Lib/ctypes
+        find /c/Miniconda/envs/test/Lib -name '*.conda_trash'
         conda install -q -y --force-reinstall libffi python python_abi
-        echo "LS /c/Miniconda/envs/test/Lib/ctypes"
-        ls /c/Miniconda/envs/test/Lib/ctypes
         if test -n "$PYPI_DEPENDENCIES"; then
             python -c "import ctypes; print(ctypes.__file__)"
             python -c "import pip; print(pip.__version__, pip.__file__)"
