@@ -507,6 +507,8 @@ jobs:
         echo ""
         echo "Installing packages only available on PyPI"
         find `python -c "import os, os.path; print(os.path.dirname(os.__file__))"` -name '*.conda_trash'
+        pwd
+        ls /mnt
         echo "LS LIB"
         ls -l `python -c "import os, os.path; print(os.path.dirname(os.__file__))"`
         echo "LS LIB/CTYPES"
