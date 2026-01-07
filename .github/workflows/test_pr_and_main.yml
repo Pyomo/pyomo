@@ -440,7 +440,7 @@ jobs:
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         # Note: remove '--update-deps' to prevent update that breaks ctypes
-        conda install -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
+        conda install -q -y --no-update-deps python="${{matrix.python}}" $CONDA_DEPENDENCIES
         python -c "import ctypes; print('CTYPES', ctypes.__file__)"
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
