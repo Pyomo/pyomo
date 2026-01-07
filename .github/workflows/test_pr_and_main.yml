@@ -367,6 +367,14 @@ jobs:
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
       run: |
+        echo "LS /"
+        ls /
+        echo "LS /d"
+        ls /d
+        echo "LS /d/a"
+        ls /d/a
+        echo "LS /c"
+        ls /c
         # Set up environment
         conda config --set always_yes yes
         conda config --set auto_update_conda false
