@@ -387,10 +387,6 @@ jobs:
                 conda config --set solver libmamba
             fi
         fi
-        python -c "import ctypes; print('CTYPES', ctypes.__file__)"
-        # Pin libffi (updating it can break pip on windows)
-        # conda config --env --append pinned_packages `conda list | grep libffi | sed -r 's/\s+(\S+).*/=\1/'`
-        python -c "import ctypes; print('CTYPES', ctypes.__file__)"
         # Add the rest of the channels
         conda config --append channels gurobi
         conda config --append channels ibmdecisionoptimization
@@ -405,7 +401,6 @@ jobs:
         python --version
         # We need setuptools so we can run Pyomo's setup.py
         conda install setuptools
-        python -c "import ctypes; print('CTYPES', ctypes.__file__)"
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -505,7 +500,6 @@ jobs:
                         kill $timeout_pid 2>/dev/null \
                             || echo "TIMEOUT: time limit expired"
                     fi
-                    python -c "import ctypes; print('CTYPES', ctypes.__file__)"
                 fi
                 echo ""
                 if test -z "$_BUILDS"; then
@@ -516,14 +510,8 @@ jobs:
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
-        python -c "import ctypes; print('CTYPES', ctypes.__file__)"
         conda install -q -y --force-reinstall pip libffi python python_abi
-        find /c/Miniconda/envs/test -name '*.conda_trash'
         if test -n "$PYPI_DEPENDENCIES"; then
-            python -c "import ctypes; print(ctypes.__file__)"
-            python -c "import pip; print(pip.__version__, pip.__file__)"
-            python -c "from pip._vendor import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
-            python -c "import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
         # remember this python interpreter
