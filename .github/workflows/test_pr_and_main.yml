@@ -398,17 +398,6 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
-        echo "LS /c/Miniconda/envs/test"
-        ls /c/Miniconda/envs/test
-        echo "LS /c/Miniconda/envs/test/Lib"
-        ls /c/Miniconda/envs/test/Lib
-        echo "LS /c/Miniconda/envs/test/Lib/ctypes"
-        ls /c/Miniconda/envs/test/Lib/ctypes
-        python -c "import ctypes; print(ctypes.__file__)"
-        python -c "import ctypes.windll; print(ctypes.windll.__file__)"
-        python -c "import pip; print(pip.__version__, pip.__file__)"
-        python -c "from pip._vendor import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
-        python -c "import platformdirs; print(platformdirs.__version__, platformdirs.__file__)"
         # We need setuptools so we can run Pyomo's setup.py
         conda install setuptools
         # Note: some pypi packages are not available through conda
