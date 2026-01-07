@@ -398,6 +398,12 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
+        echo "LS /c/Miniconda/envs/test"
+        ls /c/Miniconda/envs/test
+        echo "LS /c/Miniconda/envs/test/Lib"
+        ls /c/Miniconda/envs/test/Lib
+        echo "LS /c/Miniconda/envs/test/Lib/ctypes"
+        ls /c/Miniconda/envs/test/Lib/ctypes
         # We need setuptools so we can run Pyomo's setup.py
         conda install setuptools
         # Note: some pypi packages are not available through conda
@@ -507,14 +513,13 @@ jobs:
         echo ""
         echo "Installing packages only available on PyPI"
         find `python -c "import os, os.path; print(os.path.dirname(os.__file__))"` -name '*.conda_trash'
-        pwd
         echo "LS /c/Miniconda/envs/test"
         ls /c/Miniconda/envs/test
         echo "LS /c/Miniconda/envs/test/Lib"
         ls /c/Miniconda/envs/test/Lib
         echo "LS /c/Miniconda/envs/test/Lib/ctypes"
         ls /c/Miniconda/envs/test/Lib/ctypes
-        conda install -q -y --force-reinstall libffi python
+        conda install -q -y --force-reinstall libffi python python-abi
         echo "LS /c/Miniconda/envs/test/Lib/ctypes"
         ls /c/Miniconda/envs/test/Lib/ctypes
         if test -n "$PYPI_DEPENDENCIES"; then
