@@ -67,11 +67,14 @@ class CUOPTDirect(DirectSolver):
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
-        log_file = None
+        log_file = ""
         if self._log_file:
             log_file = self._log_file
         t0 = time.time()
         settings = cuopt.linear_programming.solver_settings.SolverSettings()
+        settings.set_parameter("log_file", log_file)
+        for key, option in self.options.items():
+            settings.set_parameter(key, option)
         self.solution = cuopt.linear_programming.solver.Solve(
             self._solver_model, settings
         )
@@ -279,23 +282,17 @@ class CUOPTDirect(DirectSolver):
         self.results.problem.upper_bound = None
         self.results.problem.lower_bound = None
         if is_mip:
-            try:
-                ObjBound = solution.get_milp_stats()["solution_bound"]
-                ObjVal = solution.get_primal_objective()
-                if self._solver_model.maximize:
-                    self.results.problem.upper_bound = ObjBound
-                    self.results.problem.lower_bound = ObjVal
-                else:
-                    self.results.problem.upper_bound = ObjVal
-                    self.results.problem.lower_bound = ObjBound
-            except Exception as e:
-                pass
+            ObjBound = solution.get_milp_stats()["solution_bound"]
+            ObjVal = solution.get_primal_objective()
+            if self._solver_model.maximize:
+                self.results.problem.upper_bound = ObjBound
+                self.results.problem.lower_bound = ObjVal
+            else:
+                self.results.problem.upper_bound = ObjVal
+                self.results.problem.lower_bound = ObjBound
         else:
-            try:
-                self.results.problem.upper_bound = solution.get_primal_objective()
-                self.results.problem.lower_bound = solution.get_primal_objective()
-            except Exception as e:
-                pass
+            self.results.problem.upper_bound = solution.get_primal_objective()
+            self.results.problem.lower_bound = solution.get_primal_objective()
 
         var_map = self._pyomo_var_to_ndx_map
         con_map = self._pyomo_con_to_solver_con_map
@@ -324,8 +321,7 @@ class CUOPTDirect(DirectSolver):
 
         elif self._load_solutions:
             if len(primal_solution) > 0:
-                for i, pyomo_var in enumerate(var_map.keys()):
-                    pyomo_var.set_value(primal_solution[i], skip_validation=True)
+                self.load_vars()
 
                 if reduced_costs is not None:
                     self._load_rc()
@@ -338,6 +334,17 @@ class CUOPTDirect(DirectSolver):
 
     def warm_start_capable(self):
         return False
+
+    def _load_vars(self, vars_to_load=None):
+        var_map = self._pyomo_var_to_ndx_map
+        if vars_to_load is None:
+            vars_to_load = var_map.keys()
+        primal_solution = self.solution.get_primal_solution()
+        for pyomo_var in vars_to_load:
+            if pyomo_var in self.referenced_vars:
+                pyomo_var.set_value(
+                    primal_solution[var_map[pyomo_var]], skip_validation=True
+                )
 
     def _load_rc(self, vars_to_load=None):
         if not hasattr(self._pyomo_model, "rc"):
@@ -367,7 +374,7 @@ class CUOPTDirect(DirectSolver):
         con_map = self._pyomo_con_to_solver_con_map
         if cons_to_load is None:
             cons_to_load = con_map.keys()
-        dual_solution = self.solution.get_reduced_cost()
+        dual_solution = self.solution.get_dual_solution()
         for pyomo_con in cons_to_load:
             dual[pyomo_con] = dual_solution[con_map[pyomo_con]]
 

@@ -21,7 +21,11 @@ from pyomo.environ import (
     Suffix,
     value,
     minimize,
+    maximize,
+    Set,
+    Binary,
 )
+import pytest
 from pyomo.common.dependencies import attempt_import
 from pyomo.opt import check_available_solvers
 from pyomo.common.tee import capture_output
@@ -60,7 +64,7 @@ class CUOPTTests(unittest.TestCase):
         )
 
         opt = SolverFactory('cuopt')
-        res = opt.solve(m)
+        res = opt.solve(m, save_results=False)
 
         expected_rc = [1.0, 0.0, 0.0, 2.5]
         expected_val = [0.0, 3.0, 2.0, 0.0]
@@ -72,6 +76,41 @@ class CUOPTTests(unittest.TestCase):
 
         for i, c in enumerate([m.top_con, m.b1.con1, m.b1.subb.con2, m.b2.con3]):
             self.assertAlmostEqual(m.dual[c], expected_dual[i], places=5)
+
+        # Set max iteration = 1 to abort problem due to iteration limit
+        opt.options["iteration_limit"] = 1
+        res = opt.solve(m)
+        self.assertEqual(res.solver.status, "aborted")
+
+    @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
+    def test_errors_exceptions(self):
+        items = ["a", "b", "c", "d", "e"]
+        value = {"a": 10, "b": 7, "c": 25, "d": 15, "e": 6}
+        weight = {"a": 4, "b": 3, "c": 9, "d": 6, "e": 2}
+        capacity = 12
+
+        m = ConcreteModel()
+        m.I = Set(initialize=items)
+        m.x = Var(m.I, within=Binary)
+        m.obj1 = Objective(expr=sum(value[i] * m.x[i] for i in m.I), sense=maximize)
+        m.cap = Constraint(expr=sum(weight[i] * m.x[i] for i in m.I) <= capacity)
+
+        opt = SolverFactory('cuopt')
+        res = opt.solve(m)
+
+        # Add second dummy objective
+        m.obj2 = Objective(expr=sum(m.x[i] for i in m.I), sense=minimize)
+        # Raise error due to multiple objectives
+        with pytest.raises(
+            ValueError, match=r"Solver interface does not support multiple objectives."
+        ):
+            res = opt.solve(m)
+        m.obj2.deactivate()
+
+        # Raise error due to unsupported suffix
+        m.slack = Suffix(direction=Suffix.IMPORT)
+        with pytest.raises(RuntimeError, match=r"cannot extract solution suffix=slack"):
+            res = opt.solve(m)
 
 
 if __name__ == "__main__":
