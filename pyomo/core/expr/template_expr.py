@@ -16,6 +16,7 @@ import builtins
 from contextlib import nullcontext
 
 from pyomo.common.collections import MutableMapping
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
@@ -45,7 +46,62 @@ from pyomo.core.expr.visitor import (
     _ToStringVisitor,
 )
 
+# Deferred imports to break circular dependencies
+pyomo_core_base_set, _ = attempt_import('pyomo.core.base.set')
+pyomo_core_base_param, _ = attempt_import('pyomo.core.base.param')
+
 logger = logging.getLogger(__name__)
+
+
+def _validate_generator(generator):
+    # We are worried about users writing things like
+    #
+    #    sum(m.x[i, j] for i in [1, 2, 3] for j in m.J)
+    # or
+    #    sum(m.x[j] for i in [1, 2, 3] for j in m.J[i])
+    #
+    # If they do, we will not "see" the "i" as an IndexTemplate, so the
+    # expression would be reduced to
+    #
+    #    sum(m.x[1, j] for j in m.J)
+    # and
+    #    sum(m.x[j] for j in m.J[1])
+    #
+    # To guard against this, we will look into the generator code, and
+    # if there are any local variables declared that are not
+    # IndexTemplate objects (or tuples of them), then we will throw up
+    # our hands and expand the sum:
+    for lvar_name in generator.gi_frame.f_code.co_varnames:
+        if lvar_name == '.0':
+            # Skip the outer generator object
+            continue
+        lvar = generator.gi_frame.f_locals.get(lvar_name, None)
+        if lvar.__class__ is IndexTemplate:
+            continue
+        if lvar.__class__ is tuple and all(i.__class__ is IndexTemplate for i in lvar):
+            continue
+        return False
+    return True
+
+
+def _validate_map(generator):
+    # We would love to validate that the map is actually iterating over
+    # Pyom Set objects (and yielding IndexTemplate objects), but there
+    # doesn't appear to be a way to interrogate the results of the list
+    # / generator that the map is iterating over.  So, we will just have
+    # to trust the user <shudder>.
+    #
+    # FIXME: rework IndexedComponent to return custom generators that
+    # wrap map so we can only accept them and not all maps?
+    return True
+
+
+# it is not clear what to import to get to the built-in "generator"
+# type.  We will just create a generator and query its __class__
+generator_validators = {
+    (_ for _ in ()).__class__: _validate_generator,
+    map: _validate_map,
+}
 
 
 class _NotSpecified:
@@ -764,8 +820,6 @@ def _reduce_template_to_component(expr):
     GetAttrExpression, and TemplateSumExpression expression nodes.
 
     """
-    import pyomo.core.base.set
-
     # wildcards holds lists of
     #   [iterator, source, value, orig_value, object0, ...]
     # 'iterator' iterates over 'source' to provide 'value's for each of
@@ -798,14 +852,12 @@ def _reduce_template_to_component(expr):
                     ans = child._resolve_template(())
                 return False, ans
             if child.is_variable_type():
-                from pyomo.core.base.set import RangeSet
-
                 if child.domain.isdiscrete():
                     domain = child.domain
                     bounds = child.bounds
                     if bounds != (None, None):
                         try:
-                            bounds = pyomo.core.base.set.RangeSet(*bounds, 0)
+                            bounds = pyomo_core_base_set.RangeSet(*bounds, 0)
                             domain = domain & bounds
                         except:
                             pass
@@ -975,14 +1027,12 @@ def substitute_getitem_with_param(expr, _map):
     new Param.  For example, this method will create expressions
     suitable for passing to DAE integrators
     """
-    import pyomo.core.base.param
-
     if type(expr) is IndexTemplate:
         return expr
 
     _id = _GetItemIndexer(expr)
     if _id not in _map:
-        _map[_id] = pyomo.core.base.param.Param(mutable=True)
+        _map[_id] = pyomo_core_base_param.Param(mutable=True)
         _map[_id].construct()
         _map[_id]._name = "%s[%s]" % (_id.base.name, ','.join(str(x) for x in _id.args))
     return _map[_id]
@@ -1032,7 +1082,10 @@ class _set_iterator_template_generator:
         else:
             d = _set.dimen
         grp = context.next_group()
-        if d is None or type(d) is not int:
+        if type(d) is not int:
+            # This covers None (jagged set) and UnknownSetDimen.  In
+            # both cases, we will not attempt to unpack the Set and just
+            # assume a single index template.
             idx = (IndexTemplate(_set, None, context.next_id(), grp),)
         else:
             idx = tuple(
@@ -1080,10 +1133,25 @@ class _template_iter_context:
         return self._group
 
     def sum_template(self, generator):
-        init_cache = len(self.cache)
+        try:
+            validator = generator_validators[generator.__class__]
+        except KeyError:
+            # We will only templatize sums over maps and generators.
+            # Expand everything else:
+            return _TemplateIterManager.builtin_sum(generator)
+        niters = -len(self.cache)
         expr = next(generator)
-        final_cache = len(self.cache)
-        return TemplateSumExpression((expr,), self.npop_cache(final_cache - init_cache))
+        niters += len(self.cache)
+        if niters:
+            iters = self.npop_cache(niters)
+        else:
+            # This didn't generate any new IndexTemplate objects; expand it:
+            return _TemplateIterManager.builtin_sum(generator, start=expr)
+        if not validator(generator):
+            # See the validator implementations above for situations where
+            # we will not attempt to generate SumTemplate objects
+            return _TemplateIterManager.builtin_sum(generator, start=expr)
+        return TemplateSumExpression((expr,), iters)
 
 
 class _template_iter_manager:
@@ -1165,15 +1233,13 @@ _TemplateIterManager = _template_iter_manager()
 
 
 def templatize_rule(block, rule, index_set):
-    import pyomo.core.base.set
-
     context = _template_iter_context()
     internal_error = None
     try:
         # Override Set iteration to return IndexTemplates
         with _TemplateIterManager.init(
             context,
-            pyomo.core.base.set._FiniteSetMixin,
+            pyomo_core_base_set._FiniteSetMixin,
             GetItemExpression,
             GetAttrExpression,
         ):
@@ -1205,7 +1271,11 @@ def templatize_rule(block, rule, index_set):
             if internal_error is not None:
                 logger.error(
                     "The following exception was raised when "
-                    "templatizing the rule '%s':\n\t%s" % (rule.name, internal_error[1])
+                    "templatizing the rule '%s':\n\t%s"
+                    % (
+                        getattr(rule, '_fcn', rule.__class__).__name__,
+                        internal_error[1],
+                    )
                 )
             raise TemplateExpressionError(
                 None,
