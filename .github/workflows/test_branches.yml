@@ -99,7 +99,7 @@ jobs:
           PYENV: pip
 
         - os: windows-latest
-          python: 3.12
+          python: 3.14
           test_docs: 1
           TARGET: win
           PYENV: conda
@@ -236,8 +236,11 @@ jobs:
       if: matrix.PYENV == 'conda'
       uses: conda-incubator/setup-miniconda@v3
       with:
+        conda-remove-defaults: true
         auto-update-conda: false
         python-version: ${{ matrix.python }}
+        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress
+        use-mamba: true
 
     # This is necessary for qt (UI) tests; the package utilized here does not
     # have support for OSX.
@@ -317,27 +320,7 @@ jobs:
       run: |
         # Set up environment
         conda config --set always_yes yes
-        conda config --set auto_update_conda false
         conda config --set channel_priority strict
-        conda config --remove channels defaults
-        conda config --append channels nodefaults
-        conda config --append channels conda-forge
-        # Try to install mamba
-        CONDA_VER=$(conda --version | cut -d\  -f2)
-        if test 23.10 = "`echo -e "23.10\n$CONDA_VER" | sort -V | tail -1`"; then
-            # Note: removed '--update-deps' on 2025-02-28 to work around
-            #       broken libffi(?)
-            conda install -q -y -n base conda-libmamba-solver \
-                || MAMBA_FAILED=1
-            if test -z "$MAMBA_FAILED"; then
-                echo "*** Activating the mamba environment solver ***"
-                conda config --set solver libmamba
-            fi
-        fi
-        # Add the rest of the channels
-        conda config --append channels gurobi
-        conda config --append channels ibmdecisionoptimization
-        conda config --append channels fico-xpress
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
@@ -375,10 +358,8 @@ jobs:
         echo ""
         echo "*** Install Pyomo dependencies ***"
         # For windows, cannot use newer setuptools because of APPSI compilation issues
-        # There seems to be some specific problem with platformdirs 4.5.0
-        # on win 3.13/3.14 as of 2025-10-23
         if test "${{matrix.TARGET}}" == 'win'; then
-            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0 platformdirs!=4.5.0"
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
