@@ -328,9 +328,7 @@ logger = logging.getLogger("pyomo.solvers")
 
 
 class ScipDirectSolutionLoader(SolutionLoaderBase):
-    def __init__(
-        self, solver_model, var_map, con_map, pyomo_model, opt
-    ) -> None:
+    def __init__(self, solver_model, var_map, con_map, pyomo_model, opt) -> None:
         super().__init__()
         self._solver_model = solver_model
         self._var_map = var_map
@@ -384,9 +382,7 @@ class ScipDirectSolutionLoader(SolutionLoaderBase):
 
 
 class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
-    def __init__(
-        self, solver_model, var_map, con_map, pyomo_model, opt
-    ) -> None:
+    def __init__(self, solver_model, var_map, con_map, pyomo_model, opt) -> None:
         super().__init__(solver_model, var_map, con_map, pyomo_model, opt)
         self._valid = True
 
@@ -497,7 +493,9 @@ class ScipDirect(SolverBase):
 
             ostreams = [io.StringIO()] + config.tee
 
-            scip_model, solution_loader, has_obj = self._create_solver_model(model, config)
+            scip_model, solution_loader, has_obj = self._create_solver_model(
+                model, config
+            )
 
             scip_model.hideOutput(quiet=False)
             if config.threads is not None:
@@ -521,7 +519,9 @@ class ScipDirect(SolverBase):
                 scip_model.optimize()
             timer.stop('optimize')
 
-            results = self._populate_results(scip_model, solution_loader, has_obj, config)
+            results = self._populate_results(
+                scip_model, solution_loader, has_obj, config
+            )
         except InfeasibleConstraintException:
             # is it possible to hit this?
             results = self._get_infeasible_results()
@@ -911,9 +911,7 @@ class ScipPersistent(ScipDirect, PersistentSolverBase, Observer):
         self._solver_model = scip.Model()
         timer.start('set_instance')
         self._change_detector = ModelChangeDetector(
-            model=self._pyomo_model,
-            observers=[self],
-            **config.auto_updates,
+            model=self._pyomo_model, observers=[self], **config.auto_updates
         )
         timer.stop('set_instance')
 
@@ -951,7 +949,7 @@ class ScipPersistent(ScipDirect, PersistentSolverBase, Observer):
                 old_params.append(p)
             else:
                 mod_params.append(p)
-        
+
         if new_params:
             self._add_parameters(new_params)
         if old_params:
