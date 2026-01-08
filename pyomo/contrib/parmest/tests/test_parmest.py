@@ -310,9 +310,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         # Sum of squared error function
         def SSE(model):
-            expr = (
-                model.experiment_outputs[model.y[model.hour]] - model.y[model.hour]
-            ) ** 2
+            expr = (model.experiment_outputs[model.y] - model.y) ** 2
             return expr
 
         # Create an experiment list
@@ -1349,7 +1347,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
     def setUp(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler_with_constraint import (
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
             RooneyBieglerExperiment,
         )
 
@@ -1361,10 +1359,8 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
 
         # Sum of squared error function
         def SSE(model):
-            expr = (
-                model.experiment_outputs[model.y]
-                - model.response_function[model.experiment_outputs[model.hour]]
-            ) ** 2
+            expr = (model.experiment_outputs[model.y] - model.y) ** 2
+
             return expr
 
         exp_list = []

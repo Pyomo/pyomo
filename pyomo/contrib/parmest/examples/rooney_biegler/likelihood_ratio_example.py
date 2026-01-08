@@ -27,9 +27,7 @@ def main():
 
     # Sum of squared error function
     def SSE(model):
-        expr = (
-            model.experiment_outputs[model.y[model.hour]] - model.y[model.hour]
-        ) ** 2
+        expr = (model.experiment_outputs[model.y] - model.y) ** 2
         return expr
 
     # Create an experiment list
