@@ -134,6 +134,12 @@ Bibliography
    Intermediate Relaxations between big-M and Convex Hull
    Reformulations". 2021.  https://arxiv.org/abs/2101.12708
 
+.. [MHJ+25] M. Mundt, W. E. Hart, E. S. Johnson, B. Nicholson, and
+   J. D. Siirola. "Pyomo: Accidentally outrunning the bear", *Patterns*,
+   6(7), 101311. 2025. ISSN 2666-3899. DOI
+   `10.1016/j.patter.2025.101311
+   <https://doi.org/10.1016/j.patter.2025.101311>`_
+
 .. [NW88] G. L. Nemhauser and L. A. Wolsey. *Integer and combinatorial
    optimization*, New York: Wiley. 1988.
 
