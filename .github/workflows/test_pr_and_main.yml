@@ -289,8 +289,11 @@ jobs:
       if: matrix.PYENV == 'conda'
       uses: conda-incubator/setup-miniconda@v3
       with:
+        conda-remove-defaults: true
         auto-update-conda: false
         python-version: ${{ matrix.python }}
+        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress
+        use-mamba: true
 
     # This is necessary for qt (UI) tests; the package utilized here does not
     # have support for OSX.
@@ -370,27 +373,7 @@ jobs:
       run: |
         # Set up environment
         conda config --set always_yes yes
-        conda config --set auto_update_conda false
         conda config --set channel_priority strict
-        conda config --remove channels defaults
-        conda config --append channels nodefaults
-        conda config --append channels conda-forge
-        # Try to install mamba
-        CONDA_VER=$(conda --version | cut -d\  -f2)
-        if test 23.10 = "`echo -e "23.10\n$CONDA_VER" | sort -V | tail -1`"; then
-            # Note: removed '--update-deps' on 2025-02-28 to work around
-            #       broken libffi(?)
-            conda install -q -y -n base conda-libmamba-solver \
-                || MAMBA_FAILED=1
-            if test -z "$MAMBA_FAILED"; then
-                echo "*** Activating the mamba environment solver ***"
-                conda config --set solver libmamba
-            fi
-        fi
-        # Add the rest of the channels
-        conda config --append channels gurobi
-        conda config --append channels ibmdecisionoptimization
-        conda config --append channels fico-xpress
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
