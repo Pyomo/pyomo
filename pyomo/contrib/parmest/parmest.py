@@ -59,7 +59,7 @@ from pyomo.common.dependencies import (
 
 import pyomo.environ as pyo
 
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, solver
 from pyomo.environ import Block, ComponentUID
 from pyomo.opt.results.solver import assert_optimal_termination
 from pyomo.common.flags import NOTSET
@@ -974,7 +974,7 @@ class Estimator:
         model = self._create_parmest_model(experiment_number)
         return model
 
-    def _create_scenario_blocks(self, bootlist=None):
+    def _create_scenario_blocks(self, bootlist=None, ThetaVals=None, fix_theta=False):
         # Create scenario block structure
         # Utility function for _Q_opt_blocks
         # Make a block of model scenarios, one for each experiment in exp_list
@@ -988,7 +988,9 @@ class Estimator:
 
             for i in range(len(bootlist)):
                 # Create parmest model for experiment i
-                parmest_model = self._create_parmest_model(bootlist[i])
+                parmest_model = self._create_parmest_model(
+                    bootlist[i], fix_theta=fix_theta
+                )
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
@@ -998,7 +1000,7 @@ class Estimator:
 
             for i in range(len(self.exp_list)):
                 # Create parmest model for experiment i
-                parmest_model = self._create_parmest_model(i)
+                parmest_model = self._create_parmest_model(i, fix_theta=fix_theta)
                 # parmest_model.pprint()
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
@@ -1008,9 +1010,20 @@ class Estimator:
         for name in self.estimator_theta_names:
             # Get the variable from the first block
             ref_var = getattr(model.exp_scenarios[0], name)
+
+            # Determine the starting value: priority to ThetaVals, then ref_var default
+            start_val = pyo.value(ref_var)
+            if ThetaVals and name in ThetaVals:
+                start_val = ThetaVals[name]
+
             # Create a variable in the parent model with same bounds and initialization
-            parent_var = pyo.Var(bounds=ref_var.bounds, initialize=pyo.value(ref_var))
+            parent_var = pyo.Var(bounds=ref_var.bounds, initialize=start_val)
             setattr(model, name, parent_var)
+
+            # Apply Fixing logic
+            if fix_theta:
+                parent_var.fix(start_val)
+
             # Constrain the variable in the first block to equal the parent variable
             model.add_component(
                 f"Link_{name}_Block0_Parent",
@@ -1018,12 +1031,17 @@ class Estimator:
                     expr=getattr(model.exp_scenarios[0], name) == parent_var
                 ),
             )
+            # Add the variable to the parent model's ref_vars for consistency
+
+            # model.ref_vars = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            # model.ref_vars.update(parent_var)
 
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
-            return sum(
-                block.Total_Cost_Objective for block in m.exp_scenarios.values()
-            ) / len(self.exp_list)
+            return (
+                sum(block.Total_Cost_Objective for block in m.exp_scenarios.values())
+                / self.obj_probability_constant
+            )
 
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
 
@@ -1059,6 +1077,7 @@ class Estimator:
         solver="ef_ipopt",
         calc_cov=NOTSET,
         cov_n=NOTSET,
+        fix_theta=False,
     ):
         '''
         Making new version of _Q_opt that uses scenario blocks, similar to DoE.
@@ -1071,33 +1090,51 @@ class Estimator:
         5. Analyze results and extract parameter estimates
 
         '''
-
         # Create scenario blocks using utility function
-        model = self._create_scenario_blocks(bootlist=bootlist)
+        model = self._create_scenario_blocks(
+            bootlist=bootlist, ThetaVals=ThetaVals, fix_theta=fix_theta
+        )
 
+        # Check solver and set options
+        if solver == "k_aug":
+            raise RuntimeError("k_aug no longer supported.")
         if solver == "ef_ipopt":
             sol = SolverFactory('ipopt')
+        else:
+            raise RuntimeError("Unknown solver in Q_Opt=" + solver)
+
         if self.solver_options is not None:
             for key in self.solver_options:
-                solver.options[key] = self.solver_options[key]
+                sol.options[key] = self.solver_options[key]
 
+        # Solve model
         solve_result = sol.solve(model, tee=self.tee)
-        assert_optimal_termination(solve_result)
 
-        # Extract objective value
-        obj_value = pyo.value(model.Obj)
-        theta_estimates = {}
-        # Extract theta estimates from first block
-        for name in self.estimator_theta_names:
-            theta_estimates[name] = pyo.value(getattr(model.exp_scenarios[0], name))
+        # Store and check termination condition
+        status = solve_result.solver.termination_condition
+        if status == pyo.TerminationCondition.optimal:
+            # Extract objective value
+            obj_value = pyo.value(model.Obj)
+            theta_estimates = {}
+            # Extract theta estimates from first block
+            for name in self.estimator_theta_names:
+                theta_estimates[name] = pyo.value(getattr(model.exp_scenarios[0], name))
+        else:
+            obj_value = None
+            theta_estimates = ThetaVals  # Return input if solve fails
+            # @Reviewers Should we raise an error here instead? If I use this function for both fixing
+            # and unfixing thetas,
+            # I may not want it to raise an error if the solve fails when fixing thetas
+            # assert_optimal_termination(solve_result)
 
-        # Check they are equal to the second block
-        for name in self.estimator_theta_names:
-            val_block1 = pyo.value(getattr(model.exp_scenarios[1], name))
-            assert theta_estimates[name] == val_block1, (
-                f"Parameter {name} estimate differs between blocks: "
-                f"{theta_estimates[name]} vs {val_block1}"
-            )
+        # Check theta estimates are equal to the second block
+        if fix_theta is False:
+            for name in self.estimator_theta_names:
+                val_block1 = pyo.value(getattr(model.exp_scenarios[1], name))
+                assert theta_estimates[name] == val_block1, (
+                    f"Parameter {name} estimate differs between blocks: "
+                    f"{theta_estimates[name]} vs {val_block1}"
+                )
 
         return obj_value, theta_estimates
 
@@ -1816,7 +1853,7 @@ class Estimator:
     # Replicate of theta_est for testing simplified _Q_opt
     # Still work in progress
     def theta_est_blocks(
-        self, solver="ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
+        self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
     ):
         """
         Parameter estimation using all scenarios in the data
@@ -2359,6 +2396,98 @@ class Estimator:
                 task_mgr = utils.ParallelTaskManager(
                     1
                 )  # initialization performed using just 1 set of theta values
+        # walk over the mesh, return objective function
+        all_obj = list()
+        if len(all_thetas) > 0:
+            for Theta in local_thetas:
+                obj, thetvals, worststatus = self._Q_at_theta(
+                    Theta, initialize_parmest_model=initialize_parmest_model
+                )
+                if worststatus != pyo.TerminationCondition.infeasible:
+                    all_obj.append(list(Theta.values()) + [obj])
+                # DLW, Aug2018: should we also store the worst solver status?
+        else:
+            obj, thetvals, worststatus = self._Q_at_theta(
+                thetavals={}, initialize_parmest_model=initialize_parmest_model
+            )
+            if worststatus != pyo.TerminationCondition.infeasible:
+                all_obj.append(list(thetvals.values()) + [obj])
+
+        global_all_obj = task_mgr.allgather_global_data(all_obj)
+        dfcols = list(theta_names) + ['obj']
+        obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
+        return obj_at_theta
+
+    def objective_at_theta_blocks(self, theta_values=None):
+        """
+        Objective value for each theta, solving extensive form problem with
+        fixed theta values.
+
+        Parameters
+        ----------
+        theta_values: pd.DataFrame, columns=theta_names
+            Values of theta used to compute the objective
+
+        Returns
+        -------
+        obj_at_theta: pd.DataFrame
+            Objective value for each theta (infeasible solutions are
+            omitted).
+        """
+
+        """
+        Pseudo-code description of redesigned function:
+        1. If deprecated parmest is being used, call its objective_at_theta method.
+        2. If no fitted parameters, skip assertion.
+        3. Use _Q_opt_blocks to compute objective values for each theta in theta_values.
+        4. Collect and return results in a DataFrame.        
+        """
+
+        # check if we are using deprecated parmest
+        if self.pest_deprecated is not None:
+            return self.pest_deprecated.objective_at_theta(theta_values=theta_values)
+
+        if len(self.estimator_theta_names) == 0:
+            pass  # skip assertion if model has no fitted parameters
+        else:
+            # create a local instance of the pyomo model to access model variables and parameters
+            model_temp = self._create_parmest_model(0)
+            model_theta_list = self._expand_indexed_unknowns(model_temp)
+
+            # if self.estimator_theta_names is not the same as temp model_theta_list,
+            # create self.theta_names_updated
+            if set(self.estimator_theta_names) == set(model_theta_list) and len(
+                self.estimator_theta_names
+            ) == len(set(model_theta_list)):
+                pass
+            else:
+                self.theta_names_updated = model_theta_list
+
+        if theta_values is None:
+            all_thetas = {}  # dictionary to store fitted variables
+            # use appropriate theta names member
+            theta_names = model_theta_list
+        else:
+            assert isinstance(theta_values, pd.DataFrame)
+            # for parallel code we need to use lists and dicts in the loop
+            theta_names = theta_values.columns
+            # # check if theta_names are in model
+            for theta in list(theta_names):
+                theta_temp = theta.replace("'", "")  # cleaning quotes from theta_names
+                assert theta_temp in [
+                    t.replace("'", "") for t in model_theta_list
+                ], "Theta name {} in 'theta_values' not in 'theta_names' {}".format(
+                    theta_temp, model_theta_list
+                )
+
+            assert len(list(theta_names)) == len(model_theta_list)
+
+            all_thetas = theta_values.to_dict('records')
+
+        if all_thetas:
+            task_mgr = utils.ParallelTaskManager(len(all_thetas))
+            local_thetas = task_mgr.global_to_local_data(all_thetas)
+
         # walk over the mesh, return objective function
         all_obj = list()
         if len(all_thetas) > 0:
