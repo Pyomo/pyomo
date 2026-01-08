@@ -462,8 +462,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         if jobs:
             jobs_by_name = [
                 (
-                    constraint.getname(fully_qualified=True),
-                    other_disjunct.getname(fully_qualified=True),
+                    constraint.getname(fully_qualified=True, relative_to=instance),
+                    other_disjunct.getname(fully_qualified=True, relative_to=instance),
                     unsuccessful_solve_msg,
                     is_upper,
                 )
