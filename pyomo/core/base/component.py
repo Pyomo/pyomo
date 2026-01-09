@@ -379,7 +379,7 @@ class ComponentBase(PyomoObject):
         if _attr or _name or _doc:
             ostream.write("\n")
             # We only indent everything if we printed the header
-            ostream = StreamIndenter(ostream)
+            ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
 
         if not _constructed:
             # HACK: for backwards compatibility, Abstract blocks will
