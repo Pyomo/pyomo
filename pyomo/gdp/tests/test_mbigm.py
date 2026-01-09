@@ -1193,6 +1193,7 @@ class EdgeCases(unittest.TestCase):
                 m, reduce_bound_constraints=False
             )
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_transform_on_block(self):
         # In multiple_bigm.py, if constraint.getname and disjunct.getname do not
         # set relative_to=instance, the transformation fails because of mismatched
