@@ -36,7 +36,7 @@ the allowable design spaces for design variables, and the assumed observation er
 During exploratory analysis, Pyomo.DoE checks if the model parameters can be 
 inferred from the postulated measurements or preliminary data.
 MBDoE then recommends optimized experimental conditions for collecting more data.
-Parameter estimation packages such as :ref:`ParmEst <parmest>` can perform 
+Parameter estimation packages such as :ref:`Parmest <parmest>` can perform 
 parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
 If the parameter uncertainties are sufficiently small, the workflow terminates 
@@ -79,7 +79,7 @@ where:
 *  :math:`\mathbf{t} \in \mathbb{R}^{N_t \times 1}` is a union of all time sets.
 
 .. note::
-    * Parameters and design variables should be defined as Pyomo ``Var`` components when building the model in ``Experiment`` canlass so that users can use both ``ParmEst`` and ``Pyomo.DoE`` seamlessly.
+    * Parameters and design variables should be defined as Pyomo ``Var`` components when building the model in ``Experiment`` canlass so that users can use both ``Parmest`` and ``Pyomo.DoE`` seamlessly.
 
 Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
@@ -116,9 +116,12 @@ Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the information
     * - Design criterion
       - Computation
       - Geometrical meaning
+    * - A-optimality
+      -   :math:`\text{trace}({\mathbf{M}}^{-1})`
+      - Sum of the dimensions of the confidence ellipse
     * - Pseudo A-optimality
       -   :math:`\text{trace}({\mathbf{M}})`
-      - Dimensions of the enclosing box of the confidence ellipse
+      - Dimensions of the enclosing box of the inverse of the confidence ellipse
     * - D-optimality
       -   :math:`\text{det}({\mathbf{M}})`
       - Volume of the confidence ellipse
@@ -134,11 +137,11 @@ In order to solve problems of the above, Pyomo.DoE implements the 2-stage stocha
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required input to the Pyomo.DoE is a subclass of the :ref:`ParmEst <parmest>` ``Experiment`` class. 
+The required input to the Pyomo.DoE is a subclass of the :ref:`Parmest <parmest>` ``Experiment`` class. 
 The subclass must have a ``get_labeled_model`` method which returns a Pyomo `ConcreteModel` 
 containing four Pyomo ``Suffix`` components identifying the parts of the model used in 
 MBDoE analysis. This is in line with the convention used in the parameter estimation tool,
- :ref:`ParmEst <parmest>`. The four Pyomo ``Suffix`` components are:
+ :ref:`Parmest <parmest>`. The four Pyomo ``Suffix`` components are:
 
 * ``experiment_inputs`` - The experimental design decisions
 * ``experiment_outputs`` - The values measured during the experiment
@@ -204,7 +207,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
     >>> import numpy as np
     >>> import json
 
-Subclass the :ref:`ParmEst <parmest>` ``Experiment`` class to define the reaction kinetics experiment and build the Pyomo ConcreteModel.
+Subclass the :ref:`Parmest <parmest>` ``Experiment`` class to define the reaction kinetics experiment and build the Pyomo ConcreteModel.
     
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: ========================
