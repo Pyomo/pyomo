@@ -31,6 +31,12 @@ if scipy_available:
         ReactorExperiment as FullReactorExperiment,
     )
 
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
+from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
+    run_rooney_biegler_doe,
+)
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
@@ -135,7 +141,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 class TestReactorExampleBuild(unittest.TestCase):
     def test_reactor_fd_central_check_fd_eqns(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -174,7 +180,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_backward_check_fd_eqns(self):
         fd_method = "backward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -212,7 +218,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_forward_check_fd_eqns(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -250,7 +256,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_central_design_fixing(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -283,7 +289,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_backward_design_fixing(self):
         fd_method = "backward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -316,7 +322,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_reactor_fd_forward_design_fixing(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -376,7 +382,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_update_FIM(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -398,7 +404,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_get_experiment_inputs_without_blocks(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -417,7 +423,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_get_experiment_outputs_without_blocks(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -436,7 +442,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_get_measurement_error_without_blocks(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -455,7 +461,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_get_unknown_parameters_without_blocks(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -475,7 +481,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
     def test_generate_blocks_without_model(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -500,6 +506,120 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Check that the suffix object has been updated correctly
         for i, v in enumerate(suffix_obj.values()):
             self.assertAlmostEqual(v, new_vals[i], places=6)
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+class TestDoEObjectiveOptions(unittest.TestCase):
+    def test_trace_constraints(self):
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        doe_obj.create_doe_model()
+        doe_obj.create_objective_function()
+
+        model = doe_obj.model
+
+        # Basic objects exist
+        self.assertTrue(hasattr(model, "objective"))
+        self.assertTrue(hasattr(model, "cov_trace"))
+        self.assertTrue(hasattr(model, "fim_inv"))
+        self.assertTrue(hasattr(model, "L"))
+        self.assertTrue(hasattr(model, "L_inv"))
+
+        # Constraints live under obj_cons block
+        self.assertTrue(hasattr(model, "obj_cons"))
+
+        # Cholesky-related constraints
+        self.assertTrue(hasattr(model.obj_cons, "cholesky_cons"))
+        self.assertTrue(hasattr(model.obj_cons, "cholesky_inv_cons"))
+        self.assertTrue(hasattr(model.obj_cons, "cholesky_LLinv_cons"))
+        self.assertTrue(hasattr(model.obj_cons, "cov_trace_rule"))
+
+        self.assertIsInstance(model.obj_cons.cholesky_cons, pyo.Constraint)
+        self.assertIsInstance(model.obj_cons.cholesky_inv_cons, pyo.Constraint)
+        self.assertIsInstance(model.obj_cons.cholesky_LLinv_cons, pyo.Constraint)
+        self.assertIsInstance(model.obj_cons.cov_trace_rule, pyo.Constraint)
+
+        # Indexing logic: lower triangle only
+        params = list(model.parameter_names)
+
+        for i, c in enumerate(params):
+            for j, d in enumerate(params):
+                # cholesky_inv_imp: only defined for i >= j
+                if i >= j:
+                    self.assertIn(
+                        (c, d),
+                        model.obj_cons.cholesky_inv_cons,
+                        msg=f"Missing cholesky_inv_cons[{c},{d}]",
+                    )
+                else:
+                    self.assertNotIn(
+                        (c, d),
+                        model.obj_cons.cholesky_inv_cons,
+                        msg=f"Unexpected cholesky_inv_cons[{c},{d}]",
+                    )
+
+                # cholesky_LLinv_imp: only defined for i >= j
+                if i >= j:
+                    self.assertIn(
+                        (c, d),
+                        model.obj_cons.cholesky_LLinv_cons,
+                        msg=f"Missing cholesky_LLinv_cons[{c},{d}]",
+                    )
+                else:
+                    self.assertNotIn(
+                        (c, d),
+                        model.obj_cons.cholesky_LLinv_cons,
+                        msg=f"Unexpected cholesky_LLinv_cons[{c},{d}]",
+                    )
+
+        # Objective definition sanity
+        self.assertIsInstance(model.objective, pyo.Objective)
+        self.assertEqual(model.objective.sense, pyo.minimize)
+        self.assertIs(model.objective.expr, model.cov_trace)
+
+    def test_trace_initialization_consistency(self):
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        doe_obj.create_doe_model()
+        doe_obj.create_objective_function()
+
+        model = doe_obj.model
+        params = list(model.parameter_names)
+
+        # Check cov_trace initialization
+        cov_trace_from_fim_inv = sum(pyo.value(model.fim_inv[j, j]) for j in params)
+
+        self.assertAlmostEqual(
+            pyo.value(model.cov_trace), cov_trace_from_fim_inv, places=4
+        )
+
+        # Check L * L_inv ≈ I (lower triangle)
+        for i, c in enumerate(params):
+            for j, d in enumerate(params):
+                if i < j:
+                    continue  # upper triangle skipped by design
+
+                val = sum(
+                    pyo.value(model.L[c, params[k]])
+                    * pyo.value(model.L_inv[params[k], d])
+                    for k in range(len(params))
+                )
+
+                expected = 1.0 if i == j else 0.0
+                self.assertAlmostEqual(val, expected, places=4)
 
 
 if __name__ == "__main__":
