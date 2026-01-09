@@ -1211,5 +1211,16 @@ class EdgeCases(unittest.TestCase):
         m.b.dis2.linear = Constraint(expr=m.b.x * 0.2 + 1 == m.b.y)
         m.b.d = Disjunction(expr=[m.b.dis1, m.b.dis2])
 
-        TransformationFactory('gdp.mbigm').apply_to(m.b, threads=1)
-        self.assertEqual(m.b.find_component('dis1.linear').name, 'b.dis1.linear')
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m.b, threads=1)
+        dis1_cons = mbm.get_transformed_constraints(m.b.dis1.linear)
+        assertExpressionsEqual(
+            self,
+            dis1_cons[0].expr,
+            2.0 * m.b.dis2.binary_indicator_var <= 0.5 * m.b.x + 3 - m.b.y,
+        )
+        assertExpressionsEqual(
+            self,
+            dis1_cons[1].expr,
+            0.5 * m.b.x + 3 - m.b.y <= 3.5 * m.b.dis2.binary_indicator_var,
+        )
