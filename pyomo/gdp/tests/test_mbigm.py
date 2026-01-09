@@ -35,6 +35,7 @@ from pyomo.environ import (
     TransformationFactory,
     value,
     Var,
+    Block,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.tests.common_tests import (
@@ -1191,3 +1192,23 @@ class EdgeCases(unittest.TestCase):
             TransformationFactory('gdp.mbigm').apply_to(
                 m, reduce_bound_constraints=False
             )
+
+    def test_transform_on_block(self):
+        # In multiple_bigm.py, if constraint.getname and disjunct.getname do not
+        # set relative_to=instance, the transformation fails because of mismatched
+        # names in _calc_M.
+        # This test ensures that the transformation works on blocks as well as
+        # ConcreteModels.
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.x = Var(bounds=(0, 5))
+        m.b.y = Var()
+        m.b.dis1 = Disjunct()
+        m.b.dis2 = Disjunct()
+
+        m.b.dis1.linear = Constraint(expr=m.b.x * 0.5 + 3 == m.b.y)
+        m.b.dis2.linear = Constraint(expr=m.b.x * 0.2 + 1 == m.b.y)
+        m.b.d = Disjunction(expr=[m.b.dis1, m.b.dis2])
+
+        TransformationFactory('gdp.mbigm').apply_to(m.b, threads=1)
+        assert m.b.find_component('dis1.linear') == 'b.dis1.linear'
