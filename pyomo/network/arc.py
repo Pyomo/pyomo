@@ -368,7 +368,7 @@ class Arc(ActiveIndexedComponent):
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Active", self.active),
             ],
-            self.items(),
+            self.items,
             ("Ports", "Directed", "Active"),
             lambda k, v: [
                 "(%s, %s)" % v.ports if v.ports is not None else None,
