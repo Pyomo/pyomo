@@ -378,6 +378,7 @@ class ComponentBase(PyomoObject):
             ostream.write(", ".join("%s=%s" % (k, v) for k, v in _attr))
         if _attr or _name or _doc:
             ostream.write("\n")
+            # We only indent everything if we printed the header
             ostream = StreamIndenter(ostream)
 
         if not _constructed:
