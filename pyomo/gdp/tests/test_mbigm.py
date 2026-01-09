@@ -1211,4 +1211,4 @@ class EdgeCases(unittest.TestCase):
         m.b.d = Disjunction(expr=[m.b.dis1, m.b.dis2])
 
         TransformationFactory('gdp.mbigm').apply_to(m.b, threads=1)
-        assert m.b.find_component('dis1.linear') == 'b.dis1.linear'
+        self.assertEqual(m.b.find_component('dis1.linear'), 'b.dis1.linear')
