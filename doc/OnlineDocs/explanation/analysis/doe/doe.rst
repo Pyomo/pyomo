@@ -118,7 +118,7 @@ Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the information
       - Geometrical meaning
     * - A-optimality
       -   :math:`\text{trace}({\mathbf{M}}^{-1})`
-      - Sum of the dimensions of the confidence ellipse
+      - Dimensions of the enclosing box of the confidence ellipse
     * - Pseudo A-optimality
       -   :math:`\text{trace}({\mathbf{M}})`
       - Dimensions of the enclosing box of the inverse of the confidence ellipse
@@ -353,27 +353,34 @@ values for each, produces the the four figures for four optimality criteria as s
 
 |plot3| |plot4|
 
+|plot5|
+
 .. |plot1| image:: example_reactor_compute_FIM_D_opt.png
    :width: 48 %
 
-.. |plot2| image:: example_reactor_compute_FIM_pseudo_A_opt.png
+.. |plot2| image:: example_reactor_compute_FIM_A_opt.png
+   :width: 48 %   
+
+.. |plot3| image:: example_reactor_compute_FIM_pseudo_A_opt.png
    :width: 48 %
 
-.. |plot3| image:: example_reactor_compute_FIM_E_opt.png
+.. |plot4| image:: example_reactor_compute_FIM_E_opt.png
    :width: 48 %
 
-.. |plot4| image:: example_reactor_compute_FIM_ME_opt.png
+.. |plot5| image:: example_reactor_compute_FIM_ME_opt.png
    :width: 48 %
 
 The heatmaps show the values of the objective functions, a.k.a. the 
 experimental information content, in the design space. Horizontal 
 and vertical axes are the two experimental design variables, while 
 the color of each grid shows the experimental information content. 
-For D-optimality (upper left subplot), the figure shows that the 
+For example, the D-optimality (upper left subplot) heatmap figure shows that the 
 most informative region is around :math:`C_{A0}=5.0` M, :math:`T=500.0` K with 
 a :math:`\log_{10}` determinant of FIM being around 19, 
 while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=300.0` K, 
-with a :math:`\log_{10}` determinant of FIM being around -5.
+with a :math:`\log_{10}` determinant of FIM being around -5. For D-, Pseudo A-, and 
+E-optimality we want to maximize the objective values, while for A- and Modified 
+E-optimality we want to minimize the objective values.
 
 
 Step 6: Performing an optimal experimental design
