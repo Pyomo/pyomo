@@ -149,9 +149,6 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
                 'dual variable values.'
             )
 
-        if not self._sol_data.duals:
-            return {}
-
         scaling = self._nl_info.scaling
         if scaling:
             _iter = zip(
