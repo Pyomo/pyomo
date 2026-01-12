@@ -32,7 +32,7 @@ from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
 class ASLSolFileData:
     """
-    Defines the data types found within an ASL .sol file
+    Defines the data fields found within an ASL .sol file
     """
 
     def __init__(self) -> None:
