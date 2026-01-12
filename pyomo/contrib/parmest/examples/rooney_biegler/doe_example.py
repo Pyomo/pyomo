@@ -63,6 +63,7 @@ def run_rooney_biegler_doe(
             objective_option="determinant",
             tee=tee,
             prior_FIM=FIM,
+            improve_cholesky_roundoff_error=True,
         )
         rooney_biegler_doe_D.run_doe()
 
@@ -80,10 +81,14 @@ def run_rooney_biegler_doe(
             objective_option="trace",
             tee=tee,
             prior_FIM=FIM,
+            improve_cholesky_roundoff_error=False,
         )
         rooney_biegler_doe_A.run_doe()
 
-        results_container["optimization"]["A"] = rooney_biegler_doe_A.results
+        results_container["optimization"]["A"] = {
+            "value": rooney_biegler_doe_A.results['log10 A-opt'],
+            "design": rooney_biegler_doe_A.results['Experiment Design'],
+        }
         if print_output:
             print("Optimal results for A-optimality:", rooney_biegler_doe_A.results)
 
@@ -169,3 +174,25 @@ def run_rooney_biegler_doe(
         )
 
     return results_container
+
+
+if __name__ == "__main__":
+    print("--- Starting Functional Test ---")
+
+    # Test 1: Run everything to ensure no crashes
+    results = run_rooney_biegler_doe(
+        optimize_experiment_A=True,
+        optimize_experiment_D=True,
+        compute_FIM_full_factorial=True,
+        draw_factorial_figure=True,  # Set True to test file generation
+        design_range={'hour': [0, 10, 11]},  # Small range for speed
+        plot_optimal_design=True,
+        print_output=True,
+    )
+
+    print("\n--- Test Complete ---")
+    print(f"Generated {len(results['plots'])} plots.")
+
+    # Show plots if running locally
+    plt = matplotlib.pyplot
+    plt.show()

@@ -2197,7 +2197,7 @@ class DesignOfExperiments:
 
         Returns
         --------
-        4 Figures of 1D sensitivity curves for each criterion
+        5 Figures of 1D sensitivity curves for each criterion
         """
         if figure_file_name is not None:
             show_fig = False
