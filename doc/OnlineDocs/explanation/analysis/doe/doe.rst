@@ -263,87 +263,32 @@ The ``compute_FIM_full_factorial`` method generates a grid over the design space
 
 The following code executes the above problem description:
 
-.. code-block:: python
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
+    :language: python
+    :start-after: # Read in file
+    :end-before: if compute_FIM_full_factorial:
+    :dedent: 4
+    :prepend: # Read in file
 
-    # Read in file
-    DATA_DIR = pathlib.Path(__file__).parent
-    file_path = DATA_DIR / "result.json"
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
+    :language: python
+    :start-after: if compute_FIM_full_factorial:
+    :end-before: if plot_factorial_results:
+    :dedent: 8
+    :prepend: n_points_for_design = 9
 
-    with open(file_path) as f:
-        data_ex = json.load(f)
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
+    :language: python
+    :start-after: if save_plots:
+    :end-before: else:
+    :dedent: 12
 
-    # Put temperature control time points into correct format for reactor experiment
-    data_ex["control_points"] = {
-        float(k): v for k, v in data_ex["control_points"].items()
-    }
-
-    # Create a ReactorExperiment object; data and discretization information are part
-    # of the constructor of this object
-    experiment = ReactorExperiment(data=data_ex, nfe=10, ncp=3)
-
-    # Use a central difference, with step size 1e-3
-    fd_formula = "central"
-    step_size = 1e-3
-
-    # Use the determinant objective with scaled sensitivity matrix
-    objective_option = "determinant"
-    scale_nominal_param_value = True
-
-    # Create the DesignOfExperiments object
-    # We will not be passing any prior information in this example
-    # and allow the experiment object and the DesignOfExperiments
-    # call of ``run_doe`` perform model initialization.
-    doe_obj = DesignOfExperiments(
-        experiment,
-        fd_formula=fd_formula,
-        step=step_size,
-        objective_option=objective_option,
-        scale_constant_value=1,
-        scale_nominal_param_value=scale_nominal_param_value,
-        prior_FIM=None,
-        jac_initial=None,
-        fim_initial=None,
-        L_diagonal_lower_bound=1e-7,
-        solver=None,
-        tee=False,
-        get_labeled_model_args=None,
-        _Cholesky_option=True,
-        _only_compute_fim_lower=True,
-    )
-    # Make design ranges to compute the full factorial design
-    design_ranges = {
-        "CA[0]": [1, 5, 9],
-        "T[0]": [300, 700, 9],
-    }
-
-    # Compute the full factorial design with the sequential FIM calculation
-    doe_obj.compute_FIM_full_factorial(
-        design_ranges=design_ranges, method="sequential"
-    )
-    # Save the results and plot the figures
-    figure_file_name = "example_reactor_compute_FIM"
-
-
-    # Plot the results
-    doe_obj.draw_factorial_figure(
-        sensitivity_design_variables=["CA[0]", "T[0]"],
-        fixed_design_variables={
-            "T[0.125]": 300,
-            "T[0.25]": 300,
-            "T[0.375]": 300,
-            "T[0.5]": 300,
-            "T[0.625]": 300,
-            "T[0.75]": 300,
-            "T[0.875]": 300,
-            "T[1]": 300,
-        },
-        title_text="Reactor Example",
-        xlabel_text="Concentration of A (M)",
-        ylabel_text="Initial Temperature (K)",
-        figure_file_name=figure_file_name,
-        log_scale=False,
-    )
-
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
+    :language: python
+    :start-after: # Plot the results
+    :end-before: ###########################
+    :dedent: 8
+    :prepend: # Plot the results
 
 An example output of the code above, a design exploration for the initial 
 concentration and temperature as experimental design variables with 9 
@@ -391,14 +336,14 @@ The same object can be used to design an optimal experiment with a single
 line of code. We can initialize the model with the result we obtained from
 the exploratory analysis step to speed up convergence.
 
-.. code-block:: python
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
+    :language: python
+    :start-after: if run_optimal_doe:
+    :end-before: ###################
+    :dedent: 8
+    :prepend: # Run optimal DoE
     
-    doe_obj.run_doe()
-    # Print the optimal design and corresponding objective value
-    print(doe_obj.results)
-
-
-When run, the optimal design is an initial concentration of 5.0 mol/L and 
+After running this code, the optimal design is an initial concentration of 5.0 mol/L and 
 an initial temperature of 494 K with all other temperatures being 300 K. 
 The corresponding :math:`\log_{10}` determinant of the FIM is 19.32.
 
