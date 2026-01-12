@@ -18,9 +18,14 @@ from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.solver.solvers.asl_sol_reader import (
     ASLSolFileSolutionLoader,
     ASLSolFileData,
+    asl_solve_code_to_solution_status,
     parse_asl_sol_file,
 )
-from pyomo.contrib.solver.common.results import Results
+from pyomo.contrib.solver.common.results import (
+    Results,
+    SolutionStatus,
+    TerminationCondition,
+)
 from pyomo.contrib.solver.common.util import SolverError
 from pyomo.repn.plugins.nl_writer import NLWriterInfo, ScalingFactors
 
@@ -39,6 +44,170 @@ class TestSolFileData(unittest.TestCase):
         self.assertEqual(instance.obj_suffixes, {})
         self.assertEqual(instance.problem_suffixes, {})
         self.assertEqual(instance.unparsed, None)
+
+
+class TestSolParserUtils(unittest.TestCase):
+    def test_solve_code_to_status(self):
+        sol_data = ASLSolFileData()
+        sol_data.message = None
+
+        sol_data.solve_code = None
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.noSolution, r.solution_status)
+        self.assertEqual(TerminationCondition.error, r.termination_condition)
+        self.assertEqual(
+            "AMPL(None): solver did not generate a SOL file",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.primals = [1]
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.error, r.termination_condition)
+        self.assertEqual(
+            "AMPL(None): solver did not generate a SOL file",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 0
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.optimal, r.solution_status)
+        self.assertEqual(
+            TerminationCondition.convergenceCriteriaSatisfied, r.termination_condition
+        )
+        self.assertEqual("", r.extra_info.solver_message)
+
+        sol_data.solve_code = 100
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.feasible, r.solution_status)
+        self.assertEqual(TerminationCondition.error, r.termination_condition)
+        self.assertEqual(
+            "AMPL(100:solved?): optimal solution indicated, but error likely",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 200
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.infeasible, r.solution_status)
+        self.assertEqual(
+            TerminationCondition.locallyInfeasible, r.termination_condition
+        )
+        self.assertEqual(
+            "AMPL(200:infeasible): constraints cannot be satisfied",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 300
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.unbounded, r.termination_condition)
+        self.assertEqual(
+            "AMPL(300:unbounded): objective can be improved without limit",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 400
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.iterationLimit, r.termination_condition)
+        self.assertEqual(
+            "AMPL(400:limit): stopped by a limit that you set",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 500
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.error, r.termination_condition)
+        self.assertEqual(
+            "AMPL(500:failure): stopped by an error condition in the solver",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 99
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.optimal, r.solution_status)
+        self.assertEqual(
+            TerminationCondition.convergenceCriteriaSatisfied, r.termination_condition
+        )
+        self.assertEqual("", r.extra_info.solver_message)
+
+        sol_data.solve_code = 199
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.feasible, r.solution_status)
+        self.assertEqual(TerminationCondition.error, r.termination_condition)
+        self.assertEqual(
+            "AMPL(199:solved?): optimal solution indicated, but error likely",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 299
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.infeasible, r.solution_status)
+        self.assertEqual(
+            TerminationCondition.locallyInfeasible, r.termination_condition
+        )
+        self.assertEqual(
+            "AMPL(299:infeasible): constraints cannot be satisfied",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 399
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.unbounded, r.termination_condition)
+        self.assertEqual(
+            "AMPL(399:unbounded): objective can be improved without limit",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 499
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.iterationLimit, r.termination_condition)
+        self.assertEqual(
+            "AMPL(499:limit): stopped by a limit that you set",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = 599
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.error, r.termination_condition)
+        self.assertEqual(
+            "AMPL(599:failure): stopped by an error condition in the solver",
+            r.extra_info.solver_message,
+        )
+
+        sol_data.solve_code = -1
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.error, r.termination_condition)
+        self.assertEqual("AMPL(-1): unexpected solve code", r.extra_info.solver_message)
+
+        sol_data.solve_code = 600
+        r = Results()
+        asl_solve_code_to_solution_status(sol_data, r)
+        self.assertEqual(SolutionStatus.unknown, r.solution_status)
+        self.assertEqual(TerminationCondition.error, r.termination_condition)
+        self.assertEqual(
+            "AMPL(600): unexpected solve code", r.extra_info.solver_message
+        )
 
 
 class TestSolParser(unittest.TestCase):
