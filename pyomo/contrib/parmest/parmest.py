@@ -911,6 +911,9 @@ class Estimator:
 
         return model_theta_list
 
+    # Added fix_theta option to fix theta variables in scenario blocks
+    # Would be useful for computing objective values at given theta, using same
+    # _create_scenario_blocks.
     def _create_parmest_model(self, experiment_number, fix_theta=False):
         """
         Modify the Pyomo model for parameter estimation
@@ -922,7 +925,6 @@ class Estimator:
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
 
         # Add objective function (optional)
-        # @Reviewers What is the purpose of the reserved_names? Can we discuss this in a meeting?
         if self.obj_function:
             # Check for component naming conflicts
             reserved_names = [
@@ -978,6 +980,8 @@ class Estimator:
         # Create scenario block structure
         # Utility function for _Q_opt_blocks
         # Make a block of model scenarios, one for each experiment in exp_list
+        # Trying to make work for both _Q_opt and _Q_at_theta tasks
+        # If sequential modeling style preferred for _Q_at_theta, can adjust accordingly
 
         # Create a parent model to hold scenario blocks
         model = pyo.ConcreteModel()
@@ -1031,7 +1035,7 @@ class Estimator:
                     expr=getattr(model.exp_scenarios[0], name) == parent_var
                 ),
             )
-            # Add the variable to the parent model's ref_vars for consistency
+            # @Reviewers: Add the variable to the parent model's ref_vars for consistency?
 
             # model.ref_vars = pyo.Suffix(direction=pyo.Suffix.LOCAL)
             # model.ref_vars.update(parent_var)
@@ -1068,7 +1072,10 @@ class Estimator:
         return model
 
     # Redesigning version of _Q_opt that uses scenario blocks
-    # Works, but still adding features from old _Q_opt
+    # @ Reviewers: Should we keep both _Q_opt and _Q_opt_blocks?
+    # Would it be preferred for _Q_opt_blocks to be used for objective at theta too?
+    # Or separate and make _Q_at_theta_blocks?
+    # Does _Q_opt_blocks need to support covariance calculation?
     def _Q_opt_blocks(
         self,
         return_values=None,
@@ -1124,8 +1131,11 @@ class Estimator:
             theta_estimates = ThetaVals  # Return input if solve fails
             # @Reviewers Should we raise an error here instead? If I use this function for both fixing
             # and unfixing thetas,
-            # I may not want it to raise an error if the solve fails when fixing thetas
+            # If an error is raised, then it would not be useful for checking objective at theta.
             # assert_optimal_termination(solve_result)
+
+        self.obj_value = obj_value
+        self.estimated_theta = theta_estimates
 
         # Check theta estimates are equal to the second block
         if fix_theta is False:
@@ -1355,6 +1365,9 @@ class Estimator:
             # in the "reduced_hessian" method
             # parmest makes the fitted parameters stage 1 variables
             ind_vars = []
+            # @Reviewers: Can we instead load the get_labeled_model function here? And then extract
+            # the unknown parameters directly from that model?
+
             for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
                 ind_vars.append(Var)
             # calculate the reduced hessian
@@ -1850,8 +1863,9 @@ class Estimator:
             cov_n=cov_n,
         )
 
-    # Replicate of theta_est for testing simplified _Q_opt
-    # Still work in progress
+    # Replicate of theta_est for testing _Q_opt_blocks
+    # Only change is call to _Q_opt_blocks
+    # Same for other duplicate functions below
     def theta_est_blocks(
         self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
     ):
@@ -2418,6 +2432,7 @@ class Estimator:
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_theta
 
+    # Not yet functional, still work in progress
     def objective_at_theta_blocks(self, theta_values=None):
         """
         Objective value for each theta, solving extensive form problem with
@@ -2493,14 +2508,14 @@ class Estimator:
         if len(all_thetas) > 0:
             for Theta in local_thetas:
                 obj, thetvals, worststatus = self._Q_at_theta(
-                    Theta, initialize_parmest_model=initialize_parmest_model
+                    Theta  # initialize_parmest_model=initialize_parmest_model
                 )
                 if worststatus != pyo.TerminationCondition.infeasible:
                     all_obj.append(list(Theta.values()) + [obj])
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
             obj, thetvals, worststatus = self._Q_at_theta(
-                thetavals={}, initialize_parmest_model=initialize_parmest_model
+                thetavals={}  # initialize_parmest_model=initialize_parmest_model
             )
             if worststatus != pyo.TerminationCondition.infeasible:
                 all_obj.append(list(thetvals.values()) + [obj])
