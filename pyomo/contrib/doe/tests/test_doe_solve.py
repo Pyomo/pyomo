@@ -575,12 +575,13 @@ class TestDoe(unittest.TestCase):
 
         A_opt_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
             "optimization"
-        ]["A"]["log10 A-opt"]
+        ]["A"]["value"]
         A_opt_design_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
             "optimization"
-        ]["A"]["Experiment Design"][0]
+        ]["A"]["design"][0]
 
         self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
+        print("A optimal design value:", A_opt_design_value)
         self.assertAlmostEqual(
             A_opt_design_value, A_opt_design_value_expected, places=2
         )

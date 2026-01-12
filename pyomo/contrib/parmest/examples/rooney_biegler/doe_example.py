@@ -89,6 +89,7 @@ def run_rooney_biegler_doe(
             "value": rooney_biegler_doe_A.results['log10 A-opt'],
             "design": rooney_biegler_doe_A.results['Experiment Design'],
         }
+
         if print_output:
             print("Optimal results for A-optimality:", rooney_biegler_doe_A.results)
 
@@ -177,9 +178,7 @@ def run_rooney_biegler_doe(
 
 
 if __name__ == "__main__":
-    print("--- Starting Functional Test ---")
 
-    # Test 1: Run everything to ensure no crashes
     results = run_rooney_biegler_doe(
         optimize_experiment_A=True,
         optimize_experiment_D=True,
@@ -190,9 +189,5 @@ if __name__ == "__main__":
         print_output=True,
     )
 
-    print("\n--- Test Complete ---")
-    print(f"Generated {len(results['plots'])} plots.")
-
     # Show plots if running locally
-    plt = matplotlib.pyplot
-    plt.show()
+    # matplotlib.pyplot.show()

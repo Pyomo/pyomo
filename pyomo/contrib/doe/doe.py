@@ -1201,8 +1201,8 @@ class DesignOfExperiments:
             self.prior_FIM = np.zeros((self.n_parameters, self.n_parameters))
         if self.fim_initial is not None:
             self.check_model_FIM(FIM=self.fim_initial)
-        else:
-            self.fim_initial = np.eye(self.n_parameters) + self.prior_FIM
+        # else:
+        #     self.fim_initial = np.eye(self.n_parameters) + self.prior_FIM
         if self.jac_initial is not None:
             self.check_model_jac(self.jac_initial)
         else:
