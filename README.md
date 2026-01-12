@@ -4,7 +4,7 @@
 [![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](https://pyomo.readthedocs.org/en/latest/)
 [![Build services](https://github.com/Pyomo/jenkins-status/blob/main/pyomo_services.svg)](https://pyomo-jenkins.sandia.gov/)
 [![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
-[![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
+[![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs&color=44cc11)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
 
 [![a COIN-OR project](https://www.coin-or.org/GitHub/coin-or-badge.png)](https://www.coin-or.org)
 
