@@ -140,8 +140,8 @@ Pyomo.DoE Required Inputs
 The required input to the Pyomo.DoE is a subclass of the :ref:`Parmest <parmest>` ``Experiment`` class. 
 The subclass must have a ``get_labeled_model`` method which returns a Pyomo `ConcreteModel` 
 containing four Pyomo ``Suffix`` components identifying the parts of the model used in 
-MBDoE analysis. This is in line with the convention used in the parameter estimation tool,
- :ref:`Parmest <parmest>`. The four Pyomo ``Suffix`` components are:
+MBDoE analysis. This is in line with the convention used in the parameter estimation tool, 
+:ref:`Parmest <parmest>`. The four Pyomo ``Suffix`` components are:
 
 * ``experiment_inputs`` - The experimental design decisions
 * ``experiment_outputs`` - The values measured during the experiment
@@ -254,45 +254,39 @@ to perform optimal experimental design.
 Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable,
+After creating the subclass of the ``Experiment`` class, exploratory analysis is 
+suggested to enumerate the design space to check if the problem is identifiable,
 i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number. 
 Additionally, it helps to initialize the model for the optimal experimental design step. 
 
 Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` method.
-The ``compute_FIM_full_factorial`` method generates a grid over the design space as specified by the user. Each grid point represents an MBDoE problem solved using ``compute_FIM`` method. In this way, sensitivity of the FIM over the design space can be evaluated.
+The ``compute_FIM_full_factorial`` method generates a grid over the design space as specified by the user. 
+Each grid point represents an MBDoE problem solved using ``compute_FIM`` method. 
+In this way, sensitivity of the FIM over the design space can be evaluated. 
+Pyomo.DoE supports plotting the results from ``compute_FIM_full_factorial`` method 
+with the ``draw_factorial_figure`` method.
 
-The following code executes the above problem description:
+The following code defines the ``run_reactor_doe`` function. This function encapsulates 
+the workflow for both sensitivity analysis (Step 5) and optimal design (Step 6). 
+
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
+   :language: python
+   :start-after: #  This software is distributed under the 3-clause BSD License.
+   :end-before: if __name__ == "__main__":
+   :linenos:
+
+After defining the function, we will call it to perform the exploratory analysis and 
+the optimal experimental design.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
     :language: python
-    :start-after: # Read in file
-    :end-before: if compute_FIM_full_factorial:
+    :start-after: if __name__ == "__main__":
     :dedent: 4
-    :prepend: # Read in file
 
-.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
-    :language: python
-    :start-after: if compute_FIM_full_factorial:
-    :end-before: if plot_factorial_results:
-    :dedent: 8
-    :prepend: n_points_for_design = 9
-
-.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
-    :language: python
-    :start-after: if save_plots:
-    :end-before: else:
-    :dedent: 12
-
-.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
-    :language: python
-    :start-after: # Plot the results
-    :end-before: ###########################
-    :dedent: 8
-    :prepend: # Plot the results
-
-An example output of the code above, a design exploration for the initial 
-concentration and temperature as experimental design variables with 9 
-values for each, produces the the four figures for four optimality criteria as shown below: 
+A design exploration for the initial concentration and temperature as experimental 
+design variables with 9 values for each, produces the the five figures for 
+five optimality criteria using  ``compute_FIM_full_factorial`` and 
+``draw_factorial_figure`` methods as shown below: 
 
 |plot1| |plot2|
 
@@ -331,19 +325,16 @@ E-optimality we want to minimize the objective values.
 Step 6: Performing an optimal experimental design
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In step 5, the DoE object was constructed to perform an exploratory sensitivity analysis. 
-The same object can be used to design an optimal experiment with a single 
-line of code. We can initialize the model with the result we obtained from
-the exploratory analysis step to speed up convergence.
+In Step 5, we defined the ``run_reactor_doe`` function. This function constructs 
+the DoE object and performs the exploratory sensitivity analysis. By default, 
+it also proceeds immediately to the optimal experimental design step 
+(applying ``run_doe`` on the ``DesignOfExperiments`` object). 
+We can initialize the model with the result we obtained from the exploratory 
+analysis (optimal point from the heatmaps) to help the optimal design step to speed 
+up convergence. However, implementation of this initialization is not shown here.
 
-.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
-    :language: python
-    :start-after: if run_optimal_doe:
-    :end-before: ###################
-    :dedent: 8
-    :prepend: # Run optimal DoE
-    
-After running this code, the optimal design is an initial concentration of 5.0 mol/L and 
+After applying ``run_doe`` on the ``DesignOfExperiments`` object, 
+the optimal design is an initial concentration of 5.0 mol/L and 
 an initial temperature of 494 K with all other temperatures being 300 K. 
 The corresponding :math:`\log_{10}` determinant of the FIM is 19.32.
 
