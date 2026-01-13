@@ -530,23 +530,14 @@ class _GMSWriter_impl(object):
         warn_int_bounds = False
         for v, (lb, ub) in var_bounds.items():
             pyomo_v = self.var_symbol_map.bySymbol[v]
-            if lb is not None:
-                ostream.write(f'{v}.lo = {lb};\n')
-            if ub is not None:
-                ostream.write(f'{v}.up = {ub};\n')
             if lb is None:
-                if v in integer_vars:
-                    ostream.write("%s.lo = -INF;\n" % (v))
-                else:
-                    ostream.write("%s.lo = %s;\n" % (v, ftoa(lb, False)))
+                lb = float("-inf")
+            ostream.write(f'{v}.lo = {ftoa(lb, False)};\n')
             if ub is None:
-                if v in integer_vars:
-                    ostream.write("%s.up = +INF;\n" % (v))
-                else:
-                    ostream.write("%s.up = %s;\n" % (v, ftoa(ub, False)))
-
+                ub = float("inf")
+            ostream.write(f'{v}.up = {ftoa(ub, False)};\n')
             if warmstart and pyomo_v.value is not None:
-                ostream.write("%s.l = %s;\n" % (v, ftoa(pyomo_v.value, False)))
+                ostream.write(f"{v}.l = {ftoa(pyomo_v.value, False)};\n")
 
         ostream.write(f'\nModel {model_name} / all /;\n')
         ostream.write(f'{model_name}.limrow = 0;\n')
