@@ -18,6 +18,7 @@ from pyomo.common.config import (
     ConfigValue,
     InEnum,
     document_kwargs_from_configdict,
+    document_class_CONFIG,
 )
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
@@ -47,15 +48,13 @@ from pyomo.repn.util import (
     categorize_valid_components,
     ordered_active_constraints,
 )
-
-### FIXME: Remove the following as soon as non-active components no
-### longer report active==True
 from pyomo.core.base import Set, RangeSet, ExternalFunction
 from pyomo.network import Port
 
 logger = logging.getLogger(__name__)
 inf = float('inf')
 neg_inf = float('-inf')
+
 
 class GAMSWriterInfo(object):
     """Return type for GAMSWriter.write()
@@ -76,58 +75,9 @@ class GAMSWriterInfo(object):
 @WriterFactory.register(
     'gams_writer_v2', 'Generate the corresponding gms file (version 2).'
 )
+@document_class_CONFIG(methods=['write'])
 class GAMSWriter(object):
     CONFIG = ConfigBlock('gamswriter')
-
-    """
-    Write a model in the GAMS modeling language format.
-
-    Keyword Arguments
-    -----------------
-    output_filename: str
-        Name of file to write GAMS model to. Optionally pass a file-like
-        stream and the model will be written to that instead.
-    io_options: str
-        - warmstart=True
-            Warmstart by initializing model's variables to their values.
-        - symbolic_solver_labels=False
-            Use full Pyomo component names rather than
-            shortened symbols (slower, but useful for debugging).
-        - labeler=None
-            Custom labeler. Incompatible with symbolic_solver_labels.
-        - solver=None
-            If None, GAMS will use default solver for model type.
-        - mtype=None
-            Model type. If None, will chose from lp, nlp, mip, and minlp.
-        - add_options=None
-            List of additional lines to write directly
-            into model file before the solve statement.
-            For model attributes, <model name> is GAMS_MODEL.
-        - skip_trivial_constraints=False
-            Skip writing constraints whose body section is fixed.
-        - output_fixed_variables=False
-            If True, output fixed variables as variables; otherwise,
-            output numeric value.
-        - file_determinism=1
-            | How much effort do we want to put into ensuring the
-            | GAMS file is written deterministically for a Pyomo model:
-                - NONE (0) : None
-                - ORDERED (10): rely on underlying component ordering (default)
-                - SORT_INDICES (20) : sort keys of indexed components
-                - SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
-        - put_results='results'
-            Filename for optionally writing solution values and
-            marginals.  If put_results_format is 'gdx', then GAMS
-            will write solution values and marginals to
-            GAMS_MODEL_p.gdx and solver statuses to
-            {put_results}_s.gdx.  If put_results_format is 'dat',
-            then solution values and marginals are written to
-            (put_results).dat, and solver statuses to (put_results +
-            'stat').dat.
-        - put_results_format='gdx'
-            Format used for put_results, one of 'gdx', 'dat'.
-    """
-    # old GAMS config
     CONFIG.declare(
         'warmstart',
         ConfigValue(
@@ -261,6 +211,8 @@ class GAMSWriter(object):
     )
 
     def __init__(self):
+        #: Instance configuration;
+        #: see :ref:`pyomo.repn.plugins.gams_writer_v2.GAMSWriter::CONFIG`.
         self.config = self.CONFIG()
 
     def __call__(self, model, filename, solver_capability, io_options):
@@ -353,12 +305,10 @@ class _GMSWriter_impl(object):
                 Var,
                 Param,
                 Expression,
-                # FIXME: Non-active components should not report as Active
                 ExternalFunction,
                 Set,
                 RangeSet,
                 Port,
-                # TODO: Piecewise, Complementarity
             },
             targets={Suffix, SOSConstraint, Objective},
         )
@@ -588,12 +538,12 @@ class _GMSWriter_impl(object):
                 ostream.write(f'{v}.up = {ub};\n')
             if lb is None:
                 if v in integer_vars:
-                    ostream.write("%s.lo = -INF;\n" % (v))        
+                    ostream.write("%s.lo = -INF;\n" % (v))
                 else:
                     ostream.write("%s.lo = %s;\n" % (v, ftoa(lb, False)))
             if ub is None:
                 if v in integer_vars:
-                    ostream.write("%s.up = +INF;\n" % (v))                
+                    ostream.write("%s.up = +INF;\n" % (v))
                 else:
                     ostream.write("%s.up = %s;\n" % (v, ftoa(ub, False)))
 
