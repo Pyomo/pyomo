@@ -661,7 +661,7 @@ class NonlinearToPWL(Transformation):
                     return ExprType.QUADRATIC, False
                 return ExprType.QUADRATIC, True
         return ExprType.GENERAL, True
-    
+
     def _separate_linear_parts(self, repn):
         var_map = self._quadratic_repn_visitor.var_map
         linear = 0
@@ -692,7 +692,7 @@ class NonlinearToPWL(Transformation):
     ):
         repn = self._quadratic_repn_visitor.walk_expression(expr)
         expr_type, needs_approximating = self._needs_approximating(
-            expr, approximate_quadratic, repn,
+            expr, approximate_quadratic, repn
         )
         if not needs_approximating:
             return None, expr_type
