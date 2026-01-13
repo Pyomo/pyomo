@@ -8,10 +8,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from glob import glob
 import json
 import logging
 import os, os.path
+from glob import glob
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -596,8 +596,6 @@ class TestDoEFactorialFigure(unittest.TestCase):
     def test_doe_1D_plotting_function(self):
         # For 1D plotting we will use the Rooney-Biegler example in parmest/examples
         plt = matplotlib.pyplot
-        import glob
-
         """
         Test that the plotting function executes without error and
         creates a matplotlib figure. We do NOT test visual correctness.
@@ -610,7 +608,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Clean up any existing plot files from test runs
         def cleanup_files():
-            files_to_remove = glob.glob("rooney_*.png")
+            files_to_remove = glob("rooney_*.png")
             for f in files_to_remove:
                 try:
                     os.remove(f)
@@ -648,7 +646,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Verify that the linear scale plots were also created
         # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
-        expected_plot_linear = glob.glob(f"{prefix_linear}*.png")
+        expected_plot_linear = glob(f"{prefix_linear}*.png")
         self.assertEqual(
             len(expected_plot_linear),
             5,
@@ -656,7 +654,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
         )
 
         # Verify that the log scale plots were also created
-        expected_plot_log = glob.glob(f"{prefix_log}*.png")
+        expected_plot_log = glob(f"{prefix_log}*.png")
         self.assertEqual(
             len(expected_plot_log),
             5,
@@ -666,7 +664,6 @@ class TestDoEFactorialFigure(unittest.TestCase):
     def test_doe_2D_plotting_function(self):
         # For 2D plotting we will use the Rooney-Biegler example in doe/examples
         plt = matplotlib.pyplot
-        import glob
 
         # File prefix for saved plots
         prefix_linear = "reactor_linear"
@@ -674,7 +671,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Clean up any existing plot files from test runs
         def cleanup_files():
-            files_to_remove = glob.glob("reactor_*.png")
+            files_to_remove = glob("reactor_*.png")
             for f in files_to_remove:
                 try:
                     os.remove(f)
@@ -697,7 +694,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Verify that the linear scale plots were also created
         # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
-        expected_plot_linear = glob.glob(f"{prefix_linear}*.png")
+        expected_plot_linear = glob(f"{prefix_linear}*.png")
         self.assertTrue(
             len(expected_plot_linear) == 5,
             f"Expected 5 plot files, but found {len(expected_plot_linear)}. Files found: {expected_plot_linear}",
@@ -716,7 +713,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Verify that the log scale plots were also created
         # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
-        expected_plot_log = glob.glob(f"{prefix_log}*.png")
+        expected_plot_log = glob(f"{prefix_log}*.png")
         self.assertTrue(
             len(expected_plot_log) == 5,
             f"Expected 5 plot files, but found {len(expected_plot_log)}. Files found: {expected_plot_log}",
