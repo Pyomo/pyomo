@@ -712,7 +712,7 @@ jobs:
       if: ${{ matrix.mpi == 0 && matrix.category != 'notests' }}
       run: |
         export PATH=$PYOMO_PATH
-        echo $PYTHON_EXE -m pytest -v \
+        $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
@@ -741,7 +741,7 @@ jobs:
     - name: Run documentation tests
       if: matrix.test_docs != 0
       run: |
-        make -C doc/OnlineDocs doctest -d || cat /tmp/sphinx-err*
+        make -C doc/OnlineDocs doctest -d
 
     - name: Process code coverage report
       run: |
