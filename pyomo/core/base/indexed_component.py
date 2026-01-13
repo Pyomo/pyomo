@@ -462,13 +462,16 @@ class IndexedComponent(Component):
             # of the underlying Set, there should be no warning if the
             # user iterates over the set when the _data dict is empty.
             #
-            if (
-                SortComponents.SORTED_INDICES in sort
-                or SortComponents.ORDERED_INDICES in sort
-            ):
-                return iter(sorted_robust(self._data))
+            # We will leverage SetOf here so we will cleanly pick up the
+            # iter overrides when we are templatizing
+            #
+            tmp_set = BASE.set.FiniteSetOf(self._data, name=self.name + "._data")
+            if SortComponents.SORTED_INDICES in sort:
+                return tmp_set.sorted_iter()
+            elif SortComponents.ORDERED_INDICES in sort:
+                return tmp_set.ordered_iter()
             else:
-                return self._data.__iter__()
+                return iter(tmp_set)
 
         if SortComponents.SORTED_INDICES in sort:
             ans = self._index_set.sorted_iter()
