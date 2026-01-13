@@ -9,11 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.collections import Bunch as Munch
 import logging
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
-from contextlib import contextmanager
 
 from pyomo.common.dependencies import numpy as numpy, numpy_available
 
@@ -57,11 +58,10 @@ def get_active_objective(model):
     """
 
     active_objs = list(model.component_data_objects(pyo.Objective, active=True))
-    assert (
-        len(active_objs) == 1
-    ), "Model has {} active objective functions, exactly one is required.".format(
-        len(active_objs)
-    )
+    if len(active_objs) != 1:
+        raise RuntimeError(
+            f"Model has {len(active_objs)} active objective functions, exactly one is required."
+        )
 
     return active_objs[0]
 
@@ -81,12 +81,10 @@ def _add_objective_constraint(
     specified block.
     """
 
-    assert (
-        rel_opt_gap is None or rel_opt_gap >= 0.0
-    ), "rel_opt_gap must be None or >= 0.0"
-    assert (
-        abs_opt_gap is None or abs_opt_gap >= 0.0
-    ), "abs_opt_gap must be None or >= 0.0"
+    if not (rel_opt_gap is None or rel_opt_gap >= 0.0):
+        raise ValueError(f"rel_opt_gap ({rel_opt_gap}) must be None or >= 0.0")
+    if not (abs_opt_gap is None or abs_opt_gap >= 0.0):
+        raise ValueError(f"abs_opt_gap ({abs_opt_gap}) must be None or >= 0.0")
 
     objective_constraints = []
 
@@ -302,3 +300,21 @@ def get_model_variables(
                 )
 
     return variable_set
+
+
+class MyMunch(Munch):
+    # WEH, MPV needed to add a to_dict since Bunch did not have one
+    def to_dict(self):
+        return to_dict(self)
+
+
+def to_dict(x):
+    xtype = type(x)
+    if xtype in [tuple, set, frozenset]:
+        return list(x)
+    elif xtype in [dict, Munch, MyMunch]:
+        return {k: to_dict(v) for k, v in x.items()}
+    elif hasattr(x, "to_dict"):
+        return x.to_dict()
+    else:
+        return x

@@ -22,7 +22,7 @@ from pyomo.common.collections import Bunch
 
 
 class Test(unittest.TestCase):
-    def test_Bunch1(self):
+    def test_Bunch_fromString(self):
         opt = Bunch('a=None c=d e="1 2 3" f=" 5 "', foo=1, bar='x')
         self.assertEqual(opt.ll, None)
         self.assertEqual(opt.a, None)
@@ -85,7 +85,8 @@ yy: 2""",
         )
 
         with self.assertRaisesRegex(
-            TypeError, r"Bunch\(\) positional arguments must be strings"
+            TypeError,
+            r"Bunch\(\) positional arguments must either by generators returning tuples defining a dictionary, or space separated strings of form 'key=value'",
         ):
             Bunch(5)
 
@@ -95,6 +96,19 @@ yy: 2""",
             "separated strings of form 'key=value', got 'foo'",
         ):
             Bunch('a=5 foo = 6')
+
+    def test_Bunch_fromGenerator(self):
+        data = dict(a=None, c='d', e="1 2 3", f=" 5 ", foo=1, bar='x')
+        o1 = Bunch((k, v) for k, v in data.items())
+        self.assertEqual(
+            str(o1),
+            """a: None
+bar: 'x'
+c: 'd'
+e: '1 2 3'
+f: ' 5 '
+foo: 1""",
+        )
 
     def test_pickle(self):
         o1 = Bunch('a=None c=d e="1 2 3"', foo=1, bar='x')
