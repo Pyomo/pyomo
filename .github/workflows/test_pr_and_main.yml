@@ -426,6 +426,10 @@ jobs:
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
                 #  - "<=9.5.0|>9.5.1" (conda seg faults)
                 XPRESS='xpress>=9.5.2'
+            elif [[ ${{matrix.TARGET}} == linux && ${{matrix.python}} == 3.10 ]]; then
+                # Test with older Xpress version to get coverage data and verify backward compatibility.
+                # Targeting Linux Python 3.10 ensures latest Xpress is still tested in other jobs.
+                XPRESS='xpress<9.3'
             else
                 XPRESS='xpress'
             fi
