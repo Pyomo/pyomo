@@ -97,7 +97,7 @@ def _generate_autosummary_content(
                     _get_members = caller.f_globals['_get_members']
                     if 'config' in l:
                         # Sphinx >= 8.2.1
-                        for field in ('config', 'events', 'registry'):
+                        for field in ('config', 'events'):
                             args[field] = l[field]
                         if 'registry' in l:
                             # Sphinx < 9.1
