@@ -13,7 +13,7 @@
 from pyomo.common.deprecation import relocated_module_attribute
 
 
-class Bar(object):
+class Bar:
     data = 42
 
 

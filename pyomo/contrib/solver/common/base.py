@@ -17,7 +17,7 @@ from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import Objective, ObjectiveData
-from pyomo.common.config import ConfigValue
+from pyomo.common.config import ConfigValue, ConfigDict
 from pyomo.common.enums import IntEnum, SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
@@ -158,7 +158,7 @@ class SolverBase:
         available: Availability
             An enum that indicates "how available" the solver is.
             Note that the enum can be cast to bool, which will
-            be True if the solver is runable at all and False
+            be True if the solver is runnable at all and False
             otherwise.
         """
         raise NotImplementedError(
@@ -408,9 +408,27 @@ class LegacySolverWrapper:
     interface. Necessary for backwards compatibility.
     """
 
+    class _all_true:
+        # A mockup of Bunch that returns True for all attribute lookups
+        # or containment tests.
+        def __getattr__(self, name):
+            return True
+
+        def __contains__(self, name):
+            return True
+
+    class _UpdatableConfigDict(ConfigDict):
+        # The legacy solver interface used Option objects.  we will make
+        # the ConfigDict *look* like an Option by supporting update()
+        __slots__ = ()
+
+        def update(self, value):
+            return self.set_value(value)
+
     def __init__(self, **kwargs):
-        if 'solver_io' in kwargs:
-            raise NotImplementedError('Still working on this')
+        solver_io = kwargs.pop('solver_io', None)
+        if solver_io:
+            raise NotImplementedError(f'Still working on this ({solver_io=})')
         # There is no reason for a user to be trying to mix both old
         # and new options. That is silly. So we will yell at them.
         _options = kwargs.pop('options', None)
@@ -425,8 +443,14 @@ class LegacySolverWrapper:
             kwargs['solver_options'] = _options
         super().__init__(**kwargs)
         # Make the legacy 'options' attribute an alias of the new
-        # config.solver_options
+        # config.solver_options; change its class so it behaves more
+        # like an old Bunch/Options object.
         self.options = self.config.solver_options
+        self.options.__class__ = LegacySolverWrapper._UpdatableConfigDict
+        # We will assume the solver interface supports all capabilities
+        # (unless a derived class actually set something
+        if not hasattr(self, '_capabilities'):
+            self._capabilities = LegacySolverWrapper._all_true()
 
     #
     # Support "with" statements
@@ -567,7 +591,7 @@ class LegacySolverWrapper:
         self, load_solutions, model, results, legacy_results, legacy_soln
     ):
         """Method to handle the preferred action for the solution"""
-        symbol_map = SymbolMap()
+        symbol_map = legacy_soln.symbol_map = SymbolMap()
         symbol_map.default_labeler = NumericLabeler('x')
         if not hasattr(model, 'solutions'):
             # This logic gets around Issue #2130 in which
@@ -576,6 +600,7 @@ class LegacySolverWrapper:
 
             setattr(model, 'solutions', ModelSolutions(model))
         model.solutions.add_symbol_map(symbol_map)
+        legacy_results._smap = symbol_map
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True
         if load_solutions:
@@ -597,10 +622,12 @@ class LegacySolverWrapper:
                     legacy_soln.variable['Rc'] = val
 
         legacy_results.solution.insert(legacy_soln)
-        # Timing info was not originally on the legacy results, but we want
-        # to make it accessible to folks who are utilizing the backwards
-        # compatible version.
-        legacy_results.timing_info = results.timing_info
+        # Timing info was not originally on the legacy results, but we
+        # want to make it accessible to folks who are utilizing the
+        # backwards compatible version.  Note that embedding the
+        # ConfigDict broke pickling the legacy_results, so we will only
+        # return raw nested dicts
+        legacy_results.timing_info = results.timing_info.value()
         if delete_legacy_soln:
             legacy_results.solution.delete(0)
         return legacy_results
@@ -711,3 +738,21 @@ class LegacySolverWrapper:
         opts = {k: v for k, v in options.value().items() if v is not None}
         if opts:
             self._map_config(**opts)
+
+    def warm_start_capable(self):
+        return False
+
+    def default_variable_value(self):
+        return None
+
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1

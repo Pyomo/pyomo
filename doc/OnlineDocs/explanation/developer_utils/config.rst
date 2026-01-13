@@ -124,7 +124,7 @@ derived classes.  Consider the following example:
 
 .. doctest::
 
-    >>> class Base(object):
+    >>> class Base:
     ...     CONFIG = ConfigDict()
     ...     CONFIG.declare('filename', ConfigValue(
     ...         default='input.txt',
@@ -168,7 +168,7 @@ and for use by each ``solve()`` call:
 
 .. testcode::
 
-   class Solver(object):
+   class Solver:
        CONFIG = ConfigDict()
        CONFIG.declare('iterlim', ConfigValue(
            default=10,
@@ -206,7 +206,7 @@ attributes:
    from pyomo.common.config import document_class_CONFIG
 
    @document_class_CONFIG(methods=['solve'])
-   class MySolver(object):
+   class MySolver:
        """Interface to My Solver"""
        #
        #: Global class configuration; see :ref:`MySolver_CONFIG`

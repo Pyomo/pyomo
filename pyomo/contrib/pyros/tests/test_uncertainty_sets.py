@@ -47,7 +47,6 @@ from pyomo.contrib.pyros.uncertainty_sets import (
 )
 
 from pyomo.contrib.pyros.config import pyros_config
-import time
 
 import logging
 
@@ -105,6 +104,12 @@ class TestBoxSet(unittest.TestCase):
         np.testing.assert_allclose(
             bounds, bset.bounds, err_msg="BoxSet bounds not as expected"
         )
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(bset.geometry, Geometry.LINEAR)
+        self.assertEqual(bset.type, "box")
+        self.assertEqual(bset.dim, 2)
+        self.assertEqual(bset.compute_auxiliary_uncertain_param_vals([0, 0]).size, 0)
 
         # check bounds update
         new_bounds = [[3, 4], [5, 6]]
@@ -475,6 +480,12 @@ class TestBudgetSet(unittest.TestCase):
         np.testing.assert_allclose([1, 3, 0, 0, 0], buset.rhs_vec)
         np.testing.assert_allclose(np.zeros(3), buset.origin)
 
+        # check defined attributes/methods inherited from base class
+        self.assertIs(buset.geometry, Geometry.LINEAR)
+        self.assertEqual(buset.type, "budget")
+        self.assertEqual(buset.dim, 3)
+        self.assertEqual(buset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
+
         # update the set
         buset.budget_membership_mat = [[1, 1, 0], [0, 0, 1]]
         buset.budget_rhs_vec = [3, 4]
@@ -815,6 +826,14 @@ class TestFactorModelSet(unittest.TestCase):
         np.testing.assert_allclose(fset.beta, 0.1)
         self.assertEqual(fset.dim, 3)
 
+        # check defined attributes/methods inherited from base class
+        self.assertIs(fset.geometry, Geometry.LINEAR)
+        self.assertEqual(fset.type, "factor_model")
+        self.assertEqual(fset.dim, 3)
+        np.testing.assert_allclose(
+            fset.compute_auxiliary_uncertain_param_vals(fset.origin), [0] * 2
+        )
+
         # update the set
         fset.origin = [1, 1, 0]
         fset.psi_mat = [[1, 0], [0, 1], [1, 1]]
@@ -1060,6 +1079,16 @@ class TestFactorModelSet(unittest.TestCase):
                     "is not in the set."
                 ),
             )
+            # test base class method, as well
+            self.assertTrue(
+                UncertaintySet.point_in_set(fset, fset_pt_from_crit),
+                msg=(
+                    f"Base method {UncertaintySet.point_in_set.__name__!r} "
+                    f"returns wrong result for point {fset_pt_from_crit}"
+                    f"generated from critical point {aux_space_pt} of the "
+                    "auxiliary variable space"
+                ),
+            )
 
             fset_pt_from_neg_crit = fset.origin - fset.psi_mat @ aux_space_pt
             self.assertTrue(
@@ -1068,6 +1097,16 @@ class TestFactorModelSet(unittest.TestCase):
                     f"Point {fset_pt_from_neg_crit} generated from critical point "
                     f"{aux_space_pt} of the auxiliary variable space "
                     "is not in the set."
+                ),
+            )
+            # test base class method, as well
+            self.assertTrue(
+                UncertaintySet.point_in_set(fset, fset_pt_from_neg_crit),
+                msg=(
+                    f"Base method {UncertaintySet.point_in_set.__name__!r} "
+                    f"returns wrong result for point {fset_pt_from_neg_crit}"
+                    f"generated from critical point {aux_space_pt} of the "
+                    "auxiliary variable space"
                 ),
             )
 
@@ -1253,6 +1292,18 @@ class TestIntersectionSet(unittest.TestCase):
             ),
         )
 
+        # check defined attributes/methods inherited from base class
+        self.assertIs(iset.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(iset.type, "intersection")
+        self.assertEqual(iset.dim, 3)
+        self.assertEqual(iset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
+
+        # since intersection does not involve discrete sets,
+        # expect error when trying to get scenarios
+        exc_str = r"Uncertainty set.*not reducible.*scenarios"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            iset.scenarios
+
     def test_error_on_intersecting_wrong_dims(self):
         """
         Test ValueError raised if IntersectionSet sets
@@ -1396,6 +1447,8 @@ class TestIntersectionSet(unittest.TestCase):
 
         # assigning to slices should work fine
         all_sets[3:] = [BoxSet([[1, 1.5]]), BoxSet([[1, 3]])]
+
+        self.assertRegex(repr(all_sets), r"UncertaintySetList\(\[.*\]\)")
 
     def test_set_as_constraint(self):
         """
@@ -1637,6 +1690,120 @@ class TestIntersectionSet(unittest.TestCase):
             iset._is_coordinate_fixed(config=Bunch(global_solver=baron)), [True, False]
         )
 
+    @unittest.skipUnless(baron_available, "BARON not available")
+    def test_intersection_aux_param_set(self):
+        """
+        Test intersection set involving at least one set
+        defined using auxiliary parameters.
+        """
+        iset = IntersectionSet(
+            set1=FactorModelSet(
+                origin=[0, 0], psi_mat=np.eye(2), beta=0.2, number_of_factors=2
+            ),
+            set2=CardinalitySet(origin=[0, 0], positive_deviation=[0.8, 0.8], gamma=1),
+        )
+
+        self.assertIs(iset.geometry, Geometry.LINEAR)
+        self.assertFalse(iset._PARAMETER_BOUNDS_EXACT)
+
+        # parameter bound calculations
+        self.assertFalse(iset.parameter_bounds)
+        baron = SolverFactory("baron")
+        np.testing.assert_allclose(
+            iset._compute_exact_parameter_bounds(solver=baron), [(0, 0.4), (0, 0.4)]
+        )
+
+        # set membership checks
+        self.assertTrue(iset.point_in_set([0, 0]))
+        self.assertTrue(iset.point_in_set([0, 0.4]))
+        self.assertTrue(iset.point_in_set([0.4, 0]))
+        self.assertTrue(iset.point_in_set([0.2, 0.2]))
+        self.assertFalse(iset.point_in_set([0.2 + 1e-5, 0.2 + 1e-5]))
+        self.assertFalse(iset.point_in_set([-1e-5, -1e-5]))
+
+        # auxiliary parameter value calculations
+        np.testing.assert_allclose(
+            iset.compute_auxiliary_uncertain_param_vals([0, 0]), np.zeros(4)
+        )
+
+        # check uncertainty set constraints setup
+        uq = iset.set_as_constraint()
+        self.assertEqual(len(uq.uncertain_param_vars), 2)
+        self.assertEqual(len(uq.auxiliary_vars), 4)
+        self.assertEqual(len(uq.uncertainty_cons), 6)
+        param_vars = uq.uncertain_param_vars
+        aux_vars = uq.auxiliary_vars
+        # factor model constraints
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[0].expr,
+            aux_vars[0] + 0.0 * aux_vars[1] == param_vars[0],
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[1].expr,
+            0.0 * aux_vars[0] + aux_vars[1] == param_vars[1],
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[2].expr,
+            RangedExpression((-0.4, aux_vars[0] + aux_vars[1], 0.4), False),
+        )
+        # cardinality constraints
+        assertExpressionsEqual(
+            self, uq.uncertainty_cons[3].expr, 0.0 + 0.8 * aux_vars[2] == param_vars[0]
+        )
+        assertExpressionsEqual(
+            self, uq.uncertainty_cons[4].expr, 0.0 + 0.8 * aux_vars[3] == param_vars[1]
+        )
+        assertExpressionsEqual(
+            self, uq.uncertainty_cons[5].expr, aux_vars[2] + aux_vars[3] <= 1
+        )
+
+    def test_intersection_discrete_set(self):
+        """
+        Test intersection set involving discrete set.
+        """
+        iset = IntersectionSet(
+            set1=BoxSet(bounds=[[1.5, 2], [1.5, 2]]),
+            set2=AxisAlignedEllipsoidalSet(center=[1.5, 1.5], half_lengths=[0.5, 0.5]),
+            set3=DiscreteScenarioSet(list(it.product([1, 1.5, 2], [1, 1.5, 2]))),
+            set4=FactorModelSet(
+                origin=[1.5, 1.5], psi_mat=0.5 * np.eye(2), number_of_factors=2, beta=1
+            ),
+        )
+
+        # test behavior resembles that of discrete set
+        self.assertIs(iset.geometry, Geometry.DISCRETE_SCENARIOS)
+        np.testing.assert_allclose(iset.scenarios, [[1.5, 1.5], [1.5, 2], [2, 1.5]])
+
+        # set membership checks
+        self.assertTrue(iset.point_in_set([1.5, 1.5]))
+        self.assertTrue(iset.point_in_set([1.5, 2]))
+        self.assertTrue(iset.point_in_set([2, 1.5]))
+        self.assertFalse(iset.point_in_set([1, 1]))
+        self.assertFalse(iset.point_in_set([1, 1.5]))
+        self.assertFalse(iset.point_in_set([1, 2]))
+        self.assertFalse(iset.point_in_set([2, 1]))
+        self.assertFalse(iset.point_in_set([2, 2]))
+
+        # test bounds
+        np.testing.assert_allclose(iset.parameter_bounds, [[1.5, 2], [1.5, 2]])
+
+        # auxiliary param calculation:
+        # since there is a factor model set, should return values
+        np.testing.assert_allclose(
+            iset.compute_auxiliary_uncertain_param_vals([2, 2]), [1, 1]
+        )
+
+        # uncertainty set constraint setup
+        # since set is discrete, no constraints or auxiliary
+        # variables should be added
+        uq = iset.set_as_constraint()
+        self.assertEqual(len(uq.uncertain_param_vars), 2)
+        self.assertFalse(uq.auxiliary_vars)
+        self.assertFalse(uq.uncertainty_cons)
+
 
 class TestCardinalitySet(unittest.TestCase):
     """
@@ -1655,7 +1822,14 @@ class TestCardinalitySet(unittest.TestCase):
         np.testing.assert_allclose(cset.origin, [0, 0])
         np.testing.assert_allclose(cset.positive_deviation, [1, 3])
         np.testing.assert_allclose(cset.gamma, 2)
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(cset.geometry, Geometry.LINEAR)
+        self.assertEqual(cset.type, "cardinality")
         self.assertEqual(cset.dim, 2)
+        np.testing.assert_allclose(
+            cset.compute_auxiliary_uncertain_param_vals(cset.origin), [0] * 2
+        )
 
         # update the set
         cset.origin = [1, 2]
@@ -1908,6 +2082,12 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         # check scenarios added appropriately
         np.testing.assert_allclose(scenarios, dset.scenarios)
 
+        # check defined attributes/methods inherited from base class
+        self.assertIs(dset.geometry, Geometry.DISCRETE_SCENARIOS)
+        self.assertEqual(dset.type, "discrete")
+        self.assertEqual(dset.dim, 3)
+        self.assertEqual(dset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
+
         # check scenarios updated appropriately
         new_scenarios = [[0, 1, 2], [1, 2, 0], [3, 5, 4]]
         dset.scenarios = new_scenarios
@@ -2083,6 +2263,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         center = [0, 0]
         half_lengths = [1, 3]
         aset = AxisAlignedEllipsoidalSet(center, half_lengths)
+
         np.testing.assert_allclose(
             center,
             aset.center,
@@ -2093,6 +2274,12 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
             aset.half_lengths,
             err_msg="AxisAlignedEllipsoidalSet half-lengths not as expected",
         )
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(aset.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(aset.type, "ellipsoidal")
+        self.assertEqual(aset.dim, 2)
+        self.assertEqual(aset.compute_auxiliary_uncertain_param_vals([0] * 2).size, 0)
 
         # check attributes update
         new_center = [-1, -3]
@@ -2309,6 +2496,13 @@ class TestEllipsoidalSet(unittest.TestCase):
         shape_matrix = [[1, 0], [0, 2]]
         scale = 2
         eset = EllipsoidalSet(center, shape_matrix, scale)
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(eset.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(eset.type, "ellipsoidal")
+        self.assertEqual(eset.dim, 2)
+        self.assertEqual(eset.compute_auxiliary_uncertain_param_vals([0] * 2).size, 0)
+
         np.testing.assert_allclose(
             center, eset.center, err_msg="EllipsoidalSet center not as expected"
         )
@@ -2724,6 +2918,12 @@ class TestPolyhedralSet(unittest.TestCase):
         rhs_vec = [1, 3]
 
         pset = PolyhedralSet(lhs_coefficients_mat, rhs_vec)
+
+        # check defined attributes/methods inherited from base class
+        self.assertIs(pset.geometry, Geometry.LINEAR)
+        self.assertEqual(pset.type, "polyhedral")
+        self.assertEqual(pset.dim, 3)
+        self.assertEqual(pset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
 
         # check attributes are as expected
         np.testing.assert_allclose(lhs_coefficients_mat, pset.coefficients_mat)

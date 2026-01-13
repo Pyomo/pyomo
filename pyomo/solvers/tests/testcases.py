@@ -105,8 +105,28 @@ SkipTests['cplex', 'nl', 'QCP_simple'] = (
 #
 # GUROBI
 #
-# NO EXPECTED FAILURES
-#
+
+# 12.0.3 (for AMPL only) returns all zeros for suffixes
+MissingSuffixFailures['gurobi', 'nl', 'LP_duals_maximize'] = (
+    lambda v: v[:3] == (12, 0, 3),
+    {'dual': (False, {})},
+    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+)
+MissingSuffixFailures['gurobi', 'nl', 'LP_duals_minimize'] = (
+    lambda v: v[:3] == (12, 0, 3),
+    {'dual': (False, {})},
+    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+)
+MissingSuffixFailures['gurobi', 'nl', 'LP_inactive_index'] = (
+    lambda v: v[:3] == (12, 0, 3),
+    {'dual': (False, {})},
+    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+)
+MissingSuffixFailures['gurobi', 'nl', 'QP_simple'] = (
+    lambda v: v[:3] == (12, 0, 3),
+    {'dual': (False, {})},
+    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+)
 
 #
 # GAMS

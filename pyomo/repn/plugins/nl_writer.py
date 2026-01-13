@@ -81,7 +81,7 @@ ScalingFactors = namedtuple(
 
 
 # TODO: make a proper base class
-class NLWriterInfo(object):
+class NLWriterInfo:
     """Return type for NLWriter.write()
 
     Attributes
@@ -159,7 +159,7 @@ class NLWriterInfo(object):
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
 @document_class_CONFIG(methods=['write'])
-class NLWriter(object):
+class NLWriter:
     #: Global class configuration;
     #: see :ref:`pyomo.repn.plugins.nl_writer.NLWriter::CONFIG`.
     CONFIG = ConfigDict('nlwriter')
@@ -388,7 +388,7 @@ class NLWriter(object):
         return symbol_map
 
 
-class _SuffixData(object):
+class _SuffixData:
     def __init__(self, name):
         self.name = name
         self.obj = {}
@@ -491,14 +491,14 @@ class CachingNumericSuffixFinder(SuffixFinder):
         return ans
 
 
-class _NoScalingFactor(object):
+class _NoScalingFactor:
     scale = False
 
     def __call__(self, obj):
         return 1
 
 
-class _NLWriter_impl(object):
+class _NLWriter_impl:
     def __init__(self, ostream, rowstream, colstream, config):
         self.ostream = ostream
         self.rowstream = rowstream

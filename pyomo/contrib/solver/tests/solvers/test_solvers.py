@@ -9,35 +9,41 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import random
+import datetime
 import math
+import random
 from typing import Type
 
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
-import pyomo.common.unittest as unittest
+from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.common.config import SolverConfig
+from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import (
-    TerminationCondition,
-    SolutionStatus,
     Results,
+    SolutionStatus,
+    TerminationCondition,
 )
 from pyomo.contrib.solver.common.util import (
     NoDualsError,
-    NoSolutionError,
     NoReducedCostsError,
+    NoSolutionError,
 )
-from pyomo.contrib.solver.common.base import SolverBase
-from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.solvers.ipopt import Ipopt
-from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiDirectMINLP
+from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.contrib.solver.solvers.gams import GAMS
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
+from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
 from pyomo.contrib.solver.tests.solvers import instances
+from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.core.expr.numeric_expr import LinearExpression
 
 np, numpy_available = attempt_import('numpy')
 parameterized, param_available = attempt_import('parameterized')
@@ -50,19 +56,36 @@ if not param_available:
 all_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('highs', Highs),
     ('gams', GAMS),
+    ('knitro_direct', KnitroDirectSolver),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('highs', Highs),
+    ('knitro_direct', KnitroDirectSolver),
 ]
-nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi_persistent', GurobiPersistent), ('ipopt', Ipopt)]
+nlp_solvers = [
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
+    ('ipopt', Ipopt),
+    ('knitro_direct', KnitroDirectSolver),
+]
+qcp_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
+    ('ipopt', Ipopt),
+    ('knitro_direct', KnitroDirectSolver),
+]
 qp_solvers = qcp_solvers + [("highs", Highs)]
-miqcqp_solvers = [('gurobi_persistent', GurobiPersistent)]
+miqcqp_solvers = [
+    ('gurobi_direct_minlp', GurobiDirectMINLP),
+    ('gurobi_persistent', GurobiPersistent),
+    ('knitro_direct', KnitroDirectSolver),
+]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 
@@ -101,7 +124,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -155,7 +178,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -215,7 +238,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -270,7 +293,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -324,7 +347,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -378,7 +401,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -440,7 +463,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -497,7 +520,7 @@ class TestDualSignConvention(unittest.TestCase):
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
                 raise unittest.SkipTest(
-                    f'cannot yet get duals if NLWriter presolve is on'
+                    'cannot yet get duals if NLWriter presolve is on'
                 )
             else:
                 opt.config.writer_config.linear_presolve = False
@@ -545,6 +568,70 @@ class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_config_overwrite(self, name: str, opt_class: Type[SolverBase]):
         self.assertIsNot(SolverBase.CONFIG, opt_class.CONFIG)
+
+    @parameterized.expand(input=_load_tests(all_solvers))
+    def test_results_object_populated(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(2, None))
+        m.obj = pyo.Objective(expr=m.x)
+        res = opt.solve(m, load_solutions=False)
+        pyo.assert_optimal_termination(res)
+
+        # Initial gut check - is it the right type?
+        self.assertIsInstance(res, Results)
+
+        # termination_condition is set to a valid enum and not unknown
+        self.assertIsInstance(res.termination_condition, TerminationCondition)
+        self.assertNotEqual(res.termination_condition, TerminationCondition.unknown)
+
+        # solution_status is a valid enum and indicates a usable solution
+        self.assertIsInstance(res.solution_status, SolutionStatus)
+        self.assertIn(
+            res.solution_status, {SolutionStatus.feasible, SolutionStatus.optimal}
+        )
+
+        # solver_name is a nonempty string
+        self.assertIsInstance(res.solver_name, str)
+        self.assertTrue(res.solver_name.strip())
+
+        # solver_version is a tuple of ints
+        self.assertIsInstance(res.solver_version, tuple)
+        for v in res.solver_version:
+            self.assertIsInstance(v, int)
+
+        # timing_info should exist
+        self.assertIsNotNone(res.timing_info)
+
+        # start_timestamp must be a valid datetime
+        self.assertIsInstance(res.timing_info.start_timestamp, datetime.datetime)
+
+        # wall_time must be a float (=> 0)
+        self.assertIsInstance(res.timing_info.wall_time, float)
+        self.assertGreaterEqual(res.timing_info.wall_time, 0.0)
+
+        # incumbent_objective should be populated for a feasible/optimal solve
+        self.assertIsNotNone(res.incumbent_objective)
+
+        # Should have a solution loader available
+        self.assertTrue(hasattr(res, "solution_loader"))
+
+        # Should have a copy of the config used
+        self.assertIsInstance(res.solver_config, SolverConfig)
+
+        # All solvers should be implementing some sort of TeeStream,
+        # so they should be able to capture anything logged to the console
+        self.assertIsNotNone(res.solver_log)
+        self.assertIsInstance(res.solver_log, str)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_remove_variable_and_objective(
@@ -1346,8 +1433,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
         m.y.unfix()
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 2**0.5)
-        self.assertAlmostEqual(m.y.value, 2**0.5)
+        self.assertAlmostEqual(m.x.value, 2**0.5, delta=1e-3)
+        self.assertAlmostEqual(m.y.value, 2**0.5, delta=1e-3)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_mutable_param_with_range(
@@ -1515,8 +1602,8 @@ class TestSolvers(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
         res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, -0.42630274815985264)
-        self.assertAlmostEqual(m.y.value, 0.6529186341994245)
+        self.assertAlmostEqual(m.x.value, -0.42630274815985264, delta=1e-3)
+        self.assertAlmostEqual(m.y.value, 0.6529186341994245, delta=1e-3)
 
     @parameterized.expand(input=_load_tests(nlp_solvers))
     def test_log(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):

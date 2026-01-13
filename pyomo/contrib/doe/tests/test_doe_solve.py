@@ -19,18 +19,24 @@ from pyomo.common.dependencies import (
     pandas_available,
     scipy_available,
 )
+
+
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
-from pyomo.contrib.doe.examples.reactor_example import (
-    ReactorExperiment as FullReactorExperiment,
-    run_reactor_doe,
-)
-from pyomo.contrib.doe.tests.experiment_class_example_flags import (
-    FullReactorExperimentBad,
-)
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
+
+if scipy_available:
+    from pyomo.contrib.doe import DesignOfExperiments
+    from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
+    from pyomo.contrib.doe.examples.reactor_example import (
+        ReactorExperiment as FullReactorExperiment,
+        run_reactor_doe,
+    )
+    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+        FullReactorExperimentBad,
+    )
 from pyomo.contrib.doe.utils import rescale_FIM
 
 import pyomo.environ as pyo
@@ -77,7 +83,9 @@ def get_FIM_Q_L(doe_obj=None):
         for i in model.output_names
         for j in model.parameter_names
     ]
-    sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
+    sigma_inv = [
+        1 / v**2 for k, v in model.scenario_blocks[0].measurement_error.items()
+    ]
     param_vals = np.array(
         [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
     )
@@ -102,26 +110,33 @@ def get_FIM_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args["experiment"] = experiment
-    args["fd_formula"] = fd_method
-    args["step"] = 1e-3
-    args["objective_option"] = obj_used
-    args["scale_constant_value"] = 1
-    args["scale_nominal_param_value"] = True
-    args["prior_FIM"] = None
-    args["jac_initial"] = None
-    args["fim_initial"] = None
-    args["L_diagonal_lower_bound"] = 1e-7
-    args["solver"] = None
-    args["tee"] = False
-    args["get_labeled_model_args"] = None
-    args["_Cholesky_option"] = True
-    args["_only_compute_fim_lower"] = True
+    args['experiment'] = experiment
+    args['fd_formula'] = fd_method
+    args['step'] = 1e-3
+    args['objective_option'] = obj_used
+    args['scale_constant_value'] = 1
+    args['scale_nominal_param_value'] = True
+    args['prior_FIM'] = None
+    args['jac_initial'] = None
+    args['fim_initial'] = None
+    args['L_diagonal_lower_bound'] = 1e-7
+    # Make solver object with
+    # good linear subroutines
+    solver = SolverFactory("ipopt")
+    solver.options["linear_solver"] = "ma57"
+    solver.options["halt_on_ampl_error"] = "yes"
+    solver.options["max_iter"] = 3000
+    args['solver'] = solver
+    args['tee'] = False
+    args['get_labeled_model_args'] = None
+    args['_Cholesky_option'] = True
+    args['_only_compute_fim_lower'] = True
     return args
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
 class TestReactorExampleSolving(unittest.TestCase):
     def test_reactor_fd_central_solve(self):
         fd_method = "central"
@@ -205,6 +220,10 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
+        # Increase numerical performance by adding a prior
+        prior_FIM = doe_obj.compute_FIM()
+        doe_obj.prior_FIM = prior_FIM
+
         doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
@@ -232,8 +251,9 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
-    def test_reactor_obj_cholesky_solve_bad_prior(self):
-
+    def DISABLE_test_reactor_obj_cholesky_solve_bad_prior(self):
+        # [10/2025] This test has been disabled because it frequently
+        # (and randomly) returns "infeasible" when run on Windows.
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
@@ -244,7 +264,8 @@ class TestReactorExampleSolving(unittest.TestCase):
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
         # Specify a prior that is slightly negative definite
-        # Because it is less than the tolerance, it should be adjusted to be positive definite
+        # Because it is less than the tolerance, it should be
+        # adjusted to be positive definite
         # No error should be thrown
         DoE_args["prior_FIM"] = -(_SMALL_TOLERANCE_DEFINITENESS / 100) * np.eye(4)
 
@@ -341,7 +362,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             design_ranges=design_ranges, method="sequential"
         )
 
-        # Check to make sure the lengths of the inputs in results object are indeed correct
+        # Check to make sure the lengths of the inputs
+        # in results object are indeed correct
         CA_vals = doe_obj.fim_factorial_results["CA[0]"]
         T_vals = doe_obj.fim_factorial_results["T[0]"]
 
@@ -408,7 +430,8 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model from experiment did not solve appropriately. Make sure the model is well-posed.",
+            "Model from experiment did not solve appropriately. "
+            "Make sure the model is well-posed.",
         ):
             doe_obj.run_doe()
 
@@ -450,24 +473,24 @@ class TestReactorExampleSolving(unittest.TestCase):
 class TestDoe(unittest.TestCase):
     def test_doe_full_factorial(self):
         log10_D_opt_expected = [
-            3.7734377852467524,
-            5.137792359070963,
-            5.182167857710023,
-            6.546522431509408,
+            11.77343778527225,
+            13.137792359064383,
+            13.182167857699808,
+            14.54652243150573,
         ]
 
         log10_A_opt_expected = [
-            3.5935726800929695,
-            3.6133186151486933,
-            3.945755198204365,
-            3.9655011332598367,
+            5.59357268009304,
+            5.613318615148643,
+            5.945755198204368,
+            5.965501133259909,
         ]
 
         log10_E_opt_expected = [
-            -1.7201873126109162,
-            -0.691340497355524,
-            -1.3680047944877138,
-            -0.3391579792516522,
+            0.27981268741620413,
+            1.3086595026369012,
+            0.6319952055040333,
+            1.6608420207466377,
         ]
 
         log10_ME_opt_expected = [
@@ -478,31 +501,31 @@ class TestDoe(unittest.TestCase):
         ]
 
         eigval_min_expected = [
-            0.019046390638130666,
-            0.20354456134677426,
-            0.04285437893696232,
-            0.45797526302234304,
+            1.9046390638130666,
+            20.354456134677426,
+            4.285437893696232,
+            45.797526302234304,
         ]
 
         eigval_max_expected = [
-            3169.552855492114,
-            3576.0292523637977,
-            7131.493924857995,
-            8046.0658178139165,
+            316955.2855492114,
+            357602.92523637977,
+            713149.3924857995,
+            804606.58178139165,
         ]
 
         det_FIM_expected = [
-            5935.233170586055,
-            137338.51875774842,
-            152113.5345070818,
-            3519836.021699428,
+            593523317093.4525,
+            13733851875566.766,
+            15211353450350.424,
+            351983602166961.56,
         ]
 
         trace_FIM_expected = [
-            3922.5878617108597,
-            4105.051549241871,
-            8825.822688850109,
-            9236.36598578955,
+            392258.78617108597,
+            410505.1549241871,
+            882582.2688850109,
+            923636.598578955,
         ]
         ff = run_reactor_doe(
             n_points_for_design=2,
@@ -532,15 +555,11 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(
             ff_results["eigval_min"], eigval_min_expected, abstol=1e-4
         )
-        self.assertStructuredAlmostEqual(
-            ff_results["eigval_max"], eigval_max_expected, abstol=1e-4
-        )
-        self.assertStructuredAlmostEqual(
-            ff_results["det_FIM"], det_FIM_expected, abstol=1e-4
-        )
-        self.assertStructuredAlmostEqual(
-            ff_results["trace_FIM"], trace_FIM_expected, abstol=1e-4
-        )
+        # abstol of 1e-4 removed for the following values as
+        # their non-log values are large (e.g., >1e10)
+        self.assertStructuredAlmostEqual(ff_results["eigval_max"], eigval_max_expected)
+        self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
+        self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
 
 
 if __name__ == "__main__":

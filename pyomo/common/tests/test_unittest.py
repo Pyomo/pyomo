@@ -12,6 +12,7 @@
 import datetime
 import multiprocessing
 import os
+import pickle
 import time
 
 import pyomo.common.unittest as unittest
@@ -191,23 +192,24 @@ class TestPyomoUnittest(unittest.TestCase):
         time.sleep(1)
         self.assertEqual(0, 0)
 
-    @unittest.timeout(10)
-    def test_timeout_skip(self):
-        if TestPyomoUnittest.test_timeout_skip.skip:
+    def timeout_skip(self, skip):
+        if skip:
             self.skipTest("Skipping this test")
         self.assertEqual(0, 1)
 
-    test_timeout_skip.skip = True
+    @unittest.timeout(10)
+    def test_timeout_skip(self):
+        self.timeout_skip(True)
 
-    def test_timeout_skip_fails(self):
-        try:
-            with self.assertRaisesRegex(unittest.SkipTest, r"Skipping this test"):
-                self.test_timeout_skip()
-            TestPyomoUnittest.test_timeout_skip.skip = False
-            with self.assertRaisesRegex(AssertionError, r"0 != 1"):
-                self.test_timeout_skip()
-        finally:
-            TestPyomoUnittest.test_timeout_skip.skip = True
+    @unittest.timeout(10)
+    def test_timeout_skip_pass(self):
+        with self.assertRaisesRegex(AssertionError, r"0 != 1"):
+            self.timeout_skip(False)
+
+    @unittest.expectedFailure
+    @unittest.timeout(10)
+    def test_timeout_skip_fail(self):
+        self.timeout_skip(False)
 
     @unittest.timeout(10)
     def bound_function(self):
@@ -218,7 +220,9 @@ class TestPyomoUnittest(unittest.TestCase):
             self.bound_function()
             return
         with LoggingIntercept() as LOG:
-            with self.assertRaises((TypeError, EOFError, AttributeError)):
+            with self.assertRaises(
+                (TypeError, EOFError, AttributeError, pickle.PicklingError)
+            ):
                 self.bound_function()
         self.assertIn("platform that does not support 'fork'", LOG.getvalue())
         self.assertIn("one of its arguments is not serializable", LOG.getvalue())
