@@ -742,6 +742,7 @@ class ModelChangeDetector:
     def _check_for_unknown_active_components(self):
         for ctype in self._model.collect_ctypes(active=True, descend_into=True):
             if not issubclass(ctype, ActiveComponent):
+                # strangly, this is needed to skip things like Param
                 continue
             if ctype in self._known_active_ctypes:
                 continue
@@ -910,7 +911,7 @@ class ModelChangeDetector:
             reason = Reason.no_change
             if _fixed != fixed:
                 reason |= Reason.fixed
-            elif _fixed and (value != _value):
+            elif (_fixed or fixed) and (value != _value):
                 reason |= Reason.value
             if lb is not _lb or ub is not _ub:
                 reason |= Reason.bounds
