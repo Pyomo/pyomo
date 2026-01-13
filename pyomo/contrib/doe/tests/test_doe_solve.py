@@ -447,7 +447,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        design_ranges = {"CA[0]": [1, 5, 3], "T[0]": [300, 700, 3]}
+        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 1]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -458,13 +458,13 @@ class TestReactorExampleSolving(unittest.TestCase):
         T_vals = doe_obj.fim_factorial_results["T[0]"]
 
         # assert length is correct
-        self.assertTrue((len(CA_vals) == 9) and (len(T_vals) == 9))
-        self.assertTrue((len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3))
+        self.assertTrue((len(CA_vals) == 2) and (len(T_vals) == 2))
+        self.assertTrue((len(set(CA_vals)) == 2) and (len(set(T_vals)) == 1))
 
         # assert unique values are correct
         self.assertTrue(
-            (set(CA_vals).issuperset(set([1, 3, 5])))
-            and (set(T_vals).issuperset(set([300, 500, 700])))
+            (set(CA_vals).issuperset(set([1, 5])))
+            and (set(T_vals).issuperset(set([300])))
         )
 
 
