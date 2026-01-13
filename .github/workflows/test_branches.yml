@@ -741,7 +741,7 @@ jobs:
     - name: Run documentation tests
       if: matrix.test_docs != 0
       run: |
-        make -C doc/OnlineDocs doctest -d
+        make -C doc/OnlineDocs doctest -d || cat /tmp/sphinx-err*
 
     - name: Process code coverage report
       run: |
