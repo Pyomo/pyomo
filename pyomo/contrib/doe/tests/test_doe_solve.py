@@ -8,9 +8,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from glob import glob
 import json
 import logging
-import os.path
+import os, os.path
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -592,12 +593,32 @@ class TestDoe(unittest.TestCase):
 @unittest.skipIf(not pandas_available, "pandas is not available")
 @unittest.skipIf(not matplotlib_available, "Matplotlib is not available")
 class TestDoEFactorialFigure(unittest.TestCase):
-    def test_trace_plot_runs_without_error(self):
+    def test_doe_1D_plotting_function(self):
+        # For 1D plotting we will use the Rooney-Biegler example in parmest/examples
         plt = matplotlib.pyplot
+        import glob
+
         """
         Test that the plotting function executes without error and
         creates a matplotlib figure. We do NOT test visual correctness.
         """
+
+        # File prefix for saved plots
+        # Define prefixes for the two runs
+        prefix_linear = "rooney_linear"
+        prefix_log = "rooney_log"
+
+        # Clean up any existing plot files from test runs
+        def cleanup_files():
+            files_to_remove = glob.glob("rooney_*.png")
+            for f in files_to_remove:
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+            plt.close('all')
+
+        self.addCleanup(cleanup_files)
 
         fd_method = "central"
         obj_used = "trace"
@@ -607,28 +628,99 @@ class TestDoEFactorialFigure(unittest.TestCase):
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj.create_doe_model()
-        doe_obj.create_objective_function()
         doe_obj.compute_FIM_full_factorial(design_ranges={'hour': [0, 10, 5]})
 
-        # Call the plotting function
-        # Replace this with your actual plotting function
-        fig = doe_obj.draw_factorial_figure(
+        # Call the plotting function for linear scale
+        doe_obj.draw_factorial_figure(
             sensitivity_design_variables=['hour'],
             fixed_design_variables={},
             log_scale=False,
-            figure_file_name="rooney_biegler",
+            figure_file_name=prefix_linear,
         )
 
-        # If the function returns a figure
-        if fig is not None:
-            self.assertIsInstance(fig, plt.Figure)
+        # Call the plotting function for log scale
+        doe_obj.draw_factorial_figure(
+            sensitivity_design_variables=['hour'],
+            fixed_design_variables={},
+            log_scale=True,
+            figure_file_name=prefix_log,
+        )
 
-        # Otherwise, ensure a figure was created
-        self.assertGreater(len(plt.get_fignums()), 0)
+        # Verify that the linear scale plots were also created
+        # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
+        expected_plot_linear = glob.glob(f"{prefix_linear}*.png")
+        self.assertEqual(
+            len(expected_plot_linear),
+            5,
+            f"Expected 5 plot files, but found {len(expected_plot_linear)}. Files found: {expected_plot_linear}",
+        )
 
-        # Cleanup
-        plt.close("all")
+        # Verify that the log scale plots were also created
+        expected_plot_log = glob.glob(f"{prefix_log}*.png")
+        self.assertEqual(
+            len(expected_plot_log),
+            5,
+            f"Expected 5 plot files, but found {len(expected_plot_log)}. Files found: {expected_plot_log}",
+        )
+
+    def test_doe_2D_plotting_function(self):
+        # For 2D plotting we will use the Rooney-Biegler example in doe/examples
+        plt = matplotlib.pyplot
+        import glob
+
+        # File prefix for saved plots
+        prefix_linear = "reactor_linear"
+        prefix_log = "reactor_log"
+
+        # Clean up any existing plot files from test runs
+        def cleanup_files():
+            files_to_remove = glob.glob("reactor_*.png")
+            for f in files_to_remove:
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+            plt.close('all')
+
+        self.addCleanup(cleanup_files)
+
+        # Run the reactor example
+        run_reactor_doe(
+            n_points_for_design=3,
+            compute_FIM_full_factorial=True,
+            plot_factorial_results=True,
+            save_plots=True,
+            figure_file_name=prefix_linear,
+            log_scale=False,
+            run_optimal_doe=False,
+        )
+
+        # Verify that the linear scale plots were also created
+        # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
+        expected_plot_linear = glob.glob(f"{prefix_linear}*.png")
+        self.assertTrue(
+            len(expected_plot_linear) == 5,
+            f"Expected 5 plot files, but found {len(expected_plot_linear)}. Files found: {expected_plot_linear}",
+        )
+
+        # Run the reactor example with log scale
+        run_reactor_doe(
+            n_points_for_design=3,
+            compute_FIM_full_factorial=True,
+            plot_factorial_results=True,
+            save_plots=True,
+            figure_file_name=prefix_log,
+            log_scale=True,
+            run_optimal_doe=False,
+        )
+
+        # Verify that the log scale plots were also created
+        # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
+        expected_plot_log = glob.glob(f"{prefix_log}*.png")
+        self.assertTrue(
+            len(expected_plot_log) == 5,
+            f"Expected 5 plot files, but found {len(expected_plot_log)}. Files found: {expected_plot_log}",
+        )
 
 
 if __name__ == "__main__":
