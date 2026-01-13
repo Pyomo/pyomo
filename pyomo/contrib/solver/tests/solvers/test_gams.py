@@ -102,6 +102,7 @@ class TestGAMSSolutionLoader(unittest.TestCase):
 
 @unittest.skipIf(not gams_available, "The 'gams' command is not available")
 class TestGAMSInterface(unittest.TestCase):
+    # _simple_model and _run_simple_model are standalone functions to test gams execution
     def _simple_model(self, n):
         return """
             option limrow = 0;
