@@ -99,6 +99,9 @@ def _generate_autosummary_content(
                         # Sphinx >= 8.2.1
                         for field in ('config', 'events', 'registry'):
                             args[field] = l[field]
+                        if 'registry' in l:
+                            # Sphinx < 9.1
+                            args['registry'] = l['registry']
                     else:
                         # Sphinx >= 7.2
                         args['app'] = l['app']
