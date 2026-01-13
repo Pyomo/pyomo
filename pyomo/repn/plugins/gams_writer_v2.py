@@ -226,7 +226,6 @@ class GAMSWriter(object):
 
         return filename, info.symbol_map
 
-    @document_kwargs_from_configdict(CONFIG)
     def write(self, model, ostream, **options) -> GAMSWriterInfo:
         """Write a model in GMS format.
 
@@ -366,9 +365,8 @@ class _GMSWriter_impl(object):
         #
         skip_trivial_constraints = self.config.skip_trivial_constraints
         last_parent = None
-        con_list = (
-            {}
-        )  # NOTE: Save the constraint representation and write it after variables/equations declare
+        # NOTE: con_list Save the constraint representation and write it after variables/equations declare
+        con_list = {}
         for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
