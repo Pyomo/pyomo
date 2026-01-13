@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import operator
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import In
@@ -22,6 +23,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.component import ActiveComponent, ModelComponentFactory
 from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')
@@ -386,12 +388,18 @@ class Suffix(ComponentMap, ActiveComponent):
         return self.direction
 
     def _pprint(self):
+        def _data(sort):
+            data = ((str(k), v) for k, v in self._dict.values())
+            if SortComponents.SORTED_INDICES in sort:
+                data = sorted(data, key=operator.itemgetter(0))
+            return data
+
         return (
             [
                 ('Direction', str(self._direction.name)),
                 ('Datatype', getattr(self._datatype, 'name', 'None')),
             ],
-            ((str(k), v) for k, v in self._dict.values()),
+            _data,
             ("Value",),
             lambda k, v: [v],
         )
@@ -401,9 +409,6 @@ class Suffix(ComponentMap, ActiveComponent):
     # called. We can't just switch the inheritance order due to
     # complications with __setstate__
     #
-
-    def pprint(self, *args, **kwds):
-        return ActiveComponent.pprint(self, *args, **kwds)
 
     def __str__(self):
         return ActiveComponent.__str__(self)

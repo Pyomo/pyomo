@@ -765,7 +765,7 @@ class Disjunction(ActiveIndexedComponent):
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Active", self.active),
             ],
-            self.items(),
+            self.items,
             ("Disjuncts", "Active", "XOR"),
             lambda k, v: [[x.name for x in v.disjuncts], v.active, v.xor],
         )
