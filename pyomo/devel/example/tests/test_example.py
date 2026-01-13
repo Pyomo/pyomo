@@ -9,4 +9,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# Tests for pyomo.contrib.example
+#
+# Only run the tests in this package if the pyomo.devel.example package
+# has been successfully imported.
+#
+
+import pyomo.devel.example
+import pyomo.common.unittest as unittest
+
+
+class Tests(unittest.TestCase):
+    def test1(self):
+        pass
+
+
+if __name__ == "__main__":
+    unittest.main()
