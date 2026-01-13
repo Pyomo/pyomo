@@ -74,15 +74,11 @@ class TestPersistentSolverBase(unittest.TestCase):
             '_load_vars',
             'add_block',
             'add_constraints',
-            'add_parameters',
-            'add_variables',
             'api_version',
             'available',
             'is_persistent',
             'remove_block',
             'remove_constraints',
-            'remove_parameters',
-            'remove_variables',
             'set_instance',
             'set_objective',
             'solve',
@@ -104,17 +100,9 @@ class TestPersistentSolverBase(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.assertEqual(instance.set_instance(None), None)
         with self.assertRaises(NotImplementedError):
-            self.assertEqual(instance.add_variables(None), None)
-        with self.assertRaises(NotImplementedError):
-            self.assertEqual(instance.add_parameters(None), None)
-        with self.assertRaises(NotImplementedError):
             self.assertEqual(instance.add_constraints(None), None)
         with self.assertRaises(NotImplementedError):
             self.assertEqual(instance.add_block(None), None)
-        with self.assertRaises(NotImplementedError):
-            self.assertEqual(instance.remove_variables(None), None)
-        with self.assertRaises(NotImplementedError):
-            self.assertEqual(instance.remove_parameters(None), None)
         with self.assertRaises(NotImplementedError):
             self.assertEqual(instance.remove_constraints(None), None)
         with self.assertRaises(NotImplementedError):
