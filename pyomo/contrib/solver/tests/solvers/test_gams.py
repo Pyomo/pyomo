@@ -217,6 +217,7 @@ class TestGAMSInterface(unittest.TestCase):
             self.assertTrue(result.returncode == 0)
             self.assertTrue(os.path.isfile(filename))
 
+
 @unittest.skipIf(not gams_available, "The 'gams' command is not available")
 class TestGAMS(unittest.TestCase):
     def create_model(self):
