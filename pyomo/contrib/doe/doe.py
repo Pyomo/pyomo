@@ -30,6 +30,7 @@ from itertools import permutations, product
 import json
 import logging
 import math
+import warnings
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -79,6 +80,7 @@ class DesignOfExperiments:
     def __init__(
         self,
         experiment=None,
+        experiment_list=None,
         fd_formula="central",
         step=1e-3,
         objective_option="determinant",
@@ -108,14 +110,19 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        experiment:
-            Experiment object that holds the model and labels all the components. The
-            object should have a ``get_labeled_model`` where a model is returned with
+        experiment_list:
+            List of Experiment objects that hold the model and labels all the components.
+            Must be a list type. For single experiments, use: experiment_list=[experiment].
+            Each object should have a ``get_labeled_model`` where a model is returned with
             the following labeled sets:
 
               - ``unknown_parameters``,
               - ``experimental_inputs``,
               - ``experimental_outputs``
+
+        experiment:
+            **DEPRECATED** - Use 'experiment_list' instead. This parameter will be removed
+            in a future version. When provided, a DeprecationWarning is issued.
 
         fd_formula:
             Finite difference formula for computing the sensitivity matrix. Must be
@@ -186,17 +193,45 @@ class DesignOfExperiments:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
 
         """
-        if experiment is None:
-            raise ValueError("Experiment object must be provided to perform DoE.")
+        # Handle backward compatibility - experiment -> experiment_list
+        if experiment is not None:
+            warnings.warn(
+                "The 'experiment' parameter is deprecated and will be removed in a future version. "
+                "Please use 'experiment_list' instead. For single experiments use: experiment_list=[experiment]",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if experiment_list is None:
+                experiment_list = [experiment]
 
-        # Check if the Experiment object has callable ``get_labeled_model`` function
-        if not hasattr(experiment, "get_labeled_model"):
+        # Validate experiment_list is provided
+        if experiment_list is None:
             raise ValueError(
-                "The experiment object must have a ``get_labeled_model`` function"
+                "The 'experiment_list' parameter must be provided. "
+                "For single experiments use: experiment_list=[experiment]"
             )
 
-        # Set the experiment object from the user
-        self.experiment = experiment
+        # Validate experiment_list is a list type
+        if not isinstance(experiment_list, list):
+            raise TypeError(
+                f"The 'experiment_list' parameter must be a list, got {type(experiment_list).__name__}. "
+                "For single experiments use: experiment_list=[experiment]"
+            )
+
+        # Validate list is not empty
+        if len(experiment_list) == 0:
+            raise ValueError("The 'experiment_list' cannot be empty.")
+
+        # Check each experiment has get_labeled_model method
+        for idx, exp in enumerate(experiment_list):
+            if not hasattr(exp, "get_labeled_model"):
+                raise ValueError(
+                    f"Experiment at index {idx} in 'experiment_list' must have a "
+                    f"'get_labeled_model' method"
+                )
+
+        # Store experiment_list
+        self.experiment_list = experiment_list
 
         # Set the finite difference and subsequent step size
         self.fd_formula = FiniteDifferenceStep(fd_formula)
@@ -537,7 +572,7 @@ class DesignOfExperiments:
             with open(results_file, "w") as file:
                 json.dump(self.results, file)
 
-    def optimize_experiment(
+    def optimize_experiments(
         self,
         n_exp,
         parameter_scenarios=None,
@@ -603,9 +638,11 @@ class DesignOfExperiments:
         computed FIM: 2D numpy array of the FIM
         """
         if model is None:
-            self.compute_FIM_model = self.experiment.get_labeled_model(
-                **self.get_labeled_model_args
-            ).clone()
+            self.compute_FIM_model = (
+                self.experiment_list[0]
+                .get_labeled_model(**self.get_labeled_model_args)
+                .clone()
+            )
             model = self.compute_FIM_model
         else:
             # TODO: Add safe naming when a model is passed by the user.
@@ -662,9 +699,11 @@ class DesignOfExperiments:
         """
         # Build a single model instance
         if model is None:
-            self.compute_FIM_model = self.experiment.get_labeled_model(
-                **self.get_labeled_model_args
-            ).clone()
+            self.compute_FIM_model = (
+                self.experiment_list[0]
+                .get_labeled_model(**self.get_labeled_model_args)
+                .clone()
+            )
             model = self.compute_FIM_model
 
         # Create suffix to keep track of parameter scenarios
@@ -823,9 +862,11 @@ class DesignOfExperiments:
         # Remake compute_FIM_model if model is None.
         # compute_FIM_model needs to be the right version for function to work.
         if model is None:
-            self.compute_FIM_model = self.experiment.get_labeled_model(
-                **self.get_labeled_model_args
-            ).clone()
+            self.compute_FIM_model = (
+                self.experiment_list[0]
+                .get_labeled_model(**self.get_labeled_model_args)
+                .clone()
+            )
             model = self.compute_FIM_model
 
         # add zero (dummy/placeholder) objective function
@@ -1211,9 +1252,11 @@ class DesignOfExperiments:
             model = self.model
 
         # Generate initial scenario to populate unknown parameter values
-        model.base_model = self.experiment.get_labeled_model(
-            **self.get_labeled_model_args
-        ).clone()
+        model.base_model = (
+            self.experiment_list[0]
+            .get_labeled_model(**self.get_labeled_model_args)
+            .clone()
+        )
 
         # Check the model that labels are correct
         self.check_model_labels(model=model.base_model)
@@ -1908,9 +1951,11 @@ class DesignOfExperiments:
         self.logger.info("Beginning Full Factorial Design.")
 
         # Make new model for factorial design
-        self.factorial_model = self.experiment.get_labeled_model(
-            **self.get_labeled_model_args
-        ).clone()
+        self.factorial_model = (
+            self.experiment_list[0]
+            .get_labeled_model(**self.get_labeled_model_args)
+            .clone()
+        )
         model = self.factorial_model
 
         # Permute the inputs to be aligned with the experiment input indices
