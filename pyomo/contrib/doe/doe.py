@@ -537,6 +537,46 @@ class DesignOfExperiments:
             with open(results_file, "w") as file:
                 json.dump(self.results, file)
 
+    def optimize_experiment(
+        self,
+        n_exp,
+        parameter_scenarios=None,
+        stochastic_objective=None,
+        results_file=None,
+    ):
+        """
+        Optimize multiple experiments using either a sequential (greedy)
+        approach or a simultaneous (optimal) approach.
+
+        Parameters
+        ----------
+        n_exp: number of experiments to optimize
+        parameter_scenarios: list of parameter scenarios to consider for
+                             the multi-experiment optimization
+        stochastic_objective: function that takes in the FIM and
+                                returns a scalar objective value
+        results_file: string name of the file path to save the results
+                        to in the form of a .json file
+        """
+        if parameter_scenarios is None:
+            n_scenarios = 1  # number of scenarios
+        else:
+            # TODO: Add support for parameter scenarios when incorporating uncertainty
+            raise NotImplementedError(
+                "Parameter scenarios for multi-experiment optimization "
+                "not yet supported."
+            )
+        # Add parameter scenario blocks to the model
+        self.model.scenario_blocks = pyo.Block(n_scenarios)
+
+        # Add experiment(s) for each scenario
+        s_prev = 0
+        for s in range(n_scenarios):
+            self.model.scenario_blocks[s].exp_blocks = pyo.Block(n_exp)
+            # We are assuming that the user will provide the initialized experiments
+            for k in range(n_exp):
+                pass
+
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
         raise NotImplementedError("Multiple experiment optimization not yet supported.")
