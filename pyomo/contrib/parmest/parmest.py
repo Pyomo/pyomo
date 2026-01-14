@@ -1143,14 +1143,29 @@ class Estimator:
                     f"Parameter {name} estimate differs between blocks: "
                     f"{theta_estimates[name]} vs {val_block1}"
                 )
+        # Return theta estimates as a pandas Series
         theta_estimates = pd.Series(theta_estimates)
 
-        # Calculate covariance if requested
+        # Calculate covariance if requested using cov_est()
         if calc_cov is not NOTSET and calc_cov:
+
+            assert cov_n is not NOTSET, (
+                "The number of data points 'cov_n' must be provided to calculate "
+                "the covariance matrix."
+            )
+            assert isinstance(cov_n, int), (
+                f"Expected an integer for the 'cov_n' argument. "
+                f"Got {type(cov_n)}."
+            )
+            assert cov_n == self.number_exp, (
+                "The number of data points 'cov_n' must equal the total number "
+                "of data points across all experiments."
+            )
             
             cov = self.cov_est()
 
             return obj_value, theta_estimates, cov
+        
         else:
 
             return obj_value, theta_estimates
