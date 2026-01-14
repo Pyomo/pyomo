@@ -14,6 +14,7 @@ that plays nicely with sphinx.ext.autosummary.
 
 """
 import enum
+import functools
 import inspect
 import re
 import sphinx.locale
@@ -228,9 +229,79 @@ class EnumMemberDocumenter(autodoc.AttributeDocumenter):
         super().add_directive_header(sig.split(" = ", 1)[0].strip())
 
 
+def _best_object_type_for_member(
+    _botfm,
+    _app,
+    member: Any,
+    member_name: str,
+    is_attr: bool,
+    *,
+    parent_obj_type: str,
+    parent_props,
+):
+    """Monkey patch for _best_object_type_for_member in Sphinx>=9.1
+
+    The revised autodoc implementation moved away from class-based
+    documenters.  We can still make autosummary work with documenter
+    extensions, but we must monkey-patch additional utilities within
+    autosummary to explicitly query (and resolve) documenters fro the
+    registery (the implementation from autodoc is a hard-coded if tree
+    and ignores the registry).
+
+    """
+
+    name = _botfm(
+        member,
+        member_name,
+        is_attr,
+        parent_obj_type=parent_obj_type,
+        parent_props=parent_props,
+    )
+    if name is None:
+        best = (-float('inf'), None)
+    else:
+        cls = _app.registry.documenters[name]
+        best = (getattr(cls, 'priority', 0), name)
+    for name, cls in _app.registry.documenters.items():
+        priority = getattr(cls, 'priority', 0)
+        if (
+            cls.can_document_member(member, member_name, is_attr, parent_obj_type)
+            and priority > best[0]
+        ):
+            best = (priority, name)
+    return best[1]
+
+
+def _load_object_by_name(_loader, name, objtype, **kwargs):
+    """Monkey patch for _load_object_by_name in Sphinx>=9.1.
+
+    The revised autodoc implementation moved away from class-based
+    documenters.  We can still make autosummary work with documenter
+    extensions, but we must monkey-patch additional utilities within
+    autosummary to map the new onjtypes back to the "standard" set.
+
+    """
+
+    if objtype == 'enum':
+        objtype = 'class'
+    if objtype == 'enum_member':
+        objtype = 'attribute'
+    return _loader(name=name, objtype=objtype, **kwargs)
+
+
 def setup(app: Sphinx) -> Dict[str, Any]:
     app.setup_extension('sphinx.ext.autodoc')
     app.setup_extension('sphinx.ext.autosummary')
+
+    app.add_autodocumenter(EnumMemberDocumenter)
+    app.add_autodocumenter(EnumDocumenter)
+
+    app.add_directive_to_domain("py", "enum", PyClasslike)
+    app.add_role_to_domain("py", "enum", PyXRefRole())
+    app.registry.domains["py"].object_types["enum"] = ObjType(
+        sphinx.locale._("enum"), "enum", "class", "obj"
+    )
+
     # Overwrite key parts of autosummary so that our version of autoenum
     # plays nicely with it.  We have tested this with Sphinx>7.2.
     # Notably, 7.1.2 does NOT work (and cannot be easily made to work)
@@ -248,14 +319,23 @@ def setup(app: Sphinx) -> Dict[str, Any]:
             "(possible incompatible Sphinx version)."
         )
     autosummary.mangle_signature = _mangle_signature
+    # Additional overrides needed beginning in Sphinx 9.1.  The
+    # try-except blocks support previous Sphinx versions.
+    try:
+        from sphinx.ext.autodoc._dynamic._member_finder import (
+            _best_object_type_for_member as _botfm,
+        )
 
-    app.add_autodocumenter(EnumMemberDocumenter)
-    app.add_autodocumenter(EnumDocumenter)
+        autosummary._best_object_type_for_member = functools.partial(
+            _best_object_type_for_member, _botfm, app
+        )
+    except ImportError:
+        pass
+    try:
+        from sphinx.ext.autodoc._dynamic._loader import _load_object_by_name as _l
 
-    app.add_directive_to_domain("py", "enum", PyClasslike)
-    app.add_role_to_domain("py", "enum", PyXRefRole())
-    app.registry.domains["py"].object_types["enum"] = ObjType(
-        sphinx.locale._("enum"), "enum", "class", "obj"
-    )
+        autosummary._load_object_by_name = functools.partial(_load_object_by_name, _l)
+    except ImportError:
+        pass
 
     return {"version": '0.0.0', "parallel_read_safe": True, "parallel_write_safe": True}
