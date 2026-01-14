@@ -1414,14 +1414,9 @@ class Estimator:
         if method == CovarianceMethod.reduced_hessian.value:
             # compute the inverse reduced hessian to be used
             # in the "reduced_hessian" method
-            # parmest makes the fitted parameters stage 1 variables
-            ind_vars = []
-            # @Reviewers: Can we instead load the get_labeled_model function here? And then extract
-            # the unknown parameters directly from that model?
+            # retrieve the independent variables (i.e., estimated parameters)
+            ind_vars = self.estimated_theta.keys()
 
-            for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
-                ind_vars.append(Var)
-            # calculate the reduced hessian
             (solve_result, inv_red_hes) = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
                     self.ef_instance,
