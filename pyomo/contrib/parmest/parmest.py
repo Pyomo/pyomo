@@ -1146,6 +1146,29 @@ class Estimator:
         # Return theta estimates as a pandas Series
         theta_estimates = pd.Series(theta_estimates)
 
+        # Extract return values if requested
+        if return_values is not None and len(return_values) > 0:
+            var_values = []
+            # In the scenario blocks structure, exp_scenarios is an IndexedBlock
+            exp_blocks = self.ef_instance.exp_scenarios.values()
+            for exp_i in exp_blocks:
+                vals = {}
+                for var in return_values:
+                    exp_i_var = exp_i.find_component(str(var))
+                    if exp_i_var is None:
+                        continue
+                    if type(exp_i_var) == ContinuousSet:
+                        temp = list(exp_i_var)
+                    else:
+                        temp = [pyo.value(_) for _ in exp_i_var.values()]
+                    if len(temp) == 1:
+                        vals[var] = temp[0]
+                    else:
+                        vals[var] = temp
+                if len(vals) > 0:
+                    var_values.append(vals)
+            var_values = pd.DataFrame(var_values)
+
         # Calculate covariance if requested using cov_est()
         if calc_cov is not NOTSET and calc_cov:
 
@@ -1167,7 +1190,13 @@ class Estimator:
             )
             
             cov = self.cov_est()
-            return obj_value, theta_estimates, cov
+
+            if return_values is not None and len(return_values) > 0:
+                return obj_value, theta_estimates, var_values, cov
+            else:
+                return obj_value, theta_estimates, cov
+        if return_values is not None and len(return_values) > 0:
+            return obj_value, theta_estimates, var_values
         else:
             return obj_value, theta_estimates
 
