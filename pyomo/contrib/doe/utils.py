@@ -141,6 +141,8 @@ def compute_FIM_metrics(FIM):
 
     det_FIM : float
         Determinant of the FIM.
+    trace_cov : float
+        Trace of the covariance matrix.
     trace_FIM : float
         Trace of the FIM.
     E_vals : numpy.ndarray
@@ -151,6 +153,8 @@ def compute_FIM_metrics(FIM):
         log10(D-optimality) metric.
     A_opt : float
         log10(A-optimality) metric.
+    pseudo_A_opt : float
+        log10(trace(FIM)) metric.
     E_opt : float
         log10(E-optimality) metric.
     ME_opt : float
@@ -164,8 +168,12 @@ def compute_FIM_metrics(FIM):
     det_FIM = np.linalg.det(FIM)
     D_opt = np.log10(det_FIM)
 
+    # Trace of FIM is the pseudo A-optimality, not the proper definition of A-optimality,
+    # The trace of covariance is the proper definition of A-optimality
     trace_FIM = np.trace(FIM)
-    A_opt = np.log10(trace_FIM)
+    pseudo_A_opt = np.log10(trace_FIM)
+    trace_cov = np.trace(np.linalg.pinv(FIM))
+    A_opt = np.log10(trace_cov)
 
     E_vals, E_vecs = np.linalg.eig(FIM)
     E_ind = np.argmin(E_vals.real)  # index of smallest eigenvalue
@@ -185,7 +193,18 @@ def compute_FIM_metrics(FIM):
 
     ME_opt = np.log10(np.linalg.cond(FIM))
 
-    return det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
+    return (
+        det_FIM,
+        trace_cov,
+        trace_FIM,
+        E_vals,
+        E_vecs,
+        D_opt,
+        A_opt,
+        pseudo_A_opt,
+        E_opt,
+        ME_opt,
+    )
 
 
 # Standalone Function for user to calculate FIM metrics directly without using the class
@@ -203,6 +222,8 @@ def get_FIM_metrics(FIM):
 
     "Determinant of FIM" : float
         determinant of the FIM
+    "Trace of cov" : float
+        trace of the covariance matrix
     "Trace of FIM" : float
         trace of the FIM
     "Eigenvalues" : numpy.ndarray
@@ -213,23 +234,36 @@ def get_FIM_metrics(FIM):
         log10(D-optimality) metric
     "log10(A-Optimality)" : float
         log10(A-optimality) metric
+    "log10(Pseudo A-Optimality)" : float
+        log10(trace(FIM)) metric
     "log10(E-Optimality)" : float
         log10(E-optimality) metric
     "log10(Modified E-Optimality)" : float
         log10(Modified E-optimality) metric
     """
 
-    (det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
-        compute_FIM_metrics(FIM)
-    )
+    (
+        det_FIM,
+        trace_cov,
+        trace_FIM,
+        E_vals,
+        E_vecs,
+        D_opt,
+        A_opt,
+        pseudo_A_opt,
+        E_opt,
+        ME_opt,
+    ) = compute_FIM_metrics(FIM)
 
     return {
         "Determinant of FIM": det_FIM,
+        "Trace of cov": trace_cov,
         "Trace of FIM": trace_FIM,
         "Eigenvalues": E_vals,
         "Eigenvectors": E_vecs,
         "log10(D-Optimality)": D_opt,
         "log10(A-Optimality)": A_opt,
+        "log10(Pseudo A-Optimality)": pseudo_A_opt,
         "log10(E-Optimality)": E_opt,
         "log10(Modified E-Optimality)": ME_opt,
     }

@@ -10,7 +10,8 @@
 #  ___________________________________________________________________________
 import json
 import logging
-import os.path
+import os, os.path
+from glob import glob
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -18,8 +19,13 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pandas_available,
     scipy_available,
+    attempt_import,
 )
 
+# Safely try to import matplotlib
+matplotlib, matplotlib_available = attempt_import('matplotlib')
+if matplotlib_available:
+    matplotlib.use("Agg")  # Use non-interactive backend (for CI testing purposes
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
@@ -38,6 +44,9 @@ if scipy_available:
         FullReactorExperimentBad,
     )
 from pyomo.contrib.doe.utils import rescale_FIM
+from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
+    run_rooney_biegler_doe,
+)
 
 import pyomo.environ as pyo
 
@@ -140,7 +149,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 class TestReactorExampleSolving(unittest.TestCase):
     def test_reactor_fd_central_solve(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -185,7 +194,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     def test_reactor_fd_backward_solve(self):
         fd_method = "backward"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -544,7 +553,7 @@ class TestDoe(unittest.TestCase):
             ff_results["log10 D-opt"], log10_D_opt_expected, abstol=1e-4
         )
         self.assertStructuredAlmostEqual(
-            ff_results["log10 A-opt"], log10_A_opt_expected, abstol=1e-4
+            ff_results["log10 pseudo A-opt"], log10_A_opt_expected, abstol=1e-4
         )
         self.assertStructuredAlmostEqual(
             ff_results["log10 E-opt"], log10_E_opt_expected, abstol=1e-4
@@ -560,6 +569,155 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(ff_results["eigval_max"], eigval_max_expected)
         self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
         self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
+
+    def test_doe_A_optimality(self):
+        A_opt_value_expected = -2.2364242059539663
+        A_opt_design_value_expected = 9.999955457176451
+
+        A_opt_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
+            "optimization"
+        ]["A"]["value"]
+        A_opt_design_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
+            "optimization"
+        ]["A"]["design"][0]
+
+        self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
+        print("A optimal design value:", A_opt_design_value)
+        self.assertAlmostEqual(
+            A_opt_design_value, A_opt_design_value_expected, places=2
+        )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
+@unittest.skipIf(not matplotlib_available, "Matplotlib is not available")
+class TestDoEFactorialFigure(unittest.TestCase):
+    def test_doe_1D_plotting_function(self):
+        # For 1D plotting we will use the Rooney-Biegler example in parmest/examples
+        plt = matplotlib.pyplot
+        """
+        Test that the plotting function executes without error and
+        creates a matplotlib figure. We do NOT test visual correctness.
+        """
+
+        # File prefix for saved plots
+        # Define prefixes for the two runs
+        prefix_linear = "rooney_linear"
+        prefix_log = "rooney_log"
+
+        # Clean up any existing plot files from test runs
+        def cleanup_files():
+            files_to_remove = glob("rooney_*.png")
+            for f in files_to_remove:
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+            plt.close('all')
+
+        self.addCleanup(cleanup_files)
+
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        doe_obj.compute_FIM_full_factorial(design_ranges={'hour': [0, 10, 5]})
+
+        # Call the plotting function for linear scale
+        doe_obj.draw_factorial_figure(
+            sensitivity_design_variables=['hour'],
+            fixed_design_variables={},
+            log_scale=False,
+            figure_file_name=prefix_linear,
+        )
+
+        # Call the plotting function for log scale
+        doe_obj.draw_factorial_figure(
+            sensitivity_design_variables=['hour'],
+            fixed_design_variables={},
+            log_scale=True,
+            figure_file_name=prefix_log,
+        )
+
+        # Verify that the linear scale plots were also created
+        # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
+        expected_plot_linear = glob(f"{prefix_linear}*.png")
+        self.assertEqual(
+            len(expected_plot_linear),
+            5,
+            f"Expected 5 plot files, but found {len(expected_plot_linear)}. Files found: {expected_plot_linear}",
+        )
+
+        # Verify that the log scale plots were also created
+        expected_plot_log = glob(f"{prefix_log}*.png")
+        self.assertEqual(
+            len(expected_plot_log),
+            5,
+            f"Expected 5 plot files, but found {len(expected_plot_log)}. Files found: {expected_plot_log}",
+        )
+
+    def test_doe_2D_plotting_function(self):
+        # For 2D plotting we will use the Rooney-Biegler example in doe/examples
+        plt = matplotlib.pyplot
+
+        # File prefix for saved plots
+        prefix_linear = "reactor_linear"
+        prefix_log = "reactor_log"
+
+        # Clean up any existing plot files from test runs
+        def cleanup_files():
+            files_to_remove = glob("reactor_*.png")
+            for f in files_to_remove:
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+            plt.close('all')
+
+        self.addCleanup(cleanup_files)
+
+        # Run the reactor example
+        run_reactor_doe(
+            n_points_for_design=3,
+            compute_FIM_full_factorial=True,
+            plot_factorial_results=True,
+            save_plots=True,
+            figure_file_name=prefix_linear,
+            log_scale=False,
+            run_optimal_doe=False,
+        )
+
+        # Verify that the linear scale plots were also created
+        # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
+        expected_plot_linear = glob(f"{prefix_linear}*.png")
+        self.assertTrue(
+            len(expected_plot_linear) == 5,
+            f"Expected 5 plot files, but found {len(expected_plot_linear)}. Files found: {expected_plot_linear}",
+        )
+
+        # Run the reactor example with log scale
+        run_reactor_doe(
+            n_points_for_design=3,
+            compute_FIM_full_factorial=True,
+            plot_factorial_results=True,
+            save_plots=True,
+            figure_file_name=prefix_log,
+            log_scale=True,
+            run_optimal_doe=False,
+        )
+
+        # Verify that the log scale plots were also created
+        # Check that we found exactly 5 files (A, D, E, ME, pseudo_A)
+        expected_plot_log = glob(f"{prefix_log}*.png")
+        self.assertTrue(
+            len(expected_plot_log) == 5,
+            f"Expected 5 plot files, but found {len(expected_plot_log)}. Files found: {expected_plot_log}",
+        )
 
 
 if __name__ == "__main__":
