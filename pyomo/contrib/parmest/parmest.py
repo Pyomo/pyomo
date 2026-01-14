@@ -1072,10 +1072,8 @@ class Estimator:
         return model
 
     # Redesigning version of _Q_opt that uses scenario blocks
-    # @ Reviewers: Should we keep both _Q_opt and _Q_opt_blocks?
-    # Would it be preferred for _Q_opt_blocks to be used for objective at theta too?
-    # Or separate and make _Q_at_theta_blocks?
-    # Does _Q_opt_blocks need to support covariance calculation?
+    # Goal is to have _Q_opt_blocks be the main function going forward,
+    # and make work for _Q_opt and _Q_at_theta tasks.
     def _Q_opt_blocks(
         self,
         return_values=None,
@@ -1145,8 +1143,17 @@ class Estimator:
                     f"Parameter {name} estimate differs between blocks: "
                     f"{theta_estimates[name]} vs {val_block1}"
                 )
+        theta_estimates = pd.Series(theta_estimates)
 
-        return obj_value, theta_estimates
+        # Calculate covariance if requested
+        if calc_cov is not NOTSET and calc_cov:
+            
+            cov = self.cov_est()
+
+            return obj_value, theta_estimates, cov
+        else:
+
+            return obj_value, theta_estimates
 
     def _Q_opt(
         self,
