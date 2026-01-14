@@ -137,3 +137,25 @@ class HtmlTester(unittest.TestCase):
         # ...and vice versa
         for field in table_col1['Attributes']:
             self.assertNotIn(field, table_col1['Enum Members'])
+
+    def test_sphinx_issue_14223(self):
+        # Sphinx 9.1 fails to correctly generate links (confusing
+        # classes and class attributes.  See
+        # https://github.com/sphinx-doc/sphinx/issues/14223
+        with open(
+            os.path.join(htmldir, 'api', 'pyomo.common.config.IsInstance.html'), 'r'
+        ) as F:
+            root = SimplifiedElementTreeHTMLParser.parse(F.read())
+
+        content = root.find('.//section[@id="isinstance"]')
+        fields = list(content.findall('.//dl[@class="field-list simple"]//li'))
+        bases = fields[0]
+        self.assertEqual(bases.find('./p/strong').text, '*bases')
+        links = list(bases.findall('.//a'))
+        self.assertEqual(len(links), 2)
+        ref = 'https://docs.python.org/3/'
+        for a in links:
+            href = a.get('href')
+            self.assertTrue(
+                href.startswith(ref), f"{a} href='{href}' does not start with '{ref}'"
+            )
