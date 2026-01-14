@@ -366,7 +366,7 @@ class DesignOfExperiments:
         # and fix the design variables.
         model.objective.deactivate()
         model.obj_cons.deactivate()
-        for comp in model.scenario_blocks[0].experiment_inputs:
+        for comp in model.fd_scenario_blocks[0].experiment_inputs:
             comp.fix()
 
         # TODO: safeguard solver call to see if solver terminated successfully
@@ -392,7 +392,7 @@ class DesignOfExperiments:
         model.dummy_obj.deactivate()
 
         # Reactivate objective and unfix experimental design decisions
-        for comp in model.scenario_blocks[0].experiment_inputs:
+        for comp in model.fd_scenario_blocks[0].experiment_inputs:
             comp.unfix()
         model.objective.activate()
         model.obj_cons.activate()
@@ -524,23 +524,23 @@ class DesignOfExperiments:
         self.results["Sensitivity Matrix"] = self.get_sensitivity_matrix()
         self.results["Experiment Design"] = self.get_experiment_input_values()
         self.results["Experiment Design Names"] = [
-            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
-            for k in model.scenario_blocks[0].experiment_inputs
+            str(pyo.ComponentUID(k, context=model.fd_scenario_blocks[0]))
+            for k in model.fd_scenario_blocks[0].experiment_inputs
         ]
         self.results["Experiment Outputs"] = self.get_experiment_output_values()
         self.results["Experiment Output Names"] = [
-            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
-            for k in model.scenario_blocks[0].experiment_outputs
+            str(pyo.ComponentUID(k, context=model.fd_scenario_blocks[0]))
+            for k in model.fd_scenario_blocks[0].experiment_outputs
         ]
         self.results["Unknown Parameters"] = self.get_unknown_parameter_values()
         self.results["Unknown Parameter Names"] = [
-            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
-            for k in model.scenario_blocks[0].unknown_parameters
+            str(pyo.ComponentUID(k, context=model.fd_scenario_blocks[0]))
+            for k in model.fd_scenario_blocks[0].unknown_parameters
         ]
         self.results["Measurement Error"] = self.get_measurement_error_values()
         self.results["Measurement Error Names"] = [
-            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
-            for k in model.scenario_blocks[0].measurement_error
+            str(pyo.ComponentUID(k, context=model.fd_scenario_blocks[0]))
+            for k in model.fd_scenario_blocks[0].measurement_error
         ]
 
         self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
@@ -592,25 +592,117 @@ class DesignOfExperiments:
                                 returns a scalar objective value
         results_file: string name of the file path to save the results
                         to in the form of a .json file
+
+        Notes
+        -----
+        Symmetry Breaking (for n_exp > 1):
+            To prevent equivalent permutations of identical experiments, you can
+            mark a "primary" design variable using a Suffix in your experiment's
+            `label_experiment()` method:
+
+            Example::
+
+                m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.sym_break_cons[m.CA[0]] = None  # Mark CA[0] as primary variable
+
+            This will add constraints: exp[k-1].primary_var <= exp[k].primary_var
+            for k = 1, ..., n_exp-1, which breaks permutation symmetry and can
+            significantly reduce solve times.
         """
         if parameter_scenarios is None:
             n_scenarios = 1  # number of scenarios
         else:
-            # TODO: Add support for parameter scenarios when incorporating uncertainty
+            # TODO: Add parameter scenarios when incorporating parametric uncertainty
             raise NotImplementedError(
                 "Parameter scenarios for multi-experiment optimization "
                 "not yet supported."
             )
         # Add parameter scenario blocks to the model
-        self.model.scenario_blocks = pyo.Block(n_scenarios)
+        self.model.param_scenario_blocks = pyo.Block(n_scenarios)
 
         # Add experiment(s) for each scenario
-        s_prev = 0
+        # TODO: Add s_prev = 0 to handle parameter scenarios
         for s in range(n_scenarios):
-            self.model.scenario_blocks[s].exp_blocks = pyo.Block(n_exp)
+            self.model.param_scenario_blocks[s].exp_blocks = pyo.Block(n_exp)
             # We are assuming that the user will provide the initialized experiments
             for k in range(n_exp):
-                pass
+                # Generate FIM and Sensitivity expressions for each experiment
+                # !Note: Be careful whether new model is being built when k changes
+                self.create_doe_model(
+                    model=self.model.param_scenario_blocks[s].exp_blocks[k],
+                    experiment_index=k,
+                )
+                # TODO: Update the parameter scenarios for each experiment block
+                # when using uncertainty in parameters
+
+        # Add symmetry breaking constraints to prevent equivalent permutations
+        if n_exp > 1:
+            for s in range(n_scenarios):
+                # Check if user provided a symmetry breaking variable via Suffix
+                first_exp_block = (
+                    self.model.param_scenario_blocks[s]
+                    .exp_blocks[0]
+                    .fd_scenario_blocks[0]
+                )
+
+                if not hasattr(first_exp_block, 'sym_break_cons'):
+                    raise ValueError(
+                        f"n_exp={n_exp} > 1 requires symmetry breaking constraints. "
+                        "Please add a 'sym_break_cons' Suffix to your experiment model "
+                        "marking the primary design variable for ordering. "
+                        "Example: m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
+                        "m.sym_break_cons[m.my_design_var] = None"
+                    )
+
+                # Get the variable marked for symmetry breaking
+                sym_break_vars = list(first_exp_block.sym_break_cons.keys())
+
+                if len(sym_break_vars) == 0:
+                    raise ValueError(
+                        "sym_break_cons Suffix exists but no variable is marked. "
+                        "Please mark at least one design variable for symmetry breaking. "
+                        "Example: m.sym_break_cons[m.my_design_var] = None"
+                    )
+
+                # Use the first marked variable as primary
+                sym_break_var = sym_break_vars[0]
+
+                if len(sym_break_vars) > 1:
+                    self.logger.warning(
+                        f"Multiple variables marked in sym_break_cons. "
+                        f"Using {sym_break_var.name} for symmetry breaking."
+                    )
+
+                # Create ordering constraints: exp[k-1] <= exp[k]
+                for k in range(1, n_exp):
+                    # Get the variable from experiment k-1
+                    var_prev = pyo.ComponentUID(
+                        sym_break_var, context=first_exp_block
+                    ).find_component_on(
+                        self.model.param_scenario_blocks[s]
+                        .exp_blocks[k - 1]
+                        .fd_scenario_blocks[0]
+                    )
+
+                    # Get the variable from experiment k
+                    var_curr = pyo.ComponentUID(
+                        sym_break_var, context=first_exp_block
+                    ).find_component_on(
+                        self.model.param_scenario_blocks[s]
+                        .exp_blocks[k]
+                        .fd_scenario_blocks[0]
+                    )
+
+                    # Add symmetry breaking constraint
+                    con_name = f"symmetry_breaking_s{s}_exp{k}"
+                    self.model.param_scenario_blocks[s].add_component(
+                        con_name, pyo.Constraint(expr=var_prev <= var_curr)
+                    )
+
+                self.logger.info(
+                    f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
+                    f"using variable: {sym_break_var.name}"
+                )
 
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
@@ -945,7 +1037,7 @@ class DesignOfExperiments:
         self.kaug_FIM = self.kaug_jac.T @ cov_y @ self.kaug_jac + self.prior_FIM
 
     # Create the DoE model (with ``scenarios`` from finite differencing scheme)
-    def create_doe_model(self, model=None):
+    def create_doe_model(self, model=None, experiment_index=0):
         """
         Add equations to compute sensitivities, FIM, and objective.
         Builds the DoE model. Adds the scenarios, the sensitivity matrix
@@ -959,6 +1051,7 @@ class DesignOfExperiments:
         Parameters
         ----------
         model: model to add finite difference scenarios
+        experiment_index: index of experiment in experiment_list to use for this model (default: 0)
 
         """
         if model is None:
@@ -986,25 +1079,27 @@ class DesignOfExperiments:
             )
 
         # Generate scenarios for finite difference formulae
-        self._generate_scenario_blocks(model=model)
+        self._generate_fd_scenario_blocks(
+            model=model, experiment_index=experiment_index
+        )
 
         # Set names for indexing sensitivity matrix (jacobian) and FIM
         scen_block_ind = min(
             [
-                k.name.split(".").index("scenario_blocks[0]")
-                for k in model.scenario_blocks[0].unknown_parameters.keys()
+                k.name.split(".").index("fd_scenario_blocks[0]")
+                for k in model.fd_scenario_blocks[0].unknown_parameters.keys()
             ]
         )
         model.parameter_names = pyo.Set(
             initialize=[
                 ".".join(k.name.split(".")[(scen_block_ind + 1) :])
-                for k in model.scenario_blocks[0].unknown_parameters.keys()
+                for k in model.fd_scenario_blocks[0].unknown_parameters.keys()
             ]
         )
         model.output_names = pyo.Set(
             initialize=[
                 ".".join(k.name.split(".")[(scen_block_ind + 1) :])
-                for k in model.scenario_blocks[0].experiment_outputs.keys()
+                for k in model.fd_scenario_blocks[0].experiment_outputs.keys()
             ]
         )
 
@@ -1140,12 +1235,14 @@ class DesignOfExperiments:
                 s1 = 0
                 s2 = param_ind + 1
 
-            var_up = cuid.find_component_on(m.scenario_blocks[s1])
-            var_lo = cuid.find_component_on(m.scenario_blocks[s2])
+            var_up = cuid.find_component_on(m.fd_scenario_blocks[s1])
+            var_lo = cuid.find_component_on(m.fd_scenario_blocks[s2])
 
             param = m.parameter_scenarios[max(s1, s2)]
-            param_loc = pyo.ComponentUID(param).find_component_on(m.scenario_blocks[0])
-            param_val = m.scenario_blocks[0].unknown_parameters[param_loc]
+            param_loc = pyo.ComponentUID(param).find_component_on(
+                m.fd_scenario_blocks[0]
+            )
+            param_val = m.fd_scenario_blocks[0].unknown_parameters[param_loc]
             param_diff = param_val * fd_step_mult * self.step
 
             if self.scale_nominal_param_value:
@@ -1202,8 +1299,10 @@ class DesignOfExperiments:
                     m.fim[p, q]
                     == sum(
                         1
-                        / m.scenario_blocks[0].measurement_error[
-                            pyo.ComponentUID(n).find_component_on(m.scenario_blocks[0])
+                        / m.fd_scenario_blocks[0].measurement_error[
+                            pyo.ComponentUID(n).find_component_on(
+                                m.fd_scenario_blocks[0]
+                            )
                         ]
                         ** 2
                         * m.sensitivity_jacobian[n, p]
@@ -1232,7 +1331,7 @@ class DesignOfExperiments:
                             model.fim_inv[p, q].fix(0.0)
 
     # Create scenario block structure
-    def _generate_scenario_blocks(self, model=None):
+    def _generate_fd_scenario_blocks(self, model=None, experiment_index=0):
         """
         Generates the modeling blocks corresponding to the scenarios for
         the finite differencing scheme to compute the sensitivity jacobian
@@ -1246,6 +1345,7 @@ class DesignOfExperiments:
         Parameters
         ----------
         model: model to add finite difference scenarios
+        experiment_index: index of experiment in experiment_list to use for this model (default: 0)
         """
         # If model is none, assume it is self.model
         if model is None:
@@ -1253,7 +1353,7 @@ class DesignOfExperiments:
 
         # Generate initial scenario to populate unknown parameter values
         model.base_model = (
-            self.experiment_list[0]
+            self.experiment_list[experiment_index]
             .get_labeled_model(**self.get_labeled_model_args)
             .clone()
         )
@@ -1385,11 +1485,15 @@ class DesignOfExperiments:
             for comp in b.experiment_inputs:
                 comp.unfix()
 
-        model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
+        model.fd_scenario_blocks = pyo.Block(
+            model.scenarios, rule=build_block_scenarios
+        )
 
         # TODO: this might have to change if experiment inputs have
         #       a different value in the Suffix (currently it is the CUID)
-        design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
+        design_vars = [
+            k for k, v in model.fd_scenario_blocks[0].experiment_inputs.items()
+        ]
 
         # Add constraints to equate block design with global design:
         for ind, d in enumerate(design_vars):
@@ -1400,8 +1504,8 @@ class DesignOfExperiments:
                 if s == 0:
                     return pyo.Constraint.Skip
                 block_design_var = pyo.ComponentUID(
-                    d, context=m.scenario_blocks[0]
-                ).find_component_on(m.scenario_blocks[s])
+                    d, context=m.fd_scenario_blocks[0]
+                ).find_component_on(m.fd_scenario_blocks[s])
                 return d == block_design_var
 
             model.add_component(
@@ -2728,7 +2832,7 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "experiment_inputs"):
-            if not hasattr(model, "scenario_blocks"):
+            if not hasattr(model, "fd_scenario_blocks"):
                 raise RuntimeError(
                     "Model provided does not have expected structure. "
                     "Please make sure model is built properly before "
@@ -2737,7 +2841,7 @@ class DesignOfExperiments:
 
             d_vals = [
                 pyo.value(k)
-                for k, v in model.scenario_blocks[0].experiment_inputs.items()
+                for k, v in model.fd_scenario_blocks[0].experiment_inputs.items()
             ]
         else:
             d_vals = [pyo.value(k) for k, v in model.experiment_inputs.items()]
@@ -2765,7 +2869,7 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "unknown_parameters"):
-            if not hasattr(model, "scenario_blocks"):
+            if not hasattr(model, "fd_scenario_blocks"):
                 raise RuntimeError(
                     "Model provided does not have expected structure. Please make "
                     "sure model is built properly before calling "
@@ -2774,7 +2878,7 @@ class DesignOfExperiments:
 
             theta_vals = [
                 pyo.value(k)
-                for k, v in model.scenario_blocks[0].unknown_parameters.items()
+                for k, v in model.fd_scenario_blocks[0].unknown_parameters.items()
             ]
         else:
             theta_vals = [pyo.value(k) for k, v in model.unknown_parameters.items()]
@@ -2801,7 +2905,7 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "experiment_outputs"):
-            if not hasattr(model, "scenario_blocks"):
+            if not hasattr(model, "fd_scenario_blocks"):
                 raise RuntimeError(
                     "Model provided does not have expected structure. Please make "
                     "sure model is built properly before calling "
@@ -2810,7 +2914,7 @@ class DesignOfExperiments:
 
             y_hat_vals = [
                 pyo.value(k)
-                for k, v in model.scenario_blocks[0].experiment_outputs.items()
+                for k, v in model.fd_scenario_blocks[0].experiment_outputs.items()
             ]
         else:
             y_hat_vals = [pyo.value(k) for k, v in model.experiment_outputs.items()]
@@ -2839,7 +2943,7 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "measurement_error"):
-            if not hasattr(model, "scenario_blocks"):
+            if not hasattr(model, "fd_scenario_blocks"):
                 raise RuntimeError(
                     "Model provided does not have expected structure. Please make "
                     "sure model is built properly before calling "
@@ -2848,7 +2952,7 @@ class DesignOfExperiments:
 
             sigma_vals = [
                 pyo.value(k)
-                for k, v in model.scenario_blocks[0].measurement_error.items()
+                for k, v in model.fd_scenario_blocks[0].measurement_error.items()
             ]
         else:
             sigma_vals = [pyo.value(k) for k, v in model.measurement_error.items()]
