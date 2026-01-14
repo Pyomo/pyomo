@@ -1035,10 +1035,8 @@ class Estimator:
                     expr=getattr(model.exp_scenarios[0], name) == parent_var
                 ),
             )
-            # @Reviewers: Add the variable to the parent model's ref_vars for consistency?
 
-            # model.ref_vars = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-            # model.ref_vars.update(parent_var)
+            # @Reviewers: Add the variable to the parent model's ref_vars for consistency?
 
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
@@ -1063,8 +1061,6 @@ class Estimator:
             # Deactivate the objective in each block to avoid double counting
             for i in range(self.obj_probability_constant):
                 model.exp_scenarios[i].Total_Cost_Objective.deactivate()
-
-        # model.pprint()
 
         # Calling the model "ef_instance" to make it compatible with existing code
         self.ef_instance = model
@@ -1126,11 +1122,11 @@ class Estimator:
 
             # In case of fixing theta, just log a warning if not optimal
             if status != pyo.TerminationCondition.optimal:
-                logger.warning(
-                    "Solver did not terminate optimally when thetas were fixed. "
-                    "Termination condition: %s",
-                    str(status),
-                )
+                # logger.warning(
+                #     "Solver did not terminate optimally when thetas were fixed. "
+                #     "Termination condition: %s",
+                #     str(status),
+                # )
                 if WorstStatus != pyo.TerminationCondition.infeasible:
                     WorstStatus = status
         
@@ -2554,7 +2550,7 @@ class Estimator:
                 if worststatus != pyo.TerminationCondition.infeasible:
                     all_obj.append(list(Theta.values()) + [obj])
         else:
-            obj, thetvals, worststatus = self._Q_opt_blocks(fix_theta=True)
+            obj, thetvals, worststatus = self._Q_opt_blocks(ThetaVals = local_thetas, fix_theta=True)
             if worststatus != pyo.TerminationCondition.infeasible:
                 all_obj.append(list(thetvals.values()) + [obj])
 
