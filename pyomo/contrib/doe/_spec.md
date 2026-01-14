@@ -92,9 +92,13 @@ for s in range(Ns):
 
 5.  **Objective Function Construction:**
     * **Scenario FIM:** For each scenario `s`, compute the total FIM:
-        $$\mathbf{M}_{total, s} = \sum_{k=0}^{n_{exp}-1} (\mathbf{M}_{k,s}) + \mathbf{M}_{prior}$$
+        $$
+        \mathbf{M}_{total, s} = \sum_{k=0}^{n_{exp}-1} (\mathbf{M}_{k,s}) + \mathbf{M}_{prior}
+        $$
     * **Objective Expression:** Define the maximizing objective:
-        $$\max \sum_{s=0}^{N_s-1} w_s \cdot \log(\det(\mathbf{M}_{total, s}))$$
+        $$
+        \max \sum_{s=0}^{N_s-1} w_s \cdot \log(\det(\mathbf{M}_{total, s}))
+        $$
 
 6.  **Solve:**
     * Send `self.model` to the solver (e.g., `ipopt`).

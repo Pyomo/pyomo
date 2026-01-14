@@ -611,6 +611,7 @@ class DesignOfExperiments:
         """
         if parameter_scenarios is None:
             n_scenarios = 1  # number of scenarios
+            self.scenario_weights = [1.0]  # Single scenario, weight = 1
         else:
             # TODO: Add parameter scenarios when incorporating parametric uncertainty
             raise NotImplementedError(
@@ -637,43 +638,42 @@ class DesignOfExperiments:
 
         # Add symmetry breaking constraints to prevent equivalent permutations
         if n_exp > 1:
-            for s in range(n_scenarios):
-                # Check if user provided a symmetry breaking variable via Suffix
-                first_exp_block = (
-                    self.model.param_scenario_blocks[s]
-                    .exp_blocks[0]
-                    .fd_scenario_blocks[0]
+            # Check if user provided a symmetry breaking variable via Suffix
+            # Use first scenario since variable names are the same across all scenarios
+            first_exp_block = (
+                self.model.param_scenario_blocks[0].exp_blocks[0].fd_scenario_blocks[0]
+            )
+
+            if not hasattr(first_exp_block, 'sym_break_cons'):
+                raise ValueError(
+                    f"n_exp={n_exp} > 1 requires symmetry breaking constraints. "
+                    "Please add a 'sym_break_cons' Suffix to your experiment model "
+                    "marking the primary design variable for ordering. "
+                    "Example: m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
+                    "m.sym_break_cons[m.my_design_var] = None"
                 )
 
-                if not hasattr(first_exp_block, 'sym_break_cons'):
-                    raise ValueError(
-                        f"n_exp={n_exp} > 1 requires symmetry breaking constraints. "
-                        "Please add a 'sym_break_cons' Suffix to your experiment model "
-                        "marking the primary design variable for ordering. "
-                        "Example: m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
-                        "m.sym_break_cons[m.my_design_var] = None"
-                    )
+            # Get the variable marked for symmetry breaking
+            sym_break_var = list(first_exp_block.sym_break_cons.keys())
 
-                # Get the variable marked for symmetry breaking
-                sym_break_vars = list(first_exp_block.sym_break_cons.keys())
+            if len(sym_break_var) == 0:
+                raise ValueError(
+                    "sym_break_cons Suffix exists but no variable is marked. "
+                    "Please mark at least one design variable for symmetry breaking. "
+                    "Example: m.sym_break_cons[m.my_design_var] = None"
+                )
 
-                if len(sym_break_vars) == 0:
-                    raise ValueError(
-                        "sym_break_cons Suffix exists but no variable is marked. "
-                        "Please mark at least one design variable for symmetry breaking. "
-                        "Example: m.sym_break_cons[m.my_design_var] = None"
-                    )
+            # Use the first marked variable as primary
+            sym_break_var = sym_break_var[0]
 
-                # Use the first marked variable as primary
-                sym_break_var = sym_break_vars[0]
+            if len(sym_break_var) > 1:
+                self.logger.warning(
+                    f"Multiple variables marked in sym_break_cons. "
+                    f"Using {sym_break_var.name} for symmetry breaking."
+                )
 
-                if len(sym_break_vars) > 1:
-                    self.logger.warning(
-                        f"Multiple variables marked in sym_break_cons. "
-                        f"Using {sym_break_var.name} for symmetry breaking."
-                    )
-
-                # Create ordering constraints: exp[k-1] <= exp[k]
+            # Add constraints for each scenario
+            for s in range(n_scenarios):
                 for k in range(1, n_exp):
                     # Get the variable from experiment k-1
                     var_prev = pyo.ComponentUID(
@@ -699,10 +699,13 @@ class DesignOfExperiments:
                         con_name, pyo.Constraint(expr=var_prev <= var_curr)
                     )
 
-                self.logger.info(
-                    f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
-                    f"using variable: {sym_break_var.name}"
-                )
+                    self.logger.info(
+                        f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
+                        f"using variable: {sym_break_var.name}"
+                    )
+
+        # Create aggregated objective for multi-experiment optimization
+        self.create_multi_experiment_objective(self.model)
 
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
@@ -1797,6 +1800,204 @@ class DesignOfExperiments:
         #       the grey box objectives with the standard model
         elif self.objective_option == ObjectiveLib.zero:
             # add dummy objective function
+            model.objective = pyo.Objective(expr=0)
+
+    def create_multi_experiment_objective(self, model):
+        """
+        Create objective for multi-experiment optimization.
+
+        For each scenario s:
+          1. Creates total_fim[s] = sum of exp_blocks[k].fim + prior_FIM
+          2. Creates Cholesky/determinant/trace variables and constraints per scenario
+          3. Creates single top-level objective summing across scenarios
+
+        Parameters
+        ----------
+        model: model with param_scenario_blocks structure
+        """
+        small_number = 1e-10
+        n_scenarios = len(model.param_scenario_blocks)
+
+        # Get weights from instance attribute (set in optimize_experiments)
+        scenario_weights = getattr(
+            self, 'scenario_weights', [1.0 / n_scenarios] * n_scenarios
+        )
+
+        # Get parameter names from first experiment (same across all)
+        parameter_names = model.param_scenario_blocks[0].exp_blocks[0].parameter_names
+        n_exp = len(model.param_scenario_blocks[0].exp_blocks)
+
+        # For each scenario: create aggregated FIM and constraints
+        for s in range(n_scenarios):
+            scenario = model.param_scenario_blocks[s]
+
+            # 1. Create aggregated FIM variable: total_fim = sum of all exp FIMs + prior
+            scenario.total_fim = pyo.Var(parameter_names, parameter_names)
+
+            # 2. Constraint: total_fim[p,q] = sum_k exp_blocks[k].fim[p,q] + prior_FIM[p,q]
+            def total_fim_rule(b, p, q):
+                p_idx = list(parameter_names).index(p)
+                q_idx = list(parameter_names).index(q)
+                return b.total_fim[p, q] == (
+                    sum(b.exp_blocks[k].fim[p, q] for k in range(n_exp))
+                    + self.prior_FIM[p_idx, q_idx]
+                )
+
+            scenario.total_fim_cons = pyo.Constraint(
+                parameter_names, parameter_names, rule=total_fim_rule
+            )
+
+            # 3. Initialize total_fim from sum of individual FIMs
+            for i, p in enumerate(parameter_names):
+                for j, q in enumerate(parameter_names):
+                    fim_sum = sum(
+                        pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
+                        for k in range(n_exp)
+                    )
+                    scenario.total_fim[p, q].value = fim_sum + self.prior_FIM[i, j]
+
+            # 4. If using Cholesky decomposition for determinant
+            if (
+                self.Cholesky_option
+                and self.objective_option == ObjectiveLib.determinant
+            ):
+                scenario.L = pyo.Var(parameter_names, parameter_names)
+
+                # Initialize L from total_fim
+                total_fim_vals = [
+                    scenario.total_fim[p, q].value
+                    for p in parameter_names
+                    for q in parameter_names
+                ]
+                total_fim_np = np.array(total_fim_vals).reshape(
+                    len(parameter_names), len(parameter_names)
+                )
+
+                # Check positive definiteness and add jitter if needed
+                eig = np.linalg.eigvals(total_fim_np)
+                if min(eig) < small_number:
+                    jitter = small_number - min(eig)
+                    total_fim_np = total_fim_np + np.eye(len(parameter_names)) * jitter
+
+                # Compute Cholesky
+                L_vals = np.linalg.cholesky(total_fim_np)
+                for i, p in enumerate(parameter_names):
+                    for j, q in enumerate(parameter_names):
+                        scenario.L[p, q].value = L_vals[i, j]
+                        # Fix upper triangle to 0
+                        if i < j:
+                            scenario.L[p, q].fix(0.0)
+                        # Lower bound on diagonal
+                        elif i == j and self.L_diagonal_lower_bound:
+                            scenario.L[p, q].setlb(self.L_diagonal_lower_bound)
+
+                # Cholesky constraint: total_fim = L * L^T
+                def cholesky_rule(b, p, q):
+                    p_idx = list(parameter_names).index(p)
+                    q_idx = list(parameter_names).index(q)
+                    if p_idx >= q_idx:
+                        return b.total_fim[p, q] == sum(
+                            b.L[p, parameter_names.at(k + 1)]
+                            * b.L[q, parameter_names.at(k + 1)]
+                            for k in range(q_idx + 1)
+                        )
+                    else:
+                        return pyo.Constraint.Skip
+
+                scenario.cholesky_cons = pyo.Constraint(
+                    parameter_names, parameter_names, rule=cholesky_rule
+                )
+
+            elif self.objective_option == ObjectiveLib.determinant:
+                # Non-Cholesky determinant: create determinant var per scenario
+                # Initialize determinant
+                total_fim_vals = [
+                    scenario.total_fim[p, q].value
+                    for p in parameter_names
+                    for q in parameter_names
+                ]
+                total_fim_np = np.array(total_fim_vals).reshape(
+                    len(parameter_names), len(parameter_names)
+                )
+                det_init = np.linalg.det(total_fim_np)
+
+                scenario.determinant = pyo.Var(
+                    initialize=det_init, bounds=(small_number, None)
+                )
+
+                # Determinant constraint (explicit formula)
+                def determinant_rule(b):
+                    r_list = list(range(len(parameter_names)))
+                    object_p = permutations(r_list)
+                    list_p = list(object_p)
+
+                    det_perm = sum(
+                        self._sgn(list_p[d])
+                        * math.prod(
+                            b.total_fim[
+                                parameter_names.at(val + 1), parameter_names.at(ind + 1)
+                            ]
+                            for ind, val in enumerate(list_p[d])
+                        )
+                        for d in range(len(list_p))
+                    )
+                    return b.determinant == det_perm
+
+                scenario.determinant_cons = pyo.Constraint(rule=determinant_rule)
+
+            elif self.objective_option == ObjectiveLib.trace:
+                # Trace objective
+                # Initialize trace
+                trace_init = sum(
+                    scenario.total_fim[j, j].value for j in parameter_names
+                )
+                scenario.trace = pyo.Var(
+                    initialize=trace_init, bounds=(small_number, None)
+                )
+
+                # Trace constraint
+                def trace_rule(b):
+                    return b.trace == sum(b.total_fim[j, j] for j in parameter_names)
+
+                scenario.trace_cons = pyo.Constraint(rule=trace_rule)
+
+        # 5. Create single top-level objective summing across scenarios
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+            model.objective = pyo.Objective(
+                expr=sum(
+                    scenario_weights[s]
+                    * 2
+                    * sum(
+                        pyo.log10(model.param_scenario_blocks[s].L[j, j])
+                        for j in parameter_names
+                    )
+                    for s in range(n_scenarios)
+                ),
+                sense=pyo.maximize,
+            )
+
+        elif self.objective_option == ObjectiveLib.determinant:
+            model.objective = pyo.Objective(
+                expr=sum(
+                    scenario_weights[s]
+                    * pyo.log10(model.param_scenario_blocks[s].determinant + 1e-6)
+                    for s in range(n_scenarios)
+                ),
+                sense=pyo.maximize,
+            )
+
+        elif self.objective_option == ObjectiveLib.trace:
+            model.objective = pyo.Objective(
+                expr=sum(
+                    scenario_weights[s]
+                    * pyo.log10(model.param_scenario_blocks[s].trace)
+                    for s in range(n_scenarios)
+                ),
+                sense=pyo.maximize,
+            )
+
+        elif self.objective_option == ObjectiveLib.zero:
+            # Dummy objective
             model.objective = pyo.Objective(expr=0)
 
     def create_grey_box_objective_function(self, model=None):
