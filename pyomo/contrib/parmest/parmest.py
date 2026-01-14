@@ -1180,15 +1180,14 @@ class Estimator:
             )
             # Needs to be an integer
             assert isinstance(cov_n, int), (
-                f"Expected an integer for the 'cov_n' argument. "
-                f"Got {type(cov_n)}."
+                f"Expected an integer for the 'cov_n' argument. " f"Got {type(cov_n)}."
             )
             # Needs to equal total number of data points across all experiments
             assert cov_n == self.number_exp, (
                 "The number of data points 'cov_n' must equal the total number "
                 "of data points across all experiments."
             )
-            
+
             cov = self.cov_est()
 
             if return_values is not None and len(return_values) > 0:
