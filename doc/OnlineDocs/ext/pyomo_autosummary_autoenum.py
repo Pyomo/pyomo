@@ -85,18 +85,26 @@ def _generate_autosummary_content(
 
                 caller = inspect.currentframe().f_back
                 l = caller.f_locals
-                doc = l['doc']
+                if 'obj_type' in l:
+                    # Sphinx >= 9.1.0
+                    doc_field = 'obj_type'
+                else:
+                    doc_field = 'doc'
+                doc = l[doc_field]
                 obj = l['obj']
-                args = {'obj': obj}
+                args = {'obj': obj, doc_field: doc}
                 if '_get_members' in caller.f_globals:
                     _get_members = caller.f_globals['_get_members']
                     if 'config' in l:
                         # Sphinx >= 8.2.1
-                        for field in ('config', 'doc', 'events', 'registry'):
+                        for field in ('config', 'events'):
                             args[field] = l[field]
+                        if 'registry' in l:
+                            # Sphinx < 9.1
+                            args['registry'] = l['registry']
                     else:
                         # Sphinx >= 7.2
-                        args.update({'doc': doc, 'app': l['app']})
+                        args['app'] = l['app']
                 else:
                     # Sphinx < 7.2
                     _get_members = caller.f_locals['get_members']
