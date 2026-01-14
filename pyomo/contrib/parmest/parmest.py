@@ -1149,25 +1149,26 @@ class Estimator:
         # Calculate covariance if requested using cov_est()
         if calc_cov is not NOTSET and calc_cov:
 
+            # Check cov_n argument is set correctly
+            # Needs to be provided
             assert cov_n is not NOTSET, (
                 "The number of data points 'cov_n' must be provided to calculate "
                 "the covariance matrix."
             )
+            # Needs to be an integer
             assert isinstance(cov_n, int), (
                 f"Expected an integer for the 'cov_n' argument. "
                 f"Got {type(cov_n)}."
             )
+            # Needs to equal total number of data points across all experiments
             assert cov_n == self.number_exp, (
                 "The number of data points 'cov_n' must equal the total number "
                 "of data points across all experiments."
             )
             
             cov = self.cov_est()
-
             return obj_value, theta_estimates, cov
-        
         else:
-
             return obj_value, theta_estimates
 
     def _Q_opt(
