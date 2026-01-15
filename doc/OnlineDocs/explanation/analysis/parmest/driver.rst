@@ -82,15 +82,12 @@ required packages for parameter estimation in parmest:
 Step 1: Create the Experiment Class for the Model
 -------------------------------------------------
 
-parmest requires that the user creates an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
-contains the annotated Pyomo model with labeled experiment outputs, unknown parameters, and measurement errors.
+parmest requires that the user create an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
+builds an annotated Pyomo model denoting experiment outputs, unknown parameters, and measurement errors using Pyomo `Suffix` components.
 
-A labeled Pyomo model ``m`` has the following additional suffixes (Pyomo `Suffix`):
-
-* ``m.experiment_outputs`` which defines experiment output (Pyomo `Param`, `Var`, or `Expression`)
-  and their associated data values (float, int).
-* ``m.unknown_parameters`` which defines the mutable parameters or variables (Pyomo `Param` or `Var`)
-  to estimate along with their component unique identifier (Pyomo `ComponentUID`).
+* ``m.experiment_outputs`` maps the experiment output, or measurement, terms in the model (Pyomo `Param`, `Var`, or `Expression`) to their associated data values (float, int).
+* ``m.unknown_parameters`` maps the model parameters to estimate (Pyomo `Param` or `Var`)
+  to their component unique identifier (Pyomo `ComponentUID`) which is used to identify equivalent parameters across multiple experiments.
   Within parmest, any parameters that are to be estimated are converted to unfixed variables.
   Variables that are to be estimated are also unfixed.
 
@@ -165,12 +162,10 @@ mathematical model outlined in the introduction section of this Quick Start.
     ...         return self.model
 
 
-Step 2: Load the Data and Create a List of the Model's Experiment Class
+Step 2: Load the Data and Create a List Experiments
 -----------------------------------------------------------------------
 
-After creating an :class:`~pyomo.contrib.parmest.experiment.Experiment` class instance for the model, a list of the
-model's :class:`~pyomo.contrib.parmest.experiment.Experiment` class for all the experimental data points should be
-created.
+Load the experimental data into Python and create an instance of your :class:`~pyomo.contrib.parmest.experiment.Experiment` class for each set of experimental data. In this example, each measurement of `y` is treated as a separate experiment.
 
 .. doctest::
 
@@ -240,12 +235,9 @@ Optionally, solver options can be supplied, e.g.,
 Objective function
 ^^^^^^^^^^^^^^^^^^
 
-The second argument is an optional argument if the objective function has already been included in the
-Pyomo model, which defines the optimization objective function to use in parameter estimation. However, if the
-objective function has not been included in the Pyomo model, like the one in the :ref:`ExperimentClass` Section
-above, the user is required to supply the second argument.
+The second argument, ``obj_function``, is used to specify the objective function to use for parameter estimation if the user has not manually defined an objective function in their ``Experiment`` class.
 
-If no objective function is specified, the Pyomo model is used "as is" and
+If ``obj_function`` is not specified, the Pyomo model is used "as is" and
 should be defined with "FirstStageCost" and "SecondStageCost"
 expressions that are used to build an objective for the two-stage 
 stochastic programming problem.
@@ -254,14 +246,14 @@ If the Pyomo model is not written as a two-stage stochastic programming problem 
 this format, the user can select the "SSE" or "SSE_weighted" built-in objective
 functions. If the user wants to use an objective that is different from the built-in
 options, a custom objective function can be defined for parameter estimation. However,
-covariance matrix estimation (see :ref:`covariancesection` Section) will not support this
-custom objective function.
+covariance matrix estimation (see :ref:`covariancesection` Section) is not supported
+for custom objective functions.
 
 Parmest includes two built-in objective functions ("SSE" and "SSE_weighted") to compute
 the sum of squared errors between the ``m.experiment_outputs`` model values and
 data values.
 
-Step 3: Estimate the Parameters
+Step 4: Estimate the Parameters
 -------------------------------
 
 After creating the :class:`~pyomo.contrib.parmest.parmest.Estimator` object with the desired objective function,
