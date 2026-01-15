@@ -995,6 +995,7 @@ class Estimator:
                 parmest_model = self._create_parmest_model(
                     bootlist[i], fix_theta=fix_theta
                 )
+
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
@@ -1005,6 +1006,15 @@ class Estimator:
             for i in range(len(self.exp_list)):
                 # Create parmest model for experiment i
                 parmest_model = self._create_parmest_model(i, fix_theta=fix_theta)
+                if ThetaVals:
+                    # Set theta values in the block model
+                    for name in self.estimator_theta_names:
+                        if name in ThetaVals:
+                            var = getattr(parmest_model, name)
+                            var.set_value(ThetaVals[name])
+                            # print(pyo.value(var))
+                            if fix_theta:
+                                var.fix()
                 # parmest_model.pprint()
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
@@ -1017,26 +1027,30 @@ class Estimator:
 
             # Determine the starting value: priority to ThetaVals, then ref_var default
             start_val = pyo.value(ref_var)
-            if ThetaVals and name in ThetaVals:
-                start_val = ThetaVals[name]
 
             # Create a variable in the parent model with same bounds and initialization
             parent_var = pyo.Var(bounds=ref_var.bounds, initialize=start_val)
             setattr(model, name, parent_var)
 
-            # Apply Fixing logic
-            if fix_theta:
-                parent_var.fix(start_val)
-
             # Constrain the variable in the first block to equal the parent variable
-            model.add_component(
-                f"Link_{name}_Block0_Parent",
-                pyo.Constraint(
-                    expr=getattr(model.exp_scenarios[0], name) == parent_var
-                ),
-            )
-
-            # @Reviewers: Add the variable to the parent model's ref_vars for consistency?
+            if not fix_theta:
+                model.add_component(
+                    f"Link_{name}_Block0_Parent",
+                    pyo.Constraint(
+                        expr=getattr(model.exp_scenarios[0], name) == parent_var
+                    ),
+                )
+            
+                # Make sure all the parameters are linked across blocks
+                for name in self.estimator_theta_names:
+                    for i in range(1, self.obj_probability_constant):
+                        model.add_component(
+                            f"Link_{name}_Block{i}_Parent",
+                            pyo.Constraint(
+                                expr=getattr(model.exp_scenarios[i], name)
+                                == getattr(model, name)
+                            ),
+                        )
 
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
@@ -1047,20 +1061,9 @@ class Estimator:
 
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
 
-        # Make sure all the parameters are linked across blocks
-        for name in self.estimator_theta_names:
-            for i in range(1, self.obj_probability_constant):
-                model.add_component(
-                    f"Link_{name}_Block{i}_Parent",
-                    pyo.Constraint(
-                        expr=getattr(model.exp_scenarios[i], name)
-                        == getattr(model, name)
-                    ),
-                )
-
-            # Deactivate the objective in each block to avoid double counting
-            for i in range(self.obj_probability_constant):
-                model.exp_scenarios[i].Total_Cost_Objective.deactivate()
+        # Deactivate the objective in each block to avoid double counting
+        for i in range(self.obj_probability_constant):
+            model.exp_scenarios[i].Total_Cost_Objective.deactivate()
 
         # Calling the model "ef_instance" to make it compatible with existing code
         self.ef_instance = model
@@ -2542,8 +2545,20 @@ class Estimator:
             task_mgr = utils.ParallelTaskManager(len(all_thetas))
             local_thetas = task_mgr.global_to_local_data(all_thetas)
 
+        # print("DEBUG objective_at_theta_blocks")
+        # print("all_thetas type:", type(all_thetas))
+        # print(all_thetas)
+        # print("local_thetas type:", type(local_thetas))
+        # print(local_thetas)
+        # print("theta_names:")
+        # print(theta_names)
+        # print("estimator_theta_names:")
+        # print(self.estimator_theta_names)
+
+
         # walk over the mesh, return objective function
         all_obj = list()
+        print("len(all_thetas):", len(all_thetas))
         if len(all_thetas) > 0:
             for Theta in local_thetas:
                 obj, thetvals, worststatus = self._Q_opt_blocks(ThetaVals=Theta, fix_theta=True)
