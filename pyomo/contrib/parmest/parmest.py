@@ -1062,9 +1062,8 @@ class Estimator:
 
         return model
 
-    # Redesigning version of _Q_opt that uses scenario blocks
-    # Goal is to have _Q_opt be the main function going forward,
-    # and make work for _Q_opt and _Q_at_theta tasks.
+    # Redesigned _Q_opt method using scenario blocks, and combined with
+    # _Q_at_theta structure.
     # Remove old _Q_opt after verifying new version works correctly.
     def _Q_opt(
         self,
@@ -1088,9 +1087,19 @@ class Estimator:
 
         '''
         # Create scenario blocks using utility function
-        model = self._create_scenario_blocks(
-            bootlist=bootlist, ThetaVals=ThetaVals, fix_theta=fix_theta
-        )
+        if self.model_initialized is False:
+            model = self._create_scenario_blocks(
+                bootlist=bootlist, ThetaVals=ThetaVals, fix_theta=fix_theta
+            )
+        else:
+            model = self.ef_instance
+            if ThetaVals is not None:
+                for name in self.estimator_theta_names:
+                    if name in ThetaVals:
+                        var = getattr(model, name)
+                        var.set_value(ThetaVals[name])
+                        if fix_theta:
+                            var.fix()
 
         # Check solver and set options
         if solver == "k_aug":
@@ -2086,7 +2095,7 @@ class Estimator:
     #     return obj_at_theta
 
     # Updated version that uses _Q_opt_blocks
-    def objective_at_theta_blocks(self, theta_values=None):
+    def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
         """
         Objective value for each theta, solving extensive form problem with
         fixed theta values.
@@ -2095,6 +2104,11 @@ class Estimator:
         ----------
         theta_values: pd.DataFrame, columns=theta_names
             Values of theta used to compute the objective
+
+        initialize_parmest_model: boolean
+            If True: Solve square problem instance, build extensive form
+            of the model for parameter estimation, and set flag
+            model_initialized to True. Default is False.
 
         Returns
         -------
@@ -2139,6 +2153,11 @@ class Estimator:
         if all_thetas:
             task_mgr = utils.ParallelTaskManager(len(all_thetas))
             local_thetas = task_mgr.global_to_local_data(all_thetas)
+        else:
+            if initialize_parmest_model:
+                task_mgr = utils.ParallelTaskManager(
+                    1
+                )  # initialization performed using just 1 set of theta values
 
         # print("DEBUG objective_at_theta_blocks")
         # print("all_thetas type:", type(all_thetas))
