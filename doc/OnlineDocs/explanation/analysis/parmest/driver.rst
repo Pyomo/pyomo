@@ -162,7 +162,7 @@ mathematical model outlined in the introduction section of this Quick Start.
     ...         return self.model
 
 
-Step 2: Load the Data and Create a List of the Model's Experiment Class
+Step 2: Load the Data and Create a List Experiments
 -----------------------------------------------------------------------
 
 After creating an :class:`~pyomo.contrib.parmest.experiment.Experiment` class instance for the model, a list of the
