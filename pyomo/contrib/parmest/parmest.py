@@ -1042,15 +1042,14 @@ class Estimator:
                 )
 
                 # Make sure all the parameters are linked across blocks
-                for name in self.estimator_theta_names:
-                    for i in range(1, self.obj_probability_constant):
-                        model.add_component(
-                            f"Link_{name}_Block{i}_Parent",
-                            pyo.Constraint(
-                                expr=getattr(model.exp_scenarios[i], name)
-                                == getattr(model, name)
-                            ),
-                        )
+                for i in range(1, self.obj_probability_constant):
+                    model.add_component(
+                        f"Link_{name}_Block{i}_Parent",
+                        pyo.Constraint(
+                            expr=getattr(model.exp_scenarios[i], name)
+                            == getattr(model, name)
+                        ),
+                    )
 
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
