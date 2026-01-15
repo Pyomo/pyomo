@@ -242,7 +242,7 @@ Pyomo model, which defines the optimization objective function to use in paramet
 objective function has not been included in the Pyomo model, like the one in the :ref:`ExperimentClass` Section
 above, the user is required to supply the second argument.
 
-If no objective function is specified, the Pyomo model is used "as is" and
+If ``obj_function`` is not specified, the Pyomo model is used "as is" and
 should be defined with "FirstStageCost" and "SecondStageCost"
 expressions that are used to build an objective for the two-stage 
 stochastic programming problem.
