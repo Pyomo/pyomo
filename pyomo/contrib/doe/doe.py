@@ -444,7 +444,7 @@ class DesignOfExperiments:
             # Check if the FIM is positive definite
             # If not, add jitter to the diagonal
             # to ensure positive definiteness
-            min_eig = np.min(np.linalg.eigvals(fim_np))
+            min_eig = np.min(np.real(np.linalg.eigvals(fim_np)))
 
             if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
                 # Raise the minimum eigenvalue to at
@@ -574,18 +574,18 @@ class DesignOfExperiments:
 
     def optimize_experiments(
         self,
-        n_exp,
         parameter_scenarios=None,
         stochastic_objective=None,
         results_file=None,
     ):
         """
-        Optimize multiple experiments using either a sequential (greedy)
-        approach or a simultaneous (optimal) approach.
+        Optimize multiple experiments simultaneously.
+        
+        The number of experiments is determined by the length of the 
+        experiment_list provided when creating the DesignOfExperiments object.
 
         Parameters
         ----------
-        n_exp: number of experiments to optimize
         parameter_scenarios: list of parameter scenarios to consider for
                              the multi-experiment optimization
         stochastic_objective: function that takes in the FIM and
@@ -595,7 +595,12 @@ class DesignOfExperiments:
 
         Notes
         -----
-        Symmetry Breaking (for n_exp > 1):
+        Number of Experiments:
+            The number of experiments to optimize is determined by the length
+            of the experiment_list parameter passed to the DesignOfExperiments
+            constructor.
+            
+        Symmetry Breaking (for multiple experiments):
             To prevent equivalent permutations of identical experiments, you can
             mark a "primary" design variable using a Suffix in your experiment's
             `label_experiment()` method:
@@ -609,6 +614,14 @@ class DesignOfExperiments:
             for k = 1, ..., n_exp-1, which breaks permutation symmetry and can
             significantly reduce solve times.
         """
+        # Infer number of experiments from experiment_list
+        n_exp = len(self.experiment_list)
+        
+        # Start timer
+        sp_timer = TicTocTimer()
+        sp_timer.tic(msg=None)
+        self.logger.info(f"Beginning multi-experiment optimization with {n_exp} experiments.")
+
         if parameter_scenarios is None:
             n_scenarios = 1  # number of scenarios
             self.scenario_weights = [1.0]  # Single scenario, weight = 1
@@ -619,12 +632,12 @@ class DesignOfExperiments:
                 "not yet supported."
             )
         # Add parameter scenario blocks to the model
-        self.model.param_scenario_blocks = pyo.Block(n_scenarios)
+        self.model.param_scenario_blocks = pyo.Block(range(n_scenarios))
 
         # Add experiment(s) for each scenario
         # TODO: Add s_prev = 0 to handle parameter scenarios
         for s in range(n_scenarios):
-            self.model.param_scenario_blocks[s].exp_blocks = pyo.Block(n_exp)
+            self.model.param_scenario_blocks[s].exp_blocks = pyo.Block(range(n_exp))
             # We are assuming that the user will provide the initialized experiments
             for k in range(n_exp):
                 # Generate FIM and Sensitivity expressions for each experiment
@@ -637,7 +650,8 @@ class DesignOfExperiments:
                 # TODO: Update the parameter scenarios for each experiment block
                 # when using uncertainty in parameters
 
-        # Add symmetry breaking constraints to prevent equivalent permutations
+        # Add symmetry breaking constraints to prevent equivalent permutations for
+        # multiple experiments
         if n_exp > 1:
             # Check if user provided a symmetry breaking variable via Suffix
             # Use first scenario since variable names are the same across all scenarios
@@ -655,23 +669,23 @@ class DesignOfExperiments:
                 )
 
             # Get the variable marked for symmetry breaking
-            sym_break_var = list(first_exp_block.sym_break_cons.keys())
+            sym_break_var_list = list(first_exp_block.sym_break_cons.keys())
 
-            if len(sym_break_var) == 0:
+            if len(sym_break_var_list) == 0:
                 raise ValueError(
                     "sym_break_cons Suffix exists but no variable is marked. "
                     "Please mark at least one design variable for symmetry breaking. "
                     "Example: m.sym_break_cons[m.my_design_var] = None"
                 )
 
-            # Use the first marked variable as primary
-            sym_break_var = sym_break_var[0]
-
-            if len(sym_break_var) > 1:
+            if len(sym_break_var_list) > 1:
                 self.logger.warning(
                     f"Multiple variables marked in sym_break_cons. "
-                    f"Using {sym_break_var.name} for symmetry breaking."
+                    f"Using {sym_break_var_list[0].name} for symmetry breaking."
                 )
+
+            # Use the first marked variable as primary
+            sym_break_var = sym_break_var_list[0]
 
             # Add constraints for each scenario
             for s in range(n_scenarios):
@@ -706,7 +720,270 @@ class DesignOfExperiments:
                     )
 
         # Create aggregated objective for multi-experiment optimization
-        self.create_multi_experiment_objective(self.model)
+        self.create_multi_experiment_objective_function(self.model)
+
+        # Track time required to build the DoE model
+        build_time = sp_timer.toc(msg=None)
+        self.logger.info(
+            "Successfully built the multi-experiment DoE model.\nBuild time: %0.1f seconds"
+            % build_time
+        )
+
+        # Solve the square problem first to initialize the FIM and sensitivity constraints
+        # Deactivate objective expression and objective constraints
+        self.model.objective.deactivate()
+        # Deactivate obj_cons for each scenario (holds Cholesky/determinant/trace constraints)
+        for s in range(n_scenarios):
+            if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
+                self.model.param_scenario_blocks[s].obj_cons.deactivate()
+
+        # Fix the design variables across all scenarios and experiments
+        for s in range(n_scenarios):
+            for k in range(n_exp):
+                for comp in (
+                    self.model.param_scenario_blocks[s]
+                    .exp_blocks[k]
+                    .fd_scenario_blocks[0]
+                    .experiment_inputs
+                ):
+                    comp.fix()
+
+        # Create and solve dummy objective for initialization
+        self.model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
+        self.solver.solve(self.model, tee=self.tee)
+
+        # Track time to initialize the DoE model
+        initialization_time = sp_timer.toc(msg=None)
+        self.logger.info(
+            (
+                "Successfully initialized the multi-experiment DoE model."
+                "\nInitialization time: %0.1f seconds" % initialization_time
+            )
+        )
+
+        # Deactivate dummy objective
+        self.model.dummy_obj.deactivate()
+
+        # Reactivate objective, obj_cons, and unfix experimental design decisions
+        for s in range(n_scenarios):
+            for k in range(n_exp):
+                for comp in (
+                    self.model.param_scenario_blocks[s]
+                    .exp_blocks[k]
+                    .fd_scenario_blocks[0]
+                    .experiment_inputs
+                ):
+                    comp.unfix()
+        self.model.objective.activate()
+        for s in range(n_scenarios):
+            if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
+                self.model.param_scenario_blocks[s].obj_cons.activate()
+
+        # Initialize scenario-level variables (L, determinant, pseudo_trace) based on
+        # the solved FIM values from the square solve
+        parameter_names = (
+            self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
+        )
+
+        for s in range(n_scenarios):
+            scenario = self.model.param_scenario_blocks[s]
+
+            # Update total_fim values from solved individual experiment FIMs
+            for i, p in enumerate(parameter_names):
+                for j, q in enumerate(parameter_names):
+                    fim_sum = sum(
+                        pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
+                        for k in range(n_exp)
+                    )
+                    scenario.total_fim[p, q].set_value(fim_sum + self.prior_FIM[i, j])
+
+            # Initialize scenario-level variables based on total_fim
+            if hasattr(scenario.obj_cons, "L"):
+                # Compute Cholesky factorization
+                total_fim_vals = [
+                    pyo.value(scenario.total_fim[p, q])
+                    for p in parameter_names
+                    for q in parameter_names
+                ]
+                total_fim_np = np.array(total_fim_vals).reshape(
+                    (len(parameter_names), len(parameter_names))
+                )
+
+                # Complete FIM if only computing lower triangle
+                if self.only_compute_fim_lower:
+                    total_fim_np = (
+                        total_fim_np + total_fim_np.T - np.diag(np.diag(total_fim_np))
+                    )
+
+                # Check positive definiteness and add jitter if needed
+                min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
+                if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
+                    jitter = np.min(
+                        [
+                            -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
+                            _SMALL_TOLERANCE_DEFINITENESS,
+                        ]
+                    )
+                else:
+                    jitter = 0
+
+                # Compute Cholesky decomposition
+                L_vals = np.linalg.cholesky(
+                    total_fim_np + jitter * np.eye(len(parameter_names))
+                )
+
+                # Initialize L values
+                for i, p in enumerate(parameter_names):
+                    for j, q in enumerate(parameter_names):
+                        scenario.obj_cons.L[p, q].set_value(L_vals[i, j])
+
+            if hasattr(scenario.obj_cons, "determinant"):
+                # Initialize determinant
+                total_fim_vals = [
+                    pyo.value(scenario.total_fim[p, q])
+                    for p in parameter_names
+                    for q in parameter_names
+                ]
+                total_fim_np = np.array(total_fim_vals).reshape(
+                    (len(parameter_names), len(parameter_names))
+                )
+                scenario.obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
+
+            if hasattr(scenario.obj_cons, "pseudo_trace"):
+                # Initialize pseudo_trace
+                trace_val = sum(
+                    pyo.value(scenario.total_fim[j, j]) for j in parameter_names
+                )
+                scenario.obj_cons.pseudo_trace.set_value(trace_val)
+
+        # Solve the full model
+        res = self.solver.solve(self.model, tee=self.tee)
+
+        # Track time used to solve the DoE model
+        solve_time = sp_timer.toc(msg=None)
+
+        self.logger.info(
+            (
+                "Successfully optimized multi-experiment design."
+                "\nSolve time: %0.1f seconds" % solve_time
+            )
+        )
+        self.logger.info(
+            "Total time for build, initialization, and solve: %0.1f seconds"
+            % (build_time + initialization_time + solve_time)
+        )
+
+        # Collect results
+        self.results = {}
+        self.results["Solver Status"] = res.solver.status
+        self.results["Termination Condition"] = res.solver.termination_condition
+        if type(res.solver.message) is str:
+            results_message = res.solver.message
+        elif type(res.solver.message) is bytes:
+            results_message = res.solver.message.decode("utf-8")
+        self.results["Termination Message"] = results_message
+
+        # Store results for each scenario
+        self.results["Scenarios"] = []
+        for s in range(n_scenarios):
+            scenario = self.model.param_scenario_blocks[s]
+            scenario_results = {}
+
+            # Get aggregated FIM for this scenario
+            total_fim_vals = [
+                pyo.value(scenario.total_fim[p, q])
+                for p in parameter_names
+                for q in parameter_names
+            ]
+            total_fim_np = np.array(total_fim_vals).reshape(
+                (len(parameter_names), len(parameter_names))
+            )
+            scenario_results["Total FIM"] = total_fim_np.tolist()
+
+            # Statistics on the aggregated FIM
+            scenario_results["log10 A-opt"] = np.log10(np.trace(total_fim_np))
+            scenario_results["log10 D-opt"] = np.log10(np.linalg.det(total_fim_np))
+            scenario_results["log10 E-opt"] = np.log10(
+                min(np.linalg.eig(total_fim_np)[0])
+            )
+            scenario_results["FIM Condition Number"] = np.linalg.cond(total_fim_np)
+
+            # Store results for each experiment in this scenario
+            scenario_results["Experiments"] = []
+            for k in range(n_exp):
+                exp_block = scenario.exp_blocks[k].fd_scenario_blocks[0]
+                exp_results = {}
+
+                # Experiment design (input values)
+                exp_results["Experiment Design"] = [
+                    pyo.value(comp) for comp in exp_block.experiment_inputs
+                ]
+                exp_results["Experiment Design Names"] = [
+                    str(pyo.ComponentUID(comp, context=exp_block))
+                    for comp in exp_block.experiment_inputs
+                ]
+
+                # Experiment outputs
+                exp_results["Experiment Outputs"] = [
+                    pyo.value(comp) for comp in exp_block.experiment_outputs
+                ]
+                exp_results["Experiment Output Names"] = [
+                    str(pyo.ComponentUID(comp, context=exp_block))
+                    for comp in exp_block.experiment_outputs
+                ]
+
+                # Unknown parameters
+                exp_results["Unknown Parameters"] = [
+                    pyo.value(comp) for comp in exp_block.unknown_parameters
+                ]
+                exp_results["Unknown Parameter Names"] = [
+                    str(pyo.ComponentUID(comp, context=exp_block))
+                    for comp in exp_block.unknown_parameters
+                ]
+
+                # Measurement error
+                exp_results["Measurement Error"] = [
+                    pyo.value(comp) for comp in exp_block.measurement_error
+                ]
+                exp_results["Measurement Error Names"] = [
+                    str(pyo.ComponentUID(comp, context=exp_block))
+                    for comp in exp_block.measurement_error
+                ]
+
+                # Individual experiment FIM
+                exp_fim_vals = [
+                    pyo.value(scenario.exp_blocks[k].fim[p, q])
+                    for p in parameter_names
+                    for q in parameter_names
+                ]
+                exp_fim_np = np.array(exp_fim_vals).reshape(
+                    (len(parameter_names), len(parameter_names))
+                )
+                exp_results["FIM"] = exp_fim_np.tolist()
+
+                scenario_results["Experiments"].append(exp_results)
+
+            self.results["Scenarios"].append(scenario_results)
+
+        # Store general settings and info
+        self.results["Number of Scenarios"] = n_scenarios
+        self.results["Number of Experiments per Scenario"] = n_exp
+        self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
+        self.results["Objective expression"] = str(self.objective_option).split(".")[-1]
+        self.results["Finite Difference Scheme"] = str(self.fd_formula).split(".")[-1]
+        self.results["Finite Difference Step"] = self.step
+        self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
+
+        # Timing statistics
+        self.results["Build Time"] = build_time
+        self.results["Initialization Time"] = initialization_time
+        self.results["Solve Time"] = solve_time
+        self.results["Wall-clock Time"] = build_time + initialization_time + solve_time
+
+        # Save results to file if requested
+        if results_file is not None:
+            with open(results_file, "w") as file:
+                json.dump(self.results, file, indent=2)
 
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
@@ -1455,8 +1732,9 @@ class DesignOfExperiments:
         # Generate blocks for finite difference scenarios
         def build_block_scenarios(b, s):
             # Generate model for the finite difference scenario
-            m = b.model()
-            b.transfer_attributes_from(m.base_model.clone())
+            # Get the parent block that contains base_model
+            parent_block = b.parent_block()
+            b.transfer_attributes_from(parent_block.base_model.clone())
 
             # Forward/Backward difference have a stationary
             # case (s == 0), no parameter to perturb
@@ -1467,7 +1745,7 @@ class DesignOfExperiments:
                 if s == 0:
                     return
 
-            param = m.parameter_scenarios[s]
+            param = parent_block.parameter_scenarios[s]
 
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
@@ -1484,9 +1762,9 @@ class DesignOfExperiments:
                 pass
 
             # Update parameter values for the given finite difference scenario
-            pyo.ComponentUID(param, context=m.base_model).find_component_on(
+            pyo.ComponentUID(param, context=parent_block.base_model).find_component_on(
                 b
-            ).set_value(m.base_model.unknown_parameters[param] * (1 + diff))
+            ).set_value(parent_block.base_model.unknown_parameters[param] * (1 + diff))
 
             # Fix experiment inputs before solve (enforce square solve)
             for comp in b.experiment_inputs:
@@ -1813,7 +2091,7 @@ class DesignOfExperiments:
             # add dummy objective function
             model.objective = pyo.Objective(expr=0)
 
-    def create_multi_experiment_objective(self, model):
+    def create_multi_experiment_objective_function(self, model):
         """
         Create objective for multi-experiment optimization.
 
@@ -1870,50 +2148,34 @@ class DesignOfExperiments:
                     )
                     scenario.total_fim[p, q].value = fim_sum + self.prior_FIM[i, j]
 
-            # 4. If using Cholesky decomposition for determinant
+            # 4. Create obj_cons block to hold objective-related constraints
+            # (similar to single-experiment case in create_objective_function)
+            scenario.obj_cons = pyo.Block()
+
+            # 5. Create variables and constraints (initialization will happen after square solve)
             if (
                 self.Cholesky_option
                 and self.objective_option == ObjectiveLib.determinant
             ):
                 # Add lower triangular Cholesky variables per scenario
-                scenario.L = pyo.Var(parameter_names, parameter_names)
+                scenario.obj_cons.L = pyo.Var(parameter_names, parameter_names)
 
-                # Initialize L from total_fim
-                total_fim_vals = [
-                    scenario.total_fim[p, q].value
-                    for p in parameter_names
-                    for q in parameter_names
-                ]
-                total_fim_np = np.array(total_fim_vals).reshape(
-                    len(parameter_names), len(parameter_names)
-                )
-
-                # Check positive definiteness and add jitter if needed
-                eig = np.linalg.eigvals(total_fim_np)
-                if min(eig) < small_number:
-                    jitter = small_number - min(eig)
-                    total_fim_np = total_fim_np + np.eye(len(parameter_names)) * jitter
-
-                # Compute Cholesky
-                L_vals = np.linalg.cholesky(total_fim_np)
-
-                # Initialize L and fix upper triangle to 0
+                # Fix upper triangle to 0 and set lower bound on diagonal
                 for i, p in enumerate(parameter_names):
                     for j, q in enumerate(parameter_names):
-                        scenario.L[p, q].value = L_vals[i, j]
                         # Fix upper triangle to 0
                         if i < j:
-                            scenario.L[p, q].fix(0.0)
+                            scenario.obj_cons.L[p, q].fix(0.0)
                         # Lower bound on diagonal
                         elif i == j and self.L_diagonal_lower_bound:
-                            scenario.L[p, q].setlb(self.L_diagonal_lower_bound)
+                            scenario.obj_cons.L[p, q].setlb(self.L_diagonal_lower_bound)
 
                 # Cholesky constraint: total_fim = L * L^T
                 def cholesky_rule(b, p, q):
                     p_idx = list(parameter_names).index(p)
                     q_idx = list(parameter_names).index(q)
                     if p_idx >= q_idx:
-                        return b.total_fim[p, q] == sum(
+                        return scenario.total_fim[p, q] == sum(
                             b.L[p, parameter_names.at(k + 1)]
                             * b.L[q, parameter_names.at(k + 1)]
                             for k in range(q_idx + 1)
@@ -1922,26 +2184,13 @@ class DesignOfExperiments:
                         # Skip upper triangle constraints since L is lower triangular
                         return pyo.Constraint.Skip
 
-                scenario.cholesky_cons = pyo.Constraint(
+                scenario.obj_cons.cholesky_cons = pyo.Constraint(
                     parameter_names, parameter_names, rule=cholesky_rule
                 )
 
             elif self.objective_option == ObjectiveLib.determinant:
                 # Non-Cholesky determinant: create determinant var per scenario
-                # Initialize determinant
-                total_fim_vals = [
-                    scenario.total_fim[p, q].value
-                    for p in parameter_names
-                    for q in parameter_names
-                ]
-                total_fim_np = np.array(total_fim_vals).reshape(
-                    len(parameter_names), len(parameter_names)
-                )
-                det_init = np.linalg.det(total_fim_np)
-
-                scenario.determinant = pyo.Var(
-                    initialize=det_init, bounds=(small_number, None)
-                )
+                scenario.obj_cons.determinant = pyo.Var(bounds=(small_number, None))
 
                 # Determinant constraint (explicit formula)
                 def determinant_general(b):
@@ -1952,7 +2201,7 @@ class DesignOfExperiments:
                     det_perm = sum(
                         self._sgn(list_p[d])
                         * math.prod(
-                            b.total_fim[
+                            scenario.total_fim[
                                 parameter_names.at(val + 1), parameter_names.at(ind + 1)
                             ]
                             for ind, val in enumerate(list_p[d])
@@ -1961,25 +2210,23 @@ class DesignOfExperiments:
                     )
                     return b.determinant == det_perm
 
-                scenario.determinant_cons = pyo.Constraint(rule=determinant_general)
+                scenario.obj_cons.determinant_cons = pyo.Constraint(
+                    rule=determinant_general
+                )
 
             elif self.objective_option == ObjectiveLib.pseudo_trace:
                 # Trace objective
-                # Initialize trace
-                trace_init = sum(
-                    scenario.total_fim[j, j].value for j in parameter_names
-                )
-                scenario.trace = pyo.Var(
-                    initialize=trace_init, bounds=(small_number, None)
-                )
+                scenario.obj_cons.pseudo_trace = pyo.Var(bounds=(small_number, None))
 
                 # Trace constraint
                 def pseudo_trace_rule(b):
                     return b.pseudo_trace == sum(
-                        b.total_fim[j, j] for j in parameter_names
+                        scenario.total_fim[j, j] for j in parameter_names
                     )
 
-                scenario.pseudo_trace_cons = pyo.Constraint(rule=pseudo_trace_rule)
+                scenario.obj_cons.pseudo_trace_cons = pyo.Constraint(
+                    rule=pseudo_trace_rule
+                )
 
         # 5. Create single top-level objective summing across scenarios
         if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
@@ -1988,7 +2235,7 @@ class DesignOfExperiments:
                     scenario_weights[s]
                     * 2
                     * sum(
-                        pyo.log10(model.param_scenario_blocks[s].L[j, j])
+                        pyo.log10(model.param_scenario_blocks[s].obj_cons.L[j, j])
                         for j in parameter_names
                     )
                     for s in range(n_scenarios)
@@ -2000,7 +2247,9 @@ class DesignOfExperiments:
             model.objective = pyo.Objective(
                 expr=sum(
                     scenario_weights[s]
-                    * pyo.log10(model.param_scenario_blocks[s].determinant + 1e-6)
+                    * pyo.log10(
+                        model.param_scenario_blocks[s].obj_cons.determinant + 1e-6
+                    )
                     for s in range(n_scenarios)
                 ),
                 sense=pyo.maximize,
@@ -2010,7 +2259,7 @@ class DesignOfExperiments:
             model.objective = pyo.Objective(
                 expr=sum(
                     scenario_weights[s]
-                    * pyo.log10(model.param_scenario_blocks[s].trace)
+                    * pyo.log10(model.param_scenario_blocks[s].obj_cons.pseudo_trace)
                     for s in range(n_scenarios)
                 ),
                 sense=pyo.maximize,
