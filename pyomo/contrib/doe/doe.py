@@ -632,6 +632,7 @@ class DesignOfExperiments:
                 self.create_doe_model(
                     model=self.model.param_scenario_blocks[s].exp_blocks[k],
                     experiment_index=k,
+                    _for_multi_experiment=True,  # Skip creating L matrix per experiment
                 )
                 # TODO: Update the parameter scenarios for each experiment block
                 # when using uncertainty in parameters
@@ -1040,7 +1041,9 @@ class DesignOfExperiments:
         self.kaug_FIM = self.kaug_jac.T @ cov_y @ self.kaug_jac + self.prior_FIM
 
     # Create the DoE model (with ``scenarios`` from finite differencing scheme)
-    def create_doe_model(self, model=None, experiment_index=0):
+    def create_doe_model(
+        self, model=None, experiment_index=0, _for_multi_experiment=False
+    ):
         """
         Add equations to compute sensitivities, FIM, and objective.
         Builds the DoE model. Adds the scenarios, the sensitivity matrix
@@ -1055,6 +1058,8 @@ class DesignOfExperiments:
         ----------
         model: model to add finite difference scenarios
         experiment_index: index of experiment in experiment_list to use for this model (default: 0)
+        _for_multi_experiment: if True, skip creating L matrix and other objective-related
+                               variables that will be created at the aggregated level (default: False)
 
         """
         if model is None:
@@ -1184,9 +1189,14 @@ class DesignOfExperiments:
 
         # To-Do: Look into this functionality.....
         # if cholesky, define L elements as variables
-        if self.Cholesky_option and self.objective_option in (
-            ObjectiveLib.determinant,
-            ObjectiveLib.trace,
+        if (
+            not _for_multi_experiment
+            and self.Cholesky_option
+            and self.objective_option
+            in (
+                ObjectiveLib.determinant,
+                ObjectiveLib.trace,
+            )
         ):
             model.L = pyo.Var(
                 model.parameter_names, model.parameter_names, initialize=identity_matrix
@@ -1712,6 +1722,7 @@ class DesignOfExperiments:
             list_p = list(object_p)
 
             # generate a name_order to iterate \sigma_i
+            # NOTE: Not used in calculation. Delete?
             det_perm = 0
             for i in range(len(list_p)):
                 name_order = []
@@ -1818,7 +1829,8 @@ class DesignOfExperiments:
         small_number = 1e-10
         n_scenarios = len(model.param_scenario_blocks)
 
-        # Get weights from instance attribute (set in optimize_experiments)
+        # Get weights from instance attribute (set in optimize_experiments) and
+        # default to uniform weights if not provided
         scenario_weights = getattr(
             self, 'scenario_weights', [1.0 / n_scenarios] * n_scenarios
         )
@@ -1831,10 +1843,12 @@ class DesignOfExperiments:
         for s in range(n_scenarios):
             scenario = model.param_scenario_blocks[s]
 
-            # 1. Create aggregated FIM variable: total_fim = sum of all exp FIMs + prior
+            # 1. Create aggregated FIM variable for each scenario:
+            # total_fim = sum of all exp FIMs + prior_FIM
             scenario.total_fim = pyo.Var(parameter_names, parameter_names)
 
-            # 2. Constraint: total_fim[p,q] = sum_k exp_blocks[k].fim[p,q] + prior_FIM[p,q]
+            # 2. Constraint: total_fim[p,q] = sum_k (exp_blocks[k].fim[p,q])
+            # + prior_FIM[p,q]
             def total_fim_rule(b, p, q):
                 p_idx = list(parameter_names).index(p)
                 q_idx = list(parameter_names).index(q)
@@ -1861,6 +1875,7 @@ class DesignOfExperiments:
                 self.Cholesky_option
                 and self.objective_option == ObjectiveLib.determinant
             ):
+                # Add lower triangular Cholesky variables per scenario
                 scenario.L = pyo.Var(parameter_names, parameter_names)
 
                 # Initialize L from total_fim
@@ -1881,6 +1896,8 @@ class DesignOfExperiments:
 
                 # Compute Cholesky
                 L_vals = np.linalg.cholesky(total_fim_np)
+
+                # Initialize L and fix upper triangle to 0
                 for i, p in enumerate(parameter_names):
                     for j, q in enumerate(parameter_names):
                         scenario.L[p, q].value = L_vals[i, j]
@@ -1902,6 +1919,7 @@ class DesignOfExperiments:
                             for k in range(q_idx + 1)
                         )
                     else:
+                        # Skip upper triangle constraints since L is lower triangular
                         return pyo.Constraint.Skip
 
                 scenario.cholesky_cons = pyo.Constraint(
@@ -1926,7 +1944,7 @@ class DesignOfExperiments:
                 )
 
                 # Determinant constraint (explicit formula)
-                def determinant_rule(b):
+                def determinant_general(b):
                     r_list = list(range(len(parameter_names)))
                     object_p = permutations(r_list)
                     list_p = list(object_p)
@@ -1943,9 +1961,9 @@ class DesignOfExperiments:
                     )
                     return b.determinant == det_perm
 
-                scenario.determinant_cons = pyo.Constraint(rule=determinant_rule)
+                scenario.determinant_cons = pyo.Constraint(rule=determinant_general)
 
-            elif self.objective_option == ObjectiveLib.trace:
+            elif self.objective_option == ObjectiveLib.pseudo_trace:
                 # Trace objective
                 # Initialize trace
                 trace_init = sum(
@@ -1956,10 +1974,12 @@ class DesignOfExperiments:
                 )
 
                 # Trace constraint
-                def trace_rule(b):
-                    return b.trace == sum(b.total_fim[j, j] for j in parameter_names)
+                def pseudo_trace_rule(b):
+                    return b.pseudo_trace == sum(
+                        b.total_fim[j, j] for j in parameter_names
+                    )
 
-                scenario.trace_cons = pyo.Constraint(rule=trace_rule)
+                scenario.pseudo_trace_cons = pyo.Constraint(rule=pseudo_trace_rule)
 
         # 5. Create single top-level objective summing across scenarios
         if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
@@ -1986,7 +2006,7 @@ class DesignOfExperiments:
                 sense=pyo.maximize,
             )
 
-        elif self.objective_option == ObjectiveLib.trace:
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
             model.objective = pyo.Objective(
                 expr=sum(
                     scenario_weights[s]
