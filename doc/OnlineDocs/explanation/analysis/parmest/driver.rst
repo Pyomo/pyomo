@@ -235,10 +235,7 @@ Optionally, solver options can be supplied, e.g.,
 Objective function
 ^^^^^^^^^^^^^^^^^^
 
-The second argument is an optional argument if the objective function has already been included in the
-Pyomo model, which defines the optimization objective function to use in parameter estimation. However, if the
-objective function has not been included in the Pyomo model, like the one in the :ref:`ExperimentClass` Section
-above, the user is required to supply the second argument.
+The second argument, ``obj_function``, is used to specify the objective function to use for parameter estimation if the user has not manually defined an objective function in their ``Experiment`` class.
 
 If ``obj_function`` is not specified, the Pyomo model is used "as is" and
 should be defined with "FirstStageCost" and "SecondStageCost"
