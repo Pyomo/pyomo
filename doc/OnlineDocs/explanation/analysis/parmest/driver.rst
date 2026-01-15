@@ -165,9 +165,7 @@ mathematical model outlined in the introduction section of this Quick Start.
 Step 2: Load the Data and Create a List Experiments
 -----------------------------------------------------------------------
 
-After creating an :class:`~pyomo.contrib.parmest.experiment.Experiment` class instance for the model, a list of the
-model's :class:`~pyomo.contrib.parmest.experiment.Experiment` class for all the experimental data points should be
-created.
+Load the experimental data into Python and create an instance of your :class:`~pyomo.contrib.parmest.experiment.Experiment` class for each set of experimental data. In this example, each measurement of `y` is treated as a separate experiment.
 
 .. doctest::
 
