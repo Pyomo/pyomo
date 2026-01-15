@@ -85,10 +85,9 @@ Step 1: Create the Experiment Class for the Model
 parmest requires that the user create an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
 builds an annotated Pyomo model denoting experiment outputs, unknown parameters, and measurement errors using Pyomo `Suffix` components.
 
-* ``m.experiment_outputs`` which defines experiment output (Pyomo `Param`, `Var`, or `Expression`)
-  and their associated data values (float, int).
-* ``m.unknown_parameters`` which defines the mutable parameters or variables (Pyomo `Param` or `Var`)
-  to estimate along with their component unique identifier (Pyomo `ComponentUID`).
+* ``m.experiment_outputs`` maps the experiment output, or measurement, terms in the model (Pyomo `Param`, `Var`, or `Expression`) to their associated data values (float, int).
+* ``m.unknown_parameters`` maps the model parameters to estimate (Pyomo `Param` or `Var`)
+  to their component unique identifier (Pyomo `ComponentUID`) which is used to identify equivalent parameters across multiple experiments.
   Within parmest, any parameters that are to be estimated are converted to unfixed variables.
   Variables that are to be estimated are also unfixed.
 
