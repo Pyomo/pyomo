@@ -23,6 +23,7 @@ import pyomo.environ as pyo
 from pyomo.core import Objective
 
 
+# File no longer used in parmest; retained for possible future use.
 def get_objs(scenario_instance):
     """return the list of objective functions for scenario_instance"""
     scenario_objs = scenario_instance.component_data_objects(

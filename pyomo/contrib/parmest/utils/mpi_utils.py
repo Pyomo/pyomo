@@ -12,6 +12,8 @@
 from collections import OrderedDict
 import importlib
 
+# Files no longer used in parmest; retained for possible future use.
+
 """
 This module is a collection of classes that provide a
 friendlier interface to MPI (through mpi4py). They help
