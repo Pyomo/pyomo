@@ -83,13 +83,18 @@ Step 1: Create the Experiment Class for the Model
 -------------------------------------------------
 
 parmest requires that the user create an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
-builds an annotated Pyomo model denoting experiment outputs, unknown parameters, and measurement errors using Pyomo `Suffix` components.
+builds an annotated Pyomo model denoting experiment outputs, unknown parameters, and measurement errors using
+Pyomo `Suffix` components.
 
-* ``m.experiment_outputs`` maps the experiment output, or measurement, terms in the model (Pyomo `Param`, `Var`, or `Expression`) to their associated data values (float, int).
+* ``m.experiment_outputs`` maps the experiment output (or measurement) terms in the model
+  (Pyomo `Param`, `Var`, or `Expression`) to their associated data values (float, int).
 * ``m.unknown_parameters`` maps the model parameters to estimate (Pyomo `Param` or `Var`)
-  to their component unique identifier (Pyomo `ComponentUID`) which is used to identify equivalent parameters across multiple experiments.
+  to their component unique identifier (Pyomo `ComponentUID`) which is used to identify equivalent
+  parameters across multiple experiments.
   Within parmest, any parameters that are to be estimated are converted to unfixed variables.
   Variables that are to be estimated are also unfixed.
+* ``m.measurement_error`` maps the measurement error (float, int) of the experiment output, or measurement
+  (Pyomo `Param`, `Var`, or `Expression`) defined in the model.
 
 The experiment class has one required method:
 
@@ -162,10 +167,12 @@ mathematical model outlined in the introduction section of this Quick Start.
     ...         return self.model
 
 
-Step 2: Load the Data and Create a List Experiments
------------------------------------------------------------------------
+Step 2: Load the Data and Create a List of Experiments
+------------------------------------------------------
 
-Load the experimental data into Python and create an instance of your :class:`~pyomo.contrib.parmest.experiment.Experiment` class for each set of experimental data. In this example, each measurement of `y` is treated as a separate experiment.
+Load the experimental data into Python and create an instance of your
+:class:`~pyomo.contrib.parmest.experiment.Experiment` class for each set of experimental data.
+In this example, each measurement of `y` is treated as a separate experiment.
 
 .. doctest::
 
@@ -235,7 +242,8 @@ Optionally, solver options can be supplied, e.g.,
 Objective function
 ^^^^^^^^^^^^^^^^^^
 
-The second argument, ``obj_function``, is used to specify the objective function to use for parameter estimation if the user has not manually defined an objective function in their ``Experiment`` class.
+The second argument, ``obj_function``, is used to specify the objective function to use for parameter
+estimation if the user has not manually defined an objective function in their ``Experiment`` class.
 
 If ``obj_function`` is not specified, the Pyomo model is used "as is" and
 should be defined with "FirstStageCost" and "SecondStageCost"
