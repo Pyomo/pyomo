@@ -82,10 +82,8 @@ required packages for parameter estimation in parmest:
 Step 1: Create the Experiment Class for the Model
 -------------------------------------------------
 
-parmest requires that the user creates an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
-contains the annotated Pyomo model with labeled experiment outputs, unknown parameters, and measurement errors.
-
-A labeled Pyomo model ``m`` has the following additional suffixes (Pyomo `Suffix`):
+parmest requires that the user create an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
+builds an annotated Pyomo model denoting experiment outputs, unknown parameters, and measurement errors using Pyomo `Suffix` components.
 
 * ``m.experiment_outputs`` which defines experiment output (Pyomo `Param`, `Var`, or `Expression`)
   and their associated data values (float, int).
