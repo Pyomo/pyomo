@@ -258,7 +258,7 @@ Parmest includes two built-in objective functions ("SSE" and "SSE_weighted") to 
 the sum of squared errors between the ``m.experiment_outputs`` model values and
 data values.
 
-Step 3: Estimate the Parameters
+Step 4: Estimate the Parameters
 -------------------------------
 
 After creating the :class:`~pyomo.contrib.parmest.parmest.Estimator` object with the desired objective function,
