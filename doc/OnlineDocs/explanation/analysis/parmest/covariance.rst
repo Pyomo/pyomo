@@ -3,7 +3,7 @@
 Covariance Matrix Estimation
 ============================
 
-The goal is parameter estimation (see :ref:`driversection` Section) is to estimate unknown model parameters
+The goal of parameter estimation (see :ref:`driversection` Section) is to estimate unknown model parameters
 from experimental data. When the model parameters are estimated from the data, their accuracy is measured by
 computing the covariance matrix. The diagonal of this covariance matrix contains the variance of the
 estimated parameters which is used to calculate their uncertainty. Assuming Gaussian independent and identically
