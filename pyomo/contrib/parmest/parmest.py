@@ -13,6 +13,7 @@
 #### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
 #### Redesign with Experiment class Dec 2023
 
+# Options for using mpi-sppy or local EF only used in the deprecatedEstimator class
 # TODO: move use_mpisppy to a Pyomo configuration option
 # False implies always use the EF that is local to parmest
 use_mpisppy = True  # Use it if we can but use local if not.
@@ -82,6 +83,7 @@ inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
 logger = logging.getLogger(__name__)
 
 
+# Only used in the deprecatedEstimator class
 def ef_nonants(ef):
     # Wrapper to call someone's ef_nonants
     # (the function being called is very short, but it might be changed)
@@ -91,6 +93,7 @@ def ef_nonants(ef):
         return local_ef.ef_nonants(ef)
 
 
+# Only used in the deprecatedEstimator class
 def _experiment_instance_creation_callback(
     scenario_name, node_names=None, cb_data=None
 ):
@@ -967,6 +970,7 @@ class Estimator:
 
         return parmest_model
 
+    # @Reviewers: Is this needed? Calls create_parmest_model above.
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
         model = self._create_parmest_model(experiment_number)
         return model
@@ -1849,6 +1853,9 @@ class Estimator:
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
             # # check if theta_names are in model
+
+            # @Reviewers: Does this need strings in new model structure?
+            # Or can we just use the names as is for assertion?
             for theta in list(theta_names):
                 theta_temp = theta.replace("'", "")  # cleaning quotes from theta_names
                 assert theta_temp in [
