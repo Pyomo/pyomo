@@ -29,7 +29,7 @@ Python Package Dependencies
     ::
 
         pip install scipy matplotlib
-4.  (*Optional*) Install ``mpisppy``, ``mpi4py.MPI``, and ``seaborn``
+4.  (*Optional*) Install ``seaborn``
 
 IPOPT
 -----

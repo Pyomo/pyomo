@@ -26,7 +26,7 @@ a vector, :math:`\boldsymbol{\theta}`, to use in the functional form
 
 .. math::
       
-   \boldsymbol{y}_i & = \boldsymbol{f}\left(\boldsymbol{x}_{i}, \boldsymbol{\theta}\right) +
+   \boldsymbol{y}_i = \boldsymbol{f}\left(\boldsymbol{x}_{i}, \boldsymbol{\theta}\right) +
     \boldsymbol{\varepsilon}_i \quad \forall \; i \in \{1, \ldots, n\}
 
 where :math:`\boldsymbol{y}_{i} \in \mathbb{R}^m` are observations of the measured or output variables,

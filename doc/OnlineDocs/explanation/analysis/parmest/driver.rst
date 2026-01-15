@@ -255,10 +255,7 @@ this format, the user can select the "SSE" or "SSE_weighted" built-in objective
 functions. If the user wants to use an objective that is different from the built-in
 options, a custom objective function can be defined for parameter estimation. However,
 covariance matrix estimation (see :ref:`covariancesection` Section) will not support this
-custom objective function. The objective function (built-in or custom) has a single argument,
-which is the model from a single experiment. The objective function returns a Pyomo expression
-which is used to define "SecondStageCost". The objective function can be used to customize data
-points and weights that are used in parameter estimation.
+custom objective function.
 
 Parmest includes two built-in objective functions ("SSE" and "SSE_weighted") to compute
 the sum of squared errors between the ``m.experiment_outputs`` model values and
