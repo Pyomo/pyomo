@@ -911,10 +911,7 @@ class Estimator:
 
         return model_theta_list
 
-    # Added fix_theta option to fix theta variables in scenario blocks
-    # Would be useful for computing objective values at given theta, using same
-    # _create_scenario_blocks.
-    def _create_parmest_model(self, experiment_number, fix_theta=False):
+    def _create_parmest_model(self, experiment_number):
         """
         Modify the Pyomo model for parameter estimation
         """
@@ -966,9 +963,7 @@ class Estimator:
 
         # Convert theta Params to Vars, and unfix theta Vars
         theta_names = [k.name for k, v in model.unknown_parameters.items()]
-        parmest_model = utils.convert_params_to_vars(
-            model, theta_names, fix_vars=fix_theta
-        )
+        parmest_model = utils.convert_params_to_vars(model, theta_names, fix_vars=False)
 
         return parmest_model
 
@@ -992,9 +987,7 @@ class Estimator:
 
             for i in range(len(bootlist)):
                 # Create parmest model for experiment i
-                parmest_model = self._create_parmest_model(
-                    bootlist[i], fix_theta=fix_theta
-                )
+                parmest_model = self._create_parmest_model(bootlist[i])
 
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
@@ -1005,7 +998,7 @@ class Estimator:
 
             for i in range(len(self.exp_list)):
                 # Create parmest model for experiment i
-                parmest_model = self._create_parmest_model(i, fix_theta=fix_theta)
+                parmest_model = self._create_parmest_model(i)
                 if ThetaVals:
                     # Set theta values in the block model
                     for name in self.estimator_theta_names:
