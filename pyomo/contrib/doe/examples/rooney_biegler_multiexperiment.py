@@ -213,7 +213,7 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # Create multiple experiment objects with different hour values
-    n_exp = 3
+    n_exp = 2
     experiment_list = []
 
     print(f"\nCreating and initializing {n_exp} experiments...")
