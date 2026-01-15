@@ -32,6 +32,7 @@ ipopt_available = pyo.SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
 
+# TESTS HERE WILL BE MODIFIED FOR _Q_OPT_BLOCKS LATER
 # Set the global seed for random number generation in tests
 _RANDOM_SEED_FOR_TESTING = 524
 
