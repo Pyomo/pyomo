@@ -573,23 +573,20 @@ class DesignOfExperiments:
                 json.dump(self.results, file)
 
     def optimize_experiments(
-        self,
-        parameter_scenarios=None,
-        stochastic_objective=None,
-        results_file=None,
+        self, parameter_scenarios=None, stochastic_objective=None, results_file=None
     ):
         """
-        Optimize multiple experiments simultaneously.
-        
-        The number of experiments is determined by the length of the 
+        Optimize single experiment or multiple experiments simultaneously for
+        Design of Experiments.
+
+        The number of experiments is determined by the length of the
         experiment_list provided when creating the DesignOfExperiments object.
 
         Parameters
         ----------
-        parameter_scenarios: list of parameter scenarios to consider for
+        parameter_scenarios: `dataclass` of parameter scenarios to consider for
                              the multi-experiment optimization
-        stochastic_objective: function that takes in the FIM and
-                                returns a scalar objective value
+        stochastic_objective: `expected_value`, `cvar`
         results_file: string name of the file path to save the results
                         to in the form of a .json file
 
@@ -599,10 +596,10 @@ class DesignOfExperiments:
             The number of experiments to optimize is determined by the length
             of the experiment_list parameter passed to the DesignOfExperiments
             constructor.
-            
+
         Symmetry Breaking (for multiple experiments):
-            To prevent equivalent permutations of identical experiments, you can
-            mark a "primary" design variable using a Suffix in your experiment's
+            To prevent equivalent permutations of identical experiments, you must
+            mark a "primary" design variable using a Pyomo Suffix in your experiment's
             `label_experiment()` method:
 
             Example::
@@ -616,11 +613,13 @@ class DesignOfExperiments:
         """
         # Infer number of experiments from experiment_list
         n_exp = len(self.experiment_list)
-        
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
-        self.logger.info(f"Beginning multi-experiment optimization with {n_exp} experiments.")
+        self.logger.info(
+            f"Beginning multi-experiment optimization with {n_exp} experiments."
+        )
 
         if parameter_scenarios is None:
             n_scenarios = 1  # number of scenarios
@@ -906,7 +905,7 @@ class DesignOfExperiments:
             scenario_results["log10 E-opt"] = np.log10(
                 min(np.linalg.eig(total_fim_np)[0])
             )
-            scenario_results["FIM Condition Number"] = np.linalg.cond(total_fim_np)
+            scenario_results["log10 ME-opt"] = np.log10(np.linalg.cond(total_fim_np))
 
             # Store results for each experiment in this scenario
             scenario_results["Experiments"] = []

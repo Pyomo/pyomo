@@ -117,7 +117,7 @@ def run_reactor_multi_experiment_doe(experiment_list, tee=False):
         print(f"  log10 A-opt: {scenario['log10 A-opt']:.4f}")
         print(f"  log10 D-opt: {scenario['log10 D-opt']:.4f}")
         print(f"  log10 E-opt: {scenario['log10 E-opt']:.4f}")
-        print(f"  FIM Condition Number: {scenario['FIM Condition Number']:.4f}")
+        print(f"  log10 ME-opt: {scenario['log10 ME-opt']:.4f}")
 
         # Print each experiment design
         for exp_idx, exp in enumerate(scenario['Experiments']):
@@ -149,13 +149,16 @@ if __name__ == "__main__":
     print("=" * 60)
     # Create a FRESH experiment object each time
     exp1 = ReactorExperiment(data=data_ex.copy(), nfe=10, ncp=3)
+    print("\n" * 10, "Checking model object presence in experiments:")
+    print(hasattr(exp1, 'model'))
+
     solver = pyo.SolverFactory("ipopt")
     solver.solve(exp1.get_labeled_model())  # Initial solve to help with initialization
     doe_obj_1 = run_reactor_multi_experiment_doe(experiment_list=[exp1], tee=False)
 
     # Test with 2 experiments with different initial values
     print("\n" + "=" * 60)
-    print("TEST 2: Two Experiments")
+    print("TEST 2: Three Experiments")
     print("=" * 60)
 
     # Create data for first experiment - use base values
@@ -172,12 +175,43 @@ if __name__ == "__main__":
         float(k): v for k, v in data_ex["control_points"].items()
     }
     data_ex2["CA0"] = 2.5  # Different initial concentration
-
+    data_ex3 = data_ex.copy()
+    data_ex3["control_points"] = {
+        float(k): v for k, v in data_ex["control_points"].items()
+    }
+    data_ex3["CA0"] = 5  # Different initial concentration
     exp2_1 = ReactorExperiment(data=data_ex1, nfe=10, ncp=3)
     exp2_2 = ReactorExperiment(data=data_ex2, nfe=10, ncp=3)
+    exp2_3 = ReactorExperiment(data=data_ex3, nfe=10, ncp=3)
+
+    # Check initialization state before solving
+    print("\n" + "=" * 60)
+    print("Checking initialization state BEFORE solver calls:")
+    print("=" * 60)
+    for i, exp in enumerate([exp2_1, exp2_2, exp2_3], 1):
+        model = exp.get_labeled_model()
+        # Check a sample variable value (e.g., temperature at first time point)
+        if hasattr(model, 'T') and len(list(model.T)) > 0:
+            first_t = list(model.T)[0]
+            print(f"Exp2_{i}: T[{first_t}] = {pyo.value(model.T[first_t])}")
+
+    # Initialize experiments with solver (like exp1)
+    print("\nInitializing experiments with solver...")
+    for i, exp in enumerate([exp2_1, exp2_2, exp2_3], 1):
+        solver.solve(exp.get_labeled_model())
+        print(f"  Exp2_{i} initialized")
+
+    # Check initialization state after solving
+    print("\nChecking initialization state AFTER solver calls:")
+    print("=" * 60)
+    for i, exp in enumerate([exp2_1, exp2_2, exp2_3], 1):
+        model = exp.get_labeled_model()
+        if hasattr(model, 'T') and len(list(model.T)) > 0:
+            first_t = list(model.T)[0]
+            print(f"Exp2_{i}: T[{first_t}] = {pyo.value(model.T[first_t])}")
 
     doe_obj_2 = run_reactor_multi_experiment_doe(
-        experiment_list=[exp2_1, exp2_2], tee=False
+        experiment_list=[exp2_1, exp2_2, exp2_3], tee=False
     )
 
     print("\nAll tests completed successfully!")
