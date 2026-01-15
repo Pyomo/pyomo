@@ -365,6 +365,8 @@ def _count_total_experiments(experiment_list):
     total_number_data = 0
     for experiment in experiment_list:
         total_number_data += len(experiment.get_labeled_model().experiment_outputs)
+        # Divide by unique experiment_outputs
+        total_number_data /= len(experiment.get_labeled_model().experiment_outputs.keys())
 
     return total_number_data
 
