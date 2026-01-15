@@ -120,7 +120,7 @@ Load the experimental data into Python and create an instance of your
 In this example, each measurement of `y` is treated as a separate experiment.
 
 .. doctest::
-
+    >>> from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
     >>> data = pd.DataFrame(data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
     ...                     columns=["hour", "y"])
     >>> exp_list = []
