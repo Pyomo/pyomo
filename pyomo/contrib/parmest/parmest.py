@@ -1260,7 +1260,7 @@ class Estimator:
         # calculate the sum of squared errors at the estimated parameter values
         sse_vals = []
         for experiment in self.exp_list:
-            model = self._create_parmest_model(experiment)
+            model = _get_labeled_model(experiment)
 
             # fix the value of the unknown parameters to the estimated values
             for param in model.unknown_parameters:
