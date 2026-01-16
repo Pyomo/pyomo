@@ -635,8 +635,7 @@ class RegressionTest(unittest.TestCase):
         # so PyROS should say robust feasible after 1 iteration
         self.assertEqual(res.iterations, 1)
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_feasible,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
         self.assertAlmostEqual(res.final_objective_value, 0)
         self.assertAlmostEqual(m.x.value, 0)
