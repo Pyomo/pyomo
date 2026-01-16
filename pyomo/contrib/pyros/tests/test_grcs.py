@@ -613,7 +613,7 @@ class RegressionTest(unittest.TestCase):
     def test_pyros_solver_robust_feas_tol(self):
         m = ConcreteModel()
         m.q = Param(initialize=0, mutable=True)
-        m.x = Var(bounds=(0, 10 - m.q * (10 + 1e-3)))
+        m.x = Var(bounds=(0, 20 - m.q * (20 + 1e-3)))
         m.obj = Objective(expr=m.x)
         res = SolverFactory("pyros").solve(
             model=m,
@@ -631,7 +631,8 @@ class RegressionTest(unittest.TestCase):
         # however, upper bound is most stringent at q = 1,
         # becomes -1e-3.
         # relative PyROS tolerance of 1e-4 should allow it, since
-        # nominally, constraint violation is -10.
+        # nominally, constraint violation is -20,
+        # so scaled violation is 1e-3 / 20 = 5e-5 < 1e-4
         # so PyROS should say robust feasible after 1 iteration
         self.assertEqual(res.iterations, 1)
         self.assertEqual(
