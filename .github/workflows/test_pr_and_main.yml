@@ -179,7 +179,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.13
           other: /rtd
           category: notests
           build_docs: 1
