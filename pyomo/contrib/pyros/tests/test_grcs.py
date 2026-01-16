@@ -627,7 +627,7 @@ class RegressionTest(unittest.TestCase):
         )
 
         # NOTE:
-        # nominally optimal solution x = 0 is within bounds (0, 10).
+        # nominally optimal solution x = 0 is within bounds (0, 20).
         # however, upper bound is most stringent at q = 1,
         # becomes -1e-3.
         # relative PyROS tolerance of 1e-4 should allow it, since
