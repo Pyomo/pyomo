@@ -244,8 +244,8 @@ def _best_object_type_for_member(
     The revised autodoc implementation moved away from class-based
     documenters.  We can still make autosummary work with documenter
     extensions, but we must monkey-patch additional utilities within
-    autosummary to explicitly query (and resolve) documenters fro the
-    registery (the implementation from autodoc is a hard-coded if tree
+    autosummary to explicitly query (and resolve) documenters from the
+    registry (the implementation from autodoc is a hard-coded if tree
     and ignores the registry).
 
     """
@@ -278,7 +278,7 @@ def _load_object_by_name(_loader, name, objtype, **kwargs):
     The revised autodoc implementation moved away from class-based
     documenters.  We can still make autosummary work with documenter
     extensions, but we must monkey-patch additional utilities within
-    autosummary to map the new onjtypes back to the "standard" set.
+    autosummary to map the new objtypes back to the "standard" set.
 
     """
 
