@@ -63,8 +63,26 @@ The experimental data is given in the table below:
 To use parmest to estimate :math:`\theta_1` and :math:`\theta_2` from the data, we provide the following
 detailed steps:
 
-Step 0: Import Pyomo, parmest, Experiment Class, and Pandas
------------------------------------------------------------
+.. testsetup:: *
+
+    import pandas as pd
+    import pyomo.contrib.parmest.parmest as parmest
+
+    # Data
+    data = pd.DataFrame(
+        data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+        columns=["hour", "y"]
+    )
+
+    # Create an experiment list
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
+
+    exp_list = []
+    for i in range(data.shape[0]):
+        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
+
+Step 0: Import parmest and Pandas
+---------------------------------
 
 Before solving the parameter estimation problem, the following code must be executed to import the
 required packages for parameter estimation in parmest:
@@ -72,9 +90,7 @@ required packages for parameter estimation in parmest:
 .. doctest::
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
-    >>> import pyomo.environ as pyo
     >>> import pyomo.contrib.parmest.parmest as parmest
-    >>> from pyomo.contrib.parmest.experiment import Experiment
     >>> import pandas as pd
 
 .. _ExperimentClass:
@@ -120,7 +136,8 @@ Load the experimental data into Python and create an instance of your
 In this example, each measurement of `y` is treated as a separate experiment.
 
 .. doctest::
-    >>> from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
     >>> data = pd.DataFrame(data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
     ...                     columns=["hour", "y"])
     >>> exp_list = []
