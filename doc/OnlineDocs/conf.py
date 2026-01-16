@@ -357,6 +357,10 @@ texinfo_documents = []
 
 # autodoc_member_order = 'bysource'
 autodoc_member_order = 'groupwise'
+# Starting in Sphinx 9.1, the new implementation of autodoc isn't
+# compatible with our autosummary extension (See
+# https://github.com/sphinx-doc/sphinx/issues/14089)
+autodoc_use_legacy_class_based = True
 
 autosummary_generate = True
 autosummary_ignore_module_all = True
