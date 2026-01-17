@@ -584,11 +584,18 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        parameter_scenarios: `dataclass` of parameter scenarios to consider for
-                             the multi-experiment optimization
-        stochastic_objective: `expected_value`, `cvar`
-        results_file: string name of the file path to save the results
-                        to in the form of a .json file
+        parameter_scenarios:
+            `dataclass` of parameter scenarios to consider for the multi-experiment
+            optimization. This is a placeholder for future functionality to
+            incorporate parametric uncertainty. Default: None
+
+        stochastic_objective:
+            `expected_value`, `cvar`. This is a placeholder for future functionality
+            to incorporate parametric uncertainty. Default: None
+
+        results_file:
+            string name of the file path to save the results to in the form
+            of a .json file
 
         Notes
         -----
@@ -647,7 +654,7 @@ class DesignOfExperiments:
                     _for_multi_experiment=True,  # Skip creating L matrix per experiment
                 )
                 # TODO: Update the parameter scenarios for each experiment block
-                # when using uncertainty in parameters
+                # when using parametric uncertainty
 
         # Add symmetry breaking constraints to prevent equivalent permutations for
         # multiple experiments
@@ -665,6 +672,7 @@ class DesignOfExperiments:
                     "marking the primary design variable for ordering. "
                     "Example: m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
                     "m.sym_break_cons[m.my_design_var] = None"
+                    "The value of the Suffix, e.g., `m.my_design_var` does not matter."
                 )
 
             # Get the variable marked for symmetry breaking
@@ -673,8 +681,9 @@ class DesignOfExperiments:
             if len(sym_break_var_list) == 0:
                 raise ValueError(
                     "sym_break_cons Suffix exists but no variable is marked. "
-                    "Please mark at least one design variable for symmetry breaking. "
+                    "Please mark one design variable for symmetry breaking. "
                     "Example: m.sym_break_cons[m.my_design_var] = None"
+                    "The value of the Suffix, e.g., `m.my_design_var` does not matter."
                 )
 
             if len(sym_break_var_list) > 1:
@@ -786,7 +795,6 @@ class DesignOfExperiments:
 
         for s in range(n_scenarios):
             scenario = self.model.param_scenario_blocks[s]
-
             # Update total_fim values from solved individual experiment FIMs
             for i, p in enumerate(parameter_names):
                 for j, q in enumerate(parameter_names):
@@ -850,10 +858,10 @@ class DesignOfExperiments:
 
             if hasattr(scenario.obj_cons, "pseudo_trace"):
                 # Initialize pseudo_trace
-                trace_val = sum(
+                pseudo_trace_val = sum(
                     pyo.value(scenario.total_fim[j, j]) for j in parameter_names
                 )
-                scenario.obj_cons.pseudo_trace.set_value(trace_val)
+                scenario.obj_cons.pseudo_trace.set_value(pseudo_trace_val)
 
         # Solve the full model
         res = self.solver.solve(self.model, tee=self.tee)
@@ -2214,10 +2222,10 @@ class DesignOfExperiments:
                 )
 
             elif self.objective_option == ObjectiveLib.pseudo_trace:
-                # Trace objective
+                # Pseudo trace objective (Trace of FIM)
                 scenario.obj_cons.pseudo_trace = pyo.Var(bounds=(small_number, None))
 
-                # Trace constraint
+                # Pseudo trace constraint
                 def pseudo_trace_rule(b):
                     return b.pseudo_trace == sum(
                         scenario.total_fim[j, j] for j in parameter_names
@@ -2247,7 +2255,8 @@ class DesignOfExperiments:
                 expr=sum(
                     scenario_weights[s]
                     * pyo.log10(
-                        model.param_scenario_blocks[s].obj_cons.determinant + 1e-6
+                        model.param_scenario_blocks[s].obj_cons.determinant
+                        + _SMALL_TOLERANCE_DEFINITENESS  # to avoid log(0)
                     )
                     for s in range(n_scenarios)
                 ),
@@ -2258,7 +2267,10 @@ class DesignOfExperiments:
             model.objective = pyo.Objective(
                 expr=sum(
                     scenario_weights[s]
-                    * pyo.log10(model.param_scenario_blocks[s].obj_cons.pseudo_trace)
+                    * pyo.log10(
+                        model.param_scenario_blocks[s].obj_cons.pseudo_trace
+                        + _SMALL_TOLERANCE_DEFINITENESS  # to avoid log(0)
+                    )
                     for s in range(n_scenarios)
                 ),
                 sense=pyo.maximize,
