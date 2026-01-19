@@ -25,12 +25,8 @@ def reactor_design_model():
     model = pyo.ConcreteModel()
 
     # Rate constants, make unknown parameters variables
-    model.k1 = pyo.Var(
-        initialize=5.0 / 6.0, within=pyo.PositiveReals
-    )  # min^-1
-    model.k2 = pyo.Var(
-        initialize=5.0 / 3.0, within=pyo.PositiveReals
-    )  # min^-1
+    model.k1 = pyo.Var(initialize=5.0 / 6.0, within=pyo.PositiveReals)  # min^-1
+    model.k2 = pyo.Var(initialize=5.0 / 3.0, within=pyo.PositiveReals)  # min^-1
     model.k3 = pyo.Var(
         initialize=1.0 / 6000.0, within=pyo.PositiveReals
     )  # m^3/(gmol min)
