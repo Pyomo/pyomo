@@ -16,7 +16,6 @@ from pyomo.common.dependencies import attempt_import, matplotlib_available
 from pyomo.common.fileutils import this_file_dir
 import pyomo.environ as pyo
 
-
 srcdir = os.path.abspath(os.path.join(this_file_dir(), '..', 'src'))
 
 parameterized, param_available = attempt_import('parameterized')
