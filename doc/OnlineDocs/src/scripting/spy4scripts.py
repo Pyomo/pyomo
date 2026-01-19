@@ -17,6 +17,7 @@
 David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for scripts.rst in testable form
 """
+
 import pyomo.environ as pyo
 
 instance = pyo.ConcreteModel()

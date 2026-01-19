@@ -31,7 +31,6 @@ from pyomo.core import (
     sum_product,
 )
 
-
 INDEX_SET = [(t1, t2) for t1 in range(1, 8) for t2 in range(0, 2)]
 DOMAIN_PTS = dict(
     [

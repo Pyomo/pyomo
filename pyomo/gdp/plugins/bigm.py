@@ -221,7 +221,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     def _transform_disjunctionData(self, obj, index, bigM, gdp_tree):
         parent_disjunct = gdp_tree.parent(obj)
         root_disjunct = gdp_tree.root_disjunct(obj)
-        (transBlock, xorConstraint) = self._setup_transform_disjunctionData(
+        transBlock, xorConstraint = self._setup_transform_disjunctionData(
             obj, root_disjunct
         )
 
@@ -378,7 +378,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         for bigm in suffix_list:
             if constraint in bigm:
                 M = bigm[constraint]
-                (lower, upper, need_lower, need_upper) = self._process_M_value(
+                lower, upper, need_lower, need_upper = self._process_M_value(
                     M,
                     lower,
                     upper,
@@ -395,7 +395,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             if constraint.parent_component() in bigm:
                 parent = constraint.parent_component()
                 M = bigm[parent]
-                (lower, upper, need_lower, need_upper) = self._process_M_value(
+                lower, upper, need_lower, need_upper = self._process_M_value(
                     M, lower, upper, need_lower, need_upper, bigm, parent, constraint
                 )
                 if not need_lower and not need_upper:
@@ -407,7 +407,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             for bigm in suffix_list:
                 if None in bigm:
                     M = bigm[None]
-                    (lower, upper, need_lower, need_upper) = self._process_M_value(
+                    lower, upper, need_lower, need_upper = self._process_M_value(
                         M, lower, upper, need_lower, need_upper, bigm, None, constraint
                     )
                 if not need_lower and not need_upper:
@@ -423,7 +423,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     )
     def get_m_value_src(self, constraint):
         transBlock = _get_constraint_transBlock(constraint)
-        ((lower_val, lower_source, lower_key), (upper_val, upper_source, upper_key)) = (
+        (lower_val, lower_source, lower_key), (upper_val, upper_source, upper_key) = (
             transBlock.private_data().bigm_src[constraint]
         )
 
