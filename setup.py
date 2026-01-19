@@ -110,12 +110,10 @@ if using_cython:
         ext_modules = cythonize(files, compiler_directives={"language_level": 3})
     except:
         if using_cython == CYTHON_REQUIRED:
-            print(
-                """
+            print("""
 ERROR: Cython was explicitly requested with --with-cython, but cythonization
        of core Pyomo modules failed.
-"""
-            )
+""")
             raise
         using_cython = False
 
@@ -312,31 +310,23 @@ except SystemExit as e_info:
     if 'Microsoft Visual C++' not in str(e_info):
         raise
     elif using_cython == CYTHON_REQUIRED:
-        print(
-            """
+        print("""
 ERROR: Cython was explicitly requested with --with-cython, but cythonization
        of core Pyomo modules failed.
-"""
-        )
+""")
         raise
     else:
-        print(
-            """
+        print("""
 ERROR: setup() failed:
     %s
 Re-running setup() without the Cython modules
-"""
-            % (str(e_info),)
-        )
+""" % (str(e_info),))
         setup_kwargs['ext_modules'] = []
         setup(**setup_kwargs)
-        print(
-            """
+        print("""
 WARNING: Installation completed successfully, but the attempt to cythonize
          core Pyomo modules failed.  Cython provides performance
          optimizations and is not required for any Pyomo functionality.
          Cython returned the following error:
    "%s"
-"""
-            % (str(e_info),)
-        )
+""" % (str(e_info),))

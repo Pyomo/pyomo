@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 """Module for visualizing results of incidence graph or matrix analysis"""
+
 from pyomo.contrib.incidence_analysis.config import IncidenceOrder
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,

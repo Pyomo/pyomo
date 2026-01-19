@@ -87,8 +87,7 @@ class RelationalExpression(ExpressionBase, BooleanValue):
     def __bool__(self):
         if self.is_constant():
             return bool(self())
-        raise PyomoException(
-            """
+        raise PyomoException("""
 Cannot convert non-constant Pyomo expression (%s) to bool.
 This error is usually caused by using a Var, unit, or mutable Param in a
 Boolean context such as an "if" statement, or when checking container
@@ -100,9 +99,7 @@ and
     >>> m.y = Var()
     >>> if m.y in [m.x, m.y]:
     ...     pass
-would both cause this exception.""".strip()
-            % (self,)
-        )
+would both cause this exception.""".strip() % (self,))
 
     @property
     def args(self):
