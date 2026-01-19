@@ -19,6 +19,8 @@ import pyomo.common.unittest as unittest
 from pyomo.common.fileutils import this_file_dir
 
 _DEBUG = False
+currdir = this_file_dir()
+htmldir = os.path.abspath(os.path.join(currdir, '..', '_build', 'html'))
 
 
 class SimplifiedElementTreeHTMLParser(html.parser.HTMLParser):
@@ -61,10 +63,6 @@ class SimplifiedElementTreeHTMLParser(html.parser.HTMLParser):
         parser.feed(html_string)
         parser.close()
         return parser.root
-
-
-currdir = this_file_dir()
-htmldir = os.path.abspath(os.path.join(currdir, '..', '_build', 'html'))
 
 
 @unittest.skipUnless(os.path.exists(htmldir), "Doc HTML build not found")
