@@ -44,6 +44,8 @@ def simple_reaction_model(data):
     model.x2 = Param(initialize=float(data['x2']))
 
     # Rate constants
+    # @Reviewers: Can we switch this to explicitly defining which parameters are to be
+    # regressed in the Experiment class?
     model.rxn = RangeSet(2)
     initial_guess = {1: 750, 2: 1200}
     model.k = Var(model.rxn, initialize=initial_guess, within=PositiveReals)
