@@ -220,7 +220,8 @@ setup_kwargs = dict(
             'pytest-parallel',
         ],
         'docs': [
-            'Sphinx>4,!=8.2.0',
+            # Sphinx 9.0-9.1.0 fails to correctly generate type references.
+            'Sphinx>4,!=8.2.0,!=9.0.*,!=9.1.0',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
