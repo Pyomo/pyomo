@@ -213,7 +213,7 @@ class StreamIndenter:
 
     def __init__(self, ostream: io.TextIOBase, indent: str = ' ' * 4):
         super().__setattr__('wrapped_os', ostream)
-        # THe following is a "cute" trick: because of the __getattr__ /
+        # The following is a "cute" trick: because of the __getattr__ /
         # __setattr__ overloads, nested StreamIndenter instances all
         # print directly to the underlying stream object, and all share
         # a common `newline` flag.
