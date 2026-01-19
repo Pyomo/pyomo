@@ -1242,7 +1242,15 @@ class Estimator:
             # compute the inverse reduced hessian to be used
             # in the "reduced_hessian" method
             # retrieve the independent variables (i.e., estimated parameters)
-            ind_vars = self.estimated_theta.keys()
+            ind_vars = []
+            for name in self.estimator_theta_names:
+                var = getattr(self.ef_instance, name)
+                ind_vars.append(var)
+
+            # Previously used code for retrieving independent variables:
+            # ind_vars = []
+            # for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
+            #     ind_vars.append(Var)
 
             (solve_result, inv_red_hes) = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
