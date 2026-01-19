@@ -662,7 +662,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # variables.
         #
         equation_section_stream = StringIO()
-        (referenced_variable_ids, branching_priorities_suffixes) = (
+        referenced_variable_ids, branching_priorities_suffixes = (
             self._write_equations_section(
                 model,
                 equation_section_stream,

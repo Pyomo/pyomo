@@ -3487,17 +3487,14 @@ class SetOperator(_ScalarSetMixin, SetData, Set):
     def subsets(self, expand_all_set_operators=None):
         if not isinstance(self, SetProduct):
             if expand_all_set_operators is None:
-                logger.warning(
-                    """
+                logger.warning("""
                 Extracting subsets for Set %s, which is a SetOperator
                 other than a SetProduct.  Returning this set and not
                 descending into the set operands.  To descend into this
                 operator, specify
                 'subsets(expand_all_set_operators=True)' or to suppress
                 this warning, specify
-                'subsets(expand_all_set_operators=False)'"""
-                    % (self.name,)
-                )
+                'subsets(expand_all_set_operators=False)'""" % (self.name,))
                 yield self
                 return
             elif not expand_all_set_operators:
@@ -4425,9 +4422,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
         References to this object will not be duplicated by deepcopy
         and be maintained/restored by pickle.
 
-        """ % (
-            obj.doc,
-        )
+        """ % (obj.doc,)
         # Note: a simple docstring does not appear to be picked up (at
         # least in Python 2.7), so we will explicitly set the __doc__
         # attribute.

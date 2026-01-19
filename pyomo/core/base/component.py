@@ -374,12 +374,6 @@ class ComponentBase(PyomoObject):
         if not _attr and self.parent_block() is None:
             _name = ''
 
-        # We only indent everything if we printed the header
-        if _attr or _name or _doc:
-            ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
-            # The first line should be a hanging indent (i.e., not indented)
-            ostream.newline = False
-
         if self.is_reference():
             _attr = list(_attr) if _attr else []
             _attr.append(('ReferenceTo', self.referent))
@@ -387,11 +381,13 @@ class ComponentBase(PyomoObject):
         if _name:
             ostream.write(_name + " : ")
         if _doc:
-            ostream.write(_doc + '\n')
+            ostream.write(_doc + '\n' + self._PPRINT_INDENT)
         if _attr:
             ostream.write(", ".join("%s=%s" % (k, v) for k, v in _attr))
         if _attr or _name or _doc:
             ostream.write("\n")
+            # We only indent everything if we printed the header
+            ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
 
         if not _constructed:
             # HACK: for backwards compatibility, Abstract blocks will

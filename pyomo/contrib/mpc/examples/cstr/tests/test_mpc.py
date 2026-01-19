@@ -14,7 +14,6 @@ import pyomo.environ as pyo
 import pyomo.contrib.mpc as mpc
 from pyomo.contrib.mpc.examples.cstr.run_mpc import get_steady_state_data, run_cstr_mpc
 
-
 ipopt_available = pyo.SolverFactory("ipopt").available()
 
 

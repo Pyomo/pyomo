@@ -203,15 +203,12 @@ class Complementarity(Block):
             return
         cc = _rule(b.parent_block(), idx)
         if cc is None:
-            raise ValueError(
-                """
+            raise ValueError("""
 Invalid complementarity condition.  The complementarity condition
 is None instead of a 2-tuple.  Please modify your rule to return
 Complementarity.Skip instead of None.
 
-Error thrown for Complementarity "%s"."""
-                % (b.name,)
-            )
+Error thrown for Complementarity "%s".""" % (b.name,))
         b.set_value(cc)
 
     def __init__(self, *args, **kwargs):

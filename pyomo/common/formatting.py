@@ -18,8 +18,12 @@
    StreamIndenter
 """
 
+import io
 import re
 import types
+
+from typing import Iterable
+
 from pyomo.common.sorting import sorted_robust
 
 
@@ -207,42 +211,59 @@ class StreamIndenter:
     StreamIndenter objects may be arbitrarily nested.
     """
 
-    def __init__(self, ostream, indent=' ' * 4):
-        self.os = ostream
-        self.indent = indent
-        self.stripped_indent = indent.rstrip()
-        self.newline = True
+    _newline_re = re.compile('\n([^\n])')
+    _blankline_re = re.compile('\n\n')
 
-    def __getattr__(self, name):
-        return getattr(self.os, name)
+    def __init__(self, ostream: io.TextIOBase, indent: str = ' ' * 4):
+        super().__setattr__('wrapped_os', ostream)
+        # The following is a "cute" trick: because of the __getattr__ /
+        # __setattr__ overloads, nested StreamIndenter instances all
+        # print directly to the underlying stream object, and all share
+        # a common `newline` flag.
+        if isinstance(ostream, StreamIndenter):
+            super().__setattr__('target_os', ostream.target_os)
+            indent = ostream.indent + indent
+        else:
+            super().__setattr__('target_os', ostream)
+            # We will assume the last thing written to the stream we
+            # are wrapping ended with a newline
+            super().__setattr__('newline', True)
+        super().__setattr__('indent', indent)
+        super().__setattr__('indent_match', f'\n{indent}\\1')
+        super().__setattr__('stripped_indent', indent.rstrip())
+        if self.stripped_indent:
+            super().__setattr__('blankline_match', f'\n{self.stripped_indent}\n')
 
-    def write(self, data):
-        if not len(data):
-            return
-        lines = data.split('\n')
+    def __getattr__(self, name: str):
+        return getattr(self.wrapped_os, name)
+
+    def __setattr__(self, name: str, val):
+        if name in self.__dict__:
+            super().__setattr__(name, val)
+        else:
+            self.wrapped_os.__setattr__(name, val)
+
+    def write(self, data: str) -> int:
+        if not data:
+            return 0
+        written = 0
         if self.newline:
-            if lines[0]:
-                self.os.write(self.indent + lines[0])
-            else:
-                self.os.write(self.stripped_indent)
-        else:
-            self.os.write(lines[0])
-        if len(lines) < 2:
-            self.newline = False
-            return
-        for line in lines[1:-1]:
-            if line:
-                self.os.write("\n" + self.indent + line)
-            else:
-                self.os.write("\n" + self.stripped_indent)
-        if lines[-1]:
-            self.os.write("\n" + self.indent + lines[-1])
-            self.newline = False
-        else:
-            self.os.write("\n")
-            self.newline = True
+            if data[0] != '\n':
+                written += self.target_os.write(self.indent)
+            elif self.stripped_indent:
+                written += self.target_os.write(self.stripped_indent)
+        data = self._newline_re.sub(self.indent_match, data)
+        if self.stripped_indent:
+            data, n = self._blankline_re.subn(self.blankline_match, data)
+            # If we replaced any blank lines, then we need to check
+            # again to catch cases like "\n\n\n"
+            if n:
+                data = self._blankline_re.sub(self.blankline_match, data)
+        written += self.target_os.write(data)
+        self.newline = data.endswith('\n')
+        return written
 
-    def writelines(self, sequence):
+    def writelines(self, sequence: Iterable[str]) -> None:
         for x in sequence:
             self.write(x)
 

@@ -739,16 +739,12 @@ class BlockData(ActiveComponentData):
         self._decl_order = _new_decl_order
 
     def set_value(self, val):
-        raise RuntimeError(
-            textwrap.dedent(
-                """
+        raise RuntimeError(textwrap.dedent("""
                 Block components do not support assignment or set_value().
                 Use the transfer_attributes_from() method to transfer the
                 components and public attributes from one block to another:
                     model.b[1].transfer_attributes_from(other_block)
-                """
-            ).strip()
-        )
+                """).strip())
 
     def clear(self):
         for name in self.component_map().keys():
@@ -967,30 +963,19 @@ class BlockData(ActiveComponentData):
             if val._parent() is self:
                 msg = """
 Attempting to re-assign the component '%s' to the same
-block under a different name (%s).""" % (
-                    val.name,
-                    name,
-                )
+block under a different name (%s).""" % (val.name, name)
             else:
                 msg = """
 Re-assigning the component '%s' from block '%s' to
-block '%s' as '%s'.""" % (
-                    val._name,
-                    val._parent().name,
-                    self.name,
-                    name,
-                )
+block '%s' as '%s'.""" % (val._name, val._parent().name, self.name, name)
 
-            raise RuntimeError(
-                """%s
+            raise RuntimeError("""%s
 
 This behavior is not supported by Pyomo; components must have a
 single owning block (or model), and a component may not appear
 multiple times in a block.  If you want to re-name or move this
 component, use the block del_component() and add_component() methods.
-"""
-                % (msg.strip(),)
-            )
+""" % (msg.strip(),))
         #
         # If the new component is a Block, then there is the chance that
         # it is the model(), and assigning it would create a circular
@@ -2009,7 +1994,7 @@ component, use the block del_component() and add_component() methods.
             def solver_capability(x):
                 return True
 
-        (filename, smap) = problem_writer(self, filename, solver_capability, io_options)
+        filename, smap = problem_writer(self, filename, solver_capability, io_options)
         smap_id = id(smap)
         if not hasattr(self, 'solutions'):
             # This is a bit of a hack.  The write() method was moved
