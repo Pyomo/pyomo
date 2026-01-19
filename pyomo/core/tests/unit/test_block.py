@@ -2740,8 +2740,7 @@ class TestBlock(unittest.TestCase):
           1 :  None :  None :  None : False :  True :  Reals
 
 3 Declarations: I y x
-"""
-            % (tuple(repr(_) for _ in m.I.ordered_iter()) + tuple(m.I)),
+""" % (tuple(repr(_) for _ in m.I.ordered_iter()) + tuple(m.I)),
             OUT.getvalue(),
         )
 
@@ -2766,8 +2765,7 @@ class TestBlock(unittest.TestCase):
           %s :  None :  None :  None : False :  True :  Reals
 
 3 Declarations: I y x
-"""
-            % (tuple(repr(_) for _ in m.I.ordered_iter()) + tuple(m.I)),
+""" % (tuple(repr(_) for _ in m.I.ordered_iter()) + tuple(m.I)),
             OUT.getvalue(),
         )
 
@@ -2792,8 +2790,7 @@ class TestBlock(unittest.TestCase):
           1 :  None :  None :  None : False :  True :  Reals
 
 3 Declarations: I y x
-"""
-            % tuple(repr(_) for _ in m.I.ordered_iter()),
+""" % tuple(repr(_) for _ in m.I.ordered_iter()),
             OUT.getvalue(),
         )
 
@@ -2818,8 +2815,7 @@ class TestBlock(unittest.TestCase):
           a :  None :  None :  None : False :  True :  Reals
 
 3 Declarations: I y x
-"""
-            % tuple(repr(_) for _ in m.I.ordered_iter()),
+""" % tuple(repr(_) for _ in m.I.ordered_iter()),
             OUT.getvalue(),
         )
 
