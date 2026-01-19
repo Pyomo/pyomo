@@ -33,7 +33,6 @@ from pyomo.contrib.pyros.util import (
     ModelData,
 )
 
-
 __version__ = "1.3.13"
 
 

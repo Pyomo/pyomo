@@ -13,6 +13,7 @@
 that plays nicely with sphinx.ext.autosummary.
 
 """
+
 import enum
 import inspect
 import re

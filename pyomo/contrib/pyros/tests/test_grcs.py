@@ -3217,8 +3217,7 @@ class TestLogOriginalModelStatistics(unittest.TestCase):
             state_variables=[m.y],
         )
 
-        expected_log_str = textwrap.dedent(
-            """
+        expected_log_str = textwrap.dedent("""
             Model Statistics (before preprocessing):
               Number of variables : 3
                 First-stage variables : 2
@@ -3228,8 +3227,7 @@ class TestLogOriginalModelStatistics(unittest.TestCase):
               Number of constraints : 3
                 Equality constraints : 1
                 Inequality constraints : 2
-            """
-        )
+            """)
 
         with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
             log_original_model_statistics(model_data, user_var_partitioning)

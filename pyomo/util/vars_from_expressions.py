@@ -16,6 +16,7 @@ component_data_objects(Var) because it does not look for Var objects which are
 not used in any expressions and it does not care if the Vars it finds are
 actually in the subtree or not.
 """
+
 from pyomo.core import Block
 from pyomo.core.expr.visitor import IdentifyVariableVisitor
 

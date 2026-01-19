@@ -20,7 +20,6 @@
 from pyomo.environ import ConcreteModel, Var, Param, Objective, Constraint, inequality
 from pyomo.core.expr import Expr_if
 
-
 model = ConcreteModel()
 
 model.vTrue = Var(initialize=1)
