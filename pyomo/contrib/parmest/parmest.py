@@ -1011,10 +1011,18 @@ class Estimator:
                     for name in self.estimator_theta_names:
                         if name in ThetaVals:
                             var = getattr(parmest_model, name)
-                            var.set_value(ThetaVals[name])
-                            # print(pyo.value(var))
-                            if fix_theta:
-                                var.fix()
+                            # Check if indexed variable
+                            if var.is_indexed():
+                                for index in var:
+                                    val = ThetaVals[name][index]
+                                    var[index].set_value(val)
+                                    if fix_theta:
+                                        var[index].fix()
+                            else:
+                                var.set_value(ThetaVals[name])
+                                # print(pyo.value(var))
+                                if fix_theta:
+                                    var.fix()
                 # parmest_model.pprint()
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
@@ -1023,27 +1031,46 @@ class Estimator:
         # Transfer all the unknown parameters to the parent model
         for name in self.estimator_theta_names:
             # Get the variable from the first block
-            ref_var = getattr(model.exp_scenarios[0], name)
+            ref_component = getattr(model.exp_scenarios[0], name)
+            if ref_component.is_indexed():
+                # Create an indexed variable in the parent model
+                index_set = ref_component.index_set()
+                # Determine the starting values for each index
+                start_vals = {
+                    idx: pyo.value(ref_component[idx]) for idx in index_set
+                }
+                # Create a variable in the parent model with same bounds and initialization
+                parent_var = pyo.Var(
+                    index_set,
+                    bounds=ref_component.bounds,
+                    initialize=lambda m, idx: start_vals[idx],
+                )
+                setattr(model, name, parent_var)
 
-            # Determine the starting value: priority to ThetaVals, then ref_var default
-            start_val = pyo.value(ref_var)
+                if not fix_theta:
+                    # Constrain the variable in the first block to equal the parent variable
+                    for i in range(self.obj_probability_constant):
+                        for idx in index_set:
+                            model.add_component(
+                                f"Link_{name}_Block{i}_Parent",
+                                pyo.Constraint(
+                                    expr=(
+                                        getattr(model.exp_scenarios[i], name)[idx]
+                                        == parent_var[idx]
+                                    )
+                                ),
+                            )
 
-            # Create a variable in the parent model with same bounds and initialization
-            parent_var = pyo.Var(bounds=ref_var.bounds, initialize=start_val)
-            setattr(model, name, parent_var)
+            else:
+                # Determine the starting value: priority to ThetaVals, then ref_var default
+                start_val = pyo.value(ref_component)
+                # Create a variable in the parent model with same bounds and initialization
+                parent_var = pyo.Var(bounds=ref_component.bounds, initialize=start_val)
+                setattr(model, name, parent_var)
 
             # Constrain the variable in the first block to equal the parent variable
             if not fix_theta:
-                model.add_component(
-                    f"Link_{name}_Block0_Parent",
-                    pyo.Constraint(
-                        expr=getattr(model.exp_scenarios[0], name) == parent_var
-                    ),
-                )
-
-                # Make sure all the parameters are linked across blocks
-                if self.obj_probability_constant > 1:
-                    for i in range(1, self.obj_probability_constant):
+                    for i in range(self.obj_probability_constant):
                         model.add_component(
                             f"Link_{name}_Block{i}_Parent",
                             pyo.Constraint(
