@@ -1042,14 +1042,15 @@ class Estimator:
                 )
 
                 # Make sure all the parameters are linked across blocks
-                for i in range(1, self.obj_probability_constant):
-                    model.add_component(
-                        f"Link_{name}_Block{i}_Parent",
-                        pyo.Constraint(
-                            expr=getattr(model.exp_scenarios[i], name)
-                            == getattr(model, name)
-                        ),
-                    )
+                if self.obj_probability_constant > 1:
+                    for i in range(1, self.obj_probability_constant):
+                        model.add_component(
+                            f"Link_{name}_Block{i}_Parent",
+                            pyo.Constraint(
+                                expr=getattr(model.exp_scenarios[i], name)
+                                == getattr(model, name)
+                            ),
+                        )
 
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
@@ -1210,7 +1211,39 @@ class Estimator:
             #     "of data points across all experiments."
             # )
 
-            cov = self.cov_est()
+            # Needs to be greater than number of parameters
+            n = cov_n  # number of data points
+            l = len(self.estimated_theta)  # number of fitted parameters
+            assert n > l, (
+                "The number of data points 'cov_n' must be greater than "
+                "the number of fitted parameters."
+            )
+            ind_vars = []
+            for name in self.estimator_theta_names:
+                var = getattr(self.ef_instance, name)
+                ind_vars.append(var)
+
+            (solve_result, inv_red_hes) = (
+                inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                    self.ef_instance,
+                    independent_variables=ind_vars,
+                    solver_options=self.solver_options,
+                    tee=self.tee,
+                )
+            )
+            self.inv_red_hes = inv_red_hes
+
+            measurement_var = self.obj_value / (
+                n - l
+            )  # estimate of the measurement error variance
+            cov = (
+                2 * measurement_var * self.inv_red_hes
+            )  # covariance matrix
+            cov = pd.DataFrame(
+                cov,
+                index=self.estimated_theta.keys(),
+                columns=self.estimated_theta.keys(),
+            )
 
             if return_values is not None and len(return_values) > 0:
                 return obj_value, theta_estimates, var_values, cov
