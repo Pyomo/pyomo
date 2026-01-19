@@ -1223,7 +1223,7 @@ class Estimator:
                 var = getattr(self.ef_instance, name)
                 ind_vars.append(var)
 
-            (solve_result, inv_red_hes) = (
+            solve_result, inv_red_hes = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
                     self.ef_instance,
                     independent_variables=ind_vars,
@@ -1236,9 +1236,7 @@ class Estimator:
             measurement_var = self.obj_value / (
                 n - l
             )  # estimate of the measurement error variance
-            cov = (
-                2 * measurement_var * self.inv_red_hes
-            )  # covariance matrix
+            cov = 2 * measurement_var * self.inv_red_hes  # covariance matrix
             cov = pd.DataFrame(
                 cov,
                 index=self.estimated_theta.keys(),
@@ -1290,7 +1288,7 @@ class Estimator:
             # for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
             #     ind_vars.append(Var)
 
-            (solve_result, inv_red_hes) = (
+            solve_result, inv_red_hes = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
                     self.ef_instance,
                     independent_variables=ind_vars,
