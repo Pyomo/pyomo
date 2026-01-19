@@ -12,7 +12,7 @@
 from collections import OrderedDict
 import importlib
 
-# Files no longer used in parmest; retained for possible future use.
+# ParallelTaskManager is used, MPI Interface is not.
 
 """
 This module is a collection of classes that provide a
