@@ -815,14 +815,11 @@ class _UnpickleableDomain:
         self._name = obj.name(True)
 
     def __call__(self, arg):
-        logger.error(
-            """%s '%s' was pickled with an unpicklable domain.
+        logger.error("""%s '%s' was pickled with an unpicklable domain.
     The domain was stripped and lost during the pickle process.  Setting
     new values on the restored object cannot be mapped into the correct
     domain.
-"""
-            % (self._type, self._name)
-        )
+""" % (self._type, self._name))
         return arg
 
 

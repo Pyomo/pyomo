@@ -13,7 +13,6 @@
 Containers for PyROS subproblem solve results.
 """
 
-
 from pyomo.opt import check_optimal_termination
 
 

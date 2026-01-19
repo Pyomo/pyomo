@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Tests for the MindtPy solver."""
+
 import sys
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
