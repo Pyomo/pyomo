@@ -55,7 +55,6 @@ from pyomo.repn.util import (
     check_constant,
 )
 
-
 _CONSTANT = ExprType.CONSTANT
 _MONOMIAL = ExprType.MONOMIAL
 _GENERAL = ExprType.GENERAL

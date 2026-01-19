@@ -15,7 +15,6 @@ from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSo
 from pyomo.contrib.appsi.solvers.wntr import Wntr, wntr_available
 import math
 
-
 _default_wntr_options = dict(TOL=1e-8)
 
 

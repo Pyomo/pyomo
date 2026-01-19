@@ -68,7 +68,7 @@ class TestUtilsFIM(unittest.TestCase):
         # Create a sample Fisher Information Matrix (FIM)
         FIM = np.array([[10, 2], [2, 3]])
 
-        (det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
+        det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
             compute_FIM_metrics(FIM)
         )
 

@@ -135,8 +135,7 @@ where the UnknownSolver object was used as if it were valid (by calling
 method "%s").
 
 The original solver was created with the following parameters:
-\t"""
-            % (self.type, method_name)
+\t""" % (self.type, method_name)
             + "\n\t".join("%s: %s" % i for i in sorted(self._kwds.items()))
             + "\n\t_args: %s" % (self._args,)
             + "\n\toptions: %s" % (self.options,)
@@ -726,7 +725,7 @@ class OptSolver:
 
         if self._problem_format:
             write_start_time = time.time()
-            (self._problem_files, self._problem_format, self._smap_id) = (
+            self._problem_files, self._problem_format, self._smap_id = (
                 self._convert_problem(
                     args, self._problem_format, self._valid_problem_formats, **kwds
                 )
