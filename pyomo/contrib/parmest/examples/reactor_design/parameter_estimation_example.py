@@ -36,10 +36,10 @@ def main():
     pest = parmest.Estimator(exp_list, obj_function='SSE')
 
     # Parameter estimation with covariance
-    obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=17)
+    obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=19)
     print(obj)
     print(theta)
-
+    print(cov)
 
 if __name__ == "__main__":
     main()
