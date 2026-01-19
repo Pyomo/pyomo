@@ -346,7 +346,9 @@ def _get_labeled_model(experiment):
     except Exception as exc:
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
-
+# Need to make this more robust. Used in Estimator class
+# Has issue where it counts duplicate data if multiple non-unique outputs
+# Not used in calculations, but to check if less than number of unknown parameters
 def _count_total_experiments(experiment_list):
     """
     Counts the number of data points in the list of experiments
@@ -1200,10 +1202,12 @@ class Estimator:
                 f"Expected an integer for the 'cov_n' argument. " f"Got {type(cov_n)}."
             )
             # Needs to equal total number of data points across all experiments
-            assert cov_n == self.number_exp, (
-                "The number of data points 'cov_n' must equal the total number "
-                "of data points across all experiments."
-            )
+            # In progress: Adjusting number_exp to be more robust.
+            # Can be removed in future when cov_n is no longer an input.
+            # assert cov_n == self.number_exp, (
+            #     "The number of data points 'cov_n' must equal the total number "
+            #     "of data points across all experiments."
+            # )
 
             cov = self.cov_est()
 
