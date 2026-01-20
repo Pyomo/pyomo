@@ -31,6 +31,7 @@ from pyomo.core.base.transformation import Transformation, TransformationFactory
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.suffix import Suffix
+from pyomo.common.config import ConfigDict, ConfigValue
 
 
 def _handle_var(node, data, visitor):
@@ -76,12 +77,12 @@ def _handle_product(node, data, visitor):
         visitor.substitution_map[node] = res
         return res
 
-    if arg1_nvars > 1:
+    if arg1_nvars > 1 or visitor.aggressive_substitution:
         arg1 = visitor.create_aux_var(arg1)
         arg1_vars = (arg1,)
         arg1_nvars = 1
         arg1_degree = 1
-    if arg2_nvars > 1:
+    if arg2_nvars > 1 or visitor.aggressive_substitution:
         arg2 = visitor.create_aux_var(arg2)
         arg2_vars = (arg2,)
         arg2_nvars = 1
@@ -153,13 +154,13 @@ def _handle_division(node, data, visitor):
         visitor.substitution_map[node] = res
         return res
 
-    if arg1_nvars > 1:
+    if arg1_nvars > 1 or visitor.aggressive_substitution:
         arg1 = visitor.create_aux_var(arg1)
         arg1_vars = (arg1,)
         arg1_nvars = 1
         arg1_degree = 1
 
-    if arg2_nvars > 1:
+    if arg2_nvars > 1 or visitor.aggressive_substitution:
         arg2 = visitor.create_aux_var(arg2)
         arg2_vars = (arg2,)
         arg2_nvars = 1
@@ -224,13 +225,13 @@ def _handle_pow(node, data, visitor):
     arg1_degree = visitor.degree_map[arg1]
     arg2_degree = visitor.degree_map[arg2]
 
-    if arg1_nvars > 1:
+    if arg1_nvars > 1 or visitor.aggressive_substitution:
         arg1 = visitor.create_aux_var(arg1)
         arg1_vars = (arg1,)
         arg1_nvars = 1
         arg1_degree = 1
 
-    if arg2_nvars > 1:
+    if arg2_nvars > 1 or visitor.aggressive_substitution:
         arg2 = visitor.create_aux_var(arg2)
         arg2_vars = (arg2,)
         arg2_nvars = 1
@@ -280,7 +281,7 @@ def _handle_unary(node, data, visitor):
     arg_nvars = len(arg_vars)
     arg_degree = visitor.degree_map[arg]
 
-    if arg_nvars > 1:
+    if arg_nvars > 1 or visitor.aggressive_substitution:
         arg = visitor.create_aux_var(arg)
         arg_vars = (arg,)
         arg_nvars = 1
@@ -317,6 +318,7 @@ handlers[float] = _handle_float
 class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
     def __init__(self, **kwds):
         self.block = kwds.pop('aux_block')
+        self.aggressive_substitution = kwds.pop('aggressive_substitution')
         super().__init__(**kwds)
         self.node_to_var_map = ComponentMap()
         self.degree_map = ComponentMap()  # values will be 0 (constant), 1 (linear), or -1 (nonlinear)
@@ -325,6 +327,7 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
 
         self.block.x = VarList()
         self.block.c = ConstraintList()
+        self._leaf_types = {VarData, ScalarVar, ParamData, ScalarVar, float, int}
 
     def initializeWalker(self, expr):
         if expr in self.substitution_map:
@@ -345,10 +348,18 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
             return _handle_float(node, data, self)
         else:
             raise NotImplementedError(f'unrecognized expression type: {nt}')
+        
+    def _is_leaf(self, x):
+        if type(x) in self._leaf_types or type(x) in native_numeric_types:
+            return True
+        return False
 
     def create_aux_var(self, expr):
         if expr in self.substitution_map:
             x = self.substitution_map[expr]
+        elif self._is_leaf(expr):
+            self.substitution_map[expr] = expr
+            return expr
         else:
             x = self.block.x.add()
             self.substitution_map[expr] = x
@@ -377,8 +388,35 @@ it can significantly reduce the complexity of the PWL approximation.
     """
 )
 class UnivariateNonlinearDecompositionTransformation(Transformation):
+
+    CONFIG = ConfigDict('contrib.piecewise.univariate_nonlinear_decomposition')
+    CONFIG.declare(
+        'aggressive_substitution',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="introduce auxiliary variables more frequently",
+            doc="""
+            If aggressive_substitution is True, then auxiliary variables will be introduced
+            more aggressively. For example, 
+
+            x**2 * y**3
+
+            will become
+
+            z1 * z2
+            z1 == x**2
+            z2 == y**3
+
+            even though this does not reduce the dimensionality of the PWL approximation.
+            The reason to do this is to be able to bound z1 and z2.
+            """
+        )
+    )
+
     def __init__(self):
         super().__init__()
+        self._config = UnivariateNonlinearDecompositionTransformation.CONFIG()
 
     def _check_for_unknown_active_components(self, model):
         known_ctypes = {Constraint, Objective, Block}
@@ -395,8 +433,7 @@ class UnivariateNonlinearDecompositionTransformation(Transformation):
             )
 
     def _apply_to(self, model, **kwds):
-        if kwds:
-            raise ValueError('UnivariateNonlinearDecompositionTransformation does not take any keyword arguments')
+        self._config = UnivariateNonlinearDecompositionTransformation.CONFIG(value=kwds, preserve_implicit=True)
         
         self._check_for_unknown_active_components(model)
 
@@ -406,7 +443,10 @@ class UnivariateNonlinearDecompositionTransformation(Transformation):
         bname = unique_component_name(model, 'auxiliary')
         setattr(model, bname, Block())
         block = getattr(model, bname)
-        visitor = _UnivariateNonlinearDecompositionVisitor(aux_block=block)
+        visitor = _UnivariateNonlinearDecompositionVisitor(
+            aux_block=block, 
+            aggressive_substitution=self._config.aggressive_substitution,
+        )
 
         for con in constraints:
             lower, body, upper = con.to_bounded_expression(evaluate_bounds=True)
