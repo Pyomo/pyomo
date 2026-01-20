@@ -1036,9 +1036,7 @@ class Estimator:
                 # Create an indexed variable in the parent model
                 index_set = ref_component.index_set()
                 # Determine the starting values for each index
-                start_vals = {
-                    idx: pyo.value(ref_component[idx]) for idx in index_set
-                }
+                start_vals = {idx: pyo.value(ref_component[idx]) for idx in index_set}
                 # Create a variable in the parent model with same bounds and initialization
                 parent_var = pyo.Var(
                     index_set,
@@ -1070,14 +1068,14 @@ class Estimator:
 
             # Constrain the variable in the first block to equal the parent variable
             if not fix_theta:
-                    for i in range(self.obj_probability_constant):
-                        model.add_component(
-                            f"Link_{name}_Block{i}_Parent",
-                            pyo.Constraint(
-                                expr=getattr(model.exp_scenarios[i], name)
-                                == getattr(model, name)
-                            ),
-                        )
+                for i in range(self.obj_probability_constant):
+                    model.add_component(
+                        f"Link_{name}_Block{i}_Parent",
+                        pyo.Constraint(
+                            expr=getattr(model.exp_scenarios[i], name)
+                            == getattr(model, name)
+                        ),
+                    )
 
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
