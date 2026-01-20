@@ -57,7 +57,6 @@ from pyomo.core.base.initializer import (
     CountedCallInitializer,
 )
 
-
 logger = logging.getLogger('pyomo.core')
 
 TEMPLATIZE_CONSTRAINTS = False

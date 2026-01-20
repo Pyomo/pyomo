@@ -26,7 +26,6 @@ from pyomo.repn.standard_repn import StandardRepn
 
 from collections.abc import Mapping
 
-
 logger = logging.getLogger('pyomo.core')
 
 

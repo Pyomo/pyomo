@@ -12,6 +12,7 @@
 """Functions for initializing the main problem
 in Logic-based outer approximation.
 """
+
 from contextlib import contextmanager
 from math import fabs
 

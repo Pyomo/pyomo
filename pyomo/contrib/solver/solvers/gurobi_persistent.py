@@ -56,7 +56,6 @@ from pyomo.contrib.solver.common.persistent import (
 from pyomo.contrib.solver.common.solution_loader import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
 
-
 logger = logging.getLogger(__name__)
 
 

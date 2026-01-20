@@ -11,7 +11,6 @@
 
 from pyomo.common import Factory
 
-
 WriterFactory = Factory('problem writer')
 
 

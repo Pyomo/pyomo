@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Transformation to detect variables fixed by bounds and fix them."""
+
 from math import fabs
 
 from pyomo.core.base.transformation import TransformationFactory
