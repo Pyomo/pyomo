@@ -26,7 +26,6 @@ numpy, numpy_available = attempt_import('numpy')
 import random
 from pyomo import gdp
 
-
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 

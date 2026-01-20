@@ -62,7 +62,7 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     def _solve_gdp(self, original_model, config):
         logger = config.logger
 
-        (discrete_problem_util_block, subproblem_util_block) = (
+        discrete_problem_util_block, subproblem_util_block = (
             _get_discrete_problem_and_subproblem(self, config)
         )
         discrete_problem = discrete_problem_util_block.parent_block()

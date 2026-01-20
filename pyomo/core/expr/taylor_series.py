@@ -13,7 +13,6 @@ from pyomo.core.expr import identify_variables, value, differentiate
 import logging
 import math
 
-
 logger = logging.getLogger(__name__)
 
 

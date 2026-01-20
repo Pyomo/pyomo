@@ -11,6 +11,7 @@
 #  ___________________________________________________________________________
 
 """Module with diagnostic utilities for infeasible models."""
+
 from pyomo.core import Constraint, Var, value
 from math import fabs
 import logging
