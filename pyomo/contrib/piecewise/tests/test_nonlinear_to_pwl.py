@@ -11,6 +11,7 @@
 
 from io import StringIO
 import logging
+import math
 
 from pyomo.common.dependencies import attempt_import, scipy_available, numpy_available
 from pyomo.common.log import LoggingIntercept
@@ -35,6 +36,7 @@ from pyomo.environ import (
     Constraint,
     Integers,
     TransformationFactory,
+    exp,
     log,
     Objective,
     Reals,
@@ -406,6 +408,34 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
             for y in [0, 1]:
                 for z in [0, 1, 5]:
                     self.assertIn((x, y, z), points)
+
+    @unittest.skipUnless(numpy_available, "Numpy is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
+    def test_do_not_pwl_linear_part(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-3, 4))
+        m.y = Var(initialize=7)
+        m.c = Constraint(expr=m.y >= exp(m.x) + m.x**3)
+
+        # we want to make sure m.y does not show up in the PWL function
+        # even if additively_decompose is False
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        num_points = 5
+        n_to_pwl.apply_to(
+            m,
+            num_points=num_points,
+            additively_decompose=False,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+        )
+
+        transformed_c = n_to_pwl.get_transformed_component(m.c)
+        self.assertIsInstance(transformed_c.body, SumExpression)
+        assertExpressionsEqual(self, transformed_c.body.args[0], -m.y)
+        pwlf = transformed_c.body.args[1].expr.pw_linear_function
+        for tup in pwlf._points:
+            self.assertEqual(len(tup), 1)
+            x = tup[0]
+            self.assertAlmostEqual(pwlf(x), math.exp(x) + x**3)
 
 
 class TestNonlinearToPWL_2D(unittest.TestCase):
