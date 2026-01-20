@@ -980,6 +980,26 @@ class Estimator:
 
     def _create_scenario_blocks(self, bootlist=None, ThetaVals=None, fix_theta=False):
         # Create scenario block structure
+        """
+        Create scenario blocks for parameter estimation
+        Parameters
+        ----------
+        bootlist : list, optional
+            List of bootstrap experiment numbers to use. If None, use all experiments in exp_list.
+            Default is None.
+        ThetaVals : dict, optional
+            Dictionary of theta values to set in the model. If None, use default values from experiment class.
+            Default is None.
+        fix_theta : bool, optional
+            If True, fix the theta values in the model. If False, leave them free.
+            Default is False.
+        Returns
+        -------
+        model : ConcreteModel
+            Pyomo model with scenario blocks for parameter estimation. Contains indexed block for
+            each experiment in exp_list or bootlist.
+
+        """
         # Utility function for updated _Q_opt
         # Make an indexed block of model scenarios, one for each experiment in exp_list
         # Trying to make work for both _Q_opt and _Q_at_theta tasks
@@ -988,10 +1008,15 @@ class Estimator:
         # Create a parent model to hold scenario blocks
         model = pyo.ConcreteModel()
 
+        # If bootlist is provided, use it to create scenario blocks for specified experiments
+        # Otherwise, use all experiments in exp_list
         if bootlist is not None:
+            # Set number of scenarios based on bootlist
             self.obj_probability_constant = len(bootlist)
+            # Create indexed block for holding scenario models
             model.exp_scenarios = pyo.Block(range(len(bootlist)))
 
+            # For each experiment in bootlist, create parmest model and assign to block
             for i in range(len(bootlist)):
                 # Create parmest model for experiment i
                 parmest_model = self._create_parmest_model(bootlist[i])
@@ -1118,12 +1143,48 @@ class Estimator:
         4. Solve the block as a single problem
         5. Analyze results and extract parameter estimates
 
+        Parameters
+        ----------
+        return_values : list, optional
+            List of variable names to return values for. Default is None.
+        bootlist : list, optional
+            List of bootstrap experiment numbers to use. If None, use all experiments in exp_list.
+            Default is None.
+        ThetaVals : dict, optional
+            Dictionary of theta values to set in the model. If None, use default values from experiment class.
+            Default is None.
+        solver : str, optional
+            Solver to use for optimization. Default is "ef_ipopt".
+        calc_cov : bool, optional
+            If True, calculate covariance matrix of estimated parameters. Default is NOTSET.
+        cov_n : int, optional
+            Number of data points to use for covariance calculation. Required if calc_cov is True. Default is NOTSET.
+        fix_theta : bool, optional
+            If True, fix the theta values in the model. If False, leave them free.
+            Default is False.
+        Returns
+        -------
+        If fix_theta is False:
+            obj_value : float
+                Objective value at optimal parameter estimates.
+            theta_estimates : pd.Series
+                Series of estimated parameter values.
+        If fix_theta is True:
+            return_value : float
+                Objective value at fixed parameter values.
+            theta_estimates : dict
+                Dictionary of fixed parameter values.
+            WorstStatus : TerminationCondition
+                Solver termination condition.
+
         '''
         # Create scenario blocks using utility function
+        # If model not initialized,  use create scenario blocks to build from labeled model in experiment class
         if self.model_initialized is False:
             model = self._create_scenario_blocks(
                 bootlist=bootlist, ThetaVals=ThetaVals, fix_theta=fix_theta
             )
+        # If model already initialized, use existing ef_instance model to get initialized ef model.
         else:
             model = self.ef_instance
             if ThetaVals is not None:
@@ -1139,6 +1200,9 @@ class Estimator:
             raise RuntimeError("k_aug no longer supported.")
         if solver == "ef_ipopt":
             sol = SolverFactory('ipopt')
+        # Currently, parmest is only tested with ipopt via ef_ipopt
+        # No other pyomo solvers have been verified to work with parmest from current release
+        # to my knowledge.
         else:
             raise RuntimeError("Unknown solver in Q_Opt=" + solver)
 
@@ -1150,12 +1214,15 @@ class Estimator:
         solve_result = sol.solve(model, tee=self.tee)
 
         # Separate handling of termination conditions for _Q_at_theta vs _Q_opt
+        # If not fixing theta, ensure optimal termination of the solve to return result
         if not fix_theta:
             # Ensure optimal termination
             assert_optimal_termination(solve_result)
-
+        # If fixing theta, capture termination condition if not optimal unless infeasible
         else:
+            # Initialize WorstStatus to optimal, update if not optimal
             WorstStatus = pyo.TerminationCondition.optimal
+            # Get termination condition from solve result
             status = solve_result.solver.termination_condition
 
             # In case of fixing theta, just log a warning if not optimal
@@ -1165,6 +1232,7 @@ class Estimator:
                 #     "Termination condition: %s",
                 #     str(status),
                 # )
+                # Unless infeasible, update WorstStatus
                 if WorstStatus != pyo.TerminationCondition.infeasible:
                     WorstStatus = status
 
