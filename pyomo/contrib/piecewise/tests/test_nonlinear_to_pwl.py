@@ -294,7 +294,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
     def test_do_not_additively_decompose_below_min_dimension(self):
         m = ConcreteModel()
         m.x = Var([0, 1, 2, 3, 4], bounds=(-4, 5))
-        m.c = Constraint(expr=m.x[0] * m.x[1] + m.x[3] <= 4)
+        m.c = Constraint(expr=m.x[0] * m.x[1] + m.x[3]**3 <= 4)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
@@ -347,7 +347,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(['rocky', 'bullwinkle'], domain=Binary)
         m.y = Var(domain=Integers, bounds=(0, 5))
-        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y <= 4)
+        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y**2 <= 4)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         output = StringIO()
@@ -380,7 +380,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(['rocky', 'bullwinkle'], domain=Binary)
         m.y = Var(domain=Integers, bounds=(0, 5))
-        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y <= 4)
+        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y**2 <= 4)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         output = StringIO()
@@ -718,8 +718,8 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         # two terms
         self.assertIsInstance(new_obj.expr, SumExpression)
         self.assertEqual(len(new_obj.expr.args), 2)
-        first = new_obj.expr.args[0]
-        pwlf = first.expr.pw_linear_function
+        second = new_obj.expr.args[1]
+        pwlf = second.expr.pw_linear_function
         all_pwlf = list(
             xm.component_data_objects(PiecewiseLinearFunction, descend_into=True)
         )
@@ -727,8 +727,8 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         # It is on the active tree.
         self.assertIs(pwlf, all_pwlf[0])
 
-        second = new_obj.expr.args[1]
-        assertExpressionsEqual(self, second, 5.04 * xm.x1)
+        first = new_obj.expr.args[0]
+        assertExpressionsEqual(self, first, 5.04 * xm.x1)
 
         objs = n_to_pwl.get_transformed_nonlinear_objectives(xm)
         self.assertEqual(len(objs), 0)
