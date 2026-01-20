@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Tests for the model size report utility."""
+
 import logging
 from os.path import abspath, dirname, join, normpath
 

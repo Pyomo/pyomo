@@ -12,6 +12,7 @@
 """
 Unit Tests for pyomo.dae.set_utils
 """
+
 import os
 from os.path import abspath, dirname
 

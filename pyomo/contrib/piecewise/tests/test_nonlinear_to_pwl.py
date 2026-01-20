@@ -117,7 +117,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         pwlf = pwlf[0]
 
         points = [(1.0009,), (5.5,), (9.9991,)]
-        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        x1, x2, x3 = 1.0009, 5.5, 9.9991
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
@@ -143,7 +143,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         pwlf = pwlf[0]
 
         points = [(1.0009,), (5.5,), (9.9991,)]
-        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        x1, x2, x3 = 1.0009, 5.5, 9.9991
 
         self.check_pw_linear_log_x(twin, pwlf, x1, x2, x3)
 
@@ -198,7 +198,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         pwlf = pwlf[0]
 
         points = [(1.0009,), (5.5,), (9.9991,)]
-        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        x1, x2, x3 = 1.0009, 5.5, 9.9991
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
         # quad is not
@@ -229,7 +229,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         pwlf = pwlf[0]
 
         points = [(1.0009,), (5.5,), (9.9991,)]
-        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        x1, x2, x3 = 1.0009, 5.5, 9.9991
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
         # quad is not

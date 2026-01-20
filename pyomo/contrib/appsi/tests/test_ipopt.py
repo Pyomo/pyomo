@@ -12,7 +12,6 @@
 from pyomo.common import unittest
 from pyomo.contrib.appsi.solvers import ipopt
 
-
 ipopt_available = ipopt.Ipopt().available()
 
 

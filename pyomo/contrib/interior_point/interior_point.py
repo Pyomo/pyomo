@@ -20,7 +20,6 @@ from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus
 from pyomo.common.timing import HierarchicalTimer
 import enum
 
-
 """
 Interface Requirements
 ----------------------
