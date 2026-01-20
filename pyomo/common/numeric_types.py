@@ -318,13 +318,11 @@ def check_if_numeric_type(obj):
     # Generate a warning, since Pyomo's management of third-party
     # numeric types is more robust when registering explicitly.
     #
-    logger.warning(
-        f"""Dynamically registering the following numeric type:
+    logger.warning(f"""Dynamically registering the following numeric type:
     {obj_class.__module__}.{obj_class.__name__}
 Dynamic registration is supported for convenience, but there are known
 limitations to this approach.  We recommend explicitly registering
-numeric types using RegisterNumericType() or RegisterIntegerType()."""
-    )
+numeric types using RegisterNumericType() or RegisterIntegerType().""")
     return True
 
 
