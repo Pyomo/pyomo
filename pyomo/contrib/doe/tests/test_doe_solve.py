@@ -52,7 +52,6 @@ import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 
-
 ipopt_available = SolverFactory("ipopt").available()
 k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
 
