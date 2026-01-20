@@ -294,7 +294,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
     def test_do_not_additively_decompose_below_min_dimension(self):
         m = ConcreteModel()
         m.x = Var([0, 1, 2, 3, 4], bounds=(-4, 5))
-        m.c = Constraint(expr=m.x[0] * m.x[1] + m.x[3]**3 <= 4)
+        m.c = Constraint(expr=m.x[0] * m.x[1] + m.x[3] ** 3 <= 4)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(

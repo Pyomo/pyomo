@@ -665,16 +665,16 @@ class NonlinearToPWL(Transformation):
     def _separate_linear_parts(self, repn):
         """
         The idea here is to ensure that linear parts of constraints
-        always get separated from the nonlinear parts, even if 
-        additively_decompose if False. The idea is that 
+        always get separated from the nonlinear parts, even if
+        additively_decompose if False. The idea is that
 
         y >= exp(x) + x**3
 
         should become
 
         y >= PWL(exp(x) + x**3)
-        
-        and not 
+
+        and not
 
         0 >= PWL(exp(x) + x**3 - y)
         """
