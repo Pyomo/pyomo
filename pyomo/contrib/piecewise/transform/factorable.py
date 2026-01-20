@@ -24,31 +24,29 @@ from pyomo.core.base import (
     Objective,
 )
 from pyomo.core.base.var import ScalarVar
+from pyomo.core.base.param import ScalarParam
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr, fbbt
 from pyomo.core.base.expression import ScalarExpression
 from pyomo.core.base.transformation import Transformation, TransformationFactory
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.suffix import Suffix
-from pyomo.gdp import Disjunct
-from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 
 
 def _handle_var(node, data, visitor):
+    if node.fixed:
+        return _handle_float(node.value, data, visitor)
     visitor.node_to_var_map[node] = (node,)
     visitor.degree_map[node] = 1
     visitor.substitution_map[node] = node
     return node
 
 
-def _handle_float(node, data, visitor):
-    visitor.node_to_var_map[node] = tuple()
-    visitor.degree_map[node] = 0
-    visitor.substitution_map[node] = node
-    return node
-
-
 def _handle_param(node, data, visitor):
+    return _handle_float(node.value, data, visitor)
+
+
+def _handle_float(node, data, visitor):
     visitor.node_to_var_map[node] = tuple()
     visitor.degree_map[node] = 0
     visitor.substitution_map[node] = node
@@ -113,13 +111,6 @@ def _handle_product(node, data, visitor):
 
 
 def _handle_sum(node, data, visitor):
-    # remember to separate the linear parts of the root expression
-    # from the nonlinear parts prior to using this visitor
-    # otherwise, we will get auxilliary variables that we don't
-    # strictly need. If this is not done, we don't do anything
-    # incorrect, we just get extra variables and constraints
-    # I'm not sure we should even worry about it, because pretty much 
-    # any presolve should remove them
     arg_list = []
     new_degree = 0
     vset = ComponentSet()
@@ -307,13 +298,14 @@ def _handle_unary(node, data, visitor):
 handlers = ExitNodeDispatcher()
 handlers[VarData] = _handle_var
 handlers[ScalarVar] = _handle_var
+handlers[ParamData] = _handle_param
+handlers[ScalarParam] = _handle_param
 handlers[ProductExpression] = _handle_product
 handlers[SumExpression] = _handle_sum
 handlers[DivisionExpression] = _handle_division
 handlers[PowExpression] = _handle_pow
 handlers[MonomialTermExpression] = _handle_product
 handlers[LinearExpression] = _handle_sum
-handlers[ParamData] = _handle_param
 handlers[ExpressionData] = _handle_named_expression
 handlers[ScalarExpression] = _handle_named_expression
 handlers[NegationExpression] = _handle_negation
@@ -415,26 +407,15 @@ class UnivariateNonlinearDecompositionTransformation(Transformation):
         setattr(model, bname, Block())
         block = getattr(model, bname)
         visitor = _UnivariateNonlinearDecompositionVisitor(aux_block=block)
-        linear_repn_visitor = LinearRepnVisitor(subexpression_cache={})
 
         for con in constraints:
-            lower, body, upper = con.to_bounded_expression()
-            repn = linear_repn_visitor.walk_expression(body)
-            if repn.nonlinear is None:
-                continue
-            nonlinear_part = repn.nonlinear
-            repn.nonlinear = None
-            linear_part = repn.to_expression(linear_repn_visitor)
-            nonlinear_part = visitor.walk_expression(nonlinear_part)
-            new_body = linear_part + nonlinear_part
-            con.set_value((lower, new_body, upper))
+            lower, body, upper = con.to_bounded_expression(evaluate_bounds=True)
+            new_body = visitor.walk_expression(body)
+            if lower == upper:
+                con.set_value(new_body == lower)
+            else:
+                con.set_value((lower, new_body, upper))
 
         for obj in objectives:
-            repn = linear_repn_visitor.walk_expression(obj.expr)
-            if repn.nonlinear is None:
-                continue
-            nonlinear_part = repn.nonlinear
-            repn.nonlinear = None
-            linear_part = repn.to_expression(linear_repn_visitor)
-            nonlinear_part = visitor.walk_expression(nonlinear_part)
-            obj.expr = linear_part + nonlinear_part
+            new_expr = visitor.walk_expression(obj.expr)
+            obj.expr = new_expr
