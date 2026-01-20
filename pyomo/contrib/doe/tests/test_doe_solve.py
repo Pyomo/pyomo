@@ -588,15 +588,12 @@ class TestDoe(unittest.TestCase):
 class TestRooneyBieglerExample(unittest.TestCase):
     @unittest.skipUnless(pandas_available, "test requires pandas")
     @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
-    def test_rooney_bieglerdoe_example(self):
+    def test_rooney_biegler_doe_example(self):
         """
         Tests the Design of Experiments (DoE) functionality, including
         plotting logic, without displaying GUI windows.
         """
         plt = matplotlib.pyplot
-
-        # Switch backend to 'Agg' to prevent GUI windows from popping up
-        plt.switch_backend('Agg')
 
         # Define the prefix used to identify files to be cleaned up
         file_prefix = "rooney_biegler"
