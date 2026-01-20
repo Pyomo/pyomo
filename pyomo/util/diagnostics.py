@@ -11,10 +11,10 @@
 
 # -*- coding: UTF-8 -*-
 """Module with miscellaneous diagnostic tools"""
+
 from pyomo.core.base.block import TraversalStrategy, Block
 from pyomo.gdp import Disjunct
 import logging
-
 
 logger = logging.getLogger('pyomo.util.diagnostics')
 logger.setLevel(logging.INFO)

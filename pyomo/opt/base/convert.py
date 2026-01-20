@@ -16,7 +16,6 @@ from pyomo.opt.base.formats import guess_format
 from pyomo.opt.base.error import ConverterError
 from pyomo.common import Factory
 
-
 # WEH - Should we treat these as singleton objects?  Not for now, since
 # I can't think of a case where that would impact performance
 ProblemConverterFactory = Factory('problem converter')
