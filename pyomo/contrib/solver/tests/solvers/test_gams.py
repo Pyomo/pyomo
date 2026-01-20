@@ -115,9 +115,7 @@ class TestGAMSInterface(unittest.TestCase):
             obj.. ans =g= sum(I, x(I));
             model test / all /;
             solve test using lp minimizing ans;
-            """ % (
-            n,
-        )
+            """ % (n,)
 
     def _run_simple_model(self, config, n):
         solver_exec = config.executable.path()
