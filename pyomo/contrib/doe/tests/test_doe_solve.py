@@ -19,13 +19,13 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pandas_available,
     scipy_available,
-    attempt_import,
+    matplotlib,
+    matplotlib_available,
 )
 
-# Safely try to import matplotlib
-matplotlib, matplotlib_available = attempt_import('matplotlib')
+# Set matplotlib backend for non-interactive use (for CI testing purposes)
 if matplotlib_available:
-    matplotlib.use("Agg")  # Use non-interactive backend (for CI testing purposes
+    matplotlib.use("Agg")
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
@@ -583,6 +583,66 @@ class TestDoe(unittest.TestCase):
         self.assertAlmostEqual(
             A_opt_design_value, A_opt_design_value_expected, places=2
         )
+
+
+class TestRooneyBieglerExample(unittest.TestCase):
+    @unittest.skipUnless(pandas_available, "test requires pandas")
+    @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
+    def test_rooney_bieglerdoe_example(self):
+        """
+        Tests the Design of Experiments (DoE) functionality, including
+        plotting logic, without displaying GUI windows.
+        """
+        plt = matplotlib.pyplot
+
+        # Switch backend to 'Agg' to prevent GUI windows from popping up
+        plt.switch_backend('Agg')
+
+        # Define the prefix used to identify files to be cleaned up
+        file_prefix = "rooney_biegler"
+
+        # Ensure we clean up the file even if the test fails halfway through
+        def cleanup_file():
+            generated_files = glob(f"{file_prefix}_*.png")
+            for f in generated_files:
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+
+        self.addCleanup(cleanup_file)
+
+        # Run with plotting flags set to TRUE
+        results = run_rooney_biegler_doe(
+            optimize_experiment_A=True,
+            optimize_experiment_D=True,
+            compute_FIM_full_factorial=True,
+            draw_factorial_figure=True,
+            design_range={'hour': [0, 10, 3]},
+            plot_optimal_design=True,
+            tee=False,
+        )
+
+        # Assertions for Numerical Results
+        self.assertIn("D", results["optimization"])
+        self.assertIn("A", results["optimization"])
+
+        # Assertions for Plotting Logic
+        # Check that the custom plotting block ran and stored figures
+        self.assertTrue(
+            len(results["plots"]) > 0, "No plot objects were stored in results['plots']"
+        )
+
+        # Check that draw_factorial_figure actually created the file
+        expected_d_plot = f"{file_prefix}_D_opt.png"
+        self.assertTrue(
+            os.path.exists(expected_d_plot),
+            f"Expected plot file '{expected_d_plot}' was not created.",
+        )
+
+        # Explicitly close figures to free memory
+        for fig in results["plots"]:
+            plt.close(fig)
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
