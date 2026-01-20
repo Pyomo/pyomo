@@ -33,9 +33,7 @@ if scipy_available:
         FullReactorExperiment,
     )
 
-from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
-    run_rooney_biegler_doe,
-)
+from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()

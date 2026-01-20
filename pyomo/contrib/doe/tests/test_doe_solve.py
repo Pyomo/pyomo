@@ -44,9 +44,7 @@ if scipy_available:
         FullReactorExperimentBad,
     )
 from pyomo.contrib.doe.utils import rescale_FIM
-from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
-    run_rooney_biegler_doe,
-)
+from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 
 import pyomo.environ as pyo
 

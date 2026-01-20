@@ -31,12 +31,7 @@ if scipy_available:
         ReactorExperiment as FullReactorExperiment,
     )
 
-from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-    RooneyBieglerExperiment,
-)
-from pyomo.contrib.parmest.examples.rooney_biegler.doe_example import (
-    run_rooney_biegler_doe,
-)
+from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
