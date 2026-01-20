@@ -12,6 +12,7 @@
 """
 Unit Tests for pyomo.dae.misc
 """
+
 import os
 from os.path import abspath, dirname
 

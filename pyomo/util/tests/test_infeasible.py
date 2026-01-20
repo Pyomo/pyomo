@@ -10,6 +10,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 """Tests infeasible model debugging utilities."""
+
 import logging
 
 from io import StringIO

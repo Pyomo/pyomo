@@ -904,7 +904,7 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
             # multipliers won't necessarily correspond).
             external_model.set_external_constraint_multipliers(lam)
             hlxx, hlxy, hlyy = external_model.get_full_space_lagrangian_hessians()
-            (pred_hlxx, pred_hlxy, pred_hlyy) = (
+            pred_hlxx, pred_hlxy, pred_hlyy = (
                 model.calculate_full_space_lagrangian_hessians(lam, x)
             )
 

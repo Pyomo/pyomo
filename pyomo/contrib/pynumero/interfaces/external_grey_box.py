@@ -27,7 +27,6 @@ from pyomo.core.base.reference import Reference
 
 from ..sparse.block_matrix import BlockMatrix
 
-
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
 """

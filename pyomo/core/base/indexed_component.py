@@ -490,8 +490,7 @@ class IndexedComponent(Component):
             #
             pass
         elif not self._data and self._index_set and PyomoOptions.paranoia_level:
-            logger.warning(
-                """Iterating over a Component (%s)
+            logger.warning("""Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have
 actually been added to the Component.  The iterator will be empty.
 This is usually caused by Concrete models where you declare the
@@ -508,9 +507,7 @@ You can silence this warning by one of three ways:
     3) If you intend to iterate over a component that may be empty, test
        if the component is empty first and avoid iteration in the case
        where it is empty.
-"""
-                % (self.name,)
-            )
+""" % (self.name,))
         else:
             #
             # Test each element of a sparse data with an ordered
@@ -949,8 +946,7 @@ index %s is not a constant value.  This is likely not what you meant to
 do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
-the value() function."""
-                        % (self.name, i)
+the value() function.""" % (self.name, i)
                     )
 
                 except EXPR.FixedExpressionError:
@@ -963,8 +959,7 @@ index %s is a fixed but not constant value.  This is likely not what you
 meant to do, as if you later change the fixed value of the object this
 lookup will not change.  If you understand the implications of using
 fixed but not constant values, you can get the current value using the
-value() function."""
-                        % (self.name, i)
+value() function.""" % (self.name, i)
                     )
                 #
                 # There are other ways we could get an exception such as
