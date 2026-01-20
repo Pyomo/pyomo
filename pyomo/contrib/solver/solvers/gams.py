@@ -546,6 +546,7 @@ class GAMS(SolverBase):
                             remove_named_expressions=True,
                         )
                     )
+            results.solver_config = config
             end_timestamp = datetime.datetime.now(datetime.timezone.utc)
             results.timing_info.start_timestamp = start_timestamp
             results.timing_info.wall_time = (
