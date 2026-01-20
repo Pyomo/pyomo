@@ -34,31 +34,6 @@ from pyomo.gdp import Disjunct
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 
 
-"""
-The purpose of this module/transformation is to convert any nonlinear model 
-to the following form:
-
-min/max f(x_i)
-s.t.
-        g_j(x_i)*h_j(x_k) + a_j^T*x >/</== 0
-        g_j(x_i)/h_j(x_k) + a_j^T*x >/</== 0
-        g_j(x_i)**h_j(x_k) + a_j^T*x >/</== 0
-
-By doing so, each nonlinear function is only a function of one or two variables. 
-If this transformation is used prior to the nonlinear_to_pwl transformation, 
-it can significantly reduce the complexity of the PWL approximation.
-"""
-
-"""
-examples:
-
-exp(x1 + x2) <= 0
-becomes
-x1 + x2 <= x3
-exp(x3) <= 0
-"""
-
-
 def _handle_var(node, data, visitor):
     visitor.node_to_var_map[node] = (node,)
     visitor.degree_map[node] = 1
@@ -392,6 +367,23 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
         return x
 
 
+@TransformationFactory.register(
+    'contrib.piecewise.univariate_nonlinear_decomposition',
+    doc="""
+The purpose of this module/transformation is to convert any nonlinear model 
+to the following form:
+
+min/max e(x_i)*///**f(x_j) + b^T*x
+s.t.
+        g_j(x_i)*h_j(x_k) + a_j^T*x >/</== 0
+        g_j(x_i)/h_j(x_k) + a_j^T*x >/</== 0
+        g_j(x_i)**h_j(x_k) + a_j^T*x >/</== 0
+
+By doing so, each nonlinear function is only a function of one or two variables. 
+If this transformation is used prior to the nonlinear_to_pwl transformation, 
+it can significantly reduce the complexity of the PWL approximation.
+    """
+)
 class UnivariateNonlinearDecompositionTransformation(Transformation):
     def __init__(self):
         super().__init__()
