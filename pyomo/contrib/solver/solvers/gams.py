@@ -547,6 +547,8 @@ class GAMS(SolverBase):
                         )
                     )
             results.solver_config = config
+            results.solver_log = ostreams[0].getvalue()
+
             end_timestamp = datetime.datetime.now(datetime.timezone.utc)
             results.timing_info.start_timestamp = start_timestamp
             results.timing_info.wall_time = (
