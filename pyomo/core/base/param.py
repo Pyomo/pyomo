@@ -311,15 +311,15 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         pass
 
     @overload
-    def __new__(
-        cls: Type[Param], *args, **kwds
-    ) -> Union[ScalarParam, IndexedParam]: ...
-
-    @overload
     def __new__(cls: Type[ScalarParam], *args, **kwds) -> ScalarParam: ...
 
     @overload
     def __new__(cls: Type[IndexedParam], *args, **kwds) -> IndexedParam: ...
+
+    @overload
+    def __new__(
+        cls: Type[Param], *args, **kwds
+    ) -> Union[ScalarParam, IndexedParam]: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Param:

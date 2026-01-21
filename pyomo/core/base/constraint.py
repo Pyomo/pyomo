@@ -638,15 +638,15 @@ class Constraint(ActiveIndexedComponent):
     Satisfied = Feasible
 
     @overload
-    def __new__(
-        cls: Type[Constraint], *args, **kwds
-    ) -> Union[ScalarConstraint, IndexedConstraint]: ...
-
-    @overload
     def __new__(cls: Type[ScalarConstraint], *args, **kwds) -> ScalarConstraint: ...
 
     @overload
     def __new__(cls: Type[IndexedConstraint], *args, **kwds) -> IndexedConstraint: ...
+
+    @overload
+    def __new__(
+        cls: Type[Constraint], *args, **kwds
+    ) -> Union[ScalarConstraint, IndexedConstraint]: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
