@@ -386,10 +386,8 @@ def pairwise_plot(
     colors = ["r", "mediumblue", "darkgray"]
     if (alpha is not None) and (len(distributions) > 0):
         if theta_star is None:
-            print(
-                """theta_star is not defined, confidence region slice will be 
-                  plotted at the mean value of theta"""
-            )
+            print("""theta_star is not defined, confidence region slice will be 
+                  plotted at the mean value of theta""")
             theta_star = thetas.mean()
 
         mvn_dist = None

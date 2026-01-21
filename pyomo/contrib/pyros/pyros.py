@@ -33,8 +33,7 @@ from pyomo.contrib.pyros.util import (
     ModelData,
 )
 
-
-__version__ = "1.3.12"
+__version__ = "1.3.13"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
