@@ -78,10 +78,10 @@ merged.
 Tests must import the Pyomo test harness from
 ``pyomo.common.unittest`` instead of using Python's built-in
 ``unittest`` module directly. This wrapper extends the standard testing
-framework with Pyomo-specific capabilities, including automatic plugin
-discovery, solver availability checks, and improved test filtering
-controls. Using the provided interface ensures that all tests run
-consistently across Pyomo's multiple CI environments.
+framework with Pyomo-specific capabilities, including support for test
+timeouts and Pyomo-specific assertions for comparing expressions and
+nested containers with numerical tolerance. Using the provided interface
+ensures that all tests run consistently across Pyomo's multiple CI environments.
 A small example is shown below:
 
 .. code-block:: python
@@ -369,7 +369,7 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
 These commands register the cloned code with the active python environment
 (``pyomodev``) and installs all possible optional dependencies.
-This way, your changes to the source code for ``pyomo`` are
+Using ``--e`` ensures that your changes to the source code for ``pyomo`` are
 automatically used by the active environment. You can create another conda
 environment to switch to alternate versions of pyomo (e.g., stable).
 
@@ -392,7 +392,8 @@ think a PR should be merged or if more changes are necessary.
 Reviewers look for:
 
 * **Core and Addons:** Code rigor, standards compliance, test coverage above
-  a threshold, and avoidance of unintended side effects (e.g., regressions)
+  a threshold, and avoidance of unintended side effects (e.g., regressions
+  or backwards incompatibilities)
 * **Devel:** Basic code correctness and clarity, with an understanding that
   these areas are experimental and evolving
 * **All areas:** Code formatting (using ``black``), documentation, and tests
@@ -404,8 +405,10 @@ Reviewers look for:
    :doc:`/principles`.
 
 The core development team tries to review PRs in a timely
-manner, but we make no guarantees on review timeframes. In addition, PRs
-might not be reviewed in the order in which they are opened.
+manner, but we make no guarantees on review timeframes.
+Smaller, focused PRs are preferred and are generally reviewed more quickly.
+Larger PRs require more review effort and may take significantly longer.
+In addition, PRs might not be reviewed in the order in which they are opened.
 
 
 Where to put contributed code 
@@ -418,13 +421,19 @@ in. Once you have this branch checked out, you can start coding. Bug
 fixes and minor enhancements to existing Pyomo functionality should be
 made in the appropriate files in the Pyomo code base.
 
+We refer to the modules that form the foundation of the Pyomo environment
+as ``pyomo`` core. This includes the base expression systems, modeling
+components, model compilers, and solver interfaces. The core development
+team has committed to maintaining these capabilities, adhering to the
+strictest policies for testing and backwards compatibility.
+
 Larger features, new modeling components, or experimental functionality
 should be placed in one of Pyomo's extension namespaces, described below.
 
 Namespaces for Contributed and Experimental Code
 ++++++++++++++++++++++++++++++++++++++++++++++++
 
-Pyomo has a long history of supporting community-developed extensions.
+Pyomo has a long history of encouraging and distributing community-developed extensions.
 Historically, all such contributions were placed under the
 ``pyomo.contrib`` namespace. This structure allowed new modeling tools and
 algorithms to be shared quickly, but over time it became difficult for users
@@ -432,7 +441,7 @@ to distinguish between more stable, supported functionality and
 experimental or research-oriented code.
 
 As a result, Pyomo is transitioning to a more structured contribution
-model with two clear namespaces:
+model with three clear namespaces:
 
 * ``pyomo.addons`` – For mostly stable, supported extensions that build on
   the Pyomo core. These packages are maintained by dedicated
@@ -446,7 +455,11 @@ model with two clear namespaces:
   this namespace may change or be removed between releases without
   deprecation warnings.
 
-This two-tiered structure provides contributors a clear pathway from
+* ``pyomo.unsupported`` - For contributions that no longer have an active
+  maintainer nor any future development plans. Functionality under this namespace
+  may not work and is **NOT** tested through the standard test harness.
+
+This three-tiered structure provides contributors a clear pathway from
 **experimentation to supported integration**, while protecting users from
 unexpected changes in stable areas of the codebase.
 
@@ -463,6 +476,9 @@ unexpected changes in stable areas of the codebase.
    * - ``pyomo.addons``
      - Mostly stable, supported extensions maintained by contributors
      - Mostly stable APIs; follow Pyomo's standards
+   * - ``pyomo.unsupported``
+     - Unsupported, unmaintained code
+     - No guarantee of functionality and no regular testing
    * - ``pyomo``
      - Core Pyomo modeling framework
      - Fully supported and versioned
@@ -476,8 +492,8 @@ Submitting a Contributed Package
 Including contributed packages in the Pyomo source tree provides a
 convenient mechanism for defining new functionality that can be
 optionally deployed by users. We expect this mechanism to include
-Pyomo extensions and experimental modeling capabilities.  However,
-contributed packages are treated as optional packages, which are not
+Pyomo extensions and experimental modeling capabilities. However,
+contributed packages are treated as optional packages, which are not necessarily
 maintained by the Pyomo developer team. Thus, it is the responsibility
 of the code contributor to keep these packages up-to-date.
 
@@ -491,14 +507,14 @@ arise, then these packages will be disabled and an issue will be
 created to resolve these test failures. The Pyomo team reserves the
 right to remove contributed packages that are not maintained.
 
-When submitting a new contributed package (under either ``addons`` or
+When submitting a new package (under either ``addons`` or
 ``devel``), please ensure that:
 
 * The package has at least one maintainer responsible for its upkeep.
 * The code includes tests that can be run through Pyomo's
   continuous integration framework.
-* The package includes a README or module-level documentation that
-  clearly describes its purpose and usage.
+* The package includes documentation that clearly describes its purpose and
+  usage, preferably in as online documentation in ``doc/OnlineDocs``.
 * Optional dependencies are properly declared in ``setup.py``
   under the appropriate ``[optional]`` section.
 * The contribution passes all standard style and formatting checks.
@@ -506,7 +522,7 @@ When submitting a new contributed package (under either ``addons`` or
 Contributed Packages within Pyomo
 +++++++++++++++++++++++++++++++++
 
-Third-party contributions can be included directly within the
+Contributions can be included directly within the
 ``pyomo.devel`` or ``pyomo.addons`` namespaces.
 The ``pyomo/devel/example`` package
 provides an example of how this can be done, including a directory
@@ -520,11 +536,10 @@ imported as a subpackage of ``pyomo.devel``::
     print(a)
 
 Although ``pyomo.devel.example`` is included in the Pyomo source
-tree, it is treated as an optional package.  Pyomo will attempt to
+tree, it is treated as an optional package. Pyomo will attempt to
 import this package, but if an import failure occurs, Pyomo will
-silently ignore it.  Otherwise, this pyomo package will be treated
-like any other.  Specifically:
+silently ignore it. Otherwise, this pyomo package will be treated
+like any other. Specifically:
 
 * Plugin classes defined in this package are loaded when ``pyomo.environ`` is loaded.
-
 * Tests in this package are run with other Pyomo tests.

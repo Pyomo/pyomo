@@ -3,7 +3,7 @@ Development Principles
 
 The Pyomo development team follows a set of development principles.
 In order to promote overall transparency, this page is intended to document
-those principles, to the best of our ability, for users and potential
+those principles to the best of our ability, for users and potential
 contributors alike. Please also review Pyomo's recent publication
 on the history of its development for a holistic view into the changes
 of these principles over time [MHJ+25]_.
@@ -15,13 +15,14 @@ Commitment to Published Interfaces
 ++++++++++++++++++++++++++++++++++
 
 If functionality is published in the most recent edition of the
-Pyomo book [PyomoBookIII]_ and corresponding examples, we treat that as
-a public API commitment. Once published in the book, those APIs will not
-change until the next major Pyomo release, which will coincide with a
+Pyomo book [PyomoBookIII]_ (The Book) and corresponding examples, we treat that
+as a public API commitment. The interfaces and APIs appearing in The Book
+will be supported (although possibly in a deprecated form) until 
+the next major Pyomo release, which will generally coincide with a
 new edition of the book.
 
 This commitment ensures that teaching materials, training resources, and
-long-term codebases built on those examples will remain valid across an
+long-term codebases built following those examples will remain valid across an
 entire major release.
 
 Stable, Supported APIs
@@ -82,30 +83,63 @@ Dependency Management
 Minimal Core Dependencies
 +++++++++++++++++++++++++
 
-Pyomo core is intentionally designed to have only one required
-dependency: ``ply``. This ensures that the base functionality of Pyomo
-can operate using only standard Python libraries and ``ply``.
+The core Pyomo codebase is designed to be a *Pure Python* library with minimal
+dependencies outside the standard Python library (currently, there is only a
+single hard dependency on ``ply``).
 
-This approach promotes overall ease of installation, allowing other packages
-to depend and be built upon Pyomo.
+This approach simplifies installation, reduces the burden on derived packages,
+and lessens the likelihood of triggering dependency conflicts.
 Additionally, this allows users to install and run Pyomo in
 resource-constrained or isolated environments (such as teaching
-containers or HPC systems). All additional packages are optional.
+containers or HPC systems).
 
 Optional Dependencies
 +++++++++++++++++++++
 
-Pyomo supports a number of optional dependencies that enhance its
-functionality. These are grouped into three categories:
+Some extended Pyomo functionality relies on additional optional Python packages.
+An optional dependency must not be imported (or required) for the Pyomo
+environment. That is:
 
-* **Tests** – Dependencies needed only to run the automated test suite
+.. doctest::
+   >>> import pyomo.environ
+
+should not raise an ``ImportError`` if the dependency is missing. Further, the
+Pyomo test harness (``pytest pyomo``) must run without error/failure if any
+optional dependencies are missing (except for the dependencies required by
+the ``tests`` :ref:`dependency group <dependency_groups>`).
+
+Pyomo makes extensive use of :py:func:`attempt_import()` to support the
+standardized and convenient use of optional dependencies. Further, many
+common dependencies are directly importable through
+``pyomo.common.dependencies`` without immediately triggering the dependency
+import; for example:
+
+.. testcode::
+   # Importing numpy from dependencies does not trigger the import
+   from pyomo.common.dependencies import numpy as np, numpy_available
+   
+   # but testing the availability or using the module will trigger the import
+   if numpy_available:
+      a = np.array([1, 2, 3])
+   
+.. testoutput::
+   : hide:
+
+.. _dependency_groups:
+Optional Dependency Groups
+++++++++++++++++++++++++++
+
+Pyomo defines three dependency groups to simplify installation of
+optional dependencies:
+
+* **tests** – Dependencies needed only to run the automated test suite
   and continuous integration infrastructure (e.g., ``pytest``,
   ``parameterized``, ``coverage``).
 
-* **Docs** – Dependencies needed to build the Sphinx-based documentation
+* **docs** – Dependencies needed to build the Sphinx-based documentation
   (e.g., ``sphinx``, ``sphinx_rtd_theme``, ``numpydoc``).
 
-* **Optional** – Dependencies that enable extended
+* **optional** – Dependencies that enable extended
   functionality throughout the Pyomo codebase, such as numerical
   computations or data handling (e.g., ``numpy``, ``pandas``,
   ``matplotlib``).
@@ -145,20 +179,29 @@ Miscellaneous Conventions
 
 There are a variety of long-standing conventions that have become
 standard across the project. This list will be amended as conventions come
-up, so please refer regularly for updates:
+up, so please refer to it regularly for updates:
 
 * **Environment imports:** Import the main Pyomo environment as  
-  ``import pyomo.environ as pyo``.  
-  Avoid ``from pyomo.environ import *`` or alternative aliases.
-  Additionally, avoid all uses of ``import *``.
+  ``import pyomo.environ as pyo``. Avoid all uses of ``import *``.
 
-* **Export lists:** Do not define ``__all__`` in modules.  
+* **Export lists:** Do not define ``__all__`` in modules.
   Public symbols are determined by naming and documentation, not explicit lists.
 
-* **Circular imports:** Avoid importing from ``pyomo.core`` into any module
-  in ``pyomo.common`` due to the potential for circular imports.
+* **Circular imports:** Make every effort to avoid circular imports. When
+  circular imports are absolutely necessary, leverage :py:func`attempt_import()`
+  to explicitly break the cycle. To help with this, some module namespaces
+  have additional requirements:
 
-* **Print statements:** Avoid printing directly to ``stdout``. Pyomo is a
+  * ``pyomo.common``: modules within :py:mod:`pyomo.common` *must* not
+    import *any* Pyomo modules outside of :py:mod:`pyomo.common`
+  * ``pyomo.core.expr``: modules within :py:mod:`pyomo.core.expr` should not
+    import modules outside of :py:mod:`pyomo.common`
+    or :py:mod:`pyomo.core.expr`.
+  * ``pyomo.core.base``: modules within :py:mod:`pyomo.core.base` should not
+    import modules outside of :py:mod:`pyomo.common`,
+    :py:mod:`pyomo.core.expr`, or :py:mod:`pyomo.core.base`.
+
+* **Print statements:** Avoid printing or writing directly to ``stdout``. Pyomo is a
   library, not an application, and copious output can interfere with downstream
   tools and workflows. Use the appropriate logger instead. Print
   information only when the user has enabled or requested it.
