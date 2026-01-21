@@ -567,19 +567,17 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
         self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
 
+    @unittest.skipUnless(pandas_available, "test requires pandas")
     def test_doe_A_optimality(self):
         A_opt_value_expected = -2.2364242059539663
         A_opt_design_value_expected = 9.999955457176451
 
-        A_opt_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
-            "optimization"
-        ]["A"]["value"]
-        A_opt_design_value = run_rooney_biegler_doe(optimize_experiment_A=True)[
-            "optimization"
-        ]["A"]["design"][0]
+        A_opt_res = run_rooney_biegler_doe(optimize_experiment_A=True)
+        A_opt_value = A_opt_res["optimization"]["A"]["value"]
+        A_opt_design_value = A_opt_res["optimization"]["A"]["design"][0]
 
         self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
-        print("A optimal design value:", A_opt_design_value)
+        # print("A optimal design value:", A_opt_design_value)
         self.assertAlmostEqual(
             A_opt_design_value, A_opt_design_value_expected, places=2
         )
@@ -587,18 +585,15 @@ class TestDoe(unittest.TestCase):
 
 class TestRooneyBieglerExample(unittest.TestCase):
     @unittest.skipUnless(pandas_available, "test requires pandas")
-    @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
+    @unittest.skipUnless(ipopt_available, "test requires ipopt")
     def test_rooney_biegler_doe_example(self):
         """
         Tests the Design of Experiments (DoE) functionality, including
-        plotting logic, without displaying GUI windows.
+        plotting logic when matplotlib is available, without displaying GUI windows.
         """
-        plt = matplotlib.pyplot
-
-        # Define the prefix used to identify files to be cleaned up
         file_prefix = "rooney_biegler"
 
-        # Ensure we clean up the file even if the test fails halfway through
+        # Cleanup function for generated files
         def cleanup_file():
             generated_files = glob(f"{file_prefix}_*.png")
             for f in generated_files:
@@ -609,14 +604,13 @@ class TestRooneyBieglerExample(unittest.TestCase):
 
         self.addCleanup(cleanup_file)
 
-        # Run with plotting flags set to TRUE
+        # Run with draw_factorial_figure conditional on matplotlib availability
         results = run_rooney_biegler_doe(
             optimize_experiment_A=True,
             optimize_experiment_D=True,
             compute_FIM_full_factorial=True,
-            draw_factorial_figure=True,
+            draw_factorial_figure=matplotlib_available,
             design_range={'hour': [0, 10, 3]},
-            plot_optimal_design=True,
             tee=False,
         )
 
@@ -624,22 +618,85 @@ class TestRooneyBieglerExample(unittest.TestCase):
         self.assertIn("D", results["optimization"])
         self.assertIn("A", results["optimization"])
 
-        # Assertions for Plotting Logic
-        # Check that the custom plotting block ran and stored figures
-        self.assertTrue(
-            len(results["plots"]) > 0, "No plot objects were stored in results['plots']"
+        # Test D-optimality optimization results
+        D_opt_value_expected = 6.864794717802814
+        D_opt_design_value_expected = 10.0  # approximately 9.999999472662282
+
+        D_opt_value = results["optimization"]["D"]["value"]
+        D_opt_design_value = results["optimization"]["D"]["design"][0]
+
+        self.assertAlmostEqual(D_opt_value, D_opt_value_expected, places=4)
+        self.assertAlmostEqual(
+            D_opt_design_value, D_opt_design_value_expected, places=4
         )
 
-        # Check that draw_factorial_figure actually created the file
-        expected_d_plot = f"{file_prefix}_D_opt.png"
-        self.assertTrue(
-            os.path.exists(expected_d_plot),
-            f"Expected plot file '{expected_d_plot}' was not created.",
+        # Test A-optimality optimization results
+        A_opt_value_expected = -2.236424205953928
+        A_opt_design_value_expected = 10.0  # approximately 9.999955457176451
+
+        A_opt_value = results["optimization"]["A"]["value"]
+        A_opt_design_value = results["optimization"]["A"]["design"][0]
+
+        self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=4)
+        self.assertAlmostEqual(
+            A_opt_design_value, A_opt_design_value_expected, places=4
         )
 
-        # Explicitly close figures to free memory
-        for fig in results["plots"]:
-            plt.close(fig)
+        # Assertions for Full Factorial Results
+        self.assertIn("results_dict", results)
+        results_dict = results["results_dict"]
+        self.assertIsInstance(results_dict, dict)
+        self.assertGreater(len(results_dict), 0, "results_dict should not be empty")
+
+        # Expected values for design_range={'hour': [0, 10, 3]}
+        # These are the 3 data points from the full factorial grid
+        expected_log10_D_opt = [6.583798747893548, 6.691228337572129, 6.864794726228617]
+        expected_log10_A_opt = [
+            -1.9574859220185146,
+            -2.0268526846104975,
+            -2.236424954559946,
+        ]
+        expected_log10_pseudo_A_opt = [
+            4.62631282587503,
+            4.6643756529616285,
+            4.628369771668666,
+        ]
+        expected_log10_E_opt = [
+            1.9584199467177335,
+            2.0278567624056967,
+            2.2381970919918426,
+        ]
+        expected_log10_ME_opt = [
+            2.666958854458125,
+            2.6355148127607713,
+            2.3884005422449364,
+        ]
+
+        # Verify structure and values using assertStructuredAlmostEqual
+        self.assertStructuredAlmostEqual(
+            results_dict["log10 D-opt"], expected_log10_D_opt, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            results_dict["log10 A-opt"], expected_log10_A_opt, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            results_dict["log10 pseudo A-opt"], expected_log10_pseudo_A_opt, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            results_dict["log10 E-opt"], expected_log10_E_opt, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            results_dict["log10 ME-opt"], expected_log10_ME_opt, abstol=1e-4
+        )
+
+        # Plot-related assertions only when matplotlib is available
+        if matplotlib_available:
+            # Check that draw_factorial_figure actually created the file
+            expected_d_plot = f"{file_prefix}_D_opt.png"
+            self.assertTrue(
+                os.path.exists(expected_d_plot),
+                f"Expected plot file '{expected_d_plot}' was not created.",
+            )
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")

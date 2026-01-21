@@ -62,12 +62,12 @@ from pyomo.opt import SolverStatus
 
 
 class ObjectiveLib(Enum):
-    determinant = "determinant"
-    trace = "trace"
-    pseudo_trace = "pseudo_trace"
-    minimum_eigenvalue = "minimum_eigenvalue"
-    condition_number = "condition_number"
-    zero = "zero"
+    determinant = "determinant"  # det(FIM), D-optimality
+    trace = "trace"  # trace(inv(FIM)), A-optimality
+    pseudo_trace = "pseudo_trace"  # trace(FIM), pseudo-A-optimality
+    minimum_eigenvalue = "minimum_eigenvalue"  # min(eig(FIM)), E-optimality
+    condition_number = "condition_number"  # cond(FIM), ME-optimality
+    zero = "zero"  # Constant zero objective, useful for initialization and debugging
 
 
 class FiniteDifferenceStep(Enum):

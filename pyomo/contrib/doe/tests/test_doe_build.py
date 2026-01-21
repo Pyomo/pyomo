@@ -595,11 +595,8 @@ class TestDoEObjectiveOptions(unittest.TestCase):
         params = list(model.parameter_names)
 
         # Check cov_trace initialization
-        cov_trace_from_fim_inv = sum(pyo.value(model.fim_inv[j, j]) for j in params)
-
-        self.assertAlmostEqual(
-            pyo.value(model.cov_trace), cov_trace_from_fim_inv, places=4
-        )
+        cov_trace_expected = 2.0
+        self.assertAlmostEqual(pyo.value(model.cov_trace), cov_trace_expected, places=4)
 
         # Check L * L_inv ≈ I (lower triangle)
         for i, c in enumerate(params):
@@ -607,10 +604,11 @@ class TestDoEObjectiveOptions(unittest.TestCase):
                 if i < j:
                     continue  # upper triangle skipped by design
 
-                val = sum(
-                    pyo.value(model.L[c, params[k]])
-                    * pyo.value(model.L_inv[params[k], d])
-                    for k in range(len(params))
+                val = pyo.value(
+                    sum(
+                        model.L[c, params[k]] * model.L_inv[params[k], d]
+                        for k in range(len(params))
+                    )
                 )
 
                 expected = 1.0 if i == j else 0.0

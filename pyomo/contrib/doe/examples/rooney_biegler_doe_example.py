@@ -1,3 +1,20 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2025
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+"""
+Rooney Biegler DoE example, based on Rooney, W. C. and Biegler, L. T. (2001). Design for
+model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
+47(8), 1794-1804.
+"""
+
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
     RooneyBieglerExperiment,
 )
@@ -11,10 +28,49 @@ def run_rooney_biegler_doe(
     compute_FIM_full_factorial=False,
     draw_factorial_figure=False,
     design_range={'hour': [0, 10, 40]},
-    plot_optimal_design=False,
     tee=False,
     print_output=False,
 ):
+    """Run Rooney Biegler DoE Example. All the boolean options control whether
+    that section of the example is run. This is to facilitate testing using the example.
+
+    Parameters
+    ----------
+    optimize_experiment_A : bool, optional
+        If True, performs A-optimality optimization to find the optimal experimental
+        design that minimizes the trace of the inverse Fisher Information Matrix.
+        By default False.
+    optimize_experiment_D : bool, optional
+        If True, performs D-optimality optimization to find the optimal
+        experimental design that maximizes the determinant of the Fisher Information
+        Matrix. By default False.
+    compute_FIM_full_factorial : bool, optional
+        If True, computes the Fisher Information Matrix for all combinations in the
+        full factorial design space defined by design_range. By default False.
+    draw_factorial_figure : bool, optional
+        If True, generates and saves factorial figures using the data from
+        `compute_FIM_full_factorial` showing the design space exploration.
+        By default False.
+    design_range : dict
+        Dictionary specifying the range of design variables to explore. Keys are
+        variable names and values are lists of candidate values. Required for
+        `compute_FIM_full_factorial`. By default {'hour': [0, 10, 40]}.
+    tee : bool, optional
+        If True, displays solver output during optimization. By default False.
+    print_output : bool, optional
+        If True, prints optimization results and full factorial design results
+        to the console. By default False.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - 'experiment': The RooneyBieglerExperiment object used for design
+        - 'results_dict': Full factorial design results (if computed)
+        - 'optimization': Dictionary with 'D' and/or 'A' keys containing optimization
+          results including objective values and optimal designs
+        - 'plots': List of matplotlib figure objects (if plots were generated)
+    """
     # Initialize a container for all potential results
     results_container = {
         "experiment": None,
@@ -57,22 +113,14 @@ def run_rooney_biegler_doe(
     )
 
     if optimize_experiment_D:
-        # D-Optimality
-        rooney_biegler_doe_D = DesignOfExperiments(
-            experiment=rooney_biegler_experiment,
-            objective_option="determinant",
-            tee=tee,
-            prior_FIM=FIM,
-            improve_cholesky_roundoff_error=True,
-        )
-        rooney_biegler_doe_D.run_doe()
+        rooney_biegler_doe.run_doe()
 
         results_container["optimization"]["D"] = {
-            "value": rooney_biegler_doe_D.results['log10 D-opt'],
-            "design": rooney_biegler_doe_D.results['Experiment Design'],
+            "value": rooney_biegler_doe.results['log10 D-opt'],
+            "design": rooney_biegler_doe.results['Experiment Design'],
         }
         if print_output:
-            print("Optimal results for D-optimality:", rooney_biegler_doe_D.results)
+            print("Optimal results for D-optimality:", rooney_biegler_doe.results)
 
     if optimize_experiment_A:
         # A-Optimality
@@ -101,71 +149,7 @@ def run_rooney_biegler_doe(
         if print_output:
             print("Full Factorial Design Results:\n", results_container["results_dict"])
 
-    # Custom Plotting Functionality that shows the optimal designs and
-    # the max/min from the full factorial results
-    # Plotting Block
-    if plot_optimal_design:
-        plt = matplotlib.pyplot
-        res_dict = results_container["results_dict"]
-        opt_D = results_container["optimization"]["D"]
-        opt_A = results_container["optimization"]["A"]
-
-        # D-Optimality Plot
-        fig1, ax1 = plt.subplots(figsize=(10, 5))
-        # Locate Star values (max)
-        id_max_D = np.argmax(res_dict["log10 D-opt"])
-
-        ax1.plot(res_dict["hour"], res_dict["log10 D-opt"])
-        ax1.scatter(
-            opt_D["design"][0],
-            opt_D["value"],
-            color='green',
-            marker="*",
-            s=600,
-            label=f'Optimal D-opt: {opt_D["value"]:.2f}',
-        )
-        ax1.scatter(
-            res_dict["hour"][id_max_D],
-            res_dict["log10 D-opt"][id_max_D],
-            color='red',
-            marker="o",
-            s=200,
-            label='Max D-opt in Range',
-        )
-        ax1.set_xlabel("Time Points")
-        ax1.set_ylabel("log10 D-optimality")
-        ax1.legend()
-
-        results_container["plots"].append(fig1)
-
-        # A-Optimality Plot
-        fig2, ax2 = plt.subplots(figsize=(10, 5))
-        # Locate Star values (min)
-        id_min_A = np.argmin(res_dict["log10 A-opt"])
-
-        ax2.plot(res_dict["hour"], res_dict["log10 A-opt"])
-        ax2.scatter(
-            opt_A["design"][0],
-            opt_A["value"],
-            color='green',
-            marker="*",
-            s=600,
-            label=f'Optimal A-opt: {opt_A["value"]:.2f}',
-        )
-        ax2.scatter(
-            res_dict["hour"][id_min_A],
-            res_dict["log10 A-opt"][id_min_A],
-            color='red',
-            marker="o",
-            s=200,
-            label='Min A-opt in Range',
-        )
-        ax2.set_xlabel("Time Points")
-        ax2.set_ylabel("log10 A-optimality")
-        ax2.legend()
-
-        results_container["plots"].append(fig2)
-
+    # Pyomo.DoE built-in factorial figure generation
     if draw_factorial_figure:
         rooney_biegler_doe.draw_factorial_figure(
             sensitivity_design_variables=['hour'],
@@ -184,10 +168,9 @@ if __name__ == "__main__":
         optimize_experiment_D=True,
         compute_FIM_full_factorial=True,
         draw_factorial_figure=True,  # Set True to test file generation
-        design_range={'hour': [0, 10, 11]},  # Small range for speed
-        plot_optimal_design=True,
+        design_range={'hour': [0, 10, 3]},  # Small range for speed
         print_output=True,
     )
-
+    print(results)
     # Show plots if running locally
     # matplotlib.pyplot.show()
