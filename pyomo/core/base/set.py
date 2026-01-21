@@ -2008,7 +2008,7 @@ _SETDATA_API = ('set_value', 'add', 'remove', 'discard', 'clear', 'update', 'pop
 
 class _ScalarSetMixin:
     # This mixin is required because scalar Sets implement __len__(),
-    # which raises an exception for non-finite sets.  Further finite
+    # which raises an exception for non-finite sets. Further, finite
     # scalar sets also implement __getitem__() as an alias of at(), and
     # IndexedComponent.items() / IndexedComponent.values() relies on
     # __getitem__()
@@ -2024,7 +2024,7 @@ class _ScalarSetMixin:
         yield self
 
     def items(self, sort=SortComponents.UNSORTED):
-        """Return an iterator of (index,data) tuples from the dictionary"""
+        """Return an iterator of (index, data) tuples from the dictionary"""
         # Scalar sets are always defined (we don't support Skip):
         yield UnindexedComponent_index, self
 

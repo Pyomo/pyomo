@@ -424,7 +424,7 @@ class ComponentBase(PyomoObject):
             # This is a non-standard component where we will not
             # generate a table at all, and instead defer all formatting
             # / printing to the callback.  This is primarily used by
-            # BLocks (and block-like things)
+            # Blocks (and block-like things)
             for _key, _val in _data:
                 _fcn(ostream, sort, _key, _val)
         elif _data is not None:
