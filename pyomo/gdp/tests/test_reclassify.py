@@ -11,6 +11,7 @@
 
 # -*- coding: UTF-8 -*-
 """Tests disjunct reclassifier transformation."""
+
 import pyomo.common.unittest as unittest
 from pyomo.core import (
     Block,

@@ -77,8 +77,7 @@ class _SignalFlush:
             failCount = 0
             while 1:
                 try:
-                    fcn(*args)
-                    break
+                    return fcn(*args)
                 except (OSError, BlockingIOError):
                     failCount += 1
                     if failCount >= retries:
@@ -89,10 +88,12 @@ class _SignalFlush:
             self._retry(self._ostream.flush)
             self._handle.flush = True
 
-        def write(self, data):
+        def write(self, data: str) -> int:
+            ans = 0
             chunksize = _pipe_buffersize >> 1  # 1/2 the buffer size
             for i in range(0, len(data), chunksize):
-                self._retry(self._ostream.write, data[i : i + chunksize])
+                ans += self._retry(self._ostream.write, data[i : i + chunksize])
+            return ans
 
         def writelines(self, data):
             for line in data:
@@ -116,9 +117,10 @@ class _AutoFlush(_SignalFlush):
         # Because we define write() and writelines() under windows, we
         # need to make sure that _AutoFlush calls them
 
-        def write(self, data):
-            super().write(data)
+        def write(self, data: str) -> int:
+            ans = super().write(data)
             self.flush()
+            return ans
 
         def writelines(self, data):
             super().writelines(data)
@@ -126,9 +128,10 @@ class _AutoFlush(_SignalFlush):
 
     else:
 
-        def write(self, data):
-            self._ostream.write(data)
+        def write(self, data: str) -> int:
+            ans = self._ostream.write(data)
             self.flush()
+            return ans
 
         def writelines(self, data):
             self._ostream.writelines(data)

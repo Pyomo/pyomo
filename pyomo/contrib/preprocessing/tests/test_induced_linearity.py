@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Tests the induced linearity module."""
+
 import pyomo.common.unittest as unittest
 from pyomo.contrib.preprocessing.plugins.induced_linearity import (
     _bilinear_expressions,

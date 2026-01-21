@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 """Functions for solving the discrete problem."""
+
 from copy import deepcopy
 
 from pyomo.common.deprecation import deprecation_warning

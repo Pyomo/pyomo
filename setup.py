@@ -110,12 +110,10 @@ if using_cython:
         ext_modules = cythonize(files, compiler_directives={"language_level": 3})
     except:
         if using_cython == CYTHON_REQUIRED:
-            print(
-                """
+            print("""
 ERROR: Cython was explicitly requested with --with-cython, but cythonization
        of core Pyomo modules failed.
-"""
-            )
+""")
             raise
         using_cython = False
 
@@ -212,9 +210,18 @@ setup_kwargs = dict(
         # There are certain tests that also require pytest-qt, but because those
         # tests are so environment/machine specific, we are leaving these out of
         # the dependencies.
-        'tests': ['coverage', 'parameterized', 'pybind11', 'pytest', 'pytest-parallel'],
+        'tests': [
+            'coverage',
+            'parameterized',
+            'pybind11',
+            # 9.0.0 breaks skipping individual tests; see
+            # https://github.com/pytest-dev/pytest/issues/13895
+            'pytest!=9.0.0',
+            'pytest-parallel',
+        ],
         'docs': [
-            'Sphinx>4,!=8.2.0',
+            # Sphinx 9.0-9.1.0 fails to correctly generate type references.
+            'Sphinx>4,!=8.2.0,!=9.0.*,!=9.1.0',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
@@ -303,31 +310,23 @@ except SystemExit as e_info:
     if 'Microsoft Visual C++' not in str(e_info):
         raise
     elif using_cython == CYTHON_REQUIRED:
-        print(
-            """
+        print("""
 ERROR: Cython was explicitly requested with --with-cython, but cythonization
        of core Pyomo modules failed.
-"""
-        )
+""")
         raise
     else:
-        print(
-            """
+        print("""
 ERROR: setup() failed:
     %s
 Re-running setup() without the Cython modules
-"""
-            % (str(e_info),)
-        )
+""" % (str(e_info),))
         setup_kwargs['ext_modules'] = []
         setup(**setup_kwargs)
-        print(
-            """
+        print("""
 WARNING: Installation completed successfully, but the attempt to cythonize
          core Pyomo modules failed.  Cython provides performance
          optimizations and is not required for any Pyomo functionality.
          Cython returned the following error:
    "%s"
-"""
-            % (str(e_info),)
-        )
+""" % (str(e_info),))

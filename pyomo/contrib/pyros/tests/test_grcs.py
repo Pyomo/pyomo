@@ -609,6 +609,38 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_feasible,
         )
 
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    def test_pyros_solver_robust_feas_tol(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=0, mutable=True)
+        m.x = Var(bounds=(0, 20 - m.q * (20 + 1e-3)))
+        m.obj = Objective(expr=m.x)
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver="ipopt",
+            global_solver="ipopt",
+            robust_feasibility_tolerance=1e-4,
+        )
+
+        # NOTE:
+        # nominally optimal solution x = 0 is within bounds (0, 20).
+        # however, upper bound is most stringent at q = 1,
+        # becomes -1e-3.
+        # relative PyROS tolerance of 1e-4 should allow it, since
+        # nominally, constraint violation is -20,
+        # so scaled violation is 1e-3 / 20 = 5e-5 < 1e-4
+        # so PyROS should say robust feasible after 1 iteration
+        self.assertEqual(res.iterations, 1)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
+        )
+        self.assertAlmostEqual(res.final_objective_value, 0)
+        self.assertAlmostEqual(m.x.value, 0)
+
     @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
@@ -1260,7 +1292,7 @@ class RegressionTest(unittest.TestCase):
 
         with self.assertRaisesRegex(
             expected_exception=ValueError,
-            expected_regex="math domain error",
+            expected_regex="(math domain error)|(expected a positive input)",
             msg="Exception arising from math domain error not raised",
         ):
             # should raise math domain error:
@@ -1285,7 +1317,7 @@ class RegressionTest(unittest.TestCase):
         m.x2.setub(1 / m.q)
         with self.assertRaisesRegex(
             expected_exception=ZeroDivisionError,
-            expected_regex="float division by zero",
+            expected_regex="division by zero",
             msg="Exception arising from math domain error not raised",
         ):
             pyros_solver.solve(
@@ -2068,6 +2100,94 @@ class RegressionTest(unittest.TestCase):
         self.assertAlmostEqual(res.final_objective_value, 4, places=4)
         self.assertAlmostEqual(m.x.value, 2, places=4)
         self.assertAlmostEqual(m.z.value, 2, places=4)
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_pyros_discrete_intersection(self):
+        """
+        Test PyROS properly supports intersection set involving
+        discrete set.
+        """
+        m = ConcreteModel()
+        m.q1 = Param(initialize=0.5, mutable=True)
+        m.q2 = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[0, 1])
+        m.x2 = Var(bounds=[0, 1])
+        m.obj = Objective(expr=m.x1 + m.x2)
+        m.con1 = Constraint(expr=m.x1 >= m.q1)
+        m.con2 = Constraint(expr=m.x2 >= m.q2)
+        iset = IntersectionSet(
+            set1=BoxSet(bounds=[[0, 2]] * 2),
+            set2=DiscreteScenarioSet([[0, 0], [0.5, 0.5], [1, 1], [3, 3]]),
+        )
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.q1, m.q2],
+            uncertainty_set=iset,
+            # note: using BARON instead of IPOPT.
+            #       when IPOPT is used, this test will fail,
+            #       as the discrete separation routine does not
+            #       account for the case where there are no
+            #       adjustable variables in the model
+            #       (i.e. separation models without any variables).
+            #       will be addressed later when the subproblem
+            #       solve routines are refactored
+            local_solver="baron",
+            global_solver="baron",
+            solve_master_globally=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 2)
+        # check worst-case optimal solution
+        self.assertAlmostEqual(res.final_objective_value, 2)
+        self.assertAlmostEqual(m.x1.value, 1)
+        self.assertAlmostEqual(m.x2.value, 1)
+
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    def test_pyros_intersection_aux_vars(self):
+        """
+        Test PyROS properly supports intersection set
+        in which at least one of the intersected sets
+        is defined with auxiliary variables.
+        """
+        m = ConcreteModel()
+        m.q1 = Param(initialize=0.5, mutable=True)
+        m.q2 = Param(initialize=0.5, mutable=True)
+        m.x1 = Var(bounds=[0, 1])
+        m.x2 = Var(bounds=[0, 1])
+        m.obj = Objective(expr=m.x1 + m.x2)
+        m.con1 = Constraint(expr=m.x1 >= m.q1)
+        m.con2 = Constraint(expr=m.x2 >= m.q2)
+        iset = IntersectionSet(
+            set1=AxisAlignedEllipsoidalSet(center=(0, 0), half_lengths=(1, 1)),
+            # factor model set requires auxiliary variables
+            set2=FactorModelSet(
+                origin=[0, 0], psi_mat=np.eye(2), number_of_factors=2, beta=0.5
+            ),
+        )
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.q1, m.q2],
+            uncertainty_set=iset,
+            local_solver="ipopt",
+            global_solver="ipopt",
+            solve_master_globally=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 3)
+        # check worst-case optimal solution
+        self.assertAlmostEqual(res.final_objective_value, 2, places=5)
+        self.assertAlmostEqual(m.x1.value, 1)
+        self.assertAlmostEqual(m.x2.value, 1)
 
 
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
@@ -3097,8 +3217,7 @@ class TestLogOriginalModelStatistics(unittest.TestCase):
             state_variables=[m.y],
         )
 
-        expected_log_str = textwrap.dedent(
-            """
+        expected_log_str = textwrap.dedent("""
             Model Statistics (before preprocessing):
               Number of variables : 3
                 First-stage variables : 2
@@ -3108,8 +3227,7 @@ class TestLogOriginalModelStatistics(unittest.TestCase):
               Number of constraints : 3
                 Equality constraints : 1
                 Inequality constraints : 2
-            """
-        )
+            """)
 
         with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
             log_original_model_statistics(model_data, user_var_partitioning)

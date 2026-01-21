@@ -29,7 +29,6 @@ from pyomo.core.base.set import Set, BooleanSet, Binary
 from pyomo.core.base.util import is_functor
 from pyomo.core.base.var import Var
 
-
 logger = logging.getLogger('pyomo.core')
 
 _logical_var_types = {bool, type(None)}
