@@ -155,7 +155,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
             continue
 
         # Include the key for only the first line in a rowset, and only
-        # if we printed out a header (if there is no header, then then
+        # if we printed out a header (if there is no header, then the
         # key is not included)
         _rows[_key] = [
             (("" if i else tostr(_key),) if header else ())
