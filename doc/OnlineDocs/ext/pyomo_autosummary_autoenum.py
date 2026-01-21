@@ -13,7 +13,9 @@
 that plays nicely with sphinx.ext.autosummary.
 
 """
+
 import enum
+import functools
 import inspect
 import re
 import sphinx.locale
@@ -87,31 +89,33 @@ def _generate_autosummary_content(
                 l = caller.f_locals
                 if 'obj_type' in l:
                     # Sphinx >= 9.1.0
-                    doc_field = 'obj_type'
+                    first_arg = 'obj_type'
                 else:
-                    doc_field = 'doc'
-                doc = l[doc_field]
+                    first_arg = 'doc'
+                first = l[first_arg]
                 obj = l['obj']
-                args = {'obj': obj, doc_field: doc}
+                get_members_args = {'obj': obj, first_arg: first}
                 if '_get_members' in caller.f_globals:
                     _get_members = caller.f_globals['_get_members']
                     if 'config' in l:
                         # Sphinx >= 8.2.1
                         for field in ('config', 'events'):
-                            args[field] = l[field]
+                            get_members_args[field] = l[field]
                         if 'registry' in l:
                             # Sphinx < 9.1
-                            args['registry'] = l['registry']
+                            get_members_args['registry'] = l['registry']
                     else:
                         # Sphinx >= 7.2
-                        args['app'] = l['app']
+                        get_members_args['app'] = l['app']
                 else:
                     # Sphinx < 7.2
                     _get_members = caller.f_locals['get_members']
 
                 if ns['objtype'] == 'module':
                     ns['enums'], ns['all_enums'] = _get_members(
-                        types={'enum'}, imported=l['imported_members'], **args
+                        types={'enum'},
+                        imported=l['imported_members'],
+                        **get_members_args,
                     )
                 elif ns['objtype'] == 'enum':
                     ns['members'] = dir(obj)
@@ -120,18 +124,25 @@ def _generate_autosummary_content(
                         # We need _get_members to eventually call
                         # _get_class_members, so we will (temporarily)
                         # set the doc.objtype back to "class"
-                        doc.objtype = 'class'
+                        if first_arg == 'doc':
+                            first.objtype = 'class'
+                        else:
+                            get_members_args[first_arg] = 'class'
                         ns['methods'], ns['all_methods'] = _get_members(
-                            types={'method'}, include_public={'__init__'}, **args
+                            types={'method'},
+                            include_public={'__init__'},
+                            **get_members_args,
                         )
                         ns['attributes'], ns['all_attributes'] = _get_members(
-                            types={'attribute', 'property'}, **args
+                            types={'attribute', 'property'}, **get_members_args
                         )
                         ns['enum_members'], ns['all_enum_members'] = _get_members(
-                            types={'enum_member'}, **args
+                            types={'enum_member'}, **get_members_args
                         )
                     finally:
-                        doc.objtype = 'enum'
+                        if first_arg == 'doc':
+                            # Sphinx < 9.1
+                            first.objtype = 'enum'
 
                     mro = obj.__mro__
                     for _base in mro[: mro.index(enum.Enum)]:
@@ -219,9 +230,79 @@ class EnumMemberDocumenter(autodoc.AttributeDocumenter):
         super().add_directive_header(sig.split(" = ", 1)[0].strip())
 
 
+def _best_object_type_for_member(
+    _botfm,
+    _app,
+    member: Any,
+    member_name: str,
+    is_attr: bool,
+    *,
+    parent_obj_type: str,
+    parent_props,
+):
+    """Monkey patch for _best_object_type_for_member in Sphinx>=9.1
+
+    The revised autodoc implementation moved away from class-based
+    documenters.  We can still make autosummary work with documenter
+    extensions, but we must monkey-patch additional utilities within
+    autosummary to explicitly query (and resolve) documenters from the
+    registry (the implementation from autodoc is a hard-coded if tree
+    and ignores the registry).
+
+    """
+
+    name = _botfm(
+        member,
+        member_name,
+        is_attr,
+        parent_obj_type=parent_obj_type,
+        parent_props=parent_props,
+    )
+    if name is None:
+        best = (-float('inf'), None)
+    else:
+        cls = _app.registry.documenters[name]
+        best = (getattr(cls, 'priority', 0), name)
+    for name, cls in _app.registry.documenters.items():
+        priority = getattr(cls, 'priority', 0)
+        if (
+            cls.can_document_member(member, member_name, is_attr, parent_obj_type)
+            and priority > best[0]
+        ):
+            best = (priority, name)
+    return best[1]
+
+
+def _load_object_by_name(_loader, name, objtype, **kwargs):
+    """Monkey patch for _load_object_by_name in Sphinx>=9.1.
+
+    The revised autodoc implementation moved away from class-based
+    documenters.  We can still make autosummary work with documenter
+    extensions, but we must monkey-patch additional utilities within
+    autosummary to map the new objtypes back to the "standard" set.
+
+    """
+
+    if objtype == 'enum':
+        objtype = 'class'
+    if objtype == 'enum_member':
+        objtype = 'attribute'
+    return _loader(name=name, objtype=objtype, **kwargs)
+
+
 def setup(app: Sphinx) -> Dict[str, Any]:
     app.setup_extension('sphinx.ext.autodoc')
     app.setup_extension('sphinx.ext.autosummary')
+
+    app.add_autodocumenter(EnumMemberDocumenter)
+    app.add_autodocumenter(EnumDocumenter)
+
+    app.add_directive_to_domain("py", "enum", PyClasslike)
+    app.add_role_to_domain("py", "enum", PyXRefRole())
+    app.registry.domains["py"].object_types["enum"] = ObjType(
+        sphinx.locale._("enum"), "enum", "class", "obj"
+    )
+
     # Overwrite key parts of autosummary so that our version of autoenum
     # plays nicely with it.  We have tested this with Sphinx>7.2.
     # Notably, 7.1.2 does NOT work (and cannot be easily made to work)
@@ -239,14 +320,23 @@ def setup(app: Sphinx) -> Dict[str, Any]:
             "(possible incompatible Sphinx version)."
         )
     autosummary.mangle_signature = _mangle_signature
+    # Additional overrides needed beginning in Sphinx 9.1.  The
+    # try-except blocks support previous Sphinx versions.
+    try:
+        from sphinx.ext.autodoc._dynamic._member_finder import (
+            _best_object_type_for_member as _botfm,
+        )
 
-    app.add_autodocumenter(EnumMemberDocumenter)
-    app.add_autodocumenter(EnumDocumenter)
+        autosummary._best_object_type_for_member = functools.partial(
+            _best_object_type_for_member, _botfm, app
+        )
+    except ImportError:
+        pass
+    try:
+        from sphinx.ext.autodoc._dynamic._loader import _load_object_by_name as _l
 
-    app.add_directive_to_domain("py", "enum", PyClasslike)
-    app.add_role_to_domain("py", "enum", PyXRefRole())
-    app.registry.domains["py"].object_types["enum"] = ObjType(
-        sphinx.locale._("enum"), "enum", "class", "obj"
-    )
+        autosummary._load_object_by_name = functools.partial(_load_object_by_name, _l)
+    except ImportError:
+        pass
 
     return {"version": '0.0.0', "parallel_read_safe": True, "parallel_write_safe": True}

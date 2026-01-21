@@ -16,7 +16,6 @@ from pyomo.core.expr.numvalue import value, is_constant
 from pyomo.core.expr import exp, log, sin, cos
 import math
 
-
 """
 The purpose of this file is to perform symbolic differentiation and 
 first order automatic differentiation directly with pyomo 

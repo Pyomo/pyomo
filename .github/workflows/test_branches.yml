@@ -737,6 +737,9 @@ jobs:
             texlive-pictures
         make -C doc/OnlineDocs html
         make -C doc/OnlineDocs latexpdf
+        # Run the doc tests (some check the html output for correctness)
+        $PYTHON_EXE -m pytest -v -W ignore::Warning \
+            doc/OnlineDocs --junitxml="TEST-pyomo-docs.xml"
 
     - name: Run documentation tests
       if: matrix.test_docs != 0

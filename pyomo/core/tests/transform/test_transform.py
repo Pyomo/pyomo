@@ -49,7 +49,6 @@ from pyomo.environ import (
 from pyomo.core.plugins.transform.standard_form import StandardForm
 from pyomo.core.plugins.transform.nonnegative_transform import NonNegativeTransformation
 
-
 solvers = check_available_solvers('glpk')
 
 
