@@ -1015,6 +1015,7 @@ class Estimator:
         # Trying to make work for both _Q_opt and _Q_at_theta tasks
         # If sequential modeling style preferred for _Q_at_theta, can adjust accordingly
 
+        # MODIFY: Use doe method for generate_scenario_blocks, look at line 1107-1119 in Pyomo.DoE.
         # Create a parent model to hold scenario blocks
         model = pyo.ConcreteModel()
 
@@ -1041,23 +1042,23 @@ class Estimator:
             for i in range(len(self.exp_list)):
                 # Create parmest model for experiment i
                 parmest_model = self._create_parmest_model(i)
-                if ThetaVals:
+                if ThetaVals is not None:
                     # Set theta values in the block model
                     for name in self.estimator_theta_names:
                         if name in ThetaVals:
-                            var = getattr(parmest_model, name)
+                            theta_var = getattr(parmest_model, name)
                             # Check if indexed variable
-                            if var.is_indexed():
-                                for index in var:
-                                    val = ThetaVals[name][index]
-                                    var[index].set_value(val)
+                            if theta_var.is_indexed():
+                                for theta_var_index in theta_var:
+                                    val = ThetaVals[name][theta_var_index]
+                                    theta_var[theta_var_index].set_value(val)
                                     if fix_theta:
-                                        var[index].fix()
+                                        theta_var[theta_var_index].fix()
                             else:
-                                var.set_value(ThetaVals[name])
+                                theta_var.set_value(ThetaVals[name])
                                 # print(pyo.value(var))
                                 if fix_theta:
-                                    var.fix()
+                                    theta_var.fix()
                 # parmest_model.pprint()
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
@@ -1230,8 +1231,8 @@ class Estimator:
             assert_optimal_termination(solve_result)
         # If fixing theta, capture termination condition if not optimal unless infeasible
         else:
-            # Initialize WorstStatus to optimal, update if not optimal
-            WorstStatus = pyo.TerminationCondition.optimal
+            # Initialize worst_status to optimal, update if not optimal
+            worst_status = pyo.TerminationCondition.optimal
             # Get termination condition from solve result
             status = solve_result.solver.termination_condition
 
@@ -1242,13 +1243,13 @@ class Estimator:
                 #     "Termination condition: %s",
                 #     str(status),
                 # )
-                # Unless infeasible, update WorstStatus
-                if WorstStatus != pyo.TerminationCondition.infeasible:
-                    WorstStatus = status
+                # Unless infeasible, update worst_status
+                if worst_status != pyo.TerminationCondition.infeasible:
+                    worst_status = status
 
             return_value = pyo.value(model.Obj)
             theta_estimates = ThetaVals if ThetaVals is not None else {}
-            return return_value, theta_estimates, WorstStatus
+            return return_value, theta_estimates, worst_status
 
         # Extract objective value
         obj_value = pyo.value(model.Obj)
