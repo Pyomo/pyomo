@@ -73,6 +73,7 @@ class GAMSWriterInfo(object):
 
 
 @WriterFactory.register(
+@WriterFactory.register(
     'gams_writer_v2', 'Generate the corresponding gms file (version 2).'
 )
 @document_class_CONFIG(methods=['write'])
