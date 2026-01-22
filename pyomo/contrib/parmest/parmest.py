@@ -1045,11 +1045,12 @@ class Estimator:
                 parmest_model = self._create_parmest_model(i)
                 if ThetaVals is not None:
                     # Set theta values in the block model
-                    for name in self.estimator_theta_names:
+                    for key, _ in model.unknown_parameters.items():
+                        name = key.name
                         if name in ThetaVals:
                             # Check the name is in the parmest model
                             assert hasattr(parmest_model, name)
-                            theta_var = getattr(parmest_model, name)
+                            theta_var = parmest_model.find_component(name)
                             theta_var.set_value(ThetaVals[name])
                             # print(pyo.value(theta_var))
                             if fix_theta:
@@ -1060,7 +1061,8 @@ class Estimator:
                 # model.exp_scenarios[i].pprint()
 
         # Add linking constraints for theta variables between blocks and parent model
-        for name in self.estimator_theta_names:
+        for key, _ in model.unknown_parameters.items():
+            name = key.name
 
             # Constrain the variable in the first block to equal the parent variable
             # If fixing theta, do not add linking constraints
@@ -1069,8 +1071,8 @@ class Estimator:
                     model.add_component(
                         f"Link_{name}_Block{i}_Parent",
                         pyo.Constraint(
-                            expr=getattr(model.exp_scenarios[i], name)
-                            == getattr(model, name)
+                            expr=model.exp_scenarios[i].find_component(name)
+                            == model.find_component(name)
                         ),
                     )
 
@@ -1157,12 +1159,17 @@ class Estimator:
         else:
             model = self.ef_instance
             if ThetaVals is not None:
-                for name in self.estimator_theta_names:
-                    if name in ThetaVals:
-                        var = getattr(model, name)
-                        var.set_value(ThetaVals[name])
-                        if fix_theta:
-                            var.fix()
+                    # Set theta values in the block model
+                    for key, _ in model.unknown_parameters.items():
+                        name = key.name
+                        if name in ThetaVals:
+                            # Check the name is in the parmest model
+                            assert hasattr(model, name)
+                            theta_var = model.find_component(name)
+                            theta_var.set_value(ThetaVals[name])
+                            # print(pyo.value(theta_var))
+                            if fix_theta:
+                                theta_var.fix()
 
         # Check solver and set options
         if solver == "k_aug":
@@ -1212,20 +1219,28 @@ class Estimator:
         # Extract objective value
         obj_value = pyo.value(model.Obj)
         theta_estimates = {}
-        # Extract theta estimates from first block
-        for name in self.estimator_theta_names:
-            theta_estimates[name] = pyo.value(getattr(model.exp_scenarios[0], name))
+        # Extract theta estimates from parent model
+        for key, _ in model.unknown_parameters.items():
+            name = key.name
+            # Value returns value in suffix, which does not change after estimation
+            # Neec to use pyo.value to get variable value
+            theta_estimates[name] = pyo.value(key)
 
-        self.obj_value = obj_value
-        self.estimated_theta = theta_estimates
+        # print("Estimated Thetas:", theta_estimates)
 
         # Check theta estimates are equal to the second block
-        for name in self.estimator_theta_names:
-            val_block1 = pyo.value(getattr(model.exp_scenarios[1], name))
+        # Due to how this is built, all blocks should have same theta estimates
+        # @Reviewers: Is this assertion needed?
+            
+            key_block1 = model.exp_scenarios[1].find_component(name)
+            val_block1 = pyo.value(key_block1)
             assert theta_estimates[name] == val_block1, (
                 f"Parameter {name} estimate differs between blocks: "
                 f"{theta_estimates[name]} vs {val_block1}"
             )
+
+        self.obj_value = obj_value
+        self.estimated_theta = theta_estimates
         # Return theta estimates as a pandas Series
         theta_estimates = pd.Series(theta_estimates)
 
@@ -1319,8 +1334,10 @@ class Estimator:
             # in the "reduced_hessian" method
             # retrieve the independent variables (i.e., estimated parameters)
             ind_vars = []
-            for name in self.estimator_theta_names:
-                var = getattr(self.ef_instance, name)
+            for key, _ in self.ef_instance.unknown_parameters.items():
+                name = key.name
+                var = self.ef_instance.find_component(name)
+                # var.pprint()
                 ind_vars.append(var)
 
             # Previously used code for retrieving independent variables:
