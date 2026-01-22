@@ -126,10 +126,11 @@ class DesignOfExperiments:
             default: 1e-3
         objective_option:
             String representation of the objective option. Current available options
-            are: ``determinant`` (for determinant, or D-optimality),
-            ``trace`` (for trace of covariance matrix, or A-optimality),
-            ``pseudo_trace`` (for trace of Fisher Information Matrix(FIM), or pseudo A-optimality),
-            ``minimum_eigenvalue``, (for E-optimality), or ``condition_number`` (for ME-optimality)
+            are:
+            - ``determinant`` (for determinant, or D-optimality),
+            - ``trace`` (for trace of covariance matrix, or A-optimality),
+            - ``pseudo_trace`` (for trace of Fisher Information Matrix(FIM), or pseudo A-optimality),
+            - ``minimum_eigenvalue``, (for E-optimality), or ``condition_number`` (for ME-optimality)
             Note: E-optimality and ME-optimality are only supported when using the
             grey box objective (i.e., ``grey_box_solver`` is True)
             default: ``determinant``
