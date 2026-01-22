@@ -1017,10 +1017,11 @@ class Estimator:
 
         # MODIFY: Use doe method for generate_scenario_blocks, look at line 1107-1119 in Pyomo.DoE.
         # Create a parent model to hold scenario blocks
-        model = pyo.ConcreteModel()
+        model = self.ef_instance = self._create_parmest_model(0)
 
-        # If bootlist is provided, use it to create scenario blocks for specified experiments
-        # Otherwise, use all experiments in exp_list
+        # Add an indexed block for scenario models
+        # # If bootlist is provided, use it to create scenario blocks for specified experiments
+        # # Otherwise, use all experiments in exp_list
         if bootlist is not None:
             # Set number of scenarios based on bootlist
             self.obj_probability_constant = len(bootlist)
@@ -1046,63 +1047,23 @@ class Estimator:
                     # Set theta values in the block model
                     for name in self.estimator_theta_names:
                         if name in ThetaVals:
+                            # Check the name is in the parmest model
+                            assert hasattr(parmest_model, name)
                             theta_var = getattr(parmest_model, name)
-                            # Check if indexed variable
-                            if theta_var.is_indexed():
-                                for theta_var_index in theta_var:
-                                    val = ThetaVals[name][theta_var_index]
-                                    theta_var[theta_var_index].set_value(val)
-                                    if fix_theta:
-                                        theta_var[theta_var_index].fix()
-                            else:
-                                theta_var.set_value(ThetaVals[name])
-                                # print(pyo.value(var))
-                                if fix_theta:
-                                    theta_var.fix()
+                            theta_var.set_value(ThetaVals[name])
+                            # print(pyo.value(theta_var))
+                            if fix_theta:
+                                theta_var.fix()
                 # parmest_model.pprint()
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
                 # model.exp_scenarios[i].pprint()
 
-        # Transfer all the unknown parameters to the parent model
+        # Add linking constraints for theta variables between blocks and parent model
         for name in self.estimator_theta_names:
-            # Get the variable from the first block
-            ref_component = getattr(model.exp_scenarios[0], name)
-            if ref_component.is_indexed():
-                # Create an indexed variable in the parent model
-                index_set = ref_component.index_set()
-                # Determine the starting values for each index
-                start_vals = {idx: pyo.value(ref_component[idx]) for idx in index_set}
-                # Create a variable in the parent model with same bounds and initialization
-                parent_var = pyo.Var(
-                    index_set,
-                    bounds=ref_component.bounds,
-                    initialize=lambda m, idx: start_vals[idx],
-                )
-                setattr(model, name, parent_var)
-
-                if not fix_theta:
-                    # Constrain the variable in the first block to equal the parent variable
-                    for i in range(self.obj_probability_constant):
-                        for idx in index_set:
-                            model.add_component(
-                                f"Link_{name}_Block{i}_Parent",
-                                pyo.Constraint(
-                                    expr=(
-                                        getattr(model.exp_scenarios[i], name)[idx]
-                                        == parent_var[idx]
-                                    )
-                                ),
-                            )
-
-            else:
-                # Determine the starting value: priority to ThetaVals, then ref_var default
-                start_val = pyo.value(ref_component)
-                # Create a variable in the parent model with same bounds and initialization
-                parent_var = pyo.Var(bounds=ref_component.bounds, initialize=start_val)
-                setattr(model, name, parent_var)
 
             # Constrain the variable in the first block to equal the parent variable
+            # If fixing theta, do not add linking constraints
             if not fix_theta:
                 for i in range(self.obj_probability_constant):
                     model.add_component(
@@ -1113,6 +1074,10 @@ class Estimator:
                         ),
                     )
 
+        # Deactivate existing objectives in parent model
+        for obj in model.component_objects(pyo.Objective):
+            obj.deactivate()
+
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
             return (
@@ -1121,13 +1086,6 @@ class Estimator:
             )
 
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
-
-        # Deactivate the objective in each block to avoid double counting
-        for i in range(self.obj_probability_constant):
-            model.exp_scenarios[i].Total_Cost_Objective.deactivate()
-
-        # Calling the model "ef_instance" to make it compatible with existing code
-        self.ef_instance = model
 
         return model
 
@@ -1322,30 +1280,8 @@ class Estimator:
                 "The number of data points 'cov_n' must be greater than "
                 "the number of fitted parameters."
             )
-            ind_vars = []
-            for name in self.estimator_theta_names:
-                var = getattr(self.ef_instance, name)
-                ind_vars.append(var)
 
-            solve_result, inv_red_hes = (
-                inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                    self.ef_instance,
-                    independent_variables=ind_vars,
-                    solver_options=self.solver_options,
-                    tee=self.tee,
-                )
-            )
-            self.inv_red_hes = inv_red_hes
-
-            measurement_var = self.obj_value / (
-                n - l
-            )  # estimate of the measurement error variance
-            cov = 2 * measurement_var * self.inv_red_hes  # covariance matrix
-            cov = pd.DataFrame(
-                cov,
-                index=self.estimated_theta.keys(),
-                columns=self.estimated_theta.keys(),
-            )
+            cov = self.cov_est(method='reduced_hessian')
 
             if return_values is not None and len(return_values) > 0:
                 return obj_value, theta_estimates, var_values, cov
