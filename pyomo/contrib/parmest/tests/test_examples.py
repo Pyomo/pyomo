@@ -57,6 +57,7 @@ class TestRooneyBieglerExamples(unittest.TestCase):
         likelihood_ratio_example.main()
 
 
+# Currently failing, cov_est() problem
 @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
 @unittest.skipUnless(ipopt_available, "The 'ipopt' solver is not available")
 @unittest.skipUnless(
@@ -131,6 +132,7 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         reactor_design.main()
 
+    # Currently failing, cov_est() problem
     @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
     def test_parameter_estimation_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import (

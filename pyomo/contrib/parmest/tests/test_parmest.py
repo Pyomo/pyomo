@@ -511,6 +511,7 @@ class TestRooneyBiegler(unittest.TestCase):
             retcode = subprocess.call(rlist)
         self.assertEqual(retcode, 0)
 
+    # Currently failing
     @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
     def test_theta_est_cov(self):
         objval, thetavals, cov = self.pest.theta_est(calc_cov=True, cov_n=6)
@@ -915,6 +916,7 @@ class TestModelVariants(unittest.TestCase):
         )  # 0.04124 from paper
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
+    # Currently failing, cov_est() problem
     def test_parmest_basics(self):
 
         for model_type, parmest_input in self.input.items():
@@ -928,6 +930,7 @@ class TestModelVariants(unittest.TestCase):
             obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
+    # currently failing, cov_est() problem
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_initialize_parmest_model_option(self):
 
@@ -945,6 +948,7 @@ class TestModelVariants(unittest.TestCase):
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
+    # currently failing, cov_est() problem, objective_at_theta() problem
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve(self):
 
@@ -963,6 +967,7 @@ class TestModelVariants(unittest.TestCase):
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
+    # currently failing, cov_est() problem, objective_at_theta() problem
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
 
         for model_type, parmest_input in self.input.items():
@@ -1278,6 +1283,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
         self.assertIn("unknown_parameters", str(context.exception))
 
+    # Currently failing, exp_scenario problem
     def test_dataformats(self):
         obj1, theta1 = self.pest_df.theta_est()
         obj2, theta2 = self.pest_dict.theta_est()
@@ -1286,6 +1292,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(theta1["k1"], theta2["k1"], places=6)
         self.assertAlmostEqual(theta1["k2"], theta2["k2"], places=6)
 
+    # Currently failing, exp_scenario problem
     def test_return_continuous_set(self):
         """
         test if ContinuousSet elements are returned correctly from theta_est()
@@ -1308,6 +1315,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(return_vals1["time"].loc[1][18], 2.368, places=3)
         self.assertAlmostEqual(return_vals2["time"].loc[1][18], 2.368, places=3)
 
+    # Currently failing, cov_est() problem
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_covariance(self):
         from pyomo.contrib.interior_point.inverse_reduced_hessian import (
@@ -1339,7 +1347,6 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertTrue(cov.loc["k1", "k1"] > 0)
         self.assertTrue(cov.loc["k2", "k2"] > 0)
         self.assertAlmostEqual(cov_diff, 0, places=6)
-
 
 @unittest.skipIf(
     not parmest.parmest_available,
@@ -1374,7 +1381,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         self.pest = parmest.Estimator(
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
-
+    # Currently failing, objective_at_theta() problem
     def test_theta_est_with_square_initialization(self):
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
         objval, thetavals = self.pest.theta_est()
@@ -1403,6 +1410,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
             thetavals["rate_constant"], 0.5311, places=2
         )  # 0.5311 from the paper
 
+    # Currently failing, objective_at_theta() problem
     def test_theta_est_with_square_initialization_diagnostic_mode_true(self):
         self.pest.diagnostic_mode = True
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
