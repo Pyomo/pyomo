@@ -347,9 +347,6 @@ def _get_labeled_model(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
-# Need to make this more robust. Used in Estimator class
-# Has issue where it counts duplicate data if multiple non-unique outputs
-# Not used in calculations, but to check if less than number of unknown parameters
 def _count_total_experiments(experiment_list):
     """
     Counts the number of data points in the list of experiments
@@ -1159,17 +1156,17 @@ class Estimator:
         else:
             model = self.ef_instance
             if ThetaVals is not None:
-                    # Set theta values in the block model
-                    for key, _ in model.unknown_parameters.items():
-                        name = key.name
-                        if name in ThetaVals:
-                            # Check the name is in the parmest model
-                            assert hasattr(model, name)
-                            theta_var = model.find_component(name)
-                            theta_var.set_value(ThetaVals[name])
-                            # print(pyo.value(theta_var))
-                            if fix_theta:
-                                theta_var.fix()
+                # Set theta values in the block model
+                for key, _ in model.unknown_parameters.items():
+                    name = key.name
+                    if name in ThetaVals:
+                        # Check the name is in the parmest model
+                        assert hasattr(model, name)
+                        theta_var = model.find_component(name)
+                        theta_var.set_value(ThetaVals[name])
+                        # print(pyo.value(theta_var))
+                        if fix_theta:
+                            theta_var.fix()
 
         # Check solver and set options
         if solver == "k_aug":
@@ -1226,12 +1223,12 @@ class Estimator:
             # Neec to use pyo.value to get variable value
             theta_estimates[name] = pyo.value(key)
 
-        # print("Estimated Thetas:", theta_estimates)
+            # print("Estimated Thetas:", theta_estimates)
 
-        # Check theta estimates are equal to the second block
-        # Due to how this is built, all blocks should have same theta estimates
-        # @Reviewers: Is this assertion needed?
-            
+            # Check theta estimates are equal to the second block
+            # Due to how this is built, all blocks should have same theta estimates
+            # @Reviewers: Is this assertion needed?
+
             key_block1 = model.exp_scenarios[1].find_component(name)
             val_block1 = pyo.value(key_block1)
             assert theta_estimates[name] == val_block1, (
