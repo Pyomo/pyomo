@@ -73,7 +73,6 @@ class GAMSWriterInfo(object):
 
 
 @WriterFactory.register(
-@WriterFactory.register(
     'gams_writer_v2', 'Generate the corresponding gms file (version 2).'
 )
 @document_class_CONFIG(methods=['write'])
@@ -211,8 +210,6 @@ class GAMSWriter(object):
         ),
     )
 
-    def __init__(self):
-        #: Instance configuration;
     def __init__(self):
         #: Instance configuration;
         #: see :ref:`pyomo.repn.plugins.gams_writer_v2.GAMSWriter::CONFIG`.
