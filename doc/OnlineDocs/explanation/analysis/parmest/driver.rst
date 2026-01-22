@@ -95,7 +95,7 @@ The experiment class has one required method:
 
 An example :class:`~pyomo.contrib.parmest.experiment.Experiment` class is shown below.
 
-.. literalinclude:: ../../pyomo/contrib/parmest/examples/rooney_biegler/rooney_biegler.py
+.. literalinclude:: /../../pyomo/contrib/parmest/examples/rooney_biegler/rooney_biegler.py
    :language: python
    :pyobject: RooneyBieglerExperiment
    :caption: RooneyBieglerExperiment class from the parmest example
