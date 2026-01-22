@@ -213,6 +213,8 @@ class GAMSWriter(object):
 
     def __init__(self):
         #: Instance configuration;
+    def __init__(self):
+        #: Instance configuration;
         #: see :ref:`pyomo.repn.plugins.gams_writer_v2.GAMSWriter::CONFIG`.
         self.config = self.CONFIG()
 
