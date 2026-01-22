@@ -1928,14 +1928,6 @@ class Estimator:
             omitted).
         """
 
-        """
-        Pseudo-code description of redesigned function:
-        1. If deprecated parmest is being used, call its objective_at_theta method.
-        2. If no fitted parameters, skip assertion.
-        3. Use _Q_opt to compute objective values for each theta in theta_values.
-        4. Collect and return results in a DataFrame.        
-        """
-
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return self.pest_deprecated.objective_at_theta(theta_values=theta_values)
