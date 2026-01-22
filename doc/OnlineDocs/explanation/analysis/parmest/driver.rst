@@ -1,34 +1,11 @@
 .. _driversection:
 
-Parameter Estimation 
-====================
+Parmest Quick Start Guide 
+=========================
 
-Parameter Estimation using parmest requires a Pyomo model, experimental
-data which defines multiple scenarios, and parameters
-(thetas) to estimate.  parmest uses Pyomo [PyomoBookIII]_ and (optionally)
-mpi-sppy [KMM+23]_ to solve a
-two-stage stochastic programming problem, where the experimental data is
-used to create a scenario tree.  The objective function needs to be
-written with the Pyomo Expression for first stage cost
-(named "FirstStageCost") set to zero and the Pyomo Expression for second
-stage cost (named "SecondStageCost") defined as the deviation between
-the model and the observations (typically defined as the sum of squared
-deviation between model values and observed values).
-
-If the Pyomo model is not formatted as a two-stage stochastic
-programming problem in this format, the user can choose either the
-built-in "SSE" or "SSE_weighted" objective functions, or supply a custom
-objective function to use as the second stage cost. The Pyomo model will then be
-modified within parmest to match the required specifications.
-The stochastic programming callback function is also defined within parmest.
-The callback function returns a populated and initialized model for each scenario.
-
-Quick Guide
-===========
-We use a simple model to provide a quick guide on how to use parmest to estimate model parameters
+This quick start guide shows how to use parmest to estimate model parameters
 from experimental data as well as compute their uncertainty. The model and data used in this
-guide is taken from: Rooney, W. C.; Biegler, L. T. Design for Model Parameter Uncertainty Using
-Nonlinear Confidence Regions. AIChE J. 2001, 47 (8), 1794–1804.
+guide were taken from [RB01]_.
 
 The mathematical model of interest is:
 
@@ -95,10 +72,10 @@ required packages for parameter estimation in parmest:
 
 .. _ExperimentClass:
 
-Step 1: Create the Experiment Class for the Model
--------------------------------------------------
+Step 1: Create an Experiment Class
+----------------------------------
 
-parmest requires that the user create an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
+Parmest requires that the user create an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
 builds an annotated Pyomo model denoting experiment outputs, unknown parameters, and measurement errors using
 Pyomo `Suffix` components.
 
@@ -115,15 +92,10 @@ Pyomo `Suffix` components.
 The experiment class has one required method:
 
 * :class:`~pyomo.contrib.parmest.experiment.Experiment.get_labeled_model` which returns the labeled Pyomo model.
-  Note that the model does not have to be specifically written as a
-  two-stage stochastic programming problem for parmest.
-  That is, parmest can modify the
-  objective, see the :ref:`EstimatorObj` Section below.
 
-This step shows how to create the :class:`~pyomo.contrib.parmest.experiment.Experiment` class using the
-mathematical model outlined in the introduction section of this Quick Start.
+An example :class:`~pyomo.contrib.parmest.experiment.Experiment` class is shown below.
 
-.. literalinclude:: ../../../pyomo/contrib/parmest/examples/rooney_biegler/rooney_biegler.py
+.. literalinclude:: ../../pyomo/contrib/parmest/examples/rooney_biegler/rooney_biegler.py
    :language: python
    :pyobject: RooneyBieglerExperiment
    :caption: RooneyBieglerExperiment class from the parmest example
@@ -204,24 +176,21 @@ Optionally, solver options can be supplied, e.g.,
 Objective function
 ^^^^^^^^^^^^^^^^^^
 
-The second argument, ``obj_function``, is used to specify the objective function to use for parameter
-estimation if the user has not manually defined an objective function in their ``Experiment`` class.
-
-If ``obj_function`` is not specified, the Pyomo model is used "as is" and
-should be defined with "FirstStageCost" and "SecondStageCost"
-expressions that are used to build an objective for the two-stage 
-stochastic programming problem.
-
-If the Pyomo model is not written as a two-stage stochastic programming problem in
-this format, the user can select the "SSE" or "SSE_weighted" built-in objective
-functions. If the user wants to use an objective that is different from the built-in
-options, a custom objective function can be defined for parameter estimation. However,
+The ``obj_function`` keyword argument is used to specify the objective function to use for parameter
+estimation if the user has not implemented their own custom objective function.
+Parmest includes two built-in objective functions ("SSE" and "SSE_weighted") to compute
+the sum of squared errors between the ``m.experiment_outputs`` model values and
+data values. If the user wants to use an objective that is different from the built-in
+options, a custom objective function can be specified in the user's model, however,
 covariance matrix estimation (see :ref:`covariancesection` Section) is not supported
 for custom objective functions.
 
-Parmest includes two built-in objective functions ("SSE" and "SSE_weighted") to compute
-the sum of squared errors between the ``m.experiment_outputs`` model values and
-data values.
+When declaring a custom objective function, parmest assumes the model has the structure of 
+a two-stage stochastic programming problem so the objective function should be implemented
+using Pyomo Expressions for the first stage cost (named "FirstStageCost") and the second stage
+cost (named "SecondStageCost"). For parameter estimation problems the first stage cost is usually 
+set to zero and the second stage cost is usually defined as the deviation between the model and 
+the observations.
 
 Step 4: Estimate the Parameters
 -------------------------------
