@@ -508,9 +508,15 @@ You can silence this warning by one of three ways:
        if the component is empty first and avoid iteration in the case
        where it is empty.
 """ % (self.name,))
+            return iter(self._data)
+        elif SortComponents.SORTED_INDICES in sort:
+            # We are sorting the indices (and this is a sparse
+            # IndexedComponent): we might as well just sort the sparse
+            # _data keys instead of iterating over the whole index.
+            return iter(sorted_robust(self._data))
         else:
             #
-            # Test each element of a sparse data with an ordered
+            # Test each element of a sparse _data with an ordered
             # index set in order.  This is potentially *slow*: if
             # the component is in fact very sparse, we could be
             # iterating over a huge (dense) index in order to sort a
@@ -553,7 +559,23 @@ You can silence this warning by one of three ways:
                 return self._data.values(sort)
             except TypeError:
                 pass
-        return map(self.__getitem__, self.keys(sort))
+        # We would like to look things up directly in _data (as that is
+        # fast, since we know that keys() will return valid entries).
+        # However, some components (notably Param with a default) have
+        # valid keys that do not have an entry in _data.  If we just
+        # rely on getitem, then we will hit issues for abstract
+        # components.  So we will use a custom getter that tries _data
+        # first (both for efficiency and to correctly handle
+        # AbstractScalar components), and then falls back on getitem.
+        _getdata = self._data.__getitem__
+
+        def getter(s):
+            try:
+                return _getdata(s)
+            except KeyError:
+                return self[s]
+
+        return map(getter, self.keys(sort))
 
     def items(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
         """Return an iterator of (index,data) component data tuples
@@ -588,7 +610,23 @@ You can silence this warning by one of three ways:
                 return self._data.items(sort)
             except TypeError:
                 pass
-        return ((s, self[s]) for s in self.keys(sort))
+        # We would like to look things up directly in _data (as that is
+        # fast, since we know that keys() will return valid entries).
+        # However, some components (notably Param with a default) have
+        # valid keys that do not have an entry in _data.  If we just
+        # rely on getitem, then we will hit issues in pprint for
+        # abstract components.  So we will use a custom getter that
+        # tries _data first (both for efficiency and to correctly handle
+        # AbstractScalar components), and then falls back on getitem.
+        _getdata = self._data.__getitem__
+
+        def getter(s):
+            try:
+                return s, _getdata(s)
+            except KeyError:
+                return s, self[s]
+
+        return map(getter, self.keys(sort))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().', version='6.0')
     def iterkeys(self):
@@ -1130,7 +1168,7 @@ value() function.""" % (self.name, i)
                 ("Size", len(self)),
                 ("Index", self._index_set if self.is_indexed() else None),
             ],
-            self._data.items(),
+            self.items,
             ("Object",),
             lambda k, v: [type(v)],
         )
