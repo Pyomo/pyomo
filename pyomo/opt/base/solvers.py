@@ -14,6 +14,7 @@ import sys
 import time
 import logging
 import shlex
+from typing import overload
 
 from pyomo.common import Factory
 from pyomo.common.enums import SolverAPIVersion
@@ -143,6 +144,11 @@ The original solver was created with the following parameters:
 
 
 class SolverFactoryClass(Factory):
+    @overload
+    def __call__(self, _name: None = None, **kwds) -> "SolverFactoryClass": ...
+    @overload
+    def __call__(self, _name, **kwds) -> "OptSolver": ...
+
     def __call__(self, _name=None, **kwds):
         if _name is None:
             return self
