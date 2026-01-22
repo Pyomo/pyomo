@@ -1225,15 +1225,16 @@ class Estimator:
 
             # print("Estimated Thetas:", theta_estimates)
 
-            # Check theta estimates are equal to the second block
+            # Check theta estimates are equal in block
             # Due to how this is built, all blocks should have same theta estimates
-            # @Reviewers: Is this assertion needed?
+            # @Reviewers: Is this assertion needed? It is a good check, but
+            # if it were to fail, it would be a Constraint violation issue.
 
-            key_block1 = model.exp_scenarios[1].find_component(name)
-            val_block1 = pyo.value(key_block1)
-            assert theta_estimates[name] == val_block1, (
+            key_block0 = model.exp_scenarios[0].find_component(name)
+            val_block0 = pyo.value(key_block0)
+            assert theta_estimates[name] == val_block0, (
                 f"Parameter {name} estimate differs between blocks: "
-                f"{theta_estimates[name]} vs {val_block1}"
+                f"{theta_estimates[name]} vs {val_block0}"
             )
 
         self.obj_value = obj_value

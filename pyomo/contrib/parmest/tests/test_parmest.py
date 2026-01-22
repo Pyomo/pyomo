@@ -1315,7 +1315,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(return_vals1["time"].loc[1][18], 2.368, places=3)
         self.assertAlmostEqual(return_vals2["time"].loc[1][18], 2.368, places=3)
 
-    # Currently failing, cov_est() problem
+    # Currently failing, _count_total_experiments problem
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_covariance(self):
         from pyomo.contrib.interior_point.inverse_reduced_hessian import (
@@ -1327,6 +1327,9 @@ class TestReactorDesign_DAE(unittest.TestCase):
         # In this example, this is the number of data points in data_df, but that's
         # only because the data is indexed by time and contains no additional information.
         n = 60
+
+        total_experiments = parmest._count_total_experiments(self.pest_df.exp_list)
+        print(f"Total experiments: {total_experiments}")
 
         # Compute covariance using parmest
         obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
@@ -1347,6 +1350,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertTrue(cov.loc["k1", "k1"] > 0)
         self.assertTrue(cov.loc["k2", "k2"] > 0)
         self.assertAlmostEqual(cov_diff, 0, places=6)
+
 
 @unittest.skipIf(
     not parmest.parmest_available,
@@ -1381,6 +1385,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         self.pest = parmest.Estimator(
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
+
     # Currently failing, objective_at_theta() problem
     def test_theta_est_with_square_initialization(self):
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
