@@ -456,7 +456,7 @@ class BooleanVar(IndexedComponent):
                 ("Size", len(self)),
                 ("Index", self._index_set if self.is_indexed() else None),
             ],
-            self._data.items(),
+            self.items,
             ("Value", "Fixed", "Stale"),
             lambda k, v: [v.value, v.fixed, v.stale],
         )
