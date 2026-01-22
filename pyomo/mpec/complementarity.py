@@ -284,9 +284,9 @@ Error thrown for Complementarity "%s".""" % (b.name,))
         # Book).
         _transformed = not issubclass(self.ctype, Complementarity)
 
-        def _conditional_block_printer(ostream, idx, data):
+        def _conditional_block_printer(ostream, sort, idx, data):
             if _transformed or len(data.component_map()):
-                self._pprint_callback(ostream, idx, data)
+                self._pprint_callback(ostream, sort, idx, data)
 
         return (
             [
@@ -294,7 +294,7 @@ Error thrown for Complementarity "%s".""" % (b.name,))
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Active", self.active),
             ],
-            self._data.items(),
+            self.items,
             ("Arg0", "Arg1", "Active"),
             (_table_data, _conditional_block_printer),
         )
