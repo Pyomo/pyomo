@@ -1418,11 +1418,11 @@ class Estimator:
         # check if the user specified 'SSE' or 'SSE_weighted' as the objective function
         if self.obj_function == ObjectiveType.SSE:
             # check if the user defined the 'measurement_error' attribute
-            if hasattr(model, "measurement_error"):
+            if hasattr(self.ef_instance, "measurement_error"):
                 # get the measurement errors
                 meas_error = [
-                    model.measurement_error[y_hat]
-                    for y_hat, y in model.experiment_outputs.items()
+                    self.ef_instance.measurement_error[y_hat]
+                    for y_hat, y in self.ef_instance.experiment_outputs.items()
                 ]
 
                 # check if the user supplied the values of the measurement errors
@@ -1494,10 +1494,10 @@ class Estimator:
                 )
         elif self.obj_function == ObjectiveType.SSE_weighted:
             # check if the user defined the 'measurement_error' attribute
-            if hasattr(model, "measurement_error"):
+            if hasattr(self.ef_instance, "measurement_error"):
                 meas_error = [
-                    model.measurement_error[y_hat]
-                    for y_hat, y in model.experiment_outputs.items()
+                    self.ef_instance.measurement_error[y_hat]
+                    for y_hat, y in self.ef_instance.experiment_outputs.items()
                 ]
 
                 # check if the user supplied the values for the measurement errors
@@ -1534,6 +1534,14 @@ class Estimator:
                 raise AttributeError(
                     'Experiment model does not have suffix "measurement_error".'
                 )
+        else:
+            raise ValueError(
+                f"Invalid objective function for covariance calculation. "
+                f"The covariance matrix can only be calculated using the built-in "
+                f"objective functions: {[e.value for e in ObjectiveType]}. Supply "
+                f"the Estimator object one of these built-in objectives and "
+                f"re-run the code."
+            )
 
         return cov
 
