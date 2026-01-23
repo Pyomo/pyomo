@@ -14,7 +14,6 @@ Between Steps (P-Split) reformulation for GDPs from [KMT21]_.
 
 """
 
-
 from pyomo.common.config import (
     ConfigBlock,
     ConfigValue,

@@ -19,7 +19,6 @@ this is included as an example of the external grey
 box model interface.
 """
 
-
 import pyomo.environ as pyo
 import numpy as np
 from scipy.sparse import coo_matrix

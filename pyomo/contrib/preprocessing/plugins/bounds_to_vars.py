@@ -11,7 +11,6 @@
 
 """Transformation to convert explicit bounds to variable bounds."""
 
-
 from math import fabs
 import math
 
