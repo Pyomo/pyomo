@@ -267,8 +267,20 @@ class Engine:
             raise RuntimeError(msg)
         return self._status
 
-    def get_num_iters(self) -> int:
+    def get_number_iters(self) -> int:
         return self.execute(knitro.KN_get_number_iters)
+
+    def get_mip_number_nodes(self) -> int:
+        return self.execute(knitro.KN_get_mip_number_nodes)
+
+    def get_mip_abs_gap(self) -> float:
+        return self.execute(knitro.KN_get_mip_abs_gap)
+
+    def get_mip_rel_gap(self) -> float:
+        return self.execute(knitro.KN_get_mip_rel_gap)
+
+    def get_mip_number_solves(self) -> int:
+        return self.execute(knitro.KN_get_mip_number_solves)
 
     def get_num_solutions(self) -> int:
         _, _, x, _ = self.execute(knitro.KN_get_solution)
