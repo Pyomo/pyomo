@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from abc import abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from io import StringIO
 from typing import Optional
@@ -49,8 +49,6 @@ from pyomo.core.staleflag import StaleFlagManager
 
 
 class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
-    CONFIG = KnitroConfig()
-    config: KnitroConfig
 
     _engine: Engine
     _model_data: KnitroModelData
@@ -96,7 +94,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         return results
 
     def _build_config(self, **kwds) -> KnitroConfig:
-        return self.config(value=kwds, preserve_implicit=True)  # type: ignore
+        return self.config(value=kwds, preserve_implicit=True)
 
     def _validate_problem(self) -> None:
         if len(self._model_data.objs) > 1:
@@ -200,7 +198,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
     def _get_vars(self) -> list[VarData]:
         return self._model_data.variables
 
-    def _get_items(self, item_type: type[ItemType]) -> Sequence[ItemType]:
+    def _get_items(self, item_type: type[ItemType]) -> Iterable[ItemType]:
         maps = {
             VarData: self._model_data.variables,
             ConstraintData: self._model_data.cons,

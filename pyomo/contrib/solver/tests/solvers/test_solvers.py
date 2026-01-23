@@ -37,6 +37,7 @@ from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
+from pyomo.contrib.solver.solvers.knitro.persistent import KnitroPersistentSolver
 from pyomo.contrib.solver.tests.solvers import instances
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -56,6 +57,7 @@ all_solvers = [
     ('ipopt', Ipopt),
     ('highs', Highs),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
@@ -63,31 +65,37 @@ mip_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('highs', Highs),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 nlp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 qcp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('gurobi_persistent', GurobiPersistent),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 
 
-def _load_tests(solver_list):
+def _load_tests(solver_list, skip=None):
     res = list()
     for solver_name, solver in solver_list:
+        if skip and solver_name in skip:
+            continue
         if solver_name in nl_solvers_set:
             test_name = f"{solver_name}_presolve"
             res.append((test_name, solver, True))
@@ -628,7 +636,7 @@ class TestSolvers(unittest.TestCase):
         self.assertIsNotNone(res.solver_log)
         self.assertIsInstance(res.solver_log, str)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=["knitro_persistent"]))
     def test_remove_variable_and_objective(
         self, name: str, opt_class: Type[SolverBase], use_presolve
     ):
@@ -704,7 +712,7 @@ class TestSolvers(unittest.TestCase):
         res.solution_loader.load_vars([m.y])
         self.assertFalse(m.y.stale)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=["knitro_persistent"]))
     def test_range_constraint(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -732,7 +740,7 @@ class TestSolvers(unittest.TestCase):
         duals = res.solution_loader.get_duals()
         self.assertAlmostEqual(duals[m.c], 1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=["knitro_persistent"]))
     def test_reduced_costs(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -761,7 +769,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.x], -3)
         self.assertAlmostEqual(rc[m.y], -4)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=["knitro_persistent"]))
     def test_reduced_costs2(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -788,7 +796,7 @@ class TestSolvers(unittest.TestCase):
         rc = res.solution_loader.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], 1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_param_changes(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -831,7 +839,7 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_immutable_param(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -878,7 +886,7 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_equality(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
@@ -922,7 +930,7 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
                 self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_linear_expression(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -967,7 +975,7 @@ class TestSolvers(unittest.TestCase):
                 bound = res.objective_bound
             self.assertTrue(bound <= m.y.value)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_no_objective(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1008,7 +1016,7 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(duals[m.c1], 0)
                 self.assertAlmostEqual(duals[m.c2], 0)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=["knitro_persistent"]))
     def test_add_remove_cons(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1153,7 +1161,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], 0.5)
         self.assertNotIn(m.c2, duals)
 
-    @parameterized.expand(input=_load_tests(qcp_solvers))
+    @parameterized.expand(input=_load_tests(qcp_solvers, skip=['knitro_persistent']))
     def test_mutable_quadratic_coefficient(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1182,7 +1190,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0.10256137418973625, 4)
         self.assertAlmostEqual(m.y.value, 0.0869525991355825, 4)
 
-    @parameterized.expand(input=_load_tests(qcp_solvers))
+    @parameterized.expand(input=_load_tests(qcp_solvers, skip=['knitro_persistent']))
     def test_mutable_quadratic_objective_qcp(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1214,7 +1222,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0.6962249634573562, 4)
         self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
 
-    @parameterized.expand(input=_load_tests(qp_solvers))
+    @parameterized.expand(input=_load_tests(qp_solvers, skip=['knitro_persistent']))
     def test_mutable_quadratic_objective_qp(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1289,7 +1297,7 @@ class TestSolvers(unittest.TestCase):
         if opt_class is Highs:
             self.assertIn(opt._pyomo_var_to_solver_var_map[id(m.x3)], {0, 1})
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_fixed_vars(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1335,7 +1343,7 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(m.x.value, 0)
             self.assertAlmostEqual(m.y.value, 2)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_fixed_vars_2(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1380,7 +1388,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_fixed_vars_3(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1404,7 +1412,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.incumbent_objective, 3)
         self.assertAlmostEqual(m.x.value, 2)
 
-    @parameterized.expand(input=_load_tests(nlp_solvers))
+    @parameterized.expand(input=_load_tests(nlp_solvers, skip=['knitro_persistent']))
     def test_fixed_vars_4(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1431,7 +1439,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2**0.5, delta=1e-3)
         self.assertAlmostEqual(m.y.value, 2**0.5, delta=1e-3)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_mutable_param_with_range(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1528,7 +1536,7 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_add_and_remove_vars(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1650,7 +1658,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_bounds_with_params(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1809,7 +1817,7 @@ class TestSolvers(unittest.TestCase):
             {TerminationCondition.maxTimeLimit, TerminationCondition.iterationLimit},
         )
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_objective_changes(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1880,7 +1888,7 @@ class TestSolvers(unittest.TestCase):
             res = opt.solve(m)
             self.assertAlmostEqual(res.incumbent_objective, 4)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_domain(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
@@ -1909,7 +1917,7 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
 
-    @parameterized.expand(input=_load_tests(mip_solvers))
+    @parameterized.expand(input=_load_tests(mip_solvers, skip=['knitro_persistent']))
     def test_domain_with_integers(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -1940,7 +1948,7 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_fixed_binaries(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -2011,7 +2019,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 1)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_variables_elsewhere(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -2045,7 +2053,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_variables_elsewhere2(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
@@ -2087,7 +2095,7 @@ class TestSolvers(unittest.TestCase):
         self.assertIn(m.y, sol)
         self.assertNotIn(m.z, sol)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_bug_1(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
@@ -2115,7 +2123,7 @@ class TestSolvers(unittest.TestCase):
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(res.incumbent_objective, 3)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_bug_2(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         """
         This test is for a bug where an objective containing a fixed variable does
@@ -2162,7 +2170,7 @@ class TestSolvers(unittest.TestCase):
             opt.config.writer_config.linear_presolve = False
 
         """
-        when c2 gets presolved out, c1 becomes 
+        when c2 gets presolved out, c1 becomes
         x - y + y = 0 which becomes
         x - 0*y == 0 which is the zero we are testing for
         """
@@ -2214,7 +2222,7 @@ class TestSolvers(unittest.TestCase):
         )
         self.assertEqual(res.termination_condition, exp)
 
-    @parameterized.expand(input=_load_tests(all_solvers))
+    @parameterized.expand(input=_load_tests(all_solvers, skip=['knitro_persistent']))
     def test_scaling(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
