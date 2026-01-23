@@ -21,7 +21,6 @@ this is included as an example of the external grey
 box model interface.
 """
 
-
 import numpy as np
 from scipy.optimize import fsolve
 from scipy.sparse import coo_matrix

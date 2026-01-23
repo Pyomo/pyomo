@@ -21,6 +21,7 @@ where m_{i,j} are sparse matrices
 .. rubric:: Contents
 
 """
+
 from __future__ import annotations
 from pyomo.common.dependencies import mpi4py
 from .mpi_block_vector import MPIBlockVector

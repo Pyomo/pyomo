@@ -23,6 +23,7 @@
 """
 UI data objects for sharing data and settings between different parts of the UI.
 """
+
 __author__ = "John Eslick"
 
 import logging

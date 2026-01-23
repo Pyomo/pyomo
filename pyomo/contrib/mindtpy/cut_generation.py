@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Cut generation."""
+
 from math import copysign
 from pyomo.core import minimize, value
 import pyomo.core.expr as EXPR

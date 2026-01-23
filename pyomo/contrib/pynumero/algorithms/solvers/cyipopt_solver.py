@@ -15,6 +15,7 @@ CyIpoptSolver, is a solver that operates on a CyIpoptProblemInterface
 Pyomo model.
 
 """
+
 import io
 import sys
 import logging
