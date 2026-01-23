@@ -2239,7 +2239,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_A)
         ax.scatter(x_range, y_range_A)
-        ax.set_ylabel("$log_{10}$ Trace")
+        ax.set_ylabel("$log_{10}$(Trace of Covariance)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": A-optimality")
         if show_fig:
@@ -2259,7 +2259,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_pseudo_A)
         ax.scatter(x_range, y_range_pseudo_A)
-        ax.set_ylabel("$log_{10}$ Trace")
+        ax.set_ylabel("$log_{10}$(Trace FIM)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": pseudo A-optimality")
         if show_fig:
@@ -2282,7 +2282,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_D)
         ax.scatter(x_range, y_range_D)
-        ax.set_ylabel("$log_{10}$ Determinant")
+        ax.set_ylabel("$log_{10}$(Determinant)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": D-optimality")
         if show_fig:
@@ -2303,7 +2303,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_E)
         ax.scatter(x_range, y_range_E)
-        ax.set_ylabel("$log_{10}$ Minimal eigenvalue")
+        ax.set_ylabel("$log_{10}$ (Minimum eigenvalue)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": E-optimality")
         if show_fig:
@@ -2324,7 +2324,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_ME)
         ax.scatter(x_range, y_range_ME)
-        ax.set_ylabel("$log_{10}$ Condition number")
+        ax.set_ylabel("$log_{10}$(Condition number)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": Modified E-optimality")
         if show_fig:
