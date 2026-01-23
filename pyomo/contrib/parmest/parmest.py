@@ -1944,7 +1944,10 @@ class Estimator:
 
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
-            return self.pest_deprecated.objective_at_theta(theta_values=theta_values)
+            return self.pest_deprecated.objective_at_theta(
+                theta_values=theta_values,
+                initialize_parmest_model=initialize_parmest_model,
+            )
 
         if theta_values is None:
             all_thetas = {}  # dictionary to store fitted variables

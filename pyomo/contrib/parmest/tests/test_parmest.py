@@ -610,6 +610,7 @@ class TestRooneyBiegler(unittest.TestCase):
 # Very outdated, does not work with built-in objective functions due to
 # param outputs and no constraints.
 
+
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
