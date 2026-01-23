@@ -60,7 +60,7 @@ from pyomo.common.dependencies import (
 
 import pyomo.environ as pyo
 
-from pyomo.opt import SolverFactory, solver
+from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
 from pyomo.opt.results.solver import assert_optimal_termination
 from pyomo.common.flags import NOTSET
