@@ -1,7 +1,7 @@
 # Pyomo Addons
 
 The `pyomo.addons` directory contains **mostly stable extensions** to Pyomo
-that are **not part of the core library*. These packages extend Pyomo's
+that are **not part of the core library**. These packages extend Pyomo's
 modeling, solver, and analysis capabilities, and have demonstrated sufficient
 maturity, documentation, and testing.
 
