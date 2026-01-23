@@ -606,6 +606,10 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertAlmostEqual(cov[1, 1], 0.04124, places=2)  # 0.04124 from paper
 
 
+# Need to update testing variants to reflect real parmest functionality
+# Very outdated, does not work with built-in objective functions due to
+# param outputs and no constraints.
+
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
@@ -810,14 +814,14 @@ class TestModelVariants(unittest.TestCase):
 
         # Changing to make the objective function the built-in SSE function
         # # Sum of squared error function
-        # def SSE(model):
-        #     expr = (
-        #         model.experiment_outputs[model.y]
-        #         - model.response_function[model.experiment_outputs[model.hour]]
-        #     ) ** 2
-        #     return expr
+        def SSE(model):
+            expr = (
+                model.experiment_outputs[model.y]
+                - model.response_function[model.experiment_outputs[model.hour]]
+            ) ** 2
+            return expr
 
-        self.objective_function = "SSE"
+        self.objective_function = SSE
 
         theta_vals = pd.DataFrame([20, 1], index=["asymptote", "rate_constant"]).T
         theta_vals_index = pd.DataFrame(
