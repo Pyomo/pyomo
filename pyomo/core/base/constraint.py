@@ -765,7 +765,7 @@ class Constraint(ActiveIndexedComponent):
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Active", self.active),
             ],
-            self.items(),
+            self.items,
             ("Lower", "Body", "Upper", "Active"),
             lambda k, v: [
                 "-Inf" if v.lower is None else v.lower,
