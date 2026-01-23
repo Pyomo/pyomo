@@ -2259,7 +2259,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_pseudo_A)
         ax.scatter(x_range, y_range_pseudo_A)
-        ax.set_ylabel("$log_{10}$(Trace FIM)")
+        ax.set_ylabel("$log_{10}$(Trace of FIM)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": pseudo A-optimality")
         if show_fig:
