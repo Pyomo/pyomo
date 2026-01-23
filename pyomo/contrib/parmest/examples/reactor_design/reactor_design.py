@@ -119,12 +119,7 @@ class ReactorDesignExperiment(Experiment):
 
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.measurement_error.update(
-            [
-                (m.ca, None),
-                (m.cb, None),
-                (m.cc, None),
-                (m.cd, None),
-            ]
+            [(m.ca, None), (m.cb, None), (m.cc, None), (m.cd, None)]
         )
 
         return m

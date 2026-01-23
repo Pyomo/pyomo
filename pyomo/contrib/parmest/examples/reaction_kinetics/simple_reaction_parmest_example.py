@@ -95,9 +95,7 @@ class SimpleReactionExperiment(Experiment):
             [(m.x1, self.data['x1']), (m.x2, self.data['x2']), (m.y, self.data['y'])]
         )
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update(
-            [(m.y, None), (m.x1, None), (m.x2, None)]
-        )
+        m.measurement_error.update([(m.y, None), (m.x1, None), (m.x2, None)])
 
         return m
 
