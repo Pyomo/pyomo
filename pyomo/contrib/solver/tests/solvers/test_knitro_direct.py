@@ -43,6 +43,7 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertEqual(config._description, "A description")
         self.assertIsNone(config.time_limit)
 
+
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
     def test_results_extra_info_mip(self):
@@ -67,7 +68,7 @@ class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
         self.assertIsInstance(results.extra_info.mip_number_nodes, int)
         self.assertIsInstance(results.extra_info.mip_abs_gap, float)
         self.assertIsInstance(results.extra_info.mip_rel_gap, float)
-        self.assertIsInstance(results.extra_info.mip_number_solves,int)
+        self.assertIsInstance(results.extra_info.mip_number_solves, int)
 
         # Check that non-MIP field does not exist
         self.assertFalse(hasattr(results.extra_info, 'number_iters'))
@@ -79,7 +80,7 @@ class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
         m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
         m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
         m.obj = pyo.Objective(
-            expr=(1.0 - m.x) ** 2 + 100.0 * (m.y - m.x ** 2) ** 2, sense=pyo.minimize
+            expr=(1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2, sense=pyo.minimize
         )
 
         results = opt.solve(m)
@@ -94,6 +95,7 @@ class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
         self.assertFalse(hasattr(results.extra_info, 'mip_abs_gap'))
         self.assertFalse(hasattr(results.extra_info, 'mip_rel_gap'))
         self.assertFalse(hasattr(results.extra_info, 'mip_number_solves'))
+
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroDirectSolverInterface(unittest.TestCase):
