@@ -1052,6 +1052,8 @@ class Estimator:
                             # print(pyo.value(theta_var))
                             if fix_theta:
                                 theta_var.fix()
+                            else:
+                                theta_var.unfix()
                 # parmest_model.pprint()
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
@@ -1148,25 +1150,28 @@ class Estimator:
         '''
         # Create scenario blocks using utility function
         # If model not initialized,  use create scenario blocks to build from labeled model in experiment class
-        if self.model_initialized is False:
-            model = self._create_scenario_blocks(
-                bootlist=bootlist, ThetaVals=ThetaVals, fix_theta=fix_theta
-            )
-        # If model already initialized, use existing ef_instance model to get initialized ef model.
-        else:
-            model = self.ef_instance
-            if ThetaVals is not None:
-                # Set theta values in the block model
-                for key, _ in model.unknown_parameters.items():
-                    name = key.name
-                    if name in ThetaVals:
-                        # Check the name is in the parmest model
-                        assert hasattr(model, name)
-                        theta_var = model.find_component(name)
-                        theta_var.set_value(ThetaVals[name])
-                        # print(pyo.value(theta_var))
-                        if fix_theta:
-                            theta_var.fix()
+        # if self.model_initialized is False:
+        model = self._create_scenario_blocks(
+            bootlist=bootlist, ThetaVals=ThetaVals, fix_theta=fix_theta
+        )
+        # # If model already initialized, use existing ef_instance model to get initialized ef model.
+        # else:
+        #     model = self.ef_instance
+        #     if ThetaVals is not None:
+        #         # Set theta values in the block model
+        #         for key, _ in model.unknown_parameters.items():
+        #             name = key.name
+        #             if name in ThetaVals:
+        #                 # Check the name is in the parmest model
+        #                 assert hasattr(model, name)
+        #                 theta_var = model.find_component(name)
+        #                 theta_var.set_value(ThetaVals[name])
+        #                 # print(pyo.value(theta_var))
+        #                 if fix_theta:
+        #                     theta_var.fix()
+        #                 else:
+        #                     theta_var.unfix()
+        model.pprint()
 
         # Check solver and set options
         if solver == "k_aug":
