@@ -1171,7 +1171,7 @@ class Estimator:
         #                     theta_var.fix()
         #                 else:
         #                     theta_var.unfix()
-        model.pprint()
+        # model.pprint()
 
         # Check solver and set options
         if solver == "k_aug":
@@ -1214,10 +1214,6 @@ class Estimator:
                 if worst_status != pyo.TerminationCondition.infeasible:
                     worst_status = status
 
-            return_value = pyo.value(model.Obj)
-            theta_estimates = ThetaVals if ThetaVals is not None else {}
-            return return_value, theta_estimates, worst_status
-
         # Extract objective value
         obj_value = pyo.value(model.Obj)
         theta_estimates = {}
@@ -1234,16 +1230,22 @@ class Estimator:
             # Due to how this is built, all blocks should have same theta estimates
             # @Reviewers: Is this assertion needed? It is a good check, but
             # if it were to fail, it would be a Constraint violation issue.
+            if not fix_theta:
 
-            key_block0 = model.exp_scenarios[0].find_component(name)
-            val_block0 = pyo.value(key_block0)
-            assert theta_estimates[name] == val_block0, (
-                f"Parameter {name} estimate differs between blocks: "
-                f"{theta_estimates[name]} vs {val_block0}"
-            )
+                key_block0 = model.exp_scenarios[0].find_component(name)
+                val_block0 = pyo.value(key_block0)
+                assert theta_estimates[name] == val_block0, (
+                    f"Parameter {name} estimate differs between blocks: "
+                    f"{theta_estimates[name]} vs {val_block0}"
+                )
 
         self.obj_value = obj_value
         self.estimated_theta = theta_estimates
+
+        # If fixing theta, return objective value, theta estimates, and worst status
+        if fix_theta:
+            return obj_value, theta_estimates, worst_status
+        
         # Return theta estimates as a pandas Series
         theta_estimates = pd.Series(theta_estimates)
 
@@ -1982,16 +1984,6 @@ class Estimator:
                     1
                 )  # initialization performed using just 1 set of theta values
 
-        # print("DEBUG objective_at_theta_blocks")
-        # print("all_thetas type:", type(all_thetas))
-        # print(all_thetas)
-        # print("local_thetas type:", type(local_thetas))
-        # print(local_thetas)
-        # print("theta_names:")
-        # print(theta_names)
-        # print("estimator_theta_names:")
-        # print(self.estimator_theta_names)
-
         # walk over the mesh, return objective function
         all_obj = list()
         print("len(all_thetas):", len(all_thetas))
@@ -2000,15 +1992,19 @@ class Estimator:
                 obj, thetvals, worststatus = self._Q_opt(
                     ThetaVals=Theta, fix_theta=True
                 )
+                print("thetvals:", thetvals)
                 if worststatus != pyo.TerminationCondition.infeasible:
                     all_obj.append(list(Theta.values()) + [obj])
         else:
             obj, thetvals, worststatus = self._Q_opt(fix_theta=True)
+            print("thetvals:", thetvals)
             if worststatus != pyo.TerminationCondition.infeasible:
                 all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
+        print(global_all_obj)
+        print("dfcols:", dfcols)
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_theta
 
