@@ -114,9 +114,9 @@ jobs:
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
 
-        # Note: verify that pymumps and xpress are available when changing conda python version
+        # Note: verify that pymumps is available when changing conda python version
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.12
           other: /conda
           TARGET: linux
           PYENV: conda
@@ -291,7 +291,7 @@ jobs:
         conda-remove-defaults: true
         auto-update-conda: false
         python-version: ${{ matrix.python }}
-        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress, intel
+        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress
         use-mamba: true
 
     # This is necessary for qt (UI) tests; the package utilized here does not
@@ -425,9 +425,8 @@ jobs:
                 #  - "!=9.5.1" (conda errors)
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
                 #  - "<=9.5.0|>9.5.1" (conda seg faults)
-                XPRESS='xpress>=9.5.2'
-            elif [[ ${{matrix.TARGET}} == linux ]]; then
-                # Test with older Xpress version to get coverage data and verify backward compatibility.
+                # XPRESS='xpress>=9.5.2'
+                # Test with older Xpress version to get coverage data and verify backward compatibility
                 XPRESS='xpress<9.3'
             else
                 XPRESS='xpress'
