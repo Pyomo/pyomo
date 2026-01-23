@@ -1353,48 +1353,48 @@ class Estimator:
             )
 
             self.inv_red_hes = inv_red_hes
+        else:
+            # calculate the sum of squared errors at the estimated parameter values
+            sse_vals = []
+            for experiment in self.exp_list:
+                model = _get_labeled_model(experiment)
+
+                # fix the value of the unknown parameters to the estimated values
+                for param in model.unknown_parameters:
+                    param.fix(self.estimated_theta[param.name])
+
+                # re-solve the model with the estimated parameters
+                results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
+                assert_optimal_termination(results)
+
+                # choose and evaluate the sum of squared errors expression
+                if self.obj_function == ObjectiveType.SSE:
+                    sse_expr = SSE(model)
+                elif self.obj_function == ObjectiveType.SSE_weighted:
+                    sse_expr = SSE_weighted(model)
+                else:
+                    raise ValueError(
+                        f"Invalid objective function for covariance calculation. "
+                        f"The covariance matrix can only be calculated using the built-in "
+                        f"objective functions: {[e.value for e in ObjectiveType]}. Supply "
+                        f"the Estimator object one of these built-in objectives and "
+                        f"re-run the code."
+                    )
+
+                # evaluate the numerical SSE and store it
+                sse_val = pyo.value(sse_expr)
+                sse_vals.append(sse_val)
+
+            sse = sum(sse_vals)
+            logger.info(
+                f"The sum of squared errors at the estimated parameter(s) is: {sse}"
+            )
 
         # Number of data points considered
         n = self.number_exp
 
         # Extract the number of fitted parameters
         l = len(self.estimated_theta)
-
-        # calculate the sum of squared errors at the estimated parameter values
-        sse_vals = []
-        for experiment in self.exp_list:
-            model = _get_labeled_model(experiment)
-
-            # fix the value of the unknown parameters to the estimated values
-            for param in model.unknown_parameters:
-                param.fix(self.estimated_theta[param.name])
-
-            # re-solve the model with the estimated parameters
-            results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
-            assert_optimal_termination(results)
-
-            # choose and evaluate the sum of squared errors expression
-            if self.obj_function == ObjectiveType.SSE:
-                sse_expr = SSE(model)
-            elif self.obj_function == ObjectiveType.SSE_weighted:
-                sse_expr = SSE_weighted(model)
-            else:
-                raise ValueError(
-                    f"Invalid objective function for covariance calculation. "
-                    f"The covariance matrix can only be calculated using the built-in "
-                    f"objective functions: {[e.value for e in ObjectiveType]}. Supply "
-                    f"the Estimator object one of these built-in objectives and "
-                    f"re-run the code."
-                )
-
-            # evaluate the numerical SSE and store it
-            sse_val = pyo.value(sse_expr)
-            sse_vals.append(sse_val)
-
-        sse = sum(sse_vals)
-        logger.info(
-            f"The sum of squared errors at the estimated parameter(s) is: {sse}"
-        )
 
         """Calculate covariance assuming experimental observation errors are
         independent and follow a Gaussian distribution with constant variance.
