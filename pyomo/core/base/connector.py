@@ -202,7 +202,7 @@ class Connector(IndexedComponent):
                 for key, val in items.items():
                     tmp.add(val, key)
 
-    def _pprint(self, ostream=None, verbose=False):
+    def _pprint(self):
         """Print component information."""
 
         def _line_generator(k, v):
@@ -222,7 +222,7 @@ class Connector(IndexedComponent):
                 ("Size", len(self)),
                 ("Index", self._index_set if self.is_indexed() else None),
             ],
-            self._data.items(),
+            self.items,
             ("Name", "Size", "Variable"),
             _line_generator,
         )

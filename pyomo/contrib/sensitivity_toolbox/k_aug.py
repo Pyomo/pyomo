@@ -23,7 +23,6 @@ import os
 from pyomo.environ import SolverFactory
 from pyomo.common.tempfiles import TempfileManager
 
-
 debug_dir = "kaug_debug"
 gjh_dir = "GJH"
 # These are files we would like to save from a call to k_aug

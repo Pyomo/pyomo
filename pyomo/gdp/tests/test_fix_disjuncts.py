@@ -12,6 +12,7 @@
 
 # -*- coding: UTF-8 -*-
 """Tests disjunct fixing."""
+
 import pyomo.common.unittest as unittest
 from pyomo.environ import (
     Block,

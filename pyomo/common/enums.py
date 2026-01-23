@@ -80,8 +80,7 @@ if sys.version_info[:2] < (3, 13):
 
                 .. rubric:: {base.__name__}
 
-                """
-            )
+            """)
             + "\n\n"
             # There are environments where IntEnum.__doc__ is None (see #3710)
             + inspect.cleandoc(getattr(base, "__doc__", "") or "")
