@@ -185,7 +185,7 @@ class BoundPretransformation(Transformation):
                 )
                 if coef < 0:
                     # we divided by a negative coef above, so flip the constraint
-                    (lower, upper) = (upper, lower)
+                    lower, upper = (upper, lower)
                 v_bounds = self._get_bound_dict_for_var(bound_dict, v)
                 self._update_bounds_dict(
                     v_bounds,
@@ -217,7 +217,7 @@ class BoundPretransformation(Transformation):
         return lb, ub
 
     def _update_bounds_dict(self, v_bounds, lower, upper, disjunct, gdp_forest):
-        (lb, ub) = self._get_tightest_ancestral_bounds(v_bounds, disjunct, gdp_forest)
+        lb, ub = self._get_tightest_ancestral_bounds(v_bounds, disjunct, gdp_forest)
         if lower is not None:
             if lb is None or lower > lb:
                 # This GDP is more constrained here than it was in the parent
@@ -266,7 +266,7 @@ class BoundPretransformation(Transformation):
                 deactivate_lower = ComponentSet()
                 deactivate_upper = ComponentSet()
                 for disj in disjunction.disjuncts:
-                    (lb, ub) = self._get_tightest_ancestral_bounds(
+                    lb, ub = self._get_tightest_ancestral_bounds(
                         v_bounds, disj, gdp_forest
                     )
                     if lb is None:

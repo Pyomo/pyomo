@@ -95,8 +95,7 @@ for the query:
 It is possible that you have an error in your external data file,
 the ODBC connector for this data source is not correctly installed,
 or that there is a bug in the ODBC connector.
-"""
-                % (self.filename, self.options.query)
+""" % (self.filename, self.options.query)
             )
             raise
         for row in rows:

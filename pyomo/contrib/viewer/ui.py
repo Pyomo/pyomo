@@ -23,6 +23,7 @@
 """
 A simple GUI viewer/editor for Pyomo models.
 """
+
 __author__ = "John Eslick"
 
 import os
@@ -269,14 +270,10 @@ class MainWindow(_MainWindow, _MainWindowUI):
         msg.setStyleSheet("QLabel{min-width: 600px;}")
         self._dialog = msg
         msg.setWindowTitle("Model Information")
-        msg.setText(
-            """{} -- Active Constraints
+        msg.setText("""{} -- Active Constraints
 {} -- Active Equalities
 {} -- Free Variables
-{} -- {} of Freedom""".format(
-                cons, active_eq, free_vars, dof, doftext
-            )
-        )
+{} -- {} of Freedom""".format(cons, active_eq, free_vars, dof, doftext))
         msg.setStandardButtons(myqt.QMessageBox.StandardButton.Ok)
         msg.setModal(False)
         msg.show()

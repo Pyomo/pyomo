@@ -148,7 +148,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         # Generate an XML string using these two environment variables
         #
         xml = self.kestrel.formXML(opt._problem_files[0])
-        (jobNumber, password) = self.kestrel.submit(xml)
+        jobNumber, password = self.kestrel.submit(xml)
         ah.job = jobNumber
         ah.password = password
         #
@@ -193,7 +193,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 del self._ah[jobNumber]
                 ah.status = ActionStatus.done
 
-                (opt, smap_id, load_solutions, select_index, default_variable_value) = (
+                opt, smap_id, load_solutions, select_index, default_variable_value = (
                     self._opt_data[jobNumber]
                 )
                 del self._opt_data[jobNumber]
@@ -204,7 +204,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 # retrieve the final results, which are in message/log format.
                 results = self.kestrel.neos.getFinalResults(jobNumber, ah.password)
 
-                (current_offset, current_message) = self._neos_log[jobNumber]
+                current_offset, current_message = self._neos_log[jobNumber]
                 with open(opt._log_file, 'w') as OUTPUT:
                     OUTPUT.write(current_message)
                 with open(opt._soln_file, 'w') as OUTPUT:
@@ -250,7 +250,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 # Grab the partial messages from NEOS as you go, in case
                 # you want to output on-the-fly. You will only get data
                 # if the job was routed to the "short" priority queue.
-                (current_offset, current_message) = self._neos_log[jobNumber]
+                current_offset, current_message = self._neos_log[jobNumber]
                 # TBD: blocking isn't the way to go, but non-blocking
                 # was triggering some exception in kestrel.
                 #
@@ -258,7 +258,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 # minutes.  If NEOS doesn't produce intermediate results
                 # by then we will need to catch (and eat) the exception
                 try:
-                    (message_fragment, new_offset) = (
+                    message_fragment, new_offset = (
                         self.kestrel.neos.getIntermediateResults(
                             jobNumber, self._ah[jobNumber].password, current_offset
                         )

@@ -137,9 +137,7 @@ class _GAMSSolver:
             obj.. ans =g= sum(I, x(I));
             model test / all /;
             solve test using lp minimizing ans;
-            """ % (
-            n,
-        )
+            """ % (n,)
 
     #
     # Support "with" statements.
@@ -324,7 +322,7 @@ class GAMSDirect(_GAMSSolver):
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
-            (_, smap_id) = model.write(
+            _, smap_id = model.write(
                 filename=output_file, format=ProblemFormat.gams, io_options=io_options
             )
             symbolMap = model.solutions.symbol_map[smap_id]
@@ -883,7 +881,7 @@ class GAMSShell(_GAMSSolver):
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
-            (_, smap_id) = model.write(
+            _, smap_id = model.write(
                 filename=output_filename,
                 format=ProblemFormat.gams,
                 io_options=io_options,

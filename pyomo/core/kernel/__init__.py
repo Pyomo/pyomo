@@ -76,7 +76,6 @@ from pyomo.core.kernel import (
     set_types,
 )
 
-
 #
 # declare deprecation paths for removed modules and attributes
 #

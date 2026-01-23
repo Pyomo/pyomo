@@ -290,7 +290,7 @@ class TransformCurrentDisjunctiveState(Transformation):
             disjunction.activate()
         for disjunct in disjunction.disjuncts:
             if disjunct in reverse_token['_disjuncts']:
-                (fixed, val) = reverse_token['_disjuncts'][disjunct]
+                fixed, val = reverse_token['_disjuncts'][disjunct]
                 disjunct.parent_block().reclassify_component_type(disjunct, Disjunct)
                 disjunct.activate()
                 disjunct.indicator_var = val

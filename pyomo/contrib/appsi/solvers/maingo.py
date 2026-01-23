@@ -56,7 +56,6 @@ from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.util import valid_expr_ctypes_minlp
 
-
 logger = logging.getLogger(__name__)
 MaingoVar = namedtuple("MaingoVar", "type name lb ub init")
 maingopy, maingopy_available = attempt_import("maingopy")

@@ -46,7 +46,6 @@ from pyomo.gdp.tests.common_tests import (
 from pyomo.gdp.tests.models import make_indexed_equality_model
 from pyomo.repn import generate_standard_repn
 
-
 gurobi_available = (
     SolverFactory('gurobi').available(exception_flag=False)
     and SolverFactory('gurobi').license_is_valid()

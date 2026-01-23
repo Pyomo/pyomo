@@ -12,7 +12,6 @@
 from . import common
 from .version import __version__
 
-
 #
 # declare deprecation paths for removed modules
 #

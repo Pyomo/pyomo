@@ -423,12 +423,10 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2 or sys.argv[1] not in '123':
-        print(
-            """ERROR: expected a model to run:
+        print("""ERROR: expected a model to run:
     1 - simple simulation model
     2 - simple (final value) optimization model
-    3 - kinetic parameter regression model"""
-        )
+    3 - kinetic parameter regression model""")
         sys.exit(1)
 
     if '1' in sys.argv[1]:

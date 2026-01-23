@@ -36,7 +36,6 @@ from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
 import pyomo.core.base.var
 
-
 logger = logging.getLogger('pyomo.solvers')
 
 

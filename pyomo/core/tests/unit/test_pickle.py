@@ -34,7 +34,6 @@ from pyomo.environ import (
     sum_product,
 )
 
-
 is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 

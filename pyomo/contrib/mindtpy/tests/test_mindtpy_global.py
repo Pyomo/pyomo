@@ -11,6 +11,7 @@
 
 # -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
+
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
 from pyomo.contrib.mindtpy.tests.nonconvex1 import Nonconvex1

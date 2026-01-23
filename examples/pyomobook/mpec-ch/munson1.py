@@ -13,7 +13,6 @@
 import pyomo.environ as pyo
 from pyomo.mpec import Complementarity, complements
 
-
 model = pyo.ConcreteModel()
 
 model.x1 = pyo.Var()

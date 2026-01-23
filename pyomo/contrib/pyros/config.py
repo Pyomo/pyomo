@@ -25,7 +25,6 @@ from pyomo.contrib.pyros.util import (
 )
 from pyomo.contrib.pyros.uncertainty_sets import UncertaintySet
 
-
 default_pyros_solver_logger = setup_pyros_logger()
 
 
@@ -483,13 +482,11 @@ def pyros_config():
         ConfigValue(
             default=None,
             domain=NonNegativeFloat,
-            doc=(
-                """
+            doc=("""
                 Wall time limit for the execution of the PyROS solver
                 in seconds (including time spent by subsolvers).
                 If `None` is provided, then no time limit is enforced.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -497,14 +494,12 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            description=(
-                """
+            description=("""
                 Export subproblems with a non-acceptable termination status
                 for debugging purposes.
                 If True is provided, then the argument
                 `subproblem_file_directory` must also be specified.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -520,12 +515,10 @@ def pyros_config():
         ConfigValue(
             default=True,
             domain=bool,
-            description=(
-                """
+            description=("""
                 Load final solution(s) found by PyROS to the deterministic
                 model provided.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -533,14 +526,12 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            description=(
-                """
+            description=("""
                 True to ensure the component names given to the
                 subordinate solvers for every subproblem reflect
                 the names of the corresponding Pyomo modeling components,
                 False otherwise.
-                """
-            ),
+                """),
         ),
     )
 
@@ -576,15 +567,13 @@ def pyros_config():
                 cdatatype_validator=uncertain_param_data_validator,
                 allow_repeats=False,
             ),
-            description=(
-                """
+            description=("""
                 Uncertain model parameters.
                 Of every constituent `Param` object,
                 the `mutable` attribute must be set to True.
                 All constituent `Var`/`VarData` objects should be
                 fixed.
-                """
-            ),
+                """),
             visibility=1,
         ),
     )
@@ -593,13 +582,11 @@ def pyros_config():
         ConfigValue(
             default=None,
             domain=IsInstance(UncertaintySet),
-            description=(
-                """
+            description=("""
                 Uncertainty set against which the
                 final solution(s) returned by PyROS should be certified
                 to be robust.
-                """
-            ),
+                """),
             visibility=1,
         ),
     )
@@ -631,15 +618,12 @@ def pyros_config():
         ConfigValue(
             default=ObjectiveType.nominal,
             domain=InEnum(ObjectiveType),
-            description=(
-                """
+            description=("""
                 Choice of objective focus to optimize in the master problems.
                 Choices are: `ObjectiveType.worst_case`,
                 `ObjectiveType.nominal`.
-                """
-            ),
-            doc=(
-                """
+                """),
+            doc=("""
                 Objective focus for the master problems:
 
                 - `ObjectiveType.nominal`:
@@ -656,8 +640,7 @@ def pyros_config():
                 by PyROS.
                 If a nominal objective focus is chosen, then only robust
                 feasibility is guaranteed.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -665,15 +648,13 @@ def pyros_config():
         ConfigValue(
             default=[],
             domain=list,
-            doc=(
-                """
+            doc=("""
                 Nominal uncertain parameter realization.
                 Entries should be provided in an order consistent with the
                 entries of the argument `uncertain_params`.
                 If an empty list is provided, then the values of the `Param`
                 objects specified through `uncertain_params` are chosen.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -681,15 +662,12 @@ def pyros_config():
         ConfigValue(
             default=0,
             domain=In([0, 1, 2]),
-            description=(
-                """
+            description=("""
                 Order (or degree) of the polynomial decision rule functions
                 used for approximating the adjustability of the second stage
                 variables with respect to the uncertain parameters.
-                """
-            ),
-            doc=(
-                """
+                """),
+            doc=("""
                 Order (or degree) of the polynomial decision rule functions
                 for approximating the adjustability of the second stage
                 variables with respect to the uncertain parameters.
@@ -699,8 +677,7 @@ def pyros_config():
                 - 0: static recourse
                 - 1: affine recourse
                 - 2: quadratic recourse
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -708,8 +685,7 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            doc=(
-                """
+            doc=("""
                 True to solve all master problems with the subordinate
                 global solver, False to solve all master problems with
                 the subordinate local solver.
@@ -719,8 +695,7 @@ def pyros_config():
                 for certification
                 of robust optimality of the final solution(s) returned
                 by PyROS. Otherwise, only robust feasibility is guaranteed.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -728,12 +703,10 @@ def pyros_config():
         ConfigValue(
             default=-1,
             domain=positive_int_or_minus_one,
-            description=(
-                """
+            description=("""
                 Iteration limit. If -1 is provided, then no iteration
                 limit is enforced.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -741,12 +714,10 @@ def pyros_config():
         ConfigValue(
             default=1e-4,
             domain=NonNegativeFloat,
-            description=(
-                """
+            description=("""
                 Relative tolerance for assessing maximal inequality
                 constraint violations during the GRCS separation step.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -754,8 +725,7 @@ def pyros_config():
         ConfigValue(
             default={},
             domain=_deprecated_separation_priority_order,
-            doc=(
-                """
+            doc=("""
                 (DEPRECATED)
                 A dict-like object, each entry of which
                 maps the full name of a model ``Var`` or ``Constraint``
@@ -781,8 +751,7 @@ def pyros_config():
                 Specify separation priorities by declaring, on your
                 model, `Suffix` components with local name
                 'pyros_separation_priority'.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -790,8 +759,7 @@ def pyros_config():
         ConfigValue(
             default=default_pyros_solver_logger,
             domain=logger_domain,
-            doc=(
-                """
+            doc=("""
                 Logger (or name thereof) used for reporting PyROS solver
                 progress. If `None` or a `str` is provided, then
                 ``progress_logger``
@@ -799,8 +767,7 @@ def pyros_config():
                 In the default case, `progress_logger` is set to
                 a :class:`pyomo.contrib.pyros.util.PreformattedLogger`
                 object of level ``logging.INFO``.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -812,13 +779,11 @@ def pyros_config():
                 require_available=False,
                 filter_by_availability=True,
             ),
-            doc=(
-                """
+            doc=("""
                 Additional subordinate local NLP optimizers to invoke
                 in the event the primary local NLP optimizer fails
                 to solve a subproblem to an acceptable termination condition.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -830,13 +795,11 @@ def pyros_config():
                 require_available=False,
                 filter_by_availability=True,
             ),
-            doc=(
-                """
+            doc=("""
                 Additional subordinate global NLP optimizers to invoke
                 in the event the primary global NLP optimizer fails
                 to solve a subproblem to an acceptable termination condition.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -844,15 +807,13 @@ def pyros_config():
         ConfigValue(
             default=None,
             domain=Path(),
-            description=(
-                """
+            description=("""
                 Directory to which to export subproblems not successfully
                 solved to an acceptable termination condition.
                 In the event ``keepfiles=True`` is specified, a str or
                 path-like referring to an existing directory must be
                 provided.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -862,8 +823,7 @@ def pyros_config():
             # note: we leave all validation of the dict entries
             #       to ``BlockData.write()``
             domain=dict,
-            description=(
-                """
+            description=("""
                 File format options for writing/exporting subproblems
                 that were not solved to an acceptable level
                 if ``keepfiles=True`` is specified.
@@ -871,8 +831,7 @@ def pyros_config():
                 format (e.g., 'bar' for BARON, 'gams' for GAMS)
                 to a value for the argument ``io_options``
                 to the method ``BlockData.write()``.
-                """
-            ),
+                """),
         ),
     )
 
@@ -884,16 +843,14 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            description=(
-                """
+            description=("""
                 This is an advanced option.
                 Solve all separation subproblems with the subordinate global
                 solver(s) only.
                 This option is useful for expediting PyROS
                 in the event that the subordinate global optimizer(s) provided
                 can quickly solve separation subproblems to global optimality.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -901,8 +858,7 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            doc=(
-                """
+            doc=("""
                 This is an advanced option.
                 Solve all separation subproblems with the subordinate local
                 solver(s) only.
@@ -913,8 +869,7 @@ def pyros_config():
                 in the event that the subordinate global optimizer provided
                 cannot tractably solve separation subproblems to global
                 optimality.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -922,8 +877,7 @@ def pyros_config():
         ConfigValue(
             default={},
             domain=dict,
-            doc=(
-                """
+            doc=("""
                 This is an advanced option.
                 Add p-robustness constraints to all master subproblems.
                 If an empty dict is provided, then p-robustness constraints
@@ -935,8 +889,7 @@ def pyros_config():
                 objective function value under any PyROS-sampled uncertain
                 parameter realization to the objective function under
                 the nominal parameter realization.
-                """
-            ),
+                """),
             visibility=1,
         ),
     )

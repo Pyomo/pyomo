@@ -43,7 +43,6 @@ from pyomo.core.base.initializer import (
 )
 from pyomo.environ import ConcreteModel, Var
 
-
 is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 

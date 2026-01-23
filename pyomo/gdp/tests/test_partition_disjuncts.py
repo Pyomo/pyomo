@@ -43,7 +43,6 @@ import pyomo.gdp.tests.models as models
 from pyomo.repn import generate_standard_repn
 from pyomo.opt import check_available_solvers
 
-
 solvers = check_available_solvers('gurobi_direct')
 
 
@@ -178,7 +177,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def check_transformation_block_structure(
         self, m, aux11lb, aux11ub, aux12lb, aux12ub, aux21lb, aux21ub, aux22lb, aux22ub
     ):
-        (b, disj1, disj2) = self.check_transformation_block_disjuncts_and_constraints(
+        b, disj1, disj2 = self.check_transformation_block_disjuncts_and_constraints(
             m, m.disjunction
         )
 
@@ -227,7 +226,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         aux22ub,
         partitions,
     ):
-        (b, disj1, disj2, aux_vars1, aux_vars2) = (
+        b, disj1, disj2, aux_vars1, aux_vars2 = (
             self.check_transformation_block_structure(
                 m,
                 aux11lb,
@@ -291,7 +290,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def check_transformation_block_indexed_var_on_disjunct(
         self, m, original_disjunction
     ):
-        (b, disj1, disj2) = self.check_transformation_block_disjuncts_and_constraints(
+        b, disj1, disj2 = self.check_transformation_block_disjuncts_and_constraints(
             m, original_disjunction
         )
 
@@ -355,7 +354,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         else:
             block_prefix = disjunction_block + "."
             disjunction_parent = m.component(disjunction_block)
-        (inner_b, inner_disj1, inner_disj2) = (
+        inner_b, inner_disj1, inner_disj2 = (
             self.check_transformation_block_disjuncts_and_constraints(
                 disj2,
                 disjunction_parent.disj2.disjunction,
@@ -425,7 +424,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         # everything for the outer disjunction should look exactly the same as
         # the test above:
-        (b, disj1, disj2) = self.check_transformation_block_indexed_var_on_disjunct(
+        b, disj1, disj2 = self.check_transformation_block_indexed_var_on_disjunct(
             m, m.disjunction
         )
 
@@ -449,7 +448,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         # everything for the outer disjunction should look exactly the same as
         # the test above:
-        (b, disj1, disj2) = self.check_transformation_block_indexed_var_on_disjunct(
+        b, disj1, disj2 = self.check_transformation_block_indexed_var_on_disjunct(
             m, m.disjunction
         )
 
@@ -474,7 +473,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         # everything for the outer disjunction should look exactly the same as
         # the test above:
-        (b, disj1, disj2) = self.check_transformation_block_indexed_var_on_disjunct(
+        b, disj1, disj2 = self.check_transformation_block_indexed_var_on_disjunct(
             m, m.disjunction
         )
 
@@ -482,7 +481,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
 
     def check_hierarchical_nested_model(self, m):
-        (b, disj1, disj2) = self.check_transformation_block_disjuncts_and_constraints(
+        b, disj1, disj2 = self.check_transformation_block_disjuncts_and_constraints(
             m.disjunction_block,
             m.disjunction_block.disjunction,
             "disjunction_block.disjunction",
@@ -755,7 +754,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # This actually changes the structure of the model because fixed vars
         # move to the constants. I think this is fair, and we should allow it
         # because it will allow for a tighter relaxation.
-        (b, disj1, disj2, aux_vars1, aux_vars2) = (
+        b, disj1, disj2, aux_vars1, aux_vars2 = (
             self.check_transformation_block_structure(m, 0, 36, 0, 72, -9, 16, -18, 32)
         )
 
@@ -819,7 +818,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_optimal_bounds,
         )
 
-        (b, disj1, disj2) = self.check_transformation_block_disjuncts_and_constraints(
+        b, disj1, disj2 = self.check_transformation_block_disjuncts_and_constraints(
             m, m.disjunction
         )
 

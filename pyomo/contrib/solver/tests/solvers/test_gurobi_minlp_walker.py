@@ -565,7 +565,8 @@ class TestGurobiMINLPWalker(CommonTest):
         with self.assertRaisesRegex(
             InvalidValueError,
             r"Invalid number encountered evaluating constant unary expression "
-            r"sqrt\(- p\): math domain error",
+            r"sqrt\(\s*-\s*p\s*\): "
+            r"(?:math domain error|expected a nonnegative input, got -?\d+(?:\.\d+)?)",
         ):
             _, expr = visitor.walk_expression(m.c.body)
 
@@ -578,6 +579,7 @@ class TestGurobiMINLPWalker(CommonTest):
         with self.assertRaisesRegex(
             InvalidValueError,
             r"Invalid number encountered evaluating constant unary expression "
-            r"log\(p\): math domain error",
+            r"log\(\s*p\s*\): "
+            r"(?:math domain error|expected a positive input)",
         ):
             _, expr = visitor.walk_expression(m.c.body)

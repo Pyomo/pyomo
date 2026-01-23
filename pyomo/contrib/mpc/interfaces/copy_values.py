@@ -11,7 +11,6 @@
 
 from pyomo.core.expr.numvalue import value as pyo_value
 
-
 iterable_scalars = (str, bytes)
 
 

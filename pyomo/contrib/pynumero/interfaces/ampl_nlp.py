@@ -12,6 +12,7 @@
 This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
+
 try:
     import pyomo.contrib.pynumero.asl as _asl
 except ImportError as e:

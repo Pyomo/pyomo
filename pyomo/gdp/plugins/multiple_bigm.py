@@ -59,7 +59,6 @@ from pyomo.repn import generate_standard_repn
 
 from weakref import ref as weakref_ref
 
-
 logger = logging.getLogger('pyomo.gdp.mbigm')
 
 _trusted_solvers = {
@@ -595,12 +594,12 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     continue
                 # First check args
                 if (constraint, other_disjunct) in arg_Ms:
-                    (lower_M, upper_M) = _convert_M_to_tuple(
+                    lower_M, upper_M = _convert_M_to_tuple(
                         arg_Ms[constraint, other_disjunct], constraint, other_disjunct
                     )
                     self.used_args[constraint, other_disjunct] = (lower_M, upper_M)
                 else:
-                    (lower_M, upper_M) = (None, None)
+                    lower_M, upper_M = (None, None)
                 unsuccessful_solve_msg = (
                     "Unsuccessful solve to calculate M value to "
                     "relax constraint '%s' on Disjunct '%s' when "

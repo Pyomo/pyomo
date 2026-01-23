@@ -29,7 +29,6 @@ import pyomo.gdp.tests.models as models
 from pyomo.repn import generate_standard_repn
 from pyomo.gdp.tests.common_tests import diff_apply_to_and_create_using
 
-
 solvers = pyomo.opt.check_available_solvers('ipopt', 'gurobi')
 
 

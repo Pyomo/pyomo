@@ -14,7 +14,6 @@ import pyomo.environ as pyo
 import pyomo.contrib.mpc as mpc
 from pyomo.contrib.mpc.examples.cstr.run_openloop import run_cstr_openloop
 
-
 ipopt_available = pyo.SolverFactory("ipopt").available()
 
 

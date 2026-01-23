@@ -18,7 +18,6 @@
 from pyomo.environ import *
 from pyomo.mpec import *
 
-
 model = ConcreteModel()
 
 model.x1 = Var()

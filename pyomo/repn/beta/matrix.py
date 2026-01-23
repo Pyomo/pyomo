@@ -33,7 +33,6 @@ from pyomo.repn import generate_standard_repn
 
 from collections.abc import Mapping
 
-
 logger = logging.getLogger('pyomo.core')
 
 

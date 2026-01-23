@@ -31,7 +31,6 @@ from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
 import time
 
-
 logger = logging.getLogger('pyomo.solvers')
 
 

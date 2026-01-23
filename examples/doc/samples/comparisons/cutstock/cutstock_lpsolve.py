@@ -21,7 +21,6 @@ from cutstock_util import (
     getCutsInPattern,
 )
 
-
 # Reading in Data using the cutstock_util
 cutcount = getCutCount()
 patcount = getPatCount()

@@ -24,7 +24,7 @@ class TestComponentCollector(unittest.TestCase):
         m.e1 = pyo.Expression(expr=m.x + m.y)
         m.e2 = pyo.Expression(expr=m.e1 + m.z)
         e = m.e2 * pyo.exp(m.e2)
-        (named_exprs, vars, params, external_funcs) = collect_components_from_expr(e)
+        named_exprs, vars, params, external_funcs = collect_components_from_expr(e)
         self.assertEqual(len(named_exprs), 2)
         named_exprs = ComponentSet(named_exprs)
         self.assertIn(m.e1, named_exprs)

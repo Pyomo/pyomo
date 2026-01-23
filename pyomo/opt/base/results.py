@@ -11,7 +11,6 @@
 
 from pyomo.common import Factory
 
-
 ReaderFactory = Factory('problem reader')
 
 

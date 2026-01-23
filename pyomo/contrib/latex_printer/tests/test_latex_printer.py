@@ -159,13 +159,11 @@ class TestLatexPrinter(unittest.TestCase):
         m.x = pyo.Var()
         m.y = pyo.Var()
         pstr = latex_printer(m.x + m.y)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              x + y 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         # Ex 2 -----------------------
@@ -174,13 +172,11 @@ class TestLatexPrinter(unittest.TestCase):
         m.y = pyo.Var()
         m.expression_1 = pyo.Expression(expr=m.x**2 + m.y**2)
         pstr = latex_printer(m.expression_1)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              x^{2} + y^{2} 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         # Ex 3 -----------------------
@@ -189,13 +185,11 @@ class TestLatexPrinter(unittest.TestCase):
         m.y = pyo.Var()
         m.constraint_1 = pyo.Constraint(expr=m.x**2 + m.y**2 <= 1.0)
         pstr = latex_printer(m.constraint_1)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              x^{2} + y^{2} \leq 1 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         # Ex 4 -----------------------
@@ -208,13 +202,11 @@ class TestLatexPrinter(unittest.TestCase):
 
         m.constraint = pyo.Constraint(rule=ruleMaker)
         pstr = latex_printer(m.constraint)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sum_{ i \in I  } v_{i} \leq 0 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         # Ex 5 -----------------------
@@ -226,16 +218,14 @@ class TestLatexPrinter(unittest.TestCase):
         m.objective = pyo.Objective(expr=m.x + m.y + m.z)
         m.constraint_1 = pyo.Constraint(expr=m.x**2 + m.y**2.0 - m.z**2.0 <= m.c)
         pstr = latex_printer(m)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x + y + z & \label{obj:basicFormulation_objective} \\ 
             & \text{s.t.} 
             & & x^{2} + y^{2} - z^{2} \leq c & \label{con:basicFormulation_constraint_1} 
         \end{align} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         # Ex 6 -----------------------
@@ -251,50 +241,42 @@ class TestLatexPrinter(unittest.TestCase):
         lcm[m.v] = 'x'
         lcm[m.I] = ['\\mathcal{A}', ['j', 'k']]
         pstr = latex_printer(m.constraint, latex_component_map=lcm)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sum_{ j \in \mathcal{A}  } x_{j} \leq 0 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_objective(self):
         m = generate_model()
         pstr = latex_printer(m.objective_1)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
             & \min 
             & & x + y + z 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         pstr = latex_printer(m.objective_3)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
             & \max 
             & & x + y + z 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_constraint(self):
         m = generate_model()
         pstr = latex_printer(m.constraint_1)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              x^{2} + y^{-2} - x y z + 1 = 2 
         \end{equation} 
-        """
-        )
+        """)
 
         self.assertEqual('\n' + pstr + '\n', bstr)
 
@@ -305,13 +287,11 @@ class TestLatexPrinter(unittest.TestCase):
 
         pstr = latex_printer(m.express)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              x + y 
         \end{equation} 
-        """
-        )
+        """)
 
         self.assertEqual('\n' + pstr + '\n', bstr)
 
@@ -319,128 +299,106 @@ class TestLatexPrinter(unittest.TestCase):
         m = generate_model()
 
         pstr = latex_printer(m.x - m.y)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              x - y 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         pstr = latex_printer(m.x - 2 * m.y)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              x - 2 y 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_unary(self):
         m = generate_model()
 
         pstr = latex_printer(m.constraint_2)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
               \left| \frac{x}{z^{-2}} \right|   \left( x + y \right)  \leq 2 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         pstr = latex_printer(pyo.Constraint(expr=pyo.sin(m.x) == 1))
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sin \left( x \right)  = 1 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         pstr = latex_printer(pyo.Constraint(expr=pyo.log10(m.x) == 1))
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \log_{10} \left( x \right)  = 1 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         pstr = latex_printer(pyo.Constraint(expr=pyo.sqrt(m.x) == 1))
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sqrt { x } = 1 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_rangedConstraint(self):
         m = generate_model()
 
         pstr = latex_printer(m.constraint_4)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              1 \leq x \leq 2 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_exprIf(self):
         m = generate_model()
 
         pstr = latex_printer(m.constraint_5)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              f_{\text{exprIf}}(x \leq 1,z,y) \leq 1 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_blackBox(self):
         m = generate_model()
 
         pstr = latex_printer(m.constraint_6)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              x + f\_1(x,y) = 2 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_iteratedConstraints(self):
         m = generate_model()
 
         pstr = latex_printer(m.constraint_7)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
               \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0  \qquad \forall j \in I 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
         pstr = latex_printer(m.constraint_8)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sum_{ i \in K  } p_{i} = 1 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_fileWriter(self):
@@ -522,16 +480,14 @@ class TestLatexPrinter(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(rule=ruleMaker_2)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & \sum_{ i \in I  } \sum_{ j \in I  } c_{i,j} x_{i,j} & \label{obj:basicFormulation_objective} \\ 
             & \text{s.t.} 
             & & \sum_{ i \in I  } \sum_{ j \in I  } x_{i,j}^{2} \leq 1 & \label{con:basicFormulation_constraint_1} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual('\n' + pstr + '\n', bstr)
 
@@ -548,8 +504,7 @@ class TestLatexPrinter(unittest.TestCase):
         pstr = latex_printer(m)
         print(pstr)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x + y + z & \label{obj:basicFormulation_objective_1} \\ 
@@ -567,8 +522,7 @@ class TestLatexPrinter(unittest.TestCase):
             &&&  \left( x + y \right)  \sum_{ i \in I  } v_{i} + u_{i,j}^{2} \leq 0 &  \qquad \forall j \in I \label{con:basicFormulation_constraint_7} \\ 
             &&& \sum_{ i \in K  } p_{i} = 1 & \label{con:basicFormulation_constraint_8} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual('\n' + pstr + '\n', bstr)
 
@@ -583,13 +537,11 @@ class TestLatexPrinter(unittest.TestCase):
         m.constraint = pyo.Constraint(rule=ruleMaker)
         pstr = latex_printer(m.constraint, explicit_set_summation=True)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sum_{ i = 1 }^{5} v_{i} \leq 0 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_notContinuousSet(self):
@@ -603,13 +555,11 @@ class TestLatexPrinter(unittest.TestCase):
         m.constraint = pyo.Constraint(rule=ruleMaker)
         pstr = latex_printer(m.constraint, explicit_set_summation=True)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sum_{ i \in I  } v_{i} \leq 0 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_autoIndex(self):
@@ -625,13 +575,11 @@ class TestLatexPrinter(unittest.TestCase):
         lcm[m.v] = 'x'
         lcm[m.I] = ['\\mathcal{A}', []]
         pstr = latex_printer(m.constraint, latex_component_map=lcm)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sum_{ i \in \mathcal{A}  } x_{i} \leq 0 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_equationEnvironment(self):
@@ -644,8 +592,7 @@ class TestLatexPrinter(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 + m.y**2.0 - m.z**2.0 <= m.c)
         pstr = latex_printer(m, use_equation_environment=True)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
             \begin{aligned} 
                 & \min 
@@ -655,8 +602,7 @@ class TestLatexPrinter(unittest.TestCase):
             \end{aligned} 
             \label{basicFormulation} 
         \end{equation} 
-        """
-        )
+        """)
         self.assertEqual('\n' + pstr + '\n', bstr)
 
     def test_latexPrinter_manyVariablesWithDomains(self):
@@ -670,8 +616,7 @@ class TestLatexPrinter(unittest.TestCase):
         m.objective = pyo.Objective(expr=m.x + m.y + m.z + m.u + m.v + m.w)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x + y + z + u + v + w & \label{obj:basicFormulation_objective} \\ 
@@ -683,8 +628,7 @@ class TestLatexPrinter(unittest.TestCase):
             &&& -10 \leq v < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_v_bound} \\ 
             &&&  0 \leq w \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_w_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -699,8 +643,7 @@ class TestLatexPrinter(unittest.TestCase):
         m.objective = pyo.Objective(expr=m.x + m.y + m.z + m.u + m.v + m.w)
         pstr = latex_printer(m, use_equation_environment=True)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
             \begin{aligned} 
                 & \min 
@@ -715,8 +658,7 @@ class TestLatexPrinter(unittest.TestCase):
             \end{aligned} 
             \label{basicFormulation} 
         \end{equation} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -737,13 +679,11 @@ class TestLatexPrinter(unittest.TestCase):
         pstr = latex_printer(m.constraint_1)
         print(pstr)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{equation} 
              \sum_{ i \in I  } \sum_{ j \in I  } c_{i,j} x_{i,j}^{2} \leq 1 
         \end{equation} 
-        """
-        )
+        """)
 
         self.assertEqual('\n' + pstr + '\n', bstr)
 
@@ -770,8 +710,7 @@ class TestLatexPrinter(unittest.TestCase):
             **{'pyomo_component': m, 'throw_templatization_error': True},
         )
         pstr = latex_printer(m)
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & \sum_{ i \in I  } c_{i} x_{i} & \label{obj:basicFormulation_objective} \\ 
@@ -783,8 +722,7 @@ class TestLatexPrinter(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual('\n' + pstr + '\n', bstr)
 

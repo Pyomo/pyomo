@@ -23,6 +23,7 @@
 """
 A simple GUI viewer/editor for Pyomo models.
 """
+
 __author__ = "John Eslick"
 
 import logging

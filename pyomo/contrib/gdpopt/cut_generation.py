@@ -11,6 +11,7 @@
 
 """This module provides functions for cut generation used across multiple
 algorithms."""
+
 from math import fabs
 from pyomo.common.collections import ComponentSet
 from pyomo.core import TransformationFactory, value, Constraint, Block

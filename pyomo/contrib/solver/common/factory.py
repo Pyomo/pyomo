@@ -10,9 +10,11 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.opt.base.solvers import LegacySolverFactory
+from typing import TYPE_CHECKING
+
 from pyomo.common.factory import Factory
 from pyomo.contrib.solver.common.base import LegacySolverWrapper
+from pyomo.opt.base.solvers import LegacySolverFactory
 
 
 class SolverFactoryClass(Factory):
@@ -106,6 +108,12 @@ class SolverFactoryClass(Factory):
             return cls
 
         return decorator
+
+    if TYPE_CHECKING:
+        from pyomo.contrib.solver.common.base import SolverBase
+
+        # NOTE: `Factory.__call__` can return None, but for the common case
+        def __call__(self, name, **kwds) -> SolverBase: ...
 
 
 #: Global registry/factory for "v2" solver interfaces.

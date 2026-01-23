@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Iteration loop for MindtPy."""
+
 import math
 from io import StringIO
 import pyomo.core.expr as EXPR
@@ -3080,7 +3081,7 @@ class _MindtPyAlgorithm:
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if self.dual_bound != self.dual_bound_progress[0]:
                 with time_code(self.timing, 'regularization main'):
-                    (regularization_main_mip, regularization_main_mip_results) = (
+                    regularization_main_mip, regularization_main_mip_results = (
                         self.solve_regularization_main()
                     )
                 self.handle_regularization_main_tc(

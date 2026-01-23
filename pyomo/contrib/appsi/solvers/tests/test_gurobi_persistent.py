@@ -18,7 +18,6 @@ from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 from pyomo.contrib.appsi.cmodel import cmodel_available
 
-
 opt = Gurobi()
 if not opt.available():
     raise unittest.SkipTest

@@ -21,7 +21,6 @@
 from pyomo.environ import *
 from pyomo.mpec import *
 
-
 model = ConcreteModel()
 
 z_init = {1: 0, 2: 1}

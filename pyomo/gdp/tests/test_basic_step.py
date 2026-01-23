@@ -11,6 +11,7 @@
 
 
 """Tests for applying basic steps."""
+
 import pyomo.common.unittest as unittest
 from pyomo.core import Constraint, BooleanVar, SortComponents
 from pyomo.gdp.basic_step import apply_basic_step

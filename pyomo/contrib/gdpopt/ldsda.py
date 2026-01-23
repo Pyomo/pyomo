@@ -40,7 +40,6 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.logical_expr import ExactlyExpression
 from pyomo.common.dependencies import attempt_import
 
-
 tabulate, tabulate_available = attempt_import('tabulate')
 
 # Data tuple for external variables.
@@ -85,15 +84,12 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         return super().solve(model, **kwds)
 
     def _log_citation(self, config):
-        config.logger.info(
-            "\n"
-            + """- LDSDA algorithm:
+        config.logger.info("\n" + """- LDSDA algorithm:
         Bernal DE, Ovalle D, Liñán DA, Ricardez-Sandoval LA, Gómez JM, Grossmann IE.
         Process Superstructure Optimization through Discrete Steepest Descent Optimization: a GDP Analysis and Applications in Process Intensification.
         Computer Aided Chemical Engineering 2022 Jan 1 (Vol. 49, pp. 1279-1284). Elsevier.
         https://doi.org/10.1016/B978-0-323-85159-6.50213-X
-        """.strip()
-        )
+        """.strip())
 
     def _solve_gdp(self, model, config):
         """Solve the GDP model.

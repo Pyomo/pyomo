@@ -39,6 +39,7 @@ from pyomo.core.expr.numvalue import (
     is_constant,
 )
 from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.initializer import (
     CountedCallInitializer,
     IndexedCallInitializer,
@@ -1608,23 +1609,6 @@ class _FiniteSetData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class _ScalarOrderedSetMixin:
-    # This mixin is required because scalar ordered sets implement
-    # __getitem__() as an alias of at()
-    __slots__ = ()
-
-    def values(self):
-        """Return an iterator of the component data objects in the dictionary"""
-        if list(self.keys()):
-            yield self
-
-    def items(self):
-        """Return an iterator of (index,data) tuples from the dictionary"""
-        _keys = list(self.keys())
-        if _keys:
-            yield _keys[0], self
-
-
 class _OrderedSetMixin:
     __slots__ = ()
     _valid_getitem_keys = {None, (None,), Ellipsis}
@@ -2022,6 +2006,29 @@ _ORDEREDSET_API = _FINITESET_API + ('at', 'ord')
 _SETDATA_API = ('set_value', 'add', 'remove', 'discard', 'clear', 'update', 'pop')
 
 
+class _ScalarSetMixin:
+    # This mixin is required because scalar Sets implement __len__(),
+    # which raises an exception for non-finite sets. Further, finite
+    # scalar sets also implement __getitem__() as an alias of at(), and
+    # IndexedComponent.items() / IndexedComponent.values() relies on
+    # __getitem__()
+    __slots__ = ()
+
+    def keys(self, sort=SortComponents.UNSORTED):
+        # Scalar sets are always defined (we don't support Skip):
+        return iter(UnindexedComponent_set)
+
+    def values(self, sort=SortComponents.UNSORTED):
+        """Return an iterator of the component data objects in the dictionary"""
+        # Scalar sets are always defined (we don't support Skip):
+        yield self
+
+    def items(self, sort=SortComponents.UNSORTED):
+        """Return an iterator of (index, data) tuples from the dictionary"""
+        # Scalar sets are always defined (we don't support Skip):
+        yield UnindexedComponent_index, self
+
+
 @ModelComponentFactory.register("Set data that is used to define a model instance.")
 class Set(IndexedComponent):
     """A component used to index other Pyomo components.
@@ -2128,10 +2135,10 @@ class Set(IndexedComponent):
     _UnorderedInitializers = {set}
 
     @overload
-    def __new__(cls: Type[Set], *args, **kwds) -> Union[SetData, IndexedSet]: ...
+    def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet: ...
 
     @overload
-    def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet: ...
+    def __new__(cls: Type[Set], *args, **kwds) -> Union[SetData, IndexedSet]: ...
 
     def __new__(cls, *args, **kwds):
         if cls is not Set:
@@ -2483,7 +2490,7 @@ class Set(IndexedComponent):
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Ordered", _ordered),
             ],
-            self._data.items(),
+            self.items,
             ("Dimen", "Domain", "Size", "Members"),
             lambda k, v: [
                 Set._pprint_dimen(v),
@@ -2505,7 +2512,7 @@ class IndexedSet(Set):
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
 
 
-class FiniteScalarSet(FiniteSetData, Set):
+class FiniteScalarSet(_ScalarSetMixin, FiniteSetData, Set):
     def __init__(self, **kwds):
         FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
@@ -2517,7 +2524,7 @@ class FiniteSimpleSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class OrderedScalarSet(_ScalarOrderedSetMixin, InsertionOrderSetData, Set):
+class OrderedScalarSet(_ScalarSetMixin, InsertionOrderSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -2532,7 +2539,7 @@ class OrderedSimpleSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class SortedScalarSet(_ScalarOrderedSetMixin, SortedSetData, Set):
+class SortedScalarSet(_ScalarSetMixin, SortedSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -2652,7 +2659,7 @@ class SetOf(SetData, Component):
         """
         return (
             [("Dimen", self.dimen), ("Size", len(self)), ("Bounds", self.bounds())],
-            {None: self}.items(),
+            [(UnindexedComponent_index, self)],
             ("Ordered", "Members"),
             lambda k, v: [v.isordered(), str(v._ref)],
         )
@@ -2695,7 +2702,7 @@ class UnorderedSetOf(metaclass=RenamedClass):
     __renamed__version__ = '6.2'
 
 
-class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
+class OrderedSetOf(_OrderedSetMixin, FiniteSetOf):
     def at(self, index):
         i = self._to_0_based_index(index)
         try:
@@ -3313,7 +3320,7 @@ class RangeSet(Component):
                 ("Size", len(self) if self.isfinite() else 'Inf'),
                 ("Bounds", self.bounds()),
             ],
-            {None: self}.items(),
+            [(UnindexedComponent_index, self)],
             ("Finite", "Members"),
             lambda k, v: [
                 v.isfinite(),  # isinstance(v, _FiniteSetMixin),
@@ -3337,7 +3344,7 @@ class InfiniteSimpleRangeSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class FiniteScalarRangeSet(_ScalarOrderedSetMixin, FiniteRangeSetData, RangeSet):
+class FiniteScalarRangeSet(FiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
         FiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
@@ -3377,7 +3384,7 @@ class AbstractFiniteSimpleRangeSet(metaclass=RenamedClass):
 ############################################################################
 
 
-class SetOperator(SetData, Set):
+class SetOperator(_ScalarSetMixin, SetData, Set):
     __slots__ = ('_sets',)
 
     def __init__(self, *args, **kwds):
@@ -3480,17 +3487,14 @@ class SetOperator(SetData, Set):
     def subsets(self, expand_all_set_operators=None):
         if not isinstance(self, SetProduct):
             if expand_all_set_operators is None:
-                logger.warning(
-                    """
+                logger.warning("""
                 Extracting subsets for Set %s, which is a SetOperator
                 other than a SetProduct.  Returning this set and not
                 descending into the set operands.  To descend into this
                 operator, specify
                 'subsets(expand_all_set_operators=True)' or to suppress
                 this warning, specify
-                'subsets(expand_all_set_operators=False)'"""
-                    % (self.name,)
-                )
+                'subsets(expand_all_set_operators=False)'""" % (self.name,))
                 yield self
                 return
             elif not expand_all_set_operators:
@@ -3609,7 +3613,7 @@ class SetUnion_FiniteSet(_FiniteSetMixin, SetUnion_InfiniteSet):
         return len(set0) + sum(1 for s in set1 if s not in set0)
 
 
-class SetUnion_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin, SetUnion_FiniteSet):
+class SetUnion_OrderedSet(_OrderedSetMixin, SetUnion_FiniteSet):
     __slots__ = tuple()
 
     def at(self, index):
@@ -3749,9 +3753,7 @@ class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
         return sum(1 for _ in self)
 
 
-class SetIntersection_OrderedSet(
-    _ScalarOrderedSetMixin, _OrderedSetMixin, SetIntersection_FiniteSet
-):
+class SetIntersection_OrderedSet(_OrderedSetMixin, SetIntersection_FiniteSet):
     __slots__ = tuple()
 
     def at(self, index):
@@ -3843,9 +3845,7 @@ class SetDifference_FiniteSet(_FiniteSetMixin, SetDifference_InfiniteSet):
         return sum(1 for _ in self)
 
 
-class SetDifference_OrderedSet(
-    _ScalarOrderedSetMixin, _OrderedSetMixin, SetDifference_FiniteSet
-):
+class SetDifference_OrderedSet(_OrderedSetMixin, SetDifference_FiniteSet):
     __slots__ = tuple()
 
     def at(self, index):
@@ -3954,7 +3954,7 @@ class SetSymmetricDifference_FiniteSet(
 
 
 class SetSymmetricDifference_OrderedSet(
-    _ScalarOrderedSetMixin, _OrderedSetMixin, SetSymmetricDifference_FiniteSet
+    _OrderedSetMixin, SetSymmetricDifference_FiniteSet
 ):
     __slots__ = tuple()
 
@@ -4236,9 +4236,7 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
         return ans
 
 
-class SetProduct_OrderedSet(
-    _ScalarOrderedSetMixin, _OrderedSetMixin, SetProduct_FiniteSet
-):
+class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
     __slots__ = tuple()
 
     def at(self, index):
@@ -4287,7 +4285,7 @@ class SetProduct_OrderedSet(
 ############################################################################
 
 
-class _AnySet(SetData, Set):
+class _AnySet(_ScalarSetMixin, SetData, Set):
     def __init__(self, **kwds):
         SetData.__init__(self, component=self)
         # There is a chicken-and-egg game here: the SetInitializer uses
@@ -4343,7 +4341,7 @@ class _AnyWithNoneSet(_AnySet):
         return super(_AnyWithNoneSet, self).get(val, default)
 
 
-class _EmptySet(_FiniteSetMixin, SetData, Set):
+class _EmptySet(_FiniteSetMixin, _ScalarSetMixin, SetData, Set):
     def __init__(self, **kwds):
         SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
@@ -4424,9 +4422,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
         References to this object will not be duplicated by deepcopy
         and be maintained/restored by pickle.
 
-        """ % (
-            obj.doc,
-        )
+        """ % (obj.doc,)
         # Note: a simple docstring does not appear to be picked up (at
         # least in Python 2.7), so we will explicitly set the __doc__
         # attribute.

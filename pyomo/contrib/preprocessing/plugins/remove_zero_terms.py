@@ -12,7 +12,6 @@
 # -*- coding: UTF-8 -*-
 """Transformation to remove zero terms from constraints."""
 
-
 from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.transformation import TransformationFactory

@@ -83,7 +83,7 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationB
 
             # We're going to want bounds on the substitute var, so we use
             # interval arithmetic to figure those out as we go.
-            (lb, ub) = compute_bounds_on_expr(linear_func(*pw_expr.args))
+            lb, ub = compute_bounds_on_expr(linear_func(*pw_expr.args))
             if lb is not None and lb < substitute_var_lb:
                 substitute_var_lb = lb
             if ub is not None and ub > substitute_var_ub:

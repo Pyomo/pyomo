@@ -40,7 +40,6 @@ from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 
-
 logger = logging.getLogger(__name__)
 
 

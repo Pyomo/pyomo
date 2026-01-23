@@ -64,7 +64,6 @@ import pyomo.repn.plugins.nl_writer as pyomo_nl_writer
 from pyomo.repn.util import OrderedVarRecorder
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
-
 # Tolerances used in the code
 PARAM_IS_CERTAIN_REL_TOL = 1e-4
 PARAM_IS_CERTAIN_ABS_TOL = 0

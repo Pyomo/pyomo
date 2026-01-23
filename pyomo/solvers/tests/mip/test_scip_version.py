@@ -255,7 +255,7 @@ class Test(unittest.TestCase):
         self.assertEqual(self.executable_paths["scipampl"], args[0])
         # check for nl file existence
         self.assertTrue(exists(args[1]))
-        (root, ext) = splitext(args[1])
+        root, ext = splitext(args[1])
         self.assertEqual(".nl", ext)
         # check proper sol filename
         self.assertEqual(root + ".sol", cm.exception.filename)

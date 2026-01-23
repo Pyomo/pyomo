@@ -12,7 +12,6 @@
 from pyomo.environ import *
 from pyomo.mpec import *
 
-
 n = 5
 
 model = ConcreteModel()

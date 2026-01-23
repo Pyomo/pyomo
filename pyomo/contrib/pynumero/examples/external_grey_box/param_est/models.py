@@ -18,7 +18,6 @@ import scipy.sparse as spa
 import numpy as np
 import math
 
-
 """
 This module builds a simple model for use in parameter 
 estimation. The module contains both the pyomo only version

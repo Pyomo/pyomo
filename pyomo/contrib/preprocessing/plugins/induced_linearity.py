@@ -17,7 +17,6 @@ reformulations for some nonlinear discrete design optimization problems.
 
 """
 
-
 import logging
 import textwrap
 from math import fabs
@@ -253,17 +252,11 @@ def prune_possible_values(block_scope, possible_values, config):
 def _process_bilinear_constraints(block, v1, v2, var_values, bilinear_constrs):
     # TODO check that the appropriate variable bounds exist.
     if not (v2.has_lb() and v2.has_ub()):
-        logger.warning(
-            textwrap.dedent(
-                """\
+        logger.warning(textwrap.dedent("""\
             Attempting to transform bilinear term {v1} * {v2} using effectively
             discrete variable {v1}, but {v2} is missing a lower or upper bound:
             ({v2lb}, {v2ub}).
-            """.format(
-                    v1=v1, v2=v2, v2lb=v2.lb, v2ub=v2.ub
-                )
-            ).strip()
-        )
+            """.format(v1=v1, v2=v2, v2lb=v2.lb, v2ub=v2.ub)).strip())
         return False
     blk = Block()
     unique_name = unique_component_name(

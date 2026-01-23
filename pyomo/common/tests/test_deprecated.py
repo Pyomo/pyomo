@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 #
 """Testing for deprecated function."""
+
 import logging
 import sys
 

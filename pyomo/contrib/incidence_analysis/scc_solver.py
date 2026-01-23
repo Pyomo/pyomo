@@ -20,7 +20,6 @@ from pyomo.contrib.incidence_analysis.interface import (
 )
 from pyomo.contrib.incidence_analysis.config import IncidenceMethod
 
-
 _log = logging.getLogger(__name__)
 
 

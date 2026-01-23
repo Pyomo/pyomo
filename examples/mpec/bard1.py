@@ -22,7 +22,6 @@
 from pyomo.environ import *
 from pyomo.mpec import *
 
-
 model = ConcreteModel()
 model.x = Var(within=NonNegativeReals)
 model.y = Var(within=NonNegativeReals)

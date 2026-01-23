@@ -15,7 +15,6 @@ from pyomo.common.fileutils import this_file_dir
 import pyomo.environ as pyo
 from pyomo.gdp import Disjunct, Disjunction
 
-
 ''' Layout optimization for screening systems in waste paper recovery:
 Problem from http://www.minlp.org/library/problem/index.php?i=263&lib=GDP
 This problem is a design problem: When waste paper is recovered, a separator 

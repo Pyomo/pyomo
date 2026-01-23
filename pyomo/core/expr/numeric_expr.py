@@ -51,7 +51,6 @@ from pyomo.core.expr.base import ExpressionBase, NPV_Mixin, visitor
 # have BOTH modules assume that the other module has NOT been declared.
 import pyomo.core.expr.relational_expr as relational_expr
 
-
 _ndarray, _ = attempt_import('pyomo.core.expr.ndarray')
 
 relocated_module_attribute(
@@ -317,17 +316,14 @@ class NumericValue(PyomoObject):
         # __bool__ is not defined.
         if self.is_constant():
             return bool(self())
-        raise PyomoException(
-            """
+        raise PyomoException("""
 Cannot convert non-constant Pyomo numeric value (%s) to bool.
 This error is usually caused by using a Var, unit, or mutable Param in a
 Boolean context such as an "if" statement. For example,
     >>> m.x = Var()
     >>> if not m.x:
     ...     pass
-would cause this exception.""".strip()
-            % (self,)
-        )
+would cause this exception.""".strip() % (self,))
 
     def __float__(self):
         """Coerce the value to a floating point
@@ -342,16 +338,13 @@ would cause this exception.""".strip()
         """
         if self.is_constant():
             return float(self())
-        raise TypeError(
-            """
+        raise TypeError("""
 Implicit conversion of Pyomo numeric value (%s) to float is disabled.
 This error is often the result of using Pyomo components as arguments to
 one of the Python built-in math module functions when defining
 expressions. Avoid this error by using Pyomo-provided math functions or
 explicitly resolving the numeric value using the Pyomo value() function.
-""".strip()
-            % (self,)
-        )
+""".strip() % (self,))
 
     def __int__(self):
         """Coerce the value to an integer
@@ -366,16 +359,13 @@ explicitly resolving the numeric value using the Pyomo value() function.
         """
         if self.is_constant():
             return int(self())
-        raise TypeError(
-            """
+        raise TypeError("""
 Implicit conversion of Pyomo numeric value (%s) to int is disabled.
 This error is often the result of using Pyomo components as arguments to
 one of the Python built-in math module functions when defining
 expressions. Avoid this error by using Pyomo-provided math functions or
 explicitly resolving the numeric value using the Pyomo value() function.
-""".strip()
-            % (self,)
-        )
+""".strip() % (self,))
 
     def __lt__(self, other):
         """

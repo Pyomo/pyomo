@@ -21,6 +21,7 @@ Ref:
                      3  constraints
 
 """
+
 from math import pi
 
 from pyomo.environ import (

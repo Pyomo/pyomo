@@ -12,7 +12,6 @@
 import types
 from pyomo.core.base import Set, Param, value
 
-
 # IMPT: Only works on non-nested block models at the moment!
 
 

@@ -12,7 +12,6 @@
 from pyomo.common import Factory
 from pyomo.opt.parallel.manager import AsynchronousActionManager
 
-
 SolverManagerFactory = Factory('solver manager')
 
 

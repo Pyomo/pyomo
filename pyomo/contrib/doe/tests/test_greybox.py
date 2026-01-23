@@ -32,8 +32,8 @@ if scipy_available:
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
     )
-    from pyomo.contrib.doe.examples.rooney_biegler_example import (
-        RooneyBieglerExperimentDoE,
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+        RooneyBieglerExperiment,
     )
 
 import pyomo.environ as pyo
@@ -304,7 +304,12 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     fd_method = "central"
     obj_used = objective_option
 
-    experiment = RooneyBieglerExperimentDoE(data={'hour': 2, 'y': 10.3})
+    data = pd.DataFrame(data=[[2, 10.3]], columns=['hour', 'y'])
+    theta = {'asymptote': 19.143, 'rate_constant': 0.5311}
+
+    experiment = RooneyBieglerExperiment(
+        data=data.loc[0, :], theta=theta, measure_error=1
+    )
 
     DoE_args = get_standard_args(experiment, fd_method, obj_used)
     DoE_args["use_grey_box_objective"] = True
@@ -318,12 +323,13 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     # Add the grey box solver to DoE_args
     DoE_args["grey_box_solver"] = grey_box_solver
 
-    data = [[1, 8.3], [7, 19.8]]
+    data = pd.DataFrame(data=[[1, 8.3], [7, 19.8]], columns=['hour', 'y'])
+    theta = {'asymptote': 19.143, 'rate_constant': 0.5311}
     FIM_prior = np.zeros((2, 2))
     # Calculate prior using existing experiments
     for i in range(len(data)):
-        prev_experiment = RooneyBieglerExperimentDoE(
-            data={'hour': data[i][0], 'y': data[i][1]}
+        prev_experiment = RooneyBieglerExperiment(
+            data=data.loc[i, :], theta=theta, measure_error=1
         )
         doe_obj = DesignOfExperiments(
             **get_standard_args(prev_experiment, fd_method, obj_used)
@@ -347,7 +353,13 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
 # linear solvers.
 bad_message = "Invalid option encountered."
 cyipopt_call_working = True
-if numpy_available and scipy_available and ipopt_available and cyipopt_available:
+if (
+    numpy_available
+    and scipy_available
+    and ipopt_available
+    and cyipopt_available
+    and pandas_available
+):
     try:
         objective_option = "determinant"
         doe_object, _ = make_greybox_and_doe_objects_rooney_biegler(
@@ -1110,6 +1122,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     @unittest.skipIf(
         not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
     )
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_E_optimality_minimum_eigenvalue(self):
         # Two locally optimal design points exist
         # (time, optimal objective value)
@@ -1151,6 +1164,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     @unittest.skipIf(
         not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
     )
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_ME_optimality_condition_number(self):
         # Two locally optimal design points exist
         # (time, optimal objective value)

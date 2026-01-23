@@ -11,7 +11,6 @@
 
 """Automatically initialize variables."""
 
-
 from pyomo.core.base.var import Var
 from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.expr.numvalue import value

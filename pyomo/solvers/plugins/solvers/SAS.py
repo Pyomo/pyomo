@@ -33,7 +33,6 @@ from pyomo.core.kernel.block import IBlock
 from pyomo.common.log import LogStream
 from pyomo.common.tee import capture_output, TeeStream
 
-
 uuid, uuid_available = attempt_import('uuid')
 logger = logging.getLogger("pyomo.solvers")
 

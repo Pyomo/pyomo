@@ -13,7 +13,6 @@
 Test separation problem construction methods.
 """
 
-
 import logging
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
@@ -45,7 +44,6 @@ from pyomo.contrib.pyros.util import (
     ObjectiveType,
     VariablePartitioning,
 )
-
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Packages numpy and scipy must both be available.")

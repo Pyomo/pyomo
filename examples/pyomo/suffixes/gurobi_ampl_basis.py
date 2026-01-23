@@ -24,7 +24,6 @@
 # gurobi_ampl version 6.5.0.
 import pyomo.environ as pyo
 
-
 #
 # Create the gurobi_ampl solver plugin using the ASL interface
 #

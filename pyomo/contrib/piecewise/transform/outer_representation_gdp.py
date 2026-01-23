@@ -105,7 +105,7 @@ class OuterRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
 
             linear_func_expr = linear_func(*pw_expr.args)
             disj.set_substitute = Constraint(expr=substitute_var == linear_func_expr)
-            (lb, ub) = compute_bounds_on_expr(linear_func_expr)
+            lb, ub = compute_bounds_on_expr(linear_func_expr)
             if lb is not None and lb < substitute_var_lb:
                 substitute_var_lb = lb
             if ub is not None and ub > substitute_var_ub:

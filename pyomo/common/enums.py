@@ -55,8 +55,7 @@ if sys.version_info[:2] < (3, 13):
 
     class IntEnum(enum.IntEnum):
         __doc__ = (
-            inspect.cleandoc(
-                """A compatibility wrapper around :class:`enum.IntEnum`
+            inspect.cleandoc("""A compatibility wrapper around :class:`enum.IntEnum`
 
         This wrapper class updates the :meth:`to_bytes` and
         :meth:`from_bytes` docstrings in Python <= 3.12 to suppress
@@ -64,8 +63,7 @@ if sys.version_info[:2] < (3, 13):
 
         .. rubric:: IntEnum
 
-        """
-            )
+        """)
             + "\n\n"
             # There are environments where IntEnum.__doc__ is None (see #3710)
             + inspect.cleandoc(getattr(enum.IntEnum, "__doc__", "") or "")

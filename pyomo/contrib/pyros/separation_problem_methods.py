@@ -356,9 +356,10 @@ def evaluate_violations_by_nominal_master(separation_data, master_data, ss_ineq_
     """
     nom_ss_ineq_con_violations = ComponentMap()
     for ss_ineq_con in ss_ineq_cons:
-        nom_violation = value(
-            master_data.master_model.scenarios[0, 0].find_component(ss_ineq_con)
+        nom_master_con = master_data.master_model.scenarios[0, 0].find_component(
+            ss_ineq_con
         )
+        nom_violation = value(nom_master_con.body - nom_master_con.upper)
         nom_ss_ineq_con_violations[ss_ineq_con] = nom_violation
 
     return nom_ss_ineq_con_violations

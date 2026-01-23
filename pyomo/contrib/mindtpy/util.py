@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Utility functions and classes for the MindtPy solver."""
+
 import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.core import (

@@ -21,7 +21,6 @@ from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
 from pyomo.environ import SolverFactory, value, maximize
 from pyomo.opt import TerminationCondition
 
-
 model_list = [
     EightProcessFlowsheet(convex=True),
     ConstraintQualificationExample(),

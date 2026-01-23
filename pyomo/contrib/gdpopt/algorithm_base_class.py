@@ -164,8 +164,7 @@ class _GDPoptAlgorithm:
         config.display(ostream=os)
         config.logger.info(os.getvalue())
 
-        config.logger.info(
-            """
+        config.logger.info("""
             If you use this software, you may cite the following:
             - Implementation:
             Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
@@ -173,8 +172,7 @@ class _GDPoptAlgorithm:
             Pyomo.GDP: an ecosystem for logic based modeling and optimization
             development.
             Optimization and Engineering, 2021.
-            """.strip()
-        )
+            """.strip())
         self._log_citation(config)
 
     def _log_header(self, logger):

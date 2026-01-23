@@ -27,7 +27,6 @@ import subprocess
 import sys
 from io import StringIO
 
-
 # Now, import the base unittest environment.  We will override things
 # specifically later
 from unittest import *

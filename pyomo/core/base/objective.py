@@ -393,7 +393,7 @@ class Objective(ActiveIndexedComponent):
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Active", self.active),
             ],
-            self._data.items(),
+            self.items,
             ("Active", "Sense", "Expression"),
             lambda k, v: [v.active, v.sense, v.expr],
         )

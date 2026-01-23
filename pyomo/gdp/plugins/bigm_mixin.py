@@ -156,7 +156,7 @@ class _BigM_MixIn:
         parent = constraint.parent_component()
         if constraint in bigMargs:
             m = bigMargs[constraint]
-            (lower, upper, need_lower, need_upper) = self._process_M_value(
+            lower, upper, need_lower, need_upper = self._process_M_value(
                 m,
                 lower,
                 upper,
@@ -171,7 +171,7 @@ class _BigM_MixIn:
                 return lower, upper
         elif parent in bigMargs:
             m = bigMargs[parent]
-            (lower, upper, need_lower, need_upper) = self._process_M_value(
+            lower, upper, need_lower, need_upper = self._process_M_value(
                 m,
                 lower,
                 upper,
@@ -188,7 +188,7 @@ class _BigM_MixIn:
         # use the precomputed traversal up the blocks
         for arg in arg_list:
             for block, val in arg.items():
-                (lower, upper, need_lower, need_upper) = self._process_M_value(
+                lower, upper, need_lower, need_upper = self._process_M_value(
                     val,
                     lower,
                     upper,
@@ -205,7 +205,7 @@ class _BigM_MixIn:
         # last check for value for None!
         if None in bigMargs:
             m = bigMargs[None]
-            (lower, upper, need_lower, need_upper) = self._process_M_value(
+            lower, upper, need_lower, need_upper = self._process_M_value(
                 m,
                 lower,
                 upper,

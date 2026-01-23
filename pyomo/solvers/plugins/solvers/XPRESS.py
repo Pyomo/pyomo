@@ -13,7 +13,6 @@ from pyomo.opt.base import OptSolver
 from pyomo.opt.base.solvers import SolverFactory
 import logging
 
-
 logger = logging.getLogger('pyomo.solvers')
 
 

@@ -23,7 +23,6 @@ from pyomo.core.base import (
 from pyomo.mpec.complementarity import Complementarity
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 
-
 logger = logging.getLogger('pyomo.core')
 
 

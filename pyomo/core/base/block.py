@@ -739,16 +739,12 @@ class BlockData(ActiveComponentData):
         self._decl_order = _new_decl_order
 
     def set_value(self, val):
-        raise RuntimeError(
-            textwrap.dedent(
-                """
+        raise RuntimeError(textwrap.dedent("""
                 Block components do not support assignment or set_value().
                 Use the transfer_attributes_from() method to transfer the
                 components and public attributes from one block to another:
                     model.b[1].transfer_attributes_from(other_block)
-                """
-            ).strip()
-        )
+                """).strip())
 
     def clear(self):
         for name in self.component_map().keys():
@@ -967,30 +963,19 @@ class BlockData(ActiveComponentData):
             if val._parent() is self:
                 msg = """
 Attempting to re-assign the component '%s' to the same
-block under a different name (%s).""" % (
-                    val.name,
-                    name,
-                )
+block under a different name (%s).""" % (val.name, name)
             else:
                 msg = """
 Re-assigning the component '%s' from block '%s' to
-block '%s' as '%s'.""" % (
-                    val._name,
-                    val._parent().name,
-                    self.name,
-                    name,
-                )
+block '%s' as '%s'.""" % (val._name, val._parent().name, self.name, name)
 
-            raise RuntimeError(
-                """%s
+            raise RuntimeError("""%s
 
 This behavior is not supported by Pyomo; components must have a
 single owning block (or model), and a component may not appear
 multiple times in a block.  If you want to re-name or move this
 component, use the block del_component() and add_component() methods.
-"""
-                % (msg.strip(),)
-            )
+""" % (msg.strip(),))
         #
         # If the new component is a Block, then there is the chance that
         # it is the model(), and assigning it would create a circular
@@ -1851,7 +1836,7 @@ component, use the block del_component() and add_component() methods.
                 return False
         return True
 
-    def _pprint_blockdata_components(self, ostream):
+    def _pprint_blockdata_components(self, ostream, sort):
         #
         # We hard-code the order of the core Pyomo modeling
         # components, to ensure that the output follows the logical order
@@ -1877,7 +1862,10 @@ component, use the block del_component() and add_component() methods.
 
         indented_ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
         for item in items:
-            keys = sorted(self.component_map(item))
+            if SortComponents.ALPHABETICAL in sort:
+                keys = sorted(self.component_map(item))
+            else:
+                keys = list(self.component_map(item))
             if not keys:
                 continue
             #
@@ -1885,7 +1873,7 @@ component, use the block del_component() and add_component() methods.
             #
             ostream.write("%d %s Declarations\n" % (len(keys), item.__name__))
             for key in keys:
-                self.component(key).pprint(ostream=indented_ostream)
+                self.component(key).pprint(ostream=indented_ostream, sort=sort)
             ostream.write("\n")
         #
         # Model Order
@@ -2006,7 +1994,7 @@ component, use the block del_component() and add_component() methods.
             def solver_capability(x):
                 return True
 
-        (filename, smap) = problem_writer(self, filename, solver_capability, io_options)
+        filename, smap = problem_writer(self, filename, solver_capability, io_options)
         smap_id = id(smap)
         if not hasattr(self, 'solutions'):
             # This is a bit of a hack.  The write() method was moved
@@ -2086,15 +2074,15 @@ class Block(ActiveIndexedComponent):
     _private_data_initializers = defaultdict(lambda: dict)
 
     @overload
-    def __new__(
-        cls: Type[Block], *args, **kwds
-    ) -> Union[ScalarBlock, IndexedBlock]: ...
-
-    @overload
     def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock: ...
 
     @overload
     def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock: ...
+
+    @overload
+    def __new__(
+        cls: Type[Block], *args, **kwds
+    ) -> Union[ScalarBlock, IndexedBlock]: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Block:
@@ -2252,25 +2240,26 @@ class Block(ActiveIndexedComponent):
                 _BlockConstruction.data.pop(id(self), None)
             timer.report()
 
-    def _pprint_callback(self, ostream, idx, data):
+    def _pprint_callback(self, ostream, sort, idx, data):
         if not self.is_indexed():
-            data._pprint_blockdata_components(ostream)
+            data._pprint_blockdata_components(ostream, sort)
         else:
             ostream.write("%s : Active=%s\n" % (data.name, data.active))
             ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
-            data._pprint_blockdata_components(ostream)
+            data._pprint_blockdata_components(ostream, sort)
 
     def _pprint(self):
-        _attrs = [
-            ("Size", len(self)),
-            ("Index", self._index_set if self.is_indexed() else None),
-            ('Active', self.active),
-        ]
         # HACK: suppress the top-level block header (for historical reasons)
         if self.parent_block() is None and not self.is_indexed():
-            return None, self._data.items(), None, self._pprint_callback
+            _attrs = None
         else:
-            return _attrs, self._data.items(), None, self._pprint_callback
+            _attrs = [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+                ('Active', self.active),
+            ]
+
+        return _attrs, self.items, None, self._pprint_callback
 
     def display(self, filename=None, ostream=None, prefix=""):
         """

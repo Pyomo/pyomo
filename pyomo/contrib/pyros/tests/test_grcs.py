@@ -609,6 +609,38 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_feasible,
         )
 
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    def test_pyros_solver_robust_feas_tol(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=0, mutable=True)
+        m.x = Var(bounds=(0, 20 - m.q * (20 + 1e-3)))
+        m.obj = Objective(expr=m.x)
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver="ipopt",
+            global_solver="ipopt",
+            robust_feasibility_tolerance=1e-4,
+        )
+
+        # NOTE:
+        # nominally optimal solution x = 0 is within bounds (0, 20).
+        # however, upper bound is most stringent at q = 1,
+        # becomes -1e-3.
+        # relative PyROS tolerance of 1e-4 should allow it, since
+        # nominally, constraint violation is -20,
+        # so scaled violation is 1e-3 / 20 = 5e-5 < 1e-4
+        # so PyROS should say robust feasible after 1 iteration
+        self.assertEqual(res.iterations, 1)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
+        )
+        self.assertAlmostEqual(res.final_objective_value, 0)
+        self.assertAlmostEqual(m.x.value, 0)
+
     @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
@@ -3185,8 +3217,7 @@ class TestLogOriginalModelStatistics(unittest.TestCase):
             state_variables=[m.y],
         )
 
-        expected_log_str = textwrap.dedent(
-            """
+        expected_log_str = textwrap.dedent("""
             Model Statistics (before preprocessing):
               Number of variables : 3
                 First-stage variables : 2
@@ -3196,8 +3227,7 @@ class TestLogOriginalModelStatistics(unittest.TestCase):
               Number of constraints : 3
                 Equality constraints : 1
                 Inequality constraints : 2
-            """
-        )
+            """)
 
         with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
             log_original_model_statistics(model_data, user_var_partitioning)

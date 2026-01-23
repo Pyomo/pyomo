@@ -15,7 +15,6 @@ from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
-
 opt = GurobiPersistent()
 if not opt.available():
     raise unittest.SkipTest

@@ -11,7 +11,6 @@
 
 import pyomo.environ as pyo
 
-
 model = pyo.AbstractModel()
 
 model.ITEMS = pyo.Set()

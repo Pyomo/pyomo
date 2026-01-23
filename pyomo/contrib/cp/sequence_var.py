@@ -134,7 +134,7 @@ class SequenceVar(ActiveIndexedComponent):
         ]
         return (
             headers,
-            self._data.items(),
+            self.items,
             ("IntervalVars",),
             lambda k, v: ['[' + ', '.join(iv.name for iv in v.interval_vars) + ']'],
         )

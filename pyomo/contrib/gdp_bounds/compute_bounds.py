@@ -20,6 +20,7 @@ to variable bounds preprocessing transformation is recommended for NLP problems
 processed with this transformation.
 
 """
+
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt, BoundsManager

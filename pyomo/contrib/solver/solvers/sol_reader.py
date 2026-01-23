@@ -187,13 +187,11 @@ def parse_sol_file(
             # reader, there was logic to check for the number of options, but it
             # was uncovered by tests and unclear if actually necessary.
             if number_of_options > 4:
-                raise DeveloperError(
-                    """
+                raise DeveloperError("""
     The sol file reader has hit an unexpected error while parsing. The number of
     options recorded is greater than 4. Please report this error to the Pyomo
     developers.
-    """
-                )
+    """)
             for i in range(number_of_options + 4):
                 line = sol_file.readline()
                 model_objects.append(int(line))

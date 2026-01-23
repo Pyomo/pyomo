@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Functions for solving the nonlinear subproblem."""
+
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException, DeveloperError
 from pyomo.contrib import appsi
@@ -162,7 +163,7 @@ def solve_linear_subproblem(subproblem, config, timing):
     if subprob_terminate_cond is tc.optimal:
         return tc.optimal
     elif subprob_terminate_cond is tc.infeasibleOrUnbounded:
-        (results, subprob_terminate_cond) = distinguish_mip_infeasible_or_unbounded(
+        results, subprob_terminate_cond = distinguish_mip_infeasible_or_unbounded(
             subproblem, config
         )
     if subprob_terminate_cond is tc.infeasible:

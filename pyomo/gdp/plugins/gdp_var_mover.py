@@ -101,14 +101,11 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                             'individual Disjuncts?' % (disjunct.name,)
                         )
                     else:
-                        raise GDP_Error(
-                            """
+                        raise GDP_Error("""
                         Reclassifying active Disjunct "%s" as a Block.  This
                         is generally an error as it indicates that the model
                         was not completely relaxed before applying the
-                        gdp.reclassify transformation"""
-                            % (disjunct.name,)
-                        )
+                        gdp.reclassify transformation""" % (disjunct.name,))
 
             # Reclassify this disjunct as a block
             disjunct_component.parent_block().reclassify_component_type(

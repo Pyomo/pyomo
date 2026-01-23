@@ -303,7 +303,7 @@ class Expression(IndexedComponent, IndexedComponent_NDArrayMixin):
                 ('Size', len(self)),
                 ('Index', None if (not self.is_indexed()) else self._index_set),
             ],
-            self.items(),
+            self.items,
             ("Expression",),
             lambda k, v: ["Undefined" if v.expr is None else v.expr],
         )

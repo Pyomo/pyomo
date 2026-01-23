@@ -22,7 +22,6 @@ from pyomo.contrib.appsi.base import TerminationCondition
 
 from pyomo.contrib.solver.tests.solvers import instances
 
-
 opt = Highs()
 if not opt.available():
     raise unittest.SkipTest

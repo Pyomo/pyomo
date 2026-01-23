@@ -52,7 +52,6 @@ if not cyipopt_available:
     raise unittest.SkipTest("PyNumero needs CyIpopt installed to run CyIpopt tests")
 import cyipopt as cyipopt_core
 
-
 example_dir = os.path.join(this_file_dir(), '..')
 
 

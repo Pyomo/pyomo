@@ -23,6 +23,7 @@
 """
 UI Tests
 """
+
 # The pytest-qt plugin can generate exceptions / core dumps when it is
 # run in a terminal (without an active X11 screen).  Setting the
 # QT_QPA_PLATFORM environment variable *before* initializing Qt can work

@@ -20,6 +20,7 @@ that works with problems derived from AslNLP as long as those
 classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
+
 import abc
 import inspect
 
