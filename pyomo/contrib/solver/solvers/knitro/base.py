@@ -146,7 +146,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             results.extra_info.mip_rel_gap = self._engine.get_mip_rel_gap()
             results.extra_info.mip_number_solves = self._engine.get_mip_number_solves()
         else:
-            results.extra_info.num_iters = self._engine.get_number_iters()
+            results.extra_info.number_iters = self._engine.get_number_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
 
