@@ -291,7 +291,7 @@ jobs:
         conda-remove-defaults: true
         auto-update-conda: false
         python-version: ${{ matrix.python }}
-        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress
+        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress, intel
         use-mamba: true
 
     # This is necessary for qt (UI) tests; the package utilized here does not
