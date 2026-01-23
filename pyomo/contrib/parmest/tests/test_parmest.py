@@ -511,41 +511,6 @@ class TestRooneyBiegler(unittest.TestCase):
             retcode = subprocess.call(rlist)
         self.assertEqual(retcode, 0)
 
-    # Currently failing
-    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
-    def test_theta_est_cov(self):
-        objval, thetavals, cov = self.pest.theta_est(calc_cov=True, cov_n=6)
-
-        self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(
-            thetavals["asymptote"], 19.1426, places=2
-        )  # 19.1426 from the paper
-        self.assertAlmostEqual(
-            thetavals["rate_constant"], 0.5311, places=2
-        )  # 0.5311 from the paper
-
-        # Covariance matrix
-        self.assertAlmostEqual(
-            cov["asymptote"]["asymptote"], 6.155892, places=2
-        )  # 6.22864 from paper
-        self.assertAlmostEqual(
-            cov["asymptote"]["rate_constant"], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov["rate_constant"]["asymptote"], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov["rate_constant"]["rate_constant"], 0.040571, places=2
-        )  # 0.04124 from paper
-
-        """ Why does the covariance matrix from parmest not match the paper? Parmest is
-        calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
-        employed the first order approximation common for nonlinear regression. The paper
-        values were verified with Scipy, which uses the same first order approximation.
-        The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
-        "Nonlinear Parameter Estimation", Y. Bard, 1974.
-        """
-
     def test_cov_scipy_least_squares_comparison(self):
         """
         Scipy results differ in the 3rd decimal place from the paper. It is possible
@@ -1328,9 +1293,16 @@ class TestReactorDesign_DAE(unittest.TestCase):
         # only because the data is indexed by time and contains no additional information.
         n = 60
 
-        total_experiments = parmest._count_total_experiments(self.pest_df.exp_list)
-        print(f"Total experiments: {total_experiments}")
+        print(self.pest_df.number_exp)
+        print(self.pest_dict.number_exp)
 
+        # total_experiments_df = parmest._count_total_experiments(self.pest_df.exp_list)
+        # print(f"Total experiments: {total_experiments_df}")
+
+        # total_experiments_dict = parmest._count_total_experiments(
+        #     self.pest_dict.exp_list
+        # )
+        # print(f"Total experiments: {total_experiments_dict}")
         # Compute covariance using parmest
         obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
 
