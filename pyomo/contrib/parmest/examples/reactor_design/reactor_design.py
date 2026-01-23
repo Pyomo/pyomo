@@ -117,6 +117,16 @@ class ReactorDesignExperiment(Experiment):
             (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2, m.k3]
         )
 
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update(
+            [
+                (m.ca, None),
+                (m.cb, None),
+                (m.cc, None),
+                (m.cd, None),
+            ]
+        )
+
         return m
 
     def get_labeled_model(self):
