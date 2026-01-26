@@ -67,16 +67,13 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         return super().solve(model, **kwds)
 
     def _log_citation(self, config):
-        config.logger.info(
-            "\n"
-            + """- GLOA algorithm:
+        config.logger.info("\n" + """- GLOA algorithm:
         Lee, S; Grossmann, IE.
         A Global Optimization Algorithm for Nonconvex Generalized
         Disjunctive Programming and Applications to Process Systems.
         Comp. and Chem. Eng. 2001, 25, 1675-1697.
         DOI: 10.1016/S0098-1354(01)00732-3.
-        """.strip()
-        )
+        """.strip())
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -89,7 +86,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         # constraints will be added by the transformation to a MIP, so these are
         # all we'll ever need.
         add_global_constraint_list(self.original_util_block)
-        (discrete_problem_util_block, subproblem_util_block) = (
+        discrete_problem_util_block, subproblem_util_block = (
             _get_discrete_problem_and_subproblem(self, config)
         )
         discrete = discrete_problem_util_block.parent_block()

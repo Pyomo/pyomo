@@ -11,7 +11,6 @@
 
 import logging
 
-
 logger = logging.getLogger('pyomo.core')
 
 _virtual_sets = []

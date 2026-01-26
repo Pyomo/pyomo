@@ -1,30 +1,128 @@
 .. _driversection:
 
-Parameter Estimation 
-==================================
+Parmest Quick Start Guide 
+=========================
 
-Parameter Estimation using parmest requires a Pyomo model, experimental
-data which defines multiple scenarios, and parameters
-(thetas) to estimate.  parmest uses Pyomo [PyomoBookIII]_ and (optionally)
-mpi-sppy [KMM+23]_ to solve a
-two-stage stochastic programming problem, where the experimental data is
-used to create a scenario tree.  The objective function needs to be
-written with the Pyomo Expression for first stage cost
-(named "FirstStageCost") set to zero and the Pyomo Expression for second
-stage cost (named "SecondStageCost") defined as the deviation between
-the model and the observations (typically defined as the sum of squared
-deviation between model values and observed values).
+This quick start guide shows how to use parmest to estimate model parameters
+from experimental data as well as compute their uncertainty. The model and data used in this
+guide were taken from [RB01]_.
 
-If the Pyomo model is not formatted as a two-stage stochastic
-programming problem in this format, the user can choose either the
-built-in "SSE" or "SSE_weighted" objective functions, or supply a custom
-objective function to use as the second stage cost. The Pyomo model will then be
-modified within parmest to match the required specifications.
-The stochastic programming callback function is also defined within parmest.
-The callback function returns a populated and initialized model for each scenario.
+The mathematical model of interest is:
 
-To use parmest, the user creates a :class:`~pyomo.contrib.parmest.parmest.Estimator`
-object which includes the following methods:
+.. math::
+   y_i(\theta_1, \theta_2, t_i) = \theta_1 \left(1 - e^{-\theta_2 t_i} \right),
+    \quad \forall \quad i \, \in \, {1, \ldots, n}
+
+Where :math:`y` is the observation of the measured variable, :math:`t` is the time, :math:`\theta_1`
+is the asymptote, and :math:`\theta_2` is the rate constant.
+
+The experimental data is given in the table below:
+
+.. list-table:: Data
+   :header-rows: 1
+   :widths: 30 30
+
+   * - hour
+     - y
+   * - 1
+     - 8.3
+   * - 2
+     - 10.3
+   * - 3
+     - 19.0
+   * - 4
+     - 16.0
+   * - 5
+     - 15.6
+   * - 7
+     - 19.8
+
+To use parmest to estimate :math:`\theta_1` and :math:`\theta_2` from the data, we provide the following
+detailed steps:
+
+.. testsetup:: *
+
+    import pandas as pd
+    import pyomo.contrib.parmest.parmest as parmest
+
+    # Data
+    data = pd.DataFrame(
+        data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+        columns=["hour", "y"]
+    )
+
+    # Create an experiment list
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
+
+    exp_list = []
+    for i in range(data.shape[0]):
+        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
+
+Step 0: Import parmest and Pandas
+---------------------------------
+
+Before solving the parameter estimation problem, the following code must be executed to import the
+required packages for parameter estimation in parmest:
+
+.. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
+    >>> import pyomo.contrib.parmest.parmest as parmest
+    >>> import pandas as pd
+
+.. _ExperimentClass:
+
+Step 1: Create an Experiment Class
+----------------------------------
+
+Parmest requires that the user create an :class:`~pyomo.contrib.parmest.experiment.Experiment` class that
+builds an annotated Pyomo model denoting experiment outputs, unknown parameters, and measurement errors using
+Pyomo `Suffix` components.
+
+* ``m.experiment_outputs`` maps the experiment output (or measurement) terms in the model
+  (Pyomo `Param`, `Var`, or `Expression`) to their associated data values (float, int).
+* ``m.unknown_parameters`` maps the model parameters to estimate (Pyomo `Param` or `Var`)
+  to their component unique identifier (Pyomo `ComponentUID`) which is used to identify equivalent
+  parameters across multiple experiments.
+  Within parmest, any parameters that are to be estimated are converted to unfixed variables.
+  Variables that are to be estimated are also unfixed.
+* ``m.measurement_error`` maps the measurement error (float, int) of the experiment output, or measurement
+  (Pyomo `Param`, `Var`, or `Expression`) defined in the model.
+
+The experiment class has one required method:
+
+* :class:`~pyomo.contrib.parmest.experiment.Experiment.get_labeled_model` which returns the labeled Pyomo model.
+
+An example :class:`~pyomo.contrib.parmest.experiment.Experiment` class is shown below.
+
+.. literalinclude:: /../../pyomo/contrib/parmest/examples/rooney_biegler/rooney_biegler.py
+   :language: python
+   :pyobject: RooneyBieglerExperiment
+   :caption: RooneyBieglerExperiment class from the parmest example
+
+Step 2: Load the Data and Create a List of Experiments
+------------------------------------------------------
+
+Load the experimental data into Python and create an instance of your
+:class:`~pyomo.contrib.parmest.experiment.Experiment` class for each set of experimental data.
+In this example, each measurement of `y` is treated as a separate experiment.
+
+.. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
+    >>> data = pd.DataFrame(data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+    ...                     columns=["hour", "y"])
+    >>> exp_list = []
+    >>> for i in range(data.shape[0]):
+    ...     exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
+
+.. _EstimatorObj:
+
+Step 3: Create the Estimator Object
+-----------------------------------
+
+To use parmest, the user creates an :class:`~pyomo.contrib.parmest.parmest.Estimator` object which includes
+the following methods:
 
 .. autosummary::
    :nosignatures:
@@ -52,33 +150,20 @@ results and fit distributions to theta values.
    ~pyomo.contrib.parmest.graphics.fit_kde_dist
     
 A :class:`~pyomo.contrib.parmest.parmest.Estimator` object can be
-created using the following code. A description of each argument is
-listed below.  Examples are provided in the :ref:`examplesection`
-Section.
-
-.. testsetup:: *
-    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
-
-    # Data
-    import pandas as pd
-    data = pd.DataFrame(
-        data=[[1, 8.3], [2, 10.3], [3, 19.0], 
-              [4, 16.0], [5, 15.6], [7, 19.8]],
-        columns=['hour', 'y'],
-    )
-
-    # Create an experiment list
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
-
-    exp_list = []
-    for i in range(data.shape[0]):
-        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
+created using the following code. A description of the arguments are
+listed below.
 
 .. doctest::
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
-    >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
+
+Alternatively, the weighted sum of squared errors objective can be used.
+
+.. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
+    >>> pest = parmest.Estimator(exp_list, obj_function="SSE_weighted")
 
 Optionally, solver options can be supplied, e.g.,
 
@@ -88,66 +173,39 @@ Optionally, solver options can be supplied, e.g.,
     >>> solver_options = {"max_iter": 6000}
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE", solver_options=solver_options)
 
-
-List of experiment objects
---------------------------
-
-The first argument is a list of experiment objects which is used to
-create one labeled model for each experiment. 
-The template :class:`~pyomo.contrib.parmest.experiment.Experiment` 
-can be used to generate a list of experiment objects.
-
-A labeled Pyomo model ``m`` has the following additional suffixes (Pyomo `Suffix`):
-
-* ``m.experiment_outputs`` which defines experiment output (Pyomo `Param`, `Var`, or `Expression`)
-  and their associated data values (float, int).
-* ``m.unknown_parameters`` which defines the mutable parameters or variables (Pyomo `Param` or `Var`)
-  to estimate along with their component unique identifier (Pyomo `ComponentUID`). 
-  Within parmest, any parameters that are to be estimated are converted to unfixed variables. 
-  Variables that are to be estimated are also unfixed.
-
-The experiment class has one required method:
-
-* :class:`~pyomo.contrib.parmest.experiment.Experiment.get_labeled_model` which returns the labeled Pyomo model.
-  Note that the model does not have to be specifically written as a 
-  two-stage stochastic programming problem for parmest. 
-  That is, parmest can modify the
-  objective, see :ref:`ObjFunction` below.
- 
-Parmest comes with several :ref:`examplesection` that illustrates how to set up the list of experiment objects.
-The examples commonly include additional :class:`~pyomo.contrib.parmest.experiment.Experiment` class methods to
-create the model, finalize the model, and label the model.  The user can customize methods to suit their needs.
-
-.. _ObjFunction:
-
 Objective function
-------------------
+^^^^^^^^^^^^^^^^^^
 
-The second argument is an optional argument which defines the
-optimization objective function to use in parameter estimation.  
-
-If no objective function is specified, the Pyomo model is used "as is" and
-should be defined with "FirstStageCost" and "SecondStageCost"
-expressions that are used to build an objective for the two-stage 
-stochastic programming problem.  
-
-If the Pyomo model is not written as a two-stage stochastic programming problem in
-this format, the user can select the "SSE" or "SSE_weighted" built-in objective
-functions. If the user wants to use an objective that is different from the built-in
-options, a custom objective function can be defined for parameter estimation. However,
-covariance matrix estimation will not support this custom objective function. The objective
-function (built-in or custom) has a single argument, which is the model from a single
-experiment.
-The objective function returns a Pyomo
-expression which is used to define "SecondStageCost".  The objective
-function can be used to customize data points and weights that are used
-in parameter estimation.
-
+The ``obj_function`` keyword argument is used to specify the objective function to use for parameter
+estimation if the user has not implemented their own custom objective function.
 Parmest includes two built-in objective functions ("SSE" and "SSE_weighted") to compute
 the sum of squared errors between the ``m.experiment_outputs`` model values and
-data values.
+data values. If the user wants to use an objective that is different from the built-in
+options, a custom objective function can be specified in the user's model, however,
+covariance matrix estimation (see :ref:`covariancesection` Section) is not supported
+for custom objective functions.
 
-Suggested initialization procedure for parameter estimation problems
+When declaring a custom objective function, parmest assumes the model has the structure of 
+a two-stage stochastic programming problem so the objective function should be implemented
+using Pyomo Expressions for the first stage cost (named "FirstStageCost") and the second stage
+cost (named "SecondStageCost"). For parameter estimation problems the first stage cost is usually 
+set to zero and the second stage cost is usually defined as the deviation between the model and 
+the observations.
+
+Step 4: Estimate the Parameters
+-------------------------------
+
+After creating the :class:`~pyomo.contrib.parmest.parmest.Estimator` object with the desired objective function,
+solve the parameter estimation problem by calling :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`,
+e.g.,
+
+.. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
+    >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
+    >>> obj_val, theta_val = pest.theta_est()
+
+Suggested Initialization Procedure for Parameter Estimation Problems
 --------------------------------------------------------------------
 
 To check the quality of initial guess values provided for the fitted parameters, we suggest solving a 
@@ -160,11 +218,8 @@ estimation solve from the square problem solution, set optional argument ``solve
 argument ``(initialize_parmest_model=True)``. Different initial guess values for the fitted 
 parameters can be provided using optional argument `theta_values` (**Pandas Dataframe**)
 
-3. Solve parameter estimation problem by calling
-:class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`, e.g.,
+More Examples Beyond this Quick Guide
+-------------------------------------
 
-.. doctest::
-    :skipif: not parmest_available
-
-    >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
-    >>> obj_val, theta_val = pest.theta_est()
+More detailed examples, such as parameter estimation of reaction kinetics are provided in the
+:ref:`examplesection` Section.

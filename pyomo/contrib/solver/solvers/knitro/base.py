@@ -140,7 +140,13 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         results.solution_status = self._get_solution_status(status)
         results.termination_condition = self._get_termination_condition(status)
         results.incumbent_objective = self._engine.get_obj_value()
-        results.extra_info.iteration_count = self._engine.get_num_iters()
+        if self._is_mip():
+            results.extra_info.mip_number_nodes = self._engine.get_mip_number_nodes()
+            results.extra_info.mip_abs_gap = self._engine.get_mip_abs_gap()
+            results.extra_info.mip_rel_gap = self._engine.get_mip_rel_gap()
+            results.extra_info.mip_number_solves = self._engine.get_mip_number_solves()
+        else:
+            results.extra_info.number_iters = self._engine.get_number_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
 
@@ -256,3 +262,9 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         raise DeveloperError(
             f"Unsupported KNITRO item type {item_type} and value type {value_type}."
         )
+
+    def _is_mip(self) -> bool:
+        for var in self._model_data.variables:
+            if var.is_integer() or var.is_binary():
+                return True
+        return False

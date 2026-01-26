@@ -27,7 +27,6 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.repn.util import valid_expr_ctypes_minlp
 
-
 maingopy, maingopy_available = attempt_import("maingopy")
 
 _plusMinusOne = {1, -1}

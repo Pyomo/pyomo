@@ -174,7 +174,7 @@ class ParamTester:
                 raise
 
     def test_setitem_preexisting(self):
-        keys = self.instance.A.sparse_keys()
+        keys = list(self.instance.A.sparse_keys())
         if not keys or None in keys:
             return
 
@@ -356,73 +356,69 @@ class ParamTester:
                 raise
 
     def test_iterkeys(self):
-        test = self.instance.A.iterkeys()
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.iterkeys()
+        self.assertIn("The iterkeys method is deprecated.", LOG.getvalue())
         self.assertEqual(sorted(test), sorted(self.instance.A.keys()))
 
     def test_itervalues(self):
-        expectException = False
-        #                  len(self.sparse_data) < len(self.data) and \
-        #                  not self.instance.A._default_val is None and \
-        #                  not self.instance.A.mutable
-        try:
-            test = self.instance.A.values()
-            test = zip(self.instance.A.keys(), test)
-            if self.instance.A._default_val is NoValue:
-                self.validateDict(self.sparse_data.items(), test)
-            else:
-                self.validateDict(self.data.items(), test)
-            self.assertFalse(expectException)
-        except ValueError:
-            if not expectException:
-                raise
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.itervalues()
+        self.assertIn("The itervalues method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(self.instance.A.values()), list(test))
 
     def test_iteritems(self):
-        expectException = False
-        #                  len(self.sparse_data) < len(self.data) and \
-        #                  not self.instance.A._default_val is None and \
-        #                  not self.instance.A.mutable
-        try:
-            test = self.instance.A.items()
-            if self.instance.A._default_val is NoValue:
-                self.validateDict(self.sparse_data.items(), test)
-            else:
-                self.validateDict(self.data.items(), test)
-            self.assertFalse(expectException)
-        except ValueError:
-            if not expectException:
-                raise
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.iteritems()
+        self.assertIn("The iteritems method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(self.instance.A.items()), list(test))
 
     def test_sparse_keys(self):
         test = self.instance.A.sparse_keys()
-        self.assertEqual(type(test), list)
         self.assertEqual(sorted(test), sorted(self.sparse_data.keys()))
 
     def test_sparse_values(self):
-        # self.instance.pprint()
         test = self.instance.A.sparse_values()
-        self.assertEqual(type(test), list)
-        # print test
-        # print self.sparse_data.items()
         test = zip(self.instance.A.keys(), test)
         self.validateDict(self.sparse_data.items(), test)
 
     def test_sparse_items(self):
         test = self.instance.A.sparse_items()
-        self.assertEqual(type(test), list)
         self.validateDict(self.sparse_data.items(), test)
 
     def test_sparse_iterkeys(self):
-        test = self.instance.A.sparse_iterkeys()
-        self.assertEqual(sorted(test), sorted(self.sparse_data.keys()))
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.sparse_iterkeys()
+        self.assertIn("The sparse_iterkeys method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(test), list(self.instance.A.sparse_keys()))
 
     def test_sparse_itervalues(self):
-        test = self.instance.A.sparse_itervalues()
-        test = zip(self.instance.A.keys(), test)
-        self.validateDict(self.sparse_data.items(), test)
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.sparse_itervalues()
+        self.assertIn("The sparse_itervalues method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(test), list(self.instance.A.sparse_values()))
 
     def test_sparse_iteritems(self):
-        test = self.instance.A.sparse_iteritems()
-        self.validateDict(self.sparse_data.items(), test)
+        with LoggingIntercept() as LOG:
+            test = self.instance.A.sparse_iteritems()
+        self.assertIn("The sparse_iteritems method is deprecated.", LOG.getvalue())
+        self.assertEqual(list(test), list(self.instance.A.sparse_items()))
+
+    def test_extract_values(self):
+        if self.instance.A._default_val is NoValue:
+            ref = self.sparse_data
+        else:
+            ref = self.data
+        vals = self.instance.A.extract_values()
+        self.assertEqual(ref, vals)
+        for k, v in vals.items():
+            self.assertIsInstance(v, (float, int))
+
+    def test_extract_values_sparse(self):
+        vals = self.instance.A.extract_values_sparse()
+        self.assertEqual(self.sparse_data, vals)
+        for k, v in vals.items():
+            self.assertIsInstance(v, (float, int))
 
     def test_len(self):
         # """Check the use of len"""
@@ -849,17 +845,42 @@ class ScalarTester(ParamTester):
     def test_value_scalar(self):
         # """Check the value of the parameter"""
         if self.data.get(None, NoValue) is NoValue:
-            self.assertRaises(ValueError, value, self.instance.A)
-            self.assertRaises(TypeError, float, self.instance.A)
-            self.assertRaises(TypeError, int, self.instance.A)
+            if self.instance.A.mutable:
+                msg = "The Param value is currently set to an invalid value."
+                with self.assertRaisesRegex(ValueError, msg):
+                    value(self.instance.A)
+            else:
+                msg = "The Param value is undefined and no default value is specified"
+                with self.assertRaisesRegex(ValueError, msg):
+                    value(self.instance.A)
         else:
             val = self.data[None]
             tmp = value(self.instance.A)
             self.assertEqual(type(tmp), type(val))
             self.assertEqual(tmp, val)
+            self.assertIsInstance(val, (int, float))
 
-            self.assertRaises(TypeError, float, self.instance.A)
-            self.assertRaises(TypeError, int, self.instance.A)
+    def test_cast_to_number(self):
+        if self.instance.A.mutable:
+            msg = r"Implicit conversion of Pyomo numeric value \(A\) to "
+            with self.assertRaisesRegex(TypeError, msg + 'float'):
+                float(self.instance.A)
+            with self.assertRaisesRegex(TypeError, msg + 'int'):
+                int(self.instance.A)
+        elif self.data.get(None, NoValue) is NoValue:
+            msg = "The Param value is undefined and no default value is specified"
+            with self.assertRaisesRegex(ValueError, msg):
+                float(self.instance.A)
+            with self.assertRaisesRegex(ValueError, msg):
+                int(self.instance.A)
+        else:
+            val = self.data[None]
+            tmp = float(self.instance.A)
+            self.assertEqual(tmp, val)
+            self.assertIs(type(tmp), float)
+            tmp = int(self.instance.A)
+            self.assertEqual(tmp, int(val))
+            self.assertIs(type(tmp), int)
 
     def test_call(self):
         # """Check the use of the __call__ method"""
@@ -867,47 +888,48 @@ class ScalarTester(ParamTester):
             self.sparse_data.get(None, 0) is NoValue
             or self.data.get(None, NoValue) is NoValue
         ):  # not self.sparse_data:
-            self.assertRaisesRegex(
-                ValueError,
-                ".*currently set to an invalid value",
-                self.instance.A.__call__,
-            )
+            if self.instance.A.mutable:
+                msg = "The Param value is currently set to an invalid value."
+            else:
+                msg = "The Param value is undefined and no default value is specified"
+            with self.assertRaisesRegex(ValueError, msg):
+                self.instance.A(),
         else:
             self.assertEqual(self.instance.A(), self.data[None])
 
     def test_get_valueattr(self):
         self.assertEqual(self.instance.A._value, self.sparse_data.get(None, NoValue))
         if self.data.get(None, 0) is NoValue:  # not self.sparse_data:
-            try:
-                value(self.instance.A)
-                self.fail("Expected value error")
-            except ValueError:
-                pass
+            if self.instance.A.mutable:
+                msg = "The Param value is currently set to an invalid value."
+            else:
+                msg = "The Param value is undefined and no default value is specified"
+            with self.assertRaisesRegex(ValueError, msg):
+                self.instance.A.value
         else:
             self.assertEqual(self.instance.A.value, self.data[None])
 
     def test_set_valueattr(self):
-        self.instance.A.value = 4.3
-        self.assertEqual(self.instance.A.value, 4.3)
-        self.assertEqual(self.instance.A(), 4.3)
-
-    def test_get_value(self):
-        if (
-            self.sparse_data.get(None, 0) is NoValue
-            or self.data.get(None, NoValue) is NoValue
-        ):  # not self.sparse_data:
-            try:
-                value(self.instance.A)
-                self.fail("Expected value error")
-            except ValueError:
-                pass
+        if self.instance.A.mutable:
+            self.instance.A.value = 4.3
+            self.assertEqual(self.instance.A.value, 4.3)
+            self.assertEqual(self.instance.A(), 4.3)
         else:
-            self.assertEqual(self.instance.A.value, self.data[None])
+            with self.assertRaisesRegex(
+                TypeError, "Attempting to set the value of the immutable parameter A"
+            ):
+                self.instance.A.value = 4.3
 
     def test_set_value(self):
-        self.instance.A = 4.3
-        self.assertEqual(self.instance.A.value, 4.3)
-        self.assertEqual(self.instance.A(), 4.3)
+        if self.instance.A.mutable:
+            self.instance.A = 4.3
+            self.assertEqual(self.instance.A.value, 4.3)
+            self.assertEqual(self.instance.A(), 4.3)
+        else:
+            with self.assertRaisesRegex(
+                TypeError, "Attempting to set the value of the immutable parameter A"
+            ):
+                self.instance.A = 4.3
 
     def test_is_indexed(self):
         self.assertFalse(self.instance.A.is_indexed())
@@ -915,6 +937,58 @@ class ScalarTester(ParamTester):
     def test_dim(self):
         # """Check the use of dim"""
         self.assertEqual(self.instance.A.dim(), 0)
+
+    def test_extract_values(self):
+        if self.instance.A._default_val is NoValue:
+            ref = self.sparse_data
+        else:
+            ref = self.data
+        vals = self.instance.A.extract_values()
+        self.assertEqual(ref, vals)
+        for k, v in vals.items():
+            self.assertIsInstance(v, (float, int))
+
+    def test_extract_values_sparse(self):
+        vals = self.instance.A.extract_values_sparse()
+        self.assertEqual(self.sparse_data, vals)
+        for k, v in vals.items():
+            self.assertIsInstance(v, (float, int))
+
+
+class ScalarParam_immutable_noDefault(ScalarTester, unittest.TestCase):
+    def setUp(self, **kwds):
+        #
+        # Sparse single-index Param, no default
+        #
+        self.model = AbstractModel()
+        ScalarTester.setUp(self, mutable=False, **kwds)
+
+        self.sparse_data = {}
+        self.data = {None: NoValue}
+
+
+class ScalarParam_immutable_init(ScalarTester, unittest.TestCase):
+    def setUp(self, **kwds):
+        #
+        # Sparse single-index Param, no default
+        #
+        self.model = AbstractModel()
+        ScalarTester.setUp(self, mutable=False, initialize=1.3, **kwds)
+
+        self.sparse_data = {None: 1.3}
+        self.data = {None: 1.3}
+
+
+class ScalarParam_immutable_floatDefault(ScalarTester, unittest.TestCase):
+    def setUp(self, **kwds):
+        #
+        # Sparse single-index Param, no default
+        #
+        self.model = AbstractModel()
+        ScalarTester.setUp(self, mutable=False, default=1.3, **kwds)
+
+        self.sparse_data = {}
+        self.data = {None: 1.3}
 
 
 class ScalarParam_mutable_noDefault(ScalarTester, unittest.TestCase):

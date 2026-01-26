@@ -49,7 +49,6 @@ from pyomo.core.kernel.piecewise_library.util import (
     PiecewiseValidationError,
 )
 
-
 logger = logging.getLogger('pyomo.core')
 
 registered_transforms = {}
