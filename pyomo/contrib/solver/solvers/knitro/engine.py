@@ -303,6 +303,11 @@ class Engine:
             return None
         return self.execute(knitro.KN_get_obj_value)
 
+    def get_obj_bound(self) -> Optional[float]:
+        if not self.has_objective:
+            return None
+        return self.execute(knitro.KN_get_mip_relaxation_bnd)
+
     def get_idxs(
         self, item_type: type[ItemType], items: Iterable[ItemType]
     ) -> list[int]:

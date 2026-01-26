@@ -140,6 +140,10 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         results.solution_status = self._get_solution_status(status)
         results.termination_condition = self._get_termination_condition(status)
         results.incumbent_objective = self._engine.get_obj_value()
+
+        if self._is_mip():
+            results.objective_bound = self._engine.get_obj_bound()
+
         if self._is_mip():
             results.extra_info.mip_number_nodes = self._engine.get_mip_number_nodes()
             results.extra_info.mip_abs_gap = self._engine.get_mip_abs_gap()
