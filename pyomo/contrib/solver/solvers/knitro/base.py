@@ -11,7 +11,8 @@
 
 from abc import abstractmethod
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+import datetime
+import time
 from io import StringIO
 from typing import Optional
 
@@ -66,7 +67,8 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         self._saved_var_values = {}
 
     def solve(self, model: BlockData, **kwds) -> Results:
-        tick = datetime.now(timezone.utc)
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tick = time.perf_counter()
         self._check_available()
 
         config = self._build_config(**kwds)
@@ -89,10 +91,10 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
 
         results = self._postsolve(config, timer)
 
-        tock = datetime.now(timezone.utc)
+        tock = time.perf_counter()
 
-        results.timing_info.start_timestamp = tick
-        results.timing_info.wall_time = (tock - tick).total_seconds()
+        results.timing_info.start_timestamp = start_timestamp
+        results.timing_info.wall_time = tock - tick
         return results
 
     def _build_config(self, **kwds) -> KnitroConfig:
@@ -146,7 +148,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             results.extra_info.mip_rel_gap = self._engine.get_mip_rel_gap()
             results.extra_info.mip_number_solves = self._engine.get_mip_number_solves()
         else:
-            results.extra_info.num_iters = self._engine.get_number_iters()
+            results.extra_info.number_iters = self._engine.get_number_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
 
