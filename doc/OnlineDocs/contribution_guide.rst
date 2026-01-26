@@ -519,27 +519,76 @@ When submitting a new package (under either ``addons`` or
   under the appropriate ``[optional]`` section.
 * The contribution passes all standard style and formatting checks.
 
-Contributed Packages within Pyomo
-+++++++++++++++++++++++++++++++++
+Example: Structure of a Contributed Package
+-------------------------------------------
 
-Contributions can be included directly within the
-``pyomo.devel`` or ``pyomo.addons`` namespaces.
-The ``pyomo/devel/example`` package
-provides an example of how this can be done, including a directory
-for plugins and package tests. For example, this package can be
-imported as a subpackage of ``pyomo.devel``::
+This section illustrates a minimal example of how a contributed package
+may be structured within the ``pyomo.devel`` or ``pyomo.addons``
+namespaces. This example is provided for documentation purposes only
+and is not included as source code in the Pyomo repository.
 
-    import pyomo.environ as pyo
-    from pyomo.devel.example import a
+Minimal Directory Layout
+++++++++++++++++++++++++
 
-    # Print the value of 'a' defined by this package
-    print(a)
+At a minimum, a contributed package should follow a structure similar
+to the following::
 
-Although ``pyomo.devel.example`` is included in the Pyomo source
-tree, it is treated as an optional package. Pyomo will attempt to
-import this package, but if an import failure occurs, Pyomo will
-silently ignore it. Otherwise, this pyomo package will be treated
-like any other. Specifically:
+   pyomo/devel/example_package/
+   ├── __init__.py
+   ├── core.py
+   └── tests/
+       ├── __init__.py
+       └── test_example_package.py
 
-* Plugin classes defined in this package are loaded when ``pyomo.environ`` is loaded.
-* Tests in this package are run with other Pyomo tests.
+Package Initialization
+++++++++++++++++++++++
+
+The package ``__init__.py`` file should expose the primary public
+interfaces of the package and avoid unnecessary imports. Contributed
+packages must be safe to import as optional components and should not
+introduce side effects at import time.
+
+For example::
+
+   # pyomo/devel/example_package/__init__.py
+   from pyomo.devel.example_package.core import example_function
+
+Core Functionality
+++++++++++++++++++
+
+The main functionality of the contributed package should be implemented
+in one or more modules within the package directory (for example,
+``core.py``). These modules should follow Pyomo's coding standards,
+documentation requirements, and dependency management policies.
+
+Tests
++++++
+
+All contributed packages must include tests. Tests should be placed in a
+``tests`` subpackage and use the Pyomo test harness provided by
+``pyomo.common.unittest``.
+
+At a minimum, tests should verify that the package can be imported and
+that its primary functionality executes as expected. For example::
+
+   import pyomo.common.unittest as unittest
+
+   class TestExamplePackage(unittest.TestCase):
+       def test_import(self):
+           import pyomo.devel.example_package
+
+Tests for contributed packages are run alongside the rest of the Pyomo
+test suite and must not require optional dependencies unless those
+dependencies are properly declared and tests are appropriately marked.
+For example, tests that require ``numpy`` may be marked using the Pyomo
+test harness as follows::
+
+   import pyomo.common.unittest as unittest
+   from pyomo.common.dependencies import numpy_available
+
+   @unittest.skipIf(not numpy_available, "NumPy is not available")
+   class TestExampleWithNumpy(unittest.TestCase):
+       def test_numpy_functionality(self):
+           import numpy as np
+           a = np.array([1, 2, 3])
+           self.assertEqual(a.sum(), 6)
