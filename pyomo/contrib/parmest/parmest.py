@@ -1245,7 +1245,7 @@ class Estimator:
         # If fixing theta, return objective value, theta estimates, and worst status
         if fix_theta:
             return obj_value, theta_estimates, worst_status
-        
+
         # Return theta estimates as a pandas Series
         theta_estimates = pd.Series(theta_estimates)
 
