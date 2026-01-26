@@ -96,6 +96,7 @@ class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
         self.assertFalse(hasattr(results.extra_info, 'mip_rel_gap'))
         self.assertFalse(hasattr(results.extra_info, 'mip_number_solves'))
 
+
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroSolverObjectiveBound(unittest.TestCase):
     def test_objective_bound_mip(self):
