@@ -61,12 +61,15 @@ that may evolve rapidly as research and experimentation continue. Users
 should not rely on API stability within this space.
 
 Pyomo is currently transitioning to a clearer organizational model that
-distinguishes between two categories:
+distinguishes between three categories:
 
 * ``pyomo.addons`` – Mostly stable, supported extensions maintained by
  specific contributors.
 
 * ``pyomo.devel`` – Active research and experimental code.
+
+* ``pyomo.unsupported`` – Unmaintained contributions with no active
+  maintainer or future development plans.
 
 The guiding philosophy is to protect users from surprises in stable
 interfaces while continuing to enable innovation and experimentation
@@ -177,9 +180,54 @@ does not include or require any specific solver as a dependency.
 Miscellaneous Conventions
 -------------------------
 
-There are a variety of long-standing conventions that have become
-standard across the project. This list will be amended as conventions come
-up, so please refer to it regularly for updates:
+There are a variety of long-standing conventions that have become standard
+across the project. This list will be amended as conventions come up, so please
+refer to it regularly for updates:
+
+* **Fail loudly:** Silent failure is strongly discouraged. Code should
+  defensively guard against unexpected or unsupported cases and raise
+  explicit exceptions (e.g., ``NotImplementedError``) rather than silently
+  producing incorrect or ambiguous results. Some of the most difficult
+  Pyomo bugs to diagnose arise from silently incorrect mathematics.
+
+* **Document and enforce assumptions:** When behavior that a user could
+  reasonably expect is ambiguous, code should clearly document the
+  assumptions being made and fail loudly when those assumptions are
+  violated.
+
+* **Print statements:** Avoid printing or writing directly to ``stdout``. Pyomo is a
+  library, not an application, and copious output can interfere with downstream
+  tools and workflows. Use the appropriate logger instead. Print
+  information only when the user has enabled or requested it.
+
+* **Active components define the model:** Pyomo models are defined as the
+  set of *active* components reachable from the root ``Block``. Not all
+  modeling objects are active components (notably, ``Var`` objects are
+  not). Algorithms and writers should respect this distinction when
+  traversing or interpreting models.
+
+* **Avoid iterating over variables directly:** Direct iteration over
+  variables using ``m.component_data_objects(Var, ...)`` is rarely
+  appropriate, as it returns all variables declared on the model
+  hierarchy regardless of their mathematical relevance. When gathering
+  variables associated with a model formulation, prefer utilities such as
+  ``get_vars_from_components`` with ``Constraint`` or
+  ``(Constraint, Objective)`` as the component types.
+
+* **Writers must validate component types:** Writers and solver-facing
+  infrastructure should explicitly detect and warn about active
+  Pyomo components they do not recognize. Pyomo supports extended
+  modeling environments (e.g., DAE and GDP), and silently ignoring
+  unexpected structures can result in invalid solver input. The utility
+  ``categorize_valid_components`` in ``pyomo.repn.util`` may be used to
+  assist with this validation.
+
+* **Do not use names as identifiers:** Component names and strings should
+  generally not be used to track Pyomo components within algorithms or
+  writers. Names are not guaranteed to be unique or stable across model
+  transformations. Prefer data structures from
+  ``pyomo.common.collections`` that support using components directly as
+  keys.
 
 * **Environment imports:** Import the main Pyomo environment as  
   ``import pyomo.environ as pyo``. Avoid all uses of ``import *``.
@@ -201,18 +249,16 @@ up, so please refer to it regularly for updates:
     import modules outside of :py:mod:`pyomo.common`,
     :py:mod:`pyomo.core.expr`, or :py:mod:`pyomo.core.base`.
 
-* **Print statements:** Avoid printing or writing directly to ``stdout``. Pyomo is a
-  library, not an application, and copious output can interfere with downstream
-  tools and workflows. Use the appropriate logger instead. Print
-  information only when the user has enabled or requested it.
+* **Naming conventions:** Follow PEP 8 naming conventions, including
+  descriptive ``snake_case`` for functions and variables and
+  ``PascalCase`` for classes. Functions should generally be named as verb
+  phrases, while classes should be noun-like representations of concepts.
 
-* **Pull Request naming:** Pull Request titles are added to the CHANGELOG
-  and the release notes. The Pyomo development team reserves the right to
-  alter titles as appropriate to ensure they fit the look and feel of
-  other titles in the CHANGELOG.
-
-* **Full commit history:** We do **not** squash-merge Pull Requests,
-  preferring to retain the entire commit history.
+* **Avoid code duplication:** Repeated or copy-pasted code is strongly
+  discouraged. Duplication increases maintenance burden and often leads
+  to inconsistent behavior. When code patterns begin to repeat,
+  contributors are encouraged to refactor common functionality or
+  discuss design alternatives with the core development team.
 
 * **URLs:** All links in code, comments, and documentation must use ``https`` 
   rather than ``http``.
@@ -220,17 +266,15 @@ up, so please refer to it regularly for updates:
 * **File headers:** Every ``.py`` file must begin with the standard Pyomo
   copyright header:
 
-  .. code-block:: text
-
-     #  ___________________________________________________________________________
-     #
-     #  Pyomo: Python Optimization Modeling Objects
-     #  Copyright (c) 2008-2025
-     #  National Technology and Engineering Solutions of Sandia, LLC
-     #  Under the terms of Contract DE-NA0003525 with National Technology and
-     #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-     #  rights in this software.
-     #  This software is distributed under the 3-clause BSD License.
-     #  ___________________________________________________________________________
+  .. literalinclude:: ../../pyomo/addons/__init__.py
+     :language: text
 
   Update the year range as appropriate when modifying files.
+
+* **Full commit history:** We do **not** squash-merge Pull Requests,
+  preferring to retain the entire commit history.
+
+* **Pull Request naming:** Pull Request titles are added to the CHANGELOG
+  and the release notes. The Pyomo development team reserves the right to
+  alter titles as appropriate to ensure they fit the look and feel of
+  other titles in the CHANGELOG.
