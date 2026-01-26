@@ -200,6 +200,11 @@ refer to it regularly for updates:
   tools and workflows. Use the appropriate logger instead. Print
   information only when the user has enabled or requested it.
 
+* **Logging:** Use Python's ``logging`` framework for diagnostic and
+  informational output. Loggers should generally be created using
+  ``logging.getLogger(__name__)`` to ensure messages are properly scoped
+  and can be enabled or filtered at the module or package level.
+
 * **Active components define the model:** Pyomo models are defined as the
   set of *active* components reachable from the root ``Block``. Not all
   modeling objects are active components (notably, ``Var`` objects are
