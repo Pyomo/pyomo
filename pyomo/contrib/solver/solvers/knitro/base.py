@@ -11,7 +11,8 @@
 
 from abc import abstractmethod
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+import datetime
+import time
 from io import StringIO
 from typing import Optional
 
@@ -66,7 +67,8 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         self._saved_var_values = {}
 
     def solve(self, model: BlockData, **kwds) -> Results:
-        tick = datetime.now(timezone.utc)
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tick = time.perf_counter()
         self._check_available()
 
         config = self._build_config(**kwds)
@@ -89,10 +91,10 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
 
         results = self._postsolve(config, timer)
 
-        tock = datetime.now(timezone.utc)
+        tock = time.perf_counter()
 
-        results.timing_info.start_timestamp = tick
-        results.timing_info.wall_time = (tock - tick).total_seconds()
+        results.timing_info.start_timestamp = start_timestamp
+        results.timing_info.wall_time = tock - tick
         return results
 
     def _build_config(self, **kwds) -> KnitroConfig:
@@ -140,7 +142,17 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         results.solution_status = self._get_solution_status(status)
         results.termination_condition = self._get_termination_condition(status)
         results.incumbent_objective = self._engine.get_obj_value()
-        results.extra_info.iteration_count = self._engine.get_num_iters()
+
+        if self._is_mip():
+            results.objective_bound = self._engine.get_obj_bound()
+
+        if self._is_mip():
+            results.extra_info.mip_number_nodes = self._engine.get_mip_number_nodes()
+            results.extra_info.mip_abs_gap = self._engine.get_mip_abs_gap()
+            results.extra_info.mip_rel_gap = self._engine.get_mip_rel_gap()
+            results.extra_info.mip_number_solves = self._engine.get_mip_number_solves()
+        else:
+            results.extra_info.number_iters = self._engine.get_number_iters()
         results.timing_info.solve_time = self._engine.get_solve_time()
         results.timing_info.timer = timer
 
@@ -256,3 +268,9 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         raise DeveloperError(
             f"Unsupported KNITRO item type {item_type} and value type {value_type}."
         )
+
+    def _is_mip(self) -> bool:
+        for var in self._model_data.variables:
+            if var.is_integer() or var.is_binary():
+                return True
+        return False

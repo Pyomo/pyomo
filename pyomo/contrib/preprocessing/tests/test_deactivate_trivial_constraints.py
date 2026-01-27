@@ -11,6 +11,7 @@
 
 # -*- coding: utf-8 -*-
 """Tests deactivation of trivial constraints."""
+
 import pyomo.common.unittest as unittest
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.environ import Constraint, ConcreteModel, TransformationFactory, Var

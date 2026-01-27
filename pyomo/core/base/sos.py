@@ -531,27 +531,21 @@ class SOSConstraint(ActiveIndexedComponent):
         else:
             soscondata.set_items(variables, weights)
 
-    # NOTE: the prefix option is ignored
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        """TODO"""
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write("   " + self.local_name + " : ")
-        if not self.doc is None:
-            ostream.write(self.doc + '\n')
-            ostream.write("  ")
-        ostream.write("\tSize=" + str(len(self._data.keys())) + ' ')
-        if self.is_indexed():
-            ostream.write("\tIndex= " + self._index_set.name + '\n')
-        else:
-            ostream.write("\n")
-        for val in self._data:
-            if not val is None:
-                ostream.write("\t" + str(val) + '\n')
-            ostream.write("\t\tType=" + str(self._data[val].level) + '\n')
-            ostream.write("\t\tWeight : Variable\n")
-            for var, weight in self._data[val].get_items():
-                ostream.write("\t\t" + str(weight) + ' : ' + var.name + '\n')
+    def _pprint(self):
+        """Print component information."""
+        headers = [
+            ("Size", len(self)),
+            ("Index", self._index_set if self.is_indexed() else None),
+        ]
+        return (
+            headers,
+            self.items,
+            ("Type", "Weight", "Variable"),
+            lambda k, v: (
+                ("" if i else v.level, w, var)
+                for i, (var, w) in enumerate(v.get_items())
+            ),
+        )
 
 
 class ScalarSOSConstraint(SOSConstraint, SOSConstraintData):

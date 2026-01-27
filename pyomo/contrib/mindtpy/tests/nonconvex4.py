@@ -21,6 +21,7 @@ Problem type:   nonconvex MINLP
                 4  constraints
 
 """
+
 from pyomo.environ import *
 from pyomo.environ import (
     ConcreteModel,

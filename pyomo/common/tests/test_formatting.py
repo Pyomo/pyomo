@@ -96,8 +96,8 @@ Key      : s                : val
         data = {(2,): (["a", 1], 1), (1, 3): ({1: 'a', 2: '2'}, '2')}
         tabular_writer(os, "", data.items(), [], lambda k, v: v)
         ref = u"""
-{1: 'a', 2: '2'} : 2
         ['a', 1] : 1
+{1: 'a', 2: '2'} : 2
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
 
@@ -195,18 +195,26 @@ Key : i : j
 
 
 class TestStreamIndenter(unittest.TestCase):
+    def test_empty(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        self.assertEqual(0, OUT2.write(''))
+        self.assertEqual('', OUT2.getvalue())
+
     def test_noprefix(self):
         OUT1 = StringIO()
         OUT2 = StreamIndenter(OUT1)
-        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual(28, OUT2.write('Hello?\nHello, world!'))
         self.assertEqual('    Hello?\n    Hello, world!', OUT2.getvalue())
 
     def test_prefix(self):
-        prefix = 'foo:'
+        prefix = 'foo: '
         OUT1 = StringIO()
         OUT2 = StreamIndenter(OUT1, prefix)
-        OUT2.write('Hello?\nHello, world!')
-        self.assertEqual('foo:Hello?\nfoo:Hello, world!', OUT2.getvalue())
+        OUT2.write('Hello?\nText\n\nHello, world!')
+        self.assertEqual(
+            'foo: Hello?\nfoo: Text\nfoo:\nfoo: Hello, world!', OUT2.getvalue()
+        )
 
     def test_blank_lines(self):
         OUT1 = StringIO()
@@ -214,8 +222,45 @@ class TestStreamIndenter(unittest.TestCase):
         OUT2.write('Hello?\n\nText\n\nHello, world!')
         self.assertEqual('    Hello?\n\n    Text\n\n    Hello, world!', OUT2.getvalue())
 
+    def test_blank_lines_nonwhitespace_indent(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1, " | ")
+        OUT2.write('Hello?\n\nText\n')
+        OUT2.write('\n')
+        OUT2.write('Hello, world!')
+        self.assertEqual(
+            ' | Hello?\n |\n | Text\n |\n | Hello, world!', OUT2.getvalue()
+        )
+
     def test_writelines(self):
         OUT1 = StringIO()
         OUT2 = StreamIndenter(OUT1)
         OUT2.writelines(['Hello?\n', '\n', 'Text\n', '\n', 'Hello, world!'])
         self.assertEqual('    Hello?\n\n    Text\n\n    Hello, world!', OUT2.getvalue())
+
+    def test_nested(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT3 = StreamIndenter(OUT2)
+        self.assertIs(OUT3.target_os, OUT2.target_os)
+        self.assertIs(OUT3.target_os, OUT1)
+        OUT3.write('Hello?\n\nText\n\nHello, world!')
+        self.assertEqual(
+            '        Hello?\n\n        Text\n\n        Hello, world!', OUT1.getvalue()
+        )
+
+    def test_nested_interleave(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT3 = StreamIndenter(OUT2)
+        self.assertIs(OUT3.target_os, OUT2.target_os)
+        self.assertIs(OUT3.target_os, OUT1)
+        OUT3.write('Hello?')
+        OUT2.write('\n\n')
+        OUT3.write('Text\n')
+        OUT2.write('Hi\n')
+        OUT3.write('Hello, world!')
+        self.assertEqual(
+            '        Hello?\n\n        Text\n    Hi\n        Hello, world!',
+            OUT1.getvalue(),
+        )
