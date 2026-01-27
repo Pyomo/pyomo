@@ -11,6 +11,7 @@
 
 import abc
 import datetime
+import time
 from typing import List
 
 from pyomo.core.base.constraint import ConstraintData, Constraint
@@ -508,6 +509,7 @@ class PersistentSolverMixin:
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tick = time.perf_counter()
         self._active_config = config = self.config(value=kwds, preserve_implicit=True)
         StaleFlagManager.mark_all_as_stale()
 
@@ -529,9 +531,9 @@ class PersistentSolverMixin:
         res = self._solve()
         self._last_results_object = res
 
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tock = time.perf_counter()
         res.timing_info.start_timestamp = start_timestamp
-        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.wall_time = tock - tick
         res.timing_info.timer = timer
         self._active_config = self.config
 
