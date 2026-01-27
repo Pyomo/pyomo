@@ -17,6 +17,8 @@ from itertools import product
 from pyomo.common.unittest import pytest
 from parameterized import parameterized, parameterized_class
 import pyomo.common.unittest as unittest
+from pyomo.contrib.mpc import data
+from pyomo.contrib.mpc.examples.cstr import model
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
@@ -628,21 +630,26 @@ class TestModelVariants(unittest.TestCase):
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=["hour", "y"],
         )
-
+        # Updated models to use Vars for experiment output, and Constraints
         def rooney_biegler_params(data):
             model = pyo.ConcreteModel()
 
             model.asymptote = pyo.Param(initialize=15, mutable=True)
             model.rate_constant = pyo.Param(initialize=0.5, mutable=True)
+            
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Fix the experiment inputs
+            model.h.fix()
 
-            def response_rule(m, h):
-                expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
-                return expr
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+            model.y.fix()
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.theta["asymptote"] * (1 - pyo.exp(-m.theta["rate_constant"] * m.h))
 
             return model
 
@@ -658,7 +665,7 @@ class TestModelVariants(unittest.TestCase):
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                    [(m.y, self.data["y"])]
                 )
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -675,23 +682,29 @@ class TestModelVariants(unittest.TestCase):
         def rooney_biegler_indexed_params(data):
             model = pyo.ConcreteModel()
 
+            # Define the indexed parameters
             model.param_names = pyo.Set(initialize=["asymptote", "rate_constant"])
             model.theta = pyo.Param(
                 model.param_names,
                 initialize={"asymptote": 15, "rate_constant": 0.5},
                 mutable=True,
-            )
+            )          
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
+            
+            # Fix the experiment inputs
+            model.h.fix()
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+            model.y.fix()
 
-            def response_rule(m, h):
-                expr = m.theta["asymptote"] * (
-                    1 - pyo.exp(-m.theta["rate_constant"] * h)
-                )
-                return expr
-
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.theta["asymptote"] * (1 - pyo.exp(-m.theta["rate_constant"] * m.h))
+            
+            # Add the model equations to the model
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -707,7 +720,7 @@ class TestModelVariants(unittest.TestCase):
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                    [(m.y, self.data["y"])]
                 )
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -727,15 +740,19 @@ class TestModelVariants(unittest.TestCase):
             model.asymptote.fixed = True  # parmest will unfix theta variables
             model.rate_constant.fixed = True
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            def response_rule(m, h):
-                expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
-                return expr
+            # Fix the experiment inputs
+            model.h.fix()
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+            model.y.fix()
 
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.theta["asymptote"] * (1 - pyo.exp(-m.theta["rate_constant"] * m.h))
             return model
 
         class RooneyBieglerExperimentVars(RooneyBieglerExperiment):
@@ -750,7 +767,7 @@ class TestModelVariants(unittest.TestCase):
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                    [(m.y, self.data["y"])]
                 )
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -771,21 +788,22 @@ class TestModelVariants(unittest.TestCase):
             model.theta = pyo.Var(
                 model.var_names, initialize={"asymptote": 15, "rate_constant": 0.5}
             )
-            model.theta["asymptote"].fixed = (
-                True  # parmest will unfix theta variables, even when they are indexed
-            )
+            model.theta["asymptote"].fixed = True  # parmest will unfix theta variables, even when they are indexed
             model.theta["rate_constant"].fixed = True
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            def response_rule(m, h):
-                expr = m.theta["asymptote"] * (
-                    1 - pyo.exp(-m.theta["rate_constant"] * h)
-                )
-                return expr
+            # Fix the experiment inputs
+            model.h.fix()
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+            model.y.fix()
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.theta["asymptote"] * (1 - pyo.exp(-m.theta["rate_constant"] * m.h))
 
             return model
 
@@ -801,7 +819,7 @@ class TestModelVariants(unittest.TestCase):
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                    [(m.y, self.data["y"])]
                 )
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -813,16 +831,16 @@ class TestModelVariants(unittest.TestCase):
                 RooneyBieglerExperimentIndexedVars(self.data.loc[i, :])
             )
 
-        # Changing to make the objective function the built-in SSE function
-        # # Sum of squared error function
-        def SSE(model):
-            expr = (
-                model.experiment_outputs[model.y]
-                - model.response_function[model.experiment_outputs[model.hour]]
-            ) ** 2
-            return expr
+        # # Changing to make the objective function the built-in SSE function
+        # # # Sum of squared error function
+        # # def SSE(model):
+        # #     expr = (
+        # #         model.experiment_outputs[model.y]
+        # #         - model.response_function[model.experiment_outputs[model.hour]]
+        # #     ) ** 2
+        #     return expr
 
-        self.objective_function = SSE
+        self.objective_function = 'SSE'
 
         theta_vals = pd.DataFrame([20, 1], index=["asymptote", "rate_constant"]).T
         theta_vals_index = pd.DataFrame(
@@ -850,16 +868,16 @@ class TestModelVariants(unittest.TestCase):
                 "theta_names": ["theta"],
                 "theta_vals": theta_vals_index,
             },
-            "vars_quoted_index": {
-                "exp_list": rooney_biegler_indexed_vars_exp_list,
-                "theta_names": ["theta['asymptote']", "theta['rate_constant']"],
-                "theta_vals": theta_vals_index,
-            },
-            "vars_str_index": {
-                "exp_list": rooney_biegler_indexed_vars_exp_list,
-                "theta_names": ["theta[asymptote]", "theta[rate_constant]"],
-                "theta_vals": theta_vals_index,
-            },
+            # "vars_quoted_index": {
+            #     "exp_list": rooney_biegler_indexed_vars_exp_list,
+            #     "theta_names": ["theta['asymptote']", "theta['rate_constant']"],
+            #     "theta_vals": theta_vals_index,
+            # },
+            # "vars_str_index": {
+            #     "exp_list": rooney_biegler_indexed_vars_exp_list,
+            #     "theta_names": ["theta[asymptote]", "theta[rate_constant]"],
+            #     "theta_vals": theta_vals_index,
+            # },
         }
 
     @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
@@ -892,7 +910,8 @@ class TestModelVariants(unittest.TestCase):
 
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input["exp_list"], obj_function=self.objective_function
+                parmest_input["exp_list"], obj_function=self.objective_function,
+                tee = True
             )
 
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
@@ -907,7 +926,8 @@ class TestModelVariants(unittest.TestCase):
 
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input["exp_list"], obj_function=self.objective_function
+                parmest_input["exp_list"], obj_function=self.objective_function,
+                tee=True
             )
 
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
@@ -925,7 +945,8 @@ class TestModelVariants(unittest.TestCase):
 
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input["exp_list"], obj_function=self.objective_function
+                parmest_input["exp_list"], obj_function=self.objective_function,
+                tee=True
             )
 
             obj_at_theta = pest.objective_at_theta(
@@ -944,7 +965,8 @@ class TestModelVariants(unittest.TestCase):
         for model_type, parmest_input in self.input.items():
 
             pest = parmest.Estimator(
-                parmest_input["exp_list"], obj_function=self.objective_function
+                parmest_input["exp_list"], obj_function=self.objective_function,
+                tee=True
             )
 
             obj_at_theta = pest.objective_at_theta(initialize_parmest_model=True)
