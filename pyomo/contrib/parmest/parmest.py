@@ -980,7 +980,6 @@ class Estimator:
 
         return parmest_model
 
-    # @Reviewers: Is this needed? Calls create_parmest_model above.
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
         model = self._create_parmest_model(experiment_number)
         return model
