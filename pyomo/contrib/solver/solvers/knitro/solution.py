@@ -60,7 +60,9 @@ class SolutionLoader(SolutionLoaderBase):
         return self.get_vars(vars_to_load)
 
     def get_vars(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id: int | None = None
+        self,
+        vars_to_load: Sequence[VarData] | None = None,
+        solution_id: int | None = None,
     ) -> Mapping[VarData, float]:
         return self._provider.get_values(
             VarData,
@@ -71,7 +73,9 @@ class SolutionLoader(SolutionLoaderBase):
         )
 
     def get_reduced_costs(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id: int | None = None
+        self,
+        vars_to_load: Sequence[VarData] | None = None,
+        solution_id: int | None = None,
     ) -> Mapping[VarData, float]:
         return self._provider.get_values(
             VarData,
@@ -82,7 +86,9 @@ class SolutionLoader(SolutionLoaderBase):
         )
 
     def get_duals(
-        self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id: int | None = None
+        self,
+        cons_to_load: Sequence[ConstraintData] | None = None,
+        solution_id: int | None = None,
     ) -> Mapping[ConstraintData, float]:
         return self._provider.get_values(
             ConstraintData,

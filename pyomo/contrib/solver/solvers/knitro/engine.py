@@ -92,7 +92,7 @@ def api_set_param(param_type: int) -> Callable[..., None]:
 
 def api_get_values(
     item_type: type[ItemType], value_type: ValueType
- ) -> Callable[..., list[float] | None]:
+) -> Callable[..., list[float] | None]:
     if item_type is VarData:
         if value_type == ValueType.PRIMAL:
             return knitro.KN_get_var_primal_values
@@ -440,8 +440,6 @@ class Engine:
         for i, expr in self.nonlinear_map.items():
             self.register_callback(i, expr)
 
-    def register_callback(
-        self, i: int | None, expr: NonlinearExpressionData
-    ) -> None:
+    def register_callback(self, i: int | None, expr: NonlinearExpressionData) -> None:
         callback = build_callback_handler(expr, idx=i).expand()
         self.add_callback(i, expr, callback)
