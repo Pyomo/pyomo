@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import datetime
+import time
 import io
 import math
 import operator
@@ -276,6 +277,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tick = time.perf_counter()
         config = self.config(value=kwds, preserve_implicit=True)
         if not self.available():
             c = self.__class__
@@ -392,9 +394,9 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
         res.solver_version = self.version()
         res.solver_log = ostreams[0].getvalue()
 
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tock = time.perf_counter()
         res.timing_info.start_timestamp = start_timestamp
-        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.wall_time = tock - tick
         res.timing_info.timer = timer
         return res
 
