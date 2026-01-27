@@ -1030,7 +1030,7 @@ class Estimator:
 
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
-        
+
         # Otherwise, use all experiments in exp_list
         else:
             self.obj_probability_constant = len(self.exp_list)
@@ -1084,6 +1084,7 @@ class Estimator:
                 sum(block.Total_Cost_Objective for block in m.exp_scenarios.values())
                 / self.obj_probability_constant
             )
+
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
 
         return model
@@ -1168,7 +1169,7 @@ class Estimator:
                             theta_var.fix()
                         else:
                             theta_var.unfix()
-                            
+
         if self.diagnostic_mode:
             print("Parmest _Q_opt model with scenario blocks:")
             model.pprint()
@@ -1971,21 +1972,22 @@ class Estimator:
             # Clean names, ignore quotes, and compare sets
             clean_provided = [t.replace("'", "") for t in theta_names]
             clean_expected = [t.replace("'", "") for t in self.estimator_theta_names]
-            
+
             # If they do not match, raise error
             if set(clean_provided) != set(clean_expected):
-                raise ValueError(f"Provided theta_values columns do not match estimator_theta_names.")
-                
+                raise ValueError(
+                    f"Provided theta_values columns do not match estimator_theta_names."
+                )
+
             # Convert to list of dicts for parallel processing
             all_thetas = theta_values.to_dict('records')
 
         # Initialize task manager
         num_tasks = len(all_thetas) if all_thetas else 1
         task_mgr = utils.ParallelTaskManager(num_tasks)
-        
+
         # Use local theta values for each task if all_thetas is provided, else empty list
         local_thetas = task_mgr.global_to_local_data(all_thetas) if all_thetas else []
-
 
         # walk over the mesh, return objective function
         all_obj = list()
