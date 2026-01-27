@@ -220,8 +220,7 @@ class TestSolParser(unittest.TestCase):
         # - "objno <i> <exit_code>"
         n_cons = 2
         n_vars = 3
-        stream = io.StringIO(
-            f"""Solver message preamble
+        stream = io.StringIO(f"""Solver message preamble
 Options
 2
 1
@@ -235,8 +234,7 @@ Options
 10.0
 20.0
 30.0
-objno 0 100"""
-        )
+objno 0 100""")
         sol_data = parse_asl_sol_file(stream)
 
         self.assertEqual("Solver message preamble", sol_data.message)
@@ -252,8 +250,7 @@ objno 0 100"""
         self.assertEqual(None, sol_data.unparsed)
 
     def test_parse_vbtol(self):
-        stream = io.StringIO(
-            f"""Solver message preamble
+        stream = io.StringIO(f"""Solver message preamble
 Options
 2
 1
@@ -263,8 +260,7 @@ Options
 3
 0
 1.5
-objno 0 100"""
-        )
+objno 0 100""")
         sol_data = parse_asl_sol_file(stream)
 
         self.assertEqual("Solver message preamble", sol_data.message)
@@ -280,8 +276,7 @@ objno 0 100"""
         self.assertEqual(None, sol_data.unparsed)
 
     def test_multiline_message_and_unparsed(self):
-        stream = io.StringIO(
-            """CONOPT 3.17A: Optimal; objective 1
+        stream = io.StringIO("""CONOPT 3.17A: Optimal; objective 1
 4 iterations; evals: nf = 2, ng = 0, nc = 2, nJ = 0, nH = 0, nHv = 0
 
 Options
@@ -304,8 +299,7 @@ sstatus
 0 3
 extra data here
 and here
-"""
-        )
+""")
         sol_data = parse_asl_sol_file(stream)
 
         self.assertEqual(
@@ -325,8 +319,7 @@ and here
         self.assertEqual("extra data here\nand here\n", sol_data.unparsed)
 
     def test_suffix_table(self):
-        stream = io.StringIO(
-            """CONOPT 3.17A: Optimal; objective 1
+        stream = io.StringIO("""CONOPT 3.17A: Optimal; objective 1
 4 iterations; evals: nf = 2, ng = 0, nc = 2, nJ = 0, nH = 0, nHv = 0
 
 Options
@@ -357,8 +350,7 @@ suffix 3 1 8 0 0
 sstatus
 0 4
 
-"""
-        )
+""")
         sol_data = parse_asl_sol_file(stream)
 
         self.assertEqual(
@@ -406,8 +398,7 @@ sstatus
             parse_asl_sol_file(stream)
 
     def test_error_objno_not_found(self):
-        stream = io.StringIO(
-            f"""Solver message preamble
+        stream = io.StringIO(f"""Solver message preamble
 Options
 2
 1
@@ -417,8 +408,7 @@ Options
 3
 0
 1.5
-objno 0"""
-        )
+objno 0""")
 
         with self.assertRaisesRegex(
             SolverError,
@@ -427,8 +417,7 @@ objno 0"""
             sol_data = parse_asl_sol_file(stream)
 
     def test_error_objno_bad_format(self):
-        stream = io.StringIO(
-            f"""Solver message preamble
+        stream = io.StringIO(f"""Solver message preamble
 Options
 2
 1
@@ -437,8 +426,7 @@ Options
 0
 3
 0
-objno 0"""
-        )
+objno 0""")
 
         with self.assertRaisesRegex(
             SolverError,

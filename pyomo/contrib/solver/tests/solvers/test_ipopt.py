@@ -1386,16 +1386,14 @@ Total number of iteration records parsed 4 does not match the number of iteratio
             dname = tempfile.mkdtemp()
             exe = os.path.join(dname, 'mock')
             with open(exe, 'w') as F:
-                F.write(
-                    f"""#!{sys.executable}
+                F.write(f"""#!{sys.executable}
 import sys
 if sys.argv[1] == '--version':
     print('ipopt 1.2.3 ASL')
 else:
     print('\\n'.join(sys.argv[1:]))
     sys.exit(1)
-"""
-                )
+""")
             os.chmod(exe, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
             opt = ipopt.Ipopt(executable=exe)
 
