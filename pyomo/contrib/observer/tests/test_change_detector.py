@@ -28,7 +28,6 @@ from pyomo.contrib.observer.model_observer import (
 from pyomo.common.collections import DefaultComponentMap, ComponentMap
 from pyomo.common.errors import PyomoException
 
-
 logger = logging.getLogger(__name__)
 
 

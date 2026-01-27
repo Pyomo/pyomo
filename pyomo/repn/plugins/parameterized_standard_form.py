@@ -97,8 +97,8 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
 
 class _SparseMatrixBase:
     def __init__(self, matrix_data, shape):
-        (data, indices, indptr) = matrix_data
-        (nrows, ncols) = shape
+        data, indices, indptr = matrix_data
+        nrows, ncols = shape
 
         self.data = np.array(data)
         self.indices = np.array(indices, dtype=int)
