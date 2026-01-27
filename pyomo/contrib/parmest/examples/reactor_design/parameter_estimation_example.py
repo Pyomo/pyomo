@@ -37,8 +37,10 @@ def main():
 
     # Parameter estimation with covariance
     obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=19)
-    print(obj)
+    print("Least squares objective value:", obj)
+    print("Estimated parameters (theta):\n")
     print(theta)
+    print("Covariance matrix:\n")
     print(cov)
 
 
