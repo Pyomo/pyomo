@@ -1987,7 +1987,10 @@ class Estimator:
         task_mgr = utils.ParallelTaskManager(num_tasks)
 
         # Use local theta values for each task if all_thetas is provided, else empty list
-        local_thetas = task_mgr.global_to_local_data(all_thetas) if all_thetas else []
+        if all_thetas:
+            local_thetas = task_mgr.global_to_local_data(all_thetas)
+        elif initialize_parmest_model:
+            local_thetas = []
 
         # walk over the mesh, return objective function
         all_obj = list()
