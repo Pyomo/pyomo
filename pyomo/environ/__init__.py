@@ -54,7 +54,6 @@ _packages = [
     'pyomo.contrib.simplification',
     'pyomo.contrib.solver',
     'pyomo.contrib.trustregion',
-    'pyomo.devel.example',
 ]
 
 
