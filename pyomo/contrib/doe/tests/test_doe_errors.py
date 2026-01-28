@@ -138,6 +138,7 @@ class TestDoEErrors(unittest.TestCase):
 
             doe_obj = DesignOfExperiments(**DoE_args)
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_check_no_experiment_outputs(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
