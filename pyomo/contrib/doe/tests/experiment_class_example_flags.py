@@ -13,6 +13,9 @@ import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
 
 from pyomo.contrib.parmest.experiment import Experiment
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
 
 import itertools
 
@@ -248,15 +251,18 @@ class FullReactorExperiment(ReactorExperiment):
         )
 
 
-class FullReactorExperimentBad(ReactorExperiment):
-    def label_experiment(self, flag=0):
-        m = self.model
+class RooneyBieglerExperimentBad(RooneyBieglerExperiment):
+    """
+    A bad version of RooneyBieglerExperiment with conflicting constraints
+    for testing error handling.
+    """
 
-        self.label_experiment_impl(
-            [[m.t_control], [m.t_control], [m.t_control]], flag=flag
-        )
+    def get_labeled_model(self):
+        m = super().get_labeled_model()
 
-        m.bad_con_1 = pyo.Constraint(expr=m.CA[0] >= 1.0)
-        m.bad_con_2 = pyo.Constraint(expr=m.CA[0] <= 0.0)
+        # Add conflicting constraints that make the model infeasible
+        # The hour variable should be >= 10 and <= 0 (impossible)
+        m.bad_con_1 = pyo.Constraint(expr=m.hour >= 10.0)
+        m.bad_con_2 = pyo.Constraint(expr=m.hour <= 0.0)
 
         return m
