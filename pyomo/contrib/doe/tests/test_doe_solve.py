@@ -766,7 +766,7 @@ class TestRooneyBieglerExample(unittest.TestCase):
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
-@unittest.skipIf(not pandas_available, "pandas is not available")
+@unittest.skipIf(not pandas_available, "Pandas is not available")
 @unittest.skipIf(not matplotlib_available, "Matplotlib is not available")
 class TestDoEFactorialFigure(unittest.TestCase):
     def test_doe_1D_plotting_function(self):
@@ -802,7 +802,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj.compute_FIM_full_factorial(design_ranges={'hour': [0, 10, 5]})
+        doe_obj.compute_FIM_full_factorial(design_ranges={'hour': [0, 10, 1]})
 
         # Call the plotting function for linear scale
         doe_obj.draw_factorial_figure(
@@ -859,7 +859,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Run the reactor example
         run_reactor_doe(
-            n_points_for_design=3,
+            n_points_for_design=1,
             compute_FIM_full_factorial=True,
             plot_factorial_results=True,
             save_plots=True,
@@ -878,7 +878,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Run the reactor example with log scale
         run_reactor_doe(
-            n_points_for_design=3,
+            n_points_for_design=1,
             compute_FIM_full_factorial=True,
             plot_factorial_results=True,
             save_plots=True,

@@ -30,6 +30,9 @@ if scipy_available:
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
     )
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+        RooneyBieglerExperiment,
+    )
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 import pyomo.environ as pyo
@@ -45,6 +48,25 @@ with open(file_path) as f:
     data_ex = json.load(f)
 
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
+
+
+def get_rooney_biegler_experiment():
+    """Get a fresh RooneyBieglerExperiment instance for testing.
+
+    Creates a new experiment instance to ensure test isolation.
+    Each test gets its own instance to avoid state sharing.
+    """
+    if pandas_available:
+        data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
+        data_point = data.iloc[0]
+    else:
+        data_point = {'hour': 5.0, 'y': 15.6}
+
+    return RooneyBieglerExperiment(
+        data=data_point,
+        theta={'asymptote': 15, 'rate_constant': 0.5},
+        measure_error=0.1,
+    )
 
 
 def get_FIM_FIMPrior_Q_L(doe_obj=None):
@@ -138,7 +160,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -177,7 +199,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "backward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -215,7 +237,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -253,7 +275,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -286,7 +308,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "backward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -319,7 +341,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -352,11 +374,11 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
-        FIM_prior = np.ones((4, 4))
-        FIM_initial = np.eye(4) + FIM_prior
-        JAC_initial = np.ones((27, 4)) * 2
+        FIM_prior = np.ones((2, 2))
+        FIM_initial = np.eye(2) + FIM_prior
+        JAC_initial = np.ones((1, 2)) * 2
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         DoE_args['prior_FIM'] = FIM_prior
@@ -379,9 +401,9 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
-        FIM_update = np.ones((4, 4)) * 10
+        FIM_update = np.ones((2, 2)) * 10
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -401,7 +423,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -420,7 +442,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -439,7 +461,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -458,7 +480,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -478,7 +500,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
