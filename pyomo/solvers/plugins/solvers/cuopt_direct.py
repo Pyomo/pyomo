@@ -11,20 +11,15 @@
 
 import logging
 import re
-import sys
+import time
 
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np
-from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective
-from pyomo.common.errors import ApplicationError
-from pyomo.common.tempfiles import TempfileManager
-from pyomo.common.tee import capture_output
+from pyomo.core.base import Suffix, Var, Constraint, Objective
 from pyomo.core.expr.numvalue import is_fixed
-from pyomo.core.expr.numvalue import value
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
-from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
@@ -34,7 +29,6 @@ from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
-import time
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +47,7 @@ cuopt, cuopt_available = attempt_import("cuopt", callback=_get_cuopt_version)
 class CUOPTDirect(DirectSolver):
     def __init__(self, **kwds):
         kwds["type"] = "cuoptdirect"
-        super(CUOPTDirect, self).__init__(**kwds)
+        super().__init__(**kwds)
         self._python_api_exists = cuopt_available
         # Note: Undefined capabilities default to None
         self._capabilities.linear = True
@@ -69,6 +63,7 @@ class CUOPTDirect(DirectSolver):
         log_file = ""
         if self._log_file:
             log_file = self._log_file
+        logger.debug("Applying cuOpt solver")
         t0 = time.time()
         settings = cuopt.linear_programming.solver_settings.SolverSettings()
         settings.set_parameter("log_file", log_file)
@@ -79,6 +74,7 @@ class CUOPTDirect(DirectSolver):
         )
         t1 = time.time()
         self._wallclock_time = t1 - t0
+        logger.debug("cuOpt solver completed in %.4f seconds", self._wallclock_time)
         return Bunch(rc=None, log=None)
 
     def _add_constraints(self, constraints):
@@ -139,6 +135,7 @@ class CUOPTDirect(DirectSolver):
             elif v.is_continuous():
                 v_type.append("C")
             else:
+                logger.error("Unallowable domain for variable %s", v.name)
                 raise ValueError(f"Unallowable domain for variable {v.name}")
             v_lb.append(lb if lb is not None else -np.inf)
             v_ub.append(ub if ub is not None else np.inf)
@@ -175,6 +172,7 @@ class CUOPTDirect(DirectSolver):
                 "Have you installed the Python "
                 "SDK for CUOPT?\n\n\t" + "Error message: {0}".format(e)
             )
+            logger.error(msg)
             raise Exception(msg)
         self._add_block(model)
 
@@ -299,10 +297,16 @@ class CUOPTDirect(DirectSolver):
         primal_solution = solution.get_primal_solution().tolist()
         reduced_costs = None
         dual_solution = None
-        if extract_reduced_costs and not is_mip:
-            reduced_costs = solution.get_reduced_cost()
-        if extract_duals and not is_mip:
-            dual_solution = solution.get_dual_solution()
+        if is_mip:
+            if extract_reduced_costs:
+                logger.warning("Cannot get reduced costs for MIP.")
+            if extract_duals:
+                logger.warning("Cannot get duals for MIP.")
+        else:
+            if extract_reduced_costs:
+                reduced_costs = solution.get_reduced_cost()
+            if extract_duals:
+                dual_solution = solution.get_dual_solution()
 
         if self._save_results:
             soln_variables = soln.variable
