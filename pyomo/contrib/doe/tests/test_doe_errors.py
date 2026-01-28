@@ -45,11 +45,8 @@ def get_rooney_biegler_experiment():
     Creates a new experiment instance to ensure test isolation.
     Each test gets its own instance to avoid state sharing.
     """
-    if pandas_available:
-        data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
-        data_point = data.iloc[0]
-    else:
-        data_point = {'hour': 5.0, 'y': 15.6}
+    data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
+    data_point = data.iloc[0]
 
     return RooneyBieglerExperiment(
         data=data_point,
@@ -67,11 +64,8 @@ def get_rooney_biegler_experiment_flag(flag=0):
     Args:
         flag: Model completeness flag (0=full, 1-4=missing specific suffix)
     """
-    if pandas_available:
-        data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
-        data_point = data.iloc[0]
-    else:
-        data_point = {'hour': 5.0, 'y': 15.6}
+    data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
+    data_point = data.iloc[0]
 
     return RooneyBieglerExperimentFlag(
         data=data_point,
@@ -109,6 +103,7 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEErrors(unittest.TestCase):
     def test_experiment_none_error(self):
         fd_method = "central"
@@ -138,7 +133,6 @@ class TestDoEErrors(unittest.TestCase):
 
             doe_obj = DesignOfExperiments(**DoE_args)
 
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_check_no_experiment_outputs(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -156,7 +150,6 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_check_no_measurement_error(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -174,7 +167,6 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_check_no_experiment_inputs(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -192,7 +184,6 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_check_no_unknown_parameters(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -374,7 +365,6 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.create_doe_model()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_grid_search_des_range_inputs(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -396,7 +386,6 @@ class TestDoEErrors(unittest.TestCase):
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_premature_figure_drawing(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -415,7 +404,6 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_no_des_var_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -440,7 +428,6 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure(results=doe_obj.fim_factorial_results)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_no_sens_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -463,7 +450,6 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_no_fixed_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -486,7 +472,6 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure(sensitivity_design_variables={"dummy": "var"})
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_bad_fixed_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -513,7 +498,6 @@ class TestDoEErrors(unittest.TestCase):
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_bad_sens_names(self):
         fd_method = "central"
         obj_used = "determinant"

@@ -56,11 +56,8 @@ def get_rooney_biegler_experiment():
     Creates a new experiment instance to ensure test isolation.
     Each test gets its own instance to avoid state sharing.
     """
-    if pandas_available:
-        data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
-        data_point = data.iloc[0]
-    else:
-        data_point = {'hour': 5.0, 'y': 15.6}
+    data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
+    data_point = data.iloc[0]
 
     return RooneyBieglerExperiment(
         data=data_point,
@@ -155,8 +152,9 @@ def get_standard_args(experiment, fd_method, obj_used):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
-class TestReactorExampleBuild(unittest.TestCase):
-    def test_reactor_fd_central_check_fd_eqns(self):
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestDoeBuild(unittest.TestCase):
+    def test_rooney_biegler_fd_central_check_fd_eqns(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -195,7 +193,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
             self.assertAlmostEqual(param_val, param_val_from_step)
 
-    def test_reactor_fd_backward_check_fd_eqns(self):
+    def test_rooney_biegler_fd_backward_check_fd_eqns(self):
         fd_method = "backward"
         obj_used = "pseudo_trace"
 
@@ -233,7 +231,7 @@ class TestReactorExampleBuild(unittest.TestCase):
                 other_param_val = pyo.value(k)
                 self.assertAlmostEqual(other_param_val, v)
 
-    def test_reactor_fd_forward_check_fd_eqns(self):
+    def test_rooney_biegler_fd_forward_check_fd_eqns(self):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
@@ -271,7 +269,7 @@ class TestReactorExampleBuild(unittest.TestCase):
                 other_param_val = pyo.value(k)
                 self.assertAlmostEqual(other_param_val, v)
 
-    def test_reactor_fd_central_design_fixing(self):
+    def test_rooney_biegler_fd_central_design_fixing(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -304,7 +302,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
-    def test_reactor_fd_backward_design_fixing(self):
+    def test_rooney_biegler_fd_backward_design_fixing(self):
         fd_method = "backward"
         obj_used = "pseudo_trace"
 
@@ -337,7 +335,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
-    def test_reactor_fd_forward_design_fixing(self):
+    def test_rooney_biegler_fd_forward_design_fixing(self):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
@@ -370,7 +368,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
-    def test_reactor_check_user_initialization(self):
+    def test_rooney_biegler_check_user_initialization(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -513,6 +511,8 @@ class TestReactorExampleBuild(unittest.TestCase):
                 doe_obj.model.find_component("scenario_blocks[" + str(i) + "]")
             )
 
+
+class TestReactorExample(unittest.TestCase):
     def test_reactor_update_suffix_items(self):
         """Test the reactor example with updating suffix items."""
         from pyomo.contrib.doe.examples.update_suffix_doe_example import main
@@ -527,6 +527,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEObjectiveOptions(unittest.TestCase):
     def test_trace_constraints(self):
         fd_method = "central"

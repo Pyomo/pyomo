@@ -69,12 +69,8 @@ def get_rooney_biegler_data():
     # Create a simple data point for Rooney-Biegler model
     # This must be a pandas Series with 'hour' and 'y' columns
     # Use data from the tested Rooney-Biegler dataset
-    if pandas_available:
-        data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
-        return data.iloc[0]
-    else:
-        # Fallback if pandas not available (though tests require it anyway)
-        return {'hour': 5.0, 'y': 15.6}
+    data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
+    return data.iloc[0]
 
 
 def get_rooney_biegler_experiment():
@@ -171,8 +167,9 @@ def get_standard_args(experiment, fd_method, obj_used):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
-class TestReactorExampleSolving(unittest.TestCase):
-    def test_reactor_fd_central_solve(self):
+class TestRooneyBieglerExampleSolving(unittest.TestCase):
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_rooney_biegler_fd_central_solve(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -196,17 +193,15 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_fd_forward_solve(self):
         fd_method = "forward"
         obj_used = "zero"
 
         # Use RooneyBiegler for algorithm validation (faster)
         # Use hour=7 for better FIM conditioning with zero objective
-        data_point = (
-            pd.Series({'hour': 7.0, 'y': 19.8})
-            if pandas_available
-            else {'hour': 7.0, 'y': 19.8}
-        )
+        data_point = pd.DataFrame({'hour': [7.0], 'y': [19.8]}).iloc[0]
+
         experiment = RooneyBieglerExperiment(
             data=data_point,
             theta={'asymptote': 15, 'rate_constant': 0.5},
@@ -235,6 +230,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Note: When using prior_FIM, the relationship FIM = Q.T @ sigma_inv @ Q + prior_FIM
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_fd_backward_solve(self):
         fd_method = "backward"
         obj_used = "pseudo_trace"
@@ -258,11 +254,13 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_obj_det_solve(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         DoE_args["scale_nominal_param_value"] = (
@@ -281,6 +279,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_obj_cholesky_solve(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -346,6 +345,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with central finite differences
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_compute_FIM_seq_centr(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -361,6 +361,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with forward finite differences
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_compute_FIM_seq_forward(self):
         fd_method = "forward"
         obj_used = "pseudo_trace"
@@ -395,6 +396,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with backward finite differences
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_compute_FIM_seq_backward(self):
         fd_method = "backward"
         obj_used = "pseudo_trace"
@@ -408,6 +410,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.compute_FIM(method="sequential")
 
+    # TODO: Refactor and use RooneyBiegler experiment for consistency
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_grid_search(self):
         fd_method = "central"
@@ -482,6 +485,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Compare scaled and rescaled values
         self.assertTrue(np.all(np.isclose(FIM2, resc_FIM)))
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_solve_bad_model(self):
         fd_method = "central"
         obj_used = "determinant"
