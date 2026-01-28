@@ -410,7 +410,6 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         doe_obj.compute_FIM(method="sequential")
 
-    # TODO: Refactor and use RooneyBiegler experiment for consistency
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_grid_search(self):
         fd_method = "central"
