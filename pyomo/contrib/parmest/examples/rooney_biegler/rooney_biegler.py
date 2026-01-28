@@ -60,7 +60,12 @@ class RooneyBieglerExperiment(Experiment):
 
     def create_model(self):
         # rooney_biegler_model expects a dataframe
-        data_df = self.data.to_frame().transpose()
+        if hasattr(self.data, 'to_frame'):
+            # self.data is a pandas Series
+            data_df = self.data.to_frame().transpose()
+        else:
+            # self.data is a dict
+            data_df = pd.DataFrame([self.data])
         self.model = rooney_biegler_model(data_df, theta=self.theta)
 
     def label_model(self):
