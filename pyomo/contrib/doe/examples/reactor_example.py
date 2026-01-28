@@ -25,6 +25,8 @@ def run_reactor_doe(
     compute_FIM_full_factorial=True,
     plot_factorial_results=True,
     save_plots=True,
+    figure_file_name="example_reactor_compute_FIM",
+    log_scale=False,
     run_optimal_doe=True,
 ):
     """
@@ -40,6 +42,8 @@ def run_reactor_doe(
         whether to plot the results of the full factorial design, by default True
     save_plots : bool, optional
         whether to save draw_factorial_figure plots, by default True
+    figure_file_name : str, optional
+        file name to save the factorial figure, by default "example_reactor_compute_FIM"
     run_optimal_doe : bool, optional
         whether to run the optimal DoE, by default True
     """
@@ -101,7 +105,7 @@ def run_reactor_doe(
         )
     if plot_factorial_results:
         if save_plots:
-            figure_file_name = "example_reactor_compute_FIM"
+            figure_file_name = figure_file_name
         else:
             figure_file_name = None
 
@@ -122,7 +126,7 @@ def run_reactor_doe(
             xlabel_text="Concentration of A (M)",
             ylabel_text="Initial Temperature (K)",
             figure_file_name=figure_file_name,
-            log_scale=False,
+            log_scale=log_scale,
         )
 
     ###########################
