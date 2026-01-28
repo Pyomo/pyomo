@@ -177,11 +177,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         obj_used = "pseudo_trace"
 
         # Use RooneyBiegler for algorithm validation (faster)
-        experiment = RooneyBieglerExperiment(
-            data=get_rooney_biegler_data(),
-            theta={'asymptote': 15, 'rate_constant': 0.5},
-            measure_error=0.1,
-        )
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -244,11 +240,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         obj_used = "pseudo_trace"
 
         # Use RooneyBiegler for algorithm validation (faster)
-        experiment = RooneyBieglerExperiment(
-            data=get_rooney_biegler_data(),
-            theta={'asymptote': 15, 'rate_constant': 0.5},
-            measure_error=0.1,
-        )
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
