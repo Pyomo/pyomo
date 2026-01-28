@@ -155,6 +155,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_check_no_measurement_error(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -172,6 +173,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_check_no_experiment_inputs(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -189,6 +191,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_check_no_unknown_parameters(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
