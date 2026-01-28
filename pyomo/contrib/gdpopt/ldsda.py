@@ -67,7 +67,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
     constraints, as well as logical conditions.
     """
 
-    CONFIG = _GDPoptAlgorithm.CONFIG()
+    CONFIG = _GDPoptAlgorithm.CONFIG() # CONFIG = ConfigBlock("GDPopt")
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
     _add_nlp_solve_configs(
@@ -334,7 +334,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             return directions
         elif config.direction_norm == 'Linf':
             directions = list(it.product([-1, 0, 1], repeat=dimension))
-            directions.remove((0,) * dimension)
+            directions.remove((0,) * dimension) # Remove the zero direction
             return directions
 
     def _check_valid_neighbor(self, neighbor):
@@ -432,11 +432,14 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         while primal_improved:
             next_point = tuple(map(sum, zip(self.current_point, self.best_direction)))
             if self._check_valid_neighbor(next_point):
-                primal_improved = self._solve_GDP_subproblem(
+                # Modification: Add ", _" to decode the tuple, only get the first boolean value
+                primal_improved, _ = self._solve_GDP_subproblem(
                     next_point, 'Line search', config
                 )
                 if primal_improved:
                     self.current_point = next_point
+                else:
+                    break
             else:
                 break
 
