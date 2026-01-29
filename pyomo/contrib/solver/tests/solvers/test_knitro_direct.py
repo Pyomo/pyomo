@@ -45,6 +45,96 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
+    def test_results_extra_info_mip(self):
+        """Test that MIP-specific extra info is populated for MIP problems."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.Integers, bounds=(0, 10))
+        m.y = pyo.Var(domain=pyo.Integers, bounds=(0, 10))
+        m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
+        m.c1 = pyo.Constraint(expr=2 * m.x + m.y <= 15)
+        m.c2 = pyo.Constraint(expr=m.x + 2 * m.y <= 15)
+
+        results = opt.solve(m)
+
+        # Check that MIP-specific fields are populated
+        self.assertIsNotNone(results.extra_info.mip_number_nodes)
+        self.assertIsNotNone(results.extra_info.mip_abs_gap)
+        self.assertIsNotNone(results.extra_info.mip_rel_gap)
+        self.assertIsNotNone(results.extra_info.mip_number_solves)
+
+        # Check that MIP-specific fields are of correct type
+        self.assertIsInstance(results.extra_info.mip_number_nodes, int)
+        self.assertIsInstance(results.extra_info.mip_abs_gap, float)
+        self.assertIsInstance(results.extra_info.mip_rel_gap, float)
+        self.assertIsInstance(results.extra_info.mip_number_solves, int)
+
+        # Check that non-MIP field does not exist
+        self.assertFalse(hasattr(results.extra_info, 'number_iters'))
+
+    def test_results_extra_info_no_mip(self):
+        """Test that iteration info is populated for non-MIP problems."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2, sense=pyo.minimize
+        )
+
+        results = opt.solve(m)
+
+        # Check that num_iters is populated for non-MIP
+        self.assertIsNotNone(results.extra_info.number_iters)
+        self.assertIsInstance(results.extra_info.number_iters, int)
+        self.assertGreater(results.extra_info.number_iters, 0)
+
+        # Check that MIP-specific fields do not exist
+        self.assertFalse(hasattr(results.extra_info, 'mip_number_nodes'))
+        self.assertFalse(hasattr(results.extra_info, 'mip_abs_gap'))
+        self.assertFalse(hasattr(results.extra_info, 'mip_rel_gap'))
+        self.assertFalse(hasattr(results.extra_info, 'mip_number_solves'))
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+class TestKnitroSolverObjectiveBound(unittest.TestCase):
+    def test_objective_bound_mip(self):
+        """Test that objective bound is retrieved for MIP problems."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.Integers, bounds=(0, 10))
+        m.y = pyo.Var(domain=pyo.Integers, bounds=(0, 10))
+        m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
+        m.c1 = pyo.Constraint(expr=2 * m.x + m.y <= 15)
+        m.c2 = pyo.Constraint(expr=m.x + 2 * m.y <= 15)
+
+        results = opt.solve(m)
+
+        # Check that objective_bound is populated
+        self.assertIsNotNone(results.objective_bound)
+        self.assertIsInstance(results.objective_bound, float)
+
+        # For maximization, bound should be >= incumbent objective
+        self.assertGreaterEqual(results.objective_bound, results.incumbent_objective)
+
+    def test_objective_bound_no_mip(self):
+        """Test that objective bound is not set for non-MIP problems."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2, sense=pyo.minimize
+        )
+
+        results = opt.solve(m)
+
+        # Check that objective_bound is None for non-MIP
+        self.assertIsNone(results.objective_bound)
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroDirectSolverInterface(unittest.TestCase):
     def test_class_member_list(self):
         opt = KnitroDirectSolver()
