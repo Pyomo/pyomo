@@ -12,7 +12,8 @@ from pyomo.environ import SolverFactory, value, Var, Constraint, TransformationF
 from pyomo.gdp import Disjunct
 import pyomo.common.unittest as unittest
 from pyomo.contrib.gdpopt.tests.four_stage_dynamic_model import build_model
-
+from unittest.mock import MagicMock
+from pyomo.contrib.gdpopt.ldsda import GDP_LDSDA_Solver
 
 class TestGDPoptLDSDA(unittest.TestCase):
     """Real unit tests for GDPopt"""
@@ -55,6 +56,41 @@ class TestGDPoptLDSDA(unittest.TestCase):
                 time_limit=100,
             )
             self.assertAlmostEqual(value(model.obj), -23.305325, places=4)
+    
+class TestLDSDAUnit(unittest.TestCase):
+    def test_line_search_tuple_unpacking(self):
+        """
+        Test that line_search correctly unpacks the (bool, float) tuple
+        returned by _solve_GDP_subproblem.
+        """
+        # 1. Instantiate the solver class directly
+        solver = GDP_LDSDA_Solver()
+
+        # 2. Set up the fake internal state required for line_search
+        solver.current_point = (0, 0)
+        solver.best_direction = (1, 1)
+
+        # 3. Mock the internal methods
+        # check_valid_neighbor: Always say the neighbor is valid
+        solver._check_valid_neighbor = MagicMock(return_value=True)
+
+        # solve_GDP_subproblem: SIMULATE THE RETURN VALUES
+        # Call 1: Returns (True, 10.0) -> Improvement found. Loop should continue.
+        # Call 2: Returns (False, 10.0) -> No improvement. Loop SHOULD break.
+        # If your fix works, the loop breaks here. If broken, it loops infinitely or crashes.
+        solver._solve_GDP_subproblem = MagicMock(side_effect=[(True, 10.0), (False, 10.0)])
+
+        # 4. Run the method
+        config = MagicMock()
+        solver.line_search(config)
+
+        # 5. Verify results
+        # The solver should have moved exactly ONCE (from 0,0 to 1,1)
+        self.assertEqual(solver.current_point, (1, 1))
+
+        # The solver should have attempted to solve exactly TWICE
+        # (Once for the success, once for the failure that stops the loop)
+        self.assertEqual(solver._solve_GDP_subproblem.call_count, 2)
 
 
 if __name__ == '__main__':

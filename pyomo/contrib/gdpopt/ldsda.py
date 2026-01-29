@@ -67,7 +67,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
     constraints, as well as logical conditions.
     """
 
-    CONFIG = _GDPoptAlgorithm.CONFIG() # CONFIG = ConfigBlock("GDPopt")
+    CONFIG = _GDPoptAlgorithm.CONFIG()  # CONFIG = ConfigBlock("GDPopt")
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
     _add_nlp_solve_configs(
@@ -84,12 +84,15 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         return super().solve(model, **kwds)
 
     def _log_citation(self, config):
-        config.logger.info("\n" + """- LDSDA algorithm:
+        config.logger.info(
+            "\n"
+            + """- LDSDA algorithm:
         Bernal DE, Ovalle D, Liñán DA, Ricardez-Sandoval LA, Gómez JM, Grossmann IE.
         Process Superstructure Optimization through Discrete Steepest Descent Optimization: a GDP Analysis and Applications in Process Intensification.
         Computer Aided Chemical Engineering 2022 Jan 1 (Vol. 49, pp. 1279-1284). Elsevier.
         https://doi.org/10.1016/B978-0-323-85159-6.50213-X
-        """.strip())
+        """.strip()
+        )
 
     def _solve_gdp(self, model, config):
         """Solve the GDP model.
@@ -334,7 +337,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             return directions
         elif config.direction_norm == 'Linf':
             directions = list(it.product([-1, 0, 1], repeat=dimension))
-            directions.remove((0,) * dimension) # Remove the zero direction
+            directions.remove((0,) * dimension)  # Remove the zero direction
             return directions
 
     def _check_valid_neighbor(self, neighbor):
