@@ -106,7 +106,7 @@ class RooneyBieglerExperiment(Experiment):
 
 
 def run_rooney_biegler_multi_experiment_doe(
-    experiment_list, objective_option="determinant", tee=False
+    experiment_list, objective_option="determinant", prior_FIM=None, tee=False
 ):
     """
     Test multi-experiment optimization with the Rooney-Biegler example.
@@ -117,6 +117,8 @@ def run_rooney_biegler_multi_experiment_doe(
         List of RooneyBieglerExperiment objects to optimize simultaneously
     objective_option : str, optional
         Objective function option ('determinant', 'trace', or 'pseudo_trace'), by default 'determinant'
+    prior_FIM : np.ndarray, optional
+        Prior Fisher Information Matrix, by default None
     tee : bool, optional
         Whether to show solver output, by default False
 
@@ -139,7 +141,7 @@ def run_rooney_biegler_multi_experiment_doe(
     doe_obj = DesignOfExperiments(
         experiment_list=experiment_list,
         objective_option=objective_option,
-        prior_FIM=None,
+        prior_FIM=prior_FIM,
         tee=tee,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
@@ -222,6 +224,10 @@ if __name__ == "__main__":
     # Dictionary to store all results
     all_results = {}
 
+    # Use no prior FIM for this simple example
+    # Using prior from existing data can cause numerical issues
+    p_FIM = None
+
     for obj_option in objective_options:
         print(f"\n\n{'#'*70}")
         print(f"# Running with objective: {obj_option}")
@@ -243,7 +249,10 @@ if __name__ == "__main__":
 
         # Run multi-experiment optimization
         doe_obj = run_rooney_biegler_multi_experiment_doe(
-            experiment_list=experiment_list, objective_option=obj_option, tee=False
+            experiment_list=experiment_list,
+            objective_option=obj_option,
+            prior_FIM=p_FIM,
+            tee=False,
         )
 
         # Extract and save results

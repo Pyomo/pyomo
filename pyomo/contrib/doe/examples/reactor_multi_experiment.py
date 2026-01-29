@@ -117,7 +117,7 @@ def run_reactor_multi_experiment_doe(experiment_list, tee=False):
         print(f"  log10 A-opt: {scenario['log10 A-opt']:.4f}")
         print(f"  log10 D-opt: {scenario['log10 D-opt']:.4f}")
         print(f"  log10 E-opt: {scenario['log10 E-opt']:.4f}")
-        print(f"  log10 ME-opt: {scenario['log10 ME-opt']:.4f}")
+        print(f"  log10 ME-opt: {scenario['FIM Condition Number']:.4f}")
 
         # Print each experiment design
         for exp_idx, exp in enumerate(scenario['Experiments']):

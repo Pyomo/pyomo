@@ -5,18 +5,18 @@
   "n_scenarios": 1,
   "n_experiments": 2,
   "timing": {
-    "build_time": 0.1589681250002286,
-    "initialization_time": 0.015661458000067796,
-    "solve_time": 0.017739999999776046,
-    "total_time": 0.19236958300007245
+    "build_time": 0.17628366700046172,
+    "initialization_time": 0.017097916999773588,
+    "solve_time": 0.020115875000556116,
+    "total_time": 0.21349745900079142
   },
   "scenarios": [
     {
       "scenario_idx": 0,
-      "log10_A_opt": 7.104925730502645,
+      "log10_A_opt": 7.104925699773209,
       "log10_D_opt": -2.7168180445999597,
       "log10_E_opt": -7.1049256998942205,
-      "FIM_condition_number": 311195521964.604,
+      "FIM_condition_number": 311195162053.6299,
       "experiments": [
         {
           "experiment_idx": 0,

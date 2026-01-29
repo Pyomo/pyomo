@@ -20,6 +20,7 @@ from pyomo.common.dependencies import pandas as pd, numpy as np
 import time
 import json
 from multiprocessing import Pool, cpu_count
+from pathlib import Path
 
 
 def rooney_biegler_model(data, theta=None):
@@ -97,85 +98,95 @@ class RooneyBieglerExperiment(Experiment):
         return self.model
 
 
-def compute_fim_pair(args):
+def compute_fim_combination(args):
     """
-    Compute FIM for a single (i, j) pair.
+    Compute FIM for a combination of experiments.
     This function is designed to be called in parallel.
 
     Parameters
     ----------
     args : tuple
-        (i, j, hour_i, hour_j, theta, measurement_error)
+        (indices, hours, theta, measurement_error)
+        where indices is a tuple of experiment indices,
+        and hours is a tuple of corresponding hour values
 
     Returns
     -------
     dict
-        Results dictionary containing hour1, hour2, FIM_2, and log10_det
+        Results dictionary containing hour values, indices, FIM, and log10_det
     """
-    i, j, hour_i, hour_j, theta, measurement_error = args
+    indices, hours, theta, measurement_error = args
 
-    # Create data series for each hour value
-    data_i = pd.Series({'hour': hour_i, 'y': 10.0})  # y value doesn't matter
-    data_j = pd.Series({'hour': hour_j, 'y': 10.0})
+    # Compute FIM sequentially, using each previous FIM as prior
+    prior_FIM = None
+    for idx, hour_val in enumerate(hours):
+        # Create data series for this hour value
+        data = pd.Series({'hour': hour_val, 'y': 10.0})  # y value doesn't matter
 
-    # Compute FIM for first experiment
-    exp_obj_1 = RooneyBieglerExperiment(
-        data=data_i, measure_error=measurement_error, theta=theta
-    )
-    doe_obj_1 = DesignOfExperiments(experiment_list=[exp_obj_1])
-    FIM_1 = doe_obj_1.compute_FIM()
+        # Create experiment and DOE object
+        exp_obj = RooneyBieglerExperiment(
+            data=data, measure_error=measurement_error, theta=theta
+        )
+        doe_obj = DesignOfExperiments(experiment_list=[exp_obj], prior_FIM=prior_FIM)
+        prior_FIM = doe_obj.compute_FIM()
 
-    # Compute FIM for second experiment with prior
-    exp_obj_2 = RooneyBieglerExperiment(
-        data=data_j, measure_error=measurement_error, theta=theta
-    )
-    doe_obj_2 = DesignOfExperiments(experiment_list=[exp_obj_2], prior_FIM=FIM_1)
-    FIM_2 = doe_obj_2.compute_FIM()
+    final_FIM = prior_FIM
 
     # Compute log10 determinant
-    det_val = np.linalg.det(FIM_2)
+    det_val = np.linalg.det(final_FIM)
     log10_det = float(np.log10(det_val)) if det_val > 0 else None
 
-    return {
-        'hour1': float(hour_i),
-        'hour2': float(hour_j),
-        'i': int(i),
-        'j': int(j),
-        'FIM_2': FIM_2.tolist(),  # Convert numpy array to list for JSON serialization
+    # Build result dictionary with dynamic hour fields
+    result = {
+        'indices': [int(i) for i in indices],
+        'FIM': final_FIM.tolist(),  # Convert numpy array to list for JSON serialization
         'log10_det': log10_det,
     }
 
+    # Add hour fields dynamically (hour1, hour2, hour3, etc.)
+    for idx, hour_val in enumerate(hours, 1):
+        result[f'hour{idx}'] = float(hour_val)
 
-def run_serial(hours, theta, measurement_error):
-    """Serial computation for comparison."""
-    results = []
-    start_time = time.time()
-
-    for i, hour_i in enumerate(hours):
-        for j, hour_j in enumerate(hours):
-            result = compute_fim_pair((i, j, hour_i, hour_j, theta, measurement_error))
-            results.append(result)
-
-    elapsed = time.time() - start_time
-    return results, elapsed
+    return result
 
 
-def run_parallel(hours, theta, measurement_error, n_cores=None):
-    """Parallel computation using multiprocessing."""
+def run_parallel(hours, theta, measurement_error, n_experiments=2, n_cores=None):
+    """Parallel computation using multiprocessing.
+
+    Parameters
+    ----------
+    hours : array-like
+        Array of hour values to use for experiments
+    theta : dict
+        Parameter values for the model
+    measurement_error : float
+        Measurement error for experiments
+    n_experiments : int, optional
+        Number of experiments in each combination (2, 3, or 4), default is 2
+    n_cores : int, optional
+        Number of cores to use, defaults to all available cores
+
+    Returns
+    -------
+    tuple
+        (results, elapsed_time)
+    """
     if n_cores is None:
         n_cores = cpu_count()
 
-    # Create list of all (i, j) pairs to compute
+    # Generate all combinations of n_experiments from hours
+    from itertools import combinations_with_replacement
+
     tasks = []
-    for i, hour_i in enumerate(hours):
-        for j, hour_j in enumerate(hours):
-            tasks.append((i, j, hour_i, hour_j, theta, measurement_error))
+    for indices in combinations_with_replacement(range(len(hours)), n_experiments):
+        hour_values = tuple(hours[i] for i in indices)
+        tasks.append((indices, hour_values, theta, measurement_error))
 
     start_time = time.time()
 
     # Use multiprocessing Pool to compute in parallel
     with Pool(processes=n_cores) as pool:
-        results = pool.map(compute_fim_pair, tasks)
+        results = pool.map(compute_fim_combination, tasks)
 
     elapsed = time.time() - start_time
     return results, elapsed
@@ -184,18 +195,27 @@ def run_parallel(hours, theta, measurement_error, n_cores=None):
 if __name__ == "__main__":
     # Create hour data with dense sampling around optimal region for verification
     # Optimal from optimization: hour1≈1.90, hour2≈10.0
-    hours_p1 = np.linspace(0.1, 1.7, 15)  # Before optimal: coarse
-    hours_p2 = np.linspace(1.71, 2.1, 50)  # Around optimal hour1: dense
-    hours_p3 = np.linspace(2.2, 9.4, 15)  # Between: coarse
-    hours_p4 = np.linspace(9.41, 10, 25)  # Around optimal hour2: dense
+    hours_p1 = np.linspace(0.1, 1.7, 5)  # Before optimal: coarse
+    hours_p2 = np.linspace(1.71, 2.1, 5)  # Around optimal hour1: dense
+    hours_p3 = np.linspace(2.2, 9.4, 5)  # Between: coarse
+    hours_p4 = np.linspace(9.41, 10, 5)  # Around optimal hour2: dense
     hours = np.concatenate((hours_p1, hours_p2, hours_p3, hours_p4))
+
+    # Set number of experiments (2, 3, or 4)
+    n_experiments = 2
+
+    # Calculate number of combinations
+    from math import comb
+
+    n_combinations = comb(len(hours) + n_experiments - 1, n_experiments)
 
     print(f"\nVerification Grid Setup:")
     print(f"  Total points: {len(hours)}")
     print(f"  Range: [{hours[0]:.2f}, {hours[-1]:.2f}]")
     print(f"  Dense around hour1≈1.90: [1.71, 2.10] with {len(hours_p2)} points")
     print(f"  Dense around hour2≈10.0: [9.41, 10.00] with {len(hours_p4)} points")
-    print(f"  Total combinations: {len(hours)**2}")
+    print(f"  Number of experiments per combination: {n_experiments}")
+    print(f"  Total combinations: {n_combinations}")
 
     theta = {'asymptote': 15, 'rate_constant': 0.5}
     measurement_error = 0.1
@@ -206,17 +226,20 @@ if __name__ == "__main__":
 
     # Run parallel computation only
     results_parallel, time_parallel = run_parallel(
-        hours, theta, measurement_error, n_cores
+        hours, theta, measurement_error, n_experiments, n_cores
     )
 
     print(f"Computation completed in {time_parallel:.2f} seconds\n")
 
     # Save results to JSON file
-    output_file = "rooney_biegler_fim_verification.json"
+    file_name = f"rooney_biegler_fim_{n_experiments}exp_verification.json"
+    DATA_DIR = Path(__file__).parent
+    output_file = DATA_DIR / file_name
     print(f"Saving results to {output_file}...")
 
     output_data = {
         'metadata': {
+            'n_experiments': n_experiments,
             'n_hours': len(hours),
             'hour_range': [float(hours[0]), float(hours[-1])],
             'total_computations': len(results_parallel),
@@ -224,7 +247,7 @@ if __name__ == "__main__":
             'measurement_error': measurement_error,
             'n_cores': n_cores,
             'computation_time': time_parallel,
-            -'grid_description': 'Dense sampling around optimal regions (1.71-2.10, 9.41-10), coarse elsewhere',
+            'grid_description': 'Dense sampling around optimal regions (1.71-2.10, 9.41-10), coarse elsewhere',
         },
         'results': results_parallel,
     }
@@ -247,10 +270,15 @@ if __name__ == "__main__":
         print("\n" + "=" * 70)
         print("GRID SEARCH VERIFICATION OF OPTIMIZATION RESULT")
         print("=" * 70)
-        print(
-            f"Best design from grid: Hour1={best['hour1']:.4f}, Hour2={best['hour2']:.4f}"
+
+        # Print hour values dynamically
+        hour_str = ", ".join(
+            [f"Hour{i}={best[f'hour{i}']:.4f}" for i in range(1, n_experiments + 1)]
         )
+        print(f"Best design from grid: {hour_str}")
         print(f"                       log10(det) = {best['log10_det']:.4f}")
-        print(f"\nOptimization result:   Hour1≈1.900, Hour2≈10.000")
-        print(f"                       log10(det) ≈ 6.0280")
+
+        if n_experiments == 2:
+            print(f"\nOptimization result:   Hour1≈1.900, Hour2≈10.000")
+            print(f"                       log10(det) ≈ 6.0280")
         print("=" * 70 + "\n")

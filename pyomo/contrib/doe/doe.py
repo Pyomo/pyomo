@@ -844,6 +844,9 @@ class DesignOfExperiments:
                     jitter = 0
 
                 # Compute Cholesky decomposition
+                print("=" * 20)
+                print("Total FIM with jitter:")
+                print(total_fim_np + jitter * np.eye(len(parameter_names)))
                 L_vals = np.linalg.cholesky(
                     total_fim_np + jitter * np.eye(len(parameter_names))
                 )
