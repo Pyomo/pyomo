@@ -30,7 +30,6 @@ from .gurobi_direct_base import (
 )
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
