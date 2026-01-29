@@ -113,10 +113,10 @@ def get_FIM_Q_L(doe_obj=None):
         for j in model.parameter_names
     ]
     sigma_inv = [
-        1 / v**2 for k, v in model.scenario_blocks[0].measurement_error.items()
+        1 / v**2 for k, v in model.fd_scenario_blocks[0].measurement_error.items()
     ]
     param_vals = np.array(
-        [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
+        [[v for k, v in model.fd_scenario_blocks[0].unknown_parameters.items()]]
     )
 
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
@@ -486,7 +486,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
             [
                 [
                     v
-                    for k, v in doe_obj.model.scenario_blocks[
+                    for k, v in doe_obj.model.fd_scenario_blocks[
                         0
                     ].unknown_parameters.items()
                 ]

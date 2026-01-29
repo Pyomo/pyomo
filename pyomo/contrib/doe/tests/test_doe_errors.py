@@ -676,7 +676,7 @@ class TestDoEErrors(unittest.TestCase):
             "Please report this to the Pyomo Developers.",
         ):
             doe_obj.fd_formula = "bad things"
-            doe_obj._generate_scenario_blocks()
+            doe_obj._generate_fd_scenario_blocks()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_bad_FD_seq_compute_FIM(self):

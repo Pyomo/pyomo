@@ -111,14 +111,17 @@ class DesignOfExperiments:
         Parameters
         ----------
         experiment_list:
-            List of Experiment objects that hold the model and labels all the components.
-            Must be a list type. For single experiments, use: experiment_list=[experiment].
-            Each object should have a ``get_labeled_model`` where a model is returned with
+            Experiment object(s) that hold the model and labels all the components.
+            Can be a single Experiment object or a list of Experiment objects.
+            For single experiments, you can pass the object directly: experiment_list=experiment
+            or as a list: experiment_list=[experiment].
+            Each object should have a ``get_labeled_model`` method that returns a model with
             the following labeled sets:
 
               - ``unknown_parameters``,
               - ``experimental_inputs``,
               - ``experimental_outputs``
+              - ``measurement_error``.
 
         experiment:
             **DEPRECATED** - Use 'experiment_list' instead. This parameter will be removed
@@ -196,27 +199,25 @@ class DesignOfExperiments:
         # Handle backward compatibility - experiment -> experiment_list
         if experiment is not None:
             warnings.warn(
-                "The 'experiment' parameter is deprecated and will be removed in a future version. "
-                "Please use 'experiment_list' instead. For single experiments use: experiment_list=[experiment]",
+                "The 'experiment' parameter in DesignOfExperiments is deprecated and "
+                "will be removed in a future version. "
+                "Please use 'experiment_list' instead.",
                 DeprecationWarning,
                 stacklevel=2,
             )
             if experiment_list is None:
-                experiment_list = [experiment]
+                experiment_list = experiment
 
         # Validate experiment_list is provided
         if experiment_list is None:
             raise ValueError(
-                "The 'experiment_list' parameter must be provided. "
-                "For single experiments use: experiment_list=[experiment]"
+                "The 'experiment_list' parameter is required. "
+                "Pass a single Experiment object or a list of Experiment objects."
             )
 
-        # Validate experiment_list is a list type
+        # Auto-convert single experiment to list
         if not isinstance(experiment_list, list):
-            raise TypeError(
-                f"The 'experiment_list' parameter must be a list, got {type(experiment_list).__name__}. "
-                "For single experiments use: experiment_list=[experiment]"
-            )
+            experiment_list = [experiment_list]
 
         # Validate list is not empty
         if len(experiment_list) == 0:
