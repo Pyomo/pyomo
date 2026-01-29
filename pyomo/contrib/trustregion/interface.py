@@ -39,7 +39,6 @@ from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.numvalue import native_types
 from pyomo.opt import SolverFactory, check_optimal_termination
 
-
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 

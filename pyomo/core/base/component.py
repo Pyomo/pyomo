@@ -31,6 +31,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.component_namer import name_repr, index_repr
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.initializer import PartialInitializer
 
@@ -41,6 +42,7 @@ relocated_module_attribute(
 )
 
 _ref_types = {type(None), weakref_ref}
+DEFAULT_PPRINT_SORT = SortComponents.ALPHABETICAL | SortComponents.SORTED_INDICES
 
 
 class ModelComponentFactoryClass(Factory):
@@ -274,7 +276,7 @@ class ComponentBase(PyomoObject):
     def cname(self, *args, **kwds):
         return self.getname(*args, **kwds)
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
+    def pprint(self, ostream=None, verbose=False, prefix="", sort=NOTSET):
         """Print component information
 
         Note that this method is generally only reachable through
@@ -292,12 +294,13 @@ class ComponentBase(PyomoObject):
             _name = comp.local_name
         else:
             # restrict output to only this data object
-            _data = iter(((self.index(), self),))
+            _data = lambda _sort: iter(((self.index(), self),))
             _name = "{Member of %s}" % (comp.local_name,)
         self._pprint_base_impl(
             ostream,
             verbose,
             prefix,
+            sort,
             _name,
             comp.doc,
             comp.is_constructed(),
@@ -348,6 +351,7 @@ class ComponentBase(PyomoObject):
         ostream,
         verbose,
         prefix,
+        sort,
         _name,
         _doc,
         _constructed,
@@ -361,16 +365,14 @@ class ComponentBase(PyomoObject):
         if prefix:
             ostream = StreamIndenter(ostream, prefix)
 
+        if sort is NOTSET:
+            sort = DEFAULT_PPRINT_SORT
+        sort = SortComponents(sort)
+
         # FIXME: HACK for backwards compatibility with suppressing the
         # header for the top block
         if not _attr and self.parent_block() is None:
             _name = ''
-
-        # We only indent everything if we printed the header
-        if _attr or _name or _doc:
-            ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
-            # The first line should be a hanging indent (i.e., not indented)
-            ostream.newline = False
 
         if self.is_reference():
             _attr = list(_attr) if _attr else []
@@ -379,11 +381,13 @@ class ComponentBase(PyomoObject):
         if _name:
             ostream.write(_name + " : ")
         if _doc:
-            ostream.write(_doc + '\n')
+            ostream.write(_doc + '\n' + self._PPRINT_INDENT)
         if _attr:
             ostream.write(", ".join("%s=%s" % (k, v) for k, v in _attr))
         if _attr or _name or _doc:
             ostream.write("\n")
+            # We only indent everything if we printed the header
+            ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
 
         if not _constructed:
             # HACK: for backwards compatibility, Abstract blocks will
@@ -395,23 +399,37 @@ class ComponentBase(PyomoObject):
                 return
 
         if type(_fcn) is tuple:
+            # Exception to the standard formatter case: with two
+            # callbacks, we will use the first to generate the normal
+            # table, then call the second callback for each data.
+            # Currently only used by Complimentarity (which should be
+            # refactored to remove the need for this edge case)
             _fcn, _fcn2 = _fcn
         else:
             _fcn2 = None
 
+        if hasattr(_data, '__call__'):
+            _data = _data(sort)
+
         if _header is not None:
+            # This is a standard component, where all the component
+            # information is printed in a single table
             if _fcn2 is not None:
-                _data_dict = dict(_data)
-                _data = _data_dict.items()
+                _data = list(_data)
             tabular_writer(ostream, '', _data, _header, _fcn)
             if _fcn2 is not None:
-                for _key in sorted_robust(_data_dict):
-                    _fcn2(ostream, _key, _data_dict[_key])
+                for _key, _val in _data:
+                    _fcn2(ostream, sort, _key, _val)
         elif _fcn is not None:
-            _data_dict = dict(_data)
-            for _key in sorted_robust(_data_dict):
-                _fcn(ostream, _key, _data_dict[_key])
+            # This is a non-standard component where we will not
+            # generate a table at all, and instead defer all formatting
+            # / printing to the callback.  This is primarily used by
+            # Blocks (and block-like things)
+            for _key, _val in _data:
+                _fcn(ostream, sort, _key, _val)
         elif _data is not None:
+            # Catch all for everything else: assume that _pprint()
+            # returned a formatted string.
             ostream.write(_data)
 
 
@@ -516,12 +534,13 @@ class Component(ComponentBase):
         """Return True if this can be used as a model component."""
         return True
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
+    def pprint(self, ostream=None, verbose=False, prefix="", sort=NOTSET):
         """Print component information"""
         self._pprint_base_impl(
             ostream,
             verbose,
             prefix,
+            sort,
             self.local_name,
             self.doc,
             self.is_constructed(),

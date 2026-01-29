@@ -14,7 +14,6 @@ Test methods for construction and solution of master problem
 objects.
 """
 
-
 import logging
 import time
 import pyomo.common.unittest as unittest
@@ -46,7 +45,6 @@ from pyomo.contrib.pyros.util import (
     VariablePartitioning,
     pyrosTerminationCondition,
 )
-
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Packages numpy and scipy must both be available.")
