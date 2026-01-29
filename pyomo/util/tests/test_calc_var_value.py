@@ -32,7 +32,6 @@ from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.sympy_tools import sympy_available
 
-
 all_diff_modes = [
     differentiate.Modes.sympy,
     differentiate.Modes.reverse_symbolic,

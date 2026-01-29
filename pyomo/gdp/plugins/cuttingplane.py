@@ -16,7 +16,6 @@ Implements a general cutting plane-based reformulation for linear and
 convex GDPs.
 """
 
-
 from pyomo.common.config import (
     ConfigBlock,
     ConfigValue,
@@ -810,7 +809,7 @@ class CuttingPlane_Transformation(Transformation):
             else:
                 self.verbose = False
 
-            (instance_rBigM, cuts_obj, instance_rHull, var_info, transBlockName) = (
+            instance_rBigM, cuts_obj, instance_rHull, var_info, transBlockName = (
                 self._setup_subproblems(instance, bigM, self._config.tighten_relaxation)
             )
 
