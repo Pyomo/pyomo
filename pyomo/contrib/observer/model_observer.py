@@ -909,7 +909,7 @@ class ModelChangeDetector:
             reason = Reason.no_change
             if _fixed != fixed:
                 reason |= Reason.fixed
-            elif _fixed and (value != _value):
+            elif (_fixed or fixed) and (value != _value):
                 reason |= Reason.value
             if lb is not _lb or ub is not _ub:
                 reason |= Reason.bounds
