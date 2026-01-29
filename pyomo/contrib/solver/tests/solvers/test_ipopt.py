@@ -2074,6 +2074,23 @@ class TestIpopt(unittest.TestCase):
         self.assertEqual(m.rc[m.x], 0)
         self.assertAlmostEqual(m.rc[m.y], -2, delta=1e-5)
 
+    def test_load_suffixes_infeasible_model(self):
+        # This tests Issue #3807: Ipopt was failing to load duals /
+        # reduced coses when the solver exited in restoration
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2, bounds=(1, 10))
+        m.c = pyo.Constraint(expr=(m.x == 0))
+
+        solver = ipopt.Ipopt()
+        solver.config.writer_config.linear_presolve = False
+        solver.config.raise_exception_on_nonoptimal_result = False
+
+        results = solver.solve(m)
+        self.assertEqual(results.solution_status, SolutionStatus.infeasible)
+        self.assertEqual(results.extra_info.iteration_log[-1]['restoration'], True)
+        self.assertAlmostEqual(results.solution_loader.get_reduced_costs()[m.x], 1000)
+        self.assertAlmostEqual(results.solution_loader.get_duals()[m.c], -1000)
+
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestLegacyIpopt(unittest.TestCase):
