@@ -48,7 +48,6 @@ from pyomo.contrib.solver.common.solution_loader import (
 )
 import time
 
-
 logger = logging.getLogger(__name__)
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
