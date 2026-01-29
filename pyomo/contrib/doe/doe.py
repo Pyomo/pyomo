@@ -618,6 +618,13 @@ class DesignOfExperiments:
             for k = 1, ..., n_exp-1, which breaks permutation symmetry and can
             significantly reduce solve times.
         """
+        # Check results file name
+        if results_file is not None:
+            if type(results_file) not in [pathlib.Path, str]:
+                raise ValueError(
+                    "``results_file`` must be either a Path object or a string."
+                )
+
         # Infer number of experiments from experiment_list
         n_exp = len(self.experiment_list)
 
@@ -665,35 +672,35 @@ class DesignOfExperiments:
                 self.model.param_scenario_blocks[0].exp_blocks[0].fd_scenario_blocks[0]
             )
 
-            if not hasattr(first_exp_block, 'sym_break_cons'):
-                raise ValueError(
-                    f"n_exp={n_exp} > 1 requires symmetry breaking constraints. "
-                    "Please add a 'sym_break_cons' Suffix to your experiment model "
-                    "marking the primary design variable for ordering. "
-                    "Example: m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
-                    "m.sym_break_cons[m.my_design_var] = None"
-                    "The value of the Suffix, e.g., `m.my_design_var` does not matter."
+            # Determine symmetry breaking variable
+            if (
+                hasattr(first_exp_block, 'sym_break_cons')
+                and len(first_exp_block.sym_break_cons) > 0
+            ):
+                # User provided symmetry breaking variable(s)
+                sym_break_var_list = list(first_exp_block.sym_break_cons.keys())
+
+                if len(sym_break_var_list) > 1:
+                    self.logger.warning(
+                        f"Multiple variables marked in sym_break_cons. "
+                        f"Using {sym_break_var_list[0].name} for symmetry breaking."
+                    )
+
+                sym_break_var = sym_break_var_list[0]
+                self.logger.info(
+                    f"Using user-specified variable '{sym_break_var.name}' for symmetry breaking."
                 )
-
-            # Get the variable marked for symmetry breaking
-            sym_break_var_list = list(first_exp_block.sym_break_cons.keys())
-
-            if len(sym_break_var_list) == 0:
-                raise ValueError(
-                    "sym_break_cons Suffix exists but no variable is marked. "
-                    "Please mark one design variable for symmetry breaking. "
-                    "Example: m.sym_break_cons[m.my_design_var] = None"
-                    "The value of the Suffix, e.g., `m.my_design_var` does not matter."
-                )
-
-            if len(sym_break_var_list) > 1:
+            else:
+                # Use first experiment input as default symmetry breaking variable
+                # Note: experiment_inputs is validated earlier to be non-empty
+                sym_break_var = next(iter(first_exp_block.experiment_inputs))
                 self.logger.warning(
-                    f"Multiple variables marked in sym_break_cons. "
-                    f"Using {sym_break_var_list[0].name} for symmetry breaking."
+                    f"No symmetry breaking variable specified. Automatically using the first "
+                    f"experiment input '{sym_break_var.name}' for ordering constraints. "
+                    f"To specify a different variable, add: "
+                    f"m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
+                    f"m.sym_break_cons[m.your_variable] = None"
                 )
-
-            # Use the first marked variable as primary
-            sym_break_var = sym_break_var_list[0]
 
             # Add constraints for each scenario
             for s in range(n_scenarios):
@@ -844,6 +851,35 @@ class DesignOfExperiments:
                     for j, q in enumerate(parameter_names):
                         scenario.obj_cons.L[p, q].set_value(L_vals[i, j])
 
+                # If trace objective, also initialize L_inv, fim_inv, and cov_trace
+                if hasattr(scenario.obj_cons, "L_inv"):
+                    L_inv_vals = np.linalg.inv(L_vals)
+
+                    for i, p in enumerate(parameter_names):
+                        for j, q in enumerate(parameter_names):
+                            if i >= j:
+                                scenario.obj_cons.L_inv[p, q].set_value(
+                                    L_inv_vals[i, j]
+                                )
+                            else:
+                                scenario.obj_cons.L_inv[p, q].set_value(0.0)
+
+                    # Initialize fim_inv
+                    if hasattr(scenario.obj_cons, "fim_inv"):
+                        fim_inv_np = np.linalg.inv(
+                            total_fim_np + jitter * np.eye(len(parameter_names))
+                        )
+                        for i, p in enumerate(parameter_names):
+                            for j, q in enumerate(parameter_names):
+                                scenario.obj_cons.fim_inv[p, q].set_value(
+                                    fim_inv_np[i, j]
+                                )
+
+                    # Initialize cov_trace
+                    if hasattr(scenario.obj_cons, "cov_trace"):
+                        initial_cov_trace = np.sum(L_inv_vals**2)
+                        scenario.obj_cons.cov_trace.set_value(initial_cov_trace)
+
             if hasattr(scenario.obj_cons, "determinant"):
                 # Initialize determinant
                 total_fim_vals = [
@@ -907,13 +943,22 @@ class DesignOfExperiments:
             )
             scenario_results["Total FIM"] = total_fim_np.tolist()
 
-            # Statistics on the aggregated FIM
-            scenario_results["log10 A-opt"] = np.log10(np.trace(total_fim_np))
+            # Complete FIM if only computing lower triangle
+            if self.only_compute_fim_lower:
+                total_fim_np = (
+                    total_fim_np + total_fim_np.T - np.diag(np.diag(total_fim_np))
+                )
+
+            # Statistics on the aggregated FIM (consistent with run_doe)
+            scenario_results["log10 A-opt"] = np.log10(
+                np.trace(np.linalg.inv(total_fim_np))
+            )
+            scenario_results["log10 pseudo A-opt"] = np.log10(np.trace(total_fim_np))
             scenario_results["log10 D-opt"] = np.log10(np.linalg.det(total_fim_np))
             scenario_results["log10 E-opt"] = np.log10(
-                min(np.linalg.eig(total_fim_np)[0])
+                min(np.linalg.eigvalsh(total_fim_np))
             )
-            scenario_results["log10 ME-opt"] = np.log10(np.linalg.cond(total_fim_np))
+            scenario_results["FIM Condition Number"] = np.linalg.cond(total_fim_np)
 
             # Store results for each experiment in this scenario
             scenario_results["Experiments"] = []
@@ -967,6 +1012,19 @@ class DesignOfExperiments:
                     (len(parameter_names), len(parameter_names))
                 )
                 exp_results["FIM"] = exp_fim_np.tolist()
+
+                # Sensitivity matrix for this experiment
+                if hasattr(scenario.exp_blocks[k], "sensitivity_jacobian"):
+                    output_names = scenario.exp_blocks[k].output_names
+                    sens_matrix_vals = [
+                        pyo.value(scenario.exp_blocks[k].sensitivity_jacobian[i, j])
+                        for i in output_names
+                        for j in parameter_names
+                    ]
+                    sens_matrix_np = np.array(sens_matrix_vals).reshape(
+                        (len(output_names), len(parameter_names))
+                    )
+                    exp_results["Sensitivity Matrix"] = sens_matrix_np.tolist()
 
                 scenario_results["Experiments"].append(exp_results)
 
@@ -2111,6 +2169,25 @@ class DesignOfExperiments:
         ----------
         model: model with param_scenario_blocks structure
         """
+        # Validate objective option for multi-experiment
+        if self.objective_option not in [
+            ObjectiveLib.determinant,
+            ObjectiveLib.trace,
+            ObjectiveLib.pseudo_trace,
+            ObjectiveLib.zero,
+        ]:
+            raise DeveloperError(
+                "Objective option not recognized for multi-experiment optimization. "
+                "Please contact the developers as you should not see this error."
+            )
+
+        # Validate trace objective requires Cholesky option
+        if self.objective_option == ObjectiveLib.trace and not self.Cholesky_option:
+            raise ValueError(
+                "objective_option='trace' currently only implemented with "
+                "``_Cholesky_option=True``."
+            )
+
         small_number = 1e-10
         n_scenarios = len(model.param_scenario_blocks)
 
@@ -2195,6 +2272,101 @@ class DesignOfExperiments:
                     parameter_names, parameter_names, rule=cholesky_rule
                 )
 
+            elif self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
+                # Add lower triangular Cholesky variables per scenario
+                scenario.obj_cons.L = pyo.Var(parameter_names, parameter_names)
+                scenario.obj_cons.L_inv = pyo.Var(parameter_names, parameter_names)
+                scenario.obj_cons.fim_inv = pyo.Var(parameter_names, parameter_names)
+                scenario.obj_cons.cov_trace = pyo.Var(bounds=(small_number, None))
+
+                # Fix upper triangle of L and L_inv to 0 and set lower bound on diagonal
+                for i, p in enumerate(parameter_names):
+                    for j, q in enumerate(parameter_names):
+                        # Fix upper triangle to 0
+                        if i < j:
+                            scenario.obj_cons.L[p, q].fix(0.0)
+                            scenario.obj_cons.L_inv[p, q].fix(0.0)
+                        # Lower bound on diagonal
+                        elif i == j and self.L_diagonal_lower_bound:
+                            scenario.obj_cons.L[p, q].setlb(self.L_diagonal_lower_bound)
+
+                # Cholesky constraint: total_fim = L * L^T
+                def cholesky_rule(b, p, q):
+                    p_idx = list(parameter_names).index(p)
+                    q_idx = list(parameter_names).index(q)
+                    if p_idx >= q_idx:
+                        return scenario.total_fim[p, q] == sum(
+                            b.L[p, parameter_names.at(k + 1)]
+                            * b.L[q, parameter_names.at(k + 1)]
+                            for k in range(q_idx + 1)
+                        )
+                    else:
+                        return pyo.Constraint.Skip
+
+                # Cholesky inverse constraint: fim_inv = L_inv^T * L_inv
+                def cholesky_inv_rule(b, p, q):
+                    p_idx = list(parameter_names).index(p)
+                    q_idx = list(parameter_names).index(q)
+                    if p_idx >= q_idx:
+                        return b.fim_inv[p, q] == sum(
+                            b.L_inv[parameter_names.at(k + 1), p]
+                            * b.L_inv[parameter_names.at(k + 1), q]
+                            for k in range(p_idx, len(parameter_names))
+                        )
+                    else:
+                        return pyo.Constraint.Skip
+
+                # L * L_inv = Identity constraint
+                def cholesky_LLinv_rule(b, p, q):
+                    param_list = list(parameter_names)
+                    idx_p = param_list.index(p)
+                    idx_q = param_list.index(q)
+                    # Only compute lower triangle
+                    if idx_p < idx_q:
+                        return pyo.Constraint.Skip
+
+                    target_value = 1 if idx_p == idx_q else 0
+                    return (
+                        sum(
+                            b.L[p, parameter_names.at(k + 1)]
+                            * b.L_inv[parameter_names.at(k + 1), q]
+                            for k in range(len(parameter_names))
+                        )
+                        == target_value
+                    )
+
+                # Covariance trace calculation
+                def cov_trace_rule(b):
+                    return b.cov_trace == sum(b.fim_inv[j, j] for j in parameter_names)
+
+                # Add all constraints
+                scenario.obj_cons.cholesky_cons = pyo.Constraint(
+                    parameter_names, parameter_names, rule=cholesky_rule
+                )
+                scenario.obj_cons.cholesky_inv_cons = pyo.Constraint(
+                    parameter_names, parameter_names, rule=cholesky_inv_rule
+                )
+                scenario.obj_cons.cholesky_LLinv_cons = pyo.Constraint(
+                    parameter_names, parameter_names, rule=cholesky_LLinv_rule
+                )
+                scenario.obj_cons.cov_trace_cons = pyo.Constraint(rule=cov_trace_rule)
+
+                # Optional: improve Cholesky roundoff error
+                if self.improve_cholesky_roundoff_error:
+
+                    def cholesky_fim_diag(b, p, q):
+                        return scenario.total_fim[p, p] >= b.L[p, q] ** 2
+
+                    def cholesky_fim_inv_diag(b, p, q):
+                        return b.fim_inv[p, p] >= b.L_inv[p, q] ** 2
+
+                    scenario.obj_cons.cholesky_fim_diag_cons = pyo.Constraint(
+                        parameter_names, parameter_names, rule=cholesky_fim_diag
+                    )
+                    scenario.obj_cons.cholesky_fim_inv_diag_cons = pyo.Constraint(
+                        parameter_names, parameter_names, rule=cholesky_fim_inv_diag
+                    )
+
             elif self.objective_option == ObjectiveLib.determinant:
                 # Non-Cholesky determinant: create determinant var per scenario
                 scenario.obj_cons.determinant = pyo.Var(bounds=(small_number, None))
@@ -2261,6 +2433,16 @@ class DesignOfExperiments:
                     for s in range(n_scenarios)
                 ),
                 sense=pyo.maximize,
+            )
+
+        elif self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
+            model.objective = pyo.Objective(
+                expr=sum(
+                    scenario_weights[s]
+                    * model.param_scenario_blocks[s].obj_cons.cov_trace
+                    for s in range(n_scenarios)
+                ),
+                sense=pyo.minimize,
             )
 
         elif self.objective_option == ObjectiveLib.pseudo_trace:
@@ -2367,28 +2549,69 @@ class DesignOfExperiments:
                 "Experiment model does not have suffix " + '"experiment_outputs".'
             )
 
+        # Check that experiment_outputs is not empty
+        if len(outputs) == 0:
+            raise ValueError(
+                "No experiment outputs found. Design of Experiments requires at least "
+                "one experiment output (measurement) to optimize. Please add an "
+                "'experiment_outputs' Suffix to your model with at least one variable."
+            )
+
         # Check that experimental inputs exist
         try:
-            outputs = [k.name for k, v in model.experiment_inputs.items()]
+            inputs = [k.name for k, v in model.experiment_inputs.items()]
         except:
             raise RuntimeError(
                 "Experiment model does not have suffix " + '"experiment_inputs".'
             )
 
+        # Check that experiment_inputs is not empty
+        if len(inputs) == 0:
+            raise ValueError(
+                "No experiment inputs found. Design of Experiments requires at least "
+                "one experiment input (design variable) to optimize. Please add an "
+                "'experiment_inputs' Suffix to your model with at least one variable."
+            )
+
         # Check that unknown parameters exist
         try:
-            outputs = [k.name for k, v in model.unknown_parameters.items()]
+            parameters = [k.name for k, v in model.unknown_parameters.items()]
         except:
             raise RuntimeError(
                 "Experiment model does not have suffix " + '"unknown_parameters".'
             )
 
+        # Check that unknown_parameters is not empty
+        if len(parameters) == 0:
+            raise ValueError(
+                "No unknown parameters found. Design of Experiments requires at least "
+                "one unknown parameter to estimate. Please add an "
+                "'unknown_parameters' Suffix to your model with at least one variable."
+            )
+
         # Check that measurement errors exist
         try:
-            outputs = [k.name for k, v in model.measurement_error.items()]
+            errors = [k.name for k, v in model.measurement_error.items()]
         except:
             raise RuntimeError(
                 "Experiment model does not have suffix " + '"measurement_error".'
+            )
+
+        # Check that measurement_error is not empty
+        if len(errors) == 0:
+            raise ValueError(
+                "No measurement errors found. Design of Experiments requires at least "
+                "one measurement error specification. Please add a "
+                "'measurement_error' Suffix to your model with at least one variable."
+            )
+
+        # Check that measurement_error and experiment_outputs have the same length
+        if len(errors) != len(outputs):
+            raise ValueError(
+                "Number of experiment outputs, {}, and length of measurement error, "
+                "{}, do not match. Please check model labeling.".format(
+                    len(outputs), len(errors)
+                )
             )
 
         self.logger.info("Model has expected labels.")

@@ -97,9 +97,11 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
         for i in model.output_names
         for j in model.parameter_names
     ]
-    sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
+    sigma_inv = [
+        1 / v for k, v in model.fd_scenario_blocks[0].measurement_error.items()
+    ]
     param_vals = np.array(
-        [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
+        [[v for k, v in model.fd_scenario_blocks[0].unknown_parameters.items()]]
     )
 
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
@@ -173,16 +175,16 @@ class TestDoeBuild(unittest.TestCase):
             diff = (-1) ** s * doe_obj.step
 
             param_val = pyo.value(
-                pyo.ComponentUID(param).find_component_on(model.scenario_blocks[s])
+                pyo.ComponentUID(param).find_component_on(model.fd_scenario_blocks[s])
             )
 
-            param_val_from_step = model.scenario_blocks[0].unknown_parameters[
-                pyo.ComponentUID(param).find_component_on(model.scenario_blocks[0])
+            param_val_from_step = model.fd_scenario_blocks[0].unknown_parameters[
+                pyo.ComponentUID(param).find_component_on(model.fd_scenario_blocks[0])
             ] * (1 + diff)
 
-            for k, v in model.scenario_blocks[s].unknown_parameters.items():
+            for k, v in model.fd_scenario_blocks[s].unknown_parameters.items():
                 if pyo.ComponentUID(
-                    k, context=model.scenario_blocks[s]
+                    k, context=model.fd_scenario_blocks[s]
                 ) == pyo.ComponentUID(param):
                     continue
 
@@ -212,17 +214,21 @@ class TestDoeBuild(unittest.TestCase):
                 param = model.parameter_scenarios[s]
 
                 param_val = pyo.value(
-                    pyo.ComponentUID(param).find_component_on(model.scenario_blocks[s])
+                    pyo.ComponentUID(param).find_component_on(
+                        model.fd_scenario_blocks[s]
+                    )
                 )
 
-                param_val_from_step = model.scenario_blocks[0].unknown_parameters[
-                    pyo.ComponentUID(param).find_component_on(model.scenario_blocks[0])
+                param_val_from_step = model.fd_scenario_blocks[0].unknown_parameters[
+                    pyo.ComponentUID(param).find_component_on(
+                        model.fd_scenario_blocks[0]
+                    )
                 ] * (1 + diff)
                 self.assertAlmostEqual(param_val, param_val_from_step)
 
-            for k, v in model.scenario_blocks[s].unknown_parameters.items():
+            for k, v in model.fd_scenario_blocks[s].unknown_parameters.items():
                 if (s != 0) and pyo.ComponentUID(
-                    k, context=model.scenario_blocks[s]
+                    k, context=model.fd_scenario_blocks[s]
                 ) == pyo.ComponentUID(param):
                     continue
 
@@ -250,17 +256,21 @@ class TestDoeBuild(unittest.TestCase):
                 param = model.parameter_scenarios[s]
 
                 param_val = pyo.value(
-                    pyo.ComponentUID(param).find_component_on(model.scenario_blocks[s])
+                    pyo.ComponentUID(param).find_component_on(
+                        model.fd_scenario_blocks[s]
+                    )
                 )
 
-                param_val_from_step = model.scenario_blocks[0].unknown_parameters[
-                    pyo.ComponentUID(param).find_component_on(model.scenario_blocks[0])
+                param_val_from_step = model.fd_scenario_blocks[0].unknown_parameters[
+                    pyo.ComponentUID(param).find_component_on(
+                        model.fd_scenario_blocks[0]
+                    )
                 ] * (1 + diff)
                 self.assertAlmostEqual(param_val, param_val_from_step)
 
-            for k, v in model.scenario_blocks[s].unknown_parameters.items():
+            for k, v in model.fd_scenario_blocks[s].unknown_parameters.items():
                 if (s != 0) and pyo.ComponentUID(
-                    k, context=model.scenario_blocks[s]
+                    k, context=model.fd_scenario_blocks[s]
                 ) == pyo.ComponentUID(param):
                     continue
 
@@ -282,7 +292,9 @@ class TestDoeBuild(unittest.TestCase):
         model = doe_obj.model
 
         # Check that the design fixing constraints are generated
-        design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
+        design_vars = [
+            k for k, v in model.fd_scenario_blocks[0].experiment_inputs.items()
+        ]
 
         con_name_base = "global_design_eq_con_"
 
@@ -315,7 +327,9 @@ class TestDoeBuild(unittest.TestCase):
         model = doe_obj.model
 
         # Check that the design fixing constraints are generated
-        design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
+        design_vars = [
+            k for k, v in model.fd_scenario_blocks[0].experiment_inputs.items()
+        ]
 
         con_name_base = "global_design_eq_con_"
 
@@ -348,7 +362,9 @@ class TestDoeBuild(unittest.TestCase):
         model = doe_obj.model
 
         # Check that the design fixing constraints are generated
-        design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
+        design_vars = [
+            k for k, v in model.fd_scenario_blocks[0].experiment_inputs.items()
+        ]
 
         con_name_base = "global_design_eq_con_"
 
@@ -502,11 +518,11 @@ class TestDoeBuild(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj._generate_scenario_blocks()
+        doe_obj._generate_fd_scenario_blocks()
 
         for i in doe_obj.model.parameter_scenarios:
             self.assertTrue(
-                doe_obj.model.find_component("scenario_blocks[" + str(i) + "]")
+                doe_obj.model.find_component("fd_scenario_blocks[" + str(i) + "]")
             )
 
 
