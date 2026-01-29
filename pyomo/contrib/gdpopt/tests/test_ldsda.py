@@ -15,6 +15,7 @@ from pyomo.contrib.gdpopt.tests.four_stage_dynamic_model import build_model
 from unittest.mock import MagicMock
 from pyomo.contrib.gdpopt.ldsda import GDP_LDSDA_Solver
 
+
 class TestGDPoptLDSDA(unittest.TestCase):
     """Real unit tests for GDPopt"""
 
@@ -56,7 +57,8 @@ class TestGDPoptLDSDA(unittest.TestCase):
                 time_limit=100,
             )
             self.assertAlmostEqual(value(model.obj), -23.305325, places=4)
-    
+
+
 class TestLDSDAUnit(unittest.TestCase):
     def test_line_search_tuple_unpacking(self):
         """
@@ -78,7 +80,9 @@ class TestLDSDAUnit(unittest.TestCase):
         # Call 1: Returns (True, 10.0) -> Improvement found. Loop should continue.
         # Call 2: Returns (False, 10.0) -> No improvement. Loop SHOULD break.
         # If your fix works, the loop breaks here. If broken, it loops infinitely or crashes.
-        solver._solve_GDP_subproblem = MagicMock(side_effect=[(True, 10.0), (False, 10.0)])
+        solver._solve_GDP_subproblem = MagicMock(
+            side_effect=[(True, 10.0), (False, 10.0)]
+        )
 
         # 4. Run the method
         config = MagicMock()
