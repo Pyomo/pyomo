@@ -6,17 +6,34 @@ To run parmest, you will need Python version 3.x along with
 various Python package dependencies and the IPOPT software 
 library for non-linear optimization.
 
-Python package dependencies
+Python Package Dependencies
 ---------------------------
 
-#. numpy
-#. pandas
-#. pyomo
-#. mpisppy (optional)
-#. matplotlib (optional)
-#. scipy.stats (optional)
-#. seaborn (optional)
-#. mpi4py.MPI (optional)
+1.  Install NumPy and Pandas with your preferred package manager;
+    both NumPy and SciPy are required dependencies of parmest.
+    You may install NumPy and Pandas with, for example, ``conda``:
+
+    ::
+
+        conda install numpy pandas
+
+    or ``pip``:
+
+    ::
+
+        pip install numpy pandas
+2.  `Install Pyomo <https://pyomo.readthedocs.io/en/stable/getting_started/installation.html#pyomo-installation>`_.
+    parmest is included in the Pyomo software package, at pyomo/contrib/parmest.
+3.  (*Optional*) Install ``matplotlib`` and ``scipy``:
+
+    ::
+
+        pip install scipy matplotlib
+4.  (*Optional*) Install ``seaborn``
+
+    ::
+
+        pip install seaborn
 
 IPOPT
 -----

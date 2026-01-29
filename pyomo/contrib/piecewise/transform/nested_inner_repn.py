@@ -72,12 +72,12 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
         # use the linear function directly (but still use the substitute_var for
         # consistency).
         if len(choices) == 1:
-            (_, linear_func) = choices[0]  # simplex isn't important in this case
+            _, linear_func = choices[0]  # simplex isn't important in this case
             linear_func_expr = linear_func(*pw_expr.args)
             transBlock.set_substitute = Constraint(
                 expr=substitute_var == linear_func_expr
             )
-            (transBlock.substitute_var_lb, transBlock.substitute_var_ub) = (
+            transBlock.substitute_var_lb, transBlock.substitute_var_ub = (
                 compute_bounds_on_expr(linear_func_expr)
             )
         else:
@@ -190,7 +190,7 @@ class NestedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBa
         )
 
         # Widen the variable bounds to those of this linear func expression
-        (lb, ub) = compute_bounds_on_expr(linear_func_expr)
+        lb, ub = compute_bounds_on_expr(linear_func_expr)
         if lb is not None and lb < root_block.substitute_var_lb:
             root_block.substitute_var_lb = lb
         if ub is not None and ub > root_block.substitute_var_ub:
