@@ -24,7 +24,6 @@ from pyomo.environ import SolverFactory, ConcreteModel
 from pyomo.opt import SolverStatus, TerminationCondition
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
 
-
 try:
     import gurobipy as gp
 
