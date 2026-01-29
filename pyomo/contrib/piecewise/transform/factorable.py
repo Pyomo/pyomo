@@ -10,7 +10,14 @@ from pyomo.core.expr.numeric_expr import (
     SumExpression,
     LinearExpression,
     UnaryFunctionExpression,
+    NPV_NegationExpression,
+    NPV_PowExpression,
+    NPV_ProductExpression,
+    NPV_DivisionExpression,
+    NPV_SumExpression,
+    NPV_UnaryFunctionExpression,
 )
+from pyomo.core.base.units_container import _PyomoUnit
 
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.core.base import (
@@ -41,6 +48,10 @@ def _handle_var(node, data, visitor):
     visitor.degree_map[node] = 1
     visitor.substitution_map[node] = node
     return node
+
+
+def _handle_unit(node, data, visitor):
+    return _handle_float(node.value, data, visitor)
 
 
 def _handle_param(node, data, visitor):
@@ -313,6 +324,13 @@ handlers[NegationExpression] = _handle_negation
 handlers[UnaryFunctionExpression] = _handle_unary
 handlers[int] = _handle_float
 handlers[float] = _handle_float
+handlers[NPV_NegationExpression] = _handle_negation
+handlers[NPV_PowExpression] = _handle_pow
+handlers[NPV_ProductExpression] = _handle_product
+handlers[NPV_DivisionExpression] = _handle_division
+handlers[NPV_SumExpression] = _handle_sum
+handlers[NPV_UnaryFunctionExpression] = _handle_unary
+handlers[_PyomoUnit] = _handle_unit
 
 
 class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
