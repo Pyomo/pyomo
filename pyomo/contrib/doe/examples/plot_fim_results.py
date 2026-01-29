@@ -8,9 +8,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
+from pathlib import Path
 
-# Read the results file
-with open('rooney_biegler_fim_verification.json', 'r') as f:
+# Get the directory where this script is located
+script_dir = Path(__file__).parent
+
+# Read the results file from the same directory as this script
+with open(script_dir / 'rooney_biegler_fim_verification.json', 'r') as f:
     data = json.load(f)
 
 # Convert results to DataFrame
@@ -141,6 +145,7 @@ ax2.grid(True, alpha=0.3)
 fig.colorbar(contour, ax=ax2, label='log10(det(FIM))')
 
 plt.tight_layout()
-plt.savefig('rooney_biegler_fim_plot_concatenated.png', dpi=300, bbox_inches='tight')
-print(f"\nPlot saved as 'rooney_biegler_fim_plot_concatenated.png'")
+output_path = script_dir / 'rooney_biegler_fim_plot_concatenated.png'
+plt.savefig(output_path, dpi=300, bbox_inches='tight')
+print(f"\nPlot saved as '{output_path}'")
 plt.show()

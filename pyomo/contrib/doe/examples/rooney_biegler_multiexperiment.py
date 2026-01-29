@@ -20,6 +20,8 @@ import pyomo.environ as pyo
 from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.doe import DesignOfExperiments
 from pyomo.common.dependencies import pandas as pd, numpy as np
+import json
+from pathlib import Path
 
 
 def rooney_biegler_model(data, theta=None):
@@ -103,7 +105,9 @@ class RooneyBieglerExperiment(Experiment):
         return self.model
 
 
-def run_rooney_biegler_multi_experiment_doe(experiment_list, tee=False):
+def run_rooney_biegler_multi_experiment_doe(
+    experiment_list, objective_option="determinant", tee=False
+):
     """
     Test multi-experiment optimization with the Rooney-Biegler example.
 
@@ -111,6 +115,8 @@ def run_rooney_biegler_multi_experiment_doe(experiment_list, tee=False):
     ----------
     experiment_list : list
         List of RooneyBieglerExperiment objects to optimize simultaneously
+    objective_option : str, optional
+        Objective function option ('determinant', 'trace', or 'pseudo_trace'), by default 'determinant'
     tee : bool, optional
         Whether to show solver output, by default False
 
@@ -123,22 +129,17 @@ def run_rooney_biegler_multi_experiment_doe(experiment_list, tee=False):
     n_exp = len(experiment_list)
 
     # Create the DesignOfExperiments object
+    print(f"Objective: {objective_option}")
     print(f"\n{'='*60}")
     print(f"Testing Multi-Experiment Optimization with {n_exp} experiments")
     print(f"{'='*60}\n")
 
-    # Create a custom solver
-    solver = pyo.SolverFactory("ipopt")
-    solver.options["linear_solver"] = "mumps"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
-
     # Note: Not using prior_FIM to avoid numerical issues with this simple model
+    # Also not passing a custom solver - let DoE use its default
     doe_obj = DesignOfExperiments(
         experiment_list=experiment_list,
-        objective_option="determinant",
+        objective_option=objective_option,
         prior_FIM=None,
-        solver=solver,
         tee=tee,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
@@ -178,7 +179,7 @@ def run_rooney_biegler_multi_experiment_doe(experiment_list, tee=False):
         print(f"  log10 A-opt: {scenario['log10 A-opt']:.4f}")
         print(f"  log10 D-opt: {scenario['log10 D-opt']:.4f}")
         print(f"  log10 E-opt: {scenario['log10 E-opt']:.4f}")
-        print(f"  log10 ME-opt: {scenario['log10 ME-opt']:.4f}")
+        print(f"  log10 ME-opt: {scenario['FIM Condition Number']:.4f}")
 
         # Print each experiment design
         for exp_idx, exp in enumerate(scenario['Experiments']):
@@ -205,33 +206,98 @@ if __name__ == "__main__":
 
     # Create solver for initialization
     solver = pyo.SolverFactory("ipopt")
-    solver.options["linear_solver"] = "mumps"
+    # Use default linear solver
 
-    # Test with 3 experiments
+    # Test with 2 experiments
     print("\n" + "=" * 60)
     print("Multi-Experiment Optimization Test")
     print("=" * 60)
 
-    # Create multiple experiment objects with different hour values
-    n_exp = 2
-    experiment_list = []
+    # Objective options to test
+    objective_options = ['determinant', 'trace', 'pseudo_trace']
 
-    print(f"\nCreating and initializing {n_exp} experiments...")
-    for i in range(n_exp):
-        # Use different rows from the dataframe for each experiment
-        exp_data = data.loc[i, :]
-        exp = RooneyBieglerExperiment(
-            data=exp_data, theta=theta, measure_error=measurement_error
+    # Get script directory for saving results
+    script_dir = Path(__file__).parent
+
+    # Dictionary to store all results
+    all_results = {}
+
+    for obj_option in objective_options:
+        print(f"\n\n{'#'*70}")
+        print(f"# Running with objective: {obj_option}")
+        print(f"{'#'*70}")
+
+        # Create multiple experiment objects with different hour values
+        n_exp = 2
+        experiment_list = []
+
+        print(f"\nCreating and initializing {n_exp} experiments...")
+        for i in range(n_exp):
+            # Use different rows from the dataframe for each experiment
+            exp_data = data.loc[i, :]
+            exp = RooneyBieglerExperiment(
+                data=exp_data, theta=theta, measure_error=measurement_error
+            )
+            experiment_list.append(exp)
+            print(f"  Experiment {i+1} created (hour={exp_data['hour']:.1f})")
+
+        # Run multi-experiment optimization
+        doe_obj = run_rooney_biegler_multi_experiment_doe(
+            experiment_list=experiment_list, objective_option=obj_option, tee=False
         )
-        # Initialize the experiment with solver
-        model = exp.get_labeled_model()
-        solver.solve(model)
-        experiment_list.append(exp)
-        print(f"  Experiment {i+1} initialized (hour={exp_data['hour']:.1f})")
 
-    # Run multi-experiment optimization
-    doe_obj = run_rooney_biegler_multi_experiment_doe(
-        experiment_list=experiment_list, tee=False
-    )
+        # Extract and save results
+        results_summary = {
+            'objective_option': obj_option,
+            'solver_status': str(doe_obj.results['Solver Status']),
+            'termination_condition': str(doe_obj.results['Termination Condition']),
+            'n_scenarios': doe_obj.results['Number of Scenarios'],
+            'n_experiments': doe_obj.results['Number of Experiments per Scenario'],
+            'timing': {
+                'build_time': doe_obj.results['Build Time'],
+                'initialization_time': doe_obj.results['Initialization Time'],
+                'solve_time': doe_obj.results['Solve Time'],
+                'total_time': doe_obj.results['Wall-clock Time'],
+            },
+            'scenarios': [],
+        }
 
-    print("\nTest completed successfully!")
+        # Extract scenario results
+        for s_idx, scenario in enumerate(doe_obj.results['Scenarios']):
+            scenario_data = {
+                'scenario_idx': s_idx,
+                'log10_A_opt': scenario['log10 A-opt'],
+                'log10_D_opt': scenario['log10 D-opt'],
+                'log10_E_opt': scenario['log10 E-opt'],
+                'FIM_condition_number': scenario['FIM Condition Number'],
+                'experiments': [],
+            }
+
+            # Extract experiment designs
+            for exp_idx, exp in enumerate(scenario['Experiments']):
+                exp_data = {'experiment_idx': exp_idx, 'design_variables': {}}
+                for name, value in zip(
+                    exp['Experiment Design Names'], exp['Experiment Design']
+                ):
+                    exp_data['design_variables'][name] = value
+                scenario_data['experiments'].append(exp_data)
+
+            results_summary['scenarios'].append(scenario_data)
+
+        all_results[obj_option] = results_summary
+
+        # Save individual results file
+        output_file = script_dir / f'rooney_biegler_multiexp_{obj_option}.json'
+        with open(output_file, 'w') as f:
+            json.dump(results_summary, f, indent=2)
+        print(f"\nResults saved to: {output_file}")
+
+    # Save combined results
+    combined_file = script_dir / 'rooney_biegler_multiexp_all_objectives.json'
+    with open(combined_file, 'w') as f:
+        json.dump(all_results, f, indent=2)
+    print(f"\n\nCombined results saved to: {combined_file}")
+
+    print("\n" + "=" * 70)
+    print("All tests completed successfully!")
+    print("=" * 70)

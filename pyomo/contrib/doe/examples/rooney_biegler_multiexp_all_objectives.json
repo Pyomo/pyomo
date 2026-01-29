@@ -1,0 +1,110 @@
+{
+  "determinant": {
+    "objective_option": "determinant",
+    "solver_status": "ok",
+    "termination_condition": "optimal",
+    "n_scenarios": 1,
+    "n_experiments": 2,
+    "timing": {
+      "build_time": 0.180333167000299,
+      "initialization_time": 0.015761791999921115,
+      "solve_time": 0.017508749999706197,
+      "total_time": 0.2136037089999263
+    },
+    "scenarios": [
+      {
+        "scenario_idx": 0,
+        "log10_A_opt": -1.9345624005152717,
+        "log10_D_opt": 6.0281601116159935,
+        "log10_E_opt": 1.9376054760011003,
+        "FIM_condition_number": 142.2162292922536,
+        "experiments": [
+          {
+            "experiment_idx": 0,
+            "design_variables": {
+              "hour": 1.9321638206023855
+            }
+          },
+          {
+            "experiment_idx": 1,
+            "design_variables": {
+              "hour": 9.999999685494409
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "trace": {
+    "objective_option": "trace",
+    "solver_status": "ok",
+    "termination_condition": "optimal",
+    "n_scenarios": 1,
+    "n_experiments": 2,
+    "timing": {
+      "build_time": 0.1562951669998256,
+      "initialization_time": 0.01545025000041278,
+      "solve_time": 0.018574582999917766,
+      "total_time": 0.19032000000015614
+    },
+    "scenarios": [
+      {
+        "scenario_idx": 0,
+        "log10_A_opt": -1.9438475742247792,
+        "log10_D_opt": 5.861092145884194,
+        "log10_E_opt": 1.948540290260968,
+        "FIM_condition_number": 92.04740838640237,
+        "experiments": [
+          {
+            "experiment_idx": 0,
+            "design_variables": {
+              "hour": 0.9728323688678797
+            }
+          },
+          {
+            "experiment_idx": 1,
+            "design_variables": {
+              "hour": 9.999983619698154
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "pseudo_trace": {
+    "objective_option": "pseudo_trace",
+    "solver_status": "ok",
+    "termination_condition": "optimal",
+    "n_scenarios": 1,
+    "n_experiments": 2,
+    "timing": {
+      "build_time": 0.1589681250002286,
+      "initialization_time": 0.015661458000067796,
+      "solve_time": 0.017739999999776046,
+      "total_time": 0.19236958300007245
+    },
+    "scenarios": [
+      {
+        "scenario_idx": 0,
+        "log10_A_opt": 7.104925730502645,
+        "log10_D_opt": -2.7168180445999597,
+        "log10_E_opt": -7.1049256998942205,
+        "FIM_condition_number": 311195521964.604,
+        "experiments": [
+          {
+            "experiment_idx": 0,
+            "design_variables": {
+              "hour": 2.003712979572658
+            }
+          },
+          {
+            "experiment_idx": 1,
+            "design_variables": {
+              "hour": 2.0039338015713404
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

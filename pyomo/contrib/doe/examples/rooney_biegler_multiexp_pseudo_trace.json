@@ -1,0 +1,36 @@
+{
+  "objective_option": "pseudo_trace",
+  "solver_status": "ok",
+  "termination_condition": "optimal",
+  "n_scenarios": 1,
+  "n_experiments": 2,
+  "timing": {
+    "build_time": 0.1589681250002286,
+    "initialization_time": 0.015661458000067796,
+    "solve_time": 0.017739999999776046,
+    "total_time": 0.19236958300007245
+  },
+  "scenarios": [
+    {
+      "scenario_idx": 0,
+      "log10_A_opt": 7.104925730502645,
+      "log10_D_opt": -2.7168180445999597,
+      "log10_E_opt": -7.1049256998942205,
+      "FIM_condition_number": 311195521964.604,
+      "experiments": [
+        {
+          "experiment_idx": 0,
+          "design_variables": {
+            "hour": 2.003712979572658
+          }
+        },
+        {
+          "experiment_idx": 1,
+          "design_variables": {
+            "hour": 2.0039338015713404
+          }
+        }
+      ]
+    }
+  ]
+}
