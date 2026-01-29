@@ -28,7 +28,6 @@ from pyomo.repn.util import (
 import pyomo.repn.linear as linear
 import pyomo.repn.quadratic as quadratic
 
-
 _FIXED = ExprType.FIXED
 _CONSTANT = ExprType.CONSTANT
 _LINEAR = ExprType.LINEAR

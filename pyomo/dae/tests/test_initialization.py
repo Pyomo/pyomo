@@ -12,6 +12,7 @@
 """
 Unit Tests for pyomo.dae.init_cond
 """
+
 import os
 from os.path import abspath, dirname
 

@@ -27,7 +27,6 @@ from pyomo.environ import (
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-
 # Circles2D3 is the original example described in the papers. Ruiz and Grossman
 # (2012) discuss two more example instances, Circles2D36 and Circles3D36, but I
 # (S. Davis 08/2023) couldn't find data for them, so I made a couple.

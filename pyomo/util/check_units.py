@@ -14,6 +14,7 @@
 This module has some helpful methods to support checking units on Pyomo
 module objects.
 """
+
 import logging
 
 from pyomo.core.base.units_container import units, UnitsError

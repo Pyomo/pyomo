@@ -75,7 +75,7 @@ class PyomoMIPConverter:
                         **io_options,
                     )
                 else:
-                    (problem_filename, symbol_map_id) = instance.write(
+                    problem_filename, symbol_map_id = instance.write(
                         filename=problem_filename,
                         format=ProblemFormat.cpxlp,
                         solver_capability=capabilities,
@@ -123,7 +123,7 @@ class PyomoMIPConverter:
                         **io_options,
                     )
                 else:
-                    (problem_filename, symbol_map_id) = instance.write(
+                    problem_filename, symbol_map_id = instance.write(
                         filename=problem_filename,
                         format=ProblemFormat.bar,
                         solver_capability=capabilities,
@@ -181,7 +181,7 @@ class PyomoMIPConverter:
                         **io_options,
                     )
                 else:
-                    (problem_filename, symbol_map_id) = instance.write(
+                    problem_filename, symbol_map_id = instance.write(
                         filename=problem_filename,
                         format=args[1],
                         solver_capability=capabilities,
@@ -246,7 +246,7 @@ class PyomoMIPConverter:
                             **io_options,
                         )
                     else:
-                        (problem_filename, symbol_map_id) = instance.write(
+                        problem_filename, symbol_map_id = instance.write(
                             filename=problem_filename,
                             format=ProblemFormat.osil,
                             solver_capability=capabilities,
