@@ -60,11 +60,25 @@ ExternalVarInfo = namedtuple(
     "Generalized Disjunctive Programming (GDP) solver",
 )
 class GDP_LDSDA_Solver(_GDPoptAlgorithm):
-    """The GDPopt (Generalized Disjunctive Programming optimizer)
-    LD-SDA (Logic-based Discrete-Steepest Descent (LD-SDA) solver.
+    """
+    The GDPopt (Generalized Disjunctive Programming optimizer) LD-SDA 
+    (Logic-based Discrete-Steepest Descent Algorithm) solver.
 
-    Accepts models that can include nonlinear, continuous variables and
-    constraints, as well as logical conditions.
+    This solver accepts models that can include nonlinear, continuous variables 
+    and constraints, as well as logical conditions. It uses a discrete steepest 
+    descent approach to explore the space of discrete variables (disjunctions) 
+    while solving NLP subproblems for the continuous variables.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        The Pyomo ConcreteModel to be solved.
+    **kwds : dict
+        Additional keyword arguments to configure the solver.
+
+    References
+    ----------
+    Ovalle, D.; Liñán, D. A.; Lee, A.; Gómez, J. M.; Ricardez-Sandoval, L.; Grossmann, I. E.; Bernal Neira, D. E. Logic-Based Discrete-Steepest Descent: A Solution Method for Process Synthesis Generalized Disjunctive Programs. Computers & Chemical Engineering 2025, 195, 108993. https://doi.org/10.1016/j.compchemeng.2024.108993.
     """
 
     CONFIG = _GDPoptAlgorithm.CONFIG()  # CONFIG = ConfigBlock("GDPopt")
@@ -92,14 +106,20 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """.strip())
 
     def _solve_gdp(self, model, config):
-        """Solve the GDP model.
+        """
+        Execute the main LD-SDA algorithm logic.
+
+        Initializes the utility blocks, reformulates the model, solves the 
+        initial point, and enters the main search loop (Neighbor Search and 
+        Line Search) until a local optimum is found or termination criteria 
+        are met.
 
         Parameters
         ----------
         model : ConcreteModel
-            The GDP model to be solved
+            The GDP model to be solved.
         config : ConfigBlock
-            GDPopt configuration block
+            The configuration block containing solver options.
         """
         logger = config.logger
         self.log_formatter = (
@@ -150,24 +170,48 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 self.line_search(config)
 
     def any_termination_criterion_met(self, config):
-        return self.reached_iteration_limit(config) or self.reached_time_limit(config)
-
-    def _solve_GDP_subproblem(self, external_var_value, search_type, config):
-        """Solve the GDP subproblem with disjunctions fixed according to the external variable.
+        """
+        Check if any termination criteria (iteration limit or time limit) have been met.
 
         Parameters
         ----------
-        external_var_value : list
-            The values of the external variables to be evaluated
-        search_type : str
-            The type of search, neighbor search or line search
         config : ConfigBlock
-            GDPopt configuration block
+            The configuration block containing limits.
 
         Returns
         -------
         bool
-            True if the primal bound is improved
+            True if either the iteration limit or time limit has been reached, 
+            False otherwise.
+        """
+        return self.reached_iteration_limit(config) or self.reached_time_limit(config)
+
+    def _solve_GDP_subproblem(self, external_var_value, search_type, config):
+        """
+        Solve the GDP subproblem with disjunctions fixed according to the external variable values.
+
+        This method fixes the Boolean variables based on the `external_var_value`, 
+        applies necessary transformations (BigM, FBBT), and solves the resulting 
+        MINLP/NLP using the configured solver.
+
+        Parameters
+        ----------
+        external_var_value : tuple or list
+            The values of the external variables (indices of active disjuncts) 
+            defining the current point in the discrete space.
+        search_type : str
+            The context of the solve (e.g., 'Initial point', 'Neighbor search', 'Line search').
+        config : ConfigBlock
+            The configuration block containing solver options.
+
+        Returns
+        -------
+        primal_improved : bool
+            True if the solution of this subproblem improved the best known 
+            primal bound (incumbent).
+        primal_bound : float
+            The objective value (primal bound) obtained from the subproblem. 
+            Returns None if the subproblem was infeasible.
         """
         self.fix_disjunctions_with_external_var(external_var_value)
         subproblem = self.working_model.clone()
@@ -202,19 +246,27 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         return primal_improved, primal_bound
 
     def _get_external_information(self, util_block, config):
-        """Function that obtains information from the model to perform the reformulation with external variables.
+        """
+        Extract information from the model to perform the reformulation with external variables.
+
+        Identifies logical constraints (specifically `ExactlyExpression`) or 
+        disjunctions to map them to external integer variables used for the 
+        discrete search.
 
         Parameters
         ----------
         util_block : Block
-            The GDPopt utility block of the model.
+            The GDPopt utility block of the model where metadata is stored.
         config : ConfigBlock
-            GDPopt configuration block.
+            The configuration block containing logical constraint or disjunction lists.
 
         Raises
         ------
         ValueError
-            The exactly_number of the exactly constraint is greater than 1.
+            If a logical constraint is not an `ExactlyExpression`.
+            If an `Exactly(N)` constraint has N > 1.
+            If the length of the starting point does not match the number of 
+            external variables derived.
         """
         util_block.external_var_info_list = []
         model = util_block.parent_block()
@@ -289,12 +341,18 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             )
 
     def fix_disjunctions_with_external_var(self, external_var_values_list):
-        """Function that fixes the disjunctions in the working_model using the values of the external variables.
+        """
+        Fix the disjunctions in the working model based on external variable values.
+
+        Maps the integer values in `external_var_values_list` to the corresponding 
+        Boolean variables in the model, fixing the selected one to True and 
+        others to False for each logical group.
 
         Parameters
         ----------
-        external_var_values_list : List
-            The list of values of the external variables
+        external_var_values_list : list or tuple
+            The list of integer values representing the active disjunct index 
+            for each external variable.
         """
         for external_variable_value, external_var_info in zip(
             external_var_values_list,
@@ -312,19 +370,22 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         self.explored_point_set.add(tuple(external_var_values_list))
 
     def _get_directions(self, dimension, config):
-        """Function creates the search directions of the given dimension.
+        """
+        Generate the search directions for the given dimension.
 
         Parameters
         ----------
         dimension : int
-            Dimension of the neighborhood
+            The dimensionality of the neighborhood (number of external variables).
         config : ConfigBlock
-            GDPopt configuration block
+            The configuration block specifying the norm ('L2' or 'Linf').
 
         Returns
         -------
-        list
-            the search directions.
+        list of tuple
+            A list of direction vectors (tuples). 
+            - If 'L2': Standard basis vectors and their negatives.
+            - If 'Linf': All combinations of {-1, 0, 1} excluding the zero vector.
         """
         if config.direction_norm == 'L2':
             directions = []
@@ -338,17 +399,22 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             return directions
 
     def _check_valid_neighbor(self, neighbor):
-        """Function that checks if a given neighbor is valid.
+        """
+        Check if a given neighbor point is valid.
+
+        A neighbor is valid if it has not been explored yet and lies within 
+        the defined bounds (LB and UB) of the external variables.
 
         Parameters
         ----------
-        neighbor : list
-            the neighbor to be checked
+        neighbor : tuple
+            The coordinates of the neighbor point to check.
 
         Returns
         -------
         bool
-            True if the neighbor is valid, False otherwise
+            True if the neighbor is valid (unexplored and within bounds), 
+            False otherwise.
         """
         if neighbor in self.explored_point_set:
             return False
@@ -361,12 +427,23 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         )
 
     def neighbor_search(self, config):
-        """Function that evaluates a group of given points and returns the best
+        """
+        Evaluate immediate neighbors of the current point to find a better solution.
+
+        Iterates through all search directions, generates neighbors, and solves 
+        their subproblems. Uses a tie-breaking mechanism favoring points farther 
+        away (Euclidean distance) if objective values are within tolerance.
 
         Parameters
         ----------
         config : ConfigBlock
-            GDPopt configuration block
+            The configuration block containing solver options.
+
+        Returns
+        -------
+        bool
+            True if the current point is locally optimal (no better neighbor found), 
+            False if a better neighbor was found (current point updated).
         """
         locally_optimal = True
         best_neighbor = None
@@ -421,12 +498,16 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         return locally_optimal
 
     def line_search(self, config):
-        """Function that performs a line search in the best direction.
+        """
+        Perform a line search along the best direction found by the neighbor search.
+
+        Continues moving in `self.best_direction` as long as the objective 
+        function value improves.
 
         Parameters
         ----------
         config : ConfigBlock
-            GDPopt configuration block
+            The configuration block containing solver options.
         """
         primal_improved = True
         while primal_improved:
@@ -446,25 +527,30 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
     def _handle_subproblem_result(
         self, subproblem_result, subproblem, external_var_value, config, search_type
     ):
-        """Function that handles the result of the subproblem
+        """
+        Process the result of a subproblem solve.
+
+        Checks termination conditions, updates primal bounds if valid, and 
+        logs the state.
 
         Parameters
         ----------
-        subproblem_result : tuple
-            the result of the subproblem
+        subproblem_result : SolverResults
+            The result object returned by the solver.
         subproblem : ConcreteModel
-            the subproblem model
-        external_var_value : list
-            the values of the external variables
+            The subproblem model instance.
+        external_var_value : tuple
+            The external variable configuration used for this subproblem.
         config : ConfigBlock
-            GDPopt configuration block
+            The configuration block.
         search_type : str
-            the type of search, neighbor search or line search
+            The type of search ('Neighbor search', etc.).
 
         Returns
         -------
         bool
-            True if the result improved the current point, False otherwise
+            True if the result improved the current best primal bound, 
+            False otherwise.
         """
         if subproblem_result is None:
             return False
