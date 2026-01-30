@@ -13,6 +13,7 @@ import logging
 import os
 import subprocess
 import datetime
+import time
 import io
 import re
 import sys
@@ -344,6 +345,7 @@ class Ipopt(SolverBase):
         "Solve a model using Ipopt"
         # Begin time tracking
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tick = time.perf_counter()
         # Update configuration options, based on keywords passed to solve
         config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
         # Check if solver is available
@@ -570,11 +572,9 @@ class Ipopt(SolverBase):
             results.solver_log = ostreams[0].getvalue()
 
         # Capture/record end-time / wall-time
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tock = time.perf_counter()
         results.timing_info.start_timestamp = start_timestamp
-        results.timing_info.wall_time = (
-            end_timestamp - start_timestamp
-        ).total_seconds()
+        results.timing_info.wall_time = tock - tick
         results.timing_info.timer = timer
         return results
 
