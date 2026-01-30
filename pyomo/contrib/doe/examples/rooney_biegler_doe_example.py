@@ -18,13 +18,14 @@ model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
     RooneyBieglerExperiment,
 )
-from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe import DesignOfExperiments, ObjectiveLib
 from pyomo.common.dependencies import pandas as pd, numpy as np, matplotlib
 
 
 def run_rooney_biegler_doe(
-    optimize_experiment_A=False,
-    optimize_experiment_D=False,
+    sensitivity_formula="central",
+    optimization_objective="determinant",
+    improve_cholesky_roundoff_error=False,
     compute_FIM_full_factorial=False,
     draw_factorial_figure=False,
     design_range={'hour': [0, 10, 40]},
@@ -36,14 +37,18 @@ def run_rooney_biegler_doe(
 
     Parameters
     ----------
-    optimize_experiment_A : bool, optional
-        If True, performs A-optimality optimization to find the optimal experimental
-        design that minimizes the trace of the inverse Fisher Information Matrix.
-        By default False.
-    optimize_experiment_D : bool, optional
-        If True, performs D-optimality optimization to find the optimal
-        experimental design that maximizes the determinant of the Fisher Information
-        Matrix. By default False.
+    sensitivity_formula : str, optional
+        Differentiation formula for computing the sensitivity matrix.
+        Must be one of ['central', 'forward', 'backward']. By default 'central'.
+        Note: symbolic differentiation is not currently supported for this example.
+        Can be added in the future when that is implemented in Pyomo.DoE.
+    optimization_objective : str or ObjectiveLib, optional
+        Objective function for the design of experiments optimization.
+        Can be a string ('determinant', 'trace', 'pseudo_trace', 'minimum_eigenvalue',
+        'condition_number') or an ObjectiveLib enum member. By default 'determinant'.
+    improve_cholesky_roundoff_error : bool, optional
+        If True, applies additional constraints to improve Cholesky factorization
+        round-off error. By default False.
     compute_FIM_full_factorial : bool, optional
         If True, computes the Fisher Information Matrix for all combinations in the
         full factorial design space defined by design_range. By default False.
@@ -67,10 +72,14 @@ def run_rooney_biegler_doe(
         A dictionary containing:
         - 'experiment': The RooneyBieglerExperiment object used for design
         - 'results_dict': Full factorial design results (if computed)
-        - 'optimization': Dictionary with 'D' and/or 'A' keys containing optimization
-          results including objective values and optimal designs
+        - 'optimization': Dictionary with optimization results including objective
+          values and optimal designs
         - 'plots': List of matplotlib figure objects (if plots were generated)
     """
+    # Convert optimization_objective to enum if it's a string
+    if isinstance(optimization_objective, str):
+        optimization_objective = ObjectiveLib(optimization_objective)
+
     # Initialize a container for all potential results
     results_container = {
         "experiment": None,
@@ -94,7 +103,10 @@ def run_rooney_biegler_doe(
             data=data.loc[i, :], theta=theta, measure_error=measurement_error
         )
         doe_prior = DesignOfExperiments(
-            experiment=exp_i, objective_option="determinant", tee=tee
+            experiment=exp_i,
+            fd_formula=sensitivity_formula,
+            objective_option=optimization_objective,
+            tee=tee,
         )
         FIM += doe_prior.compute_FIM()
 
@@ -106,40 +118,47 @@ def run_rooney_biegler_doe(
 
     rooney_biegler_doe = DesignOfExperiments(
         experiment=rooney_biegler_experiment,
-        objective_option="determinant",
+        objective_option=optimization_objective,
+        fd_formula=sensitivity_formula,
         tee=tee,
         prior_FIM=FIM,
-        improve_cholesky_roundoff_error=True,
+        improve_cholesky_roundoff_error=improve_cholesky_roundoff_error,
     )
 
-    if optimize_experiment_D:
-        rooney_biegler_doe.run_doe()
+    # Run the optimization
+    rooney_biegler_doe.run_doe()
 
-        results_container["optimization"]["D"] = {
-            "value": rooney_biegler_doe.results['log10 D-opt'],
-            "design": rooney_biegler_doe.results['Experiment Design'],
-        }
-        if print_output:
-            print("Optimal results for D-optimality:", rooney_biegler_doe.results)
+    # Store results based on objective type
+    objective_name = optimization_objective.value
+    results_container["optimization"][objective_name] = {
+        "objective_type": str(optimization_objective).split('.')[-1],
+        "design": rooney_biegler_doe.results['Experiment Design'],
+    }
 
-    if optimize_experiment_A:
-        # A-Optimality
-        rooney_biegler_doe_A = DesignOfExperiments(
-            experiment=rooney_biegler_experiment,
-            objective_option="trace",
-            tee=tee,
-            prior_FIM=FIM,
-            improve_cholesky_roundoff_error=False,
+    # Add objective-specific metrics
+    if optimization_objective == ObjectiveLib.determinant:
+        results_container["optimization"][objective_name]["value"] = (
+            rooney_biegler_doe.results['log10 D-opt']
         )
-        rooney_biegler_doe_A.run_doe()
+    elif optimization_objective == ObjectiveLib.trace:
+        results_container["optimization"][objective_name]["value"] = (
+            rooney_biegler_doe.results['log10 A-opt']
+        )
+    elif optimization_objective == ObjectiveLib.pseudo_trace:
+        results_container["optimization"][objective_name]["value"] = (
+            rooney_biegler_doe.results['log10 pseudo A-opt']
+        )
+    elif optimization_objective == ObjectiveLib.minimum_eigenvalue:
+        results_container["optimization"][objective_name]["value"] = (
+            rooney_biegler_doe.results['log10 E-opt']
+        )
+    elif optimization_objective == ObjectiveLib.condition_number:
+        results_container["optimization"][objective_name]["value"] = (
+            rooney_biegler_doe.results['FIM Condition Number']
+        )
 
-        results_container["optimization"]["A"] = {
-            "value": rooney_biegler_doe_A.results['log10 A-opt'],
-            "design": rooney_biegler_doe_A.results['Experiment Design'],
-        }
-
-        if print_output:
-            print("Optimal results for A-optimality:", rooney_biegler_doe_A.results)
+    if print_output:
+        print(f"Optimal results for {objective_name}:", rooney_biegler_doe.results)
 
     # Compute Full Factorial Design Results
     if compute_FIM_full_factorial:
@@ -164,8 +183,9 @@ def run_rooney_biegler_doe(
 if __name__ == "__main__":
 
     results = run_rooney_biegler_doe(
-        optimize_experiment_A=True,
-        optimize_experiment_D=True,
+        optimization_objective=ObjectiveLib.trace,  # Can also use string: "trace"
+        sensitivity_formula="central",
+        improve_cholesky_roundoff_error=False,
         compute_FIM_full_factorial=True,
         draw_factorial_figure=True,  # Set True to test file generation
         design_range={'hour': [0, 10, 3]},  # Small range for speed
@@ -173,4 +193,4 @@ if __name__ == "__main__":
     )
     print(results)
     # Show plots if running locally
-    # matplotlib.pyplot.show()
+    matplotlib.pyplot.show()
