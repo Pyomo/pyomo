@@ -605,7 +605,6 @@ class TestDoe(unittest.TestCase):
             n_points_for_design=2,
             compute_FIM_full_factorial=False,
             plot_factorial_results=False,
-            save_plots=False,
             run_optimal_doe=False,
         )
         ff.compute_FIM_full_factorial(
@@ -640,9 +639,9 @@ class TestDoe(unittest.TestCase):
         A_opt_value_expected = -2.2364242059539663
         A_opt_design_value_expected = 9.999955457176451
 
-        A_opt_res = run_rooney_biegler_doe(optimize_experiment_A=True)
-        A_opt_value = A_opt_res["optimization"]["A"]["value"]
-        A_opt_design_value = A_opt_res["optimization"]["A"]["design"][0]
+        A_opt_res = run_rooney_biegler_doe(optimization_objective="trace")
+        A_opt_value = A_opt_res["optimization"]["trace"]["value"]
+        A_opt_design_value = A_opt_res["optimization"]["trace"]["design"][0]
 
         self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
         # print("A optimal design value:", A_opt_design_value)
@@ -673,25 +672,34 @@ class TestRooneyBieglerExample(unittest.TestCase):
         self.addCleanup(cleanup_file)
 
         # Run with draw_factorial_figure conditional on matplotlib availability
-        results = run_rooney_biegler_doe(
-            optimize_experiment_A=True,
-            optimize_experiment_D=True,
+        # Test D-optimality
+        results_D = run_rooney_biegler_doe(
+            optimization_objective="determinant",
             compute_FIM_full_factorial=True,
             draw_factorial_figure=matplotlib_available,
             design_range={'hour': [0, 10, 3]},
             tee=False,
         )
 
+        # Test A-optimality
+        results_A = run_rooney_biegler_doe(
+            optimization_objective="trace",
+            compute_FIM_full_factorial=False,
+            draw_factorial_figure=False,
+            design_range={'hour': [0, 10, 3]},
+            tee=False,
+        )
+
         # Assertions for Numerical Results
-        self.assertIn("D", results["optimization"])
-        self.assertIn("A", results["optimization"])
+        self.assertIn("determinant", results_D["optimization"])
+        self.assertIn("trace", results_A["optimization"])
 
         # Test D-optimality optimization results
         D_opt_value_expected = 6.864794717802814
         D_opt_design_value_expected = 10.0  # approximately 9.999999472662282
 
-        D_opt_value = results["optimization"]["D"]["value"]
-        D_opt_design_value = results["optimization"]["D"]["design"][0]
+        D_opt_value = results_D["optimization"]["determinant"]["value"]
+        D_opt_design_value = results_D["optimization"]["determinant"]["design"][0]
 
         self.assertAlmostEqual(D_opt_value, D_opt_value_expected, places=4)
         self.assertAlmostEqual(
@@ -702,8 +710,8 @@ class TestRooneyBieglerExample(unittest.TestCase):
         A_opt_value_expected = -2.236424205953928
         A_opt_design_value_expected = 10.0  # approximately 9.999955457176451
 
-        A_opt_value = results["optimization"]["A"]["value"]
-        A_opt_design_value = results["optimization"]["A"]["design"][0]
+        A_opt_value = results_A["optimization"]["trace"]["value"]
+        A_opt_design_value = results_A["optimization"]["trace"]["design"][0]
 
         self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=4)
         self.assertAlmostEqual(
@@ -711,8 +719,8 @@ class TestRooneyBieglerExample(unittest.TestCase):
         )
 
         # Assertions for Full Factorial Results
-        self.assertIn("results_dict", results)
-        results_dict = results["results_dict"]
+        self.assertIn("results_dict", results_D)
+        results_dict = results_D["results_dict"]
         self.assertIsInstance(results_dict, dict)
         self.assertGreater(len(results_dict), 0, "results_dict should not be empty")
 
@@ -865,7 +873,6 @@ class TestDoEFactorialFigure(unittest.TestCase):
             n_points_for_design=1,
             compute_FIM_full_factorial=True,
             plot_factorial_results=True,
-            save_plots=True,
             figure_file_name=prefix_linear,
             log_scale=False,
             run_optimal_doe=False,
@@ -884,7 +891,6 @@ class TestDoEFactorialFigure(unittest.TestCase):
             n_points_for_design=1,
             compute_FIM_full_factorial=True,
             plot_factorial_results=True,
-            save_plots=True,
             figure_file_name=prefix_log,
             log_scale=True,
             run_optimal_doe=False,
