@@ -6,10 +6,10 @@
     "n_scenarios": 1,
     "n_experiments": 2,
     "timing": {
-      "build_time": 0.19888587499917776,
-      "initialization_time": 0.018853666000723024,
-      "solve_time": 0.02022029199906683,
-      "total_time": 0.2379598329989676
+      "build_time": 0.1875945829997363,
+      "initialization_time": 0.01786112500121817,
+      "solve_time": 0.01961154200034798,
+      "total_time": 0.22506725000130245
     },
     "scenarios": [
       {
@@ -42,10 +42,10 @@
     "n_scenarios": 1,
     "n_experiments": 2,
     "timing": {
-      "build_time": 0.17755491600109963,
-      "initialization_time": 0.018094958999427035,
-      "solve_time": 0.022076625000408967,
-      "total_time": 0.21772650000093563
+      "build_time": 0.17969729200194706,
+      "initialization_time": 0.017128166000475176,
+      "solve_time": 0.019859999996697297,
+      "total_time": 0.21668545799911954
     },
     "scenarios": [
       {
@@ -78,10 +78,10 @@
     "n_scenarios": 1,
     "n_experiments": 2,
     "timing": {
-      "build_time": 0.17628366700046172,
-      "initialization_time": 0.017097916999773588,
-      "solve_time": 0.020115875000556116,
-      "total_time": 0.21349745900079142
+      "build_time": 0.17603979100022116,
+      "initialization_time": 0.017235041999811074,
+      "solve_time": 0.019696750001457985,
+      "total_time": 0.21297158300149022
     },
     "scenarios": [
       {

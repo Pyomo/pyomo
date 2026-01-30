@@ -188,7 +188,7 @@ def run_rooney_biegler_multi_experiment_doe(
             print(f"\n  Experiment {exp_idx}:")
             print(f"    Design Variables:")
             for name, value in zip(
-                exp['Experiment Design Names'], exp['Experiment Design']
+                doe_obj.results['Experiment Design Names'], exp['Experiment Design']
             ):
                 print(f"      {name}: {value:.4f}")
 
@@ -286,7 +286,7 @@ if __name__ == "__main__":
             for exp_idx, exp in enumerate(scenario['Experiments']):
                 exp_data = {'experiment_idx': exp_idx, 'design_variables': {}}
                 for name, value in zip(
-                    exp['Experiment Design Names'], exp['Experiment Design']
+                    doe_obj.results['Experiment Design Names'], exp['Experiment Design']
                 ):
                     exp_data['design_variables'][name] = value
                 scenario_data['experiments'].append(exp_data)

@@ -5,10 +5,10 @@
   "n_scenarios": 1,
   "n_experiments": 2,
   "timing": {
-    "build_time": 0.19888587499917776,
-    "initialization_time": 0.018853666000723024,
-    "solve_time": 0.02022029199906683,
-    "total_time": 0.2379598329989676
+    "build_time": 0.1875945829997363,
+    "initialization_time": 0.01786112500121817,
+    "solve_time": 0.01961154200034798,
+    "total_time": 0.22506725000130245
   },
   "scenarios": [
     {
