@@ -13,6 +13,7 @@ import logging
 import sys
 import random
 from io import StringIO
+import math
 
 import pyomo.common.unittest as unittest
 
@@ -30,6 +31,14 @@ from pyomo.environ import (
     ComponentMap,
     value,
     log,
+    log10,
+    sqrt,
+    asin,
+    acos,
+    acosh,
+    atanh,
+    tan,
+    sin,
     ConcreteModel,
     Any,
     Suffix,
@@ -38,6 +47,8 @@ from pyomo.environ import (
     Param,
     Objective,
     TerminationCondition,
+    SortComponents,
+    ConstraintList,
 )
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
@@ -51,6 +62,7 @@ from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
+from pyomo.gdp.plugins.hull import _WellDefinedConstraintGenerator
 
 currdir = this_file_dir()
 
@@ -2878,42 +2890,61 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
 
 
 class DomainRestrictionTest(unittest.TestCase):
+    def test_no_nonlinear(self):
+        m = models.makeTwoTermDisj()
+        TransformationFactory('gdp.hull').apply_to(m)
+
+        m_pts = TransformationFactory('gdp.hull').get_well_defined_points_map(m)
+        # both points have zero offset
+        self.assertEqual(m_pts[m.disjunction][m.a], 0)
+        self.assertEqual(m_pts[m.disjunction][m.x], 0)
+
     def test_simple_case(self):
         m = models.makeTwoTermDisj()
         m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
+        m2 = m.clone()
         TransformationFactory('gdp.hull').apply_to(m)
-        # did not throw
-        #
-        # TODO: keep on the model somewhere what x0 was, and assert it
-        # has a nonzero element
+
+        m_pts = TransformationFactory('gdp.hull').get_well_defined_points_map(m)
+        # x gets a nonzero offset; a does not (but it might by chance)
+        self.assertNotEqual(m_pts[m.disjunction][m.x], 0)
+        # using the recorded map is the same thing as the process that
+        # created that map
+        TransformationFactory('gdp.hull').apply_to(m2, well_defined_points=m_pts)
+        # how to assert that two blocks have (value) identical contents?
+        for c1, c2 in zip(
+            m.component_data_objects(Constraint, sort=SortComponents.deterministic),
+            m2.component_data_objects(Constraint, sort=SortComponents.deterministic),
+        ):
+            self.assertEqual(str(c1.expr), str(c2.expr))
 
     def test_handle_fixed_disagg(self):
         m = models.makeTwoTermDisj()
         m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
         m.x.fix(2)
-        TransformationFactory('gdp.hull').apply_to(m, assume_fixed_vars_permanent=False)
-        # TODO: assert x0 has a key for m.x
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m, assume_fixed_vars_permanent=False)
+        self.assertIn(m.x, hull.get_well_defined_points_map(m)[m.disjunction])
 
     def test_handle_fixed_no_disagg(self):
         m = models.makeTwoTermDisj()
         m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
         m.x.fix(2)
-        TransformationFactory('gdp.hull').apply_to(m, assume_fixed_vars_permanent=True)
-        # TODO: assert x0 does not have a key for m.x, also the
-        # transformed constraint here should be trivial
-
-    def test_well_defined_points_arg(self):
-        m = models.makeTwoTermDisj()
-        m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
-        TransformationFactory('gdp.hull').apply_to(m)
-        # did not throw
-        #
-        # TODO: check that well_defined_points is what is should be then
-        # redo by passing it
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m, assume_fixed_vars_permanent=True)
+        self.assertNotIn(m.x, hull.get_well_defined_points_map(m)[m.disjunction])
+        # transformed nonlinear constraint is trivial here
+        assertExpressionsEqual(
+            self,
+            m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+            .transformedConstraints['nonlinear_1', 'lb']
+            .body,
+            0.0 * m.d[0].binary_indicator_var,
+        )
 
     def test_no_good_point(self):
         m = models.makeTwoTermDisj()
-        m.d[0].nonlinear = Constraint(expr=log(-(m.x)**2 - 1) >= 0)
+        m.d[0].nonlinear = Constraint(expr=log(-((m.x) ** 2) - 1) >= 0)
         self.assertRaisesRegex(
             GDP_Error,
             "Unable to find a well-defined point on disjunction .*",
@@ -2924,13 +2955,15 @@ class DomainRestrictionTest(unittest.TestCase):
     def test_various_nonlinear(self):
         m = models.makeTwoTermDisj()
         m.y = Var(bounds=(-5, 5))
-        m.d[0].log = Constraint(expr=log(m.y + 1) >= 0)
+        m.d[0].log = Constraint(expr=log(m.a + 1) >= 0)
         m.d[0].pow = Constraint(expr=m.y ** (-0.5) >= 0)
-        m.d[0].div = Constraint(expr=1 / (1 - m.y) >= 0)
-        TransformationFactory('gdp.hull').apply_to(m)
-        # did not throw
-        # TODO check that I properly handled the ill-defined stuff
-    
+        m.d[0].div = Constraint(expr=1 / (m.x) >= 0)
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        m_pts = hull.get_well_defined_points_map(m)
+        self.assertNotEqual(m_pts[m.disjunction][m.x], 0)
+        self.assertNotEqual(m_pts[m.disjunction][m.y], 0)
+
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class NestedDisjunctsInFlatGDP(unittest.TestCase):
@@ -2940,3 +2973,46 @@ class NestedDisjunctsInFlatGDP(unittest.TestCase):
 
     def test_declare_disjuncts_in_disjunction_rule(self):
         ct.check_nested_disjuncts_in_flat_gdp(self, 'hull')
+
+
+class WellDefinedConstraintWalkerTest(unittest.TestCase):
+    def test_many_constraints(self):
+        m = models.makeTwoTermDisj()
+        m.hard = Constraint(expr=1 / (log(atanh(m.x))) >= 0)
+        m.several = Constraint(
+            expr=log(m.x + 1)
+            + log10(m.x + 2)
+            + sqrt(m.x + 3)
+            + asin(m.x + 4)
+            + acos(m.x + 5)
+            + tan(m.x + 6)
+            + acosh(m.x + 7)
+            + atanh(m.x + 8)
+            >= 0
+        )
+        m.cons = ConstraintList()
+        walker = _WellDefinedConstraintGenerator(cons_list=m.cons)
+        walker.walk_expression(m.hard.body)
+        walker.walk_expression(m.several.body)
+        walked_strings = [str(con.expr) for con in m.cons.values()]
+        walker_eps = 1e-4
+        for con in [
+                log(atanh(m.x)) >= walker_eps,
+                atanh(m.x) >= walker_eps,
+                m.x >= -1 + walker_eps,
+                m.x <= 1 - walker_eps,
+                m.x + 1 >= walker_eps,
+                m.x + 2 >= walker_eps,
+                m.x + 3 >= 0,
+                m.x + 4 >= -1,
+                m.x + 4 <= 1,
+                m.x + 5 >= -1,
+                m.x + 5 <= 1,
+                m.x + 6 <= (math.pi / 2) - walker_eps,
+                m.x + 6 >= -(math.pi / 2) + walker_eps,
+                m.x + 7 >= 1,
+                m.x + 8 <= 1 - walker_eps,
+                m.x + 8 >= -1 + walker_eps,
+        ]:
+            self.assertIn(str(con), walked_strings)
+        
