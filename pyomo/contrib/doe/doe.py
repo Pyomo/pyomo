@@ -805,8 +805,15 @@ class DesignOfExperiments:
         for s in range(n_scenarios):
             scenario = self.model.param_scenario_blocks[s]
             # Update total_fim values from solved individual experiment FIMs
+            # Individual experiment FIMs don't include prior_FIM in multi-experiment mode,
+            # so we add it once here to the aggregated total
             for i, p in enumerate(parameter_names):
                 for j, q in enumerate(parameter_names):
+                    # When only_compute_fim_lower=True, only the lower triangle is computed
+                    # Upper triangle elements are fixed to 0, so only aggregate lower triangle
+                    if self.only_compute_fim_lower and i < j:
+                        continue
+
                     fim_sum = sum(
                         pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
                         for k in range(n_exp)
@@ -844,9 +851,6 @@ class DesignOfExperiments:
                     jitter = 0
 
                 # Compute Cholesky decomposition
-                print("=" * 20)
-                print("Total FIM with jitter:")
-                print(total_fim_np + jitter * np.eye(len(parameter_names)))
                 L_vals = np.linalg.cholesky(
                     total_fim_np + jitter * np.eye(len(parameter_names))
                 )
@@ -946,13 +950,15 @@ class DesignOfExperiments:
             total_fim_np = np.array(total_fim_vals).reshape(
                 (len(parameter_names), len(parameter_names))
             )
-            scenario_results["Total FIM"] = total_fim_np.tolist()
 
             # Complete FIM if only computing lower triangle
             if self.only_compute_fim_lower:
                 total_fim_np = (
                     total_fim_np + total_fim_np.T - np.diag(np.diag(total_fim_np))
                 )
+
+            # Store the completed (symmetric) FIM
+            scenario_results["Total FIM"] = total_fim_np.tolist()
 
             # Statistics on the aggregated FIM (consistent with run_doe)
             scenario_results["log10 A-opt"] = np.log10(
@@ -965,75 +971,62 @@ class DesignOfExperiments:
             )
             scenario_results["FIM Condition Number"] = np.linalg.cond(total_fim_np)
 
+            # Store unknown parameter values at scenario level (same for all experiments)
+            # Use first experiment to get the values
+            scenario_results["Unknown Parameters"] = self.get_unknown_parameter_values(
+                model=scenario.exp_blocks[0]
+            )
+
             # Store results for each experiment in this scenario
             scenario_results["Experiments"] = []
             for k in range(n_exp):
-                exp_block = scenario.exp_blocks[k].fd_scenario_blocks[0]
+                exp_block = scenario.exp_blocks[k]
                 exp_results = {}
 
-                # Experiment design (input values)
-                exp_results["Experiment Design"] = [
-                    pyo.value(comp) for comp in exp_block.experiment_inputs
-                ]
-                exp_results["Experiment Design Names"] = [
-                    str(pyo.ComponentUID(comp, context=exp_block))
-                    for comp in exp_block.experiment_inputs
-                ]
-
-                # Experiment outputs
-                exp_results["Experiment Outputs"] = [
-                    pyo.value(comp) for comp in exp_block.experiment_outputs
-                ]
-                exp_results["Experiment Output Names"] = [
-                    str(pyo.ComponentUID(comp, context=exp_block))
-                    for comp in exp_block.experiment_outputs
-                ]
-
-                # Unknown parameters
-                exp_results["Unknown Parameters"] = [
-                    pyo.value(comp) for comp in exp_block.unknown_parameters
-                ]
-                exp_results["Unknown Parameter Names"] = [
-                    str(pyo.ComponentUID(comp, context=exp_block))
-                    for comp in exp_block.unknown_parameters
-                ]
-
-                # Measurement error
-                exp_results["Measurement Error"] = [
-                    pyo.value(comp) for comp in exp_block.measurement_error
-                ]
-                exp_results["Measurement Error Names"] = [
-                    str(pyo.ComponentUID(comp, context=exp_block))
-                    for comp in exp_block.measurement_error
-                ]
-
-                # Individual experiment FIM
-                exp_fim_vals = [
-                    pyo.value(scenario.exp_blocks[k].fim[p, q])
-                    for p in parameter_names
-                    for q in parameter_names
-                ]
-                exp_fim_np = np.array(exp_fim_vals).reshape(
-                    (len(parameter_names), len(parameter_names))
+                # Use helper functions for consistent extraction (same as run_doe)
+                # Store only the VALUES for each experiment (names are at top level)
+                exp_results["Experiment Design"] = self.get_experiment_input_values(
+                    model=exp_block
                 )
-                exp_results["FIM"] = exp_fim_np.tolist()
+                exp_results["Experiment Outputs"] = self.get_experiment_output_values(
+                    model=exp_block
+                )
+                exp_results["Measurement Error"] = self.get_measurement_error_values(
+                    model=exp_block
+                )
+
+                # Individual experiment FIM (get_FIM handles symmetry completion)
+                exp_results["FIM"] = self.get_FIM(model=exp_block)
 
                 # Sensitivity matrix for this experiment
-                if hasattr(scenario.exp_blocks[k], "sensitivity_jacobian"):
-                    output_names = scenario.exp_blocks[k].output_names
-                    sens_matrix_vals = [
-                        pyo.value(scenario.exp_blocks[k].sensitivity_jacobian[i, j])
-                        for i in output_names
-                        for j in parameter_names
-                    ]
-                    sens_matrix_np = np.array(sens_matrix_vals).reshape(
-                        (len(output_names), len(parameter_names))
+                if hasattr(exp_block, "sensitivity_jacobian"):
+                    exp_results["Sensitivity Matrix"] = self.get_sensitivity_matrix(
+                        model=exp_block
                     )
-                    exp_results["Sensitivity Matrix"] = sens_matrix_np.tolist()
 
                 scenario_results["Experiments"].append(exp_results)
 
             self.results["Scenarios"].append(scenario_results)
+
+        # Store variable names once (structural properties, same across all scenarios/experiments)
+        # Use first scenario's first experiment to get the structure
+        first_exp_block_fd = self.model.param_scenario_blocks[0].exp_blocks[0].fd_scenario_blocks[0]
+        self.results["Experiment Design Names"] = [
+            str(pyo.ComponentUID(comp, context=first_exp_block_fd))
+            for comp in first_exp_block_fd.experiment_inputs
+        ]
+        self.results["Experiment Output Names"] = [
+            str(pyo.ComponentUID(comp, context=first_exp_block_fd))
+            for comp in first_exp_block_fd.experiment_outputs
+        ]
+        self.results["Unknown Parameter Names"] = [
+            str(pyo.ComponentUID(comp, context=first_exp_block_fd))
+            for comp in first_exp_block_fd.unknown_parameters
+        ]
+        self.results["Measurement Error Names"] = [
+            str(pyo.ComponentUID(comp, context=first_exp_block_fd))
+            for comp in first_exp_block_fd.measurement_error
+        ]
 
         # Store general settings and info
         self.results["Number of Scenarios"] = n_scenarios
@@ -1655,9 +1648,10 @@ class DesignOfExperiments:
                 else:
                     return m.fim[p, q] == m.fim[q, p]
             else:
-                return (
-                    m.fim[p, q]
-                    == sum(
+                # For multi-experiment optimization, prior_FIM is added to the
+                # aggregated total_fim, not to each individual experiment's FIM
+                if _for_multi_experiment:
+                    return m.fim[p, q] == sum(
                         1
                         / m.fd_scenario_blocks[0].measurement_error[
                             pyo.ComponentUID(n).find_component_on(
@@ -1669,8 +1663,23 @@ class DesignOfExperiments:
                         * m.sensitivity_jacobian[n, q]
                         for n in m.output_names
                     )
-                    + m.prior_FIM[p, q]
-                )
+                else:
+                    return (
+                        m.fim[p, q]
+                        == sum(
+                            1
+                            / m.fd_scenario_blocks[0].measurement_error[
+                                pyo.ComponentUID(n).find_component_on(
+                                    m.fd_scenario_blocks[0]
+                                )
+                            ]
+                            ** 2
+                            * m.sensitivity_jacobian[n, p]
+                            * m.sensitivity_jacobian[n, q]
+                            for n in m.output_names
+                        )
+                        + m.prior_FIM[p, q]
+                    )
 
         model.jacobian_constraint = pyo.Constraint(
             model.output_names, model.parameter_names, rule=jacobian_rule
@@ -2219,6 +2228,12 @@ class DesignOfExperiments:
             def total_fim_rule(b, p, q):
                 p_idx = list(parameter_names).index(p)
                 q_idx = list(parameter_names).index(q)
+
+                # When only_compute_fim_lower=True, only compute lower triangle
+                # Upper triangle elements will be handled through symmetry
+                if self.only_compute_fim_lower and p_idx < q_idx:
+                    return pyo.Constraint.Skip
+
                 return b.total_fim[p, q] == (
                     sum(b.exp_blocks[k].fim[p, q] for k in range(n_exp))
                     + self.prior_FIM[p_idx, q_idx]
@@ -2228,19 +2243,24 @@ class DesignOfExperiments:
                 parameter_names, parameter_names, rule=total_fim_rule
             )
 
-            # 3. Initialize total_fim from sum of individual FIMs
+            # 3. Fix upper triangle elements to 0 if only_compute_fim_lower=True
+            # Initialize lower triangle from sum of individual FIMs
             for i, p in enumerate(parameter_names):
                 for j, q in enumerate(parameter_names):
-                    fim_sum = sum(
-                        pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
-                        for k in range(n_exp)
-                    )
-                    scenario.total_fim[p, q].value = fim_sum + self.prior_FIM[i, j]
+                    if self.only_compute_fim_lower and i < j:
+                        # Fix upper triangle to 0
+                        scenario.total_fim[p, q].fix(0.0)
+                    else:
+                        # Initialize lower triangle and diagonal
+                        fim_sum = sum(
+                            pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
+                            for k in range(n_exp)
+                        )
+                        scenario.total_fim[p, q].value = fim_sum + self.prior_FIM[i, j]
 
             # 4. Create obj_cons block to hold objective-related constraints
             # (similar to single-experiment case in create_objective_function)
             scenario.obj_cons = pyo.Block()
-
             # 5. Create variables and constraints (initialization will happen after square solve)
             if (
                 self.Cholesky_option
