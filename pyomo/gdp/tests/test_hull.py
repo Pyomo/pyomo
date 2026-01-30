@@ -2997,22 +2997,21 @@ class WellDefinedConstraintWalkerTest(unittest.TestCase):
         walked_strings = [str(con.expr) for con in m.cons.values()]
         walker_eps = 1e-4
         for con in [
-                log(atanh(m.x)) >= walker_eps,
-                atanh(m.x) >= walker_eps,
-                m.x >= -1 + walker_eps,
-                m.x <= 1 - walker_eps,
-                m.x + 1 >= walker_eps,
-                m.x + 2 >= walker_eps,
-                m.x + 3 >= 0,
-                m.x + 4 >= -1,
-                m.x + 4 <= 1,
-                m.x + 5 >= -1,
-                m.x + 5 <= 1,
-                m.x + 6 <= (math.pi / 2) - walker_eps,
-                m.x + 6 >= -(math.pi / 2) + walker_eps,
-                m.x + 7 >= 1,
-                m.x + 8 <= 1 - walker_eps,
-                m.x + 8 >= -1 + walker_eps,
+            log(atanh(m.x)) >= walker_eps,
+            atanh(m.x) >= walker_eps,
+            m.x >= -1 + walker_eps,
+            m.x <= 1 - walker_eps,
+            m.x + 1 >= walker_eps,
+            m.x + 2 >= walker_eps,
+            m.x + 3 >= 0,
+            m.x + 4 >= -1,
+            m.x + 4 <= 1,
+            m.x + 5 >= -1,
+            m.x + 5 <= 1,
+            m.x + 6 <= (math.pi / 2) - walker_eps,
+            m.x + 6 >= -(math.pi / 2) + walker_eps,
+            m.x + 7 >= 1,
+            m.x + 8 <= 1 - walker_eps,
+            m.x + 8 >= -1 + walker_eps,
         ]:
             self.assertIn(str(con), walked_strings)
-        
