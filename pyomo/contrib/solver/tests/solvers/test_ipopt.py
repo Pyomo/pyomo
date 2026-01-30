@@ -9,22 +9,42 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import os
+import os, sys
 import subprocess
+from contextlib import contextmanager
 
 import pyomo.environ as pyo
+from pyomo.common.envvar import is_windows
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict, ADVANCED_OPTION
 from pyomo.common.errors import DeveloperError
 from pyomo.common.tee import capture_output
 import pyomo.contrib.solver.solvers.ipopt as ipopt
 from pyomo.contrib.solver.common.util import NoSolutionError
+from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.common import unittest, Executable
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.repn.plugins.nl_writer import NLWriter
 
 ipopt_available = ipopt.Ipopt().available()
+
+
+@contextmanager
+def windows_tee_buffer(size=1 << 20):
+    """Temporarily increase TeeStream buffer size on Windows"""
+    if not sys.platform.startswith("win"):
+        # Only windows has an issue
+        yield
+        return
+    import pyomo.common.tee as tee
+
+    old = tee._pipe_buffersize
+    tee._pipe_buffersize = size
+    try:
+        yield
+    finally:
+        tee._pipe_buffersize = old
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -102,6 +122,7 @@ class TestIpoptInterface(unittest.TestCase):
         expected_list = [
             'CONFIG',
             'config',
+            'api_version',
             'available',
             'has_linear_solver',
             'is_persistent',
@@ -318,15 +339,131 @@ Ipopt 3.14.17: Optimal Solution Found
             logs.output[0],
         )
 
+    def test_parse_output_diagnostic_tags(self):
+        output = """******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit [legacy Ipopt URL removed]
+
+This version of Ipopt was compiled from source code available at
+    https://github.com/IDAES/Ipopt as part of the Institute for the Design of
+    Advanced Energy Systems Process Systems Engineering Framework (IDAES PSE
+    Framework) Copyright (c) 2018-2019. See https://github.com/IDAES/idaes-pse.
+
+This version of Ipopt was compiled using HSL, a collection of Fortran codes
+    for large-scale scientific computation.  All technical papers, sales and
+    publicity material resulting from use of the HSL codes within IPOPT must
+    contain the following acknowledgement:
+        HSL, a collection of Fortran codes for large-scale scientific
+        computation. See http://www.hsl.rl.ac.uk/.
+******************************************************************************
+
+This is Ipopt version 3.13.2, running with linear solver ma57.
+
+Number of nonzeros in equality constraint Jacobian...:    77541
+Number of nonzeros in inequality constraint Jacobian.:        0
+Number of nonzeros in Lagrangian Hessian.............:    51855
+
+Total number of variables............................:    15468
+                     variables with only lower bounds:     3491
+                variables with lower and upper bounds:     5026
+                     variables with only upper bounds:      186
+Total number of equality constraints.................:    15417
+Total number of inequality constraints...............:        0
+        inequality constraints with only lower bounds:        0
+   inequality constraints with lower and upper bounds:        0
+        inequality constraints with only upper bounds:        0
+
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+   0  4.3126674e+00 1.34e+00 1.00e+00  -5.0 0.00e+00    -  0.00e+00 0.00e+00   0
+Reallocating memory for MA57: lfact (2247250)
+   1r 4.3126674e+00 1.34e+00 9.99e+02   0.1 0.00e+00  -4.0 0.00e+00 3.29e-10R  2
+   2r 3.0519246e+08 1.13e+00 9.90e+02   0.1 2.30e+02    -  2.60e-02 9.32e-03f  1
+   3r 2.2712595e+09 1.69e+00 9.73e+02   0.1 2.23e+02    -  2.54e-02 1.71e-02f  1 Nhj
+   4  2.2712065e+09 1.69e+00 1.37e+09  -5.0 3.08e+03    -  1.32e-05 1.17e-05f  1 q
+   5  1.9062986e+09 1.55e+00 1.25e+09  -5.0 5.13e+03    -  1.19e-01 8.38e-02f  1
+   6  1.7041594e+09 1.46e+00 1.18e+09  -5.0 5.66e+03    -  7.06e-02 5.45e-02f  1
+   7  1.4763158e+09 1.36e+00 1.10e+09  -5.0 3.94e+03    -  2.30e-01 6.92e-02f  1
+   8  8.5873108e+08 1.04e+00 8.41e+08  -5.0 2.38e+05    -  3.49e-06 2.37e-01f  1
+   9  4.4215572e+08 7.45e-01 6.03e+08  -5.0 1.63e+06    -  7.97e-02 2.82e-01f  1
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+  10  5.0251884e+01 1.65e-01 1.57e+04  -5.0 1.24e+06    -  3.92e-05 1.00e+00f  1
+  11  4.9121733e+01 4.97e-02 4.68e+03  -5.0 8.11e+04    -  4.31e-02 7.01e-01h  1
+  12  4.1483985e+01 2.24e-02 5.97e+03  -5.0 1.15e+06    -  5.93e-02 1.00e+00f  1
+  13  3.5762585e+01 1.75e-02 5.00e+03  -5.0 1.03e+06    -  1.25e-01 1.00e+00f  1
+  14  3.2291014e+01 1.08e-02 3.51e+03  -5.0 8.25e+05    -  6.68e-01 1.00e+00f  1
+  15  3.2274630e+01 3.31e-05 1.17e+00  -5.0 4.26e+04    -  9.92e-01 1.00e+00h  1
+  16  3.2274631e+01 7.45e-09 2.71e-03  -5.0 6.11e+02    -  8.97e-01 1.00e+00h  1
+  17  3.2274635e+01 7.45e-09 2.35e-03  -5.0 2.71e+04    -  1.32e-01 1.00e+00f  1
+  18  3.2274635e+01 7.45e-09 1.15e-04  -5.0 5.53e+03    -  9.51e-01 1.00e+00h  1
+  19  3.2274635e+01 7.45e-09 2.84e-05  -5.0 4.41e+04    -  7.54e-01 1.00e+00f  1
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+  20  3.2274635e+01 7.45e-09 8.54e-07  -5.0 1.83e+04    -  1.00e+00 1.00e+00h  1
+
+Number of Iterations....: 20
+
+                                   (scaled)                 (unscaled)
+Objective...............:   3.2274635418964841e+01    3.2274635418964841e+01
+Dual infeasibility......:   8.5365078678328669e-07    8.5365078678328669e-07
+Constraint violation....:   8.0780625068607930e-13    7.4505805969238281e-09
+Complementarity.........:   1.2275904566414160e-05    1.2275904566414160e-05
+Overall NLP error.......:   1.2275904566414160e-05    1.2275904566414160e-05
+
+
+Number of objective function evaluations             = 23
+Number of objective gradient evaluations             = 20
+Number of equality constraint evaluations            = 23
+Number of inequality constraint evaluations          = 0
+Number of equality constraint Jacobian evaluations   = 22
+Number of inequality constraint Jacobian evaluations = 0
+Number of Lagrangian Hessian evaluations             = 20
+Total CPU secs in IPOPT (w/o function evaluations)   =     10.450
+Total CPU secs in NLP function evaluations           =      1.651
+
+EXIT: Optimal Solution Found.
+    """
+        parsed_output = ipopt.Ipopt()._parse_ipopt_output(output)
+        self.assertEqual(parsed_output["iters"], 20)
+        self.assertEqual(len(parsed_output["iteration_log"]), 21)
+        self.assertEqual(parsed_output["incumbent_objective"], 3.2274635418964841e01)
+        self.assertEqual(parsed_output["iteration_log"][3]["diagnostic_tags"], 'Nhj')
+        self.assertIn("final_scaled_results", parsed_output.keys())
+        self.assertIn(
+            'IPOPT (w/o function evaluations)', parsed_output['cpu_seconds'].keys()
+        )
+
+    def test_verify_ipopt_options(self):
+        opt = ipopt.Ipopt(solver_options={'max_iter': 4})
+        opt._verify_ipopt_options(opt.config)
+        self.assertEqual(opt.config.solver_options.value(), {'max_iter': 4})
+
+        opt = ipopt.Ipopt(solver_options={'max_iter': 4}, time_limit=10)
+        opt._verify_ipopt_options(opt.config)
+        self.assertEqual(
+            opt.config.solver_options.value(), {'max_iter': 4, 'max_cpu_time': 10}
+        )
+
+        # Finally, let's make sure it errors if someone tries to pass option_file_name
+        opt = ipopt.Ipopt(
+            solver_options={'max_iter': 4, 'option_file_name': 'myfile.opt'}
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r'Pyomo generates the ipopt options file as part of the `solve` '
+            r'method.  Add all options to ipopt.config.solver_options instead',
+        ):
+            opt._verify_ipopt_options(opt.config)
+
     def test_write_options_file(self):
-        # If we have no options, we should get false back
+        # If we have no options, nothing should happen (and no options
+        # file should be added tot he set of options)
         opt = ipopt.Ipopt()
-        result = opt._write_options_file('fakename', None)
-        self.assertFalse(result)
+        opt._write_options_file('fakename', opt.config.solver_options)
+        self.assertEqual(opt.config.solver_options.value(), {})
         # Pass it some options that ARE on the command line
         opt = ipopt.Ipopt(solver_options={'max_iter': 4})
-        result = opt._write_options_file('myfile', opt.config.solver_options)
-        self.assertFalse(result)
+        opt._write_options_file('myfile', opt.config.solver_options)
+        self.assertNotIn('option_file_name', opt.config.solver_options)
         self.assertFalse(os.path.isfile('myfile.opt'))
         # Now we are going to actually pass it some options that are NOT on
         # the command line
@@ -335,23 +472,25 @@ Ipopt 3.14.17: Optimal Solution Found
             dname = temp.mkdtemp()
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            filename = os.path.join(dname, 'myfile')
-            result = opt._write_options_file(filename, opt.config.solver_options)
-            self.assertTrue(result)
-            self.assertTrue(os.path.isfile(filename + '.opt'))
+            filename = os.path.join(dname, 'myfile.opt')
+            opt._write_options_file(filename, opt.config.solver_options)
+            self.assertIn('option_file_name', opt.config.solver_options)
+            self.assertTrue(os.path.isfile(filename))
         # Make sure all options are writing to the file
         opt = ipopt.Ipopt(solver_options={'custom_option_1': 4, 'custom_option_2': 3})
         with TempfileManager.new_context() as temp:
             dname = temp.mkdtemp()
             if not os.path.exists(dname):
                 os.mkdir(dname)
-            filename = os.path.join(dname, 'myfile')
-            result = opt._write_options_file(filename, opt.config.solver_options)
-            self.assertTrue(result)
-            self.assertTrue(os.path.isfile(filename + '.opt'))
-            with open(filename + '.opt', 'r') as f:
+            filename = os.path.join(dname, 'myfile.opt')
+            opt._write_options_file(filename, opt.config.solver_options)
+            self.assertIn('option_file_name', opt.config.solver_options)
+            self.assertTrue(os.path.isfile(filename))
+            with open(filename, 'r') as f:
                 data = f.readlines()
-                self.assertEqual(len(data), len(list(opt.config.solver_options.keys())))
+                self.assertEqual(
+                    len(data) + 1, len(list(opt.config.solver_options.keys()))
+                )
 
     def test_has_linear_solver(self):
         opt = ipopt.Ipopt()
@@ -379,17 +518,18 @@ Ipopt 3.14.17: Optimal Solution Found
     def test_create_command_line(self):
         opt = ipopt.Ipopt()
         # No custom options, no file created. Plain and simple.
-        result = opt._create_command_line('myfile', opt.config, False)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(result, [str(opt.config.executable), 'myfile.nl', '-AMPL'])
         # Custom command line options
         opt = ipopt.Ipopt(solver_options={'max_iter': 4})
-        result = opt._create_command_line('myfile', opt.config, False)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result, [str(opt.config.executable), 'myfile.nl', '-AMPL', 'max_iter=4']
         )
         # Let's see if we correctly parse config.time_limit
         opt = ipopt.Ipopt(solver_options={'max_iter': 4}, time_limit=10)
-        result = opt._create_command_line('myfile', opt.config, False)
+        opt._verify_ipopt_options(opt.config)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result,
             [
@@ -402,7 +542,8 @@ Ipopt 3.14.17: Optimal Solution Found
         )
         # Now let's do multiple command line options
         opt = ipopt.Ipopt(solver_options={'max_iter': 4, 'max_cpu_time': 10})
-        result = opt._create_command_line('myfile', opt.config, False)
+        opt._verify_ipopt_options(opt.config)
+        result = opt._create_command_line('myfile', opt.config)
         self.assertEqual(
             result,
             [
@@ -413,25 +554,6 @@ Ipopt 3.14.17: Optimal Solution Found
                 'max_iter=4',
             ],
         )
-        # Let's now include if we "have" an options file
-        result = opt._create_command_line('myfile', opt.config, True)
-        self.assertEqual(
-            result,
-            [
-                str(opt.config.executable),
-                'myfile.nl',
-                '-AMPL',
-                'option_file_name=myfile.opt',
-                'max_cpu_time=10',
-                'max_iter=4',
-            ],
-        )
-        # Finally, let's make sure it errors if someone tries to pass option_file_name
-        opt = ipopt.Ipopt(
-            solver_options={'max_iter': 4, 'option_file_name': 'myfile.opt'}
-        )
-        with self.assertRaises(ValueError):
-            result = opt._create_command_line('myfile', opt.config, False)
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -457,18 +579,52 @@ class TestIpopt(unittest.TestCase):
         # Test custom initialization
         solver = SolverFactory('ipopt', executable='/path/to/exe')
         self.assertFalse(solver.config.tee)
-        self.assertTrue(solver.config.executable.startswith('/path'))
+        self.assertIsNone(solver.config.executable.path())
+        self.assertTrue(solver.config.executable._registered_name.startswith('/path'))
 
     def test_ipopt_solve(self):
         # Gut check - does it solve?
         model = self.create_model()
         ipopt.Ipopt().solve(model)
+        self.assertAlmostEqual(model.x.value, 1)
+        self.assertAlmostEqual(model.y.value, 1)
+
+    def test_ipopt_quiet_print_level(self):
+        model = self.create_model()
+        result = ipopt.Ipopt().solve(model, solver_options={'print_level': 0})
+        # IPOPT doesn't tell us anything about the iters if the print level
+        # is set to 0
+        self.assertFalse(hasattr(result.extra_info, 'iteration_count'))
+        self.assertFalse(hasattr(result.extra_info, 'iteration_log'))
+        model = self.create_model()
+        result = ipopt.Ipopt().solve(model, solver_options={'print_level': 3})
+        # At a slightly higher level, we get some of the info, like
+        # iteration count, but NOT iteration_log
+        self.assertEqual(result.extra_info.iteration_count, 11)
+        self.assertFalse(hasattr(result.extra_info, 'iteration_log'))
+
+    def test_ipopt_loud_print_level(self):
+        with windows_tee_buffer(1 << 20):
+            model = self.create_model()
+            result = ipopt.Ipopt().solve(model, solver_options={'print_level': 8})
+            # Nothing unexpected should be in the results object at this point,
+            # except that the solver_log is significantly longer
+            self.assertEqual(result.extra_info.iteration_count, 11)
+            self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
+            self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
+            self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
+            model = self.create_model()
+            result = ipopt.Ipopt().solve(model, solver_options={'print_level': 12})
+            self.assertEqual(result.extra_info.iteration_count, 11)
+            self.assertEqual(result.incumbent_objective, 7.013645951336496e-25)
+            self.assertIn('Optimal Solution Found', result.extra_info.solver_message)
+            self.assertTrue(hasattr(result.extra_info, 'iteration_log'))
 
     def test_ipopt_results(self):
         model = self.create_model()
         results = ipopt.Ipopt().solve(model)
         self.assertEqual(results.solver_name, 'ipopt')
-        self.assertEqual(results.iteration_count, 11)
+        self.assertEqual(results.extra_info.iteration_count, 11)
         self.assertEqual(results.incumbent_objective, 7.013645951336496e-25)
         self.assertIn('Optimal Solution Found', results.extra_info.solver_message)
 
@@ -504,3 +660,110 @@ class TestIpopt(unittest.TestCase):
         else:
             # Newer version of IPOPT
             self.assertIn('IPOPT', timing_info.keys())
+
+    def test_ipopt_options_file(self):
+        # Check that the options file is getting to Ipopt: if we give it
+        # an invalid option in the options file, ipopt will fail.  This
+        # is important, as ipopt will NOT fail if you pass if an
+        # option_file_name that does not exist.
+        model = self.create_model()
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        # If the model name contains a quote, then the name needs
+        # to be quoted
+        model.name = "test'model'"
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        model.name = 'test"model'
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        # Because we are using universal=True for to_legal_filename,
+        # using both single and double quotes will be OK
+        model.name = 'test"\'model'
+        results = ipopt.Ipopt().solve(
+            model,
+            solver_options={'bogus_option': 5},
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+        )
+        self.assertEqual(results.termination_condition, TerminationCondition.error)
+        self.assertEqual(results.solution_status, SolutionStatus.noSolution)
+        self.assertIn('OPTION_INVALID', results.solver_log)
+
+        if not is_windows:
+            # This test is not valid on Windows, as {"} is not a valid
+            # character in a directory name.
+            with TempfileManager.new_context() as temp:
+                dname = temp.mkdtemp()
+                working_dir = os.path.join(dname, '"foo"')
+                os.mkdir(working_dir)
+                with self.assertRaisesRegex(ValueError, 'single and double'):
+                    results = ipopt.Ipopt().solve(
+                        model,
+                        working_dir=working_dir,
+                        solver_options={'bogus_option': 5},
+                        raise_exception_on_nonoptimal_result=False,
+                        load_solutions=False,
+                    )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class TestLegacyIpopt(unittest.TestCase):
+    def create_model(self):
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var(initialize=1.5)
+        model.y = pyo.Var(initialize=1.5)
+
+        @model.Objective(sense=pyo.minimize)
+        def rosenbrock(m):
+            return (1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2
+
+        return model
+
+    def test_map_OF_options(self):
+        model = self.create_model()
+
+        with capture_output() as LOG:
+            results = ipopt.LegacyIpoptSolver().solve(
+                model,
+                tee=True,
+                solver_options={'OF_bogus_option': 5},
+                load_solutions=False,
+            )
+        self.assertIn('OPTION_INVALID', LOG.getvalue())
+        # Note: OF_ is stripped
+        self.assertIn(
+            'Read Option: "bogus_option". It is not a valid option', LOG.getvalue()
+        )
+
+        with self.assertRaisesRegex(ValueError, "unallowed Ipopt option 'wantsol'"):
+            results = ipopt.LegacyIpoptSolver().solve(
+                model,
+                tee=True,
+                solver_options={'OF_wantsol': False},
+                load_solutions=False,
+            )

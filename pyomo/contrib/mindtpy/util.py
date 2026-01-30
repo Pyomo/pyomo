@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Utility functions and classes for the MindtPy solver."""
+
 import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.core import (
@@ -73,7 +74,7 @@ def initialize_feas_subproblem(m, feasibility_norm):
     Parameters
     ----------
     m : Pyomo model
-        The feasbility NLP subproblem.
+        The feasibility NLP subproblem.
     feasibility_norm : String
         The norm used to generate the objective function.
     """

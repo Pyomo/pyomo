@@ -60,7 +60,7 @@ RowEntry = collections.namedtuple('RowEntry', ['constraint', 'bound_type'])
 
 
 # TODO: make a proper base class
-class LinearStandardFormInfo(object):
+class LinearStandardFormInfo:
     """Return type for LinearStandardFormCompiler.write()
 
     Attributes
@@ -138,7 +138,7 @@ class LinearStandardFormInfo(object):
     'compile_standard_form',
     r'Compile an LP to standard form (:math:`\min c^Tx s.t. Ax \le b)`',
 )
-class LinearStandardFormCompiler(object):
+class LinearStandardFormCompiler:
     r"""Compiler to convert an LP to the matrix representation of the
     standard form:
 
@@ -268,7 +268,7 @@ class LinearStandardFormCompiler(object):
             return _LinearStandardFormCompiler_impl(config).write(model)
 
 
-class _LinearStandardFormCompiler_impl(object):
+class _LinearStandardFormCompiler_impl:
     # Making these methods class attributes so that others can change the hooks
     _get_visitor = LinearRepnVisitor
     _to_vector = None
@@ -330,7 +330,7 @@ class _LinearStandardFormCompiler_impl(object):
         self.var_map = var_map = {}
         initialize_var_map_from_column_order(model, self.config, var_map)
 
-        var_recorder = TemplateVarRecorder(var_map, None, sorter)
+        var_recorder = TemplateVarRecorder(var_map, sorter)
         visitor = self._get_visitor({}, var_recorder=var_recorder)
         template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
 
@@ -457,7 +457,7 @@ class _LinearStandardFormCompiler_impl(object):
                 # slack variable, but that seems rather silly.
                 continue
 
-            if not N:
+            if not N and offset.__class__ in native_types:
                 # This is a constant constraint
                 # TODO: add a (configurable) feasibility tolerance
                 if (lb is None or lb <= offset) and (ub is None or ub >= offset):
@@ -563,22 +563,42 @@ class _LinearStandardFormCompiler_impl(object):
         A_ip = A.indptr
         active_var_mask = (A_ip[1:] > A_ip[:-1]) | (c_ip[1:] > c_ip[:-1])
 
-        # Masks on NumPy arrays are very fast.  Build the reduced A
-        # indptr and then check if we actually have to manipulate the
-        # columns
-        augmented_mask = np.concatenate((active_var_mask, [True]))
-        reduced_A_indptr = A.indptr[augmented_mask]
-        n_cols -= len(reduced_A_indptr) - 1
-        if n_cols > 0:
+        obj_offset = np.array(obj_offset)
+
+        # Note: since we are doing matrix multiplication and then
+        # removing the fixed columns, we only want to go through that
+        # hassle for columns with actual nonzero entries.
+        fixed_vars = (
+            np.array([v.fixed for v in columns], dtype=np.bool_) & active_var_mask
+        )
+        if any(fixed_vars):
+            x = np.array([columns[i].value for i, f in enumerate(fixed_vars) if f])
+            obj_offset = obj_offset + c[:, fixed_vars] @ x
+            rhs = np.array(rhs) - A[:, fixed_vars] @ x
+            # Update the active variable mask to exclude the fixed_vars
+            # (that we just moved to the RHS)
+            active_var_mask &= ~fixed_vars
+            c = c[:, active_var_mask]
+            A = A[:, active_var_mask]
             columns = [v for k, v in zip(active_var_mask, columns) if k]
-            c = self._csc_matrix(
-                (c.data, c.indices, c.indptr[augmented_mask]),
-                [c.shape[0], len(columns)],
-            )
-            # active_var_idx[-1] = len(columns)
-            A = self._csc_matrix(
-                (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
-            )
+            n_cols = len(columns)
+        else:
+            # Masks on NumPy arrays are very fast.  Build the reduced A
+            # indptr and then check if we actually have to manipulate the
+            # columns
+            augmented_mask = np.concatenate((active_var_mask, [True]))
+            reduced_A_indptr = A.indptr[augmented_mask]
+            n_cols -= len(reduced_A_indptr) - 1
+            if n_cols > 0:
+                columns = [v for k, v in zip(active_var_mask, columns) if k]
+                c = self._csc_matrix(
+                    (c.data, c.indices, c.indptr[augmented_mask]),
+                    [c.shape[0], len(columns)],
+                )
+                # active_var_idx[-1] = len(columns)
+                A = self._csc_matrix(
+                    (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
+                )
 
         if with_debug_timing:
             timer.toc('Eliminated %s unused columns', n_cols, level=logging.DEBUG)
@@ -591,12 +611,16 @@ class _LinearStandardFormCompiler_impl(object):
             eliminated_vars = []
 
         info = LinearStandardFormInfo(
-            c, np.array(obj_offset), A, rhs, rows, columns, objectives, eliminated_vars
+            c, obj_offset, A, rhs, rows, columns, objectives, eliminated_vars
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
 
     def _create_csc(self, data, index, index_ptr, nnz, n_cols):
+        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
+        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
+        index_ptr = np.array(index_ptr, dtype=np.int32)
+
         if not nnz:
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
@@ -608,9 +632,6 @@ class _LinearStandardFormCompiler_impl(object):
                 (data, index, index_ptr), [len(index_ptr) - 1, n_cols]
             ).tocsc()
 
-        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
-        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
-        index_ptr = np.array(index_ptr, dtype=np.int32)
         A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, n_cols])
         A = A.tocsc()
         A.sum_duplicates()

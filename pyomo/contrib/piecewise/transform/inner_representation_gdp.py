@@ -43,7 +43,7 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
            targets must be Blocks and/or PiecewiseLinearFunctions.
         2) With 'descend_into_expressions' True. This is less computationally
            efficient, but will respect hierarchical structure by finding
-           uses of PiecewiseLinearFunctions in Constraint and Obective
+           uses of PiecewiseLinearFunctions in Constraint and Objective
            expressions and putting their transformed counterparts on the same
            parent Block as the component owning their parent expression. In
            this mode, targets must be Blocks, Constraints, and/or Objectives.
@@ -78,7 +78,7 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
             )
             linear_func_expr = linear_func(*pw_expr.args)
             disj.set_substitute = Constraint(expr=substitute_var == linear_func_expr)
-            (lb, ub) = compute_bounds_on_expr(linear_func_expr)
+            lb, ub = compute_bounds_on_expr(linear_func_expr)
             if lb is not None and lb < substitute_var_lb:
                 substitute_var_lb = lb
             if ub is not None and ub > substitute_var_ub:

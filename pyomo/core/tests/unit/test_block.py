@@ -15,6 +15,7 @@
 from io import StringIO
 import logging
 import os
+import pickle
 import sys
 import types
 import json
@@ -78,6 +79,16 @@ class DerivedBlock(ScalarBlock):
 
 
 DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
+
+
+@declare_custom_block("FooBlock", rule="build")
+class FooBlockData(BlockData):
+    def build(self, *args, capex, opex):
+        self.x = Var(list(args))
+        self.y = Var()
+
+        self.capex = capex
+        self.opex = opex
 
 
 class TestGenerators(unittest.TestCase):
@@ -474,7 +485,7 @@ class TestGenerators(unittest.TestCase):
             self.assertIs(a, b)
 
 
-class HierarchicalModel(object):
+class HierarchicalModel:
     def __init__(self):
         m = self.model = ConcreteModel()
         m.a1_IDX = Set(initialize=[5, 4], ordered=True)
@@ -671,7 +682,7 @@ class HierarchicalModel(object):
         ]
 
 
-class MixedHierarchicalModel(object):
+class MixedHierarchicalModel:
     def __init__(self):
         m = self.model = ConcreteModel()
         m.a = Block()
@@ -2533,7 +2544,7 @@ class TestBlock(unittest.TestCase):
             self.assertIs(m.d[i].parent_block(), m)
 
     def test_clone_unclonable_attribute(self):
-        class foo(object):
+        class foo:
             def __deepcopy__(bogus):
                 pass
 
@@ -2701,6 +2712,112 @@ class TestBlock(unittest.TestCase):
 5 Declarations: a1_IDX a3_IDX c a b
 """
         self.assertEqual(ref, buf.getvalue())
+
+    def test_pprint_sorting(self):
+        m = ConcreteModel()
+        m.I = Set(ordered=False, initialize=[3, 'a', 1])
+        m.y = Var(m.I)
+        m.x = Var([3, 2, 1])
+
+        OUT = StringIO()
+        m.pprint(ostream=OUT, sort=False)
+        self.assertEqual(
+            """1 Set Declarations
+    I : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {%s, %s, %s}
+
+2 Var Declarations
+    y : Size=3, Index=I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          %s :  None :  None :  None : False :  True :  Reals
+          %s :  None :  None :  None : False :  True :  Reals
+          %s :  None :  None :  None : False :  True :  Reals
+    x : Size=3, Index={3, 2, 1}
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          1 :  None :  None :  None : False :  True :  Reals
+
+3 Declarations: I y x
+""" % (tuple(repr(_) for _ in m.I.ordered_iter()) + tuple(m.I)),
+            OUT.getvalue(),
+        )
+
+        OUT = StringIO()
+        m.pprint(ostream=OUT, sort=SortComponents.ALPHABETICAL)
+        self.assertEqual(
+            """1 Set Declarations
+    I : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {%s, %s, %s}
+
+2 Var Declarations
+    x : Size=3, Index={3, 2, 1}
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          1 :  None :  None :  None : False :  True :  Reals
+    y : Size=3, Index=I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          %s :  None :  None :  None : False :  True :  Reals
+          %s :  None :  None :  None : False :  True :  Reals
+          %s :  None :  None :  None : False :  True :  Reals
+
+3 Declarations: I y x
+""" % (tuple(repr(_) for _ in m.I.ordered_iter()) + tuple(m.I)),
+            OUT.getvalue(),
+        )
+
+        OUT = StringIO()
+        m.pprint(ostream=OUT, sort=SortComponents.ORDERED_INDICES)
+        self.assertEqual(
+            """1 Set Declarations
+    I : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {%s, %s, %s}
+
+2 Var Declarations
+    y : Size=3, Index=I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          3 :  None :  None :  None : False :  True :  Reals
+          a :  None :  None :  None : False :  True :  Reals
+    x : Size=3, Index={3, 2, 1}
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          1 :  None :  None :  None : False :  True :  Reals
+
+3 Declarations: I y x
+""" % tuple(repr(_) for _ in m.I.ordered_iter()),
+            OUT.getvalue(),
+        )
+
+        OUT = StringIO()
+        m.pprint(ostream=OUT, sort=True)
+        self.assertEqual(
+            """1 Set Declarations
+    I : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {%s, %s, %s}
+
+2 Var Declarations
+    x : Size=3, Index={3, 2, 1}
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          3 :  None :  None :  None : False :  True :  Reals
+    y : Size=3, Index=I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          3 :  None :  None :  None : False :  True :  Reals
+          a :  None :  None :  None : False :  True :  Reals
+
+3 Declarations: I y x
+""" % tuple(repr(_) for _ in m.I.ordered_iter()),
+            OUT.getvalue(),
+        )
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve1(self):
@@ -3088,6 +3205,82 @@ class TestBlock(unittest.TestCase):
         stream = StringIO()
         b.pprint(ostream=stream)
         self.assertEqual(correct_s, stream.getvalue())
+
+    def test_custom_block_default_rule(self):
+        """Tests the decorator with `build` method, but without options"""
+
+        @declare_custom_block("LocalFooBlock", rule="build")
+        class LocalFooBlockData(BlockData):
+            def build(self, *args):
+                self.x = Var(list(args))
+                self.y = Var()
+
+        m = ConcreteModel()
+        m.blk_without_index = LocalFooBlock()
+        m.blk_1 = LocalFooBlock([1, 2, 3])
+        m.blk_2 = LocalFooBlock([4, 5], [6, 7])
+
+        self.assertIn("x", m.blk_without_index.component_map())
+        self.assertIn("y", m.blk_without_index.component_map())
+        self.assertIn("x", m.blk_1[3].component_map())
+        self.assertIn("x", m.blk_2[4, 6].component_map())
+
+        self.assertEqual(len(m.blk_1), 3)
+        self.assertEqual(len(m.blk_2), 4)
+
+        self.assertEqual(len(m.blk_1[2].x), 1)
+        self.assertEqual(len(m.blk_2[4, 6].x), 2)
+
+    def test_custom_block_default_rule_options(self):
+        """Tests the decorator with `build` method and model options"""
+
+        options = {"capex": 42, "opex": 24}
+        m = ConcreteModel()
+        m.blk_without_index = FooBlock(capex=42, opex=24)
+        m.blk_1 = FooBlock([1, 2, 3], **options)
+        m.blk_2 = FooBlock([4, 5], [6, 7], **options)
+
+        self.assertEqual(m.blk_without_index.capex, 42)
+        self.assertEqual(m.blk_without_index.opex, 24)
+
+        self.assertEqual(m.blk_1[3].capex, 42)
+        self.assertEqual(m.blk_2[4, 7].opex, 24)
+
+        new_m = pickle.loads(pickle.dumps(m))
+        self.assertIs(new_m.blk_without_index.__class__, m.blk_without_index.__class__)
+        self.assertIs(new_m.blk_1.__class__, m.blk_1.__class__)
+        self.assertIs(new_m.blk_2.__class__, m.blk_2.__class__)
+
+        self.assertIsNot(new_m.blk_without_index, m.blk_without_index)
+        self.assertIsNot(new_m.blk_1, m.blk_1)
+        self.assertIsNot(new_m.blk_2, m.blk_2)
+
+        with self.assertRaisesRegex(
+            TypeError, "missing 2 required keyword-only arguments"
+        ):
+            # missing 2 required keyword arguments
+            m.blk_3 = FooBlock()
+
+    def test_custom_block_user_rule(self):
+        """Tests if the default rule can be overwritten"""
+
+        @declare_custom_block("FooBlock")
+        class FooBlockData(BlockData):
+            def build(self, *args):
+                self.x = Var(list(args))
+                self.y = Var()
+
+        def _new_rule(blk):
+            blk.a = Var()
+            blk.b = Var()
+
+        m = ConcreteModel()
+        m.blk = FooBlock(rule=_new_rule)
+
+        self.assertNotIn("x", m.blk.component_map())
+        self.assertNotIn("y", m.blk.component_map())
+        self.assertIn("a", m.blk.component_map())
+        self.assertIn("b", m.blk.component_map())
 
     def test_block_rules(self):
         m = ConcreteModel()

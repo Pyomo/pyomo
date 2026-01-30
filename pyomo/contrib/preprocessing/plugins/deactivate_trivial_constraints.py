@@ -11,6 +11,7 @@
 #  ___________________________________________________________________________
 
 """Transformation to deactivate trivial constraints."""
+
 import logging
 
 from pyomo.common.collections import ComponentSet

@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import operator
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import In
@@ -22,6 +23,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.component import ActiveComponent, ModelComponentFactory
 from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')
@@ -52,7 +54,12 @@ _SUFFIX_API = (
 
 
 def suffix_generator(a_block, datatype=NOTSET, direction=NOTSET, active=None):
-    _iter = a_block.component_map(Suffix, active=active).items()
+    _iter = (
+        (s.local_name, s)
+        for s in a_block.component_data_objects(
+            Suffix, active=active, descend_into=False
+        )
+    )
     if direction is not NOTSET:
         direction = _SuffixDirectionDomain(direction)
         if not direction:
@@ -381,12 +388,18 @@ class Suffix(ComponentMap, ActiveComponent):
         return self.direction
 
     def _pprint(self):
+        def _data(sort):
+            data = ((str(k), v) for k, v in self._dict.values())
+            if SortComponents.SORTED_INDICES in sort:
+                data = sorted(data, key=operator.itemgetter(0))
+            return data
+
         return (
             [
                 ('Direction', str(self._direction.name)),
                 ('Datatype', getattr(self._datatype, 'name', 'None')),
             ],
-            ((str(k), v) for k, v in self._dict.values()),
+            _data,
             ("Value",),
             lambda k, v: [v],
         )
@@ -397,9 +410,6 @@ class Suffix(ComponentMap, ActiveComponent):
     # complications with __setstate__
     #
 
-    def pprint(self, *args, **kwds):
-        return ActiveComponent.pprint(self, *args, **kwds)
-
     def __str__(self):
         return ActiveComponent.__str__(self)
 
@@ -409,7 +419,7 @@ class AbstractSuffix(Suffix):
     pass
 
 
-class SuffixFinder(object):
+class SuffixFinder:
     def __init__(self, name, default=None, context=None):
         """This provides an efficient utility for finding suffix values on a
         (hierarchical) Pyomo model.

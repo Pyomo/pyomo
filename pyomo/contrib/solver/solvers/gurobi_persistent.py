@@ -56,7 +56,6 @@ from pyomo.contrib.solver.common.persistent import (
 from pyomo.contrib.solver.common.solution_loader import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -857,7 +856,9 @@ class GurobiPersistent(
             ):
                 results.incumbent_objective = None
 
-        results.iteration_count = gprob.getAttr('IterCount')
+        results.extra_info.IterCount = gprob.getAttr('IterCount')
+        results.extra_info.BarIterCount = gprob.getAttr('BarIterCount')
+        results.extra_info.NodeCount = gprob.getAttr('NodeCount')
 
         timer.start('load solution')
         if config.load_solutions:

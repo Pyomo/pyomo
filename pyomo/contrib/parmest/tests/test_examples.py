@@ -33,18 +33,6 @@ class TestRooneyBieglerExamples(unittest.TestCase):
     def tearDownClass(self):
         pass
 
-    def test_model(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import rooney_biegler
-
-        rooney_biegler.main()
-
-    def test_model_with_constraint(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import (
-            rooney_biegler_with_constraint,
-        )
-
-        rooney_biegler_with_constraint.main()
-
     @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_parameter_estimation_example(self):
@@ -193,6 +181,15 @@ class TestReactorDesignExamples(unittest.TestCase):
         from pyomo.contrib.parmest.examples.reactor_design import datarec_example
 
         datarec_example.main()
+
+    def test_update_suffix_example(self):
+        from pyomo.contrib.parmest.examples.reactor_design import update_suffix_example
+
+        suffix_obj, new_vals, new_var_vals = update_suffix_example.main()
+
+        # Check that the suffix object has been updated correctly
+        for i, v in enumerate(new_var_vals):
+            self.assertAlmostEqual(new_var_vals[i], new_vals[i], places=6)
 
 
 if __name__ == "__main__":

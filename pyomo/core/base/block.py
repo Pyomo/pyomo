@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 import copy
+import functools
 import logging
 import sys
 import weakref
@@ -56,7 +57,7 @@ from pyomo.opt import WriterFactory
 logger = logging.getLogger('pyomo.core')
 
 
-class _generic_component_decorator(object):
+class _generic_component_decorator:
     """A generic decorator that wraps Block.__setattr__()
 
     Arguments
@@ -83,7 +84,7 @@ class _generic_component_decorator(object):
         return rule
 
 
-class _component_decorator(object):
+class _component_decorator:
     """A class that wraps the _generic_component_decorator, which remembers
     and provides the Block and component type to the decorator.
 
@@ -102,7 +103,7 @@ class _component_decorator(object):
         return _generic_component_decorator(self._component, self._block, *args, **kwds)
 
 
-class SubclassOf(object):
+class SubclassOf:
     """This mocks up a tuple-like interface based on subclass relationship.
 
     Instances of this class present a somewhat tuple-like interface for
@@ -133,7 +134,7 @@ class SubclassOf(object):
         return iter((self,))
 
 
-class _DeduplicateInfo(object):
+class _DeduplicateInfo:
     """Class implementing a unique component data object filter
 
     This class implements :py:meth:`unique()`, which is an efficient
@@ -243,7 +244,7 @@ def _isNotNone(val):
     return val is not None
 
 
-class _BlockConstruction(object):
+class _BlockConstruction:
     """
     This class holds a "global" dict used when constructing
     (hierarchical) models.
@@ -738,16 +739,12 @@ class BlockData(ActiveComponentData):
         self._decl_order = _new_decl_order
 
     def set_value(self, val):
-        raise RuntimeError(
-            textwrap.dedent(
-                """
+        raise RuntimeError(textwrap.dedent("""
                 Block components do not support assignment or set_value().
                 Use the transfer_attributes_from() method to transfer the
                 components and public attributes from one block to another:
                     model.b[1].transfer_attributes_from(other_block)
-                """
-            ).strip()
-        )
+                """).strip())
 
     def clear(self):
         for name in self.component_map().keys():
@@ -966,30 +963,19 @@ class BlockData(ActiveComponentData):
             if val._parent() is self:
                 msg = """
 Attempting to re-assign the component '%s' to the same
-block under a different name (%s).""" % (
-                    val.name,
-                    name,
-                )
+block under a different name (%s).""" % (val.name, name)
             else:
                 msg = """
 Re-assigning the component '%s' from block '%s' to
-block '%s' as '%s'.""" % (
-                    val._name,
-                    val._parent().name,
-                    self.name,
-                    name,
-                )
+block '%s' as '%s'.""" % (val._name, val._parent().name, self.name, name)
 
-            raise RuntimeError(
-                """%s
+            raise RuntimeError("""%s
 
 This behavior is not supported by Pyomo; components must have a
 single owning block (or model), and a component may not appear
 multiple times in a block.  If you want to re-name or move this
 component, use the block del_component() and add_component() methods.
-"""
-                % (msg.strip(),)
-            )
+""" % (msg.strip(),))
         #
         # If the new component is a Block, then there is the chance that
         # it is the model(), and assigning it would create a circular
@@ -1850,7 +1836,7 @@ component, use the block del_component() and add_component() methods.
                 return False
         return True
 
-    def _pprint_blockdata_components(self, ostream):
+    def _pprint_blockdata_components(self, ostream, sort):
         #
         # We hard-code the order of the core Pyomo modeling
         # components, to ensure that the output follows the logical order
@@ -1876,7 +1862,10 @@ component, use the block del_component() and add_component() methods.
 
         indented_ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
         for item in items:
-            keys = sorted(self.component_map(item))
+            if SortComponents.ALPHABETICAL in sort:
+                keys = sorted(self.component_map(item))
+            else:
+                keys = list(self.component_map(item))
             if not keys:
                 continue
             #
@@ -1884,7 +1873,7 @@ component, use the block del_component() and add_component() methods.
             #
             ostream.write("%d %s Declarations\n" % (len(keys), item.__name__))
             for key in keys:
-                self.component(key).pprint(ostream=indented_ostream)
+                self.component(key).pprint(ostream=indented_ostream, sort=sort)
             ostream.write("\n")
         #
         # Model Order
@@ -2005,7 +1994,7 @@ component, use the block del_component() and add_component() methods.
             def solver_capability(x):
                 return True
 
-        (filename, smap) = problem_writer(self, filename, solver_capability, io_options)
+        filename, smap = problem_writer(self, filename, solver_capability, io_options)
         smap_id = id(smap)
         if not hasattr(self, 'solutions'):
             # This is a bit of a hack.  The write() method was moved
@@ -2085,15 +2074,15 @@ class Block(ActiveIndexedComponent):
     _private_data_initializers = defaultdict(lambda: dict)
 
     @overload
-    def __new__(
-        cls: Type[Block], *args, **kwds
-    ) -> Union[ScalarBlock, IndexedBlock]: ...
-
-    @overload
     def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock: ...
 
     @overload
     def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock: ...
+
+    @overload
+    def __new__(
+        cls: Type[Block], *args, **kwds
+    ) -> Union[ScalarBlock, IndexedBlock]: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Block:
@@ -2120,7 +2109,6 @@ class Block(ActiveIndexedComponent):
         # initializer
         self._dense = kwargs.pop('dense', True)
         kwargs.setdefault('ctype', Block)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _options is not None:
             deprecation_warning(
                 "The Block 'options=' keyword is deprecated.  "
@@ -2129,19 +2117,10 @@ class Block(ActiveIndexedComponent):
                 "the function arguments",
                 version='5.7.2',
             )
-            if self.is_indexed():
-
-                def rule_wrapper(model, *_idx):
-                    return _rule(model, *_idx, **_options)
-
-            else:
-
-                def rule_wrapper(model):
-                    return _rule(model, **_options)
-
-            self._rule = Initializer(rule_wrapper)
+            self._rule = Initializer(functools.partial(_rule, **_options))
         else:
             self._rule = Initializer(_rule)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _concrete:
             # Call self.construct() as opposed to just setting the _constructed
             # flag so that the base class construction procedure fires (this
@@ -2261,25 +2240,26 @@ class Block(ActiveIndexedComponent):
                 _BlockConstruction.data.pop(id(self), None)
             timer.report()
 
-    def _pprint_callback(self, ostream, idx, data):
+    def _pprint_callback(self, ostream, sort, idx, data):
         if not self.is_indexed():
-            data._pprint_blockdata_components(ostream)
+            data._pprint_blockdata_components(ostream, sort)
         else:
             ostream.write("%s : Active=%s\n" % (data.name, data.active))
             ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
-            data._pprint_blockdata_components(ostream)
+            data._pprint_blockdata_components(ostream, sort)
 
     def _pprint(self):
-        _attrs = [
-            ("Size", len(self)),
-            ("Index", self._index_set if self.is_indexed() else None),
-            ('Active', self.active),
-        ]
         # HACK: suppress the top-level block header (for historical reasons)
         if self.parent_block() is None and not self.is_indexed():
-            return None, self._data.items(), None, self._pprint_callback
+            _attrs = None
         else:
-            return _attrs, self._data.items(), None, self._pprint_callback
+            _attrs = [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+                ('Active', self.active),
+            ]
+
+        return _attrs, self.items, None, self._pprint_callback
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
@@ -2401,7 +2381,7 @@ def components_data(block, ctype, sort=None, sort_by_keys=False, sort_by_names=F
 BlockData._Block_reserved_words = set(dir(Block()))
 
 
-class ScalarCustomBlockMixin(object):
+class ScalarCustomBlockMixin:
     def __init__(self, *args, **kwargs):
         # __bases__ for the ScalarCustomBlock is
         #
@@ -2426,6 +2406,7 @@ class CustomBlock(Block):
     def __init__(self, *args, **kwargs):
         if self._default_ctype is not None:
             kwargs.setdefault('ctype', self._default_ctype)
+        kwargs.setdefault("rule", getattr(self, '_default_rule', None))
         Block.__init__(self, *args, **kwargs)
 
     def __new__(cls, *args, **kwargs):
@@ -2446,13 +2427,56 @@ class CustomBlock(Block):
             return super().__new__(cls._indexed_custom_block, *args, **kwargs)
 
 
-def declare_custom_block(name, new_ctype=None):
+class _custom_block_rule_redirect:
+    """Functor to redirect the default rule to a BlockData method"""
+
+    def __init__(self, cls, name):
+        self.cls = cls
+        self.name = name
+
+    def __call__(self, block, *args, **kwargs):
+        return getattr(self.cls, self.name)(block, *args, **kwargs)
+
+
+def declare_custom_block(name, new_ctype=None, rule=None):
     """Decorator to declare components for a custom block data class
+
+    This decorator simplifies the definition of custom derived Block
+    classes.  With this decorator, developers must only implement the
+    derived "Data" class.  The decorator automatically creates the
+    derived containers using the provided name, and adds them to the
+    current module:
 
     >>> @declare_custom_block(name="FooBlock")
     ... class FooBlockData(BlockData):
-    ...    # custom block data class
     ...    pass
+
+    >>> s = FooBlock()
+    >>> type(s)
+    <class 'ScalarFooBlock'>
+
+    >>> s = FooBlock([1,2])
+    >>> type(s)
+    <class 'IndexedFooBlock'>
+
+    It is frequently desirable for the custom class to have a default
+    ``rule`` for constructing and populating new instances.  The default
+    rule can be provided either as an explicit function or a string.  If
+    a string, the rule is obtained by attribute lookup on the derived
+    Data class:
+
+    >>> @declare_custom_block(name="BarBlock", rule="build")
+    ... class BarBlockData(BlockData):
+    ...    def build(self, *args):
+    ...        self.x = Var(initialize=5)
+
+    >>> m = pyo.ConcreteModel()
+    >>> m.b = BarBlock([1,2])
+    >>> print(m.b[1].x.value)
+    5
+    >>> print(m.b[2].x.value)
+    5
+
     """
 
     def block_data_decorator(block_data):
@@ -2476,8 +2500,15 @@ def declare_custom_block(name, new_ctype=None):
                 "_ComponentDataClass": block_data,
                 # By default this new block does not declare a new ctype
                 "_default_ctype": None,
+                # Define the default rule (may be None)
+                "_default_rule": rule,
             },
         )
+
+        # If the default rule is a string, then replace it with a
+        # function that will look up the attribute on the data class.
+        if type(rule) is str:
+            comp._default_rule = _custom_block_rule_redirect(block_data, rule)
 
         if new_ctype is not None:
             if new_ctype is True:

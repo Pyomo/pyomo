@@ -81,7 +81,7 @@ from pyomo.common.dependencies import numpy
 logger = logging.getLogger('pyomo.network')
 
 
-class FOQUSGraph(object):
+class FOQUSGraph:
     def solve_tear_direct(
         self, G, order, function, tears, outEdges, iterLim, tol, tol_type, report_diffs
     ):
@@ -614,7 +614,7 @@ class FOQUSGraph(object):
         # Rows of A are cycles and columns of A are edges
         # 1 if an edge is in a cycle, 0 otherwise
         A, _, cycleEdges = self.cycle_edge_matrix(G)
-        (nr, nc) = A.shape
+        nr, nc = A.shape
 
         if nr == 0:
             # no cycles so we are done

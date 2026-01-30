@@ -35,7 +35,7 @@ logger = logging.getLogger('pyomo.neos')
 _email_re = re.compile(r'([^@]+@[^@]+\.[a-zA-Z0-9]+)$')
 
 
-class NEOS(object):
+class NEOS:
     # NEOS currently only supports HTTPS access
     scheme = 'https'
     host = 'neos-server.org'
@@ -79,7 +79,7 @@ def ProxiedTransport():
     return ProxiedTransport_PY3()
 
 
-class kestrelAMPL(object):
+class kestrelAMPL:
     def __init__(self):
         self.setup_connection()
 
@@ -179,7 +179,7 @@ class kestrelAMPL(object):
         # sudo.  We include USERNAME to cover Windows, where LOGNAME and
         # USER may not be defined.
         user = self.getEmailAddress()
-        (jobNumber, password) = self.neos.submitJob(xml, user, "kestrel")
+        jobNumber, password = self.neos.submitJob(xml, user, "kestrel")
         if jobNumber == 0:
             raise RuntimeError("%s\n\tJob not submitted" % (password,))
 
@@ -356,7 +356,7 @@ if __name__ == "__main__":  # pragma:nocover
 
     elif sys.argv[1] == "submit":
         xml = kestrel.formXML("kestproblem")
-        (jobNumber, password) = kestrel.submit(xml)
+        jobNumber, password = kestrel.submit(xml)
 
         # Add the job,pass to the stack
         jobfile = open(kestrel.tempfile(), 'a')
@@ -391,7 +391,7 @@ if __name__ == "__main__":  # pragma:nocover
             os.unlink(kestrel.tempfile())
 
     elif sys.argv[1] == "kill":
-        (jobNumber, password) = kestrel.getJobAndPassword()
+        jobNumber, password = kestrel.getJobAndPassword()
         if jobNumber:
             kestrel.kill(jobNumber, password)
         else:
@@ -405,12 +405,12 @@ if __name__ == "__main__":  # pragma:nocover
         try:
             stub = sys.argv[1]
             # See if kestrel_options has job=.. password=..
-            (jobNumber, password) = kestrel.getJobAndPassword()
+            jobNumber, password = kestrel.getJobAndPassword()
 
             # otherwise, submit current problem to NEOS
             if not jobNumber:
                 xml = kestrel.formXML(stub)
-                (jobNumber, password) = kestrel.submit(xml)
+                jobNumber, password = kestrel.submit(xml)
 
         except KeyboardInterrupt:
             e = sys.exc_info()[1]
@@ -422,7 +422,7 @@ if __name__ == "__main__":  # pragma:nocover
             status = "Running"
             offset = 0
             while status == "Running" or status == "Waiting":
-                (output, offset) = kestrel.neos.getIntermediateResults(
+                output, offset = kestrel.neos.getIntermediateResults(
                     jobNumber, password, offset
                 )
 
@@ -445,11 +445,6 @@ To stop job:\n\
 \tampl: commands kestrelkill;\n\
 To retrieve results:\n\
 \tampl: option kestrel_options "job=%d password=%s";\n\
-\tampl: solve;\n''' % (
-                jobNumber,
-                password,
-                jobNumber,
-                password,
-            )
+\tampl: solve;\n''' % (jobNumber, password, jobNumber, password)
             sys.stdout.write(msg)
             sys.exit(1)

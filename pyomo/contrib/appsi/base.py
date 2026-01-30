@@ -16,6 +16,7 @@ import re
 import weakref
 
 from typing import (
+    TYPE_CHECKING,
     Sequence,
     Dict,
     Optional,
@@ -28,7 +29,7 @@ from typing import (
 
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
 from pyomo.common.errors import ApplicationError
-from pyomo.common.enums import IntEnum
+from pyomo.common.enums import IntEnum, SolverAPIVersion
 from pyomo.common.factory import Factory
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.constraint import ConstraintData, Constraint
@@ -379,7 +380,7 @@ class SolutionLoader(SolutionLoaderBase):
         return rc
 
 
-class Results(object):
+class Results:
     """
     Base class for all APPSI solver results
 
@@ -635,6 +636,18 @@ class Solver(abc.ABC):
             # preserve the previous behavior
             return self.name
 
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.APPSI
+
     @abc.abstractmethod
     def solve(self, model: BlockData, timer: HierarchicalTimer = None) -> Results:
         """
@@ -676,7 +689,7 @@ class Solver(abc.ABC):
         available: Solver.Availability
             An enum that indicates "how available" the solver is.
             Note that the enum can be cast to bool, which will
-            be True if the solver is runable at all and False
+            be True if the solver is runnable at all and False
             otherwise.
         """
         pass
@@ -1512,7 +1525,7 @@ legacy_solution_status_map = {
 }
 
 
-class LegacySolverInterface(object):
+class LegacySolverInterface:
     def solve(
         self,
         model: BlockData,
@@ -1674,6 +1687,18 @@ class LegacySolverInterface(object):
     def __exit__(self, t, v, traceback):
         pass
 
+    @classmethod
+    def api_version(self):
+        """
+        Return the public API supported by this interface.
+
+        Returns
+        -------
+        ~pyomo.common.enums.SolverAPIVersion
+            A solver API enum object
+        """
+        return SolverAPIVersion.V1
+
 
 class SolverFactoryClass(Factory):
     def register(self, name, doc=None):
@@ -1689,6 +1714,10 @@ class SolverFactoryClass(Factory):
             return cls
 
         return decorator
+
+    if TYPE_CHECKING:
+        # NOTE: `Factory.__call__` can return None, but for the common case
+        def __call__(self, name, **kwds) -> Solver: ...
 
 
 SolverFactory = SolverFactoryClass()

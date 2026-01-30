@@ -70,6 +70,7 @@ from pyomo.common.config import (
     ConfigFormatter,
     String_ConfigFormatter,
     document_kwargs_from_configdict,
+    document_class_CONFIG,
     add_docstring_list,
     USER_OPTION,
     DEVELOPER_OPTION,
@@ -86,7 +87,7 @@ def _display(obj, *args):
     return test.getvalue()
 
 
-class GlobalClass(object):
+class GlobalClass:
     "test class for test_known_types"
 
     pass
@@ -409,7 +410,7 @@ class TestConfigDomains(unittest.TestCase):
         c.b = '1'
         self.assertEqual(c.b, 1)
 
-        class Container(object):
+        class Container:
             def __init__(self, vals):
                 self._vals = vals
 
@@ -1427,7 +1428,7 @@ bar:
         )
 
     def test_display_nondata_type(self):
-        class NOOP(object):
+        class NOOP:
             def __getattr__(self, attr):
                 def noop(*args, **kwargs):
                     pass
@@ -1597,6 +1598,24 @@ scenarios[1].detection""",
         self.config['scenario'].declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         self.assertEqual(test, "")
+
+    def test_userValues_call_nonempty(self):
+        # See bug report in Pyomo/pyomo#3721
+        default = ConfigDict()
+        default.declare("filename", ConfigValue(default=None, domain=str))
+        cfg = default(value={"filename": "example.txt"})
+        names = [x.name(True) for x in cfg.user_values()]
+        self.assertEqual(names, ["filename"])
+        self.assertTrue(all(x is not cfg for x in cfg.user_values()))
+
+    def test_userValues_call_empty_then_set(self):
+        # See bug report in Pyomo/pyomo#3721
+        default = ConfigDict()
+        default.declare("filename", ConfigValue(default=None, domain=str))
+        cfg = default({})
+        cfg["filename"] = "example.txt"
+        names = [x.name(True) for x in cfg.user_values()]
+        self.assertEqual(names, ["filename"])
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplayAndValue_default(self):
@@ -2657,11 +2676,11 @@ Node information:
 
     def test_argparse_lists(self):
         c = ConfigDict()
-        self.assertEqual(c.domain_name(), '')
+        self.assertEqual(c.domain_name(), 'dict')
         sub_dict = c.declare('sub_dict', ConfigDict())
         sub_dict.declare('a', ConfigValue(domain=int))
         sub_dict.declare('b', ConfigValue())
-        self.assertEqual(c.sub_dict.domain_name(), 'sub-dict')
+        self.assertEqual(c.sub_dict.domain_name(), 'dict')
         self.assertEqual(c.sub_dict.get('a').domain_name(), 'int')
         self.assertEqual(c.sub_dict.get('b').domain_name(), '')
         c.declare('lst', ConfigList(domain=int)).declare_as_argument(action='append')
@@ -2680,7 +2699,7 @@ Node information:
             """
   -h, --help            show this help message and exit
   --lst INT
-  --sub SUB-DICT
+  --sub DICT
   --listof LISTOF[INT]""".strip(),
             parser.format_help(),
         )
@@ -2898,7 +2917,7 @@ c: 1.0
         self.assertEqual(mod_copy._visibility, 0)
 
     def test_template_nondata(self):
-        class NOOP(object):
+        class NOOP:
             def __getattr__(self, attr):
                 def noop(*args, **kwargs):
                     pass
@@ -3014,7 +3033,7 @@ c: 1.0
 
     def test_known_types(self):
         def local_fcn():
-            class LocalClass(object):
+            class LocalClass:
                 pass
 
             return LocalClass
@@ -3097,7 +3116,7 @@ c: 1.0
 
     def test_docstring_decorator(self):
         @document_kwargs_from_configdict('CONFIG')
-        class ExampleClass(object):
+        class ExampleClass:
             CONFIG = ExampleConfig()
 
             @document_kwargs_from_configdict(CONFIG)
@@ -3302,7 +3321,7 @@ option_2: int, default=5
         self.assertEqual(cfg.get('type').domain_name(), 'int')
 
     def test_deferred_initialization(self):
-        class Accumulator(object):
+        class Accumulator:
             def __init__(self):
                 self.data = []
 
@@ -3350,6 +3369,102 @@ option_2: int, default=5
         cfg.get('lb').reset()
         self.assertEqual(record.data, [10, 11, 'a', 'b'])
         self.assertEqual(cfg.lb.value(), ['a', 'b'])
+
+    def test_document_class_config(self):
+        class _base:
+            CONFIG = ConfigDict()
+            CONFIG.declare(
+                'option_1', ConfigValue(default=1, domain=int, doc="class option 1")
+            )
+            CONFIG.declare('option_2', ConfigValue(domain=float, doc="class option 2"))
+
+            def fcn1(self, **kwargs):
+                "Base class docstring 1"
+
+            def fcn2(self, **kwargs):
+                "Base class docstring 2"
+
+            def fcn3(self, **kwargs):
+                pass
+
+        @document_class_CONFIG(methods=['fcn1', 'fcn2', 'fcn3'])
+        class _derived(_base):
+            "Derived class documentation"
+
+            def fcn1(self, **kwargs):
+                "Derived docstring 1"
+
+        self.assertEqual(_base.__doc__, None)
+        self.assertEqual(
+            _derived.__doc__,
+            """Derived class documentation
+
+**Class configuration**
+
+This class leverages the Pyomo Configuration System for managing
+configuration options.  See the discussion on :ref:`configuring class
+hierarchies <class_config>` for more information on how configuration
+class attributes, instance attributes, and method keyword arguments
+interact.
+
+.. _pyomo.common.tests.test_config._derived::CONFIG:
+
+CONFIG
+------
+option_1: int, default=1
+
+    class option 1
+
+option_2: float, optional
+
+    class option 2""",
+        )
+
+        self.assertEqual(_base.fcn1.__doc__, "Base class docstring 1")
+        self.assertEqual(
+            _derived.fcn1.__doc__,
+            """Derived docstring 1
+
+Keyword Arguments
+-----------------
+option_1: int, default=1
+
+    class option 1
+
+option_2: float, optional
+
+    class option 2""",
+        )
+
+        self.assertEqual(_base.fcn2.__doc__, "Base class docstring 2")
+        self.assertEqual(
+            _derived.fcn2.__doc__,
+            """Base class docstring 2
+
+Keyword Arguments
+-----------------
+option_1: int, default=1
+
+    class option 1
+
+option_2: float, optional
+
+    class option 2""",
+        )
+
+        self.assertEqual(_base.fcn3.__doc__, None)
+        self.assertEqual(
+            _derived.fcn3.__doc__,
+            """Keyword Arguments
+-----------------
+option_1: int, default=1
+
+    class option 1
+
+option_2: float, optional
+
+    class option 2""",
+        )
 
 
 if __name__ == "__main__":

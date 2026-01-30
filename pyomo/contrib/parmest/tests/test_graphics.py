@@ -20,10 +20,6 @@ from pyomo.common.dependencies import (
     matplotlib_available,
 )
 
-import platform
-
-is_osx = platform.mac_ver()[0] != ''
-
 import pyomo.common.unittest as unittest
 import sys
 import os
@@ -42,10 +38,6 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 )
 @unittest.skipIf(
     not graphics.imports_available, "parmest.graphics imports are unavailable"
-)
-@unittest.skipIf(
-    is_osx,
-    "Disabling graphics tests on OSX due to issue in Matplotlib, see Pyomo PR #1337",
 )
 class TestGraphics(unittest.TestCase):
     def setUp(self):

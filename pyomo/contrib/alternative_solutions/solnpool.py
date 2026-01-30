@@ -32,8 +32,14 @@ def gurobi_generate_solutions(
 ):
     """
     Finds alternative optimal solutions for discrete variables using Gurobi's
-    built-in Solution Pool capability. See the Gurobi Solution Pool
-    documentation for additional details.
+    built-in Solution Pool capability.
+
+    This method defaults to the optimality-enforced discovery method with PoolSearchMode = 2.
+    There are two other options, standard single optimal solution (PoolSearchMode = 0) and
+    best-effort discovery with no guarantees (PoolSearchMode = 1). Please consult the Gurobi
+    documentation on PoolSearchMode for details on impact on Gurobi results.
+    Changes to this mode can be made by included PoolSearchMode set to the intended value
+    in solver_options.
 
     Parameters
     ----------
@@ -69,16 +75,29 @@ def gurobi_generate_solutions(
     if not opt.available():
         raise ApplicationError("Solver (gurobi) not available")
 
+    assert num_solutions >= 1, "num_solutions must be positive integer"
+    if num_solutions == 1:
+        logger.warning("Running alternative_solutions method to find only 1 solution!")
+
     opt.config.stream_solver = tee
     opt.config.load_solution = False
     opt.gurobi_options["PoolSolutions"] = num_solutions
-    opt.gurobi_options["PoolSearchMode"] = 2
     if rel_opt_gap is not None:
         opt.gurobi_options["PoolGap"] = rel_opt_gap
     if abs_opt_gap is not None:
         opt.gurobi_options["PoolGapAbs"] = abs_opt_gap
     for parameter, value in solver_options.items():
         opt.gurobi_options[parameter] = value
+    if "PoolSearchMode" not in opt.gurobi_options:
+        opt.gurobi_options["PoolSearchMode"] = 2
+    elif opt.gurobi_options["PoolSearchMode"] == 0:
+        logger.warning(
+            "Running gurobi_solnpool with PoolSearchMode=0, this is single search mode and not the intended use case for gurobi_generate_solutions"
+        )
+    elif opt.gurobi_options["PoolSearchMode"] == 1:
+        logger.warning(
+            "Running gurobi_solnpool with PoolSearchMode=1, best effort search may lead to unexpected behavior"
+        )
     #
     # Run gurobi
     #

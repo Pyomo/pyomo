@@ -32,7 +32,6 @@ from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_interval_index,
 )
 
-
 IntervalDataTuple = namedtuple("IntervalTuple", ["data", "intervals"])
 
 

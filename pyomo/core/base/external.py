@@ -460,7 +460,7 @@ class AMPLExternalFunction(ExternalFunction):
                     ),
                 ),
             ],
-            (),
+            None,
             None,
             None,
         )
@@ -614,7 +614,7 @@ class PythonCallbackFunction(ExternalFunction):
                     ),
                 ),
             ],
-            (),
+            None,
             None,
             None,
         )

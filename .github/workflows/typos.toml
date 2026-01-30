@@ -73,4 +73,12 @@ lst = "lst"
 gam = "gam"
 # Regex search term from contrib/solver/solvers/ipopt
 ond = "ond"
+# GAMS_writer
+PATHC = "PATHC"
+# Bimap - tries to correct to Bitmap
+Bimap = "Bimap"
+# cmo - tries to correct to com
+cmo = "cmo"
+# Substituters
+Substituters = "Substituters"
 # AS NEEDED: Add More Words Below

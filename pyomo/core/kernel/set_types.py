@@ -11,7 +11,6 @@
 
 import logging
 
-
 logger = logging.getLogger('pyomo.core')
 
 _virtual_sets = []
@@ -20,7 +19,7 @@ _virtual_sets = []
 #
 # Dummy types used by Kernel as domain flags
 #
-class RealSet(object):
+class RealSet:
     @staticmethod
     def get_interval():
         return (None, None, 0)
@@ -38,7 +37,7 @@ class RealSet(object):
         return False
 
 
-class IntegerSet(object):
+class IntegerSet:
     @staticmethod
     def get_interval():
         return (None, None, 1)
@@ -56,7 +55,7 @@ class IntegerSet(object):
         return False
 
 
-class BinarySet(object):
+class BinarySet:
     @staticmethod
     def get_interval():
         return (0, 1, 1)

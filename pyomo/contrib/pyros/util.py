@@ -21,6 +21,7 @@ import functools
 import itertools as it
 import logging
 import math
+import os
 import timeit
 
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -58,11 +59,10 @@ from pyomo.core.expr.visitor import (
 from pyomo.core.util import prod
 from pyomo.opt import SolverFactory
 import pyomo.repn.ampl as pyomo_ampl_repn
-from pyomo.repn.parameterized_quadratic import ParameterizedQuadraticRepnVisitor
+from pyomo.repn.parameterized import ParameterizedQuadraticRepnVisitor
 import pyomo.repn.plugins.nl_writer as pyomo_nl_writer
 from pyomo.repn.util import OrderedVarRecorder
 from pyomo.util.vars_from_expressions import get_vars_from_components
-
 
 # Tolerances used in the code
 PARAM_IS_CERTAIN_REL_TOL = 1e-4
@@ -814,13 +814,6 @@ def validate_variable_partitioning(model, config):
         overlap, or there are no first-stage variables
         and no second-stage variables.
     """
-    # at least one DOF required
-    if not config.first_stage_variables and not config.second_stage_variables:
-        raise ValueError(
-            "Arguments `first_stage_variables` and "
-            "`second_stage_variables` are both empty lists."
-        )
-
     # ensure no overlap between DOF var sets
     overlapping_vars = ComponentSet(config.first_stage_variables) & ComponentSet(
         config.second_stage_variables
@@ -862,6 +855,22 @@ def validate_variable_partitioning(model, config):
     first_stage_vars = ComponentSet(config.first_stage_variables) & active_model_vars
     second_stage_vars = ComponentSet(config.second_stage_variables) & active_model_vars
     state_vars = active_model_vars - (first_stage_vars | second_stage_vars)
+
+    if not active_model_vars:
+        config.progress_logger.warning(
+            "NOTE: No variables declared on the user-provided model "
+            "appear in the active model objective or constraints. "
+            "PyROS will proceed with solving for the optimal objective value, "
+            "subject to the active declared constraints, "
+            "according to the user-provided options."
+        )
+    elif not (first_stage_vars or second_stage_vars):
+        config.progress_logger.warning(
+            "NOTE: No user-provided first-stage variables or second-stage variables "
+            "appear in the active model objective or constraints. "
+            "PyROS will proceed with optimizing the state variables "
+            "according to the user-provided options."
+        )
 
     return VariablePartitioning(
         list(first_stage_vars), list(second_stage_vars), list(state_vars)
@@ -929,8 +938,7 @@ def validate_uncertainty_specification(model, config):
           `config.second_stage_variables`
         - dimension of uncertainty set does not equal number of
           uncertain parameters
-        - uncertainty set `is_valid()` method does not return
-          true.
+        - uncertainty set `validate()` method fails.
         - nominal parameter realization is not in the uncertainty set.
     """
     check_components_descended_from_model(
@@ -967,13 +975,6 @@ def validate_uncertainty_specification(model, config):
             f"({len(config.uncertain_params)} != {config.uncertainty_set.dim})."
         )
 
-    # validate uncertainty set
-    if not config.uncertainty_set.is_valid(config=config):
-        raise ValueError(
-            f"Uncertainty set {config.uncertainty_set} is invalid, "
-            "as it is either empty or unbounded."
-        )
-
     # fill-in nominal point as necessary, if not provided.
     # otherwise, check length matches uncertainty dimension
     if not config.nominal_uncertain_param_vals:
@@ -995,6 +996,9 @@ def validate_uncertainty_specification(model, config):
             f"({len(config.uncertain_params)} != "
             f"{len(config.nominal_uncertain_param_vals)})."
         )
+
+    # validate uncertainty set
+    config.uncertainty_set.validate(config=config)
 
     # uncertainty set should contain nominal point
     nominal_point_in_set = config.uncertainty_set.point_in_set(
@@ -1156,6 +1160,51 @@ class ModelData:
                 component_data_name, DEFAULT_SEPARATION_PRIORITY
             )
         return priority
+
+
+def log_original_model_statistics(model_data, user_var_partitioning):
+    """
+    Log statistics for the original model (before preprocessing).
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    user_var_partitioning : VariablePartitioning
+        User-specified partitioning of the model variables.
+    """
+    config = model_data.config
+    original_model = model_data.original_model
+
+    # variables. we log the user partitioning
+    num_first_stage_vars = len(user_var_partitioning.first_stage_variables)
+    num_second_stage_vars = len(user_var_partitioning.second_stage_variables)
+    num_state_vars = len(user_var_partitioning.state_variables)
+    num_vars = num_first_stage_vars + num_second_stage_vars + num_state_vars
+
+    # uncertain parameters
+    num_uncertain_params = len(model_data.config.uncertain_params)
+
+    # constraints
+    num_cons, num_eq_cons, num_ineq_cons = 0, 0, 0
+    for con in original_model.component_data_objects(Constraint, active=True):
+        num_cons += 1
+        if con.equality:
+            num_eq_cons += 1
+        else:
+            num_ineq_cons += 1
+
+    info_log_func = config.progress_logger.info
+
+    info_log_func("Model Statistics (before preprocessing):")
+    info_log_func(f"  Number of variables : {num_vars}")
+    info_log_func(f"    First-stage variables : {num_first_stage_vars}")
+    info_log_func(f"    Second-stage variables : {num_second_stage_vars}")
+    info_log_func(f"    State variables : {num_state_vars}")
+    info_log_func(f"  Number of uncertain parameters : {num_uncertain_params}")
+    info_log_func(f"  Number of constraints : {num_cons}")
+    info_log_func(f"    Equality constraints : {num_eq_cons}")
+    info_log_func(f"    Inequality constraints : {num_ineq_cons}")
 
 
 def setup_quadratic_expression_visitor(
@@ -2910,7 +2959,7 @@ def preprocess_model_data(model_data, user_var_partitioning):
     return robust_infeasible
 
 
-def log_model_statistics(model_data):
+def log_preprocessed_model_statistics(model_data):
     """
     Log statistics for the preprocessed model.
 
@@ -2962,37 +3011,38 @@ def log_model_statistics(model_data):
     num_first_stage_ineq_cons = len(working_model.first_stage.inequality_cons)
     num_second_stage_ineq_cons = len(working_model.second_stage.inequality_cons)
 
-    info_log_func = config.progress_logger.info
+    debug_log_func = config.progress_logger.debug
 
-    IterationLogRecord.log_header_rule(info_log_func)
-    info_log_func("Model Statistics:")
+    debug_log_func("Model Statistics (after preprocessing):")
 
-    info_log_func(f"  Number of variables : {num_vars}")
-    info_log_func(f"    Epigraph variable : {num_epigraph_vars}")
-    info_log_func(f"    First-stage variables : {num_first_stage_vars}")
-    info_log_func(
+    debug_log_func(f"  Number of variables : {num_vars}")
+    debug_log_func(f"    Epigraph variable : {num_epigraph_vars}")
+    debug_log_func(f"    First-stage variables : {num_first_stage_vars}")
+    debug_log_func(
         f"    Second-stage variables : {num_second_stage_vars} "
         f"({num_eff_second_stage_vars} adj.)"
     )
-    info_log_func(
+    debug_log_func(
         f"    State variables : {num_state_vars} " f"({num_eff_state_vars} adj.)"
     )
-    info_log_func(f"    Decision rule variables : {num_dr_vars}")
+    debug_log_func(f"    Decision rule variables : {num_dr_vars}")
 
-    info_log_func(
+    debug_log_func(
         f"  Number of uncertain parameters : {num_uncertain_params} "
         f"({num_eff_uncertain_params} eff.)"
     )
 
-    info_log_func(f"  Number of constraints : {num_cons}")
-    info_log_func(f"    Equality constraints : {num_eq_cons}")
-    info_log_func(f"      Coefficient matching constraints : {num_coeff_matching_cons}")
-    info_log_func(f"      Other first-stage equations : {num_other_first_stage_eqns}")
-    info_log_func(f"      Second-stage equations : {num_second_stage_eq_cons}")
-    info_log_func(f"      Decision rule equations : {num_dr_eq_cons}")
-    info_log_func(f"    Inequality constraints : {num_ineq_cons}")
-    info_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
-    info_log_func(f"      Second-stage inequalities : {num_second_stage_ineq_cons}")
+    debug_log_func(f"  Number of constraints : {num_cons}")
+    debug_log_func(f"    Equality constraints : {num_eq_cons}")
+    debug_log_func(
+        f"      Coefficient matching constraints : {num_coeff_matching_cons}"
+    )
+    debug_log_func(f"      Other first-stage equations : {num_other_first_stage_eqns}")
+    debug_log_func(f"      Second-stage equations : {num_second_stage_eq_cons}")
+    debug_log_func(f"      Decision rule equations : {num_dr_eq_cons}")
+    debug_log_func(f"    Inequality constraints : {num_ineq_cons}")
+    debug_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
+    debug_log_func(f"      Second-stage inequalities : {num_second_stage_ineq_cons}")
 
 
 def add_decision_rule_variables(model_data):
@@ -3184,6 +3234,31 @@ def load_final_solution(model_data, master_soln, original_user_var_partitioning)
         orig_var.set_value(master_blk_var.value, skip_validation=True)
 
 
+def write_subproblem(model, fname, config):
+    """
+    Write/export a subproblem to one or more files.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Subproblem to be written/exported.
+    fname : str
+        Base name of the file(s) to be written.
+        Should not include any prefix directories.
+    config : ConfigDict
+        PyROS solver options.
+        A file will be written for each format provided in
+        ``config.subproblem_format_options``,
+        and in the directory ``config.subproblem_file_directory``.
+    """
+    for fmt, io_options in config.subproblem_format_options.items():
+        full_filename = os.path.join(config.subproblem_file_directory, f"{fname}.{fmt}")
+        model.write(filename=full_filename, format=fmt, io_options=io_options)
+        config.progress_logger.warning(
+            f"For debugging, subproblem has been written to the file {full_filename!r}."
+        )
+
+
 def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
     """
     Solve a model with a given optimizer, keeping track of
@@ -3308,6 +3383,18 @@ class IterationLogRecord:
         found during separation step.
     elapsed_time : float, optional
         Total time elapsed up to the current iteration, in seconds.
+    master_backup_solver : bool
+        True if a backup subordinate optimizer was used to solve the
+        master problem, False otherwise.
+    master_feasibility_success : bool
+        True if the master feasibility problem was solved
+        successfully, False otherwise.
+    separation_backup_local_solver : bool
+        True if a backup subordinate local optimizer was used
+        to solve at least one separation problem, False otherwise.
+    separation_backup_global_solver : bool
+        True if a backup subordinate global optimizer was used
+        to solve at least one separation problem, False otherwise.
 
     Attributes
     ----------
@@ -3347,6 +3434,18 @@ class IterationLogRecord:
         found during separation step.
     elapsed_time : float
         Total time elapsed up to the current iteration, in seconds.
+    master_backup_solver : bool
+        True if a backup subordinate optimizer was used to solve the
+        master problem, False otherwise.
+    master_feasibility_success : bool
+        True if the master feasibility problem was solved
+        successfully, False otherwise.
+    separation_backup_local_solver : bool
+        True if a backup subordinate local optimizer was used
+        to solve at least one separation problem, False otherwise.
+    separation_backup_global_solver : bool
+        True if a backup subordinate global optimizer was used
+        to solve at least one separation problem, False otherwise.
     """
 
     _LINE_LENGTH = 78
@@ -3382,6 +3481,10 @@ class IterationLogRecord:
         num_violated_cons,
         all_sep_problems_solved,
         global_separation,
+        master_backup_solver,
+        master_feasibility_success,
+        separation_backup_local_solver,
+        separation_backup_global_solver,
         max_violation,
         elapsed_time,
     ):
@@ -3395,6 +3498,10 @@ class IterationLogRecord:
         self.num_violated_cons = num_violated_cons
         self.all_sep_problems_solved = all_sep_problems_solved
         self.global_separation = global_separation
+        self.master_backup_solver = master_backup_solver
+        self.master_feasibility_success = master_feasibility_success
+        self.separation_backup_local_solver = separation_backup_local_solver
+        self.separation_backup_global_solver = separation_backup_global_solver
         self.max_violation = max_violation
         self.elapsed_time = elapsed_time
 
@@ -3434,7 +3541,18 @@ class IterationLogRecord:
             if attr_name in ["second_stage_var_shift", "dr_var_shift"]:
                 qual = "*" if not self.dr_polishing_success else ""
             elif attr_name == "num_violated_cons":
-                qual = "+" if not self.all_sep_problems_solved else ""
+                all_solved_qual = "+" if not self.all_sep_problems_solved else ""
+                bkp_qual = (
+                    "^"
+                    if self.separation_backup_local_solver
+                    or self.separation_backup_global_solver
+                    else ""
+                )
+                qual = all_solved_qual + bkp_qual
+            elif attr_name == "first_stage_var_shift":
+                qual = "*" if not self.master_feasibility_success else ""
+            elif attr_name == "objective":
+                qual = "^" if self.master_backup_solver else ""
             elif attr_name == "max_violation":
                 qual = "g" if self.global_separation else ""
             else:

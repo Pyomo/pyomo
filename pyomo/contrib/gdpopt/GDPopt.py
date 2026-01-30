@@ -44,6 +44,7 @@
 - start keeping basic changelog
 
 """
+
 from pyomo.common.config import document_kwargs_from_configdict, ConfigDict
 from pyomo.contrib.gdpopt import __version__
 from pyomo.contrib.gdpopt.config_options import (
@@ -67,7 +68,7 @@ def _handle_strategy_deprecation(config):
     doc='The GDPopt decomposition-based '
     'Generalized Disjunctive Programming (GDP) solver',
 )
-class GDPoptSolver(object):
+class GDPoptSolver:
     """Decomposition solver for Generalized Disjunctive Programming (GDP)
     problems.
 

@@ -19,7 +19,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ScenarioSet(object):
+class ScenarioSet:
     """
     Class to hold scenario sets
 
@@ -94,7 +94,7 @@ class ScenarioSet(object):
                 f.write('\n')
 
 
-class ParmestScen(object):
+class ParmestScen:
     """A little container for scenarios; the Args are the attributes.
 
     Args:
@@ -113,7 +113,7 @@ class ParmestScen(object):
 ############################################################
 
 
-class ScenarioCreator(object):
+class ScenarioCreator:
     """Create scenarios from parmest.
 
     Args:

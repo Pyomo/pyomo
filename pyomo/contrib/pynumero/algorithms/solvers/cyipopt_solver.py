@@ -15,6 +15,7 @@ CyIpoptSolver, is a solver that operates on a CyIpoptProblemInterface
 Pyomo model.
 
 """
+
 import io
 import sys
 import logging
@@ -180,7 +181,7 @@ _ipopt_term_cond = {
 }
 
 
-class CyIpoptSolver(object):
+class CyIpoptSolver:
     def __init__(self, problem_interface, options=None):
         """Create an instance of the CyIpoptSolver. You must
         provide a problem_interface that corresponds to
@@ -243,7 +244,7 @@ def _numpy_vector(val):
     return ans
 
 
-class PyomoCyIpoptSolver(object):
+class PyomoCyIpoptSolver:
     CONFIG = ConfigBlock("cyipopt")
     CONFIG.declare(
         "tee",

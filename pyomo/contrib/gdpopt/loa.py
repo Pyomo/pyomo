@@ -83,15 +83,12 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         return super().solve(model, **kwds)
 
     def _log_citation(self, config):
-        config.logger.info(
-            "\n"
-            + """- LOA algorithm:
+        config.logger.info("\n" + """- LOA algorithm:
         Türkay, M; Grossmann, IE.
         Logic-based MINLP algorithms for the optimal synthesis of process
         networks. Comp. and Chem. Eng. 1996, 20(8), 959–978.
         DOI: 10.1016/0098-1354(95)00219-7.
-        """.strip()
-        )
+        """.strip())
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -99,7 +96,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         # We'll need these to get dual info after solving subproblems
         add_constraint_list(self.original_util_block)
 
-        (discrete_problem_util_block, subproblem_util_block) = (
+        discrete_problem_util_block, subproblem_util_block = (
             _get_discrete_problem_and_subproblem(self, config)
         )
 

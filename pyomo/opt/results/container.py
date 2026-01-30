@@ -37,7 +37,7 @@ default_print_options = Bunch(schema=False, ignore_time=False)
 strict = False
 
 
-class UndefinedData(object):
+class UndefinedData:
     singleton = {}
 
     def __new__(cls, name='undefined'):
@@ -61,7 +61,7 @@ undefined = UndefinedData('undefined')
 ignore = UndefinedData('ignore')
 
 
-class ScalarData(object):
+class ScalarData:
     def __init__(
         self,
         value=undefined,
@@ -80,7 +80,7 @@ class ScalarData(object):
         self._active = False
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        return self.__dict__ == getattr(other, '__dict__', None)
 
     def get_value(self):
         if isinstance(self.value, enum.Enum):
@@ -175,7 +175,7 @@ class ScalarData(object):
 #
 # This class manages a list of MapContainer objects.
 #
-class ListContainer(object):
+class ListContainer:
     def __init__(self, cls):
         self._cls = cls
         self._list = []
@@ -191,7 +191,7 @@ class ListContainer(object):
         return self._list[i]
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        return self.__dict__ == getattr(other, '__dict__', None)
 
     def clear(self):
         self._list = []
@@ -279,7 +279,12 @@ class MapContainer(dict):
         # underlying dict data (which doesn't show up in the __dict__).
         # So we will use the base __eq__ in addition to checking
         # __dict__.
-        return super().__eq__(other) and self.__dict__ == other.__dict__
+        #
+        # Note: __eq__ can return True, False, or NotImplemented
+        base = super().__eq__(other)
+        if base == True:
+            return self.__dict__ == getattr(other, '__dict__', None)
+        return base
 
     def __getattr__(self, name):
         try:

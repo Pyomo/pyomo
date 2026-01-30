@@ -28,7 +28,7 @@ colloc = pyo.TransformationFactory('dae.collocation')
 solver = pyo.SolverFactory('ipopt')
 
 
-class Reaction(object):
+class Reaction:
     """A simple class to hold the stoichiometry of a single reaction
 
     Reaction data is stored in two dictionaries:
@@ -84,7 +84,7 @@ class Reaction(object):
         return coef, species.strip()
 
 
-class ReactionNetwork(object):
+class ReactionNetwork:
     """A simple object to hold sets of reactions."""
 
     def __init__(self):
@@ -423,12 +423,10 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2 or sys.argv[1] not in '123':
-        print(
-            """ERROR: expected a model to run:
+        print("""ERROR: expected a model to run:
     1 - simple simulation model
     2 - simple (final value) optimization model
-    3 - kinetic parameter regression model"""
-        )
+    3 - kinetic parameter regression model""")
         sys.exit(1)
 
     if '1' in sys.argv[1]:

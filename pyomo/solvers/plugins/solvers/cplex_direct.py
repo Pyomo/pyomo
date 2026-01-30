@@ -31,7 +31,6 @@ from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
 import time
 
-
 logger = logging.getLogger('pyomo.solvers')
 
 
@@ -39,7 +38,7 @@ class DegreeError(ValueError):
     pass
 
 
-class _CplexExpr(object):
+class _CplexExpr:
     def __init__(
         self,
         variables,
@@ -65,7 +64,7 @@ def _is_numeric(x):
     return True
 
 
-class _VariableData(object):
+class _VariableData:
     def __init__(self, solver_model):
         self._solver_model = solver_model
         self.lb = []
@@ -85,7 +84,7 @@ class _VariableData(object):
         )
 
 
-class _LinearConstraintData(object):
+class _LinearConstraintData:
     def __init__(self, solver_model):
         self._solver_model = solver_model
         self.lin_expr = []

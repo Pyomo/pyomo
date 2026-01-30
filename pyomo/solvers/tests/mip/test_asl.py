@@ -79,6 +79,7 @@ class mock_all(unittest.TestCase):
         """Test ASL - test4.nl"""
         _log = TempfileManager.create_tempfile(".test_solve4.log")
         _out = TempfileManager.create_tempfile(".test_solve4.txt")
+        TempfileManager.add_tempfile(join(currdir, 'test4.soln'), exists=False)
 
         results = self.asl.solve(
             join(currdir, "test4.nl"), logfile=_log, suffixes=['.*']

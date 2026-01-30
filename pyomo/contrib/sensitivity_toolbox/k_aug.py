@@ -23,7 +23,6 @@ import os
 from pyomo.environ import SolverFactory
 from pyomo.common.tempfiles import TempfileManager
 
-
 debug_dir = "kaug_debug"
 gjh_dir = "GJH"
 # These are files we would like to save from a call to k_aug
@@ -42,7 +41,7 @@ known_files = [
 ]
 
 
-class InTempDir(object):
+class InTempDir:
     def __init__(self, suffix=None, prefix=None, dir=None):
         self._suffix = suffix
         self._prefix = prefix
@@ -63,7 +62,7 @@ class InTempDir(object):
         TempfileManager.pop()
 
 
-class K_augInterface(object):
+class K_augInterface:
     """
     k_aug and dot_sens store information in the user's filesystem,
     some of which is mandatory for subsequent calls.

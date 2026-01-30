@@ -11,11 +11,10 @@
 
 from pyomo.common import Factory
 
-
 ReaderFactory = Factory('problem reader')
 
 
-class AbstractResultsReader(object):
+class AbstractResultsReader:
     """Base class that can read optimization results."""
 
     def __init__(self, results_format):

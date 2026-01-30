@@ -25,11 +25,10 @@ from pyomo.repn.tests.lp_diff import load_and_compare_lp_baseline
 from pyomo.scripting.util import cleanup
 import pyomo.scripting.pyomo_main as main
 
-
 solver = None
 
 
-class CommonTests(object):
+class CommonTests:
     solve = True
 
     def run_bilevel(self, *_args, **kwds):

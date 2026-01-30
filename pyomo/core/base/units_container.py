@@ -101,6 +101,7 @@ information.
           data and reporting.
 
 """
+
 # TODO
 #    * create a new pint unit definition file (and load from that file)
 #       since the precision in pint seems insufficient for 1e-8 constraint tolerances
@@ -944,7 +945,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         return result
 
 
-class PyomoUnitsContainer(object):
+class PyomoUnitsContainer:
     """Class that is used to create and contain units in Pyomo.
 
     This is the class that is used to create, contain, and interact

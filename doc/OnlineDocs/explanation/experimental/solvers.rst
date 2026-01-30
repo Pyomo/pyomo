@@ -54,6 +54,9 @@ with existing interfaces).
    * - HiGHS
      - ``highs``
      - ``highs``
+   * - KNITRO
+     - ``knitro_direct``
+     - ``knitro_direct``
 
 Using the new interfaces through the legacy interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -242,11 +245,8 @@ The new interface allows access to new capabilities in the various
 problem writers, including the linear presolve and scaling options
 recently incorporated into the redesigned NL writer.  For example, you
 can control the NL writer in the new ``ipopt`` interface through the
-solver's ``writer_config`` configuration option:
-
-.. autoclass:: pyomo.contrib.solver.solvers.ipopt.Ipopt
-   :noindex:
-   :members: solve
+solver's ``writer_config`` configuration option (see the
+:class:`~pyomo.contrib.solver.solvers.ipopt.Ipopt` interface documentation).
 
 .. testcode::
 

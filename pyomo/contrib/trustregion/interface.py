@@ -39,7 +39,6 @@ from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.numvalue import native_types
 from pyomo.opt import SolverFactory, check_optimal_termination
 
-
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 
@@ -95,7 +94,7 @@ class EFReplacement(ExpressionReplacementVisitor):
         return _output
 
 
-class TRFInterface(object):
+class TRFInterface:
     """
     Pyomo interface for Trust Region algorithm.
     """

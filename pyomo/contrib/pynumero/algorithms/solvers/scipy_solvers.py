@@ -115,12 +115,10 @@ class RootNlpSolver(DenseSquareNlpSolver):
             default="hybr",
             domain=In({"hybr", "lm"}),
             description="Method used to solve for the function root",
-            doc=(
-                """The 'method' argument in the scipy.optimize.root function.
+            doc=("""The 'method' argument in the scipy.optimize.root function.
             For now only 'hybr' (Powell hybrid method from MINPACK) and
             'lm' (Levenberg-Marquardt from MINPACK) are supported.
-            """
-            ),
+            """),
         ),
     )
 
@@ -255,7 +253,7 @@ class SecantNewtonNlpSolver(NewtonNlpSolver):
         return results
 
 
-class PyomoScipySolver(object):
+class PyomoScipySolver:
     def __init__(self, options=None):
         if options is None:
             options = {}

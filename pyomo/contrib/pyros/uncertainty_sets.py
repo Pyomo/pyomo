@@ -21,6 +21,7 @@ literature.
 import abc
 import math
 import functools
+import itertools
 from numbers import Integral
 from collections import namedtuple
 from collections.abc import Iterable, MutableSequence
@@ -36,6 +37,7 @@ from pyomo.core.base import (
     minimize,
     Var,
     VarData,
+    NonNegativeReals,
 )
 from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
@@ -47,9 +49,8 @@ from pyomo.contrib.pyros.util import (
     POINT_IN_UNCERTAINTY_SET_TOL,
     standardize_component_data,
 )
-
-
-valid_num_types = tuple(native_numeric_types)
+from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.common.errors import InfeasibleConstraintException
 
 
 def standardize_uncertain_param_vars(obj, dim):
@@ -218,7 +219,7 @@ def validate_arg_type(
         Name of argument to be displayed in exception message.
     arg_val : object
         Value of argument to be checked.
-    valid_types : type or tuple of types
+    valid_types : type or iterable of types
         Valid types for the argument value.
     valid_type_desc : str or None, optional
         Description of valid types for the argument value;
@@ -241,6 +242,9 @@ def validate_arg_type(
         If the finiteness check on a numerical value returns
         a negative result.
     """
+    # convert to tuple if necessary
+    if isinstance(valid_types, Iterable):
+        valid_types = tuple(valid_types)
     if not isinstance(arg_val, valid_types):
         if valid_type_desc is not None:
             type_phrase = f"not {valid_type_desc}"
@@ -264,9 +268,9 @@ def validate_arg_type(
     # check for finiteness, if desired
     if check_numeric_type_finite:
         if isinstance(valid_types, type):
-            numeric_types_required = valid_types in valid_num_types
+            numeric_types_required = valid_types in native_numeric_types
         else:
-            numeric_types_required = set(valid_types).issubset(valid_num_types)
+            numeric_types_required = set(valid_types).issubset(native_numeric_types)
         if numeric_types_required and (math.isinf(arg_val) or math.isnan(arg_val)):
             if is_entry_of_arg:
                 raise ValueError(
@@ -474,8 +478,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     An object representing an uncertainty set to be passed to the
     PyROS solver.
 
-    An `UncertaintySet` object should be viewed as merely a container
-    for data needed to parameterize the set it represents,
+    `UncertaintySet` is an abstract base class for constructing
+    specific subclasses and instances of uncertainty sets.
+    Therefore, `UncertaintySet` cannot be instantiated directly.
+
+    A concrete `UncertaintySet` instance should be viewed as merely
+    a container for data needed to parameterize the set it represents,
     such that the object's attributes do not reference the
     components of a Pyomo modeling object.
     """
@@ -488,7 +496,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dim(self):
         """
-        Dimension of the uncertainty set (number of uncertain
+        int : Dimension of the uncertainty set (number of uncertain
         parameters in a corresponding optimization model of interest).
         """
         raise NotImplementedError
@@ -497,8 +505,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def geometry(self):
         """
-        Geometry of the uncertainty set. See the `Geometry` class
-        documentation.
+        Geometry : Geometry of the uncertainty set.
         """
         raise NotImplementedError
 
@@ -508,6 +515,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         Bounds for the value of each uncertain parameter constrained
         by the set (i.e. bounds for each set dimension).
+
+        Returns
+        -------
+        list[tuple[numbers.Real, numbers.Real]]
+            If the bounds can be calculated efficiently, then this list
+            should be of length ``self.dim`` and contain the
+            (lower, upper) bound pairs.
+            Otherwise, the list should be empty.
         """
         raise NotImplementedError
 
@@ -520,7 +535,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Returns
         -------
         model : ConcreteModel
-            Bounding model, with an indexed mimimization sense
+            Bounding model, with an indexed minimization sense
             Objective with name 'param_var_objectives' consisting
             of `N` entries, all of which have been deactivated.
         """
@@ -558,23 +573,49 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Notes
         -----
-        This check is carried out by solving a sequence of maximization
-        and minimization problems (in which the objective for each
-        problem is the value of a single uncertain parameter). If any of
-        the optimization models cannot be solved successfully to
-        optimality, then False is returned.
+        This check is carried out by checking if all parameter bounds
+        are finite.
 
-        This method is invoked during the validation step of a PyROS
-        solver call.
+        If no parameter bounds are available, the following processes
+        are run to perform the check:
+        (i) feasibility-based bounds tightening is used to obtain
+        parameter bounds, and if not all bound are found,
+        (ii) solving a sequence of maximization and minimization
+        problems (in which the objective for each problem is the value
+        of a single uncertain parameter).
+        If any of the optimization models cannot be solved successfully
+        to optimality, then False is returned.
+
+        This method is invoked by ``self.validate()``.
         """
-        # initialize uncertain parameter variables
-        param_bounds_arr = np.array(
-            self._compute_parameter_bounds(solver=config.global_solver)
-        )
+        # use parameter bounds if they are available
+        param_bounds_arr = self.parameter_bounds
+        if param_bounds_arr:
+            all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+        else:
+            # use FBBT
+            param_bounds_arr = np.array(
+                self._fbbt_parameter_bounds(config), dtype="float"
+            )
+            all_bounds_finite = np.isfinite(param_bounds_arr).all()
 
-        all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+            if not all_bounds_finite:
+                # get bounds that need to be solved
+                index = np.isnan(param_bounds_arr)
+                # solve bounding problems for bounds that have not been found
+                opt_bounds_arr = np.array(
+                    self._compute_exact_parameter_bounds(
+                        solver=config.global_solver, index=index
+                    ),
+                    dtype="float",
+                )
+                # combine with previously found bounds
+                param_bounds_arr[index] = opt_bounds_arr[index]
+                all_bounds_finite = np.isfinite(param_bounds_arr).all()
+
+        # log result
         if not all_bounds_finite:
-            config.progress_logger.info(
+            config.progress_logger.error(
                 "Computed coordinate value bounds are not all finite. "
                 f"Got bounds: {param_bounds_arr}"
             )
@@ -583,16 +624,56 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def is_nonempty(self, config):
         """
-        Return True if the uncertainty set is nonempty, else False.
-        """
-        return self.is_bounded(config)
+        Determine whether the uncertainty set is nonempty.
 
-    def is_valid(self, config):
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Returns
+        -------
+        : bool
+            True if the uncertainty set is nonempty,
+            and False otherwise.
         """
-        Return True if the uncertainty set is bounded and non-empty,
-        else False.
+        # check if nominal point is in set for quick test
+        if config.nominal_uncertain_param_vals:
+            set_nonempty = self.point_in_set(config.nominal_uncertain_param_vals)
+        else:
+            # construct feasibility problem and solve otherwise
+            self._solve_feasibility(config.global_solver)
+            set_nonempty = True
+
+        # log result
+        if not set_nonempty:
+            config.progress_logger.error(
+                "Nominal point is not within the uncertainty set. "
+                f"Got nominal point: {config.nominal_uncertain_param_vals}"
+            )
+
+        return set_nonempty
+
+    def validate(self, config):
         """
-        return self.is_nonempty(config=config) and self.is_bounded(config=config)
+        Validate the uncertainty set with a nonemptiness
+        and boundedness check.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Raises
+        ------
+        ValueError
+            If nonemptiness check or boundedness check fails.
+        """
+        if not self.is_nonempty(config=config):
+            raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
+
+        if not self.is_bounded(config=config):
+            raise ValueError(f"Boundedness check failed for uncertainty set {self}.")
 
     @abc.abstractmethod
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -631,7 +712,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        is_in_set : bool
+        bool
             True if the point lies in the uncertainty set,
             False otherwise.
 
@@ -645,7 +726,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -653,21 +734,29 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         m = ConcreteModel()
         uncertainty_quantification = self.set_as_constraint(block=m)
-        for var, val in zip(uncertainty_quantification.uncertain_param_vars, point):
+
+        main_vars = uncertainty_quantification.uncertain_param_vars
+        for var, val in zip(main_vars, point):
             var.set_value(val)
 
-        # since constraint expressions are relational,
-        # `value()` returns True if constraint satisfied, False else
-        # NOTE: this check may be inaccurate if there are auxiliary
-        #       variables and they have not been initialized to
-        #       feasible values
-        is_in_set = all(
-            value(con.expr) for con in uncertainty_quantification.uncertainty_cons
+        aux_vars = uncertainty_quantification.auxiliary_vars
+        aux_vals = self.compute_auxiliary_uncertain_param_vals(point)
+        for aux_var, aux_val in zip(aux_vars, aux_vals):
+            aux_var.set_value(aux_val)
+
+        all_vars_within_bounds = all(
+            (var.lb is None or var.value - var.lb >= -POINT_IN_UNCERTAINTY_SET_TOL)
+            and (var.ub is None or var.ub - var.value >= -POINT_IN_UNCERTAINTY_SET_TOL)
+            for var in main_vars + aux_vars
         )
 
-        return is_in_set
+        return all_vars_within_bounds and all(
+            con.lslack() > -POINT_IN_UNCERTAINTY_SET_TOL
+            and con.uslack() > -POINT_IN_UNCERTAINTY_SET_TOL
+            for con in uncertainty_quantification.uncertainty_cons
+        )
 
-    def _compute_parameter_bounds(self, solver, index=None):
+    def _compute_exact_parameter_bounds(self, solver, index=None):
         """
         Compute lower and upper coordinate value bounds
         for every dimension of `self` by solving a bounding model.
@@ -676,11 +765,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         ----------
         solver : Pyomo solver type
             Optimizer to invoke on the bounding problems.
-        index : list of int, optional
-            Positional indices of the coordinates for which
-            to compute bounds. If None is passed,
-            then the argument is set to ``list(range(self.dim))``,
-            so that the bounds for all coordinates are computed.
+        index : list of 2-tuple of bool, optional
+            A list of tuples for each index of the coordinates for
+            which to compute bounds. A lower or upper bound is
+            computed for any value that is True, while False
+            indicates that the bound should be skipped.
+            If None is passed, then the argument is set to
+            ``[(True, True)]*self.dim``, so that the bounds
+            for all coordinates are computed.
 
         Returns
         -------
@@ -696,14 +788,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             coordinate.
         """
         if index is None:
-            index = list(range(self.dim))
+            index = [(True, True)] * self.dim
 
+        # create bounding model and get all objectives
         bounding_model = self._create_bounding_model()
-        objs_to_optimize = (
-            (idx, obj)
-            for idx, obj in bounding_model.param_var_objectives.items()
-            if idx in index
-        )
+        objs_to_optimize = bounding_model.param_var_objectives.items()
+
         param_bounds = []
         for idx, obj in objs_to_optimize:
             # activate objective for corresponding dimension
@@ -712,7 +802,11 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
             # solve for lower bound, then upper bound
             # solve should be successful
-            for sense in (minimize, maximize):
+            for i, sense in enumerate((minimize, maximize)):
+                # check if the LB or UB should be solved
+                if not index[idx][i]:
+                    bounds.append(None)
+                    continue
                 obj.sense = sense
                 res = solver.solve(bounding_model, load_solutions=False)
                 if check_optimal_termination(res):
@@ -734,6 +828,84 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             obj.deactivate()
 
         return param_bounds
+
+    def _fbbt_parameter_bounds(self, config):
+        """
+        Obtain parameter bounds of the uncertainty set using FBBT.
+        The bounds returned by FBBT may be inexact.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Returns
+        -------
+        param_bounds : list of tuple
+            List, of length `N`, containing
+            (lower bound, upper bound) pairs
+            for the uncertain parameters.
+        """
+        bounding_model = self._create_bounding_model()
+
+        # calculate bounds with FBBT
+        try:
+            fbbt(bounding_model)
+        except InfeasibleConstraintException as fbbt_infeasible_con_exception:
+            config.progress_logger.error(
+                "Encountered the following exception "
+                f"while computing parameter bounds with FBBT "
+                f"for uncertainty set {self}:\n  "
+                f"{fbbt_infeasible_con_exception!r}"
+            )
+
+        param_bounds = [
+            (var.lower, var.upper) for var in bounding_model.param_vars.values()
+        ]
+
+        return param_bounds
+
+    def _solve_feasibility(self, solver):
+        """
+        Construct and solve feasibility problem using uncertainty set
+        constraints and parameter bounds using `set_as_constraint` and
+        `_add_bounds_on_uncertain_parameters` of self.
+
+        Parameters
+        ----------
+        solver : Pyomo solver
+            Optimizer capable of solving bounding problems to
+            global optimality.
+
+        Raises
+        ------
+        ValueError
+            If feasibility problem fails to solve.
+        """
+        model = ConcreteModel()
+        model.u = Var(within=NonNegativeReals)
+
+        # construct param vars
+        model.param_vars = Var(range(self.dim))
+
+        # add bounds on param vars
+        self._add_bounds_on_uncertain_parameters(model.param_vars, global_solver=solver)
+
+        # add constraints
+        self.set_as_constraint(uncertain_params=model.param_vars, block=model)
+
+        # add objective with dummy variable model.u
+        @model.Objective(sense=minimize)
+        def feasibility_objective(self):
+            return model.u
+
+        # solve feasibility problem
+        res = solver.solve(model, load_solutions=False)
+        if not check_optimal_termination(res):
+            raise ValueError(
+                "Could not successfully solve feasibility problem. "
+                f"Solver status summary:\n {res.solver}."
+            )
 
     def _add_bounds_on_uncertain_parameters(
         self, uncertain_param_vars, global_solver=None
@@ -763,7 +935,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         parameter_bounds = self.parameter_bounds
         if not parameter_bounds:
-            parameter_bounds = self._compute_parameter_bounds(global_solver)
+            parameter_bounds = self._compute_exact_parameter_bounds(global_solver)
 
         for (lb, ub), param_var in zip(parameter_bounds, uncertain_param_vars):
             param_var.setlb(lb)
@@ -824,7 +996,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         param_bounds = self.parameter_bounds
         if not (param_bounds and self._PARAMETER_BOUNDS_EXACT):
             # we need the exact bounding box
-            param_bounds = self._compute_parameter_bounds(
+            param_bounds = self._compute_exact_parameter_bounds(
                 solver=config.global_solver, index=index
             )
         else:
@@ -1026,12 +1198,30 @@ class UncertaintySetList(MutableSequence):
 
 class BoxSet(UncertaintySet):
     """
-    A hyper-rectangle (i.e., "box").
+    A hyperrectangle (or box).
 
     Parameters
     ----------
     bounds : (N, 2) array_like
         Lower and upper bounds for each dimension of the set.
+
+    Notes
+    -----
+    The :math:`n`-dimensional box set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,|
+            \\,q^\\text{L} \\leq q \\leq q^\\text{U}
+        \\right\\}
+
+    in which
+    :math:`q^\\text{L} \\in \\mathbb{R}^n` refers to
+    ``numpy.array(bounds)[:, 0]``,
+    and
+    :math:`q^\\text{U} \\in \\mathbb{R}^n` refers to
+    ``numpy.array(bounds)[:, 1]``.
 
     Examples
     --------
@@ -1051,7 +1241,7 @@ class BoxSet(UncertaintySet):
 
     5D hypercube with bounds 0 and 1 in each dimension:
 
-    >>> hypercube_5d = BoxSet(bounds=[[0, 1] for idx in range(5)])
+    >>> hypercube_5d = BoxSet(bounds=[[0, 1]] * 5)
     >>> hypercube_5d.bounds
     array([[0, 1],
            [0, 1],
@@ -1090,16 +1280,12 @@ class BoxSet(UncertaintySet):
             arr=val,
             arr_name="bounds",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=[None, 2],
         )
 
         bounds_arr = np.array(val)
-
-        for lb, ub in bounds_arr:
-            if lb > ub:
-                raise ValueError(f"Lower bound {lb} exceeds upper bound {ub}")
 
         # box set dimension is immutable
         if hasattr(self, "_bounds") and bounds_arr.shape[0] != self.dim:
@@ -1119,8 +1305,7 @@ class BoxSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the box set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the box set.
         """
         return Geometry.LINEAR
 
@@ -1132,10 +1317,9 @@ class BoxSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         return [tuple(bound) for bound in self.bounds]
 
@@ -1161,6 +1345,39 @@ class BoxSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
+    def validate(self, config):
+        """
+        Check BoxSet validity.
+
+        Raises
+        ------
+        ValueError
+            If any uncertainty set attributes are not valid.
+            (e.g., numeric values are infinite,
+            or ``self.parameter_bounds`` has LB > UB.)
+        """
+        bounds_arr = np.array(self.parameter_bounds)
+
+        # check bounds are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=bounds_arr,
+            arr_name="bounds",
+            dim=2,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=[None, 2],
+        )
+
+        # check LB <= UB
+        for lb, ub in bounds_arr:
+            if lb > ub:
+                raise ValueError(f"Lower bound {lb} exceeds upper bound {ub}")
+
 
 class CardinalitySet(UncertaintySet):
     """
@@ -1177,6 +1394,29 @@ class CardinalitySet(UncertaintySet):
         Upper bound for the number of uncertain parameters which
         may realize their maximal deviations from the origin
         simultaneously.
+
+    Notes
+    -----
+    The :math:`n`-dimensional cardinality set is defined by
+
+    .. math::
+
+        \\left\\{ q \\in \\mathbb{R}^n\\,\\middle|
+             \\,\\exists\\, \\xi \\in [0, 1]^n \\,:\\,
+             \\left[
+                 \\begin{array}{l}
+                    q = q^0 + \\hat{q} \\circ \\xi \\\\
+                    \\displaystyle \\sum_{i=1}^n \\xi_i \\leq \\Gamma
+                 \\end{array}
+             \\right]
+        \\right\\}
+
+    in which
+    :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
+    the quantity :math:`\\hat{q} \\in \\mathbb{R}_{+}^n`
+    refers to ``positive_deviation``,
+    and :math:`\\Gamma \\in [0, n]` refers to ``gamma``.
+    The operator ":math:`\\circ`" denotes the element-wise product.
 
     Examples
     --------
@@ -1225,7 +1465,7 @@ class CardinalitySet(UncertaintySet):
             arr=val,
             arr_name="origin",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
 
@@ -1245,7 +1485,7 @@ class CardinalitySet(UncertaintySet):
     def positive_deviation(self):
         """
         (N,) numpy.ndarray : Maximal coordinate deviations from the
-        origin in each dimension. All entries are nonnegative.
+        origin in each dimension. All entries should be nonnegative.
         """
         return self._positive_deviation
 
@@ -1255,16 +1495,9 @@ class CardinalitySet(UncertaintySet):
             arr=val,
             arr_name="positive_deviation",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
-
-        for dev_val in val:
-            if dev_val < 0:
-                raise ValueError(
-                    f"Entry {dev_val} of attribute 'positive_deviation' "
-                    f"is negative value"
-                )
 
         val_arr = np.array(val)
 
@@ -1283,28 +1516,24 @@ class CardinalitySet(UncertaintySet):
     def gamma(self):
         """
         numeric type : Upper bound for the number of uncertain
-        parameters which may maximally deviate from their respective
+        parameters that may maximally deviate from their respective
         origin values simultaneously. Must be a numerical value ranging
         from 0 to the set dimension `N`.
 
         Note that, mathematically, setting `gamma` to 0 reduces the set
-        to a singleton containing the center, while setting `gamma` to
+        to a singleton containing the point represented by
+        ``self.origin``, while setting `gamma` to
         the set dimension `N` makes the set mathematically equivalent
         to a `BoxSet` with bounds
-        ``numpy.array([origin, origin + positive_deviation]).T``.
+        ``numpy.array([self.origin, self.origin + self.positive_deviation]).T``.
         """
         return self._gamma
 
     @gamma.setter
     def gamma(self, val):
-        validate_arg_type("gamma", val, valid_num_types, "a valid numeric type", False)
-        if val < 0 or val > self.dim:
-            raise ValueError(
-                "Cardinality set attribute "
-                f"'gamma' must be a real number between 0 and dimension "
-                f"{self.dim} "
-                f"(provided value {val})"
-            )
+        validate_arg_type(
+            "gamma", val, native_numeric_types, "a valid numeric type", False
+        )
 
         self._gamma = val
 
@@ -1318,8 +1547,7 @@ class CardinalitySet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the cardinality set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the cardinality set.
         """
         return Geometry.LINEAR
 
@@ -1330,10 +1558,9 @@ class CardinalitySet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         nom_val = self.origin
         deviation = self.positive_deviation
@@ -1381,7 +1608,7 @@ class CardinalitySet(UncertaintySet):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -1419,6 +1646,59 @@ class CardinalitySet(UncertaintySet):
             and np.all(aux_space_pt <= 1)
         )
 
+    def validate(self, config):
+        """
+        Check CardinalitySet validity.
+
+        Raises
+        ------
+        ValueError
+            If any uncertainty set attributes are not valid.
+            (e.g., numeric values are infinite,
+            ``self.positive_deviation`` has negative values,
+            or ``self.gamma`` is out of range).
+        """
+        orig_val = self.origin
+        pos_dev = self.positive_deviation
+        gamma = self.gamma
+
+        # check origin, positive deviation, and gamma are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=orig_val,
+            arr_name="origin",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+        )
+        validate_array(
+            arr=pos_dev,
+            arr_name="positive_deviation",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+        )
+        validate_arg_type(
+            "gamma", gamma, native_numeric_types, "a valid numeric type", False
+        )
+
+        # check deviation is positive
+        for dev_val in pos_dev:
+            if dev_val < 0:
+                raise ValueError(
+                    f"Entry {dev_val} of attribute 'positive_deviation' "
+                    f"is negative value"
+                )
+
+        # check gamma between 0 and n
+        if gamma < 0 or gamma > self.dim:
+            raise ValueError(
+                "Cardinality set attribute "
+                f"'gamma' must be a real number between 0 and dimension "
+                f"{self.dim} "
+                f"(provided value {gamma})"
+            )
+
 
 class PolyhedralSet(UncertaintySet):
     """
@@ -1435,6 +1715,23 @@ class PolyhedralSet(UncertaintySet):
         Each entry is an upper bound for the quantity
         ``lhs_coefficients_mat @ x``, where `x` is an (N,)
         array representing any point in the polyhedral set.
+
+    Notes
+    -----
+    The :math:`n`-dimensional polyhedral set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,
+            \\middle| \\, A q \\leq b
+        \\right\\}
+
+    in which
+    :math:`A \\in \\mathbb{R}^{m \\times n}` refers to
+    ``lhs_coefficients_mat``,
+    and
+    :math:`b \\in \\mathbb{R}^m` refers to ``rhs_vec``.
 
     Examples
     --------
@@ -1459,43 +1756,6 @@ class PolyhedralSet(UncertaintySet):
         # set attributes to copies of the originals
         self.coefficients_mat = lhs_coefficients_mat
         self.rhs_vec = rhs_vec
-
-        # validate nonemptiness and boundedness here.
-        # This check is only performed at construction.
-        self._validate()
-
-    def _validate(self):
-        """
-        Check polyhedral set attributes are such that set is nonempty
-        (solve a feasibility problem).
-
-        Raises
-        ------
-        ValueError
-            If set is empty, or the check was not
-            successfully completed due to numerical issues.
-        """
-        # solve LP
-        res = sp.optimize.linprog(
-            c=np.zeros(self.coefficients_mat.shape[1]),
-            A_ub=self.coefficients_mat,
-            b_ub=self.rhs_vec,
-            method="highs",
-            bounds=(None, None),
-        )
-
-        # check termination
-        if res.status == 1 or res.status == 4:
-            raise ValueError(
-                "Could not verify nonemptiness of the "
-                "polyhedral set (`scipy.optimize.linprog(method='highs')` "
-                f" status {res.status}) "
-            )
-        elif res.status == 2:
-            raise ValueError(
-                "PolyhedralSet defined by 'coefficients_mat' and "
-                "'rhs_vec' is empty. Check arguments"
-            )
 
     @property
     def type(self):
@@ -1522,7 +1782,7 @@ class PolyhedralSet(UncertaintySet):
             arr=val,
             arr_name="coefficients_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -1547,19 +1807,6 @@ class PolyhedralSet(UncertaintySet):
                     f"to match shape of attribute 'rhs_vec' "
                     f"(provided {lhs_coeffs_arr.shape[0]} rows)"
                 )
-
-        # check no column is all zeros. otherwise, set is unbounded
-        cols_with_all_zeros = np.nonzero(
-            [np.all(col == 0) for col in lhs_coeffs_arr.T]
-        )[0]
-        if cols_with_all_zeros.size > 0:
-            col_str = ", ".join(str(val) for val in cols_with_all_zeros)
-            raise ValueError(
-                "Attempting to set attribute 'coefficients_mat' to value "
-                f"with all entries zero in columns at indexes: {col_str}. "
-                "Ensure column has at least one nonzero entry"
-            )
-
         self._coefficients_mat = lhs_coeffs_arr
 
     @property
@@ -1576,7 +1823,7 @@ class PolyhedralSet(UncertaintySet):
             arr=val,
             arr_name="rhs_vec",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -1606,8 +1853,7 @@ class PolyhedralSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the polyhedral set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the polyhedral set.
         """
         return Geometry.LINEAR
 
@@ -1640,6 +1886,57 @@ class PolyhedralSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
+    def validate(self, config):
+        """
+        Check PolyhedralSet validity.
+
+        Raises
+        ------
+        ValueError
+            If any uncertainty set attributes are not valid.
+            (e.g., numeric values are infinite,
+            or ``self.coefficients_mat`` has column of zeros).
+            If bounded and nonempty checks fail.
+        """
+        lhs_coeffs_arr = self.coefficients_mat
+        rhs_vec_arr = self.rhs_vec
+
+        # check lhs matrix and rhs vector are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=lhs_coeffs_arr,
+            arr_name="coefficients_mat",
+            dim=2,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=rhs_vec_arr,
+            arr_name="rhs_vec",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        # check no column is all zeros. otherwise, set is unbounded
+        cols_with_all_zeros = np.nonzero(np.all(lhs_coeffs_arr == 0, axis=0))[0]
+        if cols_with_all_zeros.size > 0:
+            col_str = ", ".join(str(val) for val in cols_with_all_zeros)
+            raise ValueError(
+                "Attempting to set attribute 'coefficients_mat' to value "
+                f"with all entries zero in columns at indexes: {col_str}. "
+                "Ensure column has at least one nonzero entry"
+            )
+
+        # check boundedness and nonemptiness
+        super().validate(config)
+
 
 class BudgetSet(UncertaintySet):
     """
@@ -1652,12 +1949,35 @@ class BudgetSet(UncertaintySet):
         Each row corresponds to a single budget constraint,
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
+        All entries should be of value 0 or 1.
     rhs_vec : (L,) array_like
         Budget limits (upper bounds) with respect to
         the origin of the set.
     origin : (N,) array_like or None, optional
         Origin of the budget set. If `None` is provided, then
         the origin is set to the zero vector.
+
+    Notes
+    -----
+    The :math:`n`-dimensional budget set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,\\middle|
+            \\begin{pmatrix} B \\\\ -I \\end{pmatrix} q
+            \\leq \\begin{pmatrix} b + Bq^0 \\\\ -q^0 \\end{pmatrix}
+        \\right\\}
+
+    in which
+    :math:`B \\in \\{0, 1\\}^{\\ell \\times n}` refers to
+    ``budget_membership_mat``,
+    the quantity
+    :math:`I` denotes the :math:`n \\times n` identity matrix,
+    the quantity
+    :math:`b \\in \\mathbb{R}_{+}^\\ell` refers to ``rhs_vec``,
+    and
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``origin``.
 
     Examples
     --------
@@ -1743,6 +2063,7 @@ class BudgetSet(UncertaintySet):
         constraints.  Each row corresponds to a single budget
         constraint and defines which uncertain parameters
         participate in that row's constraint.
+        All entries should be of value 0 or 1.
         """
         return self._budget_membership_mat
 
@@ -1752,7 +2073,7 @@ class BudgetSet(UncertaintySet):
             arr=val,
             arr_name="budget_membership_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -1778,7 +2099,161 @@ class BudgetSet(UncertaintySet):
                     f"to match shape of attribute 'budget_rhs_vec' "
                     f"(provided {lhs_coeffs_arr.shape[0]} rows)"
                 )
+        # matrix is valid; update
+        self._budget_membership_mat = lhs_coeffs_arr
 
+    @property
+    def budget_rhs_vec(self):
+        """
+        (L,) numpy.ndarray : Budget limits (upper bounds)
+        with respect to the origin.
+        """
+        return self._budget_rhs_vec
+
+    @budget_rhs_vec.setter
+    def budget_rhs_vec(self, val):
+        validate_array(
+            arr=val,
+            arr_name="budget_rhs_vec",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        rhs_vec_arr = np.array(val)
+
+        # ensure shape of coefficients matrix
+        # and rhs vec match
+        if hasattr(self, "_budget_membership_mat"):
+            if len(val) != self.budget_membership_mat.shape[0]:
+                raise ValueError(
+                    "Budget set attribute 'budget_rhs_vec' "
+                    f"must have {self.budget_membership_mat.shape[0]} entries "
+                    f"to match shape of attribute 'budget_membership_mat' "
+                    f"(provided {rhs_vec_arr.size} entries)"
+                )
+
+        self._budget_rhs_vec = rhs_vec_arr
+
+    @property
+    def origin(self):
+        """
+        (N,) numpy.ndarray : Origin of the budget set.
+        """
+        return self._origin
+
+    @origin.setter
+    def origin(self, val):
+        validate_array(
+            arr=val,
+            arr_name="origin",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        origin_arr = np.array(val)
+
+        # ensure shape of coefficients matrix
+        # and rhs vec match
+        if len(val) != self.dim:
+            raise ValueError(
+                "Budget set attribute 'origin' "
+                f"must have {self.dim} entries "
+                f"to match set dimension "
+                f"(provided {origin_arr.size} entries)"
+            )
+
+        self._origin = origin_arr
+
+    @property
+    def dim(self):
+        """
+        int : Dimension `N` of the budget set.
+        """
+        return self.budget_membership_mat.shape[1]
+
+    @property
+    def geometry(self):
+        """
+        Geometry : Geometry of the budget set.
+        """
+        return Geometry.LINEAR
+
+    @property
+    def parameter_bounds(self):
+        """
+        Bounds in each dimension of the budget set.
+
+        Returns
+        -------
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
+        """
+        bounds = []
+        for orig_val, col in zip(self.origin, self.budget_membership_mat.T):
+            lb = orig_val
+            ub = orig_val + np.min(self.budget_rhs_vec[col == 1])
+            bounds.append((lb, ub))
+
+        return bounds
+
+    @copy_docstring(UncertaintySet.set_as_constraint)
+    def set_as_constraint(self, **kwargs):
+        return PolyhedralSet.set_as_constraint(self, **kwargs)
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
+    def validate(self, config):
+        """
+        Check BudgetSet validity.
+
+        Raises
+        ------
+        ValueError
+            If any uncertainty set attributes are not valid.
+            (e.g., numeric values are infinite,
+            ``self.budget_membership_mat`` contains a
+            full column or row of zeros,
+            or ``self.budget_rhs_vec`` has negative values).
+        """
+        lhs_coeffs_arr = self.budget_membership_mat
+        rhs_vec_arr = self.budget_rhs_vec
+        orig_val = self.origin
+
+        # check budget matrix, budget limits, and origin are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=lhs_coeffs_arr,
+            arr_name="budget_membership_mat",
+            dim=2,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=rhs_vec_arr,
+            arr_name="budget_rhs_vec",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=orig_val,
+            arr_name="origin",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        # check no row, col, are all zeros and all values are 0-1.
         # ensure all entries are 0-1 values
         uniq_entries = np.unique(lhs_coeffs_arr)
         non_bool_entries = uniq_entries[(uniq_entries != 0) & (uniq_entries != 1)]
@@ -1810,121 +2285,13 @@ class BudgetSet(UncertaintySet):
                 "Ensure each row and column has at least one nonzero entry"
             )
 
-        # matrix is valid; update
-        self._budget_membership_mat = lhs_coeffs_arr
-
-    @property
-    def budget_rhs_vec(self):
-        """
-        (L,) numpy.ndarray : Budget limits (upper bounds)
-        with respect to the origin.
-        """
-        return self._budget_rhs_vec
-
-    @budget_rhs_vec.setter
-    def budget_rhs_vec(self, val):
-        validate_array(
-            arr=val,
-            arr_name="budget_rhs_vec",
-            dim=1,
-            valid_types=valid_num_types,
-            valid_type_desc="a valid numeric type",
-            required_shape=None,
-        )
-
-        rhs_vec_arr = np.array(val)
-
-        # ensure shape of coefficients matrix
-        # and rhs vec match
-        if hasattr(self, "_budget_membership_mat"):
-            if len(val) != self.budget_membership_mat.shape[0]:
-                raise ValueError(
-                    "Budget set attribute 'budget_rhs_vec' "
-                    f"must have {self.budget_membership_mat.shape[0]} entries "
-                    f"to match shape of attribute 'budget_membership_mat' "
-                    f"(provided {rhs_vec_arr.size} entries)"
-                )
-
-        # ensure all entries are nonnegative
+        # ensure all rhs entries are nonnegative
         for entry in rhs_vec_arr:
             if entry < 0:
                 raise ValueError(
                     f"Entry {entry} of attribute 'budget_rhs_vec' is "
                     "negative. Ensure all entries are nonnegative"
                 )
-
-        self._budget_rhs_vec = rhs_vec_arr
-
-    @property
-    def origin(self):
-        """
-        (N,) numpy.ndarray : Origin of the budget set.
-        """
-        return self._origin
-
-    @origin.setter
-    def origin(self, val):
-        validate_array(
-            arr=val,
-            arr_name="origin",
-            dim=1,
-            valid_types=valid_num_types,
-            valid_type_desc="a valid numeric type",
-            required_shape=None,
-        )
-
-        origin_arr = np.array(val)
-
-        # ensure shape of coefficients matrix
-        # and rhs vec match
-        if len(val) != self.dim:
-            raise ValueError(
-                "Budget set attribute 'origin' "
-                f"must have {self.dim} entries "
-                f"to match set dimension "
-                f"(provided {origin_arr.size} entries)"
-            )
-
-        self._origin = origin_arr
-
-    @property
-    def dim(self):
-        """
-        int : Dimension `N` of the budget set.
-        """
-        return self.budget_membership_mat.shape[1]
-
-    @property
-    def geometry(self):
-        """
-        Geometry of the budget set.
-        See the `Geometry` class documentation.
-        """
-        return Geometry.LINEAR
-
-    @property
-    def parameter_bounds(self):
-        """
-        Bounds in each dimension of the budget set.
-
-        Returns
-        -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
-        """
-        bounds = []
-        for orig_val, col in zip(self.origin, self.budget_membership_mat.T):
-            lb = orig_val
-            ub = orig_val + np.min(self.budget_rhs_vec[col == 1])
-            bounds.append((lb, ub))
-
-        return bounds
-
-    @copy_docstring(UncertaintySet.set_as_constraint)
-    def set_as_constraint(self, **kwargs):
-        return PolyhedralSet.set_as_constraint(self, **kwargs)
 
 
 class FactorModelSet(UncertaintySet):
@@ -1952,6 +2319,34 @@ class FactorModelSet(UncertaintySet):
         Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
         their extreme values.
+
+    Notes
+    -----
+    The :math:`n`-dimensional factor model set is defined by
+
+    .. math::
+
+        \\left\\{ q \\in \\mathbb{R}^n\\,
+            \\middle|
+             \\,
+            \\exists\\, \\xi \\in [-1, 1]^F \\,:\\,
+            \\left[
+            \\begin{array}{l}
+                q = q^0 + \\Psi \\xi \\\\
+                \\displaystyle
+                    \\bigg| \\sum_{i=1}^n \\xi_i \\bigg|
+                    \\leq \\beta F
+            \\end{array}
+            \\right]
+        \\right\\}
+
+    in which
+    :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
+    the quantity :math:`F` refers to ``number_of_factors``,
+    the quantity :math:`\\Psi \\in \\mathbb{R}^{n \\times F}`
+    refers to ``psi_mat``,
+    and :math:`\\beta \\in [0, 1]` refers to ``beta``.
+
 
     Examples
     --------
@@ -2008,7 +2403,7 @@ class FactorModelSet(UncertaintySet):
             arr=val,
             arr_name="origin",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
 
@@ -2071,7 +2466,7 @@ class FactorModelSet(UncertaintySet):
             arr=val,
             arr_name="psi_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2088,16 +2483,6 @@ class FactorModelSet(UncertaintySet):
                 f"(provided shape {psi_mat_arr.shape})"
             )
 
-        psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
-        is_full_column_rank = psi_mat_rank == self.number_of_factors
-        if not is_full_column_rank:
-            raise ValueError(
-                "Attribute 'psi_mat' should be full column rank. "
-                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.) "
-                "Ensure `psi_mat` does not have more columns than rows, "
-                "and the columns of `psi_mat` are linearly independent."
-            )
-
         self._psi_mat = psi_mat_arr
 
     @property
@@ -2110,19 +2495,13 @@ class FactorModelSet(UncertaintySet):
         Note that, mathematically, setting ``beta = 0`` will enforce
         that as many factors will be above 0 as there will be below 0
         (i.e., "zero-net-alpha" model). If ``beta = 1``,
-        then the set is numerically equivalent to a `BoxSet` with bounds
-        ``[self.origin - psi @ np.ones(F), self.origin + psi @ np.ones(F)].T``.
+        then any number of factors can be above 0 or below 0
+        simultaneously.
         """
         return self._beta
 
     @beta.setter
     def beta(self, val):
-        if val > 1 or val < 0:
-            raise ValueError(
-                "Beta parameter must be a real number between 0 "
-                f"and 1 inclusive (provided value {val})"
-            )
-
         self._beta = val
 
     @property
@@ -2135,8 +2514,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the factor model set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the factor model set.
         """
         return Geometry.LINEAR
 
@@ -2147,10 +2525,9 @@ class FactorModelSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         F = self.number_of_factors
         psi_mat = self.psi_mat
@@ -2235,7 +2612,7 @@ class FactorModelSet(UncertaintySet):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -2273,10 +2650,65 @@ class FactorModelSet(UncertaintySet):
             np.abs(aux_space_pt) <= 1 + tol
         )
 
+    def validate(self, config):
+        """
+        Check FactorModelSet validity.
+
+        Raises
+        ------
+        ValueError
+            If any uncertainty set attributes are not valid.
+            (e.g., numeric values are infinite,
+            ``self.psi_mat`` is not full column rank,
+            or ``self.beta`` is not between 0 and 1).
+        """
+        orig_val = self.origin
+        psi_mat_arr = self.psi_mat
+        beta = self.beta
+
+        # check origin, psi matrix, and beta are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=orig_val,
+            arr_name="origin",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+        )
+        validate_array(
+            arr=psi_mat_arr,
+            arr_name="psi_mat",
+            dim=2,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_arg_type(
+            "beta", beta, native_numeric_types, "a valid numeric type", False
+        )
+
+        # check psi is full column rank
+        psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
+        check_full_column_rank = psi_mat_rank == self.number_of_factors
+        if not check_full_column_rank:
+            raise ValueError(
+                "Attribute 'psi_mat' should be full column rank. "
+                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.) "
+                "Ensure `psi_mat` does not have more columns than rows, "
+                "and the columns of `psi_mat` are linearly independent."
+            )
+
+        # check beta is between 0 and 1
+        if beta > 1 or beta < 0:
+            raise ValueError(
+                "Beta parameter must be a real number between 0 "
+                f"and 1 inclusive (provided value {beta})"
+            )
+
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
     """
-    An axis-aligned ellipsoid.
+    An axis-aligned ellipsoidal region.
 
     Parameters
     ----------
@@ -2285,18 +2717,46 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     half_lengths : (N,) array_like
         Semi-axis lengths of the ellipsoid.
 
+    See Also
+    --------
+    EllipsoidalSet : A general ellipsoidal region.
+
+    Notes
+    -----
+    The :math:`n`-dimensional axis-aligned ellipsoidal set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,
+            \\middle|\\,
+            \\begin{array}{l}
+                \\displaystyle
+                    \\sum_{\\substack{i = 1 \\\\ \\alpha_i > 0}}^n
+                    \\bigg( \\frac{q_i - q_i^0}{\\alpha_i}\\bigg)^2
+                    \\leq 1
+                    \\\\
+                q_i = q_i^0\\quad\\forall\\,i \\,:\\,\\alpha_i = 0
+            \\end{array}
+        \\right\\}
+
+    in which
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
+    and :math:`\\alpha \\in \\mathbb{R}_{+}^n` refers to
+    ``half_lengths``.
+
     Examples
     --------
-    3D origin-centered unit hypersphere:
+    3D origin-centered unit ball:
 
     >>> from pyomo.contrib.pyros import AxisAlignedEllipsoidalSet
-    >>> sphere = AxisAlignedEllipsoidalSet(
+    >>> ball = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0, 0],
-    ...     half_lengths=[1, 1, 1]
+    ...     half_lengths=[1, 1, 1],
     ... )
-    >>> sphere.center
+    >>> ball.center
     array([0, 0, 0])
-    >>> sphere.half_lengths
+    >>> ball.half_lengths
     array([1, 1, 1])
 
     """
@@ -2328,7 +2788,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             arr=val,
             arr_name="center",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2359,7 +2819,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             arr=val,
             arr_name="half_lengths",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2375,14 +2835,6 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
                     f"to value of dimension {val_arr.size}"
                 )
 
-        # ensure half-lengths are non-negative
-        for half_len in val_arr:
-            if half_len < 0:
-                raise ValueError(
-                    f"Entry {half_len} of 'half_lengths' "
-                    "is negative. All half-lengths must be nonnegative"
-                )
-
         self._half_lengths = val_arr
 
     @property
@@ -2395,8 +2847,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the axis-aligned ellipsoidal set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the axis-aligned ellipsoidal set.
         """
         return Geometry.CONVEX_NONLINEAR
 
@@ -2407,10 +2858,9 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         nom_value = self.center
         half_length = self.half_lengths
@@ -2452,10 +2902,55 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
+    def validate(self, config):
+        """
+        Check AxisAlignedEllipsoidalSet validity.
+
+        Raises
+        ------
+        ValueError
+            If any uncertainty set attributes are not valid.
+            (e.g., numeric values are infinite,
+            or ``self.half_lengths`` are negative).
+        """
+        ctr = self.center
+        half_lengths = self.half_lengths
+
+        # check center and half lengths are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=ctr,
+            arr_name="center",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=half_lengths,
+            arr_name="half_lengths",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        # ensure half-lengths are non-negative
+        for half_len in half_lengths:
+            if half_len < 0:
+                raise ValueError(
+                    f"Entry {half_len} of 'half_lengths' "
+                    "is negative. All half-lengths must be nonnegative"
+                )
+
 
 class EllipsoidalSet(UncertaintySet):
     """
-    A general ellipsoid.
+    A general ellipsoidal region.
 
     Parameters
     ----------
@@ -2474,6 +2969,34 @@ class EllipsoidalSet(UncertaintySet):
         matrix `shape_matrix`.
         Exactly one of `scale` and `gaussian_conf_lvl` should be
         None; otherwise, an exception is raised.
+
+    See Also
+    --------
+    AxisAlignedEllipsoidalSet : An axis-aligned ellipsoidal region.
+
+    Notes
+    -----
+    The :math:`n`-dimensional ellipsoidal set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,|
+            \\,(q - q^0)^\\intercal \\Sigma^{-1}(q - q^0) \\leq s
+        \\right\\}
+
+    in which
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
+    the quantity
+    :math:`\\Sigma \\in \\mathbb{R}^{n \\times n}`
+    refers to ``shape_matrix``,
+    and :math:`s \\geq 0` refers to ``scale``.
+
+    The quantity :math:`s` is related to the Gaussian confidence level
+    (``gaussian_conf_lvl``) :math:`p \\in [0, 1)`
+    by :math:`s = \\chi_{n}^2(p)`, in which
+    :math:`\\chi_{n}^2(\\cdot)` is the quantile function
+    of the chi-squared distribution with :math:`n` degrees of freedom.
 
     Examples
     --------
@@ -2495,7 +3018,7 @@ class EllipsoidalSet(UncertaintySet):
     >>> ball.scale
     1
 
-    A 2D ellipsoid with custom rotation and scaling:
+    A 2D ellipsoidal region with custom rotation and scaling:
 
     >>> rotated_ellipsoid = EllipsoidalSet(
     ...     center=[1, 1],
@@ -2510,7 +3033,7 @@ class EllipsoidalSet(UncertaintySet):
     >>> rotated_ellipsoid.scale
     0.5
 
-    A 4D 95% confidence ellipsoid:
+    A 4D 95% confidence ellipsoidal region:
 
     >>> conf_ellipsoid = EllipsoidalSet(
     ...     center=np.zeros(4),
@@ -2519,13 +3042,14 @@ class EllipsoidalSet(UncertaintySet):
     ...     gaussian_conf_lvl=0.95,
     ... )
     >>> conf_ellipsoid.center
-    array([0, 0, 0, 0])
+    array([0., 0., 0., 0.])
     >>> conf_ellipsoid.shape_matrix
-    array([[1, 0, 0, 0]],
-           [0, 2, 0, 0]],
-           [0, 0, 3, 0]],
-           [0, 0, 0. 4]])
-    >>> conf_ellipsoid.scale
+    array([[1, 0, 0, 0],
+           [0, 2, 0, 0],
+           [0, 0, 3, 0],
+           [0, 0, 0, 4]])
+    >>> conf_ellipsoid.scale  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    <BLANKLINE>
     ...9.4877...
     >>> conf_ellipsoid.gaussian_conf_lvl
     0.95
@@ -2569,7 +3093,7 @@ class EllipsoidalSet(UncertaintySet):
             arr=val,
             arr_name="center",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2649,7 +3173,7 @@ class EllipsoidalSet(UncertaintySet):
             arr=val,
             arr_name="shape_matrix",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2666,7 +3190,6 @@ class EllipsoidalSet(UncertaintySet):
                     f"(provided matrix with shape {shape_mat_arr.shape})"
                 )
 
-        self._verify_positive_definite(shape_mat_arr)
         self._shape_matrix = shape_mat_arr
 
     @property
@@ -2680,13 +3203,9 @@ class EllipsoidalSet(UncertaintySet):
 
     @scale.setter
     def scale(self, val):
-        validate_arg_type("scale", val, valid_num_types, "a valid numeric type", False)
-        if val < 0:
-            raise ValueError(
-                f"{type(self).__name__} attribute "
-                f"'scale' must be a non-negative real "
-                f"(provided value {val})"
-            )
+        validate_arg_type(
+            "scale", val, native_numeric_types, "a valid numeric type", False
+        )
 
         self._scale = val
         self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
@@ -2704,7 +3223,11 @@ class EllipsoidalSet(UncertaintySet):
     @gaussian_conf_lvl.setter
     def gaussian_conf_lvl(self, val):
         validate_arg_type(
-            "gaussian_conf_lvl", val, valid_num_types, "a valid numeric type", False
+            "gaussian_conf_lvl",
+            val,
+            native_numeric_types,
+            "a valid numeric type",
+            False,
         )
 
         scale_val = sp.stats.chi2.isf(q=1 - val, df=self.dim)
@@ -2728,8 +3251,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the ellipsoidal set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the ellipsoidal set.
         """
         return Geometry.CONVEX_NONLINEAR
 
@@ -2740,10 +3262,9 @@ class EllipsoidalSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         scale = self.scale
         nom_value = self.center
@@ -2763,7 +3284,7 @@ class EllipsoidalSet(UncertaintySet):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -2806,16 +3327,81 @@ class EllipsoidalSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
+    def validate(self, config):
+        """
+        Check EllipsoidalSet validity.
+
+        Raises
+        ------
+        ValueError
+            If any uncertainty set attributes are not valid.
+            (e.g., numeric values are infinite,
+            ``self.shape_matrix`` is not positive semidefinite,
+            or ``self.scale`` is negative).
+        """
+        ctr = self.center
+        shape_mat_arr = self.shape_matrix
+        scale = self.scale
+
+        # check center, shape matrix, and scale are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=ctr,
+            arr_name="center",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=shape_mat_arr,
+            arr_name="shape_matrix",
+            dim=2,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_arg_type(
+            "scale", scale, native_numeric_types, "a valid numeric type", False
+        )
+
+        # check shape matrix is positive semidefinite
+        self._verify_positive_definite(shape_mat_arr)
+
+        # ensure scale is non-negative
+        if scale < 0:
+            raise ValueError(
+                f"{type(self).__name__} attribute "
+                f"'scale' must be a non-negative real "
+                f"(provided value {scale})"
+            )
+
 
 class DiscreteScenarioSet(UncertaintySet):
     """
-    A discrete set of finitely many uncertain parameter realizations
-    (or scenarios).
+    A set of finitely many distinct points (or scenarios).
 
     Parameters
     ----------
     scenarios : (M, N) array_like
         A sequence of `M` distinct uncertain parameter realizations.
+
+    Notes
+    -----
+    The :math:`n`-dimensional discrete set is defined by
+
+    .. math::
+
+        \\left\\{
+                q^1, q^2, \\dots, q^m
+        \\right\\}
+
+    in which :math:`q^i \\in \\mathbb{R}^n`
+    refers to ``scenarios[i - 1]`` for :math:`i = 1, 2, \\dots, m`.
 
     Examples
     --------
@@ -2847,8 +3433,9 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def scenarios(self):
         """
-        list of tuples : Uncertain parameter realizations comprising the
-        set.  Each tuple is an uncertain parameter realization.
+        list[tuple[numbers.Real, ...]] : Uncertain parameter
+        realizations comprising the set. Each tuple is an uncertain
+        parameter realization.
 
         Note that the `scenarios` attribute may be modified, but
         only such that the dimension of the set remains unchanged.
@@ -2861,7 +3448,7 @@ class DiscreteScenarioSet(UncertaintySet):
             arr=val,
             arr_name="scenarios",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2888,8 +3475,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the discrete scenario set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the discrete scenario set.
         """
         return Geometry.DISCRETE_SCENARIOS
 
@@ -2900,10 +3486,9 @@ class DiscreteScenarioSet(UncertaintySet):
 
         Returns
         -------
-        : list of tuples
-            List, length `N`, of 2-tuples. Each tuple
-            specifies the bounds in its corresponding
-            dimension.
+        list[tuple[numbers.Real, numbers.Real]]
+            List, length `N`, of coordinate value
+            (lower, upper) bound pairs.
         """
         parameter_bounds = [
             (min(s[i] for s in self.scenarios), max(s[i] for s in self.scenarios))
@@ -2944,6 +3529,10 @@ class DiscreteScenarioSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        return np.array([])
+
     def point_in_set(self, point):
         """
         Determine whether a given point lies in the discrete
@@ -2963,7 +3552,7 @@ class DiscreteScenarioSet(UncertaintySet):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -2974,10 +3563,33 @@ class DiscreteScenarioSet(UncertaintySet):
         rounded_point = np.round(point, decimals=num_decimals)
         return np.any(np.all(rounded_point == rounded_scenarios, axis=1))
 
+    def validate(self, config):
+        """
+        Check DiscreteScenarioSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness or nonemptiness checks fail.
+        """
+        scenario_arr = self.scenarios
+
+        # check that all scenarios are valid
+        # this includes a nonemptiness check and a finiteness check
+        # using the validate_arr method
+        validate_array(
+            arr=scenario_arr,
+            arr_name="scenarios",
+            dim=2,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
 
 class IntersectionSet(UncertaintySet):
     """
-    An intersection of a sequence of uncertainty sets, each of which
+    An intersection of two or more uncertainty sets, each of which
     is represented by an `UncertaintySet` object.
 
     Parameters
@@ -2986,6 +3598,19 @@ class IntersectionSet(UncertaintySet):
         PyROS `UncertaintySet` objects of which to construct
         an intersection. At least two uncertainty sets must
         be provided. All sets must be of the same dimension.
+
+    Notes
+    -----
+    The :math:`n`-dimensional intersection set is defined by
+
+    .. math::
+
+        \\mathcal{Q}_1 \\cap \\mathcal{Q}_2 \\cap \\cdots
+            \\cap \\mathcal{Q}_m
+
+    in which :math:`\\mathcal{Q}_i \\subset \\mathbb{R}^n`
+    refers to the uncertainty set ``list(unc_sets.values())[i - 1]``
+    for :math:`i = 1, 2, \\dots, m`.
 
     Examples
     --------
@@ -3000,9 +3625,10 @@ class IntersectionSet(UncertaintySet):
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
-    >>> # to construct intersection, pass sets as keyword arguments
+    >>> # to construct intersection, pass sets as keyword arguments.
+    >>> # keywords are arbitrary
     >>> intersection = IntersectionSet(set1=square, set2=circle)
-    >>> intersection.all_sets
+    >>> intersection.all_sets  # doctest: +ELLIPSIS
     UncertaintySetList([...])
 
     """
@@ -3061,20 +3687,59 @@ class IntersectionSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry of the intersection set.
-        See the `Geometry` class documentation.
+        Geometry : Geometry of the intersection set.
         """
-        return max(self.all_sets[i].geometry.value for i in range(len(self.all_sets)))
+        return Geometry(max(uset.geometry.value for uset in self.all_sets))
+
+    @property
+    def scenarios(self):
+        """
+        list[tuple[numbers.Real, ...]] : If the set represented by
+        `self` reduces to a discrete uncertainty set, then this attribute
+        contains the scenarios that comprise the set.
+        Otherwise, a ValueError is raised.
+        """
+        if self.geometry == Geometry.DISCRETE_SCENARIOS:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.scenarios
+
+        raise ValueError(
+            "Uncertainty set represented by `self` is not reducible "
+            "to a finite set of scenarios."
+        )
+
+    @property
+    def _PARAMETER_BOUNDS_EXACT(self):
+        """
+        bool : True if the coordinate value bounds returned by
+        ``self.parameter_bounds`` are exact
+        (i.e., specify the minimum bounding box),
+        False otherwise.
+
+        For the intersection set, parameter bounds are exact only
+        if the intersection turns out to be a discrete set.
+        """
+        return self.geometry == Geometry.DISCRETE_SCENARIOS
 
     @property
     def parameter_bounds(self):
         """
-        Uncertain parameter value bounds for the intersection
-        set.
+        Compute parameter bounds of the intersection set.
 
-        Currently, an empty list, as the bounds cannot, in general,
-        be computed without access to an optimization solver.
+        Returns
+        -------
+        list[tuple[numbers.Real, numbers.Real]]
+            If one of the sets to be intersected is discrete,
+            then the list is of length ``self.dim`` and contains
+            the coordinate value (lower, upper) bound pairs.
+            Otherwise, an empty list is returned, as the bounds cannot,
+            in general, be computed without access to an optimization
+            solver.
         """
+        if self._PARAMETER_BOUNDS_EXACT:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.parameter_bounds
+
         return []
 
     def point_in_set(self, point):
@@ -3091,10 +3756,7 @@ class IntersectionSet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        if all(a_set.point_in_set(point=point) for a_set in self.all_sets):
-            return True
-        else:
-            return False
+        return all(a_set.point_in_set(point=point) for a_set in self.all_sets)
 
     # === Define pairwise intersection function
     @staticmethod
@@ -3107,7 +3769,7 @@ class IntersectionSet(UncertaintySet):
         Parameters
         ----------
         Q1, Q2 : UncertaintySet
-            Operand uncertainty sets.
+            Operand uncertainty set.
 
         Returns
         -------
@@ -3119,7 +3781,7 @@ class IntersectionSet(UncertaintySet):
         for set1, set2 in zip((Q1, Q2), (Q2, Q1)):
             if isinstance(set1, DiscreteScenarioSet):
                 return DiscreteScenarioSet(
-                    scenarios=[pt for pt in set1.scenarios if set1.point_in_set(pt)]
+                    scenarios=[pt for pt in set1.scenarios if set2.point_in_set(pt)]
                 )
 
         # === This case is if both sets are continuous
@@ -3136,14 +3798,15 @@ class IntersectionSet(UncertaintySet):
             )
         )
 
-        intersection_set = functools.reduce(self.intersect, self.all_sets)
-        if isinstance(intersection_set, DiscreteScenarioSet):
-            return intersection_set.set_as_constraint(
+        # handle special case where the intersection is a discrete set
+        if self.geometry == Geometry.DISCRETE_SCENARIOS:
+            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
+            return discrete_intersection.set_as_constraint(
                 uncertain_params=uncertain_params, block=block
             )
 
         all_cons, all_aux_vars = [], []
-        for idx, unc_set in enumerate(intersection_set.all_sets):
+        for idx, unc_set in enumerate(self.all_sets):
             sub_block = Block()
             block.add_component(
                 unique_component_name(block, f"sub_block_{idx}"), sub_block
@@ -3160,3 +3823,31 @@ class IntersectionSet(UncertaintySet):
             uncertainty_cons=all_cons,
             auxiliary_vars=all_aux_vars,
         )
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        aux_param_vals_iter = itertools.chain(
+            *tuple(
+                uset.compute_auxiliary_uncertain_param_vals(point, solver=solver)
+                for uset in self.all_sets
+            )
+        )
+        return np.array(list(aux_param_vals_iter))
+
+    def validate(self, config):
+        """
+        Check IntersectionSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness or nonemptiness checks fail.
+        """
+        the_sets = self.all_sets
+
+        # validate each set
+        for a_set in the_sets:
+            a_set.validate(config)
+
+        # check boundedness and nonemptiness of intersected set
+        super().validate(config)

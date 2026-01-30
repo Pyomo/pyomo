@@ -17,7 +17,15 @@ from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 
 ipopt_available = pyo.SolverFactory('ipopt').available(exception_flag=False)
 
-for mip_name in ('cplex_direct', 'gurobi_direct', 'gurobi', 'cplex', 'glpk', 'cbc'):
+for mip_name in (
+    'cplex_direct',
+    'gurobi_direct',
+    'gurobi',
+    'cplex',
+    'glpk',
+    'cbc',
+    'highs',
+):
     mip_available = pyo.SolverFactory(mip_name).available(exception_flag=False)
     if mip_available:
         break
@@ -29,7 +37,7 @@ class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
     @unittest.skipIf(not mip_available, 'MIP solver is not available.')
     def test_farmer(self):
-        class Farmer(object):
+        class Farmer:
             def __init__(self):
                 self.crops = ['WHEAT', 'CORN', 'SUGAR_BEETS']
                 self.total_acreage = 500
@@ -252,7 +260,7 @@ class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
     @unittest.skipIf(not mip_available, 'MIP solver is not available.')
     def test_four_scen_farmer(self):
-        class FourScenFarmer(object):
+        class FourScenFarmer:
             def __init__(self):
                 self.crops = ['WHEAT', 'CORN', 'SUGAR_BEETS']
                 self.total_acreage = 500

@@ -205,7 +205,7 @@ def expression_to_string(expr, treechecker, smap=None, output_fixed_variables=Fa
     return expr_str, visitor.is_discontinuous
 
 
-class Categorizer(object):
+class Categorizer:
     """Class for representing categorized variables.
 
     Given a list of variable names and a symbol map, categorizes the variable
@@ -252,7 +252,7 @@ class Categorizer(object):
                 yield category, var_name
 
 
-class StorageTreeChecker(object):
+class StorageTreeChecker:
     def __init__(self, model):
         # blocks are hashable so we can use a normal set
         self.tree = {model}
@@ -958,6 +958,7 @@ valid_solvers = {
     'CONOPT3': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
     'CONOPT4': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
     'CONOPTD': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
+    'COPT': {'LP', 'MIP', 'RMIP', 'QCP', 'MIQCP', 'RMIQCP'},
     'CONVERT': {
         'LP',
         'MIP',
@@ -1043,11 +1044,23 @@ valid_solvers = {
         'RMIQCP',
     },
     'GLOMIQO': {'QCP', 'MIQCP', 'RMIQCP'},
-    'GUROBI': {'LP', 'MIP', 'RMIP', 'QCP', 'MIQCP', 'RMIQCP'},
+    'GUROBI': {
+        'LP',
+        'MIP',
+        'RMIP',
+        'NLP',
+        'DNLP',
+        'MINLP',
+        'RMINLP',
+        'QCP',
+        'MIQCP',
+        'RMIQCP',
+    },
     'GUSS': {'LP', 'MIP', 'NLP', 'MCP', 'CNS', 'DNLP', 'MINLP', 'QCP', 'MIQCP'},
     'IPOPT': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
     'IPOPTH': {'LP', 'RMIP', 'NLP', 'CNS', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
     'JAMS': {'EMP'},
+    'HIGHS': {'LP', 'MIP', 'RMIP'},
     'KESTREL': {
         'LP',
         'MIP',
@@ -1142,6 +1155,7 @@ valid_solvers = {
     'MPSGE': {},
     'MSNLP': {'NLP', 'DNLP', 'RMINLP', 'QCP', 'RMIQCP'},
     'NLPEC': {'MCP', 'MPEC', 'RMPEC'},
+    'ODHCPLEX': {'MINLP'},
     'OQNLP': {'NLP', 'DNLP', 'MINLP', 'QCP', 'MIQCP'},
     'OS': {
         'LP',

@@ -11,7 +11,7 @@ model:
   file determinism: 1            # When interfacing with a solver using file
                                  #   based I/O, set the effort level for
                                  #   ensuring the file creation process is
-                                 #   determistic. The default (1) sorts the
+                                 #   deterministic. The default (1) sorts the
                                  #   index of components when transforming the
                                  #   model. Anything less than 1 disables
                                  #   index sorting. Anything greater than 1

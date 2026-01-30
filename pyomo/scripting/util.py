@@ -512,7 +512,7 @@ def create_model(data):
             io_options['symbolic_solver_labels'] = True
         if data.options.model.file_determinism is not None:
             io_options['file_determinism'] = data.options.model.file_determinism
-        (fname, smap_id) = instance.write(
+        fname, smap_id = instance.write(
             filename=fname, format=format, io_options=io_options
         )
 
@@ -912,7 +912,7 @@ def configure_loggers(options=None, shutdown=False):
 configure_loggers.fileLogger = None
 
 
-class PyomoCommandLogContext(object):
+class PyomoCommandLogContext:
     """Context manager to setup/restore logging for the Pyomo command"""
 
     def __init__(self, options):

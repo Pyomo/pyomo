@@ -203,15 +203,12 @@ class Complementarity(Block):
             return
         cc = _rule(b.parent_block(), idx)
         if cc is None:
-            raise ValueError(
-                """
+            raise ValueError("""
 Invalid complementarity condition.  The complementarity condition
 is None instead of a 2-tuple.  Please modify your rule to return
 Complementarity.Skip instead of None.
 
-Error thrown for Complementarity "%s"."""
-                % (b.name,)
-            )
+Error thrown for Complementarity "%s".""" % (b.name,))
         b.set_value(cc)
 
     def __init__(self, *args, **kwargs):
@@ -287,9 +284,9 @@ Error thrown for Complementarity "%s"."""
         # Book).
         _transformed = not issubclass(self.ctype, Complementarity)
 
-        def _conditional_block_printer(ostream, idx, data):
+        def _conditional_block_printer(ostream, sort, idx, data):
             if _transformed or len(data.component_map()):
-                self._pprint_callback(ostream, idx, data)
+                self._pprint_callback(ostream, sort, idx, data)
 
         return (
             [
@@ -297,7 +294,7 @@ Error thrown for Complementarity "%s"."""
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Active", self.active),
             ],
-            self._data.items(),
+            self.items,
             ("Arg0", "Arg1", "Active"),
             (_table_data, _conditional_block_printer),
         )

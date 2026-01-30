@@ -24,6 +24,7 @@ Standard Enums:
 .. autosummary::
 
    ObjectiveSense
+   SolverAPIVersion
 
 """
 
@@ -41,6 +42,8 @@ if sys.version_info[:2] < (3, 11):
 else:
     _EnumType = enum.EnumType
 if sys.version_info[:2] < (3, 13):
+    import inspect
+
     # prior to 3.13 the int.{to,from}_bytes docstrings had LaTeX-like
     # "`..'" quotations, which Sphinx can't parse correctly.
     def _fix_doc(ref):
@@ -52,7 +55,7 @@ if sys.version_info[:2] < (3, 13):
 
     class IntEnum(enum.IntEnum):
         __doc__ = (
-            """A compatibility wrapper around :class:`enum.IntEnum`
+            inspect.cleandoc("""A compatibility wrapper around :class:`enum.IntEnum`
 
         This wrapper class updates the :meth:`to_bytes` and
         :meth:`from_bytes` docstrings in Python <= 3.12 to suppress
@@ -60,8 +63,10 @@ if sys.version_info[:2] < (3, 13):
 
         .. rubric:: IntEnum
 
-        """
-            + enum.IntEnum.__doc__
+        """)
+            + "\n\n"
+            # There are environments where IntEnum.__doc__ is None (see #3710)
+            + inspect.cleandoc(getattr(enum.IntEnum, "__doc__", "") or "")
         )
 
         @_fix_doc(enum.IntEnum.to_bytes)
@@ -211,6 +216,23 @@ class ObjectiveSense(NamedIntEnum):
     # need to do this.
     def __str__(self):
         return self.name
+
+
+class SolverAPIVersion(NamedIntEnum):
+    """
+    Enum identifying Pyomo solver API version
+
+    The numeric values are intentionally a bit odd because APPSI came
+    between the official V1 and V2. We still want it to be chronologically
+    in order without sacrificing the human-logic of v1 vs. v2.
+    """
+
+    #: Original Coopr/Pyomo solver interface
+    V1 = 10
+    #: Automatic Persistent Pyomo Solver Interface (experimental)
+    APPSI = 15
+    #: Redesigned solver interface (circa 2024)
+    V2 = 20
 
 
 minimize = ObjectiveSense.minimize

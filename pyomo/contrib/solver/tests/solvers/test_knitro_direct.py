@@ -1,0 +1,326 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2025
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+import io
+from contextlib import redirect_stdout
+
+import pyomo.common.unittest as unittest
+import pyomo.environ as pyo
+
+from pyomo.contrib.solver.common.results import SolutionStatus, TerminationCondition
+from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
+from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
+
+avail = KnitroDirectSolver().available()
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+class TestKnitroDirectSolverConfig(unittest.TestCase):
+    def test_default_instantiation(self):
+        config = KnitroConfig()
+        self.assertIsNone(config._description)
+        self.assertEqual(config._visibility, 0)
+        self.assertFalse(config.tee)
+        self.assertTrue(config.load_solutions)
+        self.assertTrue(config.raise_exception_on_nonoptimal_result)
+        self.assertFalse(config.symbolic_solver_labels)
+        self.assertIsNone(config.timer)
+        self.assertIsNone(config.threads)
+        self.assertIsNone(config.time_limit)
+
+    def test_custom_instantiation(self):
+        config = KnitroConfig(description="A description")
+        config.tee = True
+        self.assertTrue(config.tee)
+        self.assertEqual(config._description, "A description")
+        self.assertIsNone(config.time_limit)
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
+    def test_results_extra_info_mip(self):
+        """Test that MIP-specific extra info is populated for MIP problems."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.Integers, bounds=(0, 10))
+        m.y = pyo.Var(domain=pyo.Integers, bounds=(0, 10))
+        m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
+        m.c1 = pyo.Constraint(expr=2 * m.x + m.y <= 15)
+        m.c2 = pyo.Constraint(expr=m.x + 2 * m.y <= 15)
+
+        results = opt.solve(m)
+
+        # Check that MIP-specific fields are populated
+        self.assertIsNotNone(results.extra_info.mip_number_nodes)
+        self.assertIsNotNone(results.extra_info.mip_abs_gap)
+        self.assertIsNotNone(results.extra_info.mip_rel_gap)
+        self.assertIsNotNone(results.extra_info.mip_number_solves)
+
+        # Check that MIP-specific fields are of correct type
+        self.assertIsInstance(results.extra_info.mip_number_nodes, int)
+        self.assertIsInstance(results.extra_info.mip_abs_gap, float)
+        self.assertIsInstance(results.extra_info.mip_rel_gap, float)
+        self.assertIsInstance(results.extra_info.mip_number_solves, int)
+
+        # Check that non-MIP field does not exist
+        self.assertFalse(hasattr(results.extra_info, 'number_iters'))
+
+    def test_results_extra_info_no_mip(self):
+        """Test that iteration info is populated for non-MIP problems."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2, sense=pyo.minimize
+        )
+
+        results = opt.solve(m)
+
+        # Check that num_iters is populated for non-MIP
+        self.assertIsNotNone(results.extra_info.number_iters)
+        self.assertIsInstance(results.extra_info.number_iters, int)
+        self.assertGreater(results.extra_info.number_iters, 0)
+
+        # Check that MIP-specific fields do not exist
+        self.assertFalse(hasattr(results.extra_info, 'mip_number_nodes'))
+        self.assertFalse(hasattr(results.extra_info, 'mip_abs_gap'))
+        self.assertFalse(hasattr(results.extra_info, 'mip_rel_gap'))
+        self.assertFalse(hasattr(results.extra_info, 'mip_number_solves'))
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+class TestKnitroSolverObjectiveBound(unittest.TestCase):
+    def test_objective_bound_mip(self):
+        """Test that objective bound is retrieved for MIP problems."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.Integers, bounds=(0, 10))
+        m.y = pyo.Var(domain=pyo.Integers, bounds=(0, 10))
+        m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
+        m.c1 = pyo.Constraint(expr=2 * m.x + m.y <= 15)
+        m.c2 = pyo.Constraint(expr=m.x + 2 * m.y <= 15)
+
+        results = opt.solve(m)
+
+        # Check that objective_bound is populated
+        self.assertIsNotNone(results.objective_bound)
+        self.assertIsInstance(results.objective_bound, float)
+
+        # For maximization, bound should be >= incumbent objective
+        self.assertGreaterEqual(results.objective_bound, results.incumbent_objective)
+
+    def test_objective_bound_no_mip(self):
+        """Test that objective bound is not set for non-MIP problems."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2, sense=pyo.minimize
+        )
+
+        results = opt.solve(m)
+
+        # Check that objective_bound is None for non-MIP
+        self.assertIsNone(results.objective_bound)
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+class TestKnitroDirectSolverInterface(unittest.TestCase):
+    def test_class_member_list(self):
+        opt = KnitroDirectSolver()
+        expected_list = [
+            "CONFIG",
+            "available",
+            "config",
+            "api_version",
+            "is_persistent",
+            "name",
+            "solve",
+            "version",
+        ]
+        method_list = [
+            m for m in dir(opt) if not m.startswith("_") and not m.startswith("get")
+        ]
+        self.assertListEqual(sorted(method_list), sorted(expected_list))
+
+    def test_default_instantiation(self):
+        opt = KnitroDirectSolver()
+        self.assertFalse(opt.is_persistent())
+        self.assertIsNotNone(opt.version())
+        self.assertEqual(opt.name, "knitro_direct")
+        self.assertEqual(opt.CONFIG, opt.config)
+        self.assertTrue(opt.available())
+
+    def test_instantiation_as_context(self):
+        with KnitroDirectSolver() as opt:
+            self.assertFalse(opt.is_persistent())
+            self.assertIsNotNone(opt.version())
+            self.assertEqual(opt.name, "knitro_direct")
+            self.assertEqual(opt.CONFIG, opt.config)
+            self.assertTrue(opt.available())
+
+    def test_available_cache(self):
+        opt = KnitroDirectSolver()
+        opt.available()
+        self.assertTrue(opt._available_cache)
+        self.assertIsNotNone(opt._available_cache)
+
+    def test_solution_status_mapping(self):
+        opt = KnitroDirectSolver()
+        for opt_status in [0, -100]:
+            status = opt._get_solution_status(opt_status)
+            self.assertEqual(status, SolutionStatus.optimal)
+
+        for opt_status in [*range(-101, -103, -1), *range(-400, -406, -1)]:
+            status = opt._get_solution_status(opt_status)
+            self.assertEqual(status, SolutionStatus.feasible)
+
+        for opt_status in [-200, -204, -205, -206]:
+            status = opt._get_solution_status(opt_status)
+            self.assertEqual(status, SolutionStatus.infeasible)
+
+        for opt_status in [-501, -99999, -1]:
+            status = opt._get_solution_status(opt_status)
+            self.assertEqual(status, SolutionStatus.noSolution)
+
+    def test_termination_condition_mapping(self):
+        opt = KnitroDirectSolver()
+        for opt_status in [0, -100]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(
+                term_cond, TerminationCondition.convergenceCriteriaSatisfied
+            )
+        term_cond = opt._get_termination_condition(-202)
+        self.assertEqual(term_cond, TerminationCondition.locallyInfeasible)
+        for opt_status in [-200, -204, -205]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.provenInfeasible)
+        for opt_status in [-300, -301]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.infeasibleOrUnbounded)
+        for opt_status in [-400, -410]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.iterationLimit)
+        for opt_status in [-401, -411]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.maxTimeLimit)
+        term_cond = opt._get_termination_condition(-500)
+        self.assertEqual(term_cond, TerminationCondition.interrupted)
+        for opt_status in [-501, -550, -599]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.error)
+        for opt_status in [-600, -99999, -1]:
+            term_cond = opt._get_termination_condition(opt_status)
+            self.assertEqual(term_cond, TerminationCondition.unknown)
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+class TestKnitroDirectSolver(unittest.TestCase):
+    def setUp(self):
+        self.opt = KnitroDirectSolver()
+
+    def test_solve_tee(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x), sense=pyo.minimize
+        )
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            self.opt.solve(m, tee=True)
+        output = stream.getvalue()
+        self.assertTrue(bool(output.strip()))
+
+    def test_solve_no_tee(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x), sense=pyo.minimize
+        )
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            self.opt.solve(m, tee=False)
+        output = stream.getvalue()
+        self.assertFalse(bool(output.strip()))
+
+    def test_solve(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x), sense=pyo.minimize
+        )
+        res = self.opt.solve(m)
+        self.assertAlmostEqual(res.incumbent_objective, -1004)
+        self.assertAlmostEqual(m.x.value, 5)
+        self.assertAlmostEqual(m.y.value, -5)
+
+    def test_qp_solve(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) + 100.0 * (m.y - m.x) ** 2, sense=pyo.minimize
+        )
+        results = self.opt.solve(m)
+        self.assertAlmostEqual(results.incumbent_objective, -4.0, 3)
+        self.assertAlmostEqual(m.x.value, 5.0, 3)
+        self.assertAlmostEqual(m.y.value, 5.0, 3)
+
+    def test_qcp_solve(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(expr=(m.y - m.x) ** 2, sense=pyo.minimize)
+        m.c1 = pyo.Constraint(expr=m.x**2 + m.y**2 <= 4)
+        results = self.opt.solve(m)
+        self.assertAlmostEqual(results.incumbent_objective, 0.0)
+
+    def test_solve_exp(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
+        self.opt.solve(m)
+        self.assertAlmostEqual(m.x.value, -0.42630274815985264)
+        self.assertAlmostEqual(m.y.value, 0.6529186341994245)
+
+    def test_solve_log(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1)
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y <= pyo.log(m.x))
+        self.opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0.6529186341994245)
+        self.assertAlmostEqual(m.y.value, -0.42630274815985264)
+
+    def test_solve_HS071(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(pyo.RangeSet(1, 4), bounds=(1.0, 5.0))
+        m.obj = pyo.Objective(
+            expr=m.x[1] * m.x[4] * (m.x[1] + m.x[2] + m.x[3]) + m.x[3],
+            sense=pyo.minimize,
+        )
+        m.c1 = pyo.Constraint(expr=m.x[1] * m.x[2] * m.x[3] * m.x[4] >= 25.0)
+        m.c2 = pyo.Constraint(
+            expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 + m.x[4] ** 2 == 40.0
+        )
+        self.opt.solve(m, solver_options={"opttol": 1e-5})
+        self.assertAlmostEqual(pyo.value(m.x[1]), 1.0, 3)
+        self.assertAlmostEqual(pyo.value(m.x[2]), 4.743, 3)
+        self.assertAlmostEqual(pyo.value(m.x[3]), 3.821, 3)
+        self.assertAlmostEqual(pyo.value(m.x[4]), 1.379, 3)
