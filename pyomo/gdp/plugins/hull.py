@@ -79,6 +79,7 @@ class _HullTransformationData(AutoSlots.Mixin):
         'original_var_map',
         'bigm_constraint_map',
         'disaggregation_constraint_map',
+        'well_defined_points_map',
     )
 
     def __init__(self):
@@ -86,6 +87,7 @@ class _HullTransformationData(AutoSlots.Mixin):
         self.original_var_map = ComponentMap()
         self.bigm_constraint_map = DefaultComponentMap(ComponentMap)
         self.disaggregation_constraint_map = DefaultComponentMap(ComponentMap)
+        self.well_defined_points_map = ComponentMap()
 
 
 Block.register_private_data_initializer(_HullTransformationData)
@@ -183,8 +185,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
          the epsilon -> 0 limit. In particular, it should be small
          enough to put spurious O(eps) sized constraint violations
          within solver tolerances. Both "GrossmannLee" (when epsilon is
-         small enough) and the original "LeeGrossmann" have serious
-         numerical issues.
+         small enough) and the original "LeeGrossmann" have numerical
+         and feasibility issues.
 
 
         References
@@ -251,8 +253,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         this is not provided for a disjunction, as it usually need not
         be, we first try the point with all variables zero, then we
         make a best effort to find a nonzero point through a subsolver
-        call, then finally we raise GDP_Error if neither attempt was
-        successful.
+        call, then we raise GDP_Error if neither attempt was successful.
         """,
         ),
     )
@@ -417,7 +418,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 unique_component_name(test_model, x.name), Reference(x)
             )
         test_model.well_defined_cons = ConstraintList()
-        WellDefinedConstraintGenerator(
+        _WellDefinedConstraintGenerator(
             cons_list=test_model.well_defined_cons
         ).walk_expression(test_expr)
         feasible = self._solve_for_first_feasible_solution(test_model)
@@ -608,6 +609,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 fallback_vars=all_local_vars,
                 disj_name=obj.name,
             )
+        transBlock.private_data().well_defined_points_map[obj] = x0_map
         # Any var that got an offset cannot be local anymore, but it can
         # still be generalized local
         # breakpoint()
@@ -1281,6 +1283,18 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             cons = transformed_cons
         return cons
 
+    def get_well_defined_points_map(self, b):
+        """
+        Retrieve the well-defined points originally used to transform
+        a Block. Format is a ComponentMap of ComponentMaps identical to
+        that of the parameter well_defined_points.
+
+        Parameters
+        ----------
+        b: a Block that was transformed by gdp.hull
+        """
+        return b._pyomo_gdp_hull_reformulation.private_data().well_defined_points_map
+
 
 @TransformationFactory.register(
     'gdp.chull',
@@ -1303,7 +1317,7 @@ class _Deprecated_Name_Hull(Hull_Reformulation):
 # more generic instead of needing to specially set up the options for
 # each solver (plus, some solvers get rather buggy when used for this
 # task).
-class WellDefinedConstraintGenerator(StreamBasedExpressionVisitor):
+class _WellDefinedConstraintGenerator(StreamBasedExpressionVisitor):
     def __init__(self, cons_list, **kwds):
         self.cons_list = cons_list
         super().__init__(**kwds)
@@ -1315,12 +1329,13 @@ class WellDefinedConstraintGenerator(StreamBasedExpressionVisitor):
         if node.__class__ in _handlers:
             for con in _handlers[node.__class__](node):
                 # note: con should never be a boolean True here, such
-                # cases were supposed to have been filtered out during
-                # the handler call
+                # cases should have been filtered out during the handler
+                # call
                 self.cons_list.add(con)
 
 
-# epsilon for handling function domains with strict inequalities
+# Epsilon for handling function domains with strict inequalities. This
+# is a heuristic so it's not important for this to be tight.
 EPS = 1e-4
 
 
@@ -1336,12 +1351,12 @@ def _handlePowExpression(node):
     # negative. Otherwise, base should be strictly positive (as we can't
     # be sure that exp could not be negative or fractional).
 
-    # Observe that this is problematic for LP and it needs to be a MIP!
-    # For now I'll just make it positive; this doesn't need to be perfect.
+    # Note: this is problematic for LP, but I don't want to potentially
+    # invoke a MIP solve here, so replace "x is nonzero" with "x is >=
+    # eps"
     if exp.__class__ in EXPR.native_types or not exp.is_potentially_variable():
         val = value(exp)
-        rounded = round(val)
-        if rounded == val:
+        if round(val) == val:
             if val >= 0:
                 return ()
             else:
@@ -1357,7 +1372,7 @@ def _handleDivisionExpression(node):
     arg = node.args[1]
     if arg.__class__ in EXPR.native_types or not arg.is_potentially_variable():
         return ()
-    # Same problem as before, this needs to be a MIP
+    # Same LP vs MIP problem as before
     return (arg >= EPS,)
 
 
@@ -1375,9 +1390,11 @@ def _handleUnaryFunctionExpression(node):
         return (arg >= -1, arg <= 1)
     if node.name == 'acos':
         return (arg >= -1, arg <= 1)
-    # It can't be pi/2 plus a multiple of pi. Not much we can do about
-    # this one.
-    # if node.name == 'tan':
+    # It can't be exactly pi/2 plus a multiple of pi. Rather difficult
+    # to enforce, so make a conservative effort by instead keeping it in
+    # (-pi/2, pi/2).
+    if node.name == 'tan':
+        return (arg >= -(math.pi / 2) + EPS, arg <= (math.pi / 2) - EPS)
     if node.name == 'acosh':
         return (arg >= 1,)
     if node.name == 'atanh':
@@ -1389,10 +1406,7 @@ def _handleUnaryFunctionExpression(node):
 # All expression types that can potentially be
 # ill-defined:
 _handlers = {
-    # Note: we will skip all the NPV expression types, since if one
-    # of those fails to be well-defined, changing variable values is
-    # not going to fix it
-    # You're on your own here
+    # You are on your own here
     # EXPR.ExternalFunctionExpression,
     EXPR.PowExpression: _handlePowExpression,
     EXPR.DivisionExpression: _handleDivisionExpression,
