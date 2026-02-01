@@ -8,7 +8,17 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.environ import SolverFactory, value, Var, Constraint, TransformationFactory, ConcreteModel, BooleanVar, LogicalConstraint, Block
+from pyomo.environ import (
+    SolverFactory,
+    value,
+    Var,
+    Constraint,
+    TransformationFactory,
+    ConcreteModel,
+    BooleanVar,
+    LogicalConstraint,
+    Block,
+)
 from pyomo.gdp import Disjunct, Disjunction
 import pyomo.common.unittest as unittest
 from pyomo.contrib.gdpopt.tests.four_stage_dynamic_model import build_model
