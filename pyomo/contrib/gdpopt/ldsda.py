@@ -513,7 +513,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         while primal_improved:
             next_point = tuple(map(sum, zip(self.current_point, self.best_direction)))
             if self._check_valid_neighbor(next_point):
-                # Modification: Add ", _" to decode the tuple, only get the first boolean value
+                # Unpack the tuple and use only the first boolean value
                 primal_improved, _ = self._solve_GDP_subproblem(
                     next_point, 'Line search', config
                 )
