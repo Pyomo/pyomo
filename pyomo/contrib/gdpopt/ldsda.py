@@ -38,9 +38,6 @@ from pyomo.core import minimize, Suffix, TransformationFactory, Objective, value
 from pyomo.opt import SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.logical_expr import ExactlyExpression
-from pyomo.common.dependencies import attempt_import
-
-tabulate, tabulate_available = attempt_import('tabulate')
 
 # Data tuple for external variables.
 ExternalVarInfo = namedtuple(
@@ -320,13 +317,10 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 )
         config.logger.info("Reformulation Summary:")
         config.logger.info(
-            tabulate.tabulate(
-                reformulation_summary,
-                headers=["Ext Var Index", "LB", "UB", "Associated Boolean Vars"],
-                showindex="always",
-                tablefmt="simple_outline",
-            )
+            "  Index | Ext Var | LB | UB | Associated Boolean Vars"
         )
+        for idx, row in enumerate(reformulation_summary):
+            config.logger.info(f"  {idx} | {row[0]} | {row[1]} | {row[2]}")
         self.number_of_external_variables = sum(
             external_var_info.exactly_number
             for external_var_info in util_block.external_var_info_list
