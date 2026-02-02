@@ -464,7 +464,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
 
                     # --- Tiebreaker Logic ---
                     if abs(fmin - primal_bound) < abs_tol:
-                        # Calculate the Euclidean distance from the current point
+                        # Calculate the squared Euclidean distance from the current point
                         dist = sum(
                             (x - y) ** 2 for x, y in zip(neighbor, self.current_point)
                         )
