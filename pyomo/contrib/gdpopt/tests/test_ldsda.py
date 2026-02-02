@@ -210,9 +210,9 @@ class TestLDSDAUnits(unittest.TestCase):
         self.solver.current_point = (0, 0)
         self.config.integer_tolerance = 1e-5
         
-        # Manually define neighbors:
-        # 1. (1,0) - Distance 1
-        # 2. (2,0) - Distance 4 (Further away)
+        # Manually define neighbors from (0, 0):
+        # 1. (1, 0) - Distance 1
+        # 2. (1, 1) - Distance sqrt(2) (further away)
         self.solver.directions = [(1, 0), (1, 1)]
         self.solver._check_valid_neighbor = MagicMock(return_value=True)
 
