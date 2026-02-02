@@ -109,8 +109,9 @@ class TestLDSDALinearSearchUnit(unittest.TestCase):
 
 class TestLDSDAUnits(unittest.TestCase):
     """
-    Unit tests for solver-independent LDSDA logic, targeting critical control-flow,
-    validation, and regression-sensitive code paths rather than full coverage.
+    Unit tests for LDSDA behavior that exercise key control-flow,
+    validation, and regression-sensitive code paths without relying
+    on external solvers.
     """
 
     def setUp(self):
