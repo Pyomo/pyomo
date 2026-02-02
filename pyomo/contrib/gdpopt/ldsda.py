@@ -230,12 +230,15 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 minlp_args['add_options'] = minlp_args.get('add_options', [])
                 minlp_args['add_options'].append('option reslim=%s;' % remaining)
             result = SolverFactory(config.minlp_solver).solve(subproblem, **minlp_args)
-            # Retrieve the primal bound (objective value) from the subproblem
-            obj = next(subproblem.component_data_objects(Objective, active=True))
-            primal_bound = value(obj)
             primal_improved = self._handle_subproblem_result(
                 result, subproblem, external_var_value, config, search_type
             )
+            # Only retrieve primal_bound if the solve succeeded; otherwise return None
+            if primal_improved:
+                obj = next(subproblem.component_data_objects(Objective, active=True))
+                primal_bound = value(obj)
+            else:
+                primal_bound = None
         return primal_improved, primal_bound
 
     def _get_external_information(self, util_block, config):
