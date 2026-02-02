@@ -107,7 +107,7 @@ class TestLDSDALinearSearchUnit(unittest.TestCase):
         # (Once for the success, once for the failure that stops the loop)
         self.assertEqual(solver._solve_GDP_subproblem.call_count, 2)
 
-class TestLDSDAunits(unittest.TestCase):
+class TestLDSDAUnits(unittest.TestCase):
     """
     Unit tests to achieve 100% coverage by hitting error branches,
     tie-breakers, and the main loop break statement.
