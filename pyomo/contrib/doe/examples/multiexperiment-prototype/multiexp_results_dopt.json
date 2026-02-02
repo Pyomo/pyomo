@@ -1,0 +1,117 @@
+{
+  "Solver Status": "ok",
+  "Termination Condition": "optimal",
+  "Termination Message": "Ipopt 3.13.2\\x3a Optimal Solution Found",
+  "Scenarios": [
+    {
+      "Total FIM": [
+        [
+          252.75335222783178,
+          1256.386754178559
+        ],
+        [
+          1256.386754178559,
+          20661.769203183634
+        ]
+      ],
+      "log10 A-opt": -2.24110940775806,
+      "log10 pseudo A-opt": 4.320447954792004,
+      "log10 D-opt": 6.561557362550065,
+      "log10 E-opt": 2.244773279685326,
+      "FIM Condition Number": 118.03499967758496,
+      "Unknown Parameters": [
+        15.014999999999999,
+        0.5
+      ],
+      "Experiments": [
+        {
+          "Experiment Design": [
+            9.999998751094452
+          ],
+          "Experiment Outputs": [
+            14.913829662632654
+          ],
+          "Measurement Error": [
+            14.913829662632654
+          ],
+          "FIM": [
+            [
+              98.65694975731763,
+              100.38867404958027
+            ],
+            [
+              100.38867404958027,
+              102.15079527821376
+            ]
+          ],
+          "Sensitivity Matrix": [
+            [
+              0.9932620487933567,
+              1.0106967659897539
+            ]
+          ]
+        },
+        {
+          "Experiment Design": [
+            9.999999422311125
+          ],
+          "Experiment Outputs": [
+            14.913829696586255
+          ],
+          "Measurement Error": [
+            14.913829696586255
+          ],
+          "FIM": [
+            [
+              98.65695020652967,
+              100.3886473251392
+            ],
+            [
+              100.3886473251392,
+              102.15074042603173
+            ]
+          ],
+          "Sensitivity Matrix": [
+            [
+              0.9932620510546534,
+              1.0106964946314596
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "Experiment Design Names": [
+    "hour"
+  ],
+  "Experiment Output Names": [
+    "y"
+  ],
+  "Unknown Parameter Names": [
+    "asymptote",
+    "rate_constant"
+  ],
+  "Measurement Error Names": [
+    "y"
+  ],
+  "Number of Scenarios": 1,
+  "Number of Experiments per Scenario": 2,
+  "Prior FIM": [
+    [
+      55.43945226398449,
+      1055.6094328038394
+    ],
+    [
+      1055.6094328038394,
+      20457.46766747939
+    ]
+  ],
+  "Objective expression": "determinant",
+  "Finite Difference Scheme": "central",
+  "Finite Difference Step": 0.001,
+  "Nominal Parameter Scaling": false,
+  "Build Time": 0.19193920899851946,
+  "Initialization Time": 0.019229708001148538,
+  "Solve Time": 0.021390249999967637,
+  "Wall-clock Time": 0.23255916699963564
+}

@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
 import sys
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
+from pyomo.contrib.doe import DesignOfExperiments
 
 # Add the parent directory to the path to import from pyomo.contrib.doe
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -27,6 +31,28 @@ results_df = pd.DataFrame(data['results'])
 print(f"Loaded {len(results_df)} results")
 print(f"Computing FIM metrics for all results...\n")
 
+# Compute prior FIM from existing data
+
+# Data Setup
+data = pd.DataFrame(
+    data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+    columns=['hour', 'y'],
+)
+theta = {'asymptote': 15, 'rate_constant': 0.5}
+measurement_error = 0.1
+
+print("Computing prior FIM from existing data...")
+FIM_0 = np.zeros((2, 2))
+for i in range(len(data)):
+    exp_data = data.loc[i, :]
+    exp = RooneyBieglerExperiment(
+        data=exp_data, theta=theta, measure_error=measurement_error
+    )
+    doe_obj = DesignOfExperiments(
+        experiment_list=exp, objective_option='determinant', prior_FIM=None, tee=False
+    )
+    FIM_0 += doe_obj.compute_FIM()
+
 # Compute metrics for each result
 d_optimality = []
 a_optimality = []
@@ -34,7 +60,7 @@ pseudo_a_optimality = []
 
 for idx, row in results_df.iterrows():
     if row['log10_det'] is not None:
-        FIM = np.array(row['FIM'])
+        FIM = np.array(row['FIM']) + FIM_0
         try:
             (
                 det_FIM,
