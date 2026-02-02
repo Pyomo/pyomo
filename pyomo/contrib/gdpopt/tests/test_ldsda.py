@@ -109,8 +109,8 @@ class TestLDSDALinearSearchUnit(unittest.TestCase):
 
 class TestLDSDAUnits(unittest.TestCase):
     """
-    Unit tests to achieve 100% coverage by hitting error branches,
-    tie-breakers, and the main loop break statement.
+    Unit tests for solver-independent LDSDA logic, targeting critical control-flow,
+    validation, and regression-sensitive code paths rather than full coverage.
     """
 
     def setUp(self):
