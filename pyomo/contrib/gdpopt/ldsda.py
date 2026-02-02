@@ -61,12 +61,12 @@ ExternalVarInfo = namedtuple(
 )
 class GDP_LDSDA_Solver(_GDPoptAlgorithm):
     """
-    The GDPopt (Generalized Disjunctive Programming optimizer) LD-SDA 
+    The GDPopt (Generalized Disjunctive Programming optimizer) LD-SDA
     (Logic-based Discrete-Steepest Descent Algorithm) solver.
 
-    This solver accepts models that can include nonlinear, continuous variables 
-    and constraints, as well as logical conditions. It uses a discrete steepest 
-    descent approach to explore the space of discrete variables (disjunctions) 
+    This solver accepts models that can include nonlinear, continuous variables
+    and constraints, as well as logical conditions. It uses a discrete steepest
+    descent approach to explore the space of discrete variables (disjunctions)
     while solving NLP subproblems for the continuous variables.
 
     References
@@ -102,9 +102,9 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         Execute the main LD-SDA algorithm logic.
 
-        Initializes the utility blocks, reformulates the model, solves the 
-        initial point, and enters the main search loop (Neighbor Search and 
-        Line Search) until a local optimum is found or termination criteria 
+        Initializes the utility blocks, reformulates the model, solves the
+        initial point, and enters the main search loop (Neighbor Search and
+        Line Search) until a local optimum is found or termination criteria
         are met.
 
         Parameters
@@ -174,7 +174,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         Returns
         -------
         bool
-            True if either the iteration limit or time limit has been reached, 
+            True if either the iteration limit or time limit has been reached,
             False otherwise.
         """
         return self.reached_iteration_limit(config) or self.reached_time_limit(config)
@@ -183,14 +183,14 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         Solve the GDP subproblem with disjunctions fixed according to the external variable values.
 
-        This method fixes the Boolean variables based on the `external_var_value`, 
-        applies necessary transformations (BigM, FBBT), and solves the resulting 
+        This method fixes the Boolean variables based on the `external_var_value`,
+        applies necessary transformations (BigM, FBBT), and solves the resulting
         MINLP/NLP using the configured solver.
 
         Parameters
         ----------
         external_var_value : tuple or list
-            The values of the external variables (indices of active disjuncts) 
+            The values of the external variables (indices of active disjuncts)
             defining the current point in the discrete space.
         search_type : str
             The context of the solve (e.g., 'Initial point', 'Neighbor search', 'Line search').
@@ -200,10 +200,10 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         Returns
         -------
         primal_improved : bool
-            True if the solution of this subproblem improved the best known 
+            True if the solution of this subproblem improved the best known
             primal bound (incumbent).
         primal_bound : float
-            The objective value (primal bound) obtained from the subproblem. 
+            The objective value (primal bound) obtained from the subproblem.
             Returns None if the subproblem was infeasible.
         """
         self.fix_disjunctions_with_external_var(external_var_value)
@@ -242,8 +242,8 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         Extract information from the model to perform the reformulation with external variables.
 
-        Identifies logical constraints (specifically `ExactlyExpression`) or 
-        disjunctions to map them to external integer variables used for the 
+        Identifies logical constraints (specifically `ExactlyExpression`) or
+        disjunctions to map them to external integer variables used for the
         discrete search.
 
         Parameters
@@ -258,7 +258,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         ValueError
             If a logical constraint is not an `ExactlyExpression`.
             If an `Exactly(N)` constraint has N > 1.
-            If the length of the starting point does not match the number of 
+            If the length of the starting point does not match the number of
             external variables derived.
         """
         util_block.external_var_info_list = []
@@ -337,14 +337,14 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         Fix the disjunctions in the working model based on external variable values.
 
-        Maps the integer values in `external_var_values_list` to the corresponding 
-        Boolean variables in the model, fixing the selected one to True and 
+        Maps the integer values in `external_var_values_list` to the corresponding
+        Boolean variables in the model, fixing the selected one to True and
         others to False for each logical group.
 
         Parameters
         ----------
         external_var_values_list : list or tuple
-            The list of integer values representing the active disjunct index 
+            The list of integer values representing the active disjunct index
             for each external variable.
         """
         for external_variable_value, external_var_info in zip(
@@ -376,7 +376,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         Returns
         -------
         list of tuple
-            A list of direction vectors (tuples). 
+            A list of direction vectors (tuples).
             - If 'L2': Standard basis vectors and their negatives.
             - If 'Linf': All combinations of {-1, 0, 1} excluding the zero vector.
         """
@@ -395,7 +395,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         Check if a given neighbor point is valid.
 
-        A neighbor is valid if it has not been explored yet and lies within 
+        A neighbor is valid if it has not been explored yet and lies within
         the defined bounds (LB and UB) of the external variables.
 
         Parameters
@@ -406,7 +406,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         Returns
         -------
         bool
-            True if the neighbor is valid (unexplored and within bounds), 
+            True if the neighbor is valid (unexplored and within bounds),
             False otherwise.
         """
         if neighbor in self.explored_point_set:
@@ -423,8 +423,8 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         Evaluate immediate neighbors of the current point to find a better solution.
 
-        Iterates through all search directions, generates neighbors, and solves 
-        their subproblems. Uses a tie-breaking mechanism favoring points farther 
+        Iterates through all search directions, generates neighbors, and solves
+        their subproblems. Uses a tie-breaking mechanism favoring points farther
         away (Euclidean distance) if objective values are within tolerance.
 
         Parameters
@@ -435,7 +435,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         Returns
         -------
         bool
-            True if the current point is locally optimal (no better neighbor found), 
+            True if the current point is locally optimal (no better neighbor found),
             False if a better neighbor was found (current point updated).
         """
         locally_optimal = True
@@ -494,7 +494,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         Perform a line search along the best direction found by the neighbor search.
 
-        Continues moving in `self.best_direction` as long as the objective 
+        Continues moving in `self.best_direction` as long as the objective
         function value improves.
 
         Parameters
@@ -523,7 +523,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         Process the result of a subproblem solve.
 
-        Checks termination conditions, updates primal bounds if valid, and 
+        Checks termination conditions, updates primal bounds if valid, and
         logs the state.
 
         Parameters
@@ -542,7 +542,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         Returns
         -------
         bool
-            True if the result improved the current best primal bound, 
+            True if the result improved the current best primal bound,
             False otherwise.
         """
         if subproblem_result is None:
