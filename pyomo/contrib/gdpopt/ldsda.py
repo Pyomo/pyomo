@@ -38,9 +38,6 @@ from pyomo.core import minimize, Suffix, TransformationFactory, Objective, value
 from pyomo.opt import SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.logical_expr import ExactlyExpression
-from pyomo.common.dependencies import attempt_import
-
-tabulate, tabulate_available = attempt_import('tabulate')
 
 # Data tuple for external variables.
 ExternalVarInfo = namedtuple(
@@ -230,12 +227,15 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 minlp_args['add_options'] = minlp_args.get('add_options', [])
                 minlp_args['add_options'].append('option reslim=%s;' % remaining)
             result = SolverFactory(config.minlp_solver).solve(subproblem, **minlp_args)
-            # Retrieve the primal bound (objective value) from the subproblem
-            obj = next(subproblem.component_data_objects(Objective, active=True))
-            primal_bound = value(obj)
             primal_improved = self._handle_subproblem_result(
                 result, subproblem, external_var_value, config, search_type
             )
+            # Only retrieve primal_bound if the solve succeeded; otherwise return None
+            if primal_improved:
+                obj = next(subproblem.component_data_objects(Objective, active=True))
+                primal_bound = value(obj)
+            else:
+                primal_bound = None
         return primal_improved, primal_bound
 
     def _get_external_information(self, util_block, config):
@@ -317,13 +317,10 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 )
         config.logger.info("Reformulation Summary:")
         config.logger.info(
-            tabulate.tabulate(
-                reformulation_summary,
-                headers=["Ext Var Index", "LB", "UB", "Associated Boolean Vars"],
-                showindex="always",
-                tablefmt="simple_outline",
-            )
+            "  Index | Ext Var | LB | UB | Associated Boolean Vars"
         )
+        for idx, row in enumerate(reformulation_summary):
+            config.logger.info(f"  {idx} | {row[0]} | {row[1]} | {row[2]}")
         self.number_of_external_variables = sum(
             external_var_info.exactly_number
             for external_var_info in util_block.external_var_info_list
