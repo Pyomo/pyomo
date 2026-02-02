@@ -110,8 +110,8 @@
   "Finite Difference Scheme": "central",
   "Finite Difference Step": 0.001,
   "Nominal Parameter Scaling": false,
-  "Build Time": 0.20528129099693615,
-  "Initialization Time": 0.01933758400264196,
-  "Solve Time": 0.022564749997400213,
-  "Wall-clock Time": 0.24718362499697832
+  "Build Time": 0.34518312500222237,
+  "Initialization Time": 0.020726166996610118,
+  "Solve Time": 0.024145750001480337,
+  "Wall-clock Time": 0.3900550420003128
 }
