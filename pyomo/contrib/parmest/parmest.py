@@ -1145,30 +1145,12 @@ class Estimator:
                 Solver termination condition.
 
         '''
-        # Create scenario blocks using utility function
-        # If model not initialized,  use create scenario blocks to build from labeled model in experiment class
-        if self.model_initialized is False:
-            model = self._create_scenario_blocks(
-                bootlist=bootlist, theta_vals=theta_vals, fix_theta=fix_theta
-            )
-        # If model already initialized, use existing ef_instance model to get initialized ef model.
-        else:
-            model = self.ef_instance
-            if theta_vals is not None:
-                # Set theta values in the block model
-                for key, _ in model.unknown_parameters.items():
-                    name = key.name
-                    if name in theta_vals:
-                        # Check the name is in the parmest model
-                        assert hasattr(model, name)
-                        theta_var = model.find_component(name)
-                        theta_var.set_value(theta_vals[name])
-                        # print(pyo.value(theta_var))
-                        if fix_theta:
-                            theta_var.fix()
-                        else:
-                            theta_var.unfix()
+        # Create extended form model with scenario blocks
+        model = self._create_scenario_blocks(
+            bootlist=bootlist, theta_vals=theta_vals, fix_theta=fix_theta
+        )
 
+        # Print model if in diagnostic mode
         if self.diagnostic_mode:
             print("Parmest _Q_opt model with scenario blocks:")
             model.pprint()
@@ -1181,8 +1163,10 @@ class Estimator:
         # Currently, parmest is only tested with ipopt via ef_ipopt
         # No other pyomo solvers have been verified to work with parmest from current release
         # to my knowledge.
-        else:
-            raise RuntimeError("Unknown solver in Q_Opt=" + solver)
+
+        # Seeing if other solvers work here.
+        # else:
+        #     raise RuntimeError("Unknown solver in Q_Opt=" + solver)
 
         if self.solver_options is not None:
             for key in self.solver_options:
@@ -1957,6 +1941,16 @@ class Estimator:
             return self.pest_deprecated.objective_at_theta(
                 theta_values=theta_values,
                 initialize_parmest_model=initialize_parmest_model,
+            )
+
+        if initialize_parmest_model:
+            # Print deprecation warning, that this option will be removed in
+            # future releases.
+            deprecation_warning(
+                "The `initialize_parmest_model` option in `objective_at_theta()` is "
+                "deprecated and will be removed in future releases. Please ensure the"
+                "model is initialized within the experiment class definition.",
+                version="6.9.5",
             )
 
         if theta_values is None:
