@@ -135,10 +135,10 @@ class TestLDSDAUnits(unittest.TestCase):
 
         # 1. Mock critical methods to prevent real solving
         self.solver._solve_GDP_subproblem = MagicMock(return_value=(True, 0))
-        # This forces the 'break' at line 147 to execute immediately
+        # This forces the early-termination check in the main loop to trigger immediately,
+        # causing the loop to break before any neighbor search is performed.
         self.solver.any_termination_criterion_met = MagicMock(return_value=True)
         self.solver.neighbor_search = MagicMock()
-
         # 2. Mock internal setup methods
         self.solver._get_external_information = MagicMock()
         self.solver._get_directions = MagicMock(return_value=[])
