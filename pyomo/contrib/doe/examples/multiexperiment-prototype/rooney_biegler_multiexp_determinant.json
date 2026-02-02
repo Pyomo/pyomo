@@ -5,29 +5,29 @@
   "n_scenarios": 1,
   "n_experiments": 2,
   "timing": {
-    "build_time": 0.1875945829997363,
-    "initialization_time": 0.01786112500121817,
-    "solve_time": 0.01961154200034798,
-    "total_time": 0.22506725000130245
+    "build_time": 0.18017437499997868,
+    "initialization_time": 0.017325000000028012,
+    "solve_time": 0.020604625000032684,
+    "total_time": 0.21810400000003938
   },
   "scenarios": [
     {
       "scenario_idx": 0,
-      "log10_A_opt": -1.93456240051534,
-      "log10_D_opt": 6.028160111616195,
-      "log10_E_opt": 1.9376054760011683,
-      "FIM_condition_number": 142.21622929227505,
+      "log10_A_opt": -2.403560811875495,
+      "log10_D_opt": 7.034011168951016,
+      "log10_E_opt": 2.4061597293806103,
+      "FIM_condition_number": 166.6064114542623,
       "experiments": [
         {
           "experiment_idx": 0,
           "design_variables": {
-            "hour": 1.9321638206021887
+            "hour": 9.99999871280986
           }
         },
         {
           "experiment_idx": 1,
           "design_variables": {
-            "hour": 9.999999685494409
+            "hour": 9.999999406831302
           }
         }
       ]

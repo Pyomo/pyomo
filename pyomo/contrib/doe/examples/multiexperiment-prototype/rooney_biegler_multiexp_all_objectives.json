@@ -6,29 +6,29 @@
     "n_scenarios": 1,
     "n_experiments": 2,
     "timing": {
-      "build_time": 0.1875945829997363,
-      "initialization_time": 0.01786112500121817,
-      "solve_time": 0.01961154200034798,
-      "total_time": 0.22506725000130245
+      "build_time": 0.18017437499997868,
+      "initialization_time": 0.017325000000028012,
+      "solve_time": 0.020604625000032684,
+      "total_time": 0.21810400000003938
     },
     "scenarios": [
       {
         "scenario_idx": 0,
-        "log10_A_opt": -1.93456240051534,
-        "log10_D_opt": 6.028160111616195,
-        "log10_E_opt": 1.9376054760011683,
-        "FIM_condition_number": 142.21622929227505,
+        "log10_A_opt": -2.403560811875495,
+        "log10_D_opt": 7.034011168951016,
+        "log10_E_opt": 2.4061597293806103,
+        "FIM_condition_number": 166.6064114542623,
         "experiments": [
           {
             "experiment_idx": 0,
             "design_variables": {
-              "hour": 1.9321638206021887
+              "hour": 9.99999871280986
             }
           },
           {
             "experiment_idx": 1,
             "design_variables": {
-              "hour": 9.999999685494409
+              "hour": 9.999999406831302
             }
           }
         ]
@@ -42,29 +42,29 @@
     "n_scenarios": 1,
     "n_experiments": 2,
     "timing": {
-      "build_time": 0.17969729200194706,
-      "initialization_time": 0.017128166000475176,
-      "solve_time": 0.019859999996697297,
-      "total_time": 0.21668545799911954
+      "build_time": 0.17397695800002566,
+      "initialization_time": 0.01706412500004717,
+      "solve_time": 0.020754999999894608,
+      "total_time": 0.21179608299996744
     },
     "scenarios": [
       {
         "scenario_idx": 0,
-        "log10_A_opt": -1.9438475742248167,
-        "log10_D_opt": 5.861092145884237,
-        "log10_E_opt": 1.948540290261006,
-        "FIM_condition_number": 92.04740838639538,
+        "log10_A_opt": -2.4035583556913998,
+        "log10_D_opt": 7.03400888660612,
+        "log10_E_opt": 2.406157257315396,
+        "FIM_condition_number": 166.60743258603637,
         "experiments": [
           {
             "experiment_idx": 0,
             "design_variables": {
-              "hour": 0.9728323688685602
+              "hour": 9.999836751932037
             }
           },
           {
             "experiment_idx": 1,
             "design_variables": {
-              "hour": 9.999983619698154
+              "hour": 9.99995048794472
             }
           }
         ]
@@ -78,29 +78,29 @@
     "n_scenarios": 1,
     "n_experiments": 2,
     "timing": {
-      "build_time": 0.17603979100022116,
-      "initialization_time": 0.017235041999811074,
-      "solve_time": 0.019696750001457985,
-      "total_time": 0.21297158300149022
+      "build_time": 0.1739820420000342,
+      "initialization_time": 0.017605875000072047,
+      "solve_time": 0.023586040999930447,
+      "total_time": 0.2151739580000367
     },
     "scenarios": [
       {
         "scenario_idx": 0,
-        "log10_A_opt": 7.104925699773209,
-        "log10_D_opt": -2.7168180445999597,
-        "log10_E_opt": -7.1049256998942205,
-        "FIM_condition_number": 311195162053.6299,
+        "log10_A_opt": -1.9985126913797737,
+        "log10_D_opt": 6.822905128384699,
+        "log10_E_opt": 1.9991626406328926,
+        "FIM_condition_number": 667.6976490882678,
         "experiments": [
           {
             "experiment_idx": 0,
             "design_variables": {
-              "hour": 2.003712979572658
+              "hour": 2.003642180218696
             }
           },
           {
             "experiment_idx": 1,
             "design_variables": {
-              "hour": 2.0039338015713404
+              "hour": 2.0040048346311594
             }
           }
         ]

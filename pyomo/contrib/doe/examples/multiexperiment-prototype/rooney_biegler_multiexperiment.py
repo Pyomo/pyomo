@@ -181,7 +181,7 @@ def run_rooney_biegler_multi_experiment_doe(
         print(f"  log10 A-opt: {scenario['log10 A-opt']:.4f}")
         print(f"  log10 D-opt: {scenario['log10 D-opt']:.4f}")
         print(f"  log10 E-opt: {scenario['log10 E-opt']:.4f}")
-        print(f"  log10 ME-opt: {scenario['FIM Condition Number']:.4f}")
+        print(f"  log10 ME-opt: {np.log10(scenario['FIM Condition Number']):.4f}")
 
         # Print each experiment design
         for exp_idx, exp in enumerate(scenario['Experiments']):
@@ -226,7 +226,14 @@ if __name__ == "__main__":
 
     # Use no prior FIM for this simple example
     # Using prior from existing data can cause numerical issues
-    p_FIM = None
+    p_FIM = np.zeros((2, 2))
+    for i in range(len(data)):
+        exp_data = data.loc[i, :]
+        exp = RooneyBieglerExperiment(
+            data=exp_data, theta=theta, measure_error=measurement_error
+        )
+        doe_data = DesignOfExperiments(experiment_list=[exp], step=0.01)
+        p_FIM += doe_data.compute_FIM()
 
     for obj_option in objective_options:
         print(f"\n\n{'#'*70}")
