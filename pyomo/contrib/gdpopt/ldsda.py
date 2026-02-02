@@ -69,13 +69,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
     descent approach to explore the space of discrete variables (disjunctions) 
     while solving NLP subproblems for the continuous variables.
 
-    Parameters
-    ----------
-    model : ConcreteModel
-        The Pyomo ConcreteModel to be solved.
-    **kwds : dict
-        Additional keyword arguments to configure the solver.
-
     References
     ----------
     Ovalle, D.; Liñán, D. A.; Lee, A.; Gómez, J. M.; Ricardez-Sandoval, L.; Grossmann, I. E.; Bernal Neira, D. E. Logic-Based Discrete-Steepest Descent: A Solution Method for Process Synthesis Generalized Disjunctive Programs. Computers & Chemical Engineering 2025, 195, 108993. https://doi.org/10.1016/j.compchemeng.2024.108993.
