@@ -316,9 +316,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                     ]
                 )
         config.logger.info("Reformulation Summary:")
-        config.logger.info(
-            "  Index | Ext Var | LB | UB | Associated Boolean Vars"
-        )
+        config.logger.info("  Index | Ext Var | LB | UB | Associated Boolean Vars")
         for idx, row in enumerate(reformulation_summary):
             config.logger.info(f"  {idx} | {row[0]} | {row[1]} | {row[2]}")
         self.number_of_external_variables = sum(
