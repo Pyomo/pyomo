@@ -131,7 +131,7 @@ class GAMS(SolverBase):
         self._version_cache = NOTSET
 
     def available(
-        self, config: Optional[GAMSConfig] = None, rehash: bool = False
+        self, config: Optional[GAMSConfig] = None, recheck: bool = False
     ) -> Availability:
 
         if config is None:
