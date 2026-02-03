@@ -13,6 +13,7 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 import datetime
 from io import StringIO
 from typing import Mapping, Optional, Sequence, Tuple
@@ -186,7 +187,7 @@ class GAMS(SolverBase):
         # Presolve
         ####################################################################
         # Begin time tracking
-        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        start_timestamp = time.perf_counter()
 
         # Update configuration options, based on keywords passed to solve
         # preserve_implicit=True is required to extract solver_options ConfigDict
@@ -549,11 +550,9 @@ class GAMS(SolverBase):
             results.solver_config = config
             results.solver_log = ostreams[0].getvalue()
 
-            end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+            end_timestamp = time.perf_counter()
             results.timing_info.start_timestamp = start_timestamp
-            results.timing_info.wall_time = (
-                end_timestamp - start_timestamp
-            ).total_seconds()
+            results.timing_info.wall_time = end_timestamp - start_timestamp
             results.timing_info.timer = timer
             return results
 
