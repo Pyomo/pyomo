@@ -141,7 +141,7 @@ class TestLDSDAUnits(unittest.TestCase):
         self.solver.any_termination_criterion_met = MagicMock(return_value=True)
         self.solver.neighbor_search = MagicMock()
         # 2. Mock internal setup methods
-        self.solver._get_external_information = MagicMock()
+        self.solver.get_external_information = MagicMock()
         self.solver._get_directions = MagicMock(return_value=[])
 
         # 3. FIX: Manually set the attribute that _get_external_information would have set
@@ -171,7 +171,7 @@ class TestLDSDAUnits(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "should be a list of ExactlyExpression"
         ):
-            self.solver._get_external_information(self.model.util_block, self.config)
+            self.solver.get_external_information(self.model.util_block, self.config)
 
     def test_exactly_number_greater_than_one(self):
         """
@@ -188,7 +188,7 @@ class TestLDSDAUnits(unittest.TestCase):
         self.model.util_block.config_logical_constraint_list = [self.model.lc]
 
         with self.assertRaisesRegex(ValueError, "only works for exactly_number = 1"):
-            self.solver._get_external_information(self.model.util_block, self.config)
+            self.solver.get_external_information(self.model.util_block, self.config)
 
     def test_starting_point_mismatch(self):
         """
@@ -209,7 +209,7 @@ class TestLDSDAUnits(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "length of the provided starting point"
         ):
-            self.solver._get_external_information(self.model.util_block, self.config)
+            self.solver.get_external_information(self.model.util_block, self.config)
 
     def test_disjunction_list_processing(self):
         """
@@ -227,7 +227,7 @@ class TestLDSDAUnits(unittest.TestCase):
         self.model.util_block.config_disjunction_list = [self.model.disj]
         self.config.starting_point = [1]  # Correct length
 
-        self.solver._get_external_information(self.model.util_block, self.config)
+        self.solver.get_external_information(self.model.util_block, self.config)
 
         # Verify it processed the disjunction
         self.assertEqual(len(self.model.util_block.external_var_info_list), 1)

@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections import namedtuple
+import enum
 import itertools as it
 import traceback
 from pyomo.common.config import document_kwargs_from_configdict
@@ -38,6 +39,48 @@ from pyomo.core import minimize, Suffix, TransformationFactory, Objective, value
 from pyomo.opt import SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.logical_expr import ExactlyExpression
+
+
+class DirectionNorm(str, enum.Enum):
+    """
+    Norm type for search direction generation in LD-SDA.
+
+    Attributes
+    ----------
+    L2 : str
+        Standard basis vectors (2n directions for n external variables).
+    Linf : str
+        All combinations of {-1, 0, 1} excluding the zero vector (3^n - 1 directions).
+    """
+
+    L2 = 'L2'
+    Linf = 'Linf'
+
+    def __str__(self):
+        return self.value
+
+
+class SearchPhase(str, enum.Enum):
+    """
+    Phase of the LD-SDA search algorithm.
+
+    Attributes
+    ----------
+    INITIAL : str
+        Initial point evaluation.
+    NEIGHBOR : str
+        Neighbor search phase.
+    LINE : str
+        Line search phase.
+    """
+
+    INITIAL = 'Initial point'
+    NEIGHBOR = 'Neighbor search'
+    LINE = 'Line search'
+
+    def __str__(self):
+        return self.value
+
 
 # Data tuple for external variables.
 ExternalVarInfo = namedtuple(
@@ -136,7 +179,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         TransformationFactory('core.logical_to_linear').apply_to(self.working_model)
         # Now that logical_to_disjunctive has been called.
         add_transformed_boolean_variable_list(self.working_model_util_block)
-        self._get_external_information(self.working_model_util_block, config)
+        self.get_external_information(self.working_model_util_block, config)
         self.directions = self._get_directions(
             self.number_of_external_variables, config
         )
@@ -147,7 +190,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             self.working_model_util_block.BigM = Suffix()
         self._log_header(logger)
         # Solve the initial point
-        _ = self._solve_GDP_subproblem(self.current_point, 'Initial point', config)
+        _ = self._solve_GDP_subproblem(self.current_point, SearchPhase.INITIAL, config)
 
         # Main loop
         locally_optimal = False
@@ -189,8 +232,8 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         external_var_value : tuple or list
             The values of the external variables (indices of active disjuncts)
             defining the current point in the discrete space.
-        search_type : str
-            The context of the solve (e.g., 'Initial point', 'Neighbor search', 'Line search').
+        search_type : SearchPhase
+            The context of the solve (SearchPhase.INITIAL, SearchPhase.NEIGHBOR, or SearchPhase.LINE).
         config : ConfigBlock
             The configuration block containing solver options.
 
@@ -238,7 +281,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 primal_bound = None
         return primal_improved, primal_bound
 
-    def _get_external_information(self, util_block, config):
+    def get_external_information(self, util_block, config):
         """
         Extract information from the model to perform the reformulation with external variables.
 
@@ -372,16 +415,16 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         -------
         list of tuple
             A list of direction vectors (tuples).
-            - If 'L2': Standard basis vectors and their negatives.
-            - If 'Linf': All combinations of {-1, 0, 1} excluding the zero vector.
+            - If DirectionNorm.L2: Standard basis vectors and their negatives.
+            - If DirectionNorm.Linf: All combinations of {-1, 0, 1} excluding the zero vector.
         """
-        if config.direction_norm == 'L2':
+        if config.direction_norm in (DirectionNorm.L2, 'L2'):
             directions = []
             for i in range(dimension):
                 directions.append(tuple([0] * i + [1] + [0] * (dimension - i - 1)))
                 directions.append(tuple([0] * i + [-1] + [0] * (dimension - i - 1)))
             return directions
-        elif config.direction_norm == 'Linf':
+        elif config.direction_norm in (DirectionNorm.Linf, 'Linf'):
             directions = list(it.product([-1, 0, 1], repeat=dimension))
             directions.remove((0,) * dimension)  # Remove the zero direction
             return directions
@@ -451,7 +494,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             if self._check_valid_neighbor(neighbor):
                 # Solve the subproblem for this neighbor
                 primal_improved, primal_bound = self._solve_GDP_subproblem(
-                    neighbor, 'Neighbor search', config
+                    neighbor, SearchPhase.NEIGHBOR, config
                 )
 
                 if primal_improved:
@@ -503,7 +546,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             if self._check_valid_neighbor(next_point):
                 # Unpack the tuple and use only the first boolean value
                 primal_improved, _ = self._solve_GDP_subproblem(
-                    next_point, 'Line search', config
+                    next_point, SearchPhase.LINE, config
                 )
                 if primal_improved:
                     self.current_point = next_point
@@ -531,8 +574,8 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             The external variable configuration used for this subproblem.
         config : ConfigBlock
             The configuration block.
-        search_type : str
-            The type of search ('Neighbor search', etc.).
+        search_type : SearchPhase
+            The type of search (SearchPhase.NEIGHBOR, etc.).
 
         Returns
         -------
