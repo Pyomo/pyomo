@@ -1507,7 +1507,7 @@ class Piecewise(Block):
             )
             raise ValueError(msg % (self.name, index, self._pw_rep))
 
-        # Make automatic simplications to the piecewise constraints
+        # Make automatic simplifications to the piecewise constraints
         # for the special cases of convexity and lower bound
         # or concavity and upper bound
         if character == -1:
