@@ -25,6 +25,7 @@ from pyomo.contrib.gdpopt.tests.four_stage_dynamic_model import build_model
 from unittest.mock import MagicMock
 from pyomo.core.expr.logical_expr import exactly
 from pyomo.contrib.gdpopt.ldsda import GDP_LDSDA_Solver
+from pyomo.opt import TerminationCondition as tc
 
 
 class TestGDPoptLDSDA(unittest.TestCase):
@@ -287,8 +288,6 @@ class TestLDSDAUnits(unittest.TestCase):
         # The code checks for: optimal, feasible, globallyOptimal, locallyOptimal,
         # maxTimeLimit, maxIterations, maxEvaluations.
         # We use 'infeasible' or 'error' to trigger the False return.
-        from pyomo.opt import TerminationCondition as tc
-
         mock_result.solver.termination_condition = tc.error
 
         # 3. Run the method

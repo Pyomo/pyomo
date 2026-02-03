@@ -71,7 +71,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
     Ovalle, D.; Liñán, D. A.; Lee, A.; Gómez, J. M.; Ricardez-Sandoval, L.; Grossmann, I. E.; Bernal Neira, D. E. Logic-Based Discrete-Steepest Descent: A Solution Method for Process Synthesis Generalized Disjunctive Programs. Computers & Chemical Engineering 2025, 195, 108993. https://doi.org/10.1016/j.compchemeng.2024.108993.
     """
 
-    CONFIG = _GDPoptAlgorithm.CONFIG()  # CONFIG = ConfigBlock("GDPopt")
+    CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
     _add_nlp_solve_configs(
