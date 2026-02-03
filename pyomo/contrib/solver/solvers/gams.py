@@ -187,7 +187,8 @@ class GAMS(SolverBase):
         # Presolve
         ####################################################################
         # Begin time tracking
-        start_timestamp = time.perf_counter()
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tick = time.perf_counter()
 
         # Update configuration options, based on keywords passed to solve
         # preserve_implicit=True is required to extract solver_options ConfigDict
@@ -550,9 +551,9 @@ class GAMS(SolverBase):
             results.solver_config = config
             results.solver_log = ostreams[0].getvalue()
 
-            end_timestamp = time.perf_counter()
+            tock = time.perf_counter()
             results.timing_info.start_timestamp = start_timestamp
-            results.timing_info.wall_time = end_timestamp - start_timestamp
+            results.timing_info.wall_time = tock - tick
             results.timing_info.timer = timer
             return results
 
