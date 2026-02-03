@@ -10,13 +10,13 @@
 #  ___________________________________________________________________________
 
 """This module contains functions to interrogate the size of a Pyomo model."""
+
 import logging
 
 from pyomo.common.collections import ComponentSet, Bunch
 from pyomo.core import Block, Constraint, Var
 import pyomo.core.expr as EXPR
 from pyomo.gdp import Disjunct, Disjunction
-
 
 default_logger = logging.getLogger('pyomo.util.model_size')
 default_logger.setLevel(logging.INFO)

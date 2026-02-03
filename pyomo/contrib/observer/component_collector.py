@@ -24,6 +24,7 @@ from pyomo.core.expr.numeric_expr import (
     UnaryFunctionExpression,
     AbsExpression,
 )
+from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.core.expr.relational_expr import (
     RangedExpression,
     InequalityExpression,
@@ -82,6 +83,7 @@ collector_handlers[InequalityExpression] = handle_skip
 collector_handlers[EqualityExpression] = handle_skip
 collector_handlers[int] = handle_skip
 collector_handlers[float] = handle_skip
+collector_handlers[NumericConstant] = handle_skip
 
 
 class _ComponentFromExprCollector(StreamBasedExpressionVisitor):

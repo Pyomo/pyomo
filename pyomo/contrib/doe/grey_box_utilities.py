@@ -198,7 +198,7 @@ class FIMExternalGreyBox(
         if self.objective_option == ObjectiveLib.trace:
             obj_value = np.trace(np.linalg.pinv(M))
         elif self.objective_option == ObjectiveLib.determinant:
-            (sign, logdet) = np.linalg.slogdet(M)
+            sign, logdet = np.linalg.slogdet(M)
             obj_value = logdet
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             eig, _ = np.linalg.eig(M)

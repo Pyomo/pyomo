@@ -18,7 +18,6 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
