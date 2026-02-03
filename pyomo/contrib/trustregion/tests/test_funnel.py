@@ -50,14 +50,18 @@ class TestFunnel(unittest.TestCase):
     def test_accept_f(self):
         """Test accept_f method."""
         self.funnel.accept_f(theta_new=0.5, f_new=-0.5)  # Use f_new < f_best
-        self.assertEqual(self.funnel.f_best, -0.5)       # Expect f_best to update
+        self.assertEqual(self.funnel.f_best, -0.5)  # Expect f_best to update
 
     def test_classify_step(self):
         """Test classify_step method."""
         # Test 'f' condition
-        status = self.funnel.classify_step(theta_old=1.0, theta_new=0.5, f_old=1.5, f_new=1.0, delta=0.1)
+        status = self.funnel.classify_step(
+            theta_old=1.0, theta_new=0.5, f_old=1.5, f_new=1.0, delta=0.1
+        )
         self.assertEqual(status, 'f')
 
         # Test 'reject' condition
-        status = self.funnel.classify_step(theta_old=1.0, theta_new=2.0, f_old=1.5, f_new=1.0, delta=0.1)
+        status = self.funnel.classify_step(
+            theta_old=1.0, theta_new=2.0, f_old=1.5, f_new=1.0, delta=0.1
+        )
         self.assertEqual(status, 'reject')
