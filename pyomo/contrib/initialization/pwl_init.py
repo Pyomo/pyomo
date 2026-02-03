@@ -1,7 +1,7 @@
 from pyomo.core.base.block import BlockData
 import pyomo.environ as pe
 from pyomo.contrib.initialization.bounds.bound_variables import bound_all_nonlinear_variables
-from pyomo.contrib.initialization.utils import fix_vars_with_equal_bounds
+from pyomo.contrib.initialization.utils import fix_vars_with_equal_bounds, shallow_clone
 
 
 def _minimize_infeasibility(m):
@@ -48,21 +48,41 @@ def _minimize_infeasibility(m):
     m.slack_obj = pe.Objective(expr=10*sum(m.slacks.values()) + obj_expr)
 
 
-def _initialize_with_piecewise_linear_approximation(nlp: BlockData):
+def _refine_pwl_approx(m):
+
+
+def _initialize_with_piecewise_linear_approximation(nlp: BlockData, default_bound=1.0e8):
+    pwl = shallow_clone(nlp)
+
     # first introduce auxiliary variables so that we don't try to 
     # approximate any functions of more than two variables
     trans = pe.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
-    trans.apply_to(nlp, aggressive_substitution=True)
+    trans.apply_to(pwl, aggressive_substitution=True)
 
     # now we need to try to get bounds on all of the nonlinear variables
-    bound_all_nonlinear_variables(nlp)
+    bound_all_nonlinear_variables(pwl, default_bound=default_bound)
 
     # Now, we need to fix variables with equal (or nearly equal) bounds.
     # Otherwise, the PWL transformation complains
-    fix_vars_with_equal_bounds(nlp)
+    fix_vars_with_equal_bounds(pwl)
 
     # now we modify the model by introducing slacks to make sure the PWL
     # approximatin is feasible
-    _minimize_infeasibility(nlp)
+    # all of the slacks appear linearly, so we don't need to worry about 
+    # upper bounds for them
+    _minimize_infeasibility(pwl)
+
+    # build the PWL approximation
+    trans = pe.TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+    trans.apply_to(pwl, num_points=num_points, additively_decompose=False)
+
+    """
+    Now we want to 
+    1. solve the PWL approximation
+    2. Initialize the NLP to the solution
+    3. Try solving the NLP
+    4. If the NLP converges => done
+    5. If the NLP does not converge, refine the PWL approximation and repeat
+    """
 
     raise NotImplementedError('not done yet')
