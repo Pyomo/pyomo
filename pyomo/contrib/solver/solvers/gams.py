@@ -139,28 +139,28 @@ class GAMS(SolverBase):
 
         pth = config.executable.path()
 
-        if rehash:
+        if recheck:
             Executable(pth).rehash()
-            rehash = False
+            recheck = False
 
         if pth is None:
             self._available_cache = (None, Availability.NotFound)
         else:
             self._available_cache = (pth, Availability.FullLicense)
-        if self._available_cache is not NOTSET and rehash == False:
+        if self._available_cache is not NOTSET and recheck == False:
             return self._available_cache[1]
 
     def version(
-        self, config: Optional[GAMSConfig] = None, rehash: bool = False
+        self, config: Optional[GAMSConfig] = None, recheck: bool = False
     ) -> Optional[Tuple[int, int, int]]:
 
         if config is None:
             config = self.config
         pth = config.executable.path()
 
-        if rehash:
+        if recheck:
             Executable(pth).rehash()
-            rehash = False
+            recheck = False
 
         if pth is None:
             self._version_cache = (None, None)
@@ -178,7 +178,7 @@ class GAMS(SolverBase):
             version = tuple(int(i) for i in version.split('.'))
             self._version_cache = (pth, version)
 
-        if self._version_cache is not NOTSET and rehash == False:
+        if self._version_cache is not NOTSET and recheck == False:
             return self._version_cache[1]
 
     def solve(self, model, **kwds):
