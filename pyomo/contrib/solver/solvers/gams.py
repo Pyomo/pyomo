@@ -125,6 +125,16 @@ class GAMSConfig(SolverConfig):
 class GAMS(SolverBase):
     CONFIG = GAMSConfig()
 
+    # default behaviour of gams is to print to console, for
+    # compatibility with windows and *nix we want to explicitly log to
+    # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
+    _log_levels = {
+        (True, False): "lo=3",
+        (False, False): "lo=0",
+        (False, True): "lo=2",
+        (True, True): "lo=4",
+    }
+
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._writer = GAMSWriter()
@@ -272,18 +282,9 @@ class GAMS(SolverBase):
             exe_path = config.executable.path()
             command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
 
-            # default behaviour of gams is to print to console, for
-            # compatibility with windows and *nix we want to explicitly log to
-            # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
-            log_levels = {
-                (True, False): "lo=3",
-                (False, False): "lo=0",
-                (False, True): "lo=2",
-                (True, True): "lo=4",
-            }
             # handled tee and logfile based on the length of list and string respectively
             command.append(
-                log_levels[(len(config.tee) > 0, config.logfile is not None)]
+                self._log_levels[(len(config.tee) > 0, config.logfile is not None)]
             )
 
             ostreams = [StringIO()]
