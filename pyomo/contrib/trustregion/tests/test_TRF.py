@@ -110,7 +110,7 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.maximum_feasibility, 50.0)
         self.assertEqual(CONFIG.param_filter_gamma_theta, 0.01)
         self.assertEqual(CONFIG.param_filter_gamma_f, 0.01)
-        self.assertEqual(CONFIG.globalization_strategy, 0) # 0 -> default - filter
+        self.assertEqual(CONFIG.globalization_strategy, 0)  # 0 -> default - filter
         self.assertEqual(CONFIG.phi_min, 1e-8)
         self.assertEqual(CONFIG.kappa_f, 0.25)
         self.assertEqual(CONFIG.kappa_r, 1.05)
@@ -120,7 +120,9 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.mu_s, 0.01)
 
     def test_funnel_globalization(self):
-        self.TRF = SolverFactory('trustregion', globalization_strategy=1)  # Set Funnel strategy
+        self.TRF = SolverFactory(
+            'trustregion', globalization_strategy=1
+        )  # Set Funnel strategy
 
         log_OUTPUT = StringIO()
         print_OUTPUT = StringIO()
@@ -133,9 +135,11 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertTrue(solve_status)
         self.assertIn('Iteration 0', log_OUTPUT.getvalue())
         self.assertIn('EXIT: Optimal solution found.', print_OUTPUT.getvalue())
-        
+
     def test_filter_globalization(self):
-        self.TRF = SolverFactory('trustregion', globalization_strategy=0)  # Set Filter strategy (default)
+        self.TRF = SolverFactory(
+            'trustregion', globalization_strategy=0
+        )  # Set Filter strategy (default)
 
         log_OUTPUT = StringIO()
         print_OUTPUT = StringIO()
