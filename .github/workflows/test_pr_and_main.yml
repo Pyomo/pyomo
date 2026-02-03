@@ -342,6 +342,12 @@ jobs:
         if test "${{matrix.TARGET}}" == 'win'; then
             PACKAGES="$PACKAGES setuptools<74.0.0"
         fi
+        # Test with older Xpress version to get coverage data and verify backward compatibility
+        if [[ ${{matrix.TARGET}} == linux && ${{matrix.python}} =~ 3.1[01] ]]; then
+            XPRESS='xpress<9.3'
+        else
+            XPRESS='xpress'
+        fi
         python -m pip install --cache-dir cache/pip ${PACKAGES}
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
@@ -350,7 +356,7 @@ jobs:
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
-            python -m pip install --cache-dir cache/pip xpress \
+            python -m pip install --cache-dir cache/pip ${XPRESS} \
                 || echo "WARNING: Xpress Community Edition is not available"
             python -m pip install --cache-dir cache/pip maingopy \
                 || echo "WARNING: MAiNGO is not available"
@@ -425,9 +431,7 @@ jobs:
                 #  - "!=9.5.1" (conda errors)
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
                 #  - "<=9.5.0|>9.5.1" (conda seg faults)
-                # XPRESS='xpress>=9.5.2'
-                # Test with older Xpress version to get coverage data and verify backward compatibility
-                XPRESS='xpress<9.3'
+                XPRESS='xpress>=9.5.2'
             else
                 XPRESS='xpress'
             fi
