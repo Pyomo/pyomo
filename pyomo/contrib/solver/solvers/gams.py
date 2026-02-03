@@ -300,7 +300,7 @@ class GAMS(SolverBase):
             rc = subprocess_result.returncode
             txt = ostreams[0].getvalue()
             if config.working_dir:
-                print("\nGAMS WORKING DIRECTORY: %s\n" % config.working_dir)
+                logger.info("\nGAMS WORKING DIRECTORY: %s\n" % config.working_dir)
 
             if rc == 1 or rc == 127:
                 raise IOError("Command 'gams' was not recognized")
@@ -308,7 +308,7 @@ class GAMS(SolverBase):
                 if rc == 3:
                     # Execution Error
                     # Run check_expr_evaluation, which errors if necessary
-                    print('Error rc=3, to be determined later')
+                    logger.error('Error rc=3 (GAMS execution error), to be determined later')
                 # If nothing was raised, or for all other cases, raise this
                 logger.error(
                     "GAMS encountered an error during solve. "
