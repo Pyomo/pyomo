@@ -47,6 +47,7 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertIsNone(config.time_limit)
         self.assertTrue(config.use_start)
 
+
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 @unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
