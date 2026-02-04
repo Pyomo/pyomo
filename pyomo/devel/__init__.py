@@ -8,10 +8,3 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-# Define a 'load()' function, which simply imports
-# sub-packages that define plugin classes.
-
-
-def load():
-    from pyomo.contrib.example.plugins import ex_plugin
