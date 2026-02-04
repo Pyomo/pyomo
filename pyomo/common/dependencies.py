@@ -486,6 +486,9 @@ class DeferredImportCallbackLoader:
     def load_module(self, fullname) -> ModuleType:
         return self._loader.load_module(fullname)
 
+    def get_resource_reader(self, fullname):
+        return self._loader.get_resource_reader(fullname)
+
 
 class DeferredImportCallbackFinder:
     """Custom Finder that will wrap the normal loader to trigger callbacks
