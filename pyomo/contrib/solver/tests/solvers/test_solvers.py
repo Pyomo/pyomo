@@ -1850,6 +1850,7 @@ class TestSolvers(unittest.TestCase):
             {
                 TerminationCondition.unbounded,
                 TerminationCondition.infeasibleOrUnbounded,
+                TerminationCondition.provenInfeasible,
             },
         )
         m.obj.sense = pyo.minimize
