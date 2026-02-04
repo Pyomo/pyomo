@@ -39,18 +39,12 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertFalse(config.use_start)
 
     def test_custom_instantiation(self):
-        config = KnitroConfig(description="A description")
+        config = KnitroConfig(description="A description", use_start=True)
         config.tee = True
         self.assertTrue(config.tee)
         self.assertEqual(config._description, "A description")
         self.assertIsNone(config.time_limit)
-
-    def test_use_start_option(self):
-        config = KnitroConfig()
-        config.use_start = True
         self.assertTrue(config.use_start)
-        config.use_start = False
-        self.assertFalse(config.use_start)
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 @unittest.pytest.mark.solver("knitro_direct")
