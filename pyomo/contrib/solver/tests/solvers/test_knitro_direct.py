@@ -39,8 +39,9 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertFalse(config.use_start)
 
     def test_custom_instantiation(self):
-        config = KnitroConfig(description="A description", use_start=True)
+        config = KnitroConfig(description="A description")
         config.tee = True
+        config.use_start = True
         self.assertTrue(config.tee)
         self.assertEqual(config._description, "A description")
         self.assertIsNone(config.time_limit)
