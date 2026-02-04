@@ -103,7 +103,7 @@ class CUOPTDirect(DirectSolver):
 
             repn = generate_standard_repn(body, quadratic=False)
             matrix_data.extend(repn.linear_coefs)
-            matrix_indices.extend(self.var_name_dict[str(i)] for i in repn.linear_vars)
+            matrix_indices.extend(self._pyomo_var_to_ndx_map[i] for i in repn.linear_vars)
             self.referenced_vars.update(repn.linear_vars)
 
             matrix_indptr.append(len(matrix_data))
@@ -125,10 +125,9 @@ class CUOPTDirect(DirectSolver):
 
     def _add_variables(self, variables):
         # Map variable to index and get var bounds
-        self.var_name_dict = {}
-        v_lb, v_ub, v_type = [], [], []
+        v_lb, v_ub, v_type, v_names = [], [], [], []
 
-        for i, v in enumerate(variables):
+        for v in variables:
             lb, ub = v.bounds
             if v.is_integer():
                 v_type.append("I")
@@ -139,28 +138,27 @@ class CUOPTDirect(DirectSolver):
                 raise ValueError(f"Unallowable domain for variable {v.name}")
             v_lb.append(lb if lb is not None else -np.inf)
             v_ub.append(ub if ub is not None else np.inf)
-            self.var_name_dict[str(v)] = i
+            v_names.append(self._symbol_map.getSymbol(v, self._labeler))
             self._pyomo_var_to_ndx_map[v] = self._ndx_count
             self._ndx_count += 1
 
         self._solver_model.set_variable_lower_bounds(np.array(v_lb))
         self._solver_model.set_variable_upper_bounds(np.array(v_ub))
         self._solver_model.set_variable_types(np.array(v_type))
-        self._solver_model.set_variable_names(np.array(list(self.var_name_dict.keys())))
+        self._solver_model.set_variable_names(np.array(v_names))
 
     def _set_objective(self, objective):
         repn = generate_standard_repn(objective.expr, quadratic=False)
         self.referenced_vars.update(repn.linear_vars)
 
-        obj_coeffs = [0] * len(self.var_name_dict)
+        obj_coeffs = [0] * len(self._pyomo_var_to_ndx_map)
         for i, coeff in enumerate(repn.linear_coefs):
-            obj_coeffs[self.var_name_dict[str(repn.linear_vars[i])]] = coeff
+            obj_coeffs[self._pyomo_var_to_ndx_map[repn.linear_vars[i]]] = coeff
         self._solver_model.set_objective_coefficients(np.array(obj_coeffs))
         self._solver_model.set_maximize(objective.sense == maximize)
 
     def _set_instance(self, model, kwds={}):
         DirectOrPersistentSolver._set_instance(self, model, kwds)
-        self.var_name_dict = None
         self._pyomo_var_to_ndx_map = ComponentMap()
         self._ndx_count = 0
 
