@@ -584,8 +584,8 @@ class GurobiDirectMINLPSolutionLoader(GurobiDirectSolutionLoaderBase):
         self._var_map = var_map
         self._con_map = con_map
 
-    def _var_pair_iter(self):
-        return self._var_map.items()
+    def _get_var_lists(self):
+        return list(self._var_map.keys()), list(self._var_map.values())
 
     def _get_var_map(self):
         return self._var_map
