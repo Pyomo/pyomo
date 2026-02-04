@@ -342,12 +342,6 @@ jobs:
         if test "${{matrix.TARGET}}" == 'win'; then
             PACKAGES="$PACKAGES setuptools<74.0.0"
         fi
-        # Test with older Xpress version to get coverage data and verify backward compatibility
-        if [[ ${{matrix.TARGET}} == linux && ${{matrix.python}} =~ 3.1[01] ]]; then
-            XPRESS='xpress<9.3'
-        else
-            XPRESS='xpress'
-        fi
         python -m pip install --cache-dir cache/pip ${PACKAGES}
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
@@ -356,7 +350,7 @@ jobs:
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
-            python -m pip install --cache-dir cache/pip ${XPRESS} \
+            python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             python -m pip install --cache-dir cache/pip maingopy \
                 || echo "WARNING: MAiNGO is not available"
