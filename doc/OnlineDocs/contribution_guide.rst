@@ -369,7 +369,7 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
 These commands register the cloned code with the active python environment
 (``pyomodev``) and installs all possible optional dependencies.
-Using ``--e`` ensures that your changes to the source code for ``pyomo`` are
+Using ``-e`` ensures that your changes to the source code for ``pyomo`` are
 automatically used by the active environment. You can create another conda
 environment to switch to alternate versions of pyomo (e.g., stable).
 
@@ -433,15 +433,10 @@ should be placed in one of Pyomo's extension namespaces, described below.
 Namespaces for Contributed and Experimental Code
 ++++++++++++++++++++++++++++++++++++++++++++++++
 
-Pyomo has a long history of encouraging and distributing community-developed extensions.
-Historically, all such contributions were placed under the
-``pyomo.contrib`` namespace. This structure allowed new modeling tools and
-algorithms to be shared quickly, but over time it became difficult for users
-to distinguish between more stable, supported functionality and
-experimental or research-oriented code.
-
-As a result, Pyomo is transitioning to a more structured contribution
-model with three clear namespaces:
+Pyomo organizes non-core functionality into a small
+number of clearly defined namespaces. Contributors should place new
+functionality according to its intended stability and maintenance
+expectations:
 
 * ``pyomo.addons`` – For mostly stable, supported extensions that build on
   the Pyomo core. These packages are maintained by dedicated
@@ -483,9 +478,6 @@ unexpected changes in stable areas of the codebase.
      - Core Pyomo modeling framework
      - Fully supported and versioned
 
-For specific inclusion requirements and maintenance expectations for each
-namespace, see each directory's accompanying ``README.md``.
-
 Submitting a Contributed Package
 --------------------------------
 
@@ -514,7 +506,7 @@ When submitting a new package (under either ``addons`` or
 * The code includes tests that can be run through Pyomo's
   continuous integration framework.
 * The package includes documentation that clearly describes its purpose and
-  usage, preferably in as online documentation in ``doc/OnlineDocs``.
+  usage, preferably as online documentation in ``doc/OnlineDocs``.
 * Optional dependencies are properly declared in ``setup.py``
   under the appropriate ``[optional]`` section.
 * The contribution passes all standard style and formatting checks.
@@ -577,18 +569,21 @@ that its primary functionality executes as expected. For example::
        def test_import(self):
            import pyomo.devel.example_package
 
-Tests for contributed packages are run alongside the rest of the Pyomo
-test suite and must not require optional dependencies unless those
-dependencies are properly declared and tests are appropriately marked.
+Tests for contributed packages are run as part of the Pyomo
+test suite and must not have an unconditional import of optional dependencies.
+Tests that exercise functionality requiring optional dependencies must be
+properly guarded (e.g., with ``@unittest.skipIf()`` / ``@unittest.skipUnless()``).
+Pyomo provides a standard tool for supporting the delayed import of optional
+dependencies (see :py:`attempt_import()`) as well as a central location for
+importing many common optional dependencies (see :py:mod:`pyomo.common.dependencies`).
 For example, tests that require ``numpy`` may be marked using the Pyomo
 test harness as follows::
 
    import pyomo.common.unittest as unittest
-   from pyomo.common.dependencies import numpy_available
+   from pyomo.common.dependencies import numpy as np, numpy_available
 
    @unittest.skipIf(not numpy_available, "NumPy is not available")
    class TestExampleWithNumpy(unittest.TestCase):
        def test_numpy_functionality(self):
-           import numpy as np
            a = np.array([1, 2, 3])
            self.assertEqual(a.sum(), 6)

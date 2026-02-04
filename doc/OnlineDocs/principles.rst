@@ -11,13 +11,13 @@ of these principles over time [MHJ+25]_.
 Backwards Compatibility
 -----------------------
 
-Commitment to Published Interfaces
-++++++++++++++++++++++++++++++++++
+Commitment to Published APIs
+++++++++++++++++++++++++++++
 
 If functionality is published in the most recent edition of the
-Pyomo book [PyomoBookIII]_ (The Book) and corresponding examples, we treat that
+Pyomo book [PyomoBookIII]_ ("The Book") and corresponding examples, we treat that
 as a public API commitment. The interfaces and APIs appearing in The Book
-will be supported (although possibly in a deprecated form) until 
+will be supported (although possibly in a deprecated form) until
 the next major Pyomo release, which will generally coincide with a
 new edition of the book.
 
@@ -25,26 +25,32 @@ This commitment ensures that teaching materials, training resources, and
 long-term codebases built following those examples will remain valid across an
 entire major release.
 
-Stable, Supported APIs
-++++++++++++++++++++++
+Core APIs
++++++++++
 
 Functionality that is part of the Pyomo source tree but not explicitly
 included in the book is also expected to be stable if it resides outside
-the ``contrib`` (or future ``addons`` / ``devel``) directories. This is
-referred to as "core" by the Pyomo development team.
+the ``pyomo.addons``, ``pyomo.devel``, and ``pyomo.unsupported`` namespaces.
+This functionality is referred to as "core" by the Pyomo development team.
 
 When changes to core APIs become necessary, we will endeavor to follow one
 (or both) of the following steps:
 
 1. **Deprecation warnings** are added in advance of functionality removal.
-   These are visible to users at import or execution time,
-   with clear guidance on replacement functionality.
+   These are visible to users at import or execution time, with clear
+   guidance on replacement functionality. For core functionality not
+   mentioned in the published Pyomo book, deprecated interfaces are
+   generally expected to remain available for **at least two minor Pyomo
+   releases** following the introduction of the deprecation warning. For
+   example, functionality deprecated in release ``X.Y.Z`` should not be
+   removed before release ``X.(Y+2).0``.
+
 2. **Relocation warnings** are provided for any relocated functionality.
    These modules import from their old locations and print a warning about
    the relocation in order to assist users' transition.
 
-Ideally, changes in this fashion can allow users and downstream packages
-to adapt gradually without abrupt breakage.
+Ideally, changes in this fashion allow users and downstream packages to
+adapt gradually without abrupt breakage.
 
 .. note::
 
@@ -52,33 +58,58 @@ to adapt gradually without abrupt breakage.
    removal within the Pyomo codebase, see
    :doc:`/explanation/developer_utils/deprecation`.
 
-Experimental and Contributed Code
-+++++++++++++++++++++++++++++++++
+Stable Extensions
++++++++++++++++++
 
-Historically, all contributed and experimental functionality has lived
-under ``pyomo.contrib``. These packages are community-driven extensions
-that may evolve rapidly as research and experimentation continue. Users
-should not rely on API stability within this space.
+The ``pyomo.addons`` namespace contains extensions that are intended to be
+**mostly stable and reliable for downstream use**, while remaining
+outside the Pyomo core.
 
-Pyomo is currently transitioning to a clearer organizational model that
-distinguishes between three categories:
+Functionality in ``pyomo.addons`` is expected to follow Pyomo's coding,
+testing, documentation, and backward-compatibility standards. While not
+held to the same guarantees as core APIs or Book-published interfaces,
+users should be able to rely on ``pyomo.addons`` functionality across
+minor Pyomo releases.
 
-* ``pyomo.addons`` – Mostly stable, supported extensions maintained by
- specific contributors.
+Experimental Functionality
+++++++++++++++++++++++++++
 
-* ``pyomo.devel`` – Active research and experimental code.
+The ``pyomo.devel`` namespace contains experimental or rapidly evolving
+functionality intended for active research, prototyping, and early-stage
+development.
 
-* ``pyomo.unsupported`` – Unmaintained contributions with no active
-  maintainer or future development plans.
+APIs under ``pyomo.devel`` may change or be removed between releases
+without deprecation warnings. Users should not rely on functionality in
+this namespace for production workflows.
 
-The guiding philosophy is to protect users from surprises in stable
-interfaces while continuing to enable innovation and experimentation
-in development areas.
+Unsupported Functionality
++++++++++++++++++++++++++
 
-.. note::
+The ``pyomo.unsupported`` namespace contains code that no longer has an
+active maintainer or future development plans.
 
-   For procedural guidance on how to structure and submit new
-   contributions to Pyomo, please visit :doc:`contribution_guide`.
+Functionality under this namespace may not work and is **NOT** routinely
+tested through the standard Pyomo test harness. No compatibility or
+stability guarantees are provided.
+
+Historical Note
+^^^^^^^^^^^^^^^
+
+Earlier versions of Pyomo placed all experimental and non-core
+functionality under a single namespace, ``pyomo.contrib``. While this
+approach enabled rapid sharing of new modeling tools and research code,
+it made it difficult for users to distinguish between stable,
+maintained functionality and experimental or unsupported features.
+
+The new namespace structure (``pyomo.addons``, ``pyomo.devel``, and
+``pyomo.unsupported``) has been introduced to provide clearer signals about
+stability, maintenance expectations, and compatibility guarantees, while
+preserving Pyomo's long-standing support for community-driven development.
+
+This historical namespace is documented here for context only. New
+development should follow the current namespace guidelines described
+above.
+
 
 Dependency Management
 ---------------------
@@ -266,7 +297,7 @@ refer to it regularly for updates:
   discuss design alternatives with the core development team.
 
 * **URLs:** All links in code, comments, and documentation must use ``https`` 
-  rather than ``http``.
+  rather than ``http`` wherever possible.
 
 * **File headers:** Every ``.py`` file must begin with the standard Pyomo
   copyright header:
