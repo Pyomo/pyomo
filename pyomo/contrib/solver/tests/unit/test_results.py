@@ -141,7 +141,7 @@ class TestTerminationCondition(unittest.TestCase):
 class TestSolutionStatus(unittest.TestCase):
     def test_member_list(self):
         member_list = results.SolutionStatus._member_names_
-        expected_list = ['noSolution', 'infeasible', 'feasible', 'optimal']
+        expected_list = ['noSolution', 'unknown', 'infeasible', 'feasible', 'optimal']
         self.assertEqual(member_list, expected_list)
 
     def test_codes(self):

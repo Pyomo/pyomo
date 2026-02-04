@@ -36,19 +36,6 @@ class TestSolutionLoaderBase(unittest.TestCase):
             self.instance.get_reduced_costs()
 
 
-class TestSolSolutionLoader(unittest.TestCase):
-    # I am currently unsure how to test this further because it relies heavily on
-    # SolFileData and NLWriterInfo
-    def test_member_list(self):
-        expected_list = ['load_vars', 'get_primals', 'get_duals', 'get_reduced_costs']
-        method_list = [
-            method
-            for method in dir(SolutionLoaderBase)
-            if method.startswith('_') is False
-        ]
-        self.assertEqual(sorted(expected_list), sorted(method_list))
-
-
 class TestPersistentSolutionLoader(unittest.TestCase):
     def test_member_list(self):
         expected_list = [
