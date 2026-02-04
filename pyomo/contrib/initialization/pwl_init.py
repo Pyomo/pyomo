@@ -179,6 +179,8 @@ class _PWLRefinementVisitor(StreamBasedExpressionVisitor):
         fname = unique_component_name(self.m.auxiliary._pyomo_contrib_nonlinear_to_pwl, 'f')
         setattr(self.m.auxiliary._pyomo_contrib_nonlinear_to_pwl, fname, new_func)
         new_expr = new_func(*variables)
+        for v, val in zip(variables, var_values):
+            v.value = val
         self.named_expr_map[node] = new_expr
         self.substitution[child] = new_expr.expr
         return False, new_expr.expr
@@ -196,6 +198,8 @@ def _refine_pwl_approx(
     for expr in pwl_expr_to_con_map.keys():
         func = expr.pw_linear_function
         var_vals = tuple(i.value for i in expr.args)
+        # for v, val in zip(expr.args, var_vals):
+        #     print(f'{str(v):<20}{val:<20.5f}{v.lb:<20.5f}{v.ub:<20.5f}{id(v):<20}')
         if any(i is None for i in var_vals):
             continue
         approx_value = func(*var_vals)
@@ -304,7 +308,7 @@ def _initialize_with_piecewise_linear_approximation(
         logger.info('refined PWL approximation')
 
         # try solving the NLP
-        res = nlp_solver.solve(nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False)
+        res = nlp_solver.solve(nlp, tee=True, load_solutions=False, raise_exception_on_nonoptimal_result=False)
         logger.info(f'solved NLP: {res.solution_status}, {res.termination_condition}')
         if res.incumbent_objective is not None:
             solved = True

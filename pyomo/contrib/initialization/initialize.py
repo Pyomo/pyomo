@@ -28,7 +28,7 @@ def initialize_nlp(
     # create a shallow clone of the model so that the initialization method can 
     # can work with the original variables but not make any other 
     # modifications to the model
-    nlp = shallow_clone(nlp)
+    # nlp = shallow_clone(nlp)
 
     # run the initialization
     if method == InitializationMethod.pwl_approximation:
