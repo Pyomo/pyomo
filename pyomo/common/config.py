@@ -1962,7 +1962,7 @@ class ConfigBase:
     def generate_yaml_template(self, indent_spacing=2, width=78, visibility=0):
         """Document Config object, in YAML format.
 
-        Output a deccription of this Config object.  While similar to
+        Output a description of this Config object.  While similar to
         :meth:`display`, this routine has two key differences:
 
           - The ``description`` for each item is output as a comment.
