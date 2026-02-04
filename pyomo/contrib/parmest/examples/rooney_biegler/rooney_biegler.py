@@ -91,6 +91,7 @@ class RooneyBieglerExperiment(Experiment):
         m.experiment_inputs.update([(m.hour, self.data['hour'])])
 
     def get_labeled_model(self):
-        self.create_model()
-        self.label_model()
+        if self.model is None:
+            self.create_model()
+            self.label_model()
         return self.model
