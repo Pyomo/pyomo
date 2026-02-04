@@ -30,6 +30,18 @@ class KnitroConfig(SolverConfig):
             visibility=visibility,
         )
 
+        self.use_start: bool = self.declare(
+            "use_start",
+            ConfigValue(
+                domain=Bool,
+                default=False,
+                doc=(
+                    "If True, KNITRO solver will use the the current values "
+                    "of variables as starting points for the optimization."
+                ),
+            ),
+        )
+
         self.rebuild_model_on_remove_var: bool = self.declare(
             "rebuild_model_on_remove_var",
             ConfigValue(
