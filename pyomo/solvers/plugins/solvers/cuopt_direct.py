@@ -17,9 +17,8 @@ from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.base import Suffix, Var, Constraint, Objective
-from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.repn import generate_standard_repn
+from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
@@ -78,17 +77,17 @@ class CUOPTDirect(DirectSolver):
         return Bunch(rc=None, log=None)
 
     def _add_constraints(self, constraints):
+        # build constraint matrix for cuopt
         c_lb, c_ub = [], []
         matrix_data = []
         matrix_indptr = [0]
         matrix_indices = []
 
+        # visitor walks expression trees and extracts linear coefficients
+        visitor = LinearRepnVisitor({})
         con_idx = 0
         for con in constraints:
             if not con.active:
-                continue
-
-            if self._skip_trivial_constraints and is_fixed(con.body):
                 continue
 
             if not con.has_lb() and not con.has_ub():
@@ -96,19 +95,39 @@ class CUOPTDirect(DirectSolver):
                 continue  # non-binding, so skip
 
             lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
+            repn = visitor.walk_expression(body)
+
+            # check for trivial constraints after getting repn (more efficient
+            # than walking expression twice with is_fixed)
+            if not repn.linear:
+                if self._skip_trivial_constraints:
+                    # verify feasibility before skipping
+                    const = repn.constant if repn.constant else 0
+                    lb_val = lb if lb is not None else -np.inf
+                    ub_val = ub if ub is not None else np.inf
+                    if not (lb_val <= const <= ub_val):
+                        raise ValueError(
+                            f"Trivial constraint {con.name} is infeasible "
+                            f"(constant={const}, bounds=[{lb_val}, {ub_val}])"
+                        )
+                    continue
+                # if not skipping, still need to add it (even if trivial)
 
             conname = self._symbol_map.getSymbol(con, self._labeler)
             self._pyomo_con_to_solver_con_map[con] = con_idx
             con_idx += 1
 
-            repn = generate_standard_repn(body, quadratic=False)
-            matrix_data.extend(repn.linear_coefs)
-            matrix_indices.extend(self._pyomo_var_to_ndx_map[i] for i in repn.linear_vars)
-            self.referenced_vars.update(repn.linear_vars)
+            # repn.linear is keyed by id(var), use var_map to get actual vars
+            for var_id, coef in repn.linear.items():
+                var = visitor.var_map[var_id]
+                matrix_data.append(coef)
+                matrix_indices.append(self._pyomo_var_to_ndx_map[var])
+                self.referenced_vars.add(var)
 
             matrix_indptr.append(len(matrix_data))
-            c_lb.append(lb - repn.constant if lb is not None else -np.inf)
-            c_ub.append(ub - repn.constant if ub is not None else np.inf)
+            const = repn.constant if repn.constant else 0
+            c_lb.append(lb - const if lb is not None else -np.inf)
+            c_ub.append(ub - const if ub is not None else np.inf)
 
         if len(matrix_data) == 0:
             matrix_data = [0]
