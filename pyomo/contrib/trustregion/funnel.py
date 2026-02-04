@@ -146,8 +146,3 @@ class Funnel:
         kf = self.kappa_f
         # gentle convex combo shrink
         self.phi = max(self.phi_min, (1 - kf) * theta_new + kf * self.phi)
-
-    def relax_theta(self, theta_new: float):
-        """Call when accepting a theta-relax step (outside funnel)."""
-        kf = self.kappa_f
-        self.phi = max(self.phi_min, (1 - kf) * theta_new + kf * self.phi)
