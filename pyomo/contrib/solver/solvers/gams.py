@@ -402,7 +402,6 @@ class GAMS(SolverBase):
 
             # --- Process GAMS SOLVESTAT ---
             solvestat = stat_vars["SOLVESTAT"]
-            results.extra_info.gams_solvestat = solvestat
             solver_status, solver_term = GAMS._SOLVER_STATUS_LOOKUP.get(
                 solvestat, (SolverStatus.unknown, TerminationCondition.unknown)
             )
@@ -420,7 +419,7 @@ class GAMS(SolverBase):
             # --- Populate 'results'
             results.solution_status = solution_status
 
-            # replaced below
+            # replaced below, if solution should be loaded
             results.solution_loader = GMSSolutionLoader(None, None)
 
             if solvestat == 1:
