@@ -113,5 +113,18 @@ class CUOPTTests(unittest.TestCase):
             res = opt.solve(m)
 
 
+    @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
+    def test_infeasible_trivial_constraint(self):
+        m = ConcreteModel()
+        m.x = Var(domain=NonNegativeReals)
+        m.obj = Objective(expr=m.x, sense=minimize)
+        # trivial constraint that is infeasible: 5 <= 3
+        m.bad_con = Constraint(expr=5 <= 3)
+
+        opt = SolverFactory('cuopt')
+        with pytest.raises(ValueError, match=r"Trivial constraint.*infeasible"):
+            opt.solve(m)
+
+
 if __name__ == "__main__":
     unittest.main()

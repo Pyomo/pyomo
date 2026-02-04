@@ -113,7 +113,7 @@ class CUOPTDirect(DirectSolver):
                     continue
                 # if not skipping, still need to add it (even if trivial)
 
-            conname = self._symbol_map.getSymbol(con, self._labeler)
+            self._symbol_map.getSymbol(con, self._labeler)
             self._pyomo_con_to_solver_con_map[con] = con_idx
             con_idx += 1
 
@@ -199,7 +199,7 @@ class CUOPTDirect(DirectSolver):
     def _add_block(self, block):
         self._add_variables(
             block.component_data_objects(
-                ctype=Var, descend_into=True, active=True, sort=True
+                ctype=Var, descend_into=True, sort=True
             )
         )
         self._add_constraints(
