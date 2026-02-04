@@ -32,8 +32,6 @@ from pyomo.core.base.indexed_component import (
 )
 from pyomo.core.base.disable_methods import disable_methods
 
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlockData
-
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -348,8 +346,8 @@ class ExternalGreyBoxConstraint(IndexedComponent):
         Construct the ExternalGreyBoxConstraint.
         """
         # First, check that the parent_block is an ExternalGreyBoxBlock
-        if self.parent_block() is None or not isinstance(
-            self.parent_block(), ExternalGreyBoxBlockData
+        if self.parent_block() is None or not hasattr(
+            self.parent_block(), "get_external_model"
         ):
             raise ValueError(
                 "ExternalGreyBoxConstraint components must be "
