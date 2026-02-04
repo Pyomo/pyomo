@@ -167,12 +167,15 @@ class CUOPTDirect(DirectSolver):
         self._solver_model.set_variable_names(np.array(v_names))
 
     def _set_objective(self, objective):
-        repn = generate_standard_repn(objective.expr, quadratic=False)
-        self.referenced_vars.update(repn.linear_vars)
+        visitor = LinearRepnVisitor({})
+        repn = visitor.walk_expression(objective.expr)
 
         obj_coeffs = [0] * len(self._pyomo_var_to_ndx_map)
-        for i, coeff in enumerate(repn.linear_coefs):
-            obj_coeffs[self._pyomo_var_to_ndx_map[repn.linear_vars[i]]] = coeff
+        # repn.linear is keyed by id(var), use var_map to get actual vars
+        for var_id, coef in repn.linear.items():
+            var = visitor.var_map[var_id]
+            obj_coeffs[self._pyomo_var_to_ndx_map[var]] = coef
+            self.referenced_vars.add(var)
         self._solver_model.set_objective_coefficients(np.array(obj_coeffs))
         self._solver_model.set_maximize(objective.sense == maximize)
 
