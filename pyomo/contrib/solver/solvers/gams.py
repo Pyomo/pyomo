@@ -308,7 +308,9 @@ class GAMS(SolverBase):
                 if rc == 3:
                     # Execution Error
                     # Run check_expr_evaluation, which errors if necessary
-                    logger.error('Error rc=3 (GAMS execution error), to be determined later')
+                    logger.error(
+                        'Error rc=3 (GAMS execution error), to be determined later'
+                    )
                 # If nothing was raised, or for all other cases, raise this
                 logger.error(
                     "GAMS encountered an error during solve. "
