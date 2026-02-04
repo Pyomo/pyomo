@@ -313,7 +313,7 @@ def _initialize_with_piecewise_linear_approximation(
         if res.incumbent_objective is not None:
             solved = True
             res.solution_loader.load_vars()
-            # break
+            break
 
     if not solved:
         raise RuntimeError('no feasible solution found')
