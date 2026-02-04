@@ -37,7 +37,6 @@ from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.opt.results import SolverStatus
 from pyomo.contrib.solver.common.results import (
-    legacy_termination_condition_map,
     Results,
     SolutionStatus,
     TerminationCondition,
