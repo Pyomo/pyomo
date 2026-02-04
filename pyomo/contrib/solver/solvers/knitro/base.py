@@ -14,7 +14,6 @@ from collections.abc import Mapping, Sequence
 import datetime
 import time
 from io import StringIO
-from typing import Optional
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import ApplicationError, DeveloperError, PyomoException
@@ -56,7 +55,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
     _engine: Engine
     _model_data: KnitroModelData
     _stream: StringIO
-    _saved_var_values: dict[int, Optional[float]]
+    _saved_var_values: dict[int, float | None]
 
     def __init__(self, **kwds) -> None:
         PackageChecker.__init__(self)
@@ -182,10 +181,10 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         self,
         item_type: type[ItemType],
         value_type: ValueType,
-        items: Optional[Sequence[ItemType]] = None,
+        items: Sequence[ItemType] | None = None,
         *,
         exists: bool,
-        solution_id: Optional[int] = None,
+        solution_id: int | None = None,
     ) -> Mapping[ItemType, float]:
         error_type = self._get_error_type(item_type, value_type)
         if not exists:
