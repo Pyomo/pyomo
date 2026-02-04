@@ -44,7 +44,7 @@ import types
 
 from operator import attrgetter
 
-from pyomo.common.collections import Sequence, Mapping
+from pyomo.common.collections import Sequence, MutableMapping
 from pyomo.common.deprecation import (
     deprecated,
     deprecation_warning,
@@ -53,6 +53,7 @@ from pyomo.common.deprecation import (
 from pyomo.common.fileutils import import_file
 from pyomo.common.flags import building_documentation, NOTSET
 from pyomo.common.formatting import wrap_reStructuredText
+from pyomo.common.sorting import sorted_robust
 
 logger = logging.getLogger(__name__)
 
@@ -714,6 +715,13 @@ def _dump(*args, **kwds):
                 return str(x).lower()
             if type(x) is type:
                 return str(type(x))
+            if isinstance(x, str):
+                # If the str is a number, then we need to quote it.
+                try:
+                    float(x)
+                    return repr(x)
+                except:
+                    return str(x)
             return str(x)
 
     assert '_dump' in globals()
@@ -850,7 +858,7 @@ def _picklable(field, obj):
         # either: exceeding recursion depth raises a RuntimeError
         # through 3.4, then switches to a RecursionError (a derivative
         # of RuntimeError).
-        if isinstance(sys.exc_info()[0], RuntimeError):
+        if issubclass(sys.exc_info()[0], RuntimeError):
             raise
         if ftype not in _picklable.unknowable_types:
             _picklable.known[ftype] = False
@@ -870,7 +878,7 @@ def _build_lexer(literals=''):
     # Ignore whitespace (space, tab, linefeed, and comma)
     t_ignore = " \t\r,"
 
-    tokens = ["STRING", "WORD"]  # quoted string  # unquoted string
+    tokens = ["STRING", "WORD"]  # [quoted string, unquoted string]
 
     # A "string" is a proper quoted string
     _quoted_str = r"'(?:[^'\\]|\\.)*'"
@@ -1172,7 +1180,8 @@ def add_docstring_list(docstring, configdict, indent_by=4):
 
 
 class document_kwargs_from_configdict:
-    """Decorator to append the documentation of a ConfigDict to the docstring
+    """Decorator to append the documentation of a ConfigDict to a class,
+    method, or function docstring.
 
     This adds the documentation of the specified :py:class:`ConfigDict`
     (using the :py:class:`numpydoc_ConfigFormatter` formatter) to the
@@ -1220,6 +1229,7 @@ class document_kwargs_from_configdict:
     ...
     ...     @document_kwargs_from_configdict(CONFIG)
     ...     def solve(self, **kwargs):
+    ...         "Solve a model."
     ...         config = self.CONFIG(kwargs)
     ...         # ...
     ...
@@ -1227,12 +1237,16 @@ class document_kwargs_from_configdict:
     Help on function solve:
     <BLANKLINE>
     solve(self, **kwargs)
+        Solve a model.
+    <BLANKLINE>
         Keyword Arguments
         -----------------
         iterlim: int, default=3000
+    <BLANKLINE>
             Iteration limit.  Specify None for no limit
     <BLANKLINE>
         tee: bool, optional
+    <BLANKLINE>
             If True, stream the solver output to the console
 
     """
@@ -1274,11 +1288,11 @@ class document_kwargs_from_configdict:
         fcn.__doc__ = (
             doc
             + f'{section}'
-            + config.generate_documentation(
+            + numpydoc_ConfigFormatter().generate(
+                config=config,
                 indent_spacing=self.indent_spacing,
                 width=self.width,
                 visibility=self.visibility,
-                format='numpydoc',
             )
         )
         return fcn
@@ -1312,8 +1326,69 @@ def _method_wrapper(func):
 
 
 class document_configdict(document_kwargs_from_configdict):
-    """A simplified wrapper around :class:`document_kwargs_from_configdict`
-    for documenting classes derived from ConfigDict.
+    """Class decorator for documenting classes derived from :class:`ConfigDict`.
+
+    This is a wrapper around :class:`document_kwargs_from_configdict`
+    for documenting classes derived from :class:`ConfigDict` with
+    pre-declared members.  See :class:`document_kwargs_from_configdict`
+    for a description of the decorator arguments.
+
+    Example
+    -------
+
+    .. testcode::
+
+       @document_configdict()
+       class MyConfig(ConfigDict):
+           'Custom configuration object'
+
+           def __init__(
+               self,
+               description=None,
+               doc=None,
+               implicit=False,
+               implicit_domain=None,
+               visibility=0,
+           ):
+               super().__init__(
+                   description=description,
+                   doc=doc,
+                   implicit=implicit,
+                   implicit_domain=implicit_domain,
+                   visibility=visibility,
+               )
+
+               self.iterlim = self.declare('iterlim', ConfigValue(
+                   domain=int, doc='Solver iteration limit'
+               ))
+
+               self.timeout = self.declare('timeout', ConfigValue(
+                   domain=float, doc='Solver (wall clock) time limit'
+               ))
+
+    Will result in
+
+    .. doctest::
+
+       >>> help(MyConfig)
+       Help on class MyConfig ...
+       <BLANKLINE>
+       class MyConfig(pyomo.common.config.ConfigDict)
+        |  MyConfig(...)
+        |
+        |  Custom configuration object
+        |
+        |  Options
+        |  -------
+        |  iterlim: int, optional
+        |
+        |      Solver iteration limit
+        |
+        |  timeout: float, optional
+        |
+        |      Solver (wall clock) time limit
+        |
+        |  ...
 
     """
 
@@ -1342,6 +1417,89 @@ class document_configdict(document_kwargs_from_configdict):
 
 
 class document_class_CONFIG(document_kwargs_from_configdict):
+    """Class decorator for documenting ``CONFIG`` class attributes.
+
+    This wrapper around the :class:`document_kwargs_from_configdict`
+    decorator will add the documentation generated from the target's
+    ``CONFIG`` class attribute to the main class docstring.
+
+    In addition to the standard options accepted by
+    :class:`document_kwargs_from_configdict`, this decorator
+    also accepts ``methods``, an iterable of strings specifying methods
+    on the target class to also document as accepting the ``CONFIG``
+    entries as keyword arguments.
+
+    Example
+    -------
+
+    .. testcode::
+
+       @document_class_CONFIG(methods=['solve'])
+       class MyClass:
+           '''A class with a CONFIG class attribute.'''
+
+           CONFIG = ConfigDict()
+           CONFIG.declare('iterlim', ConfigValue(
+               domain=int, doc='Solver iteration limit'
+           ))
+           CONFIG.declare('timeout', ConfigValue(
+               domain=float, doc='Solver (wall clock) time limit'
+           ))
+
+           def solve(model, **kwargs):
+               "Solve the specified model"
+               config = self.CONFIG(kwargs)
+
+    Will result in
+
+    .. doctest::
+
+       >>> help(MyClass)
+       Help on class MyClass ...
+       <BLANKLINE>
+       class MyClass(object)
+        |  A class with a CONFIG class attribute.
+        |
+        |  **Class configuration**
+        |
+        |  This class leverages the Pyomo Configuration System for managing
+        |  configuration options.  See the discussion on :ref:`configuring class
+        |  hierarchies <class_config>` for more information on how configuration
+        |  class attributes, instance attributes, and method keyword arguments
+        |  interact.
+        |
+        |  .. _MyClass::CONFIG:
+        |
+        |  CONFIG
+        |  ------
+        |  iterlim: int, optional
+        |
+        |      Solver iteration limit
+        |
+        |  timeout: float, optional
+        |
+        |      Solver (wall clock) time limit
+        |
+        |  ...
+
+        >>> help(MyClass.solve)
+        Help on function solve:
+        <BLANKLINE>
+        solve(model, **kwargs)
+            Solve the specified model
+        <BLANKLINE>
+            Keyword Arguments
+            -----------------
+            iterlim: int, optional
+        <BLANKLINE>
+                Solver iteration limit
+        <BLANKLINE>
+            timeout: float, optional
+        <BLANKLINE>
+                Solver (wall clock) time limit
+        <BLANKLINE>
+    """
+
     def __init__(
         self,
         section='CONFIG',
@@ -1384,19 +1542,20 @@ interact."""
 
         self.preamble += f"\n\n.. _{ref}:\n"
         if self.methods:
+            method_documenter = document_kwargs_from_configdict(
+                self.config,
+                indent_spacing=self.indent_spacing,
+                width=self.width,
+                visibility=self.visibility,
+                doc=self.doc,
+            )
             for method in self.methods:
                 if method not in vars(cls):
                     # If this method is inherited, we need to make a
                     # "local" version of it so we don't change the
                     # docstring on the base class.
                     setattr(cls, method, _method_wrapper(getattr(cls, method)))
-                document_kwargs_from_configdict(
-                    self.config,
-                    indent_spacing=self.indent_spacing,
-                    width=self.width,
-                    visibility=self.visibility,
-                    doc=self.doc,
-                )(getattr(cls, method))
+                method_documenter(getattr(cls, method))
         return super().__call__(cls)
 
 
@@ -1546,8 +1705,6 @@ class ConfigBase:
         description=NOTSET,
         doc=NOTSET,
         visibility=NOTSET,
-        implicit=NOTSET,
-        implicit_domain=NOTSET,
         preserve_implicit=False,
     ):
         # We will pass through overriding arguments to the constructor.
@@ -1556,44 +1713,16 @@ class ConfigBase:
         # that code here.  Unfortunately, it means we need to do a bit
         # of logic to be sure we only pass through appropriate
         # arguments.
-        kwds = {}
-        fields = ('description', 'doc', 'visibility')
-        if isinstance(self, ConfigDict):
-            fields += (('implicit', '_implicit_declaration'), 'implicit_domain')
-            assert domain is NOTSET
-            assert default is NOTSET
-        else:
-            fields += ('domain',)
-            if default is NOTSET:
-                default = self.value()
-                if default is NOTSET:
-                    default = None
-            kwds['default'] = default
-            assert implicit is NOTSET
-            assert implicit_domain is NOTSET
-        for field in fields:
-            if type(field) is tuple:
-                field, attr = field
-            else:
-                attr = '_' + field
-            if locals()[field] is NOTSET:
-                kwds[field] = getattr(self, attr, NOTSET)
-            else:
-                kwds[field] = locals()[field]
+        kwds = {
+            'default': self.value() if default is NOTSET else default,
+            'domain': self._domain if domain is NOTSET else domain,
+            'description': self._description if description is NOTSET else description,
+            'doc': self._doc if doc is NOTSET else doc,
+            'visibility': self._visibility if visibility is NOTSET else visibility,
+        }
 
         # Initialize the new config object
         ans = self.__class__(**kwds)
-
-        if isinstance(self, ConfigDict):
-            # Copy over any Dict definitions
-            ans._domain = self._domain
-            for k, v in self._data.items():
-                if preserve_implicit or k in self._declared:
-                    ans._data[k] = _tmp = v(preserve_implicit=preserve_implicit)
-                    if k in self._declared:
-                        ans._declared.add(k)
-                    _tmp._parent = ans
-                    _tmp._name = v._name
 
         # ... and set the value, if appropriate
         if value is not NOTSET:
@@ -1670,11 +1799,17 @@ class ConfigBase:
     def declare_as_argument(self, *args, **kwds):
         """Map this Config item to an argparse argument.
 
-        Valid arguments include all valid arguments to argparse's
-        ArgumentParser.add_argument() with the exception of 'default'.
-        In addition, you may provide a group keyword argument to either
-        pass in a pre-defined option group or subparser, or else pass in
-        the string name of a group, subparser, or (subparser, group).
+        Valid arguments include all valid arguments to
+        :meth:`argparse.ArgumentParser.add_argument()` with the exception of
+        ``default``.
+
+        In addition, you may provide a `group` keyword argument that can be:
+
+           - an argument group returned from
+             `~argparse.ArgumentParser.add_argument_group`
+           - a subparser returned from `~argparse.ArgumentParser.add_subparsers`
+           - a string specifying the name of a subparser or argument group
+           - a tuple of strings specifying a (subparser, group)
 
         """
 
@@ -1705,6 +1840,14 @@ class ConfigBase:
         return self
 
     def initialize_argparse(self, parser):
+        """Initialize an :class:`~argparse.ArgumentParser` with arguments from
+        this Config object.
+
+        Translate items from this Config object that have been marked
+        with :meth:`declare_as_argument` into :mod:`argparse` arguments.
+
+        """
+
         def _get_subparser_or_group(_parser, name):
             # Note: strings also have a 'title()' method.  We are
             # looking for things that look like argparse
@@ -1769,6 +1912,7 @@ class ConfigBase:
                 _process_argparse_def(obj, _args, _kwds)
 
     def import_argparse(self, parsed_args):
+        """Import parsed arguments back into this Config object"""
         for level, prefix, value, obj in self._data_collector(None, ""):
             if obj._argparse is None:
                 continue
@@ -1787,10 +1931,19 @@ class ConfigBase:
     def display(
         self, content_filter=None, indent_spacing=2, ostream=None, visibility=None
     ):
+        """Print the current Config value, in YAML format.
+
+        The current values stored in this Config object are output to
+        ``ostream`` (or :attr:`sys.stdout` if ``ostream`` is ``None``).
+        If ``visibility`` is not ``None``, then only items with
+        visibility less than or equal to ``visibility`` will be output.
+        Output can be further filtered by providing a ``content_filter``.
+
+        """
         if content_filter not in ConfigDict.content_filters:
             raise ValueError(
                 "unknown content filter '%s'; valid values are %s"
-                % (content_filter, ConfigDict.content_filters)
+                % (content_filter, sorted_robust(ConfigDict.content_filters))
             )
         _blocks = []
         if ostream is None:
@@ -1807,6 +1960,19 @@ class ConfigBase:
                     _blocks[i] = None
 
     def generate_yaml_template(self, indent_spacing=2, width=78, visibility=0):
+        """Document Config object, in YAML format.
+
+        Output a description of this Config object.  While similar to
+        :meth:`display`, this routine has two key differences:
+
+          - The ``description`` for each item is output as a comment.
+          - The result is returned as a string instead of being sent
+            directly to an output stream
+
+        If ``visibility`` is not ``None``, then only items with
+        visibility less than or equal to ``visibility`` will be output.
+
+        """
         minDocWidth = 20
         comment = "  # "
         data = list(self._data_collector(0, "", visibility))
@@ -1889,11 +2055,41 @@ class ConfigBase:
         item_start=None,
         item_body=None,
         item_end=None,
-        indent_spacing=2,
-        width=78,
-        visibility=None,
-        format='latex',
+        indent_spacing: int = 2,
+        width: int = 78,
+        visibility: int | None = None,
+        format: ConfigFormatter | str = 'latex',
     ):
+        """Document the this Config object.
+
+        Generate documentation for this config object in the specified
+        format.  While it can be called on any class derived from
+        :class:`ConfigBase`, it is typically used for documenting
+        :class:`ConfigDict` instances.
+
+        Note that unlike :meth:`display` and
+        :meth:`generate_yaml_template`, :meth:`generate_documentation`
+        does not document the current value of any `ConfigList`
+        containers.  Instead, it generates the documentation for the
+        :attr:`ConfigList` domain.
+
+        If the ``format`` argument is a string, this method is equivalent to:
+
+        .. code::
+
+           ConfigFormatter.formats[format]().generate(
+               self, indent_spacing, width, visibility
+           )
+
+        Otherwise, if ``format`` is a :class:`ConfigFormatter` instance,
+        then this is simply:
+
+        .. code::
+
+           format.generate(self, indent_spacing, width, visibility)
+
+        """
+
         if isinstance(format, str):
             formatter = ConfigFormatter.formats.get(format, None)
             if formatter is None:
@@ -2310,7 +2506,7 @@ ConfigList._UninitializedClass = type(
 )
 
 
-class ConfigDict(ConfigBase, Mapping):
+class ConfigDict(ConfigBase, MutableMapping):
     """Store and manipulate a dictionary of configuration values.
 
     Parameters
@@ -2390,6 +2586,55 @@ class ConfigDict(ConfigBase, Mapping):
             object.__setattr__(self, key, val)
         for x in self._data.values():
             x._parent = self
+
+    def __call__(
+        self,
+        value=NOTSET,
+        description=NOTSET,
+        doc=NOTSET,
+        visibility=NOTSET,
+        implicit=NOTSET,
+        implicit_domain=NOTSET,
+        preserve_implicit=False,
+    ):
+        # We will pass through overriding arguments to the constructor.
+        # This way if the constructor does special processing of any of
+        # the arguments (like implicit_domain), we don't have to repeat
+        # that code here.  Unfortunately, it means we need to do a bit
+        # of logic to be sure we only pass through appropriate
+        # arguments.
+        kwds = {
+            'description': self._description if description is NOTSET else description,
+            'doc': self._doc if doc is NOTSET else doc,
+            'visibility': self._visibility if visibility is NOTSET else visibility,
+            'implicit': self._implicit_declaration if implicit is NOTSET else implicit,
+            'implicit_domain': (
+                self._implicit_domain if implicit_domain is NOTSET else implicit_domain
+            ),
+        }
+
+        # Initialize the new config object
+        ans = self.__class__(**kwds)
+
+        # Copy over any Dict definitions
+        ans._domain = self._domain
+        for k, v in self._data.items():
+            if preserve_implicit or k in self._declared:
+                ans._data[k] = _tmp = v(preserve_implicit=preserve_implicit)
+                if k in self._declared:
+                    ans._declared.add(k)
+                _tmp._parent = ans
+                _tmp._name = v._name
+
+        # ... and set the value, if appropriate
+        if value is not NOTSET:
+            # Note that because we are *creating* a new Config object,
+            # we do not want set_value() to change the current (default)
+            # userSet flag for this object/container (see #3721).
+            tmp = ans._userSet
+            ans.set_value(value)
+            ans._userSet = tmp
+        return ans
 
     def __dir__(self):
         # Note that dir() returns the *normalized* names (i.e., no spaces)
@@ -2534,10 +2779,11 @@ class ConfigDict(ConfigBase, Mapping):
         return config
 
     def declare(self, name, config):
+        """Declare a new configuration item in the :class:`ConfigDict`"""
         _name = str(name).replace(' ', '_')
-        ans = self._add(name, config)
+        self._add(name, config)
         self._declared.add(_name)
-        return ans
+        return config
 
     def declare_from(self, other, skip=None):
         if not isinstance(other, ConfigDict):
@@ -2554,7 +2800,7 @@ class ConfigDict(ConfigBase, Mapping):
                 )
             self.declare(key, other.get(key)())
 
-    def add(self, name, config):
+    def add(self, name, config, **kwargs):
         if not self._implicit_declaration:
             raise ValueError(
                 "Key '%s' not defined in ConfigDict '%s'"
@@ -2565,11 +2811,18 @@ class ConfigDict(ConfigBase, Mapping):
             if isinstance(config, ConfigBase):
                 ans = self._add(name, config)
             else:
-                ans = self._add(name, ConfigValue(config))
+                ans = self._add(name, ConfigValue(config, **kwargs))
+                kwargs = None
         elif type(self._implicit_domain) is DynamicImplicitDomain:
             ans = self._add(name, self._implicit_domain(name, config))
         else:
             ans = self._add(name, self._implicit_domain(config))
+        if kwargs:
+            if self._implicit_domain is None:
+                why = f'user-provided {config.__class__.__name__}'
+            else:
+                why = 'implicit domain'
+            logger.warning(f"user-defined Config attributes {kwargs} ignored by {why}")
         ans._userSet = True
         # Adding something to the container should not change the
         # userSet on the container (see Pyomo/pyomo#352; now
