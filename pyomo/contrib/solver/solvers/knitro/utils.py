@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Iterable, Mapping, MutableSet, Sequence
-from typing import Optional
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.numeric_types import value
@@ -75,11 +74,11 @@ class KnitroModelData:
     variables: list[VarData]
     _vars: MutableSet[VarData]
 
-    def __init__(self, block: Optional[BlockData] = None) -> None:
+    def __init__(self, block: BlockData | None = None) -> None:
         """Initialize a Problem instance.
 
         Args:
-            block (Optional[BlockData]): Pyomo block to initialize from. If None,
+            block (BlockData | None): Pyomo block to initialize from. If None,
                 creates an empty problem that can be populated later.
 
         """
