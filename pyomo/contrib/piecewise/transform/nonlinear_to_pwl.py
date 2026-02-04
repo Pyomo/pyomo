@@ -347,6 +347,17 @@ def _find_leaves(splits, leaves, input_node):
     return leaves_list
 
 
+class _Evaluator:
+    def __init__(self, expr, expr_vars):
+        self.expr = expr
+        self.expr_vars = expr_vars
+
+    def __call__(self, *args):
+        for i, v in enumerate(self.expr_vars):
+            v.value = args[i]
+        return value(self.expr)
+
+
 @TransformationFactory.register(
     'contrib.piecewise.nonlinear_to_pwl',
     doc="Convert nonlinear constraints and objectives to piecewise-linear "
@@ -742,10 +753,7 @@ class NonlinearToPWL(Transformation):
                 continue
             # else we approximate subexpr
 
-            def eval_expr(*args):
-                for i, v in enumerate(expr_vars):
-                    v.value = args[i]
-                return value(subexpr)
+            eval_expr = _Evaluator(subexpr, expr_vars)
 
             pwlf = _get_pwl_function_approximation(
                 eval_expr, config, self._get_bounds_list(expr_vars, obj)
