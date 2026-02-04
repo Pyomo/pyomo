@@ -101,7 +101,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         # interface)
         GurobiDirectBase._release_env_client()
 
-    def _get_primals(self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0) -> Tuple[List[VarData], List[float]]:
+    def _get_primals(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+    ) -> Tuple[List[VarData], List[float]]:
         if self._solver_model.SolCount == 0:
             raise NoSolutionError()
         if vars_to_load is None:
@@ -117,7 +119,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
                 raise ValueError(
                     'Cannot obtain suboptimal solutions for a continuous model'
                 )
-            original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
+            original_solution_number = self._solver_model.getParamInfo(
+                'SolutionNumber'
+            )[2]
             self._solver_model.setParam('SolutionNumber', solution_id)
             grbFcn = "Xn"
         else:
@@ -132,7 +136,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
     def load_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
     ) -> None:
-        pvars, vals = self._get_primals(vars_to_load=vars_to_load, solution_id=solution_id)
+        pvars, vals = self._get_primals(
+            vars_to_load=vars_to_load, solution_id=solution_id
+        )
         for pv, val in zip(pvars, vals):
             pv.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
@@ -140,7 +146,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
     def get_primals(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
     ) -> Mapping[VarData, float]:
-        pvars, vals = self._get_primals(vars_to_load=vars_to_load, solution_id=solution_id)
+        pvars, vals = self._get_primals(
+            vars_to_load=vars_to_load, solution_id=solution_id
+        )
         res = ComponentMap(zip(pvars, vals))
         return res
 
