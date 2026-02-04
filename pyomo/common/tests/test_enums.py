@@ -13,10 +13,15 @@ import enum
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.enums import ExtendedEnumType, ObjectiveSense, SolverAPIVersion
+from pyomo.common.enums import (
+    ExtendedEnumType,
+    ObjectiveSense,
+    SolverAPIVersion,
+    IntEnum,
+)
 
 
-class ProblemSense(enum.IntEnum, metaclass=ExtendedEnumType):
+class ProblemSense(IntEnum, metaclass=ExtendedEnumType):
     __base_enum__ = ObjectiveSense
 
     unknown = 0
@@ -117,3 +122,14 @@ class TestSolverAPIVersion(unittest.TestCase):
             ValueError, "'foo' is not a valid SolverAPIVersion"
         ):
             SolverAPIVersion('foo')
+
+
+class TestEnumBackport(unittest.TestCase):
+    def test_bytes(self):
+        # Test that the Int portability wrappers (if present) define
+        # functional to_bytes / from_bytes
+        class TestEnum(IntEnum):
+            field = 100
+
+        self.assertEqual(TestEnum.field.to_bytes(), b'd')
+        self.assertIs(TestEnum.from_bytes(b'd'), TestEnum.field)

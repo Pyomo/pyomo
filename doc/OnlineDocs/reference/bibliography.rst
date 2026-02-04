@@ -6,7 +6,7 @@ Publications
    Note to developers: For these references, we will use the package
    name followed by a description of the publication type.
 
-These publications describe various Pyomo capabilitites or subpackages:
+These publications describe various Pyomo capabilities or subpackages:
 
 .. [Pyomo-paper] William E. Hart, Jean-Paul Watson, David L. Woodruff.
    "Pyomo: modeling and solving mathematical programs in Python,"
