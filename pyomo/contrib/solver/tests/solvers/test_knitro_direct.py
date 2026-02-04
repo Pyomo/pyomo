@@ -36,7 +36,7 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertIsNone(config.timer)
         self.assertIsNone(config.threads)
         self.assertIsNone(config.time_limit)
-        self.assertTrue(config.use_start)
+        self.assertFalse(config.use_start)
 
     def test_custom_instantiation(self):
         config = KnitroConfig(description="A description")
@@ -45,6 +45,12 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertEqual(config._description, "A description")
         self.assertIsNone(config.time_limit)
 
+    def test_use_start_option(self):
+        config = KnitroConfig()
+        config.use_start = True
+        self.assertTrue(config.use_start)
+        config.use_start = False
+        self.assertFalse(config.use_start)
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 @unittest.pytest.mark.solver("knitro_direct")
@@ -498,7 +504,6 @@ class TestKnitroWarmStart(unittest.TestCase):
 
     def test_warm_start_reduces_iterations(self):
         """Test that providing a good starting point reduces the number of iterations."""
-        # Rosenbrock function - a classic nonlinear optimization test problem
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(-5, 5))
         m.y = pyo.Var(bounds=(-5, 5))
@@ -506,23 +511,19 @@ class TestKnitroWarmStart(unittest.TestCase):
             expr=(1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2, sense=pyo.minimize
         )
 
-        # Solve without warm start (from default/zero values)
         m.x.set_value(None)
         m.y.set_value(None)
         res_no_start = self.opt.solve(m, use_start=False)
         iters_no_start = res_no_start.extra_info.number_iters
 
-        # Solve with a good starting point near the optimum (1, 1)
         m.x.set_value(0.9)
         m.y.set_value(0.9)
         res_with_start = self.opt.solve(m, use_start=True)
         iters_with_start = res_with_start.extra_info.number_iters
 
-        # Both should find the optimum
         self.assertAlmostEqual(m.x.value, 1.0, 3)
         self.assertAlmostEqual(m.y.value, 1.0, 3)
 
-        # With a good starting point, we should need fewer iterations
         self.assertLessEqual(iters_with_start, iters_no_start)
 
     def test_warm_start_uses_initial_values(self):
@@ -532,16 +533,15 @@ class TestKnitroWarmStart(unittest.TestCase):
         m.y = pyo.Var(bounds=(0, 10))
         m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
 
-        # Set initial values close to optimum
         m.x.set_value(3.0)
         m.y.set_value(4.0)
 
         res = self.opt.solve(m, use_start=True)
 
-        # Should converge quickly to the optimum
         self.assertAlmostEqual(m.x.value, 3.0, 5)
         self.assertAlmostEqual(m.y.value, 4.0, 5)
         self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
+        self.assertLessEqual(res.extra_info.number_iters, 2)
 
     def test_warm_start_disabled(self):
         """Test that use_start=False disables warm start."""
@@ -571,25 +571,8 @@ class TestKnitroWarmStart(unittest.TestCase):
         m.c1 = pyo.Constraint(expr=m.x + 2 * m.y >= 4)
         m.c2 = pyo.Constraint(expr=2 * m.x + m.y >= 4)
 
-        # Set initial values near the optimum
         m.x.set_value(1.3)
         m.y.set_value(1.3)
-
         self.opt.solve(m, use_start=True)
-
-        # Optimum is at (4/3, 4/3)
         self.assertAlmostEqual(m.x.value, 4.0 / 3.0, 3)
         self.assertAlmostEqual(m.y.value, 4.0 / 3.0, 3)
-
-    def test_warm_start_default_enabled(self):
-        """Test that use_start defaults to True."""
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(0, 10))
-        m.obj = pyo.Objective(expr=(m.x - 5) ** 2, sense=pyo.minimize)
-        m.x.set_value(5.0)
-
-        # Solve without explicitly setting use_start (should default to True)
-        res = self.opt.solve(m)
-
-        self.assertAlmostEqual(m.x.value, 5.0, 5)
-        self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
