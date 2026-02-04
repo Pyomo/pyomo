@@ -311,7 +311,7 @@ class Engine:
         return [idx_map[id(item)] for item in items]
 
     def set_initial_values(self, variables: Iterable[VarData]) -> None:
-        values = [value(var.value) for var in variables]
+        values = [value(var) for var in variables]
         idxs = self.get_idxs(VarData, variables)
         self.execute(knitro.KN_set_var_primal_init_values, idxs, values)
 

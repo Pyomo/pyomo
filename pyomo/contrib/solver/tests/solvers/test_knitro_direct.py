@@ -521,8 +521,8 @@ class TestKnitroWarmStart(unittest.TestCase):
         res_with_start = self.opt.solve(m, use_start=True)
         iters_with_start = res_with_start.extra_info.number_iters
 
-        self.assertAlmostEqual(m.x.value, 1.0, 3)
-        self.assertAlmostEqual(m.y.value, 1.0, 3)
+        self.assertAlmostEqual(pyo.value(m.x), 1.0, 3)
+        self.assertAlmostEqual(pyo.value(m.y), 1.0, 3)
 
         self.assertLessEqual(iters_with_start, iters_no_start)
 
@@ -532,16 +532,26 @@ class TestKnitroWarmStart(unittest.TestCase):
         m.x = pyo.Var(bounds=(0, 10))
         m.y = pyo.Var(bounds=(0, 10))
         m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
-
         m.x.set_value(3.0)
         m.y.set_value(4.0)
-
         res = self.opt.solve(m, use_start=True)
-
-        self.assertAlmostEqual(m.x.value, 3.0, 5)
-        self.assertAlmostEqual(m.y.value, 4.0, 5)
+        self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
+        self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
         self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
-        self.assertLessEqual(res.extra_info.number_iters, 2)
+        self.assertLessEqual(res.extra_info.number_iters, 1)
+
+    def test_warm_start_with_subset_variables(self):
+        """Test warm start when only a subset of variables have initial values."""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, 10))
+        m.y = pyo.Var(bounds=(0, 10))
+        m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
+        m.x.set_value(3.0)
+        m.y.set_value(None)
+        res = self.opt.solve(m, use_start=True)
+        self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
+        self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
+        self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
 
     def test_warm_start_disabled(self):
         """Test that use_start=False disables warm start."""
@@ -549,17 +559,11 @@ class TestKnitroWarmStart(unittest.TestCase):
         m.x = pyo.Var(bounds=(0, 10))
         m.y = pyo.Var(bounds=(0, 10))
         m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
-
-        # Set initial values at the optimum
         m.x.set_value(3.0)
         m.y.set_value(4.0)
-
-        # Even with initial values, use_start=False should not use them
         res = self.opt.solve(m, use_start=False)
-
-        # Should still find the optimum (just without warm start)
-        self.assertAlmostEqual(m.x.value, 3.0, 5)
-        self.assertAlmostEqual(m.y.value, 4.0, 5)
+        self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
+        self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
         self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
 
     def test_warm_start_with_constraints(self):
@@ -570,9 +574,8 @@ class TestKnitroWarmStart(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.minimize)
         m.c1 = pyo.Constraint(expr=m.x + 2 * m.y >= 4)
         m.c2 = pyo.Constraint(expr=2 * m.x + m.y >= 4)
-
         m.x.set_value(1.3)
         m.y.set_value(1.3)
         self.opt.solve(m, use_start=True)
-        self.assertAlmostEqual(m.x.value, 4.0 / 3.0, 3)
-        self.assertAlmostEqual(m.y.value, 4.0 / 3.0, 3)
+        self.assertAlmostEqual(pyo.value(m.x), 4.0 / 3.0, 3)
+        self.assertAlmostEqual(pyo.value(m.y), 4.0 / 3.0, 3)

@@ -49,9 +49,9 @@ class KnitroDirectSolver(KnitroSolverBase):
         timer.stop("load_options")
 
         if config.use_start:
-            timer.start("set_start")
-            self._engine.set_initial_values(self._model_data.variables)
-            timer.stop("set_start")
+            timer.start("warm_start")
+            self._warm_start()
+            timer.stop("warm_start")
 
         timer.start("solve")
         self._engine.solve()
