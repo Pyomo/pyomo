@@ -314,6 +314,11 @@ class Engine:
         idx_map = self.maps[item_type]
         return [idx_map[id(item)] for item in items]
 
+    def set_initial_values(self, variables: Iterable[VarData]) -> None:
+        values = [value(var.value) for var in variables]
+        idxs = self.get_idxs(VarData, variables)
+        self.execute(knitro.KN_set_var_primal_init_values, idxs, values)
+
     def get_values(
         self,
         item_type: type[ItemType],

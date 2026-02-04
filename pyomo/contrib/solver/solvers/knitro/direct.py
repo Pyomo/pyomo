@@ -50,6 +50,11 @@ class KnitroDirectSolver(KnitroSolverBase):
         self._engine.set_options(**config.solver_options)
         timer.stop("load_options")
 
+        if config.use_start:
+            timer.start("set_start")
+            self._engine.set_initial_values(self._model_data.variables)
+            timer.stop("set_start")
+
         timer.start("solve")
         self._engine.solve()
         timer.stop("solve")
