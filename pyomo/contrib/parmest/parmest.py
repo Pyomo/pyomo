@@ -1011,31 +1011,32 @@ class Estimator:
 
         # Create a parent model to hold scenario blocks
         model = self.ef_instance = self._create_parmest_model(0)
+        if fix_theta:
+            for key, _ in model.unknown_parameters.items():
+                name = key.name
+                theta_var = model.find_component(name)
+                theta_var.fix()
 
-        # Add an indexed block for scenario models
-        # If bootlist is provided, use it to create scenario blocks for specified experiments
+        # Set the number of experiments to use, either from bootlist or all experiments
+        self.obj_probability_constant = (
+            len(bootlist) if bootlist is not None else len(self.exp_list)
+        )
+
+        # Create indexed block for holding scenario models
+        model.exp_scenarios = pyo.Block(range(self.obj_probability_constant))
+
         # Otherwise, use all experiments in exp_list
-        if bootlist is not None:
-            # Set number of scenarios based on bootlist
-            # This is an integer value used to divide the total objective
-            self.obj_probability_constant = len(bootlist)
-            # Create indexed block for holding scenario models
-            model.exp_scenarios = pyo.Block(range(len(bootlist)))
-
-            # For each experiment in bootlist, create parmest model and assign to block
-            for i in range(len(bootlist)):
+        for i in range(self.obj_probability_constant):
+            # If bootlist is provided, use it to create scenario blocks for specified experiments
+            if bootlist is not None:
                 # Create parmest model for experiment i
                 parmest_model = self._create_parmest_model(bootlist[i])
 
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
-        # Otherwise, use all experiments in exp_list
-        else:
-            self.obj_probability_constant = len(self.exp_list)
-            model.exp_scenarios = pyo.Block(range(len(self.exp_list)))
-
-            for i in range(len(self.exp_list)):
+            # Otherwise, use all experiments in exp_list
+            else:
                 # Create parmest model for experiment i
                 parmest_model = self._create_parmest_model(i)
                 if theta_vals is not None:
@@ -1048,10 +1049,10 @@ class Estimator:
                             theta_var = parmest_model.find_component(name)
                             theta_var.set_value(theta_vals[name])
                             # print(pyo.value(theta_var))
-                            if fix_theta:
-                                theta_var.fix()
-                            else:
-                                theta_var.unfix()
+                        if fix_theta:
+                            theta_var.fix()
+                        else:
+                            theta_var.unfix()
                 # parmest_model.pprint()
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
@@ -1215,7 +1216,6 @@ class Estimator:
             # @Reviewers: Is this assertion needed? It is a good check, but
             # if it were to fail, it would be a Constraint violation issue.
             if not fix_theta:
-
                 key_block0 = model.exp_scenarios[0].find_component(name)
                 val_block0 = pyo.value(key_block0)
                 assert theta_estimates[name] == val_block0, (
@@ -1334,7 +1334,6 @@ class Estimator:
             for key, _ in self.ef_instance.unknown_parameters.items():
                 name = key.name
                 var = self.ef_instance.find_component(name)
-                # var.pprint()
                 ind_vars.append(var)
 
             # Previously used code for retrieving independent variables:
