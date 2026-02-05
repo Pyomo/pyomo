@@ -1115,7 +1115,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
             def ComputeFirstStageCost_rule(m):
                 return 0
 
-            m.FirstStageCost = pyo.Expression(rule=ComputeFirstStageCost_rule)
+            # Model used in
+            m.FirstStage = pyo.Expression(rule=ComputeFirstStageCost_rule)
 
             def ComputeSecondStageCost_rule(m):
                 return sum(
@@ -1125,14 +1126,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
                     for t in meas_t
                 )
 
-            m.SecondStageCost = pyo.Expression(rule=ComputeSecondStageCost_rule)
+            m.SecondStage = pyo.Expression(rule=ComputeSecondStageCost_rule)
 
             def total_cost_rule(model):
-                return model.FirstStageCost + model.SecondStageCost
+                return model.FirstStage + model.SecondStage
 
-            m.Total_Cost_Objective = pyo.Objective(
-                rule=total_cost_rule, sense=pyo.minimize
-            )
+            m.Total_Cost = pyo.Objective(rule=total_cost_rule, sense=pyo.minimize)
 
             disc = pyo.TransformationFactory("dae.collocation")
             disc.apply_to(m, nfe=20, ncp=2)
@@ -1173,6 +1172,10 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], None) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], None) for t in meas_time_points)
+                m.measurement_error.update((m.cc[t], None) for t in meas_time_points)
 
             def get_labeled_model(self):
                 self.create_model()
@@ -1218,8 +1221,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
         exp_list_df = [ReactorDesignExperimentDAE(data_df)]
         exp_list_dict = [ReactorDesignExperimentDAE(data_dict)]
 
-        self.pest_df = parmest.Estimator(exp_list_df)
-        self.pest_dict = parmest.Estimator(exp_list_dict)
+        self.pest_df = parmest.Estimator(exp_list_df, obj_function="SSE")
+        self.pest_dict = parmest.Estimator(exp_list_dict, obj_function="SSE")
 
         # Estimator object with multiple scenarios
         exp_list_df_multiple = [
@@ -1231,8 +1234,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
             ReactorDesignExperimentDAE(data_dict),
         ]
 
-        self.pest_df_multiple = parmest.Estimator(exp_list_df_multiple)
-        self.pest_dict_multiple = parmest.Estimator(exp_list_dict_multiple)
+        self.pest_df_multiple = parmest.Estimator(
+            exp_list_df_multiple, obj_function="SSE"
+        )
+        self.pest_dict_multiple = parmest.Estimator(
+            exp_list_dict_multiple, obj_function="SSE"
+        )
 
         # Create an instance of the model
         self.m_df = ABC_model(data_df)
@@ -1314,47 +1321,47 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(return_vals2["time"].loc[1][18], 2.368, places=3)
 
     # Currently failing, _count_total_experiments problem
-    # @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
-    # def test_covariance(self):
-    #     from pyomo.contrib.interior_point.inverse_reduced_hessian import (
-    #         inv_reduced_hessian_barrier,
-    #     )
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
+    def test_covariance(self):
+        from pyomo.contrib.interior_point.inverse_reduced_hessian import (
+            inv_reduced_hessian_barrier,
+        )
 
-    #     # Number of datapoints.
-    #     # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
-    #     # In this example, this is the number of data points in data_df, but that's
-    #     # only because the data is indexed by time and contains no additional information.
-    #     n = 60
+        # Number of datapoints.
+        # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
+        # In this example, this is the number of data points in data_df, but that's
+        # only because the data is indexed by time and contains no additional information.
+        n = 20
 
-    #     print(self.pest_df.number_exp)
-    #     print(self.pest_dict.number_exp)
+        print(self.pest_df.number_exp)
+        print(self.pest_dict.number_exp)
 
-    #     # total_experiments_df = parmest._count_total_experiments(self.pest_df.exp_list)
-    #     # print(f"Total experiments: {total_experiments_df}")
+        # total_experiments_df = parmest._count_total_experiments(self.pest_df.exp_list)
+        # print(f"Total experiments: {total_experiments_df}")
 
-    #     # total_experiments_dict = parmest._count_total_experiments(
-    #     #     self.pest_dict.exp_list
-    #     # )
-    #     # print(f"Total experiments: {total_experiments_dict}")
-    #     # Compute covariance using parmest
-    #     obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
+        # total_experiments_dict = parmest._count_total_experiments(
+        #     self.pest_dict.exp_list
+        # )
+        # print(f"Total experiments: {total_experiments_dict}")
+        # Compute covariance using parmest
+        obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
 
-    #     # Compute covariance using interior_point
-    #     vars_list = [self.m_df.k1, self.m_df.k2]
-    #     solve_result, inv_red_hes = inv_reduced_hessian_barrier(
-    #         self.m_df, independent_variables=vars_list, tee=True
-    #     )
-    #     l = len(vars_list)
-    #     cov_interior_point = 2 * obj / (n - l) * inv_red_hes
-    #     cov_interior_point = pd.DataFrame(
-    #         cov_interior_point, ["k1", "k2"], ["k1", "k2"]
-    #     )
+        # Compute covariance using interior_point
+        vars_list = [self.m_df.k1, self.m_df.k2]
+        solve_result, inv_red_hes = inv_reduced_hessian_barrier(
+            self.m_df, independent_variables=vars_list, tee=True
+        )
+        l = len(vars_list)
+        cov_interior_point = 2 * obj / (n - l) * inv_red_hes
+        cov_interior_point = pd.DataFrame(
+            cov_interior_point, ["k1", "k2"], ["k1", "k2"]
+        )
 
-    #     cov_diff = (cov - cov_interior_point).abs().sum().sum()
+        cov_diff = (cov - cov_interior_point).abs().sum().sum()
 
-    #     self.assertTrue(cov.loc["k1", "k1"] > 0)
-    #     self.assertTrue(cov.loc["k2", "k2"] > 0)
-    #     self.assertAlmostEqual(cov_diff, 0, places=6)
+        self.assertTrue(cov.loc["k1", "k1"] > 0)
+        self.assertTrue(cov.loc["k2", "k2"] > 0)
+        self.assertAlmostEqual(cov_diff, 0, places=6)
 
 
 @unittest.skipIf(
