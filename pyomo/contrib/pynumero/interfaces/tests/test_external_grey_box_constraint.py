@@ -22,6 +22,7 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import (
 from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
     ExternalGreyBoxConstraint,
     ScalarExternalGreyBoxConstraint,
+    EGBConstraintBody,
 )
 import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
 
@@ -117,7 +118,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
     """Test properties of ExternalGreyBoxConstraint."""
 
     def test_body_with_equality_constraint(self):
-        """Test body property returns residual for equality constraint."""
+        """Test body property returns EGBConstraintBody that evaluates to residual."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleEquality()
@@ -129,11 +130,11 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         # Expected residual: Pout - (Pin - 4*c*F^2) = 50 - (100 - 4*2*9) = 50 - 28 = 22
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(body_value, 22.0, places=6)
 
     def test_body_with_output(self):
-        """Test body property returns 0 for output variables."""
+        """Test body property returns EGBConstraintBody that evaluates to 0 for outputs."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleOutput()
@@ -144,8 +145,8 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         # Set input values directly on external model
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
 
-        # For outputs, body should return 0.0
-        body_value = m.egb.c.body
+        # For outputs, body should evaluate to 0.0
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(body_value, 0.0, places=6)
 
     def test_body_with_invalid_constraint_id_raises(self):
@@ -174,7 +175,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
 
         # External model initializes with zeros, so evaluation should work
         # Expected: 0 - (0 - 4*0*0) = 0
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(body_value, 0.0, places=6)
 
     def test_lower_property(self):
@@ -329,6 +330,384 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         self.assertIn("do not have an explicit expression", str(context.exception))
 
 
+class TestEGBConstraintBody(unittest.TestCase):
+    """Test the EGBConstraintBody object returned by the body property."""
+
+    def test_body_returns_egb_constraint_body_object(self):
+        """Test that body property returns an EGBConstraintBody object."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        body_obj = m.egb.c.body
+        self.assertIsInstance(body_obj, EGBConstraintBody)
+
+    def test_body_object_is_numeric_type(self):
+        """Test that EGBConstraintBody object has is_numeric_type property set to True."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        body_obj = m.egb.c.body
+        self.assertTrue(body_obj.is_numeric_type)
+
+    def test_body_object_can_be_called(self):
+        """Test that EGBConstraintBody object can be called directly to get residual."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
+
+        body_obj = m.egb.c.body
+        body_value = body_obj()
+        self.assertAlmostEqual(body_value, 22.0, places=6)
+
+    def test_body_object_with_pyo_value(self):
+        """Test that pyo.value() works with EGBConstraintBody object."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
+
+        body_obj = m.egb.c.body
+        body_value = pyo.value(body_obj)
+        self.assertAlmostEqual(body_value, 22.0, places=6)
+
+    def test_body_object_caching(self):
+        """Test that body property returns the same object on repeated access."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        body_obj1 = m.egb.c.body
+        body_obj2 = m.egb.c.body
+        self.assertIs(body_obj1, body_obj2)
+
+    def test_body_object_evaluates_with_different_inputs(self):
+        """Test that body object evaluates correctly with different external model inputs."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        body_obj = m.egb.c.body
+
+        # First evaluation
+        external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
+        body_value1 = pyo.value(body_obj)
+        self.assertAlmostEqual(body_value1, 22.0, places=6)
+
+        # Second evaluation with different inputs
+        external_model.set_input_values(np.asarray([100, 2, 3, 28], dtype=np.float64))
+        body_value2 = pyo.value(body_obj)
+        self.assertAlmostEqual(body_value2, 0.0, places=6)
+
+    def test_body_object_for_output_constraint(self):
+        """Test EGBConstraintBody object for output-based constraints."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleOutput()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+
+        external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
+
+        body_obj = m.egb.c.body
+        # For outputs, residual should be 0
+        self.assertAlmostEqual(pyo.value(body_obj), 0.0, places=6)
+
+    def test_body_object_invalid_constraint_id_raises(self):
+        """Test that body object raises error for invalid constraint ID."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        # Directly create body object with invalid constraint ID
+        with self.assertRaises(ValueError) as context:
+            body_obj = EGBConstraintBody(m.egb, 'invalid_constraint_id')
+        self.assertIn("invalid_constraint_id", str(context.exception))
+
+    def test_get_incident_variables_without_jacobian(self):
+        """Test get_incident_variables returns all input variables when use_jacobian=False."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        body_obj = m.egb.c.body
+        incident_vars = body_obj.get_incident_variables(use_jacobian=False)
+
+        # Should return all 4 input variables
+        self.assertEqual(len(incident_vars), 4)
+        expected_names = ['Pin', 'c', 'F', 'Pout']
+        actual_names = [var.name for var in incident_vars]
+        self.assertEqual(actual_names, [f'egb.inputs[{name}]' for name in expected_names])
+
+    def test_get_incident_variables_with_jacobian_all_nonzero(self):
+        """Test get_incident_variables with use_jacobian=True when all Jacobian entries are non-zero."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        # Set inputs to non-zero values so all Jacobian entries are non-zero
+        external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
+
+        body_obj = m.egb.c.body
+        incident_vars = body_obj.get_incident_variables(use_jacobian=True)
+
+        # Should return all 4 input variables since all Jacobian entries are non-zero
+        self.assertEqual(len(incident_vars), 4)
+        expected_names = ['Pin', 'c', 'F', 'Pout']
+        actual_names = [var.name for var in incident_vars]
+        self.assertEqual(actual_names, [f'egb.inputs[{name}]' for name in expected_names])
+
+    def test_get_incident_variables_with_jacobian_some_zero(self):
+        """Test get_incident_variables with use_jacobian=True when some Jacobian entries are zero."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropTwoEqualities()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop2')
+        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='pdropout')
+
+        # Set F=0 so that derivatives with respect to c and F are zero
+        external_model.set_input_values(np.asarray([100, 2, 0, 90, 80], dtype=np.float64))
+
+        # For first constraint (pdrop2): P2 - (Pin - 2*c*F^2)
+        # Jacobian: [-1, 0, 0, 1, 0] (only Pin and P2 are non-zero)
+        body_obj1 = m.egb.c1.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=True)
+        self.assertEqual(len(incident_vars1), 2)
+        names1 = [var.name for var in incident_vars1]
+        self.assertIn('egb.inputs[Pin]', names1)
+        self.assertIn('egb.inputs[P2]', names1)
+
+        # For second constraint (pdropout): Pout - (P2 - 2*c*F^2)
+        # Jacobian: [0, 0, 0, -1, 1] (only P2 and Pout are non-zero)
+        body_obj2 = m.egb.c2.body
+        incident_vars2 = body_obj2.get_incident_variables(use_jacobian=True)
+        self.assertEqual(len(incident_vars2), 2)
+        names2 = [var.name for var in incident_vars2]
+        self.assertIn('egb.inputs[P2]', names2)
+        self.assertIn('egb.inputs[Pout]', names2)
+
+    def test_get_incident_variables_with_output_constraint(self):
+        """Test get_incident_variables for output-based constraints."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropTwoOutputs()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+
+        body_obj = m.egb.c.body
+
+        # Test without Jacobian
+        incident_vars = body_obj.get_incident_variables(use_jacobian=False)
+        self.assertEqual(len(incident_vars), 4)
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.outputs[Pout]']
+        assert all(var.name in expected_names for var in incident_vars)
+
+        # Test with Jacobian (all non-zero)
+        external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
+        incident_vars = body_obj.get_incident_variables(use_jacobian=True)
+        self.assertEqual(len(incident_vars), 4)
+        assert all(var.name in expected_names for var in incident_vars)
+
+    def test_get_incident_variables_with_custom_tolerance(self):
+        """Test get_incident_variables with custom Jacobian tolerance."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        # Set inputs so that some Jacobian entries are small but non-zero
+        # With c=0.001 and F=0.001, the derivative w.r.t. c is 4*F^2 = 4e-6
+        external_model.set_input_values(np.asarray([100, 0.001, 0.001, 50], dtype=np.float64))
+
+        body_obj = m.egb.c.body
+
+        # With default tolerance (1e-8), should include variables with Jacobian entry 4e-6
+        incident_vars_default = body_obj.get_incident_variables(use_jacobian=True)
+        self.assertEqual(len(incident_vars_default), 4)
+
+        # With higher tolerance (1e-5), should exclude variable with Jacobian entry 4e-6
+        incident_vars_high_tol = body_obj.get_incident_variables(
+            use_jacobian=True, jac_tolerance=1e-5
+        )
+        # c and F derivatives should be filtered out
+        self.assertEqual(len(incident_vars_high_tol), 2)
+        names = [var.name for var in incident_vars_high_tol]
+        self.assertIn('egb.inputs[Pin]', names)
+        self.assertIn('egb.inputs[Pout]', names)
+
+    def test_get_incident_variables_multiple_outputs(self):
+        """Test get_incident_variables for different output constraints in same model."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropTwoOutputs()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_id='P2')
+        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+
+        external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
+
+        body_obj1 = m.egb.c1.body
+        body_obj2 = m.egb.c2.body
+
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=True)
+        incident_vars2 = body_obj2.get_incident_variables(use_jacobian=True)
+
+        self.assertEqual(len(incident_vars1), 4)
+        self.assertEqual(len(incident_vars2), 4)
+
+        # Compare variable names
+        for v in incident_vars1:
+            expected1 = [
+                "egb.inputs[Pin]",
+                "egb.inputs[c]",
+                "egb.inputs[F]",
+                "egb.outputs[P2]",
+            ]
+            assert v.name in expected1
+        for v in incident_vars2:
+            expected2 = [
+                "egb.inputs[Pin]",
+                "egb.inputs[c]",
+                "egb.inputs[F]",
+                "egb.outputs[Pout]",
+            ]
+            assert v.name in expected2
+
+    def test_get_incident_variables_multiple_constraints_and_outputs(self):
+        """Test get_incident_variables for different implicit constraints in same model."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
+        m.egb.set_external_model(external_model, build_implicit_constraint_objects=True)
+
+        # Implicit constraint: 'pdrop1'
+        body_obj1 = m.egb.pdrop1.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
+        self.assertEqual(len(incident_vars1), 5)
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]']
+        for v in incident_vars1:
+            self.assertIn(v.name, expected_names)
+        
+        # Implicit constraint: 'pdrop3'
+        body_obj1 = m.egb.pdrop3.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
+        self.assertEqual(len(incident_vars1), 5)
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]']
+        for v in incident_vars1:
+            self.assertIn(v.name, expected_names)
+
+        # Implicit constraint: 'P2_constraint'
+        body_obj1 = m.egb.P2_constraint.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
+        self.assertEqual(len(incident_vars1), 6)
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[P2]']
+        for v in incident_vars1:
+            self.assertIn(v.name, expected_names)
+        
+        # Implicit constraint: 'Pout_constraint'
+        body_obj1 = m.egb.Pout_constraint.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
+        self.assertEqual(len(incident_vars1), 6)
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[Pout]']
+        for v in incident_vars1:
+            self.assertIn(v.name, expected_names)
+
+
+    def test_get_incident_variables_default_parameters(self):
+        """Test get_incident_variables with default parameters (use_jacobian=False)."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        body_obj = m.egb.c.body
+        # Call without parameters (should default to use_jacobian=False)
+        incident_vars = body_obj.get_incident_variables()
+
+        # Should return all 4 input variables
+        self.assertEqual(len(incident_vars), 4)
+
+    def test_get_incident_variables_returns_var_data_objects(self):
+        """Test that get_incident_variables returns actual variable data objects."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        body_obj = m.egb.c.body
+        incident_vars = body_obj.get_incident_variables()
+
+        # Verify that each element is a Pyomo VarData object
+        for var in incident_vars:
+            self.assertTrue(hasattr(var, 'value'))
+            self.assertTrue(hasattr(var, 'fixed'))
+            self.assertTrue(hasattr(var, 'lb'))
+            self.assertTrue(hasattr(var, 'ub'))
+
+    def test_get_incident_variables_with_zero_jacobian_entries(self):
+        """Test get_incident_variables when all Jacobian entries are exactly zero."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+
+        # Set c=0 and F=0, making derivatives w.r.t. c and F equal to zero
+        external_model.set_input_values(np.asarray([100, 0, 0, 50], dtype=np.float64))
+
+        body_obj = m.egb.c.body
+        incident_vars = body_obj.get_incident_variables(use_jacobian=True)
+
+        # Should only include Pin and Pout (which have Jacobian entries -1 and 1)
+        self.assertEqual(len(incident_vars), 2)
+        names = [var.name for var in incident_vars]
+        self.assertIn('egb.inputs[Pin]', names)
+        self.assertIn('egb.inputs[Pout]', names)
+        self.assertNotIn('egb.inputs[c]', names)
+        self.assertNotIn('egb.inputs[F]', names)
+
+
 class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
     """Test slack methods of ExternalGreyBoxConstraint."""
 
@@ -344,7 +723,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
         lslack_value = m.egb.c.lslack()
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(lslack_value, body_value, places=6)
 
     def test_uslack(self):
@@ -359,7 +738,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
         uslack_value = m.egb.c.uslack()
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(uslack_value, -body_value, places=6)
 
     def test_slack(self):
@@ -374,7 +753,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
         slack_value = m.egb.c.slack()
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(slack_value, -abs(body_value), places=6)
 
     def test_call_method(self):
@@ -389,7 +768,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
         call_value = m.egb.c()
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(call_value, body_value, places=6)
 
 
@@ -558,11 +937,11 @@ class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
         external_model.set_input_values(np.asarray([100, 2, 3, 82, 64], dtype=np.float64))
 
         # Expected residual for pdrop2: P2 - (Pin - 2*c*F^2) = 82 - (100 - 2*2*9) = 82 - 64 = 18
-        body1 = m.egb.c1.body
+        body1 = pyo.value(m.egb.c1.body)
         self.assertAlmostEqual(body1, 18.0, places=6)
 
         # Expected residual for pdropout: Pout - (P2 - 2*c*F^2) = 64 - (82 - 2*2*9) = 64 - 46 = 18
-        body2 = m.egb.c2.body
+        body2 = pyo.value(m.egb.c2.body)
         self.assertAlmostEqual(body2, 18.0, places=6)
 
     def test_two_outputs(self):
@@ -578,9 +957,9 @@ class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
         # Set input values directly on external model
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
 
-        # For outputs, body should return 0.0
-        self.assertAlmostEqual(m.egb.c1.body, 0.0, places=6)
-        self.assertAlmostEqual(m.egb.c2.body, 0.0, places=6)
+        # For outputs, body should evaluate to 0.0
+        self.assertAlmostEqual(pyo.value(m.egb.c1.body), 0.0, places=6)
+        self.assertAlmostEqual(pyo.value(m.egb.c2.body), 0.0, places=6)
 
 
 class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
@@ -695,7 +1074,7 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
         external_model.set_input_values(np.asarray([100, 2, 3, 28], dtype=np.float64))
 
         # At correct solution, residual should be 0
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(body_value, 0.0, places=6)
 
     def test_with_hessian_model_output(self):
@@ -709,8 +1088,8 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
 
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
 
-        # For outputs, body should be 0
-        self.assertAlmostEqual(m.egb.c.body, 0.0, places=6)
+        # For outputs, body should evaluate to 0
+        self.assertAlmostEqual(pyo.value(m.egb.c.body), 0.0, places=6)
 
     def test_constraint_in_different_blocks(self):
         """Test constraints in multiple ExternalGreyBoxBlocks."""
@@ -733,8 +1112,8 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
         external_model2.set_input_values(np.asarray([50, 1, 2], dtype=np.float64))
 
         # Check both constraints work independently
-        self.assertAlmostEqual(m.egb1.c.body, 0.0, places=6)
-        self.assertAlmostEqual(m.egb2.c.body, 0.0, places=6)
+        self.assertAlmostEqual(pyo.value(m.egb1.c.body), 0.0, places=6)
+        self.assertAlmostEqual(pyo.value(m.egb2.c.body), 0.0, places=6)
 
 
 class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
@@ -753,7 +1132,7 @@ class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
         external_model.set_input_values(np.asarray([0, 0, 0, 0], dtype=np.float64))
 
         # Residual should be: 0 - (0 - 4*0*0) = 0
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(body_value, 0.0, places=6)
 
     def test_constraint_with_negative_inputs(self):
@@ -769,7 +1148,7 @@ class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
         external_model.set_input_values(np.asarray([-100, -2, -3, -50], dtype=np.float64))
 
         # Should evaluate without error
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         # Expected: -50 - (-100 - 4*(-2)*(-3)^2) = -50 - (-100 - 4*(-2)*9) = -50 - (-100 + 72) = -50 + 28 = -22
         self.assertAlmostEqual(body_value, -22.0, places=6)
 
@@ -786,7 +1165,7 @@ class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
         external_model.set_input_values(np.asarray([1e6, 1e3, 1e2, 1e5], dtype=np.float64))
 
         # Should evaluate without error
-        body_value = m.egb.c.body
+        body_value = pyo.value(m.egb.c.body)
         self.assertIsInstance(body_value, (float, np.floating))
 
 

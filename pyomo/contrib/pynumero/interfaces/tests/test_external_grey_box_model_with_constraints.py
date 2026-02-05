@@ -476,11 +476,52 @@ def test_incidence_analysis_with_constraints():
     external_model = ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian()
     m.egb.set_external_model(external_model, build_implicit_constraint_objects=True)
 
+    # Check that the get_incident_variables method on the implicit constraint body returns the correct variables
+    for implicit_constraint in m.egb.component_data_objects(ctype=ExternalGreyBoxConstraint, descend_into=False):
+        incident_vars = implicit_constraint.body.get_incident_variables()
+        incident_var_names = [var.name for var in incident_vars]
+        # All variables should be incident on the implicit constraints in this model
+        input_var_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+        ]
+        for v in input_var_names:
+            assert v in incident_var_names
+        if implicit_constraint.name.endswith('_constraint'):
+            # If the constraint is associated with an output, then the output variable should also be incident
+            output_var_name = implicit_constraint.local_name.split('_')[0]
+            assert f"egb.outputs[{output_var_name}]" in incident_var_names
+
     igraph = IncidenceGraphInterface(m, include_inequality=False)
     var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
 
-    print(var_dm_partition)
-    print(con_dm_partition)
+    print("\nVariables in square set:")
+    for var in var_dm_partition.square:
+        print(var.name)
+    print("\nVariables in unmatched set:")
+    for var in var_dm_partition.unmatched:
+        print(var.name)
+    print("\nVariables in underconstrained set:")
+    for var in var_dm_partition.underconstrained:
+        print(var.name)
+    print("\nVariables in overconstrained set:")
+    for var in var_dm_partition.overconstrained:
+        print(var.name)
+    print("\nConstraints in square set:")
+    for con in con_dm_partition.square:
+        print(con.name)
+    print("\nConstraints in unmatched set:")
+    for con in con_dm_partition.unmatched:
+        print(con.name)
+    print("\nConstraints in underconstrained set:")
+    for con in con_dm_partition.underconstrained:
+        print(con.name)
+    print("\nConstraints in overconstrained set:")
+    for con in con_dm_partition.overconstrained:
+        print(con.name)
     # Partition should show EGB variables and constraints in square set
     # Unmatched, underconstrained and overconstrained sets should be empty
     assert var_dm_partition.unmatched == []
@@ -490,8 +531,8 @@ def test_incidence_analysis_with_constraints():
     assert con_dm_partition.underconstrained == []
     assert con_dm_partition.overconstrained == []
 
-    assert len(var_dm_partition.square) == 2
-    assert len(con_dm_partition.square) == 2
+    assert len(var_dm_partition.square) == 4
+    assert len(con_dm_partition.square) == 4
 
 
 if __name__ == '__main__':

@@ -36,6 +36,119 @@ from pyomo.core.base.disable_methods import disable_methods
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
 
+JAC_ZERO_TOLERANCE = 1e-8
+
+
+class EGBConstraintBody:
+    """
+    This class creates a representation of the "body" of an implicit constraint in 
+    an ExternalGreyBox model.
+
+    Currently, this supports:
+    * evaluation of the residual of the implicit constraint
+    * identification of incident variables in the implicit constraint
+    """
+    def __init__(self, parent_model, implicit_constraint_id):
+        self._parent_model = parent_model
+        self._implicit_constraint_id = implicit_constraint_id
+
+        self._ext_output_idx = None
+        self._ext_eq_cons_idx = None
+
+        ext_model = parent_model.get_external_model()
+
+        if self._implicit_constraint_id in ext_model.equality_constraint_names():
+            self._ext_eq_cons_idx = ext_model.equality_constraint_names().index(
+                self._implicit_constraint_id
+            )
+        elif self._implicit_constraint_id in ext_model.output_names():
+            self._ext_output_idx = ext_model.output_names().index(
+                self._implicit_constraint_id
+            )
+        else:
+            raise ValueError(
+                f"Implicit_constraint_id '{self._implicit_constraint_id}' is not a valid identifier in "
+                f"the external model."
+            )
+
+    @property
+    def is_numeric_type(self):
+        """
+        Returns True if the body of this constraint is a numeric type (i.e., it can be evaluated to a number).
+        """
+        return True
+    
+    def __call__(self, exception=NOTSET):
+        """Compute the value of the body of this constraint."""
+        if self._ext_eq_cons_idx is not None:
+            # For an implicit constraint, return the residual
+            try:
+                return self._parent_model.get_external_model().evaluate_equality_constraints()[self._ext_eq_cons_idx]
+            except Exception as e:
+                raise RuntimeError(
+                    f"Error evaluating implicit equality constraint '{self._implicit_constraint_id}' "
+                    "in external model. Have the external model inputs been set?"
+                ) from e
+        # For an output, the ExternalGreyBox will always return the value
+        # of the output as a function of the inputs.
+        # In this case, the "residual" of the implicit constraint is 0.0
+        return 0.0
+
+    def get_incident_variables(self, use_jacobian=False, jac_tolerance=JAC_ZERO_TOLERANCE):
+        """
+        Get the variables that are incident on this implicit constraint.
+
+        Parameters
+        ----------
+        use_jacobian : bool, optional
+            If True, only include variables with non-zero Jacobian entries.
+        jac_tolerance : float, optional
+            The tolerance below which Jacobian entries are considered zero.
+
+        Returns
+        -------
+        list of VarData
+            List containing the variables that participate in the expression
+
+        """
+        # There are two ways incident variables could be defined for an implicit constraint:
+        # 1) We consider all inputs to the external model to be incident on the implicit constraint
+        # 2) We consider only the inputs that have a non-zero Jacobian entry for the implicit constraint
+        # to be incident on the implicit constraint
+        # Both have their uses, so we will support both.
+        ext_model = self._parent_model.get_external_model()
+        incident_variables = []
+
+        if self._ext_output_idx is not None:
+            # If this constraint is linked to an output variable, then that variable is also incident on the constraint
+            incident_variables.append(self._parent_model.outputs[self._implicit_constraint_id])
+
+        if not use_jacobian:
+            # If we are not using the Jacobian to determine incidence, then all inputs are incident
+            for input_name in ext_model.input_names():
+                incident_variables.append(self._parent_model.inputs[input_name])
+        else:
+            # If we are using the Jacobian to determine incidence, then only include variables with non-zero Jacobian entries
+            # AL: To be even more robust, we could look at the Hessian too to catch cases where the Jacobian is just
+            # passing through zero.
+            if self._ext_eq_cons_idx is not None:
+                jac = ext_model.evaluate_jacobian_equality_constraints().tocsr()
+                con_idx = self._ext_eq_cons_idx
+            else:
+                jac = ext_model.evaluate_jacobian_outputs().tocsr()
+                con_idx = self._ext_output_idx
+            
+            for input_name in ext_model.input_names():
+                var_idx = ext_model.input_names().index(input_name)
+
+                jacobian_entry = jac[con_idx, var_idx]
+
+                if abs(jacobian_entry) >= jac_tolerance:
+                    incident_variables.append(self._parent_model.inputs[input_name])
+
+        return incident_variables
+
+
 class ExternalGreyBoxConstraintData(ComponentData):
     """This class defines the data for a single algebraic constraint.
 
@@ -61,6 +174,9 @@ class ExternalGreyBoxConstraintData(ComponentData):
 
         self._implicit_constraint_id = implicit_constraint_id
 
+        # Placeholder for body
+        self._body = None
+
     def __call__(self, exception=NOTSET):
         """Compute the value of the body of this constraint."""
         body = value(self.body, exception=exception)
@@ -83,30 +199,13 @@ class ExternalGreyBoxConstraintData(ComponentData):
     @property
     def body(self):
         """Value (residual) of the implicit ExternalGreyBoxConstraint."""
-        external_model = self.parent_block().get_external_model()
-
-        # Check to see if this is an implicit constraint or output
-        if self._implicit_constraint_id in external_model.equality_constraint_names():
-            # For an implicit constraint, return the residual
-            idx = external_model.equality_constraint_names().index(
-                self._implicit_constraint_id
+        if self._body is None:
+            # Create the EGBConstraintBody object
+            self._body = EGBConstraintBody(
+                parent_model=self.parent_block(),
+                implicit_constraint_id=self._implicit_constraint_id,
             )
-            try:
-                return external_model.evaluate_equality_constraints()[idx]
-            except Exception as e:
-                raise RuntimeError(
-                    f"Error evaluating implicit equality constraint '{self._implicit_constraint_id}' "
-                    "in external model. Have the external model inputs been set?"
-                ) from e
-        elif self._implicit_constraint_id in external_model.output_names():
-            # For an output, the ExternalGreyBox will always return the value
-            # of the output as a function of the inputs.
-            # In this case, the "residual" of the implicit constraint is 0.0
-            return 0.0
-        raise ValueError(
-            f"implicit_constraint_id '{self._implicit_constraint_id}' is not a valid identifier in "
-            f"the external model associated with ExternalGreyBoxBlock '{self.parent_block().name}'."
-        )
+        return self._body
 
     @property
     def lower(self):
