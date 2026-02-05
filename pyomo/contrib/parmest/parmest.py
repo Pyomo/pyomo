@@ -364,17 +364,14 @@ def _count_total_experiments(experiment_list):
     """
     total_number_data = 0
     for experiment in experiment_list:
-        # get the experiment outputs
+        # Get the dictionary of output variables
         output_variables = experiment.get_labeled_model().experiment_outputs
 
-        # get the parent component of the first output variable
-        parent = list(output_variables.keys())[0].parent_component()
+        # Use a set to capture unique index values (time points)
+        # This assumes your variables are indexed by time (e.g., Var[t])
+        unique_indices = {v.index() for v in output_variables.keys()}
 
-        # check if there is only one unique experiment output, e.g., dynamic output variable
-        if all(v.parent_component() is parent for v in output_variables):
-            total_number_data += len(output_variables)
-        else:
-            total_number_data += 1
+        total_number_data += len(unique_indices)
 
     return total_number_data
 
