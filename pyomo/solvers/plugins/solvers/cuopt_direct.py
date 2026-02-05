@@ -97,6 +97,12 @@ class CUOPTDirect(DirectSolver):
             lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
             repn = visitor.walk_expression(body)
 
+            if repn.nonlinear is not None:
+                raise ValueError(
+                    f"Constraint '{con.name}' contains nonlinear terms which are "
+                    "not supported by cuOpt solver."
+                )
+
             # check for trivial constraints after getting repn (more efficient
             # than walking expression twice with is_fixed)
             if not repn.linear:
