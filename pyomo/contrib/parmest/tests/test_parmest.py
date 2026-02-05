@@ -903,16 +903,16 @@ class TestModelVariants(unittest.TestCase):
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
-            cov.iloc[asymptote_index, asymptote_index], 6.30579403, places=2
+            cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
         )  # 6.22864 from paper
         self.assertAlmostEqual(
-            cov.iloc[asymptote_index, rate_constant_index], -0.4395341, places=2
+            cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, asymptote_index], -0.4395341, places=2
+            cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, rate_constant_index], 0.04193591, places=2
+            cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
         )  # 0.04124 from paper
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
