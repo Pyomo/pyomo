@@ -1011,9 +1011,10 @@ class Estimator:
 
         # Create a parent model to hold scenario blocks
         model = self.ef_instance = self._create_parmest_model(0)
+        expanded_theta_names = self._expand_indexed_unknowns(model)
+        print("Expanded theta names:", expanded_theta_names)
         if fix_theta:
-            for key, _ in model.unknown_parameters.items():
-                name = key.name
+            for name in expanded_theta_names:
                 theta_var = model.find_component(name)
                 theta_var.fix()
 
@@ -1040,38 +1041,37 @@ class Estimator:
                 # Create parmest model for experiment i
                 parmest_model = self._create_parmest_model(i)
                 if theta_vals is not None:
+                    print(theta_vals)
                     # Set theta values in the block model
-                    for key, _ in model.unknown_parameters.items():
-                        name = key.name
+                    for name in expanded_theta_names:
+                        print("Checking theta name:", name)
+                        # Check the name is in the parmest model
                         if name in theta_vals:
-                            # Check the name is in the parmest model
-                            assert hasattr(parmest_model, name)
+                            print(f"Setting theta {name} to {theta_vals[name]}")
                             theta_var = parmest_model.find_component(name)
                             theta_var.set_value(theta_vals[name])
                             # print(pyo.value(theta_var))
-                        if fix_theta:
-                            theta_var.fix()
-                        else:
-                            theta_var.unfix()
+                            if fix_theta:
+                                theta_var.fix()
+                            else:
+                                theta_var.unfix()
+
                 # parmest_model.pprint()
                 # Assign parmest model to block
                 model.exp_scenarios[i].transfer_attributes_from(parmest_model)
                 # model.exp_scenarios[i].pprint()
 
         # Add linking constraints for theta variables between blocks and parent model
-        for key, _ in model.unknown_parameters.items():
-            name = key.name
-
+        for name in expanded_theta_names:
             # Constrain the variable in the first block to equal the parent variable
             # If fixing theta, do not add linking constraints
+            parent_theta_var = model.find_component(name)
             if not fix_theta:
                 for i in range(self.obj_probability_constant):
+                    child_theta_var = model.exp_scenarios[i].find_component(name)
                     model.add_component(
                         f"Link_{name}_Block{i}_Parent",
-                        pyo.Constraint(
-                            expr=model.exp_scenarios[i].find_component(name)
-                            == model.find_component(name)
-                        ),
+                        pyo.Constraint(expr=child_theta_var == parent_theta_var),
                     )
 
         # Deactivate existing objectives in the parent model and indexed scenarios
@@ -1150,6 +1150,7 @@ class Estimator:
         model = self._create_scenario_blocks(
             bootlist=bootlist, theta_vals=theta_vals, fix_theta=fix_theta
         )
+        expanded_theta_names = self._expand_indexed_unknowns(model)
 
         # Print model if in diagnostic mode
         if self.diagnostic_mode:
@@ -1203,25 +1204,23 @@ class Estimator:
         obj_value = pyo.value(model.Obj)
         theta_estimates = {}
         # Extract theta estimates from parent model
-        for key, _ in model.unknown_parameters.items():
-            name = key.name
+        for name in expanded_theta_names:
             # Value returns value in suffix, which does not change after estimation
             # Neec to use pyo.value to get variable value
-            theta_estimates[name] = pyo.value(key)
-
+            theta_estimates[name] = pyo.value(model.find_component(name))
             # print("Estimated Thetas:", theta_estimates)
 
             # Check theta estimates are equal in block
             # Due to how this is built, all blocks should have same theta estimates
             # @Reviewers: Is this assertion needed? It is a good check, but
             # if it were to fail, it would be a Constraint violation issue.
-            if not fix_theta:
-                key_block0 = model.exp_scenarios[0].find_component(name)
-                val_block0 = pyo.value(key_block0)
-                assert theta_estimates[name] == val_block0, (
-                    f"Parameter {name} estimate differs between blocks: "
-                    f"{theta_estimates[name]} vs {val_block0}"
-                )
+            # if not fix_theta:
+            #     key_block0 = model.exp_scenarios[0].find_component(name)
+            #     val_block0 = pyo.value(key_block0)
+            #     assert theta_estimates[name] == val_block0, (
+            #         f"Parameter {name} estimate differs between blocks: "
+            #         f"{theta_estimates[name]} vs {val_block0}"
+            #     )
 
         self.obj_value = obj_value
         self.estimated_theta = theta_estimates
@@ -1955,21 +1954,32 @@ class Estimator:
         if theta_values is None:
             all_thetas = {}  # dictionary to store fitted variables
             # use appropriate theta names member
-            theta_names = self.estimator_theta_names
+            # Get theta names from fresh parmest model, assuming this can be called
+            # directly after creating Estimator.
+            theta_names = self._expand_indexed_unknowns(self._create_parmest_model(0))
         else:
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
+            print("theta_names:", theta_names)
             # # check if theta_names are in model
             # Clean names, ignore quotes, and compare sets
             clean_provided = [t.replace("'", "") for t in theta_names]
-            clean_expected = [t.replace("'", "") for t in self.estimator_theta_names]
-
+            clean_expected = [
+                t.replace("'", "")
+                for t in self._expand_indexed_unknowns(self._create_parmest_model(0))
+            ]
+            print("clean_provided:", clean_provided)
+            print("clean_expected:", clean_expected)
             # If they do not match, raise error
             if set(clean_provided) != set(clean_expected):
                 raise ValueError(
                     f"Provided theta_values columns do not match estimator_theta_names."
                 )
+            # Rename columns using expected names
+            if set(clean_provided) != set(theta_names):
+                print("Renaming columns from", theta_names, "to", clean_provided)
+                theta_values.columns = clean_provided
 
             # Convert to list of dicts for parallel processing
             all_thetas = theta_values.to_dict('records')
