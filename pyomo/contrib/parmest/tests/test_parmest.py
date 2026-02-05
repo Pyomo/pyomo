@@ -914,11 +914,8 @@ class TestModelVariants(unittest.TestCase):
     def test_parmest_basics(self):
 
         for model_type, parmest_input in self.input.items():
-            print(f"\nTesting model type: {model_type}\n")
             pest = parmest.Estimator(
-                parmest_input["exp_list"],
-                obj_function=self.objective_function,
-                tee=True,
+                parmest_input["exp_list"], obj_function=self.objective_function
             )
 
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
@@ -932,9 +929,7 @@ class TestModelVariants(unittest.TestCase):
 
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input["exp_list"],
-                obj_function=self.objective_function,
-                tee=True,
+                parmest_input["exp_list"], obj_function=self.objective_function
             )
 
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
@@ -951,9 +946,7 @@ class TestModelVariants(unittest.TestCase):
 
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
-                parmest_input["exp_list"],
-                obj_function=self.objective_function,
-                tee=True,
+                parmest_input["exp_list"], obj_function=self.objective_function
             )
 
             obj_at_theta = pest.objective_at_theta(
@@ -971,9 +964,7 @@ class TestModelVariants(unittest.TestCase):
         for model_type, parmest_input in self.input.items():
 
             pest = parmest.Estimator(
-                parmest_input["exp_list"],
-                obj_function=self.objective_function,
-                tee=True,
+                parmest_input["exp_list"], obj_function=self.objective_function
             )
 
             obj_at_theta = pest.objective_at_theta(initialize_parmest_model=True)
@@ -1333,16 +1324,6 @@ class TestReactorDesign_DAE(unittest.TestCase):
         # only because the data is indexed by time and contains no additional information.
         n = 20
 
-        print(self.pest_df.number_exp)
-        print(self.pest_dict.number_exp)
-
-        # total_experiments_df = parmest._count_total_experiments(self.pest_df.exp_list)
-        # print(f"Total experiments: {total_experiments_df}")
-
-        # total_experiments_dict = parmest._count_total_experiments(
-        #     self.pest_dict.exp_list
-        # )
-        # print(f"Total experiments: {total_experiments_dict}")
         # Compute covariance using parmest
         obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
 

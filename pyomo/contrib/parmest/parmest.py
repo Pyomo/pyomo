@@ -1009,7 +1009,6 @@ class Estimator:
         # Create a parent model to hold scenario blocks
         model = self.ef_instance = self._create_parmest_model(0)
         expanded_theta_names = self._expand_indexed_unknowns(model)
-        print("Expanded theta names:", expanded_theta_names)
         if fix_theta:
             for name in expanded_theta_names:
                 theta_var = model.find_component(name)
@@ -1038,16 +1037,12 @@ class Estimator:
                 # Create parmest model for experiment i
                 parmest_model = self._create_parmest_model(i)
                 if theta_vals is not None:
-                    print(theta_vals)
                     # Set theta values in the block model
                     for name in expanded_theta_names:
-                        print("Checking theta name:", name)
                         # Check the name is in the parmest model
                         if name in theta_vals:
-                            print(f"Setting theta {name} to {theta_vals[name]}")
                             theta_var = parmest_model.find_component(name)
                             theta_var.set_value(theta_vals[name])
-                            # print(pyo.value(theta_var))
                             if fix_theta:
                                 theta_var.fix()
                             else:
@@ -1203,21 +1198,8 @@ class Estimator:
         # Extract theta estimates from parent model
         for name in expanded_theta_names:
             # Value returns value in suffix, which does not change after estimation
-            # Neec to use pyo.value to get variable value
+            # Need to use pyo.value to get variable value
             theta_estimates[name] = pyo.value(model.find_component(name))
-            # print("Estimated Thetas:", theta_estimates)
-
-            # Check theta estimates are equal in block
-            # Due to how this is built, all blocks should have same theta estimates
-            # @Reviewers: Is this assertion needed? It is a good check, but
-            # if it were to fail, it would be a Constraint violation issue.
-            # if not fix_theta:
-            #     key_block0 = model.exp_scenarios[0].find_component(name)
-            #     val_block0 = pyo.value(key_block0)
-            #     assert theta_estimates[name] == val_block0, (
-            #         f"Parameter {name} estimate differs between blocks: "
-            #         f"{theta_estimates[name]} vs {val_block0}"
-            #     )
 
         self.obj_value = obj_value
         self.estimated_theta = theta_estimates
@@ -1958,7 +1940,6 @@ class Estimator:
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
-            print("theta_names:", theta_names)
             # # check if theta_names are in model
             # Clean names, ignore quotes, and compare sets
             clean_provided = [t.replace("'", "") for t in theta_names]
@@ -1966,16 +1947,13 @@ class Estimator:
                 t.replace("'", "")
                 for t in self._expand_indexed_unknowns(self._create_parmest_model(0))
             ]
-            print("clean_provided:", clean_provided)
-            print("clean_expected:", clean_expected)
             # If they do not match, raise error
             if set(clean_provided) != set(clean_expected):
                 raise ValueError(
                     f"Provided theta_values columns do not match estimator_theta_names."
                 )
-            # Rename columns using expected names
+            # Rename columns using cleaned names
             if set(clean_provided) != set(theta_names):
-                print("Renaming columns from", theta_names, "to", clean_provided)
                 theta_values.columns = clean_provided
 
             # Convert to list of dicts for parallel processing
@@ -1993,25 +1971,20 @@ class Estimator:
 
         # walk over the mesh, return objective function
         all_obj = list()
-        print("len(all_thetas):", len(all_thetas))
         if len(all_thetas) > 0:
             for Theta in local_thetas:
                 obj, thetvals, worststatus = self._Q_opt(
                     theta_vals=Theta, fix_theta=True
                 )
-                print("thetvals:", thetvals)
                 if worststatus != pyo.TerminationCondition.infeasible:
                     all_obj.append(list(Theta.values()) + [obj])
         else:
             obj, thetvals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
-            print("thetvals:", thetvals)
             if worststatus != pyo.TerminationCondition.infeasible:
                 all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
-        print(global_all_obj)
-        print("dfcols:", dfcols)
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_theta
 
