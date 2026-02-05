@@ -359,21 +359,28 @@ def _count_total_experiments(experiment_list):
 
     Returns
     -------
-    total_number_data : int
+    total_data_points : int
         The total number of data points in the list of experiments
     """
-    total_number_data = 0
+    total_data_points = 0
+
     for experiment in experiment_list:
-        # Get the dictionary of output variables
-        output_variables = experiment.get_labeled_model().experiment_outputs
+        output_vars = experiment.get_labeled_model().experiment_outputs
 
-        # Use a set to capture unique index values (time points)
-        # This assumes your variables are indexed by time (e.g., Var[t])
-        unique_indices = {v.index() for v in output_variables.keys()}
+        # 1. Identify the first parent component
+        # (e.g., the 'ca' Var container itself)
+        first_var_key = list(output_vars.keys())[0]
+        first_parent = first_var_key.parent_component()
 
-        total_number_data += len(unique_indices)
+        # 2. Count only the keys that belong to this specific parent
+        # This filters out 'cb', 'cc', etc.
+        first_param_indices = [
+            v for v in output_vars.keys() if v.parent_component() is first_parent
+        ]
 
-    return total_number_data
+        total_data_points += len(first_param_indices)
+
+    return total_data_points
 
 
 class CovarianceMethod(Enum):
