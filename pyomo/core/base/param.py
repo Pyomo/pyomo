@@ -507,7 +507,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         repeated __getitem__ calls are too expensive to extract
         the contents of a parameter.
         """
-        
         if self._mutable:
             # The parameter is mutable so parameter data are ParamData
             # types.  We need to evaluate the ParamData back to POD
