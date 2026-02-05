@@ -646,13 +646,12 @@ class TestModelVariants(unittest.TestCase):
 
             # Add experiment outputs
             model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
-            model.y.fix()
 
             # Define the model equations
             def response_rule(m):
-                return m.y == m.theta["asymptote"] * (
-                    1 - pyo.exp(-m.theta["rate_constant"] * m.h)
-                )
+                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.h))
+
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -673,6 +672,8 @@ class TestModelVariants(unittest.TestCase):
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_params_exp_list = []
         for i in range(self.data.shape[0]):
@@ -698,7 +699,6 @@ class TestModelVariants(unittest.TestCase):
 
             # Add experiment outputs
             model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
-            model.y.fix()
 
             # Define the model equations
             def response_rule(m):
@@ -708,7 +708,6 @@ class TestModelVariants(unittest.TestCase):
 
             # Add the model equations to the model
             model.response_con = pyo.Constraint(rule=response_rule)
-
             return model
 
         class RooneyBieglerExperimentIndexedParams(RooneyBieglerExperiment):
@@ -726,6 +725,9 @@ class TestModelVariants(unittest.TestCase):
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_indexed_params_exp_list = []
         for i in range(self.data.shape[0]):
@@ -749,13 +751,12 @@ class TestModelVariants(unittest.TestCase):
 
             # Add experiment outputs
             model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
-            model.y.fix()
 
             # Define the model equations
             def response_rule(m):
-                return m.y == m.theta["asymptote"] * (
-                    1 - pyo.exp(-m.theta["rate_constant"] * m.h)
-                )
+                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.h))
+
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -776,6 +777,8 @@ class TestModelVariants(unittest.TestCase):
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_vars_exp_list = []
         for i in range(self.data.shape[0]):
@@ -803,13 +806,14 @@ class TestModelVariants(unittest.TestCase):
 
             # Add experiment outputs
             model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
-            model.y.fix()
 
             # Define the model equations
             def response_rule(m):
                 return m.y == m.theta["asymptote"] * (
                     1 - pyo.exp(-m.theta["rate_constant"] * m.h)
                 )
+
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -828,6 +832,9 @@ class TestModelVariants(unittest.TestCase):
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_indexed_vars_exp_list = []
         for i in range(self.data.shape[0]):
