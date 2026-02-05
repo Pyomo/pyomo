@@ -11,7 +11,7 @@
 
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from types import MappingProxyType
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.errors import DeveloperError
@@ -92,7 +92,7 @@ def api_set_param(param_type: int) -> Callable[..., None]:
 
 def api_get_values(
     item_type: type[ItemType], value_type: ValueType
-) -> Callable[..., Optional[list[float]]]:
+) -> Callable[..., list[float] | None]:
     if item_type is VarData:
         if value_type == ValueType.PRIMAL:
             return knitro.KN_get_var_primal_values
@@ -108,7 +108,7 @@ def api_get_values(
     )
 
 
-def api_add_items(item_type: type[ItemType]) -> Callable[..., Optional[list[int]]]:
+def api_add_items(item_type: type[ItemType]) -> Callable[..., list[int] | None]:
     if item_type is VarData:
         return knitro.KN_add_vars
     elif item_type is ConstraintData:
@@ -169,11 +169,11 @@ class Engine:
 
     has_objective: bool
     maps: Mapping[type[ItemData], MutableMapping[int, int]]
-    nonlinear_map: MutableMapping[Optional[int], NonlinearExpressionData]
+    nonlinear_map: MutableMapping[int | None, NonlinearExpressionData]
     nonlinear_diff_order: int
 
-    _kc: Optional[Any]
-    _status: Optional[int]
+    _kc: Any | None
+    _status: int | None
 
     def __init__(self, *, nonlinear_diff_order: int = 2) -> None:
         self.has_objective = False
@@ -242,7 +242,7 @@ class Engine:
         for param, val in options.items():
             self.set_option(param, val)
 
-    def set_outlev(self, level: Optional[int] = None) -> None:
+    def set_outlev(self, level: int | None = None) -> None:
         if level is None:
             level = knitro.KN_OUTLEV_ALL
         self.set_options(outlev=level)
@@ -289,7 +289,7 @@ class Engine:
     def get_solve_time(self) -> float:
         return self.execute(knitro.KN_get_solve_time_real)
 
-    def get_obj_value(self) -> Optional[float]:
+    def get_obj_value(self) -> float | None:
         if not self.has_objective:
             return None
         if self._status not in {
@@ -303,7 +303,7 @@ class Engine:
             return None
         return self.execute(knitro.KN_get_obj_value)
 
-    def get_obj_bound(self) -> Optional[float]:
+    def get_obj_bound(self) -> float | None:
         if not self.has_objective:
             return None
         return self.execute(knitro.KN_get_mip_relaxation_bnd)
@@ -319,7 +319,7 @@ class Engine:
         item_type: type[ItemType],
         value_type: ValueType,
         items: Iterable[ItemType],
-    ) -> Optional[list[float]]:
+    ) -> list[float] | None:
         func = api_get_values(item_type, value_type)
         idxs = self.get_idxs(item_type, items)
         return self.execute(func, idxs)
@@ -367,7 +367,7 @@ class Engine:
     def set_obj_structures(self, obj: ObjectiveData) -> None:
         self.add_structures(None, obj.expr)
 
-    def add_structures(self, i: Optional[int], expr) -> None:
+    def add_structures(self, i: int | None, expr) -> None:
         repn = generate_standard_repn(expr)
         if repn is None:
             return
@@ -408,7 +408,7 @@ class Engine:
             )
 
     def add_callback(
-        self, i: Optional[int], expr: NonlinearExpressionData, callback: Callback
+        self, i: int | None, expr: NonlinearExpressionData, callback: Callback
     ) -> None:
         is_obj = i is None
         idx_cons = [i] if not is_obj else None
@@ -440,8 +440,6 @@ class Engine:
         for i, expr in self.nonlinear_map.items():
             self.register_callback(i, expr)
 
-    def register_callback(
-        self, i: Optional[int], expr: NonlinearExpressionData
-    ) -> None:
+    def register_callback(self, i: int | None, expr: NonlinearExpressionData) -> None:
         callback = build_callback_handler(expr, idx=i).expand()
         self.add_callback(i, expr, callback)

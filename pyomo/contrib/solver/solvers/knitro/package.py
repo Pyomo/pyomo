@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import io
-from typing import Optional
 
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.contrib.solver.common.base import Availability
@@ -61,7 +60,7 @@ class Package:
         return knitro.KN_new_lm(lmc)
 
     @staticmethod
-    def get_version() -> Optional[tuple[int, int, int]]:
+    def get_version() -> tuple[int, int, int] | None:
         """Get the version of the KNITRO solver as a tuple.
 
         Returns:
@@ -97,7 +96,7 @@ class Package:
 
 
 class PackageChecker:
-    _available_cache: Optional[Availability]
+    _available_cache: Availability | None
 
     def __init__(self) -> None:
         self._available_cache = None
@@ -107,5 +106,5 @@ class PackageChecker:
             self._available_cache = Package.check_availability()
         return self._available_cache
 
-    def version(self) -> Optional[tuple[int, int, int]]:
+    def version(self) -> tuple[int, int, int] | None:
         return Package.get_version()
