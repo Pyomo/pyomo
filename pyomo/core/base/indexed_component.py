@@ -575,7 +575,9 @@ You can silence this warning by one of three ways:
         def getter(s):
             try:
                 return _getdata(s)
-            except KeyError:
+            except (KeyError, TypeError):
+                # KeyError for missing indices, TypeError for unhashable
+                # keys (e.g., a template)
                 return self[s]
 
         return map(getter, self.keys(sort))
