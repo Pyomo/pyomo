@@ -310,7 +310,7 @@ class block(IBlock):
 
         if _solver_capability is None:
             _solver_capability = lambda x: True
-        (filename_, smap) = problem_writer(self, filename, _solver_capability, kwds)
+        filename_, smap = problem_writer(self, filename, _solver_capability, kwds)
         assert filename_ == filename
 
         if _called_by_solver:

@@ -78,7 +78,6 @@ from pyomo.common.errors import InfeasibleConstraintException
 
 from pyomo.common.dependencies import numpy as np, numpy_available
 
-
 set_operator_map = {
     '|': r' \cup ',
     '&': r' \cap ',

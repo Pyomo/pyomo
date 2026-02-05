@@ -72,12 +72,7 @@ def _disable_method(fcn, msg=None, exception=RuntimeError):
     _funcdef = """def %s%s:
         raise %s("%s" %% (_msg, type(self).__name__,
             self.name, _name, self.name))
-""" % (
-        _name,
-        args,
-        exception.__name__,
-        _disabled_error,
-    )
+""" % (_name, args, exception.__name__, _disabled_error)
     exec(_funcdef, _env)
     return functools.wraps(fcn)(_env[_name])
 

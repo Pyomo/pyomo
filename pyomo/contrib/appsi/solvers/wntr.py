@@ -55,7 +55,6 @@ import time
 import sys
 from pyomo.core.expr.visitor import ExpressionValueVisitor
 
-
 logger = logging.getLogger(__name__)
 
 

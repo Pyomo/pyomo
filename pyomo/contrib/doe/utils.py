@@ -219,7 +219,7 @@ def get_FIM_metrics(FIM):
         log10(Modified E-optimality) metric
     """
 
-    (det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt) = (
+    det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
         compute_FIM_metrics(FIM)
     )
 

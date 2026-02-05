@@ -10,9 +10,9 @@ The Pyomo configuration system provides a set of three classes
 configuration information and user input.  The system is based around
 the :class:`ConfigValue` class, which provides storage for a single
 configuration entry.  :class:`ConfigValue` objects can be grouped using
-two containers (:class:`ConfigDict` and :class:`ConfigList`), which
-provide functionality analogous to Python's dict and list classes,
-respectively.
+two containers (:class:`ConfigDict` and :class:`ConfigList`) that
+provide functionality analogous to Python's :class:`dict` and
+:class:`list` classes, respectively.
 
 At its simplest, the configuration system allows for developers to specify a
 dictionary of documented configuration entries:
@@ -71,7 +71,8 @@ Domain validation
 
 All Config objects support a ``domain`` keyword that accepts a callable
 object (type, function, or callable instance).  The domain callable
-should take data and map it onto the desired domain, optionally
+should take a single argument (the incoming data value) and map it onto
+the desired domain, optionally
 performing domain validation (see :py:class:`ConfigValue`,
 :py:class:`ConfigDict`, and :py:class:`ConfigList` for more
 information).  This allows client code to accept a very flexible set of
@@ -266,7 +267,7 @@ In addition to basic storage and retrieval, the configuration system provides
 hooks to the argparse command-line argument parsing system.  Individual
 configuration entries can be declared as :mod:`argparse` arguments using the
 :py:meth:`~ConfigBase.declare_as_argument` method.  To make declaration
-simpler, the :py:meth:`declare` method returns the declared configuration
+simpler, the :py:meth:`~ConfigDict.declare` method returns the declared configuration
 object so that the argument declaration can be done inline:
 
 .. testcode::
@@ -373,18 +374,17 @@ were set but never retrieved (:py:meth:`unused_user_values`):
     >>> print([val.name() for val in config.unused_user_values()])
     ['lbfgs', 'absolute tolerance']
 
-Generating output & documentation
-=================================
+Outputting the current state
+============================
 
-Configuration objects support three methods for generating output and
-documentation: :py:meth:`display()`,
-:py:meth:`generate_yaml_template()`, and
-:py:meth:`generate_documentation()`.  The simplest is
-:py:meth:`display()`, which prints out the current values of the
-configuration object (and if it is a container type, all of its
-children).  :py:meth:`generate_yaml_template` is similar to
-:py:meth:`display`, but also includes the description fields as
-formatted comments.
+Configuration objects support two methods for generating output:
+:py:meth:`~ConfigBase.display` and
+:py:meth:`~ConfigBase.generate_yaml_template`.  The simpler is
+:py:meth:`~ConfigBase.display`, which prints out the current values of
+the configuration object (and if it is a container type, all of its
+children).  :py:meth:`~ConfigBase.generate_yaml_template` is similar to
+:py:meth:`~ConfigBase.display`, but also includes the description fields
+as formatted comments.
 
 .. testcode::
 
@@ -452,14 +452,31 @@ output:
         absolute tolerance: 0.2  # absolute convergence tolerance
     <BLANKLINE>
 
-The third method (:py:meth:`generate_documentation`) behaves
-differently.  This method is designed to generate reference
-documentation.  For each configuration item, the ``doc`` field is output.
-If the item has no ``doc``, then the ``description`` field is used.
+Generating documentation
+========================
 
-List containers have their *domain* documented and not their current
-values.  The documentation can be configured through optional arguments.
-The defaults generate LaTeX documentation:
+One of the most useful features of the Configuration system is the
+ability to automatically generate documentation.  To accomplish this, we
+rely on a series of formatters derived from :class:`ConfigFormatter`
+that implement a visitor pattern for walking the hierarchy of
+configuration containers (:class:`ConfigDict` and :class:`ConfigList`)
+and documenting the members.  As the :class:`ConfigFormatter` was
+designed to generate reference documentation, it behaves differently
+from :meth:`~ConfigBase.display` or
+:meth:`~ConfigBase.generate_yaml_template`):
+
+    - For each configuration item, the ``doc`` field is output.  If the
+      item has no ``doc``, then the ``description`` field is used.
+
+    - List containers have their *domain* documented and not their
+      current values.
+
+The simplest interface for generating documentation is to call the
+:py:meth:`~ConfigBase.generate_documentation` method.  This method
+retrieves the specified formatter, instantiates it, and returns the
+result from walking the configuration object.  The documentation format
+can be configured through optional arguments.  The defaults generate
+LaTeX documentation:
 
 .. doctest::
 
@@ -486,3 +503,15 @@ The defaults generate LaTeX documentation:
       \end{description}
     \end{description}
     <BLANKLINE>
+
+More useful is actually documenting the source code itself.  To this
+end, the Configuration system provides three decorators that append
+documentation of the referenced :class:`ConfigDict` (in
+`numpydoc format <https://numpydoc.readthedocs.io/en/latest/>`_) for the most
+common situations:
+
+.. autosummary::
+
+   document_configdict
+   document_class_CONFIG
+   document_kwargs_from_configdict

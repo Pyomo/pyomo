@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 """Tests for the MindtPy solver."""
+
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
@@ -27,7 +28,6 @@ from pyomo.environ import SolverFactory, value, maximize
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.opt import TerminationCondition
-
 
 full_model_list = [
     EightProcessFlowsheet(convex=True),
