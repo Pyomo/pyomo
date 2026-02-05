@@ -9,23 +9,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import abc
 import logging
-import numpy as np
-from scipy.sparse import coo_matrix
-from pyomo.common.dependencies import numpy as np
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base import Var, Set, Constraint, value
-from pyomo.core.base.block import BlockData, Block, declare_custom_block
+from pyomo.core.base import Var, Set
+from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.set import UnindexedComponent_set
 from pyomo.core.base.reference import Reference
 
-from ..sparse.block_matrix import BlockMatrix
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    ExternalGreyBoxConstraint,
+)
+
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -347,7 +346,7 @@ class ExternalGreyBoxModel:
 
 
 class ExternalGreyBoxBlockData(BlockData):
-    def set_external_model(self, external_grey_box_model, inputs=None, outputs=None):
+    def set_external_model(self, external_grey_box_model, inputs=None, outputs=None, build_implicit_constraint_objects=False):
         """
         Parameters
         ----------
@@ -359,6 +358,9 @@ class ExternalGreyBoxBlockData(BlockData):
         outputs: List of VarData objects
             If provided, these VarData will be used as outputs from the
             external model.
+        build_implicit_constraint_objects: bool
+            If True, then we will build ExternalGreyBoxConstraint objects to represent the
+            implicit constraints.
 
         """
         self._ex_model = ex_model = external_grey_box_model
@@ -409,6 +411,24 @@ class ExternalGreyBoxBlockData(BlockData):
         # call the callback so the model can set initialization, bounds, etc.
         external_grey_box_model.finalize_block_construction(self)
 
+        # If required, construct the ExternalGreyBoxConstraint objects
+        if build_implicit_constraint_objects:
+            for con_name in self._equality_constraint_names:
+                setattr(
+                    self,
+                    con_name,
+                    ExternalGreyBoxConstraint(implicit_constraint_id=con_name, doc=f"Implicit constraint for external grey box constraint {con_name}"),
+                )
+            for out_name in self._output_names:
+                setattr(
+                    self,
+                    out_name + "_constraint",
+                    ExternalGreyBoxConstraint(
+                        implicit_constraint_id=out_name,
+                        doc=f"Implicit constraint for external model output {out_name}",
+                    ),
+                )
+
     def get_external_model(self):
         return self._ex_model
 
@@ -428,6 +448,7 @@ class ExternalGreyBoxBlock(Block):
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', ExternalGreyBoxBlock)
         self._init_model = Initializer(kwds.pop('external_model', None))
+        self._build_implicit_constraint_objects = Initializer(kwds.pop('build_implicit_constraint_objects', False))
         Block.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
@@ -447,7 +468,7 @@ class ExternalGreyBoxBlock(Block):
         if self._init_model is not None:
             block = self.parent_block()
             for index, data in self.items():
-                data.set_external_model(self._init_model(block, index))
+                data.set_external_model(self._init_model(block, index), build_implicit_constraint_objects=self._build_implicit_constraint_objects(block, index))
 
 
 class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock):

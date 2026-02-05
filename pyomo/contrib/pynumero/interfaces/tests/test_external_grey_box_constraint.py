@@ -14,13 +14,7 @@ import pyomo.environ as pyo
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
-    numpy_available,
-    scipy,
-    scipy_available,
 )
-
-if not (numpy_available and scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
     ExternalGreyBoxBlock,
@@ -794,6 +788,21 @@ class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
         # Should evaluate without error
         body_value = m.egb.c.body
         self.assertIsInstance(body_value, (float, np.floating))
+
+
+def test_component_data_objects_with_EGBC():
+    """Test that ExternalGreyBoxConstraints can be iterated over using component_data_objects."""
+    m = pyo.ConcreteModel()
+    m.egb = ExternalGreyBoxBlock()
+    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian()
+    m.egb.set_external_model(external_model, build_implicit_constraint_objects=True)
+
+    count = 0
+    for c in m.egb.component_data_objects(ctype=ExternalGreyBoxConstraint, descend_into=False):
+        assert isinstance(c, ScalarExternalGreyBoxConstraint)
+        assert c.local_name in ['P2_constraint', 'Pout_constraint', 'pdrop1', 'pdrop3']
+        count += 1
+    assert count == 4
 
 
 if __name__ == '__main__':
