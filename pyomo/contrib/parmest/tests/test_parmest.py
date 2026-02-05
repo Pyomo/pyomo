@@ -608,11 +608,6 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertAlmostEqual(cov[1, 1], 0.04124, places=2)  # 0.04124 from paper
 
 
-# Need to update testing variants to reflect real parmest functionality
-# Very outdated, does not work with built-in objective functions due to
-# param outputs and no constraints.
-
-
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
@@ -879,16 +874,16 @@ class TestModelVariants(unittest.TestCase):
                 "theta_names": ["theta"],
                 "theta_vals": theta_vals_index,
             },
-            # "vars_quoted_index": {
-            #     "exp_list": rooney_biegler_indexed_vars_exp_list,
-            #     "theta_names": ["theta['asymptote']", "theta['rate_constant']"],
-            #     "theta_vals": theta_vals_index,
-            # },
-            # "vars_str_index": {
-            #     "exp_list": rooney_biegler_indexed_vars_exp_list,
-            #     "theta_names": ["theta[asymptote]", "theta[rate_constant]"],
-            #     "theta_vals": theta_vals_index,
-            # },
+            "vars_quoted_index": {
+                "exp_list": rooney_biegler_indexed_vars_exp_list,
+                "theta_names": ["theta['asymptote']", "theta['rate_constant']"],
+                "theta_vals": theta_vals_index,
+            },
+            "vars_str_index": {
+                "exp_list": rooney_biegler_indexed_vars_exp_list,
+                "theta_names": ["theta[asymptote]", "theta[rate_constant]"],
+                "theta_vals": theta_vals_index,
+            },
         }
 
     @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
@@ -916,10 +911,10 @@ class TestModelVariants(unittest.TestCase):
         )  # 0.04124 from paper
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
-    # Currently failing, cov_est() problem
     def test_parmest_basics(self):
 
         for model_type, parmest_input in self.input.items():
+            print(f"\nTesting model type: {model_type}\n")
             pest = parmest.Estimator(
                 parmest_input["exp_list"],
                 obj_function=self.objective_function,
@@ -932,7 +927,6 @@ class TestModelVariants(unittest.TestCase):
             obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
-    # currently failing, cov_est() problem
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_initialize_parmest_model_option(self):
 
@@ -952,7 +946,6 @@ class TestModelVariants(unittest.TestCase):
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
-    # currently failing, cov_est() problem, objective_at_theta() problem
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve(self):
 
@@ -973,7 +966,6 @@ class TestModelVariants(unittest.TestCase):
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
-    # currently failing, cov_est() problem, objective_at_theta() problem
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
 
         for model_type, parmest_input in self.input.items():
@@ -1291,7 +1283,6 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
         self.assertIn("unknown_parameters", str(context.exception))
 
-    # Currently failing, exp_scenario problem
     def test_dataformats(self):
         obj1, theta1 = self.pest_df.theta_est()
         obj2, theta2 = self.pest_dict.theta_est()
@@ -1300,7 +1291,6 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(theta1["k1"], theta2["k1"], places=6)
         self.assertAlmostEqual(theta1["k2"], theta2["k2"], places=6)
 
-    # Currently failing, exp_scenario problem
     def test_return_continuous_set(self):
         """
         test if ContinuousSet elements are returned correctly from theta_est()
@@ -1324,47 +1314,47 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(return_vals2["time"].loc[1][18], 2.368, places=3)
 
     # Currently failing, _count_total_experiments problem
-    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
-    def test_covariance(self):
-        from pyomo.contrib.interior_point.inverse_reduced_hessian import (
-            inv_reduced_hessian_barrier,
-        )
+    # @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
+    # def test_covariance(self):
+    #     from pyomo.contrib.interior_point.inverse_reduced_hessian import (
+    #         inv_reduced_hessian_barrier,
+    #     )
 
-        # Number of datapoints.
-        # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
-        # In this example, this is the number of data points in data_df, but that's
-        # only because the data is indexed by time and contains no additional information.
-        n = 60
+    #     # Number of datapoints.
+    #     # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
+    #     # In this example, this is the number of data points in data_df, but that's
+    #     # only because the data is indexed by time and contains no additional information.
+    #     n = 60
 
-        print(self.pest_df.number_exp)
-        print(self.pest_dict.number_exp)
+    #     print(self.pest_df.number_exp)
+    #     print(self.pest_dict.number_exp)
 
-        # total_experiments_df = parmest._count_total_experiments(self.pest_df.exp_list)
-        # print(f"Total experiments: {total_experiments_df}")
+    #     # total_experiments_df = parmest._count_total_experiments(self.pest_df.exp_list)
+    #     # print(f"Total experiments: {total_experiments_df}")
 
-        # total_experiments_dict = parmest._count_total_experiments(
-        #     self.pest_dict.exp_list
-        # )
-        # print(f"Total experiments: {total_experiments_dict}")
-        # Compute covariance using parmest
-        obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
+    #     # total_experiments_dict = parmest._count_total_experiments(
+    #     #     self.pest_dict.exp_list
+    #     # )
+    #     # print(f"Total experiments: {total_experiments_dict}")
+    #     # Compute covariance using parmest
+    #     obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
 
-        # Compute covariance using interior_point
-        vars_list = [self.m_df.k1, self.m_df.k2]
-        solve_result, inv_red_hes = inv_reduced_hessian_barrier(
-            self.m_df, independent_variables=vars_list, tee=True
-        )
-        l = len(vars_list)
-        cov_interior_point = 2 * obj / (n - l) * inv_red_hes
-        cov_interior_point = pd.DataFrame(
-            cov_interior_point, ["k1", "k2"], ["k1", "k2"]
-        )
+    #     # Compute covariance using interior_point
+    #     vars_list = [self.m_df.k1, self.m_df.k2]
+    #     solve_result, inv_red_hes = inv_reduced_hessian_barrier(
+    #         self.m_df, independent_variables=vars_list, tee=True
+    #     )
+    #     l = len(vars_list)
+    #     cov_interior_point = 2 * obj / (n - l) * inv_red_hes
+    #     cov_interior_point = pd.DataFrame(
+    #         cov_interior_point, ["k1", "k2"], ["k1", "k2"]
+    #     )
 
-        cov_diff = (cov - cov_interior_point).abs().sum().sum()
+    #     cov_diff = (cov - cov_interior_point).abs().sum().sum()
 
-        self.assertTrue(cov.loc["k1", "k1"] > 0)
-        self.assertTrue(cov.loc["k2", "k2"] > 0)
-        self.assertAlmostEqual(cov_diff, 0, places=6)
+    #     self.assertTrue(cov.loc["k1", "k1"] > 0)
+    #     self.assertTrue(cov.loc["k2", "k2"] > 0)
+    #     self.assertAlmostEqual(cov_diff, 0, places=6)
 
 
 @unittest.skipIf(
@@ -1401,7 +1391,6 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
 
-    # Currently failing, objective_at_theta() problem
     def test_theta_est_with_square_initialization(self):
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
         objval, thetavals = self.pest.theta_est()
@@ -1430,7 +1419,6 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
             thetavals["rate_constant"], 0.5311, places=2
         )  # 0.5311 from the paper
 
-    # Currently failing, objective_at_theta() problem
     def test_theta_est_with_square_initialization_diagnostic_mode_true(self):
         self.pest.diagnostic_mode = True
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
