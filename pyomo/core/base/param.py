@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from __future__ import annotations
+import collections
 import sys
 import types
 import logging
@@ -510,18 +511,26 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # The parameter is mutable so parameter data are ParamData
             # types.  We need to evaluate the ParamData back to POD
             # (numeric) data when creating the result.
-            return {key: param_data() for key, param_data in self.items()}
+            ans = {key: param_data() for key, param_data in self.items()}
         elif not self.is_indexed():
             # The scalar could be defined (in which case items() will
             # return the ScalarParam), OR it could be defined by a
             # default value (in which case items() will return the
             # actual numeric value).  To cover both cases we will use
             # value():
-            return {key: expr_value(param_data) for key, param_data in self.items()}
+            ans = {key: expr_value(param_data) for key, param_data in self.items()}
         else:
             # The parameter is not mutable, so iteritems() can be
             # converted into a dictionary containing parameter values.
-            return dict(self.items())
+            ans = dict(self.items())
+
+        # We need to fill-in the "missing" values with the declared default
+        #
+        # TBD [11/2025]: should we declare __missing__ so we can still
+        # validate the index for any missing values?
+        if self._default_val is not Param.NoValue and not self._index_set.isfinite():
+            ans = collections.defaultdict(lambda: self._default_val, ans)
+        return ans
 
     def extract_values_sparse(self):
         """
@@ -542,11 +551,20 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # case it will still be evaluatable by calling it).
             # ScalarParams whose value comes from the default are not
             # returned by sparse_items()
-            return {key: param_data() for key, param_data in self.sparse_items()}
+            ans = {key: param_data() for key, param_data in self.sparse_items()}
         else:
             # The parameter is not mutable, so sparse_items() can be
             # converted into a dictionary containing parameter values.
-            return dict(self.sparse_items())
+            #
+            ans = dict(self.sparse_iteritems())
+
+        # We need to fill-in the "missing" values with the declared default
+        #
+        # TBD [11/2025]: should we declare __missing__ so we can still
+        # validate the index for any missing values?
+        if self._default_val is not Param.NoValue:
+            ans = collections.defaultdict(lambda: self._default_val, ans)
+        return ans
 
     def store_values(self, new_values, check=True):
         """
