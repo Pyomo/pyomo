@@ -250,6 +250,63 @@ def SSE(model):
     return expr
 
 
+# TODO: Waiting to merge with PR #3535 to follow Enum structure
+def SSE_with_L2_regularization(
+    model, prior_FIM, theta_ref=None, regularization_weight=None
+):
+    """
+    SSE with an added L2 Regularization term for the objective function, which is used to
+    penalize deviation from a reference theta.
+    (theta - theta_ref).transpose() * prior_FIM * (theta - theta_ref)
+
+    Parameters
+    ----------
+    model: Pyomo model
+    theta_ref: Reference parameter values, matrix, optional
+    prior_FIM: Fisher Information Matrix from prior experimental design, matrix
+    regularization_weight: Multiplier for regularization term, float, optional
+
+    """
+
+    # Calculate sum of squared errors
+    SSE_expr = SSE(model)
+
+    # Construct L2 regularization term
+    # Check if prior_FIM is a square matrix
+    if prior_FIM.shape[0] != prior_FIM.shape[1]:
+        raise ValueError("prior_FIM must be a square matrix")
+
+    # Check if theta_ref is a vector of the same size as prior_FIM
+    if len(theta_ref) != prior_FIM.shape[0]:
+        raise ValueError("theta_ref must be a vector of the same size as prior_FIM")
+
+    # (theta - theta_ref).transpose() * prior_FIM * (theta - theta_ref)
+    expr = np.zeros(len(theta_ref))
+
+    for i in range(len(theta_ref)):
+        if theta_ref[i] is None:
+            raise ValueError("theta_ref must not contain None values")
+        expr[i] = (
+            (model.unknown_parameters[i] - theta_ref[i]).transpose()
+            * prior_FIM[i]
+            * (model.unknown_parameters[i] - theta_ref[i])
+        )
+
+    # Combine SSE and regularization terms
+    expr_reg_L2 = sum(expr) ** 2
+
+    # If no regularization weight is not provided,
+    # scale the regularization term to be equivalent to the SSE term
+    if regularization_weight is None:
+        regularization_weight = SSE_expr / expr_reg_L2
+
+    expr_reg_L2 *= regularization_weight
+    expr_SSE_reg_L2 = SSE_expr + expr_reg_L2
+
+    return expr_SSE_reg_L2
+
+
+class Estimator(object):
 def SSE_weighted(model):
     """
     Returns an expression that is used to compute the 'SSE_weighted' objective,
@@ -782,6 +839,9 @@ class Estimator:
         self,
         experiment_list,
         obj_function=None,
+        prior_FIM=None,
+        theta_ref=None,
+        regularization_weight=None,
         tee=False,
         diagnostic_mode=False,
         solver_options=None,
@@ -815,6 +875,11 @@ class Estimator:
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
+
+        # Added keyword arguments for L2 regularization
+        self.prior_FIM = prior_FIM
+        self.theta_ref = theta_ref
+        self.regularization_weight = regularization_weight
 
         # TODO: delete this when the deprecated interface is removed
         self.pest_deprecated = None
@@ -939,8 +1004,32 @@ class Estimator:
             for obj in model.component_objects(pyo.Objective):
                 obj.deactivate()
 
+            # Completed in PR #3535, this is a temporary solution
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
+            if self.obj_function == 'SSE':
+                # Sum of squared errors
+                second_stage_rule = SSE
+
+            # Added L2 regularization option
+            elif self.obj_function == 'SSE_with_L2_regularization':
+
+                # Prior FIM is required for L2 regularization
+                # If prior_FIM and theta_ref are provided, use them
+                if self.theta_ref.any() is not None:
+                    # Regularize the objective function
+                    second_stage_rule = SSE_with_L2_regularization(
+                        model=self.model_initialized,
+                        prior_FIM=self.prior_FIM,
+                        theta_ref=self.theta_ref,
+                    )
+                # If prior_FIM is provided but theta_ref is not, use
+                # unknown_parameters values as reference
+                elif self.prior_FIM:
+                    theta_ref_none_provided = model.unknown_parameters.values()
+                    second_stage_rule = SSE_with_L2_regularization(
+                        prior_FIM=self.prior_FIM, theta_ref=theta_ref_none_provided
+                    )
             if self.obj_function is ObjectiveType.SSE:
                 second_stage_rule = SSE
                 self.covariance_objective = second_stage_rule
