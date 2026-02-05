@@ -1950,7 +1950,7 @@ class Estimator:
             # If they do not match, raise error
             if set(clean_provided) != set(clean_expected):
                 raise ValueError(
-                    f"Provided theta_values columns do not match estimator_theta_names."
+                    f"Provided theta values {clean_provided} do not match expected theta names {clean_expected}."
                 )
             # Rename columns using cleaned names
             if set(clean_provided) != set(theta_names):
