@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Callable
-from typing import Any, NamedTuple, Protocol, TypeVar, Union
+from typing import Any, NamedTuple, Protocol, TypeVar
 
 from pyomo.common.enums import Enum
 from pyomo.core.base.constraint import ConstraintData
@@ -38,7 +38,7 @@ class ValueType(Enum):
         return -1.0 if self == ValueType.DUAL else 1.0
 
 
-ItemData = Union[VarData, ConstraintData]
+ItemData = VarData | ConstraintData
 ItemType = TypeVar("ItemType", bound=ItemData)
 
 
