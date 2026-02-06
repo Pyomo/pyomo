@@ -877,6 +877,7 @@ _store_bool = {'store_true', 'store_false'}
 # cache of compiled Lark() instances, one per distinct literals set
 _lexers = {}
 
+
 def _build_lexer(literals=""):
     """
     Return a function lex(text) => iterator of Lark Token objects
@@ -915,9 +916,7 @@ def _build_lexer(literals=""):
         """
 
         _lexers[literals] = lark.Lark(
-            grammar,
-            parser="lalr",
-            propagate_positions=True,  # gives us .line & .column
+            grammar, parser="lalr", propagate_positions=True  # gives us .line & .column
         )
 
     def lex(text):
@@ -926,9 +925,9 @@ def _build_lexer(literals=""):
             for tok in _lexers[literals].lex(text):
                 yield tok
         except lark.UnexpectedCharacters as err:
-            ch = err.char        # the offending character
+            ch = err.char  # the offending character
             line = err.line
-            col  = err.column
+            col = err.column
             raise IOError(f"ERROR: Token {repr(ch)} Line {line} Column {col}")
 
     return lex
@@ -988,7 +987,7 @@ def _default_string_dict_lexer(value):
             raise ValueError(
                 f"Expected value following '{s}' but encountered end of string"
             )
-        
+
         key = key_tok.value
         val = val_tok.value
         if key_tok.type == "STRING":
