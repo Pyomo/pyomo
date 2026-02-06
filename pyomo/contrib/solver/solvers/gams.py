@@ -35,7 +35,6 @@ from pyomo.core.base import value, Objective
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import SolverConfig
-from pyomo.opt.results import SolverStatus
 from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
@@ -129,19 +128,19 @@ class GAMS(SolverBase):
 
     # mapping for GAMS SOLVESTAT
     _SOLVER_STATUS_LOOKUP = {
-        1: (SolverStatus.ok, None),
-        2: (SolverStatus.ok, TerminationCondition.iterationLimit),
-        3: (SolverStatus.ok, TerminationCondition.maxTimeLimit),
-        4: (SolverStatus.warning, TerminationCondition.error),
-        5: (SolverStatus.error, TerminationCondition.iterationLimit),
-        6: (SolverStatus.unknown, TerminationCondition.error),
-        7: (SolverStatus.error, TerminationCondition.licensingProblems),
-        8: (SolverStatus.error, TerminationCondition.interrupted),
-        9: (SolverStatus.error, TerminationCondition.error),
-        10: (SolverStatus.error, TerminationCondition.error),
-        11: (SolverStatus.error, TerminationCondition.error),
-        12: (SolverStatus.error, TerminationCondition.error),
-        13: (SolverStatus.error, TerminationCondition.error),
+        1: None,
+        2: TerminationCondition.iterationLimit,
+        3: TerminationCondition.maxTimeLimit,
+        4: TerminationCondition.error,
+        5: TerminationCondition.iterationLimit,
+        6: TerminationCondition.error,
+        7: TerminationCondition.licensingProblems,
+        8: TerminationCondition.interrupted,
+        9: TerminationCondition.error,
+        10: TerminationCondition.error,
+        11: TerminationCondition.error,
+        12: TerminationCondition.error,
+        13: TerminationCondition.error,
     }
 
     # mapping for GAMS MODELSTAT
@@ -394,8 +393,8 @@ class GAMS(SolverBase):
 
             # --- Process GAMS SOLVESTAT ---
             solvestat = stat_vars["SOLVESTAT"]
-            solver_status, solver_term = GAMS._SOLVER_STATUS_LOOKUP.get(
-                solvestat, (SolverStatus.unknown, TerminationCondition.unknown)
+            solver_term = GAMS._SOLVER_STATUS_LOOKUP.get(
+                solvestat, TerminationCondition.unknown
             )
 
             # specific message for status 4
