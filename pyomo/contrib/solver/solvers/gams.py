@@ -250,9 +250,8 @@ class GAMS(SolverBase):
             )
 
         if config.timer is None:
-            timer = HierarchicalTimer()
-        else:
-            timer = config.timer
+            config.timer = HierarchicalTimer()
+        timer = config.timer
         StaleFlagManager.mark_all_as_stale()
 
         # local variable to hold the working directory name and flags
@@ -377,99 +376,9 @@ class GAMS(SolverBase):
 
             ####################################################################
             # Postsolve (WIP)
-
-            model_suffixes = list(
-                name
-                for (
-                    name,
-                    comp,
-                ) in pyomo.core.base.suffix.active_import_suffix_generator(model)
+            results = self._postsolve(
+                model, timer, config, model_soln, stat_vars, gms_info
             )
-            extract_dual = 'dual' in model_suffixes
-            extract_rc = 'rc' in model_suffixes
-            results = Results()
-            results.solver_name = "GAMS "
-            results.solver_version = self.version()
-
-            # --- Process GAMS SOLVESTAT ---
-            solvestat = stat_vars["SOLVESTAT"]
-            solver_term = GAMS._SOLVER_STATUS_LOOKUP.get(
-                solvestat, TerminationCondition.unknown
-            )
-
-            # specific message for status 4
-            if solvestat == 4:
-                results.message = "Solver quit with a problem (see LST file)"
-
-            # --- Process GAMS MODELSTAT ---
-            modelstat = stat_vars["MODELSTAT"]
-            solution_status, model_term = GAMS._MODEL_STATUS_LOOKUP.get(
-                modelstat, (SolutionStatus.noSolution, TerminationCondition.unknown)
-            )
-
-            # --- Populate 'results'
-            results.solution_status = solution_status
-
-            # replaced below, if solution should be loaded
-            results.solution_loader = GMSSolutionLoader(None, None)
-
-            if solvestat == 1:
-                results.termination_condition = model_term
-            else:
-                results.termination_condition = solver_term
-
-            # extra_info (save GAMS status codes)
-            results.extra_info.gams_solvestat = solvestat
-            results.extra_info.gams_modelstat = modelstat
-
-            # Taken from ipopt.py
-            if (
-                config.raise_exception_on_nonoptimal_result
-                and results.solution_status != SolutionStatus.optimal
-            ):
-                raise NoOptimalSolutionError()
-
-            obj = list(model.component_data_objects(Objective, active=True))
-
-            if results.solution_status in {
-                SolutionStatus.feasible,
-                SolutionStatus.optimal,
-            }:
-                results.solution_loader = GMSSolutionLoader(
-                    gdx_data=model_soln, gms_info=gms_info
-                )
-
-                if config.load_solutions:
-                    results.solution_loader.load_vars()
-                    if len(obj) == 1:
-                        results.incumbent_objective = stat_vars["OBJVAL"]
-                    else:
-                        results.incumbent_objective = None
-                    if (
-                        hasattr(model, 'dual')
-                        and isinstance(model.dual, Suffix)
-                        and model.dual.import_enabled()
-                    ):
-                        model.dual.update(results.solution_loader.get_duals())
-                    if (
-                        hasattr(model, 'rc')
-                        and isinstance(model.rc, Suffix)
-                        and model.rc.import_enabled()
-                    ):
-                        model.rc.update(results.solution_loader.get_reduced_costs())
-
-                else:
-                    results.incumbent_objective = value(
-                        replace_expressions(
-                            obj[0].expr,
-                            substitution_map={
-                                id(v): val
-                                for v, val in results.solution_loader.get_primals().items()
-                            },
-                            descend_into_named_expressions=True,
-                            remove_named_expressions=True,
-                        )
-                    )
 
             results.solver_config = config
             results.solver_log = ostreams[0].getvalue()
@@ -479,6 +388,98 @@ class GAMS(SolverBase):
             results.timing_info.wall_time = tock - tick
             results.timing_info.timer = timer
             return results
+
+    def _postsolve(self, model, timer, config, model_soln, stat_vars, gms_info):
+        model_suffixes = list(
+            name
+            for (name, comp) in pyomo.core.base.suffix.active_import_suffix_generator(
+                model
+            )
+        )
+        extract_dual = 'dual' in model_suffixes
+        extract_rc = 'rc' in model_suffixes
+        results = Results()
+        results.solver_name = "GAMS "
+        results.solver_version = self.version()
+
+        # --- Process GAMS SOLVESTAT ---
+        solvestat = stat_vars["SOLVESTAT"]
+        solver_term = GAMS._SOLVER_STATUS_LOOKUP.get(
+            solvestat, TerminationCondition.unknown
+        )
+
+        # specific message for status 4
+        if solvestat == 4:
+            results.message = "Solver quit with a problem (see LST file)"
+
+        # --- Process GAMS MODELSTAT ---
+        modelstat = stat_vars["MODELSTAT"]
+        solution_status, model_term = GAMS._MODEL_STATUS_LOOKUP.get(
+            modelstat, (SolutionStatus.noSolution, TerminationCondition.unknown)
+        )
+
+        # --- Populate 'results'
+        results.solution_status = solution_status
+
+        # replaced below, if solution should be loaded
+        results.solution_loader = GMSSolutionLoader(None, None)
+
+        if solvestat == 1:
+            results.termination_condition = model_term
+        else:
+            results.termination_condition = solver_term
+
+        # extra_info (save GAMS status codes)
+        results.extra_info.gams_solvestat = solvestat
+        results.extra_info.gams_modelstat = modelstat
+
+        # Taken from ipopt.py
+        if (
+            config.raise_exception_on_nonoptimal_result
+            and results.solution_status != SolutionStatus.optimal
+        ):
+            raise NoOptimalSolutionError()
+
+        obj = list(model.component_data_objects(Objective, active=True))
+
+        if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
+            results.solution_loader = GMSSolutionLoader(
+                gdx_data=model_soln, gms_info=gms_info
+            )
+
+            if config.load_solutions:
+                results.solution_loader.load_vars()
+                if len(obj) == 1:
+                    results.incumbent_objective = stat_vars["OBJVAL"]
+                else:
+                    results.incumbent_objective = None
+                if (
+                    hasattr(model, 'dual')
+                    and isinstance(model.dual, Suffix)
+                    and model.dual.import_enabled()
+                ):
+                    model.dual.update(results.solution_loader.get_duals())
+                if (
+                    hasattr(model, 'rc')
+                    and isinstance(model.rc, Suffix)
+                    and model.rc.import_enabled()
+                ):
+                    model.rc.update(results.solution_loader.get_reduced_costs())
+
+            else:
+                results.incumbent_objective = value(
+                    replace_expressions(
+                        obj[0].expr,
+                        substitution_map={
+                            id(v): val
+                            for v, val in results.solution_loader.get_primals().items()
+                        },
+                        descend_into_named_expressions=True,
+                        remove_named_expressions=True,
+                    )
+                )
+
+        return results
 
     def _parse_gdx_results(self, config, results_filename, statresults_filename):
         model_soln = dict()
