@@ -645,10 +645,8 @@ class _GMSWriter_impl(object):
                 expr.linear.items(), key=lambda x: getVarOrder(x[0])
             ):
                 if coef < 0:
-                    # ostream.write(f'{coef!s}*{getSymbol(getVar(vid))}')
                     expr_str += f'{coef!s}*{getSymbol(getVar(vid))} \n'
                 else:
-                    # ostream.write(f'+{coef!s}*{getSymbol(getVar(vid))}')
                     expr_str += f'+ {coef!s} * {getSymbol(getVar(vid))} \n'
 
         return expr_str
