@@ -10,12 +10,11 @@
 #  ___________________________________________________________________________
 
 
-from typing import Tuple, Dict, Any, List, Sequence, Optional, Mapping, NoReturn
+from typing import Dict, Any, List, Sequence, Optional, Mapping, NoReturn
 
-from pyomo.core.base import Constraint, Var, value, Objective
+from pyomo.core.base import Var
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
-from pyomo.core.expr import value
 from pyomo.common.collections import ComponentMap
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.gams_writer_v2 import GAMSWriterInfo

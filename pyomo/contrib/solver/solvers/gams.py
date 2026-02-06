@@ -11,16 +11,16 @@
 
 import logging
 import os
-import shutil
 import subprocess
 import time
 import datetime
 from io import StringIO
-from typing import Mapping, Optional, Sequence, Tuple
+from typing import Optional, Tuple
 import sys
+import struct
 
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.fileutils import Executable, ExecutableData
-from pyomo.common.dependencies import pathlib
 from pyomo.common.config import (
     ConfigValue,
     ConfigDict,
@@ -31,7 +31,7 @@ from pyomo.common.config import (
 from pyomo.common.modeling import NOTSET
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.core.base import Constraint, Var, value, Objective
+from pyomo.core.base import value, Objective
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import SolverConfig
@@ -46,20 +46,12 @@ from pyomo.contrib.solver.solvers.gms_sol_reader import GMSSolutionLoader
 import pyomo.core.base.suffix
 from pyomo.common.tee import TeeStream
 from pyomo.core.expr.visitor import replace_expressions
-from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.errors import ApplicationError
-from pyomo.contrib.solver.common.util import (
-    NoFeasibleSolutionError,
-    NoOptimalSolutionError,
-    NoSolutionError,
-)
-from pyomo.repn.plugins.gams_writer_v2 import GAMSWriterInfo, GAMSWriter
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError
+from pyomo.repn.plugins.gams_writer_v2 import GAMSWriter
 
 logger = logging.getLogger(__name__)
-
-from pyomo.common.dependencies import attempt_import
-import struct
 
 
 def _gams_importer():
@@ -310,7 +302,7 @@ class GAMS(SolverBase):
                 # NOTE: omit InfeasibleConstraintException for now
                 timer.stop(f'write_{output_filename}_file')
             if self._writer.config.put_results_format == 'gdx':
-                results_filename = os.path.join(dname, f"GAMS_MODEL_p.gdx")
+                results_filename = os.path.join(dname, "GAMS_MODEL_p.gdx")
                 statresults_filename = os.path.join(
                     dname, "%s_s.gdx" % (self._writer.config.put_results,)
                 )

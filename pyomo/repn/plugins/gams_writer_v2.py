@@ -10,19 +10,11 @@
 #  ___________________________________________________________________________
 
 import logging
-from io import StringIO
-from operator import itemgetter, attrgetter
+from operator import attrgetter
 
-from pyomo.common.config import (
-    ConfigBlock,
-    ConfigValue,
-    InEnum,
-    document_kwargs_from_configdict,
-    document_class_CONFIG,
-)
+from pyomo.common.config import ConfigBlock, ConfigValue, InEnum, document_class_CONFIG
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
-
 from pyomo.core.base import (
     Block,
     Objective,
@@ -39,7 +31,6 @@ from pyomo.core.base import (
 from pyomo.core.base.label import NumericLabeler
 from pyomo.opt import WriterFactory
 from pyomo.repn.util import ftoa
-
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
@@ -501,7 +492,7 @@ class _GMSWriter_impl(object):
                 var_bounds[v_symbol] = (lb, ub)
                 integer_vars.append(v_symbol)
 
-        ostream.write(f"\tGAMS_OBJECTIVE;\n\n")
+        ostream.write("\tGAMS_OBJECTIVE;\n\n")
 
         if integer_vars:
             ostream.write("\nINTEGER VARIABLES\n\t")
