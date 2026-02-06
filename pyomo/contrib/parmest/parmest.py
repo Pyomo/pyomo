@@ -250,12 +250,11 @@ def SSE(model):
     return expr
 
 
-# TODO: Waiting to merge with PR #3535 to follow Enum structure
-def SSE_with_L2_regularization(
-    model, prior_FIM, theta_ref=None, regularization_weight=None
+def L2_regularization(
+    model, prior_FIM, theta_ref=None, param_names = None, regularization_weight=None
 ):
     """
-    SSE with an added L2 Regularization term for the objective function, which is used to
+    L2 Regularization addition term for the objective function, which is used to
     penalize deviation from a reference theta.
     (theta - theta_ref).transpose() * prior_FIM * (theta - theta_ref)
 
@@ -267,14 +266,24 @@ def SSE_with_L2_regularization(
     regularization_weight: Multiplier for regularization term, float, optional
 
     """
+    _check_model_labels(model)
 
     # Calculate sum of squared errors
     SSE_expr = SSE(model)
 
-    # Construct L2 regularization term
     # Check if prior_FIM is a square matrix
     if prior_FIM.shape[0] != prior_FIM.shape[1]:
         raise ValueError("prior_FIM must be a square matrix")
+    
+    # Check prior_FIM is positive semi-definite
+    if not np.all(np.linalg.eigvals(prior_FIM) >= 0):
+        raise ValueError("prior_FIM must be positive semi-definite")
+
+    # Construct L2 regularization term
+    if param_names is None:
+        # Get the names of the unknown parameters in the model up to the length of prior_FIM
+        param_names = [param.name for param in model.unknown_parameters][:prior_FIM.shape[0]]
+
 
     # Check if theta_ref is a vector of the same size as prior_FIM
     if len(theta_ref) != prior_FIM.shape[0]:
@@ -306,7 +315,6 @@ def SSE_with_L2_regularization(
     return expr_SSE_reg_L2
 
 
-class Estimator(object):
 def SSE_weighted(model):
     """
     Returns an expression that is used to compute the 'SSE_weighted' objective,
