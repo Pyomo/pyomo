@@ -837,15 +837,6 @@ class TestModelVariants(unittest.TestCase):
                 RooneyBieglerExperimentIndexedVars(self.data.loc[i, :])
             )
 
-        # # Changing to make the objective function the built-in SSE function
-        # # # Sum of squared error function
-        # # def SSE(model):
-        # #     expr = (
-        # #         model.experiment_outputs[model.y]
-        # #         - model.response_function[model.experiment_outputs[model.hour]]
-        # #     ) ** 2
-        #     return expr
-
         self.objective_function = 'SSE'
 
         theta_vals = pd.DataFrame([20, 1], index=["asymptote", "rate_constant"]).T

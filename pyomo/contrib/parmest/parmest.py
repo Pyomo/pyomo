@@ -1321,11 +1321,6 @@ class Estimator:
                 var = self.ef_instance.find_component(name)
                 ind_vars.append(var)
 
-            # Previously used code for retrieving independent variables:
-            # ind_vars = []
-            # for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
-            #     ind_vars.append(Var)
-
             solve_result, inv_red_hes = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
                     self.ef_instance,
@@ -1337,7 +1332,8 @@ class Estimator:
 
             self.inv_red_hes = inv_red_hes
         else:
-            # calculate the sum of squared errors at the estimated parameter values
+            # if not using the 'reduced_hessian' method, calculate the sum of squared errors
+            # using 'finite_difference' method or 'automatic_differentiation_kaug'
             sse_vals = []
             for experiment in self.exp_list:
                 model = _get_labeled_model(experiment)
@@ -1933,7 +1929,7 @@ class Estimator:
             deprecation_warning(
                 "The `initialize_parmest_model` option in `objective_at_theta()` is "
                 "deprecated and will be removed in future releases. Please ensure the"
-                "model is initialized within the experiment class definition.",
+                "model is initialized within the Experiment class definition.",
                 version="6.9.5",
             )
 
