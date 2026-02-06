@@ -97,37 +97,37 @@ class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
 
 
 class _MutableLowerBound:
-    def __init__(self, var_id, expr, var_map):
-        self.var_id = var_id
+    def __init__(self, var, expr, var_map):
+        self.var = var
         self.expr = expr
         self.var_map = var_map
 
     def update(self):
-        self.var_map[self.var_id].setAttr('lb', value(self.expr))
+        self.var_map[self.var].setAttr('lb', value(self.expr))
 
 
 class _MutableUpperBound:
-    def __init__(self, var_id, expr, var_map):
-        self.var_id = var_id
+    def __init__(self, var, expr, var_map):
+        self.var = var
         self.expr = expr
         self.var_map = var_map
 
     def update(self):
-        self.var_map[self.var_id].setAttr('ub', value(self.expr))
+        self.var_map[self.var].setAttr('ub', value(self.expr))
 
 
 class _MutableLinearCoefficient:
-    def __init__(self, expr, pyomo_con, con_map, pyomo_var_id, var_map, gurobi_model):
+    def __init__(self, expr, pyomo_con, con_map, pyomo_var, var_map, gurobi_model):
         self.expr = expr
         self.pyomo_con = pyomo_con
-        self.pyomo_var_id = pyomo_var_id
+        self.pyomo_var = pyomo_var
         self.con_map = con_map
         self.var_map = var_map
         self.gurobi_model = gurobi_model
 
     @property
     def gurobi_var(self):
-        return self.var_map[self.pyomo_var_id]
+        return self.var_map[self.pyomo_var]
 
     @property
     def gurobi_con(self):
@@ -239,19 +239,19 @@ class _MutableObjective:
 
 
 class _MutableQuadraticCoefficient:
-    def __init__(self, expr, v1id, v2id, var_map):
+    def __init__(self, expr, v1, v2, var_map):
         self.expr = expr
         self.var_map = var_map
-        self.v1id = v1id
-        self.v2id = v2id
+        self.v1 = v1
+        self.v2 = v2
 
     @property
     def var1(self):
-        return self.var_map[self.v1id]
+        return self.var_map[self.v1]
 
     @property
     def var2(self):
-        return self.var_map[self.v2id]
+        return self.var_map[self.v2]
 
 
 class GurobiPersistentConfig(GurobiConfig):
@@ -375,12 +375,12 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
                 ub = min(ub, value(var._ub))
         if not is_constant(var._lb):
             mutable_lb = _MutableLowerBound(
-                id(var), var.lower, self._pyomo_var_to_solver_var_map
+                var, var.lower, self._pyomo_var_to_solver_var_map
             )
             self._mutable_bounds[id(var), 'lb'] = (var, mutable_lb)
         if not is_constant(var._ub):
             mutable_ub = _MutableUpperBound(
-                id(var), var.upper, self._pyomo_var_to_solver_var_map
+                var, var.upper, self._pyomo_var_to_solver_var_map
             )
             self._mutable_bounds[id(var), 'ub'] = (var, mutable_ub)
         return lb, ub, vtype
@@ -516,7 +516,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
                         c,
                         con,
                         self._pyomo_con_to_solver_con_map,
-                        id(v),
+                        v,
                         self._pyomo_var_to_solver_var_map,
                         self._solver_model,
                     )
@@ -538,7 +538,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
                 for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
                     if not is_constant(coef):
                         mqc = _MutableQuadraticCoefficient(
-                            coef, id(x), id(y), self._pyomo_var_to_solver_var_map
+                            coef, x, y, self._pyomo_var_to_solver_var_map
                         )
                         mqc_list.append(mqc)
                 mqc = _MutableQuadraticConstraint(
@@ -645,7 +645,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
                     c,
                     None,
                     None,
-                    id(v),
+                    v,
                     self._pyomo_var_to_solver_var_map,
                     self._solver_model,
                 )
@@ -655,7 +655,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
             if not is_constant(coef):
                 mqc = _MutableQuadraticCoefficient(
-                    coef, id(x), id(y), self._pyomo_var_to_solver_var_map
+                    coef, x, y, self._pyomo_var_to_solver_var_map
                 )
                 mqc_list.append(mqc)
 
@@ -1007,7 +1007,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
                 ' the set_var_attr method. Please use'
                 ' the set_objective method.'
             )
-        self._pyomo_var_to_solver_var_map[id(var)].setAttr(attr, val)
+        self._pyomo_var_to_solver_var_map[var].setAttr(attr, val)
         self._needs_updated = True
 
     def get_var_attr(self, var, attr):
@@ -1024,7 +1024,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         """
         if self._needs_updated:
             self._update_gurobi_model()
-        return self._pyomo_var_to_solver_var_map[id(var)].getAttr(attr)
+        return self._pyomo_var_to_solver_var_map[var].getAttr(attr)
 
     def get_linear_constraint_attr(self, con, attr):
         """
@@ -1240,7 +1240,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         """
         if not isinstance(variables, Iterable):
             variables = [variables]
-        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in variables]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in variables]
         var_values = self._solver_model.cbGetNodeRel(gurobi_vars)
         for i, v in enumerate(variables):
             v.set_value(var_values[i], skip_validation=True)
@@ -1253,7 +1253,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         """
         if not isinstance(variables, Iterable):
             variables = [variables]
-        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in variables]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in variables]
         var_values = self._solver_model.cbGetSolution(gurobi_vars)
         for i, v in enumerate(variables):
             v.set_value(var_values[i], skip_validation=True)
@@ -1309,7 +1309,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
     def cbSetSolution(self, variables, solution):
         if not isinstance(variables, Iterable):
             variables = [variables]
-        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in variables]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in variables]
         self._solver_model.cbSetSolution(gurobi_vars, solution)
 
     def cbUseSolution(self):
