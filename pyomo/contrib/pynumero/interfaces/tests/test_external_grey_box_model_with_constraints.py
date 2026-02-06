@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
@@ -20,13 +21,6 @@ from pyomo.contrib.pynumero.dependencies import (
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
-
-from pyomo.contrib.pynumero.asl import AmplInterface
-
-if not AmplInterface.available():
-    raise unittest.SkipTest("Pynumero needs the ASL extension to run cyipopt tests")
-
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import cyipopt_available
 
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
     ExternalGreyBoxBlock,
@@ -469,70 +463,223 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
                 h = pyomo_nlp.evaluate_hessian_lag()
 
 
-def test_incidence_analysis_with_constraints():
-    """Test that the incidence analysis correctly identifies which variables are involved in which constraints when build_implicit_constraint_objects=True"""
-    m = pyo.ConcreteModel()
-    m.egb = ExternalGreyBoxBlock()
-    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian()
-    m.egb.set_external_model(external_model, build_implicit_constraint_objects=True)
+class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
+    """Tests for integration of ExternalGreyBoxBlock with incidence analysis"""
+    def build_model(self):
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian()
+        m.egb.set_external_model(external_model, build_implicit_constraint_objects=True)
 
-    # Check that the get_incident_variables method on the implicit constraint body returns the correct variables
-    for implicit_constraint in m.egb.component_data_objects(ctype=ExternalGreyBoxConstraint, descend_into=False):
-        incident_vars = implicit_constraint.body.get_incident_variables()
-        incident_var_names = [var.name for var in incident_vars]
-        # All variables should be incident on the implicit constraints in this model
-        input_var_names = [
-            'egb.inputs[Pin]',
-            'egb.inputs[c]',
-            'egb.inputs[F]',
-            'egb.inputs[P1]',
-            'egb.inputs[P3]',
-        ]
-        for v in input_var_names:
-            assert v in incident_var_names
-        if implicit_constraint.name.endswith('_constraint'):
-            # If the constraint is associated with an output, then the output variable should also be incident
-            output_var_name = implicit_constraint.local_name.split('_')[0]
-            assert f"egb.outputs[{output_var_name}]" in incident_var_names
+        return m
+    
+    def build_model_with_pyomo_components(self):
+        m = self.build_model()
 
-    igraph = IncidenceGraphInterface(m, include_inequality=False)
-    var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
+        # Add Vars and linking constraints to m
+        m.Pin = pyo.Var()
+        m.c = pyo.Var()
+        m.F = pyo.Var()
+        m.P1 = pyo.Var()
+        m.P3 = pyo.Var()
+        m.P2 = pyo.Var()
+        m.Pout = pyo.Var()
 
-    print("\nVariables in square set:")
-    for var in var_dm_partition.square:
-        print(var.name)
-    print("\nVariables in unmatched set:")
-    for var in var_dm_partition.unmatched:
-        print(var.name)
-    print("\nVariables in underconstrained set:")
-    for var in var_dm_partition.underconstrained:
-        print(var.name)
-    print("\nVariables in overconstrained set:")
-    for var in var_dm_partition.overconstrained:
-        print(var.name)
-    print("\nConstraints in square set:")
-    for con in con_dm_partition.square:
-        print(con.name)
-    print("\nConstraints in unmatched set:")
-    for con in con_dm_partition.unmatched:
-        print(con.name)
-    print("\nConstraints in underconstrained set:")
-    for con in con_dm_partition.underconstrained:
-        print(con.name)
-    print("\nConstraints in overconstrained set:")
-    for con in con_dm_partition.overconstrained:
-        print(con.name)
-    # Partition should show EGB variables and constraints in square set
-    # Unmatched, underconstrained and overconstrained sets should be empty
-    assert var_dm_partition.unmatched == []
-    assert var_dm_partition.underconstrained == []
-    assert var_dm_partition.overconstrained == []
-    assert con_dm_partition.unmatched == []
-    assert con_dm_partition.underconstrained == []
-    assert con_dm_partition.overconstrained == []
+        m.link_Pin = pyo.Constraint(expr=m.Pin == m.egb.inputs['Pin'])
+        m.link_c = pyo.Constraint(expr=m.c == m.egb.inputs['c'])
+        m.link_F = pyo.Constraint(expr=m.F == m.egb.inputs['F'])
+        m.link_P1 = pyo.Constraint(expr=m.P1 == m.egb.inputs['P1'])
+        m.link_P3 = pyo.Constraint(expr=m.P3 == m.egb.inputs['P3'])
+        m.link_P2 = pyo.Constraint(expr=m.P2 == m.egb.outputs['P2'])
+        m.link_Pout = pyo.Constraint(expr=m.Pout == m.egb.outputs['Pout'])
 
-    assert len(var_dm_partition.square) == 4
-    assert len(con_dm_partition.square) == 4
+        return m
+
+    def test_grey_box_only(self):
+        """
+        Test that the incidence analysis correctly determines the DM partition for
+        a grey box model with two equality constraints and two outputs
+        """
+        m = self.build_model()
+
+        # Check that the get_incident_variables method on the implicit constraint body returns the correct variables
+        # Implicit constraint: 'pdrop1'
+        body_obj1 = m.egb.pdrop1.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
+        assert len(incident_vars1) == 5
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]']
+        for v in incident_vars1:
+            assert v.name in expected_names
+        
+        # Implicit constraint: 'pdrop3'
+        body_obj1 = m.egb.pdrop3.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
+        assert len(incident_vars1) == 5
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]']
+        for v in incident_vars1:
+            assert v.name in expected_names
+
+        # Implicit constraint: 'P2_constraint'
+        body_obj1 = m.egb.P2_constraint.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
+        assert len(incident_vars1) == 6
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[P2]']
+        for v in incident_vars1:
+            assert v.name in expected_names
+        
+        # Implicit constraint: 'Pout_constraint'
+        body_obj1 = m.egb.Pout_constraint.body
+        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
+        assert len(incident_vars1) == 6
+        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[Pout]']
+        for v in incident_vars1:
+            assert v.name in expected_names
+
+        # Check Dulmage-Mendelsohn partitioning of the incidence graph
+        igraph = IncidenceGraphInterface(m, include_inequality=False)
+        var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
+
+        # In this case, as we have not fixed any variables, we expect the system to be under-constrained.
+        # All variables will be in the under-constrained or unmatched sets
+        # All constraints will be in the under-constrained set
+        assert var_dm_partition.overconstrained == []
+        assert var_dm_partition.square == []
+        assert con_dm_partition.unmatched == []
+        assert con_dm_partition.overconstrained == []
+        assert con_dm_partition.square == []
+
+        assert len(var_dm_partition.underconstrained) == 4
+        assert len(var_dm_partition.unmatched) == 3
+        var_names = [v.name for v in var_dm_partition.underconstrained + var_dm_partition.unmatched]
+        for v in var_names:
+            assert v in ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[P2]', 'egb.outputs[Pout]']
+
+        assert len(con_dm_partition.underconstrained) == 4
+        con_names = [c.name for c in con_dm_partition.underconstrained]
+        for c in con_names:
+            assert c in ['egb.pdrop1', 'egb.pdrop3', 'egb.P2_constraint', 'egb.Pout_constraint']
+    
+    def test_grey_box_w_pyomo_components(self):
+        """
+        Test that the incidence analysis correctly determines the DM partition for
+        a model containing both grey box and other components
+        """
+        m = self.build_model_with_pyomo_components()
+
+        # Check Dulmage-Mendelsohn partitioning of the incidence graph
+        igraph = IncidenceGraphInterface(m, include_inequality=False)
+        var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
+
+        # In this case, as we have not fixed any variables, we expect the system to be under-constrained.
+        # All variables will be in the under-constrained or unmatched sets
+        # All constraints will be in the under-constrained set
+        assert var_dm_partition.overconstrained == []
+        assert var_dm_partition.square == []
+        assert con_dm_partition.unmatched == []
+        assert con_dm_partition.overconstrained == []
+        assert con_dm_partition.square == []
+
+        assert len(var_dm_partition.underconstrained) == 11
+        assert len(var_dm_partition.unmatched) == 3
+        var_names = [v.name for v in var_dm_partition.underconstrained + var_dm_partition.unmatched]
+        for v in var_names:
+            assert v in [
+                'egb.inputs[Pin]',
+                'egb.inputs[c]',
+                'egb.inputs[F]',
+                'egb.inputs[P1]',
+                'egb.inputs[P3]',
+                'egb.outputs[P2]',
+                'egb.outputs[Pout]',
+                'Pin',
+                'c',
+                'F',
+                'P1',
+                'P3',
+                'P2',
+                'Pout',
+            ]
+
+        assert len(con_dm_partition.underconstrained) == 11
+        con_names = [c.name for c in con_dm_partition.underconstrained]
+        for c in con_names:
+            assert c in [
+                'egb.pdrop1',
+                'egb.pdrop3',
+                'egb.P2_constraint',
+                'egb.Pout_constraint',
+                'link_Pin',
+                'link_c',
+                'link_F',
+                'link_P1',
+                'link_P3',
+                'link_P2',
+                'link_Pout',
+            ]
+    
+    def test_grey_box_w_pyomo_components_square(self):
+        """
+        Test that the incidence analysis correctly determines the DM partition for
+        a model containing both grey box and other components
+        """
+        m = self.build_model_with_pyomo_components()
+
+        # Fix 3 inputs
+        # Note that we have 2 implicit constraints that cross-link inputs
+        m.Pin.fix(1)
+        m.c.fix(1)
+        m.F.fix(1)
+
+        # Check Dulmage-Mendelsohn partitioning of the incidence graph
+        igraph = IncidenceGraphInterface(m, include_inequality=False)
+        var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
+
+        # In this case, as we have fixed all input variables, we expect the system to be square.
+        # All variables and constraints will be in the square sets
+        assert var_dm_partition.unmatched == []
+        assert var_dm_partition.overconstrained == []
+        assert var_dm_partition.underconstrained == []
+        assert con_dm_partition.unmatched == []
+        assert con_dm_partition.overconstrained == []
+        assert con_dm_partition.underconstrained == []
+
+        assert len(var_dm_partition.square) == 11
+        var_names = [v.name for v in var_dm_partition.square]
+        for v in var_names:
+            assert v in [
+                'egb.inputs[Pin]',
+                'egb.inputs[c]',
+                'egb.inputs[F]',
+                'egb.inputs[P1]',
+                'egb.inputs[P3]',
+                'egb.outputs[P2]',
+                'egb.outputs[Pout]',
+                # These three re fixed, so do not appear by default
+                # 'Pin',
+                # 'c',
+                # 'F',
+                'P1',
+                'P3',
+                'P2',
+                'Pout',
+            ]
+
+        assert len(con_dm_partition.square) == 11
+        con_names = [c.name for c in con_dm_partition.square]
+        for c in con_names:
+            assert c in [
+                'egb.pdrop1',
+                'egb.pdrop3',
+                'egb.P2_constraint',
+                'egb.Pout_constraint',
+                'link_Pin',
+                'link_c',
+                'link_F',
+                'link_P1',
+                'link_P3',
+                'link_P2',
+                'link_Pout',
+            ]
 
 
 if __name__ == '__main__':
