@@ -3,10 +3,15 @@ Pyomo.DoE
 **Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design 
 of experiments using science-based models.
 
-Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the 
+Pyomo.DoE was originally created by **Jialu Wang** and **Alexander W. Dowling** at the 
 University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact 
 (CCSI2) <https://github.com/CCSI-Toolset/>`_
-project, funded through the U.S. Department Of Energy Office of Fossil Energy.
+project, funded through the U.S. Department Of Energy Office of Fossil Energy with 
+assistance from **John Siirola**, **Bethany Nicholson**, **Miranda Mundt**,and **Hailey Lynch**.
+Significant improvements and extensions were contributed by **Dan Laky**, and 
+**Shuvashish Mondal** with funding from the 
+`Process Optimization & Modeling for Minerals Sustainability (PrOMMiS) <https://www.netl.doe.gov/prommis>`_ 
+and the `University of Notre Dame <https://www.nd.edu/>`_.
 
 If you use Pyomo.DoE, please cite:
 
@@ -48,7 +53,7 @@ Below is an overview of the type of optimization models Pyomo.DoE can accommodat
 
 * Pyomo.DoE is suitable for optimization models of **continuous** variables
 * Pyomo.DoE can handle **equality constraints** defining state variables
-* Pyomo.DoE supports (Partial) Differential-Algebraic Equations (PDAE) models via Pyomo.DAE
+* Pyomo.DoE supports (Partial) Differential-Algebraic Equations (PDAE) models via :ref:`Pyomo.DAE <pyomo.dae>`
 * Pyomo.DoE also supports models with only algebraic equations
 
 The general form of a DAE problem that can be passed into Pyomo.DoE is shown below:
@@ -60,7 +65,7 @@ The general form of a DAE problem that can be passed into Pyomo.DoE is shown bel
      \dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}}, \boldsymbol{\theta}) \\
      \mathbf{g}(\mathbf{x}(t),  \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta})=\mathbf{0} \\
      \mathbf{y} =\mathbf{h}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta}) \\
-     \mathbf{f}^{\mathbf{0}}\left(\dot{\mathbf{x}}\left(t_{0}\right), \mathbf{x}\left(t_{0}\right), \mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta})\right)=\mathbf{0} \\
+     \mathbf{f}^{\mathbf{0}}\left(\dot{\mathbf{x}}\left(t_{0}\right), \mathbf{x}\left(t_{0}\right), \mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)=\mathbf{0} \\
      \mathbf{g}^{\mathbf{0}}\left( \mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)=\mathbf{0}\\
      \mathbf{y}^{\mathbf{0}}\left(t_{0}\right)=\mathbf{h}\left(\mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)
    \end{array}\]
@@ -79,7 +84,9 @@ where:
 *  :math:`\mathbf{t} \in \mathbb{R}^{N_t \times 1}` is a union of all time sets.
 
 .. note::
-    * Parameters and design variables should be defined as Pyomo ``Var`` components when building the model in ``Experiment`` canlass so that users can use both ``Parmest`` and ``Pyomo.DoE`` seamlessly.
+    * Parameters and design variables should be defined as Pyomo ``Var`` components 
+      when building the model using the ``Experiment`` class so that users can use both 
+      ``Parmest`` and ``Pyomo.DoE`` seamlessly.
 
 Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
@@ -104,10 +111,10 @@ where:
 *  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. It should consist of one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}`. With a proper model formulation, the timepoints for control or measurements :math:`\mathbf{t}` can also be degrees of freedom.
 *  :math:`\mathbf{M}` is the Fisher information matrix (FIM), estimated as the inverse of the covariance matrix of parameter estimates  :math:`\boldsymbol{\hat{\theta}}`. A large FIM indicates more information contained in the experiment for parameter estimation.
 *  :math:`\mathbf{Q}` is the dynamic sensitivity matrix, containing the partial derivatives of  :math:`\mathbf{y}` with respect to  :math:`\boldsymbol{\theta}`.
-*  :math:`\Psi` is the design criteria to measure FIM.
+*  :math:`\Psi` is the scalar design criteria to measure the information content in FIM.
 *  :math:`\mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1}` is the FIM of previous experiments.
 
-Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the information in FIM:
+Pyomo.DoE provides five design criteria  :math:`\Psi` to measure the information in FIM:
 
 .. list-table:: Pyomo.DoE design criteria
     :header-rows: 1
@@ -207,7 +214,8 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
     >>> import numpy as np
     >>> import json
 
-Subclass the :ref:`Parmest <parmest>` ``Experiment`` class to define the reaction kinetics experiment and build the Pyomo ConcreteModel.
+Subclass the :ref:`Parmest <parmest>` ``Experiment`` class to define the reaction 
+kinetics experiment and build the Pyomo ConcreteModel.
     
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: ========================
@@ -216,7 +224,8 @@ Subclass the :ref:`Parmest <parmest>` ``Experiment`` class to define the reactio
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The process model for the reaction kinetics problem is shown below. Here, we build the model without any data or discretization.
+The process model for the reaction kinetics problem is shown below. Here, we build 
+the model without any data or discretization.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: Create flexible model without data
@@ -225,7 +234,8 @@ The process model for the reaction kinetics problem is shown below. Here, we bui
 Step 2: Finalize the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here, we add data to the model and finalize the discretization using a new method to the class. This step is required before the model can be labeled.
+Here, we add data to the model and finalize the discretization using a new method to 
+the class. This step is required before the model can be labeled.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End equation definition
@@ -256,7 +266,8 @@ Step 5: Exploratory analysis (Enumeration)
 
 After creating the subclass of the ``Experiment`` class, exploratory analysis is 
 suggested to enumerate the design space to check if the problem is identifiable,
-i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number. 
+i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and 
+Modified E-optimality is not a big number. 
 Additionally, it helps to initialize the model for the optimal experimental design step. 
 
 Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` method.
@@ -318,16 +329,16 @@ most informative region is around :math:`C_{A0}=5.0` M, :math:`T=500.0` K with
 a :math:`\log_{10}` determinant of FIM being around 19, 
 while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=300.0` K, 
 with a :math:`\log_{10}` determinant of FIM being around -5. For D-, Pseudo A-, and 
-E-optimality we want to maximize the objective values, while for A- and Modified 
-E-optimality we want to minimize the objective values.
+E-optimality we want to maximize the objective function, while for A- and Modified 
+E-optimality we want to minimize the objective function.
 
 
 Step 6: Performing an optimal experimental design
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In Step 5, we defined the ``run_reactor_doe`` function. This function constructs 
-the DoE object and performs the exploratory sensitivity analysis. By default, 
-it also proceeds immediately to the optimal experimental design step 
+the DoE object and performs the exploratory sensitivity analysis. The way the function
+is defined, it also proceeds immediately to the optimal experimental design step 
 (applying ``run_doe`` on the ``DesignOfExperiments`` object). 
 We can initialize the model with the result we obtained from the exploratory 
 analysis (optimal point from the heatmaps) to help the optimal design step to speed 
