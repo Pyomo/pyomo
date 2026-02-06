@@ -29,10 +29,11 @@ gain from experiments by directly using science-based models with physically mea
 parameters. It is one key component in the model calibration and uncertainty 
 quantification workflow shown below:
 
-.. figure:: flowchart.png
+.. figure:: pyomo_doe_workflow.png
+   :align: center
    :scale: 25 %
 
-   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are 
+   The parameter estimation, uncertainty analysis, and MBDoE are 
    combined into an iterative framework to select, refine, and calibrate science-based 
    mathematical models with quantified uncertainty. Currently, Pyomo.DoE focuses on 
    increasing parameter precision.
