@@ -11,23 +11,18 @@
 
 import os
 import subprocess
+
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.opt.base import SolverFactory
+from pyomo.common import unittest, Executable
 from pyomo.repn.plugins.gams_writer_v2 import GAMSWriter
-import pdb
 from pyomo.core.base import SymbolMap
 from pyomo.core.base.label import NumericLabeler
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict
-from pyomo.common.errors import DeveloperError
 import pyomo.contrib.solver.solvers.gams as gams
-from pyomo.contrib.solver.common.util import (
-    NoSolutionError,
-    NoDualsError,
-    NoReducedCostsError,
-)
-from pyomo.opt.base import SolverFactory
-from pyomo.common import unittest, Executable
+from pyomo.contrib.solver.common.util import NoDualsError, NoReducedCostsError
 
 """
 Formatted after pyomo/pyomo/contrib/solver/test/solvers/test_ipopt.py
