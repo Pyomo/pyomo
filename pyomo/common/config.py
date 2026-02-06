@@ -37,6 +37,7 @@ import logging
 import os
 import pickle
 import ply.lex
+import lark
 import re
 import sys
 import textwrap
@@ -874,36 +875,64 @@ _picklable.unknowable_types = {type, types.FunctionType}
 _store_bool = {'store_true', 'store_false'}
 
 
-def _build_lexer(literals=''):
-    # Ignore whitespace (space, tab, linefeed, and comma)
-    t_ignore = " \t\r,"
+# cache of compiled Lark() instances, one per distinct literals set
+_lexers = {}
 
-    tokens = ["STRING", "WORD"]  # [quoted string, unquoted string]
+def _build_lexer(literals=""):
+    """
+    Return a function lex(text) => iterator of Lark Token objects
+    with .type, .value, .line and .column (and also .pos_in_stream).
+    Ignore whitespace (space, tab, linefeed, and comma)
+    STRING  = single‐ or double‐quoted,
+    WORD    = runs of non‐separator characters,
+    and each single character in `literals` becomes its own token type.
+    """
+    # for now, let's ensure literals is always "" or ":="
+    # this is all we currently use, and we want to make sure
+    # nothing unexpected comes in
+    assert literals == "" or literals == ":="
 
-    # A "string" is a proper quoted string
-    _quoted_str = r"'(?:[^'\\]|\\.)*'"
-    _general_str = "|".join([_quoted_str, _quoted_str.replace("'", '"')])
+    if literals not in _lexers:
+        esc = re.escape(literals)
+        # start building a tiny grammar
+        grammar = r"""
+            ?start: token*
+            ?token: STRING
+                  | WORD
+        """
+        # inline each literal as a separate alternative in the `token` rule
+        for ch in literals:
+            # map literal "ch" to a token whose type is literally the character
+            grammar += f'| "{ch}"\n'
 
-    @ply.lex.TOKEN(_general_str)
-    def t_STRING(t):
-        t.value = t.value[1:-1]
-        return t
+        grammar += rf"""
+            // a proper quoted string, either single or double
+            STRING : /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/
 
-    # A "word" contains no whitesspace or commas
-    @ply.lex.TOKEN(r'[^' + repr(t_ignore + literals) + r']+')
-    def t_WORD(t):
-        t.value = t.value
-        return t
+            // any run of characters except whitespace, comma, or any of the literals
+            WORD   : /[^\ \t\r,{esc}\'"]+/
 
-    # Error handling rule
-    def t_error(t):
-        # Note this parser does not allow "\n", so lexpos is the
-        # column number
-        raise IOError(
-            "ERROR: Token '%s' Line %s Column %s" % (t.value, t.lineno, t.lexpos + 1)
+            %ignore /[ \t\r,]+/   // skip spaces, tabs, CRs, and commas
+        """
+
+        _lexers[literals] = lark.Lark(
+            grammar,
+            parser="lalr",
+            propagate_positions=True,  # gives us .line & .column
         )
 
-    return ply.lex.lex()
+    def lex(text):
+        try:
+            # yield Lark tokens, one by one
+            for tok in _lexers[literals].lex(text):
+                yield tok
+        except lark.UnexpectedCharacters as err:
+            ch = err.char        # the offending character
+            line = err.line
+            col  = err.column
+            raise IOError(f"ERROR: Token {repr(ch)} Line {line} Column {col}")
+
+    return lex
 
 
 def _default_string_list_lexer(value):
@@ -915,18 +944,13 @@ def _default_string_list_lexer(value):
     do not yield empty strings).
 
     """
-    _lex = _default_string_list_lexer._lex
-    if _lex is None:
-        _default_string_list_lexer._lex = _lex = _build_lexer()
-    _lex.input(value)
-    while True:
-        tok = _lex.token()
-        if not tok:
-            break
-        yield tok.value
-
-
-_default_string_list_lexer._lex = None
+    lex = _build_lexer()
+    for tok in lex(value):
+        if tok.type == "STRING":
+            # strip leading+trailing quote
+            yield tok.value[1:-1]
+        else:
+            yield tok.value
 
 
 def _default_string_dict_lexer(value):
@@ -939,32 +963,41 @@ def _default_string_dict_lexer(value):
     empty strings).
 
     """
-    _lex = _default_string_dict_lexer._lex
-    if _lex is None:
-        _default_string_dict_lexer._lex = _lex = _build_lexer(':=')
-    _lex.input(value)
+    lex = _build_lexer(":=")
+    it = lex(value)
     while True:
-        key = _lex.token()
-        if not key:
-            break
-        sep = _lex.token()
-        if not sep:
+        try:
+            key_tok = next(it)
+        except StopIteration:
+            return
+
+        sep_tok = next(it, None)
+        if sep_tok is None:
             raise ValueError("Expected ':' or '=' but encountered end of string")
-        if sep.type not in ':=':
+        if sep_tok.type != "EQUAL" and sep_tok.type != "COLON":
             raise ValueError(
-                f"Expected ':' or '=' but found '{sep.value}' at "
-                f"Line {sep.lineno} Column {sep.lexpos+1}"
+                f"Expected ':' or '=' but found '{sep_tok.value}' "
+                f"at Line {sep_tok.line} Column {sep_tok.column}"
             )
-        val = _lex.token()
-        if not val:
+
+        val_tok = next(it, None)
+        if val_tok is None:
+            if sep_tok.type == "EQUAL":
+                s = "="
+            else:
+                s = ":"
             raise ValueError(
-                f"Expected value following '{sep.type}' "
-                f"but encountered end of string"
+                f"Expected value following '{s}' but encountered end of string"
             )
-        yield key.value, val.value
+        
+        key = key_tok.value
+        val = val_tok.value
+        if key_tok.type == "STRING":
+            key = key[1:-1]
+        if val_tok.type == "STRING":
+            val = val[1:-1]
 
-
-_default_string_dict_lexer._lex = None
+        yield key, val
 
 
 def _formatter_str_to_callback(pattern, formatter):
