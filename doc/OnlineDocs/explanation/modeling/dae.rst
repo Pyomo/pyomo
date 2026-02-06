@@ -1,3 +1,5 @@
+.. _pyomo.dae:
+
 Dynamic Optimization with pyomo.DAE
 ===================================
 

@@ -1,3 +1,5 @@
+.. _pyomo.doe:
+
 Pyomo.DoE
 =========
 **Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design 
