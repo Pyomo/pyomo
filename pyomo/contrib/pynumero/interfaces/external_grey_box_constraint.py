@@ -26,10 +26,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.indexed_component import (
-    IndexedComponent,
-    UnindexedComponent_set,
-)
+from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.disable_methods import disable_methods
 
 
@@ -41,13 +38,14 @@ JAC_ZERO_TOLERANCE = 1e-8
 
 class EGBConstraintBody:
     """
-    This class creates a representation of the "body" of an implicit constraint in 
+    This class creates a representation of the "body" of an implicit constraint in
     an ExternalGreyBox model.
 
     Currently, this supports:
     * evaluation of the residual of the implicit constraint
     * identification of incident variables in the implicit constraint
     """
+
     def __init__(self, parent_model, implicit_constraint_id):
         self._parent_model = parent_model
         self._implicit_constraint_id = implicit_constraint_id
@@ -77,13 +75,15 @@ class EGBConstraintBody:
         Returns True if the body of this constraint is a numeric type (i.e., it can be evaluated to a number).
         """
         return True
-    
+
     def __call__(self, exception=NOTSET):
         """Compute the value of the body of this constraint."""
         if self._ext_eq_cons_idx is not None:
             # For an implicit constraint, return the residual
             try:
-                return self._parent_model.get_external_model().evaluate_equality_constraints()[self._ext_eq_cons_idx]
+                return self._parent_model.get_external_model().evaluate_equality_constraints()[
+                    self._ext_eq_cons_idx
+                ]
             except Exception as e:
                 raise RuntimeError(
                     f"Error evaluating implicit equality constraint '{self._implicit_constraint_id}' "
@@ -94,7 +94,9 @@ class EGBConstraintBody:
         # In this case, the "residual" of the implicit constraint is 0.0
         return 0.0
 
-    def get_incident_variables(self, use_jacobian=False, jac_tolerance=JAC_ZERO_TOLERANCE):
+    def get_incident_variables(
+        self, use_jacobian=False, jac_tolerance=JAC_ZERO_TOLERANCE
+    ):
         """
         Get the variables that are incident on this implicit constraint.
 
@@ -121,7 +123,9 @@ class EGBConstraintBody:
 
         if self._ext_output_idx is not None:
             # If this constraint is linked to an output variable, then that variable is also incident on the constraint
-            incident_variables.append(self._parent_model.outputs[self._implicit_constraint_id])
+            incident_variables.append(
+                self._parent_model.outputs[self._implicit_constraint_id]
+            )
 
         if not use_jacobian:
             # If we are not using the Jacobian to determine incidence, then all inputs are incident
@@ -137,7 +141,7 @@ class EGBConstraintBody:
             else:
                 jac = ext_model.evaluate_jacobian_outputs().tocsr()
                 con_idx = self._ext_output_idx
-            
+
             for input_name in ext_model.input_names():
                 var_idx = ext_model.input_names().index(input_name)
 
@@ -162,7 +166,7 @@ class ExternalGreyBoxConstraintData(ComponentData):
 
     """
 
-    __slots__ = ('_implicit_constraint_id',)
+    __slots__ = ('_implicit_constraint_id', '_body')
 
     def __init__(self, implicit_constraint_id=None, component=None):
         #
@@ -677,6 +681,7 @@ class IndexedExternalGreyBoxConstraint(ExternalGreyBoxConstraint):
     """
     Implementation of indexed ExternalGreyBoxConstraints.
     """
+
     #
     # Leaving this method for backward compatibility reasons
     #

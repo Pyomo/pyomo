@@ -12,13 +12,9 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
-from pyomo.contrib.pynumero.dependencies import (
-    numpy as np,
-)
+from pyomo.contrib.pynumero.dependencies import numpy as np
 
-from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-    ExternalGreyBoxBlock,
-)
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
     ExternalGreyBoxConstraint,
     ScalarExternalGreyBoxConstraint,
@@ -82,7 +78,7 @@ class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
     def test_construction_not_in_external_grey_box_block_raises(self):
         """Test that construction outside ExternalGreyBoxBlock raises ValueError."""
         m = pyo.ConcreteModel()
-        
+
         # Construction happens automatically when added to block
         with self.assertRaises(ValueError) as context:
             m.c = ExternalGreyBoxConstraint(implicit_constraint_id='test')
@@ -464,7 +460,9 @@ class TestEGBConstraintBody(unittest.TestCase):
         self.assertEqual(len(incident_vars), 4)
         expected_names = ['Pin', 'c', 'F', 'Pout']
         actual_names = [var.name for var in incident_vars]
-        self.assertEqual(actual_names, [f'egb.inputs[{name}]' for name in expected_names])
+        self.assertEqual(
+            actual_names, [f'egb.inputs[{name}]' for name in expected_names]
+        )
 
     def test_get_incident_variables_with_jacobian_all_nonzero(self):
         """Test get_incident_variables with use_jacobian=True when all Jacobian entries are non-zero."""
@@ -485,7 +483,9 @@ class TestEGBConstraintBody(unittest.TestCase):
         self.assertEqual(len(incident_vars), 4)
         expected_names = ['Pin', 'c', 'F', 'Pout']
         actual_names = [var.name for var in incident_vars]
-        self.assertEqual(actual_names, [f'egb.inputs[{name}]' for name in expected_names])
+        self.assertEqual(
+            actual_names, [f'egb.inputs[{name}]' for name in expected_names]
+        )
 
     def test_get_incident_variables_with_jacobian_some_zero(self):
         """Test get_incident_variables with use_jacobian=True when some Jacobian entries are zero."""
@@ -498,7 +498,9 @@ class TestEGBConstraintBody(unittest.TestCase):
         m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='pdropout')
 
         # Set F=0 so that derivatives with respect to c and F are zero
-        external_model.set_input_values(np.asarray([100, 2, 0, 90, 80], dtype=np.float64))
+        external_model.set_input_values(
+            np.asarray([100, 2, 0, 90, 80], dtype=np.float64)
+        )
 
         # For first constraint (pdrop2): P2 - (Pin - 2*c*F^2)
         # Jacobian: [-1, 0, 0, 1, 0] (only Pin and P2 are non-zero)
@@ -532,7 +534,12 @@ class TestEGBConstraintBody(unittest.TestCase):
         # Test without Jacobian
         incident_vars = body_obj.get_incident_variables(use_jacobian=False)
         self.assertEqual(len(incident_vars), 4)
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.outputs[Pout]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.outputs[Pout]',
+        ]
         assert all(var.name in expected_names for var in incident_vars)
 
         # Test with Jacobian (all non-zero)
@@ -552,7 +559,9 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Set inputs so that some Jacobian entries are small but non-zero
         # With c=0.001 and F=0.001, the derivative w.r.t. c is 4*F^2 = 4e-6
-        external_model.set_input_values(np.asarray([100, 0.001, 0.001, 50], dtype=np.float64))
+        external_model.set_input_values(
+            np.asarray([100, 0.001, 0.001, 50], dtype=np.float64)
+        )
 
         body_obj = m.egb.c.body
 
@@ -620,15 +629,27 @@ class TestEGBConstraintBody(unittest.TestCase):
         body_obj1 = m.egb.pdrop1.body
         incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
         self.assertEqual(len(incident_vars1), 5)
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+        ]
         for v in incident_vars1:
             self.assertIn(v.name, expected_names)
-        
+
         # Implicit constraint: 'pdrop3'
         body_obj1 = m.egb.pdrop3.body
         incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
         self.assertEqual(len(incident_vars1), 5)
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+        ]
         for v in incident_vars1:
             self.assertIn(v.name, expected_names)
 
@@ -636,18 +657,31 @@ class TestEGBConstraintBody(unittest.TestCase):
         body_obj1 = m.egb.P2_constraint.body
         incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
         self.assertEqual(len(incident_vars1), 6)
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[P2]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+            'egb.outputs[P2]',
+        ]
         for v in incident_vars1:
             self.assertIn(v.name, expected_names)
-        
+
         # Implicit constraint: 'Pout_constraint'
         body_obj1 = m.egb.Pout_constraint.body
         incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
         self.assertEqual(len(incident_vars1), 6)
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[Pout]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+            'egb.outputs[Pout]',
+        ]
         for v in incident_vars1:
             self.assertIn(v.name, expected_names)
-
 
     def test_get_incident_variables_default_parameters(self):
         """Test get_incident_variables with default parameters (use_jacobian=False)."""
@@ -834,7 +868,10 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             _ = m.egb.c.body
-        self.assertIn("before the ExternalGreyBoxConstraint has been assigned", str(context.exception))
+        self.assertIn(
+            "before the ExternalGreyBoxConstraint has been assigned",
+            str(context.exception),
+        )
 
     def test_scalar_lower_before_assignment_raises(self):
         """Test accessing lower before assignment raises ValueError."""
@@ -848,7 +885,10 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             _ = m.egb.c.lower
-        self.assertIn("before the ExternalGreyBoxConstraint has been assigned", str(context.exception))
+        self.assertIn(
+            "before the ExternalGreyBoxConstraint has been assigned",
+            str(context.exception),
+        )
 
     def test_scalar_upper_before_assignment_raises(self):
         """Test accessing upper before assignment raises ValueError."""
@@ -862,7 +902,10 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             _ = m.egb.c.upper
-        self.assertIn("before the ExternalGreyBoxConstraint has been assigned", str(context.exception))
+        self.assertIn(
+            "before the ExternalGreyBoxConstraint has been assigned",
+            str(context.exception),
+        )
 
     def test_scalar_equality_before_assignment_raises(self):
         """Test accessing equality before assignment raises ValueError."""
@@ -876,7 +919,10 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             _ = m.egb.c.equality
-        self.assertIn("before the ExternalGreyBoxConstraint has been assigned", str(context.exception))
+        self.assertIn(
+            "before the ExternalGreyBoxConstraint has been assigned",
+            str(context.exception),
+        )
 
     def test_scalar_strict_lower_before_assignment_raises(self):
         """Test accessing strict_lower before assignment raises ValueError."""
@@ -890,7 +936,10 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             _ = m.egb.c.strict_lower
-        self.assertIn("before the ExternalGreyBoxConstraint has been assigned", str(context.exception))
+        self.assertIn(
+            "before the ExternalGreyBoxConstraint has been assigned",
+            str(context.exception),
+        )
 
     def test_scalar_strict_upper_before_assignment_raises(self):
         """Test accessing strict_upper before assignment raises ValueError."""
@@ -904,7 +953,10 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             _ = m.egb.c.strict_upper
-        self.assertIn("before the ExternalGreyBoxConstraint has been assigned", str(context.exception))
+        self.assertIn(
+            "before the ExternalGreyBoxConstraint has been assigned",
+            str(context.exception),
+        )
 
     def test_scalar_add_with_invalid_index_raises(self):
         """Test add() with non-None index raises ValueError."""
@@ -917,7 +969,9 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             m.egb.c.add(1, None)
-        self.assertIn("does not accept index values other than None", str(context.exception))
+        self.assertIn(
+            "does not accept index values other than None", str(context.exception)
+        )
 
 
 class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
@@ -934,7 +988,9 @@ class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
         m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='pdropout')
 
         # Set input values directly on external model: Pin=100, c=2, F=3, P2=82, Pout=64
-        external_model.set_input_values(np.asarray([100, 2, 3, 82, 64], dtype=np.float64))
+        external_model.set_input_values(
+            np.asarray([100, 2, 3, 82, 64], dtype=np.float64)
+        )
 
         # Expected residual for pdrop2: P2 - (Pin - 2*c*F^2) = 82 - (100 - 2*2*9) = 82 - 64 = 18
         body1 = pyo.value(m.egb.c1.body)
@@ -978,6 +1034,7 @@ class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
 
         # Should not raise an exception
         import io
+
         output = io.StringIO()
         m.egb.c.display(ostream=output)
         result = output.getvalue()
@@ -998,6 +1055,7 @@ class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
         m.egb.deactivate()
 
         import io
+
         output = io.StringIO()
         m.egb.c.display(ostream=output)
         result = output.getvalue()
@@ -1094,7 +1152,7 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
     def test_constraint_in_different_blocks(self):
         """Test constraints in multiple ExternalGreyBoxBlocks."""
         m = pyo.ConcreteModel()
-        
+
         m.egb1 = ExternalGreyBoxBlock()
         external_model1 = ex_models.PressureDropSingleEquality()
         m.egb1.set_external_model(external_model1)
@@ -1145,7 +1203,9 @@ class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
         m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
 
         # Set negative inputs directly on external model
-        external_model.set_input_values(np.asarray([-100, -2, -3, -50], dtype=np.float64))
+        external_model.set_input_values(
+            np.asarray([-100, -2, -3, -50], dtype=np.float64)
+        )
 
         # Should evaluate without error
         body_value = pyo.value(m.egb.c.body)
@@ -1162,7 +1222,9 @@ class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
         m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
 
         # Set large inputs directly on external model
-        external_model.set_input_values(np.asarray([1e6, 1e3, 1e2, 1e5], dtype=np.float64))
+        external_model.set_input_values(
+            np.asarray([1e6, 1e3, 1e2, 1e5], dtype=np.float64)
+        )
 
         # Should evaluate without error
         body_value = pyo.value(m.egb.c.body)
@@ -1177,7 +1239,9 @@ def test_component_data_objects_with_EGBC():
     m.egb.set_external_model(external_model, build_implicit_constraint_objects=True)
 
     count = 0
-    for c in m.egb.component_data_objects(ctype=ExternalGreyBoxConstraint, descend_into=False):
+    for c in m.egb.component_data_objects(
+        ctype=ExternalGreyBoxConstraint, descend_into=False
+    ):
         assert isinstance(c, ScalarExternalGreyBoxConstraint)
         assert c.local_name in ['P2_constraint', 'Pout_constraint', 'pdrop1', 'pdrop3']
         count += 1

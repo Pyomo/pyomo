@@ -20,7 +20,9 @@ from pyomo.contrib.incidence_analysis.config import (
     IncidenceMethod,
     get_config_from_kwds,
 )
-from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import EGBConstraintBody
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    EGBConstraintBody,
+)
 
 
 #

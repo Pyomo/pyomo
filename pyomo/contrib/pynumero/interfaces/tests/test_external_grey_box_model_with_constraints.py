@@ -22,9 +22,7 @@ from pyomo.contrib.pynumero.dependencies import (
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-    ExternalGreyBoxBlock,
-)
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
     ExternalGreyBoxConstraint,
 )
@@ -62,7 +60,8 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
-            ex_models.PressureDropSingleEquality(), build_implicit_constraint_objects=True
+            ex_models.PressureDropSingleEquality(),
+            build_implicit_constraint_objects=True,
         )
 
         # Check that the constraint object was created for the equality constraint
@@ -93,7 +92,8 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
-            ex_models.PressureDropTwoEqualities(), build_implicit_constraint_objects=True
+            ex_models.PressureDropTwoEqualities(),
+            build_implicit_constraint_objects=True,
         )
 
         # Check that constraint objects were created for both equality constraints
@@ -465,6 +465,7 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
 
 class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
     """Tests for integration of ExternalGreyBoxBlock with incidence analysis"""
+
     def build_model(self):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
@@ -472,7 +473,7 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         m.egb.set_external_model(external_model, build_implicit_constraint_objects=True)
 
         return m
-    
+
     def build_model_with_pyomo_components(self):
         m = self.build_model()
 
@@ -507,15 +508,27 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         body_obj1 = m.egb.pdrop1.body
         incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
         assert len(incident_vars1) == 5
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+        ]
         for v in incident_vars1:
             assert v.name in expected_names
-        
+
         # Implicit constraint: 'pdrop3'
         body_obj1 = m.egb.pdrop3.body
         incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
         assert len(incident_vars1) == 5
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+        ]
         for v in incident_vars1:
             assert v.name in expected_names
 
@@ -523,15 +536,29 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         body_obj1 = m.egb.P2_constraint.body
         incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
         assert len(incident_vars1) == 6
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[P2]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+            'egb.outputs[P2]',
+        ]
         for v in incident_vars1:
             assert v.name in expected_names
-        
+
         # Implicit constraint: 'Pout_constraint'
         body_obj1 = m.egb.Pout_constraint.body
         incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
         assert len(incident_vars1) == 6
-        expected_names = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[Pout]']
+        expected_names = [
+            'egb.inputs[Pin]',
+            'egb.inputs[c]',
+            'egb.inputs[F]',
+            'egb.inputs[P1]',
+            'egb.inputs[P3]',
+            'egb.outputs[Pout]',
+        ]
         for v in incident_vars1:
             assert v.name in expected_names
 
@@ -550,15 +577,31 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
 
         assert len(var_dm_partition.underconstrained) == 4
         assert len(var_dm_partition.unmatched) == 3
-        var_names = [v.name for v in var_dm_partition.underconstrained + var_dm_partition.unmatched]
+        var_names = [
+            v.name
+            for v in var_dm_partition.underconstrained + var_dm_partition.unmatched
+        ]
         for v in var_names:
-            assert v in ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[P2]', 'egb.outputs[Pout]']
+            assert v in [
+                'egb.inputs[Pin]',
+                'egb.inputs[c]',
+                'egb.inputs[F]',
+                'egb.inputs[P1]',
+                'egb.inputs[P3]',
+                'egb.outputs[P2]',
+                'egb.outputs[Pout]',
+            ]
 
         assert len(con_dm_partition.underconstrained) == 4
         con_names = [c.name for c in con_dm_partition.underconstrained]
         for c in con_names:
-            assert c in ['egb.pdrop1', 'egb.pdrop3', 'egb.P2_constraint', 'egb.Pout_constraint']
-    
+            assert c in [
+                'egb.pdrop1',
+                'egb.pdrop3',
+                'egb.P2_constraint',
+                'egb.Pout_constraint',
+            ]
+
     def test_grey_box_w_pyomo_components(self):
         """
         Test that the incidence analysis correctly determines the DM partition for
@@ -581,7 +624,10 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
 
         assert len(var_dm_partition.underconstrained) == 11
         assert len(var_dm_partition.unmatched) == 3
-        var_names = [v.name for v in var_dm_partition.underconstrained + var_dm_partition.unmatched]
+        var_names = [
+            v.name
+            for v in var_dm_partition.underconstrained + var_dm_partition.unmatched
+        ]
         for v in var_names:
             assert v in [
                 'egb.inputs[Pin]',
@@ -616,7 +662,7 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
                 'link_P2',
                 'link_Pout',
             ]
-    
+
     def test_grey_box_w_pyomo_components_square(self):
         """
         Test that the incidence analysis correctly determines the DM partition for

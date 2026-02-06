@@ -346,7 +346,13 @@ class ExternalGreyBoxModel:
 
 
 class ExternalGreyBoxBlockData(BlockData):
-    def set_external_model(self, external_grey_box_model, inputs=None, outputs=None, build_implicit_constraint_objects=False):
+    def set_external_model(
+        self,
+        external_grey_box_model,
+        inputs=None,
+        outputs=None,
+        build_implicit_constraint_objects=False,
+    ):
         """
         Parameters
         ----------
@@ -417,7 +423,10 @@ class ExternalGreyBoxBlockData(BlockData):
                 setattr(
                     self,
                     con_name,
-                    ExternalGreyBoxConstraint(implicit_constraint_id=con_name, doc=f"Implicit constraint for external grey box constraint {con_name}"),
+                    ExternalGreyBoxConstraint(
+                        implicit_constraint_id=con_name,
+                        doc=f"Implicit constraint for external grey box constraint {con_name}",
+                    ),
                 )
             for out_name in self._output_names:
                 setattr(
@@ -448,7 +457,9 @@ class ExternalGreyBoxBlock(Block):
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', ExternalGreyBoxBlock)
         self._init_model = Initializer(kwds.pop('external_model', None))
-        self._build_implicit_constraint_objects = Initializer(kwds.pop('build_implicit_constraint_objects', False))
+        self._build_implicit_constraint_objects = Initializer(
+            kwds.pop('build_implicit_constraint_objects', False)
+        )
         Block.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
@@ -468,7 +479,12 @@ class ExternalGreyBoxBlock(Block):
         if self._init_model is not None:
             block = self.parent_block()
             for index, data in self.items():
-                data.set_external_model(self._init_model(block, index), build_implicit_constraint_objects=self._build_implicit_constraint_objects(block, index))
+                data.set_external_model(
+                    self._init_model(block, index),
+                    build_implicit_constraint_objects=self._build_implicit_constraint_objects(
+                        block, index
+                    ),
+                )
 
 
 class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock):
