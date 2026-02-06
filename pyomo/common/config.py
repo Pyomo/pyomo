@@ -36,7 +36,6 @@ import io
 import logging
 import os
 import pickle
-import ply.lex
 import lark
 import re
 import sys
