@@ -35,6 +35,8 @@ from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
 from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiDirectMINLP
 from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.highs import Highs
+from pyomo.contrib.solver.solvers.gams import GAMS
+
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
 from pyomo.contrib.solver.tests.solvers import instances
@@ -55,6 +57,7 @@ all_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('highs', Highs),
+    ('gams', GAMS),
     ('knitro_direct', KnitroDirectSolver),
 ]
 mip_solvers = [
@@ -1845,6 +1848,7 @@ class TestSolvers(unittest.TestCase):
             {
                 TerminationCondition.unbounded,
                 TerminationCondition.infeasibleOrUnbounded,
+                TerminationCondition.provenInfeasible,
             },
         )
         m.obj.sense = pyo.minimize
