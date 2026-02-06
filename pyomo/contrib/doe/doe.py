@@ -1832,7 +1832,7 @@ class DesignOfExperiments:
         traversal_scheme="snake_traversal",
         file_name: str = None,
     ):
-        """Will run a simulation-based factorial exploration of the experimental input
+        """Performs a simulation-based factorial exploration of the experimental input
         space (a.k.a., a ``grid search`` or ``parameter sweep``) to understand how the
         FIM metrics change as a function of the experimental design space. This method
         can be used for both full factorial and fractional factorial designs.
@@ -2061,8 +2061,12 @@ class DesignOfExperiments:
             factorial_points = snake_traversal_grid_sampling(*design_values)
         elif scheme_enum == DesignSpaceTraversal.nested_for_loop:
             factorial_points = product(*design_values)
-
-        # TODO: Add more DesignSpaceTraversal schemes
+        else:
+            raise ValueError(
+                f"{traversal_scheme=} is not recognized. "
+                "Please use one of the following: "
+                f"{[e.value for e in DesignSpaceTraversal]}"
+            )
 
         factorial_points_list = list(factorial_points)
 
