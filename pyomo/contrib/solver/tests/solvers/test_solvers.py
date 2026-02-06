@@ -42,8 +42,6 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
 from pyomo.contrib.solver.tests.solvers import instances
-from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.core.expr.numeric_expr import LinearExpression
 
 np, numpy_available = attempt_import('numpy')
 parameterized, param_available = attempt_import('parameterized')
