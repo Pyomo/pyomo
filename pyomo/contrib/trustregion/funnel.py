@@ -18,7 +18,7 @@
 
 # funnel.py – scalar funnel helper (no Filter list)
 # --------------------------------------------------------
-# Implements Hameed et al. (https://arxiv.org/abs/2511.18998) funnel logic
+# Implements Hameed et al. (https://doi.org/10.1002/aic.70258) funnel logic
 # Funnel is an alternative to filter globalization mechanism
 # This addition lets the users to choose Funnel or Filter
 # Public API (mirrors simplicity of filterMethod):
@@ -52,7 +52,7 @@ class Funnel:
     phi_init     : initial funnel width  φ⁰  (≥ θ⁰)
     f_best_init  : first feasible objective (usually f⁰)
     phi_min      : hard floor on φ           (>0)
-    kappa_f      : shrink factor after f‑step (0<κ_f<1)
+    kappa_f      : shrink factor after theta‑step (0<κ_f<1)
     kappa_r      : relax factor for theta (>1)
     alpha        : curvature exponent        (0<α<1)
     beta         : θ‑type shrink factor      (0<β<1)

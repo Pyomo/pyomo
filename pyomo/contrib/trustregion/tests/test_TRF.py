@@ -111,13 +111,13 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.param_filter_gamma_theta, 0.01)
         self.assertEqual(CONFIG.param_filter_gamma_f, 0.01)
         self.assertEqual(CONFIG.globalization_strategy, 0)  # 0 -> default - filter
-        self.assertEqual(CONFIG.phi_min, 1e-8)
-        self.assertEqual(CONFIG.kappa_f, 0.25)
-        self.assertEqual(CONFIG.kappa_r, 1.05)
-        self.assertEqual(CONFIG.eta, 0.0001)
-        self.assertEqual(CONFIG.alpha, 0.5)
-        self.assertEqual(CONFIG.beta, 0.8)
-        self.assertEqual(CONFIG.mu_s, 0.01)
+        self.assertEqual(CONFIG.funnel_param_phi_min, 1e-8)
+        self.assertEqual(CONFIG.funnel_param_kappa_f, 0.25)
+        self.assertEqual(CONFIG.funnel_param_kappa_r, 1.05)
+        self.assertEqual(CONFIG.funnel_param_eta, 0.0001)
+        self.assertEqual(CONFIG.funnel_param_alpha, 0.5)
+        self.assertEqual(CONFIG.funnel_param_beta, 0.8)
+        self.assertEqual(CONFIG.funnel_param_mu_s, 0.01)
 
     def test_funnel_globalization(self):
         self.TRF = SolverFactory(
