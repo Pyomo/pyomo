@@ -80,17 +80,19 @@ def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, c
     trust_radius = config.trust_radius
 
     # Initialising funnel method
-    funnel = Funnel(
-        phi_init=feasibility_k,
-        f_best_init=obj_val_k,
-        phi_min=config.phi_min,
-        kappa_f=config.kappa_f,
-        kappa_r=config.kappa_r,
-        alpha=config.alpha,
-        beta=config.beta,
-        mu_s=config.mu_s,
-        eta=config.eta,
-    )
+    use_funnel_globalization_strategy = config.globalization_strategy == 1
+    if use_funnel_globalization_strategy:
+        funnel = Funnel(
+            phi_init=feasibility_k,
+            f_best_init=obj_val_k,
+            phi_min=config.funnel_param_phi_min,
+            kappa_f=config.funnel_param_kappa_f,
+            kappa_r=config.funnel_param_kappa_r,
+            alpha=config.funnel_param_alpha,
+            beta=config.funnel_param_beta,
+            mu_s=config.funnel_param_mu_s,
+            eta=config.funnel_param_eta,
+        )
 
     iteration = 0
 
@@ -143,7 +145,7 @@ def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, c
 
         # If user opts for filter as a globalization mechanism
         # Note that filter is also default option
-        if config.globalization_strategy == 0:
+        if not use_funnel_globalization_strategy:
             # Check filter acceptance
             filterElement = FilterElement(obj_val_k, feasibility_k)
             if not TRFilter.isAcceptable(filterElement, config.maximum_feasibility):
@@ -203,7 +205,7 @@ def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, c
                     )
 
         # If user opts for funnel as a globalization mechanism
-        if config.globalization_strategy == 1:
+        else:
             # Check funnel acceptance
             status = funnel.classify_step(
                 feasibility, feasibility_k, obj_val, obj_val_k, config.trust_radius
@@ -505,14 +507,14 @@ def _trf_config():
 
     ### Funnel parameters
     CONFIG.declare(
-        'phi_min',
+        'funnel_param_phi_min',
         ConfigValue(
             default=1e-8, domain=PositiveFloat, description='Hard floor on funnel width'
         ),
     )
 
     CONFIG.declare(
-        'kappa_f',
+        'funnel_param_kappa_f',
         ConfigValue(
             default=0.25,
             domain=PositiveFloat,
@@ -521,7 +523,7 @@ def _trf_config():
     )
 
     CONFIG.declare(
-        'kappa_r',
+        'funnel_param_kappa_r',
         ConfigValue(
             default=1.05,
             domain=PositiveFloat,
@@ -530,7 +532,7 @@ def _trf_config():
     )
 
     CONFIG.declare(
-        'eta',
+        'funnel_param_eta',
         ConfigValue(
             default=0.0001,
             domain=PositiveFloat,
@@ -539,7 +541,7 @@ def _trf_config():
     )
 
     CONFIG.declare(
-        'alpha',
+        'funnel_param_alpha',
         ConfigValue(
             default=0.5,
             domain=PositiveFloat,
@@ -548,7 +550,7 @@ def _trf_config():
     )
 
     CONFIG.declare(
-        'beta',
+        'funnel_param_beta',
         ConfigValue(
             default=0.8,
             domain=PositiveFloat,
@@ -557,7 +559,7 @@ def _trf_config():
     )
 
     CONFIG.declare(
-        'mu_s',
+        'funnel_param_mu_s',
         ConfigValue(
             default=0.01, domain=PositiveFloat, description='Switching coefficient δ'
         ),
