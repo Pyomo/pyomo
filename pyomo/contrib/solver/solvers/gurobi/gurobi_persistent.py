@@ -488,11 +488,11 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             repn = generate_standard_repn(body, quadratic=True, compute_values=False)
             gurobi_expr = self._get_expr_from_pyomo_repn(repn)
             mutable_constant = None
-            if lb is None and ub is None:
-                raise ValueError(
-                    f"Constraint does not have a lower or an upper bound: {con}"
-                )
-            elif lb is None:
+            if lb is None:
+                if ub is None:
+                    raise ValueError(
+                        f"Constraint does not have a lower or an upper bound: {con}"
+                    )
                 rhs_expr = ub - repn.constant
                 gurobi_expr_list.append(gurobi_expr <= float(value(rhs_expr)))
                 if not is_constant(rhs_expr):
