@@ -28,7 +28,7 @@ def run_rooney_biegler_doe(
     improve_cholesky_roundoff_error=False,
     compute_FIM_full_factorial=False,
     draw_factorial_figure=False,
-    design_range={'hour': [0, 10, 40]},
+    design_range=None,
     tee=False,
     print_output=False,
 ):
@@ -130,8 +130,8 @@ def run_rooney_biegler_doe(
 
     # Store results based on objective type
     objective_name = optimization_objective.value
-    results_container["optimization"][objective_name] = {
-        "objective_type": str(optimization_objective).split('.')[-1],
+    results_container["optimization"] = {
+        "objective_type": objective_name,
         "design": rooney_biegler_doe.results['Experiment Design'],
     }
 
