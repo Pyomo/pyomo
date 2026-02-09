@@ -79,6 +79,9 @@ def run_rooney_biegler_doe(
     if isinstance(optimization_objective, str):
         optimization_objective = ObjectiveLib(optimization_objective)
 
+    if design_range is None:
+        design_range = {'hour': [0, 10, 40]}
+
     # Initialize a container for all potential results
     results_container = {
         "experiment": None,
