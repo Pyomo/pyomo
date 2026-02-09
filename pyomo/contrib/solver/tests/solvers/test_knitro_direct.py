@@ -199,6 +199,11 @@ class TestKnitroSolverSolutionStatus(unittest.TestCase):
         """Test that solution status is correctly mapped from KNITRO status."""
         engine = Engine()
 
+        # Test that RuntimeError is raised for None status
+        engine._status = None
+        with self.assertRaises(RuntimeError):
+            engine.get_solution_status()
+
         # Test optimal statuses
         for code in [
             knitro.KN_RC_OPTIMAL,
@@ -247,6 +252,11 @@ class TestKnitroSolverTerminationCondition(unittest.TestCase):
     def test_termination_condition_mapping(self):
         """Test that termination condition is correctly mapped from KNITRO status."""
         engine = Engine()
+
+        # Test that RuntimeError is raised for None status
+        engine._status = None
+        with self.assertRaises(RuntimeError):
+            engine.get_termination_condition()
 
         # Test convergenceCriteriaSatisfied
         for code in [
