@@ -990,7 +990,8 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         val: any
             See gurobi documentation for acceptable values.
         """
-        if attr in {'Sense', 'RHS', 'ConstrName'}:
+        attr = attr.lower()
+        if attr in {'sense', 'rhs', 'constrname'}:
             raise ValueError(
                 f'Linear constraint attr {attr} cannot be set with'
                 ' the set_linear_constraint_attr method. Please use'
@@ -1019,13 +1020,14 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         val: any
             See gurobi documentation for acceptable values.
         """
-        if attr in {'LB', 'UB', 'VType', 'VarName'}:
+        attr = attr.lower()
+        if attr in {'lb', 'ub', 'vtype', 'varname'}:
             raise ValueError(
                 f'Var attr {attr} cannot be set with'
                 ' the set_var_attr method. Please use'
                 ' the update_var method.'
             )
-        if attr == 'Obj':
+        if attr == 'obj':
             raise ValueError(
                 'Var attr Obj cannot be set with'
                 ' the set_var_attr method. Please use'
