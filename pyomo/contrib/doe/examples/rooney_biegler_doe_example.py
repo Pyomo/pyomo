@@ -28,7 +28,7 @@ def run_rooney_biegler_doe(
     improve_cholesky_roundoff_error=False,
     compute_FIM_full_factorial=False,
     draw_factorial_figure=False,
-    design_range={'hour': [0, 10, 40]},
+    design_range=None,
     tee=False,
     print_output=False,
 ):
@@ -74,18 +74,19 @@ def run_rooney_biegler_doe(
         - 'results_dict': Full factorial design results (if computed)
         - 'optimization': Dictionary with optimization results including objective
           values and optimal designs
-        - 'plots': List of matplotlib figure objects (if plots were generated)
     """
     # Convert optimization_objective to enum if it's a string
     if isinstance(optimization_objective, str):
         optimization_objective = ObjectiveLib(optimization_objective)
+
+    if design_range is None:
+        design_range = {'hour': [0, 10, 40]}
 
     # Initialize a container for all potential results
     results_container = {
         "experiment": None,
         "results_dict": {},
         "optimization": {},  # Will hold D/A optimization results if run
-        "plots": [],  # Store figure objects if created
     }
 
     # Data Setup
@@ -130,32 +131,32 @@ def run_rooney_biegler_doe(
 
     # Store results based on objective type
     objective_name = optimization_objective.value
-    results_container["optimization"][objective_name] = {
-        "objective_type": str(optimization_objective).split('.')[-1],
+    results_container["optimization"] = {
+        "objective_type": objective_name,
         "design": rooney_biegler_doe.results['Experiment Design'],
     }
 
     # Add objective-specific metrics
     if optimization_objective == ObjectiveLib.determinant:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['log10 D-opt']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'log10 D-opt'
+        ]
     elif optimization_objective == ObjectiveLib.trace:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['log10 A-opt']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'log10 A-opt'
+        ]
     elif optimization_objective == ObjectiveLib.pseudo_trace:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['log10 pseudo A-opt']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'log10 pseudo A-opt'
+        ]
     elif optimization_objective == ObjectiveLib.minimum_eigenvalue:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['log10 E-opt']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'log10 E-opt'
+        ]
     elif optimization_objective == ObjectiveLib.condition_number:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['FIM Condition Number']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'FIM Condition Number'
+        ]
 
     if print_output:
         print(f"Optimal results for {objective_name}:", rooney_biegler_doe.results)
@@ -173,6 +174,8 @@ def run_rooney_biegler_doe(
         rooney_biegler_doe.draw_factorial_figure(
             sensitivity_design_variables=['hour'],
             fixed_design_variables={},
+            title_text="Rooney Biegler DoE - Full Factorial Design",
+            xlabel_text="Experiment duration (hour)",
             log_scale=False,
             figure_file_name="rooney_biegler",
         )

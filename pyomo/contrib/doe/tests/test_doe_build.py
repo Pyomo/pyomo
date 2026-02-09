@@ -533,7 +533,9 @@ class TestDoEObjectiveOptions(unittest.TestCase):
         fd_method = "central"
         obj_used = "trace"
 
-        experiment = run_rooney_biegler_doe()["experiment"]
+        experiment = run_rooney_biegler_doe(optimization_objective="trace")[
+            "experiment"
+        ]
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         doe_obj = DesignOfExperiments(**DoE_args)
@@ -606,7 +608,9 @@ class TestDoEObjectiveOptions(unittest.TestCase):
         fd_method = "central"
         obj_used = "trace"
 
-        experiment = run_rooney_biegler_doe()["experiment"]
+        experiment = run_rooney_biegler_doe(optimization_objective="trace")[
+            "experiment"
+        ]
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         doe_obj = DesignOfExperiments(**DoE_args)
