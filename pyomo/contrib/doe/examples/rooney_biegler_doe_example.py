@@ -74,7 +74,6 @@ def run_rooney_biegler_doe(
         - 'results_dict': Full factorial design results (if computed)
         - 'optimization': Dictionary with optimization results including objective
           values and optimal designs
-        - 'plots': List of matplotlib figure objects (if plots were generated)
     """
     # Convert optimization_objective to enum if it's a string
     if isinstance(optimization_objective, str):
@@ -85,7 +84,6 @@ def run_rooney_biegler_doe(
         "experiment": None,
         "results_dict": {},
         "optimization": {},  # Will hold D/A optimization results if run
-        "plots": [],  # Store figure objects if created
     }
 
     # Data Setup
@@ -173,6 +171,8 @@ def run_rooney_biegler_doe(
         rooney_biegler_doe.draw_factorial_figure(
             sensitivity_design_variables=['hour'],
             fixed_design_variables={},
+            title_text="Rooney Biegler DoE - Full Factorial Design",
+            xlabel_text="Experiment duration (hour)",
             log_scale=False,
             figure_file_name="rooney_biegler",
         )
