@@ -17,9 +17,8 @@ from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.base import Suffix, Var, Constraint, Objective
-from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.repn import generate_standard_repn
+from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
@@ -78,17 +77,17 @@ class CUOPTDirect(DirectSolver):
         return Bunch(rc=None, log=None)
 
     def _add_constraints(self, constraints):
+        # build constraint matrix for cuopt
         c_lb, c_ub = [], []
         matrix_data = []
         matrix_indptr = [0]
         matrix_indices = []
 
+        # visitor walks expression trees and extracts linear coefficients
+        visitor = LinearRepnVisitor({})
         con_idx = 0
         for con in constraints:
             if not con.active:
-                continue
-
-            if self._skip_trivial_constraints and is_fixed(con.body):
                 continue
 
             if not con.has_lb() and not con.has_ub():
@@ -96,19 +95,45 @@ class CUOPTDirect(DirectSolver):
                 continue  # non-binding, so skip
 
             lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
+            repn = visitor.walk_expression(body)
 
-            conname = self._symbol_map.getSymbol(con, self._labeler)
+            if repn.nonlinear is not None:
+                raise ValueError(
+                    f"Constraint '{con.name}' contains nonlinear terms which are "
+                    "not supported by cuOpt solver."
+                )
+
+            # check for trivial constraints after getting repn (more efficient
+            # than walking expression twice with is_fixed)
+            if not repn.linear:
+                if self._skip_trivial_constraints:
+                    # verify feasibility before skipping
+                    const = repn.constant if repn.constant else 0
+                    lb_val = lb if lb is not None else -np.inf
+                    ub_val = ub if ub is not None else np.inf
+                    if not (lb_val <= const <= ub_val):
+                        raise ValueError(
+                            f"Trivial constraint {con.name} is infeasible "
+                            f"(constant={const}, bounds=[{lb_val}, {ub_val}])"
+                        )
+                    continue
+                # if not skipping, still need to add it (even if trivial)
+
+            self._symbol_map.getSymbol(con, self._labeler)
             self._pyomo_con_to_solver_con_map[con] = con_idx
             con_idx += 1
 
-            repn = generate_standard_repn(body, quadratic=False)
-            matrix_data.extend(repn.linear_coefs)
-            matrix_indices.extend(self.var_name_dict[str(i)] for i in repn.linear_vars)
-            self.referenced_vars.update(repn.linear_vars)
+            # repn.linear is keyed by id(var), use var_map to get actual vars
+            for var_id, coef in repn.linear.items():
+                var = visitor.var_map[var_id]
+                matrix_data.append(coef)
+                matrix_indices.append(self._pyomo_var_to_ndx_map[var])
+                self.referenced_vars.add(var)
 
             matrix_indptr.append(len(matrix_data))
-            c_lb.append(lb - repn.constant if lb is not None else -np.inf)
-            c_ub.append(ub - repn.constant if ub is not None else np.inf)
+            const = repn.constant if repn.constant else 0
+            c_lb.append(lb - const if lb is not None else -np.inf)
+            c_ub.append(ub - const if ub is not None else np.inf)
 
         if len(matrix_data) == 0:
             matrix_data = [0]
@@ -125,10 +150,9 @@ class CUOPTDirect(DirectSolver):
 
     def _add_variables(self, variables):
         # Map variable to index and get var bounds
-        self.var_name_dict = {}
-        v_lb, v_ub, v_type = [], [], []
+        v_lb, v_ub, v_type, v_names = [], [], [], []
 
-        for i, v in enumerate(variables):
+        for v in variables:
             lb, ub = v.bounds
             if v.is_integer():
                 v_type.append("I")
@@ -139,28 +163,30 @@ class CUOPTDirect(DirectSolver):
                 raise ValueError(f"Unallowable domain for variable {v.name}")
             v_lb.append(lb if lb is not None else -np.inf)
             v_ub.append(ub if ub is not None else np.inf)
-            self.var_name_dict[str(v)] = i
+            v_names.append(self._symbol_map.getSymbol(v, self._labeler))
             self._pyomo_var_to_ndx_map[v] = self._ndx_count
             self._ndx_count += 1
 
         self._solver_model.set_variable_lower_bounds(np.array(v_lb))
         self._solver_model.set_variable_upper_bounds(np.array(v_ub))
         self._solver_model.set_variable_types(np.array(v_type))
-        self._solver_model.set_variable_names(np.array(list(self.var_name_dict.keys())))
+        self._solver_model.set_variable_names(np.array(v_names))
 
     def _set_objective(self, objective):
-        repn = generate_standard_repn(objective.expr, quadratic=False)
-        self.referenced_vars.update(repn.linear_vars)
+        visitor = LinearRepnVisitor({})
+        repn = visitor.walk_expression(objective.expr)
 
-        obj_coeffs = [0] * len(self.var_name_dict)
-        for i, coeff in enumerate(repn.linear_coefs):
-            obj_coeffs[self.var_name_dict[str(repn.linear_vars[i])]] = coeff
+        obj_coeffs = [0] * len(self._pyomo_var_to_ndx_map)
+        # repn.linear is keyed by id(var), use var_map to get actual vars
+        for var_id, coef in repn.linear.items():
+            var = visitor.var_map[var_id]
+            obj_coeffs[self._pyomo_var_to_ndx_map[var]] = coef
+            self.referenced_vars.add(var)
         self._solver_model.set_objective_coefficients(np.array(obj_coeffs))
         self._solver_model.set_maximize(objective.sense == maximize)
 
     def _set_instance(self, model, kwds={}):
         DirectOrPersistentSolver._set_instance(self, model, kwds)
-        self.var_name_dict = None
         self._pyomo_var_to_ndx_map = ComponentMap()
         self._ndx_count = 0
 
@@ -179,7 +205,7 @@ class CUOPTDirect(DirectSolver):
     def _add_block(self, block):
         self._add_variables(
             block.component_data_objects(
-                ctype=Var, descend_into=True, active=True, sort=True
+                ctype=Var, descend_into=True, sort=True
             )
         )
         self._add_constraints(
