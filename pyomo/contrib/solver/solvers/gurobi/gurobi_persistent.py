@@ -324,6 +324,8 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         self._last_results_object: Optional[Results] = None
         self._change_detector = None
         self._constraint_ndx = 0
+        self._disallow_set_var_attr = {'lb', 'ub', 'vtype', 'varname'}
+        self._disallow_linear_constraint_attr = {'sense', 'rhs', 'constrname'}
 
     def _clear(self):
         release = False
@@ -991,7 +993,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             See gurobi documentation for acceptable values.
         """
         attr = attr.lower()
-        if attr in {'sense', 'rhs', 'constrname'}:
+        if attr in self._disallow_linear_constraint_attr:
             raise ValueError(
                 f'Linear constraint attr {attr} cannot be set with'
                 ' the set_linear_constraint_attr method. Please use'
@@ -1021,7 +1023,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             See gurobi documentation for acceptable values.
         """
         attr = attr.lower()
-        if attr in {'lb', 'ub', 'vtype', 'varname'}:
+        if attr in self._disallow_set_var_attr:
             raise ValueError(
                 f'Var attr {attr} cannot be set with'
                 ' the set_var_attr method. Please use'
