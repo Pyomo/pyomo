@@ -572,8 +572,8 @@ class TestDoe(unittest.TestCase):
         A_opt_design_value_expected = 9.999955457176451
 
         A_opt_res = run_rooney_biegler_doe(optimization_objective="trace")
-        A_opt_value = A_opt_res["optimization"]["trace"]["value"]
-        A_opt_design_value = A_opt_res["optimization"]["trace"]["design"][0]
+        A_opt_value = A_opt_res["optimization"]["value"]
+        A_opt_design_value = A_opt_res["optimization"]["design"][0]
 
         self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
         # print("A optimal design value:", A_opt_design_value)
@@ -623,15 +623,15 @@ class TestRooneyBieglerExample(unittest.TestCase):
         )
 
         # Assertions for Numerical Results
-        self.assertIn("determinant", results_D["optimization"])
-        self.assertIn("trace", results_A["optimization"])
+        self.assertEqual("determinant", results_D["optimization"]["objective_type"])
+        self.assertEqual("trace", results_A["optimization"]["objective_type"])
 
         # Test D-optimality optimization results
         D_opt_value_expected = 6.864794717802814
         D_opt_design_value_expected = 10.0  # approximately 9.999999472662282
 
-        D_opt_value = results_D["optimization"]["determinant"]["value"]
-        D_opt_design_value = results_D["optimization"]["determinant"]["design"][0]
+        D_opt_value = results_D["optimization"]["value"]
+        D_opt_design_value = results_D["optimization"]["design"][0]
 
         self.assertAlmostEqual(D_opt_value, D_opt_value_expected, places=4)
         self.assertAlmostEqual(
@@ -642,8 +642,8 @@ class TestRooneyBieglerExample(unittest.TestCase):
         A_opt_value_expected = -2.236424205953928
         A_opt_design_value_expected = 10.0  # approximately 9.999955457176451
 
-        A_opt_value = results_A["optimization"]["trace"]["value"]
-        A_opt_design_value = results_A["optimization"]["trace"]["design"][0]
+        A_opt_value = results_A["optimization"]["value"]
+        A_opt_design_value = results_A["optimization"]["design"][0]
 
         self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=4)
         self.assertAlmostEqual(

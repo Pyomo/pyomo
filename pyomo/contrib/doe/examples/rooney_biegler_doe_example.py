@@ -135,25 +135,25 @@ def run_rooney_biegler_doe(
 
     # Add objective-specific metrics
     if optimization_objective == ObjectiveLib.determinant:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['log10 D-opt']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'log10 D-opt'
+        ]
     elif optimization_objective == ObjectiveLib.trace:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['log10 A-opt']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'log10 A-opt'
+        ]
     elif optimization_objective == ObjectiveLib.pseudo_trace:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['log10 pseudo A-opt']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'log10 pseudo A-opt'
+        ]
     elif optimization_objective == ObjectiveLib.minimum_eigenvalue:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['log10 E-opt']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'log10 E-opt'
+        ]
     elif optimization_objective == ObjectiveLib.condition_number:
-        results_container["optimization"][objective_name]["value"] = (
-            rooney_biegler_doe.results['FIM Condition Number']
-        )
+        results_container["optimization"]["value"] = rooney_biegler_doe.results[
+            'FIM Condition Number'
+        ]
 
     if print_output:
         print(f"Optimal results for {objective_name}:", rooney_biegler_doe.results)
