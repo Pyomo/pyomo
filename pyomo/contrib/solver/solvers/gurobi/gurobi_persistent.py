@@ -97,6 +97,9 @@ class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
 
 
 class _MutableLowerBound:
+
+    __slots__ = ("var", "expr", "var_map")
+
     def __init__(self, var, expr, var_map):
         self.var = var
         self.expr = expr
@@ -107,6 +110,9 @@ class _MutableLowerBound:
 
 
 class _MutableUpperBound:
+
+    __slots__ = ("var", "expr", "var_map")
+
     def __init__(self, var, expr, var_map):
         self.var = var
         self.expr = expr
@@ -117,6 +123,9 @@ class _MutableUpperBound:
 
 
 class _MutableLinearCoefficient:
+
+    __slots__ = ("expr", "pyomo_con", "pyomo_var", "con_map", "var_map", "gurobi_model")
+
     def __init__(self, expr, pyomo_con, con_map, pyomo_var, var_map, gurobi_model):
         self.expr = expr
         self.pyomo_con = pyomo_con
@@ -138,6 +147,9 @@ class _MutableLinearCoefficient:
 
 
 class _MutableRangeConstant:
+
+    __slots__ = ("lhs_expr", "rhs_expr", "pyomo_con", "con_map", "slack_name", "gurobi_model")
+
     def __init__(
         self, lhs_expr, rhs_expr, pyomo_con, con_map, slack_name, gurobi_model
     ):
@@ -158,6 +170,9 @@ class _MutableRangeConstant:
 
 
 class _MutableConstant:
+
+    __slots__ = ("expr", "pyomo_con", "con_map")
+
     def __init__(self, expr, pyomo_con, con_map):
         self.expr = expr
         self.pyomo_con = pyomo_con
@@ -169,6 +184,9 @@ class _MutableConstant:
 
 
 class _MutableQuadraticConstraint:
+
+    __slots__ = ("pyomo_con", "con_map", "gurobi_model", "constant", "last_constant_value", "linear_coefs", "last_linear_coef_values", "quadratic_coefs", "last_quadratic_coef_values")
+
     def __init__(
         self, gurobi_model, pyomo_con, con_map, constant, linear_coefs, quadratic_coefs
     ):
@@ -209,6 +227,9 @@ class _MutableQuadraticConstraint:
 
 
 class _MutableObjective:
+
+    __slots__ = ("gurobi_model", "constant", "linear_coefs", "quadratic_coefs", "last_quadratic_coef_values")
+
     def __init__(self, gurobi_model, constant, linear_coefs, quadratic_coefs):
         self.gurobi_model = gurobi_model
         self.constant: _MutableConstant = constant
@@ -239,6 +260,9 @@ class _MutableObjective:
 
 
 class _MutableQuadraticCoefficient:
+
+    __slots__ = ("expr", "var_map", "v1", "v2")
+
     def __init__(self, expr, v1, v2, var_map):
         self.expr = expr
         self.var_map = var_map
