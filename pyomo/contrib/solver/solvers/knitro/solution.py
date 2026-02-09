@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Mapping, Sequence
-from typing import Optional, Protocol
+from typing import Protocol
 
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.contrib.solver.solvers.knitro.typing import ItemType, ValueType
@@ -25,10 +25,10 @@ class SolutionProvider(Protocol):
         self,
         item_type: type[ItemType],
         value_type: ValueType,
-        items: Optional[Sequence[ItemType]] = None,
+        items: Sequence[ItemType] | None = None,
         *,
         exists: bool,
-        solution_id: Optional[int] = None,
+        solution_id: int | None = None,
     ) -> Mapping[ItemType, float]: ...
 
 
@@ -60,7 +60,9 @@ class SolutionLoader(SolutionLoaderBase):
         return self.get_vars(vars_to_load)
 
     def get_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+        self,
+        vars_to_load: Sequence[VarData] | None = None,
+        solution_id: int | None = None,
     ) -> Mapping[VarData, float]:
         return self._provider.get_values(
             VarData,
@@ -71,7 +73,9 @@ class SolutionLoader(SolutionLoaderBase):
         )
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+        self,
+        vars_to_load: Sequence[VarData] | None = None,
+        solution_id: int | None = None,
     ) -> Mapping[VarData, float]:
         return self._provider.get_values(
             VarData,
@@ -82,7 +86,9 @@ class SolutionLoader(SolutionLoaderBase):
         )
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
+        self,
+        cons_to_load: Sequence[ConstraintData] | None = None,
+        solution_id: int | None = None,
     ) -> Mapping[ConstraintData, float]:
         return self._provider.get_values(
             ConstraintData,
