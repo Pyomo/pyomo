@@ -461,8 +461,8 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
 
     def _get_expr_from_pyomo_repn(self, repn):
         if repn.nonlinear_expr is not None:
-            raise IncompatibleModelError(
-                f'GurobiPersistent only supports linear and quadratic expressions: {repn}.'
+            raise NotImplementedError(
+                f'GurobiPersistent only supports linear and quadratic expressions for now: {repn}.'
             )
 
         if len(repn.linear_vars) > 0:
