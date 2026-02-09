@@ -204,9 +204,7 @@ class CUOPTDirect(DirectSolver):
 
     def _add_block(self, block):
         self._add_variables(
-            block.component_data_objects(
-                ctype=Var, descend_into=True, sort=True
-            )
+            block.component_data_objects(ctype=Var, descend_into=True, sort=True)
         )
         self._add_constraints(
             block.component_data_objects(
