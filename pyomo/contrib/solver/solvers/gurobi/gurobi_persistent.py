@@ -490,7 +490,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             mutable_constant = None
             if lb is None and ub is None:
                 raise ValueError(
-                    "Constraint does not have a lower " f"or an upper bound: {con} \n"
+                    f"Constraint does not have a lower or an upper bound: {con}"
                 )
             elif lb is None:
                 rhs_expr = ub - repn.constant
