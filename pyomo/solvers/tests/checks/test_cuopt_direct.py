@@ -112,7 +112,6 @@ class CUOPTTests(unittest.TestCase):
         with pytest.raises(RuntimeError, match=r"cannot extract solution suffix=slack"):
             res = opt.solve(m)
 
-
     @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
     def test_infeasible_trivial_constraint(self):
         m = ConcreteModel()
