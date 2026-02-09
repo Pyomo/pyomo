@@ -148,7 +148,14 @@ class _MutableLinearCoefficient:
 
 class _MutableRangeConstant:
 
-    __slots__ = ("lhs_expr", "rhs_expr", "pyomo_con", "con_map", "slack_name", "gurobi_model")
+    __slots__ = (
+        "lhs_expr",
+        "rhs_expr",
+        "pyomo_con",
+        "con_map",
+        "slack_name",
+        "gurobi_model",
+    )
 
     def __init__(
         self, lhs_expr, rhs_expr, pyomo_con, con_map, slack_name, gurobi_model
@@ -185,7 +192,17 @@ class _MutableConstant:
 
 class _MutableQuadraticConstraint:
 
-    __slots__ = ("pyomo_con", "con_map", "gurobi_model", "constant", "last_constant_value", "linear_coefs", "last_linear_coef_values", "quadratic_coefs", "last_quadratic_coef_values")
+    __slots__ = (
+        "pyomo_con",
+        "con_map",
+        "gurobi_model",
+        "constant",
+        "last_constant_value",
+        "linear_coefs",
+        "last_linear_coef_values",
+        "quadratic_coefs",
+        "last_quadratic_coef_values",
+    )
 
     def __init__(
         self, gurobi_model, pyomo_con, con_map, constant, linear_coefs, quadratic_coefs
@@ -228,7 +245,13 @@ class _MutableQuadraticConstraint:
 
 class _MutableObjective:
 
-    __slots__ = ("gurobi_model", "constant", "linear_coefs", "quadratic_coefs", "last_quadratic_coef_values")
+    __slots__ = (
+        "gurobi_model",
+        "constant",
+        "linear_coefs",
+        "quadratic_coefs",
+        "last_quadratic_coef_values",
+    )
 
     def __init__(self, gurobi_model, constant, linear_coefs, quadratic_coefs):
         self.gurobi_model = gurobi_model
