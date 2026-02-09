@@ -91,8 +91,12 @@ class EGBConstraintBody:
                 ) from e
         # For an output, the ExternalGreyBox will always return the value
         # of the output as a function of the inputs.
-        # In this case, the "residual" of the implicit constraint is 0.0
-        return 0.0
+        evaluated_value = self._parent_model.get_external_model().evaluate_outputs()[
+            self._ext_output_idx
+        ]
+        var_value = value(self._parent_model.outputs[self._implicit_constraint_id])
+        return var_value - evaluated_value
+
 
     def get_incident_variables(
         self, use_jacobian=False, jac_tolerance=JAC_ZERO_TOLERANCE

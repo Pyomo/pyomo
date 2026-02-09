@@ -130,7 +130,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         self.assertAlmostEqual(body_value, 22.0, places=6)
 
     def test_body_with_output(self):
-        """Test body property returns EGBConstraintBody that evaluates to 0 for outputs."""
+        """Test body property returns EGBConstraintBody that evaluates residual for outputs."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleOutput()
@@ -139,9 +139,13 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
 
         # Set input values directly on external model
+        # Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*3^2 = 100 - 72 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
 
-        # For outputs, body should evaluate to 0.0
+        # Set output variable to match the evaluated value
+        m.egb.outputs['Pout'].set_value(28.0)
+
+        # For outputs, when variable matches evaluated value, residual should be 0.0
         body_value = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(body_value, 0.0, places=6)
 
@@ -426,11 +430,92 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
 
+        # Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*3^2 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
 
+        # Set output variable to match evaluated value
+        m.egb.outputs['Pout'].set_value(28.0)
+
         body_obj = m.egb.c.body
-        # For outputs, residual should be 0
+        # For outputs, when variable matches evaluated value, residual should be 0
         self.assertAlmostEqual(pyo.value(body_obj), 0.0, places=6)
+
+    def test_output_constraint_residual_when_variable_matches_evaluated(self):
+        """Test that residual is zero when output variable value matches evaluated value."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleOutput()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+
+        # Set inputs: Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*3^2 = 28
+        external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
+
+        # Set the output variable to match the evaluated value
+        evaluated_value = external_model.evaluate_outputs()[0]
+        m.egb.outputs['Pout'].set_value(evaluated_value)
+
+        # Residual should be: var_value - evaluated_value = 28 - 28 = 0
+        residual = pyo.value(m.egb.c.body)
+        self.assertAlmostEqual(residual, 0.0, places=6)
+
+    def test_output_constraint_residual_when_variable_does_not_match_evaluated(self):
+        """Test that residual is non-zero when output variable value does not match evaluated value."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleOutput()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+
+        # Set inputs: Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*3^2 = 28
+        external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
+
+        # Set the output variable to a different value than evaluated
+        m.egb.outputs['Pout'].set_value(50.0)
+
+        # Residual should be: var_value - evaluated_value = 50 - 28 = 22
+        residual = pyo.value(m.egb.c.body)
+        self.assertAlmostEqual(residual, 22.0, places=6)
+
+        # Test with another non-matching value
+        m.egb.outputs['Pout'].set_value(20.0)
+        
+        # Residual should be: var_value - evaluated_value = 20 - 28 = -8
+        residual = pyo.value(m.egb.c.body)
+        self.assertAlmostEqual(residual, -8.0, places=6)
+
+    def test_output_constraint_residual_updates_with_inputs_and_variable(self):
+        """Test that residual updates correctly when inputs or output variable changes."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleOutput()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+
+        # Initial inputs: Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*9 = 28
+        external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
+        m.egb.outputs['Pout'].set_value(30.0)
+        
+        # Residual should be: 30 - 28 = 2
+        residual = pyo.value(m.egb.c.body)
+        self.assertAlmostEqual(residual, 2.0, places=6)
+
+        # Change inputs: Pin=100, c=2, F=2 => Pout_evaluated = 100 - 4*2*4 = 68
+        external_model.set_input_values(np.asarray([100, 2, 2], dtype=np.float64))
+        
+        # Residual should be: 30 - 68 = -38
+        residual = pyo.value(m.egb.c.body)
+        self.assertAlmostEqual(residual, -38.0, places=6)
+
+        # Now set variable to match the new evaluated value
+        m.egb.outputs['Pout'].set_value(68.0)
+        
+        # Residual should be: 68 - 68 = 0
+        residual = pyo.value(m.egb.c.body)
+        self.assertAlmostEqual(residual, 0.0, places=6)
 
     def test_body_object_invalid_constraint_id_raises(self):
         """Test that body object raises error for invalid constraint ID."""
@@ -1011,9 +1096,16 @@ class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
         m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
 
         # Set input values directly on external model
+        # Pin=100, c=2, F=3
+        # P2_evaluated = 100 - 2*2*9 = 64
+        # Pout_evaluated = 100 - 4*2*9 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
 
-        # For outputs, body should evaluate to 0.0
+        # Set output variables to match evaluated values
+        m.egb.outputs['P2'].set_value(64.0)
+        m.egb.outputs['Pout'].set_value(28.0)
+
+        # For outputs, when variables match evaluated values, residuals should be 0.0
         self.assertAlmostEqual(pyo.value(m.egb.c1.body), 0.0, places=6)
         self.assertAlmostEqual(pyo.value(m.egb.c2.body), 0.0, places=6)
 
@@ -1144,9 +1236,13 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
 
         m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
 
+        # Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*9 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
 
-        # For outputs, body should evaluate to 0
+        # Set output variable to match evaluated value
+        m.egb.outputs['Pout'].set_value(28.0)
+
+        # For outputs, when variable matches evaluated value, residual should be 0
         self.assertAlmostEqual(pyo.value(m.egb.c.body), 0.0, places=6)
 
     def test_constraint_in_different_blocks(self):
@@ -1167,7 +1263,11 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
         external_model1.set_input_values(np.asarray([100, 2, 3, 28], dtype=np.float64))
 
         # Set inputs for second block
+        # Pin=50, c=1, F=2 => Pout_evaluated = 50 - 4*1*4 = 34
         external_model2.set_input_values(np.asarray([50, 1, 2], dtype=np.float64))
+
+        # Set output variable for second block to match evaluated value
+        m.egb2.outputs['Pout'].set_value(34.0)
 
         # Check both constraints work independently
         self.assertAlmostEqual(pyo.value(m.egb1.c.body), 0.0, places=6)
