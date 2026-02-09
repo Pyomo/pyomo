@@ -367,7 +367,7 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
   pip install -e .[tests,docs,optional]
 
-These commands register the cloned code with the active python environment
+This command registers the cloned code with the active Python environment
 (``pyomodev``) and installs all possible optional dependencies.
 Using ``-e`` ensures that your changes to the source code for ``pyomo`` are
 automatically used by the active environment. You can create another conda
@@ -454,7 +454,7 @@ expectations:
   maintainer nor any future development plans. Functionality under this namespace
   may not work and is **NOT** tested through the standard test harness.
 
-This three-tiered structure provides contributors a clear pathway from
+This tiered namespace structure provides contributors a clear pathway from
 **experimentation to supported integration**, while protecting users from
 unexpected changes in stable areas of the codebase.
 

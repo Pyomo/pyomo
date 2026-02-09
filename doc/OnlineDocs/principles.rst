@@ -14,9 +14,9 @@ Backwards Compatibility
 Commitment to Published APIs
 ++++++++++++++++++++++++++++
 
-If functionality is published in the most recent edition of the
-Pyomo book [PyomoBookIII]_ ("The Book") and corresponding examples, we treat that
-as a public API commitment. The interfaces and APIs appearing in The Book
+We treat functionality and examples published in the most recent edition of the
+Pyomo book [PyomoBookIII]_ ("The Book") as our public API commitment.
+The interfaces and APIs appearing in The Book
 will be supported (although possibly in a deprecated form) until
 the next major Pyomo release, which will generally coincide with a
 new edition of the book.
@@ -132,10 +132,9 @@ Optional Dependencies
 
 Some extended Pyomo functionality relies on additional optional Python packages.
 An optional dependency must not be imported (or required) for the Pyomo
-environment. That is:
+environment. That is::
 
-.. doctest::
-   >>> import pyomo.environ
+   import pyomo.environ
 
 should not raise an ``ImportError`` if the dependency is missing. Further, the
 Pyomo test harness (``pytest pyomo``) must run without error/failure if any
@@ -146,9 +145,8 @@ Pyomo makes extensive use of :py:func:`attempt_import()` to support the
 standardized and convenient use of optional dependencies. Further, many
 common dependencies are directly importable through
 ``pyomo.common.dependencies`` without immediately triggering the dependency
-import; for example:
+import; for example::
 
-.. testcode::
    # Importing numpy from dependencies does not trigger the import
    from pyomo.common.dependencies import numpy as np, numpy_available
    
@@ -156,8 +154,6 @@ import; for example:
    if numpy_available:
       a = np.array([1, 2, 3])
    
-.. testoutput::
-   : hide:
 
 .. _dependency_groups:
 Optional Dependency Groups
