@@ -268,7 +268,7 @@ refer to it regularly for updates:
   Public symbols are determined by naming and documentation, not explicit lists.
 
 * **Circular imports:** Make every effort to avoid circular imports. When
-  circular imports are absolutely necessary, leverage :py:func`attempt_import()`
+  circular imports are absolutely necessary, leverage :py:func:`attempt_import()`
   to explicitly break the cycle. To help with this, some module namespaces
   have additional requirements:
 
