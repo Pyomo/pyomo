@@ -279,6 +279,10 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
+        expected_design = 9.999213890476453
+        actual_design = doe_obj.results["Experiment Design"][0]
+        self.assertAlmostEqual(actual_design, expected_design, places=3)
+
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_rooney_biegler_obj_cholesky_solve(self):
         fd_method = "central"
