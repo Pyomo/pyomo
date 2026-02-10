@@ -361,7 +361,13 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj.compute_FIM(method="sequential")
+        expected_FIM = np.array(
+            [[18957.7788694, 4238.27606876], [4238.27606876, 947.52577076]]
+        )
+
+        self.assertTrue(
+            np.all(np.isclose(doe_obj.compute_FIM(method="sequential"), expected_FIM))
+        )
 
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with forward finite differences
@@ -396,7 +402,13 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj.compute_FIM(method="kaug")
+        expected_FIM = np.array(
+            [[18957.7788694, 4238.27606876], [4238.27606876, 947.52577076]]
+        )
+
+        self.assertTrue(
+            np.all(np.isclose(doe_obj.compute_FIM(method="kaug"), expected_FIM))
+        )
 
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with backward finite differences
