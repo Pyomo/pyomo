@@ -175,7 +175,12 @@ class CUOPTDirect(DirectSolver):
     def _set_objective(self, objective):
         visitor = LinearRepnVisitor({})
         repn = visitor.walk_expression(objective.expr)
-
+        if repn.nonlinear is not None:
+            raise ValueError(
+                f"Objective contains nonlinear terms which are "
+                "not supported by cuOpt solver."
+            )
+                
         obj_coeffs = [0] * len(self._pyomo_var_to_ndx_map)
         # repn.linear is keyed by id(var), use var_map to get actual vars
         for var_id, coef in repn.linear.items():
@@ -335,16 +340,16 @@ class CUOPTDirect(DirectSolver):
         if self._save_results:
             soln_variables = soln.variable
             soln_constraints = soln.constraint
-            for i, pyomo_var in enumerate(var_map.keys()):
+            for pyomo_var in var_map.keys():
                 if len(primal_solution) > 0 and pyomo_var in self.referenced_vars:
                     name = self._symbol_map.getSymbol(pyomo_var, self._labeler)
                     soln_variables[name] = {"Value": primal_solution[i]}
                     if reduced_costs is not None:
-                        soln_variables[name]["Rc"] = reduced_costs[i]
-            for i, pyomo_con in enumerate(con_map.keys()):
+                        soln_variables[name]["Rc"] = reduced_costs[var_map[pyomo_var]]
+            for pyomo_con in con_map.keys():
                 if dual_solution is not None:
                     con_name = self._symbol_map.getSymbol(pyomo_con, self._labeler)
-                    soln_constraints[con_name] = {"Dual": dual_solution[i]}
+                    soln_constraints[con_name] = {"Dual": dual_solution[con_map[pyomo_con]]}
 
         elif self._load_solutions:
             if len(primal_solution) > 0:
@@ -392,7 +397,11 @@ class CUOPTDirect(DirectSolver):
         ----------
         vars_to_load: list of Var
         """
-        self._load_rc(vars_to_load)
+        is_mip = self.solution.get_problem_category()
+        if is_mip:
+            logger.warning("Cannot get reduced costs for MIP.")
+        else:
+            self._load_rc(vars_to_load)
 
     def _load_duals(self, cons_to_load=None):
         if not hasattr(self._pyomo_model, 'dual'):
@@ -413,4 +422,8 @@ class CUOPTDirect(DirectSolver):
         ----------
         cons_to_load: list of Constraint
         """
-        self._load_duals(cons_to_load)
+        is_mip = self.solution.get_problem_category()
+        if is_mip:
+            logger.warning("Cannot get duals for MIP.")
+        else:
+            self._load_duals(cons_to_load)
