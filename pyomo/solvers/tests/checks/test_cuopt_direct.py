@@ -35,7 +35,7 @@ from pyomo.solvers.plugins.solvers.cuopt_direct import cuopt_available
 
 
 class CUOPTTests(unittest.TestCase):
-    """@unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
+    @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
     def test_values_and_rc(self):
         m = ConcreteModel()
 
@@ -111,7 +111,6 @@ class CUOPTTests(unittest.TestCase):
         m.slack = Suffix(direction=Suffix.IMPORT)
         with pytest.raises(RuntimeError, match=r"cannot extract solution suffix=slack"):
             res = opt.solve(m)
-    """
 
     @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
     def test_infeasible_trivial_constraint(self):
@@ -127,7 +126,7 @@ class CUOPTTests(unittest.TestCase):
         with pytest.raises(ValueError, match=r"Trivial constraint.*infeasible"):
             opt.solve(m, skip_trivial_constraints=True)
 
-    """@unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
+    @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
     def test_nonlinear_constraint_rejected(self):
         m = ConcreteModel()
         m.x = Var(domain=NonNegativeReals)
@@ -139,8 +138,7 @@ class CUOPTTests(unittest.TestCase):
         opt = SolverFactory('cuopt')
         with pytest.raises(ValueError, match=r"contains nonlinear terms"):
             opt.solve(m)
-    """
-
+    
 
 if __name__ == "__main__":
     unittest.main()
