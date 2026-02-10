@@ -39,23 +39,20 @@ class RooneyBieglerExperimentFlag(RooneyBieglerExperiment):
         m = super().get_labeled_model()
 
         # If flag is non-zero, remove the corresponding suffix to create an incomplete model
-        if flag == 1 and hasattr(m, 'experiment_outputs'):
-            delattr(m, 'experiment_outputs')
-        elif flag == 2 and hasattr(m, 'measurement_error'):
-            delattr(m, 'measurement_error')
-        elif flag == 3 and hasattr(m, 'experiment_inputs'):
-            delattr(m, 'experiment_inputs')
-        elif flag == 4 and hasattr(m, 'unknown_parameters'):
-            delattr(m, 'unknown_parameters')
+        if flag == 1:
+            m.del_component(m.experiment_outputs)
+        elif flag == 2:
+            m.del_component(m.measurement_error)
+        elif flag == 3:
+            m.del_component(m.experiment_inputs)
+        elif flag == 4:
+            m.del_component(m.unknown_parameters)
         elif flag == 5:
             # Create mismatch: 1 experiment output but multiple measurement errors
             # This tests the validation that checks output/error length match
-            if hasattr(m, 'measurement_error'):
-                import pyomo.environ as pyo
-
-                # Add a fake component to measurement_error to create length mismatch
-                m.fake_output = pyo.Var()
-                m.measurement_error[m.fake_output] = 0.1
+            # Add a fake component to measurement_error to create length mismatch
+            m.fake_output = pyo.Var()
+            m.measurement_error[m.fake_output] = 0.1
 
         return m
 
