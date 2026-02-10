@@ -12,7 +12,7 @@ project, funded through the U.S. Department Of Energy Office of Fossil Energy wi
 assistance from **John Siirola**, **Bethany Nicholson**, **Miranda Mundt**,and **Hailey Lynch**.
 Significant improvements and extensions were contributed by **Dan Laky**, and 
 **Shuvashish Mondal** with funding from the 
-`Process Optimization & Modeling for Minerals Sustainability (PrOMMiS) <https://www.netl.doe.gov/prommis>`_ 
+`Process Optimization & Modeling for Minerals Sustainability (PrOMMiS) <https://www.netl.doe.gov/prommis>`_ project
 and the `University of Notre Dame <https://www.nd.edu/>`_.
 
 If you use Pyomo.DoE, please cite:
@@ -114,10 +114,10 @@ where:
 *  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. It should consist of one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}`. With a proper model formulation, the timepoints for control or measurements :math:`\mathbf{t}` can also be degrees of freedom.
 *  :math:`\mathbf{M}` is the Fisher information matrix (FIM), estimated as the inverse of the covariance matrix of parameter estimates  :math:`\boldsymbol{\hat{\theta}}`. A large FIM indicates more information contained in the experiment for parameter estimation.
 *  :math:`\mathbf{Q}` is the dynamic sensitivity matrix, containing the partial derivatives of  :math:`\mathbf{y}` with respect to  :math:`\boldsymbol{\theta}`.
-*  :math:`\Psi` is the scalar design criteria to measure the information content in FIM.
+*  :math:`\Psi` is the scalar design criteria to measure the information content in the FIM.
 *  :math:`\mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1}` is the FIM of previous experiments.
 
-Pyomo.DoE provides five design criteria  :math:`\Psi` to measure the information in FIM:
+Pyomo.DoE provides five design criteria  :math:`\Psi` to measure the information in the FIM:
 
 .. list-table:: Pyomo.DoE design criteria
     :header-rows: 1
