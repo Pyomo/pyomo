@@ -342,11 +342,13 @@ class CUOPTDirect(DirectSolver):
             for pyomo_var in var_map.keys():
                 if len(primal_solution) > 0 and pyomo_var in self.referenced_vars:
                     name = self._symbol_map.getSymbol(pyomo_var, self._labeler)
-                    soln_variables[name] = {"Value": primal_solution[var_map[pyomo_var]]}
-                    if reduced_costs is not None:
+                    soln_variables[name] = {
+                        "Value": primal_solution[var_map[pyomo_var]]
+                    }
+                    if reduced_costs is not None and len(reduced_costs) > 0:
                         soln_variables[name]["Rc"] = reduced_costs[var_map[pyomo_var]]
             for pyomo_con in con_map.keys():
-                if dual_solution is not None:
+                if dual_solution is not None and len(dual_solution) > 0:
                     con_name = self._symbol_map.getSymbol(pyomo_con, self._labeler)
                     soln_constraints[con_name] = {
                         "Dual": dual_solution[con_map[pyomo_con]]
