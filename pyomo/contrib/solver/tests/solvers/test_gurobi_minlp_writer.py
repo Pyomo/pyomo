@@ -40,7 +40,7 @@ from pyomo.environ import (
 )
 from pyomo.gdp import Disjunction
 from pyomo.opt import WriterFactory
-from pyomo.contrib.solver.solvers.gurobi_direct_minlp import (
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
     GurobiDirectMINLP,
     GurobiMINLPVisitor,
 )
@@ -51,6 +51,9 @@ from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import CommonTe
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 if gurobipy_available:
     from gurobipy import GRB
+
+    if not GurobiDirectMINLP().available():
+        gurobipy_available = False
 
 
 def make_model():
