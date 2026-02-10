@@ -13,7 +13,7 @@ import math
 import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
-from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiDirectMINLP
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.environ import (
