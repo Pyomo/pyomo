@@ -180,7 +180,7 @@ class CUOPTDirect(DirectSolver):
                 f"Objective contains nonlinear terms which are "
                 "not supported by cuOpt solver."
             )
-                
+
         obj_coeffs = [0] * len(self._pyomo_var_to_ndx_map)
         # repn.linear is keyed by id(var), use var_map to get actual vars
         for var_id, coef in repn.linear.items():
@@ -349,7 +349,9 @@ class CUOPTDirect(DirectSolver):
             for pyomo_con in con_map.keys():
                 if dual_solution is not None:
                     con_name = self._symbol_map.getSymbol(pyomo_con, self._labeler)
-                    soln_constraints[con_name] = {"Dual": dual_solution[con_map[pyomo_con]]}
+                    soln_constraints[con_name] = {
+                        "Dual": dual_solution[con_map[pyomo_con]]
+                    }
 
         elif self._load_solutions:
             if len(primal_solution) > 0:
