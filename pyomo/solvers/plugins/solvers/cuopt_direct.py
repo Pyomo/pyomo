@@ -90,11 +90,10 @@ class CUOPTDirect(DirectSolver):
             if not con.active:
                 continue
 
-            if not con.has_lb() and not con.has_ub():
+            lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
+            if lb is None and ub is None:
                 assert not con.equality
                 continue  # non-binding, so skip
-
-            lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
             repn = visitor.walk_expression(body)
 
             if repn.nonlinear is not None:
