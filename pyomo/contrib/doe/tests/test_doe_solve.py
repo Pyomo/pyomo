@@ -194,7 +194,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    def test_reactor_fd_forward_solve(self):
+    def test_rooney_biegler_fd_forward_solve(self):
         fd_method = "forward"
         obj_used = "zero"
 
@@ -231,7 +231,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    def test_reactor_fd_backward_solve(self):
+    def test_rooney_biegler_fd_backward_solve(self):
         fd_method = "backward"
         obj_used = "pseudo_trace"
 
@@ -255,7 +255,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    def test_reactor_obj_det_solve(self):
+    def test_rooney_biegler_obj_det_solve(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -280,7 +280,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    def test_reactor_obj_cholesky_solve(self):
+    def test_rooney_biegler_obj_cholesky_solve(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -386,7 +386,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         fd_method = "forward"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
