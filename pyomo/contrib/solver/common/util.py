@@ -15,6 +15,11 @@ import pyomo.core.expr as EXPR
 from pyomo.core.base.objective import Objective
 
 
+class SolverError(PyomoException):
+    """General error raised by Pyomo solver interfaces when processing
+    Solver results."""
+
+
 class NoFeasibleSolutionError(PyomoException):
     default_message = (
         'A feasible solution was not found, so no solution can be loaded. '
