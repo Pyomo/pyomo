@@ -280,3 +280,47 @@ class TestTrustRegionMethod(unittest.TestCase):
         self.assertEqual(result.name, self.m.name)
         # The values should not be the same
         self.assertNotEqual(value(result.obj), value(self.m.obj))
+
+
+@unittest.skipIf(
+    not SolverFactory('ipopt').available(False), "The IPOPT solver is not available"
+)
+class TestTrustRegionMethod(unittest.TestCase):
+    def setUp(self):
+        self.m = ConcreteModel()
+        self.m.x = Var(range(2), domain=Reals, initialize=0.0)
+
+        def blackbox(a):
+            return (a**3) + (a**2) - a
+
+        def grad_blackbox(args, fixed):
+            a = args[0]
+            return [3 * a**2 + 2 * a - 1]
+
+        self.m.bb = ExternalFunction(blackbox, grad_blackbox)
+
+        self.m.obj = Objective(expr=(self.m.x[0]) ** 2 + (self.m.x[1]) ** 2)
+        self.m.c = Constraint(
+            expr=self.m.bb(self.m.x[0]) + self.m.x[0] + 1 == self.m.x[1]
+        )
+
+        self.ext_fcn_surrogate_map_rule = lambda comp, ef: 0
+        self.decision_variables = [self.m.x[0]]
+
+    def test_funnel_step_rejection(self):
+        """Test Funnel globalization strategy with a problem that invokes step rejection."""
+        self.TRF = SolverFactory(
+            'trustregion', globalization_strategy=1  # Funnel strategy
+        )
+
+        # Run the solver
+        log_OUTPUT = StringIO()
+        print_OUTPUT = StringIO()
+        sys.stdout = print_OUTPUT
+        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+            solve_status = self.TRF.solve(self.m, self.decision_variables)
+        sys.stdout = sys.__stdout__
+
+        # Assertions
+        self.assertTrue(solve_status)  # Solver should succeed
+        self.assertIn('rejected', log_OUTPUT.getvalue())
