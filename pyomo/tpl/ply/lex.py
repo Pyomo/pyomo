@@ -949,10 +949,6 @@ def lex(module=None, debug=False, optimize=False, lextab='lextab',
         if debuglog is None:
             debuglog = PlyLogger(sys.stderr)
 
-    # Get the module dictionary used for the lexer
-    if object:
-        module = object
-
     # Get the module dictionary used for the parser
     if module:
         _items = [(k, getattr(module, k)) for k in dir(module)]
