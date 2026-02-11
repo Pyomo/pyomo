@@ -270,7 +270,7 @@ class TempfileContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()
 
-    def mkstemp(self, suffix=None, prefix=None, dir=None, text=False):
+    def mkstemp(self, suffix=None, prefix=None, dir=None, text=False, delete=True):
         """Create a unique temporary file using :func:`tempfile.mkstemp`
 
         Parameters are handled as in :func:`tempfile.mkstemp`, with
@@ -289,10 +289,11 @@ class TempfileContext:
         dir = self._resolve_tempdir(dir)
         # Note: ans == (fd, fname)
         ans = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=dir, text=text)
-        self.tempfiles.append(ans)
+        if delete:
+            self.tempfiles.append(ans)
         return ans
 
-    def mkdtemp(self, suffix=None, prefix=None, dir=None):
+    def mkdtemp(self, suffix=None, prefix=None, dir=None, delete=True):
         """Create a unique temporary directory using :func:`tempfile.mkdtemp`
 
         Parameters are handled as in :func:`tempfile.mkdtemp`, with
@@ -307,7 +308,8 @@ class TempfileContext:
         """
         dir = self._resolve_tempdir(dir)
         dname = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
-        self.tempfiles.append((None, dname))
+        if delete:
+            self.tempfiles.append((None, dname))
         return dname
 
     def gettempdir(self):
