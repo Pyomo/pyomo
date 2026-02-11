@@ -27,7 +27,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase, load_import_suffixes
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 
 
 class ASLSolFileData:
@@ -55,7 +58,9 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     Loader for solvers that create ASL .sol files (e.g., ipopt)
     """
 
-    def __init__(self, sol_data: ASLSolFileData, nl_info: NLWriterInfo, pyomo_model) -> None:
+    def __init__(
+        self, sol_data: ASLSolFileData, nl_info: NLWriterInfo, pyomo_model
+    ) -> None:
         self._sol_data = sol_data
         self._nl_info = nl_info
         self._pyomo_model = pyomo_model
@@ -71,7 +76,9 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     def load_import_suffixes(self, solution_id=None):
         load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None) -> None:
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> None:
         if solution_id is not None:
             raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if vars_to_load is not None:
@@ -107,7 +114,7 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None,
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
         if solution_id is not None:
             raise ValueError(f'{self.__class__.__name__} does not support solution_id')
@@ -155,7 +162,7 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
         return result
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None,
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> dict[ConstraintData, float]:
         if solution_id is not None:
             raise ValueError(f'{self.__class__.__name__} does not support solution_id')
