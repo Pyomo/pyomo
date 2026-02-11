@@ -162,8 +162,8 @@ class TestPyomoEnviron(unittest.TestCase):
             'win32file',  # Imported on Windows
             'win32pipe',  # Imported on Windows
         }
-        # Non-standard-library TPLs that Pyomo will load unconditionally
-        ref.add('ply')
+        # Non-standard-library TPLs that Pyomo will load unconditionally:
+        # ref.add('ply')  # PLY removed as a dependency in 6.10.0
         diff = set(_[0] for _ in tpl_by_time[-5:]).difference(ref)
         self.assertEqual(
             diff, set(), "Unexpected module found in 5 slowest-loading TPL modules"
