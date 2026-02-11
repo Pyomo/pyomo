@@ -59,6 +59,17 @@
 # own risk!
 # ----------------------------------------------------------------------------
 
+"""Customized version of ply.yacc
+
+This is a modified version of ply.yacc (from PLY 3.11) that removes
+support for loading parse tables from picklefiles or arbitrary locations
+on the filesystem.  ply.yacc.yacc() is expected to be used in a "2-pass"
+mode: either called to generate the parse table module, or else to load
+the module and build the parser.
+
+The YACC logic was not changed.
+"""
+
 import re
 import types
 import sys
@@ -1979,8 +1990,10 @@ class LRTable(object):
         if isinstance(module, types.ModuleType):
             parsetab = module
         else:
-            exec('import %s' % module)
-            parsetab = sys.modules[module]
+            raise ValueError(
+                f"{__name__}.yacc(): loading parse tables is not supported.  "
+                "Pass the imported parse table module with the 'tabmodule=' argument"
+            )
 
         if parsetab._tabversion != __tabversion__:
             raise VersionError('yacc table file version is out of date')
@@ -2695,7 +2708,7 @@ class LRGeneratedTable(LRTable):
     # This function writes the LR parsing tables to a file
     # -----------------------------------------------------------------------------
 
-    def write_table(self, tabmodule, outputdir='', signature=''):
+    def write_table(self, tabmodule, outputdir='', signature='', module_signature=''):
         if isinstance(tabmodule, types.ModuleType):
             raise IOError("Won't overwrite existing tabmodule")
 
@@ -2712,8 +2725,16 @@ _tabversion = %r
 
 _lr_method = %r
 
+_lr_module_signature = %r
+
 _lr_signature = %r
-    ''' % (os.path.basename(filename), __tabversion__, self.lr_method, signature))
+    ''' % (
+    os.path.basename(filename),
+    __tabversion__,
+    self.lr_method,
+    module_signature,
+    signature,
+))
 
             # Change smaller to 0 to go back to original tables
             smaller = 1
@@ -3160,14 +3181,11 @@ class ParserReflect(object):
 # -----------------------------------------------------------------------------
 
 def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, start=None,
-         check_recursion=True, optimize=False, write_tables=True, debugfile=debug_file,
-         outputdir=None, debuglog=None, errorlog=None):
+         check_recursion=True, debugfile=debug_file,
+         outputdir=None, debuglog=None, errorlog=None, module_signature=''):
 
     if tabmodule is None:
         tabmodule = tab_module
-
-    # Reference to the parsing method of the last built parser
-    global parse
 
     if errorlog is None:
         errorlog = PlyLogger(sys.stderr)
@@ -3191,17 +3209,9 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
         # is determined according to the following rules:
         #     - If tabmodule specifies a package, files go into that package directory
         #     - Otherwise, files go in the same directory as the specifying module
-        if isinstance(tabmodule, types.ModuleType):
-            srcfile = tabmodule.__file__
-        else:
-            if '.' not in tabmodule:
-                srcfile = pdict['__file__']
-            else:
-                parts = tabmodule.split('.')
-                pkgname = '.'.join(parts[:-1])
-                exec('import %s' % pkgname)
-                srcfile = getattr(sys.modules[pkgname], '__file__', '')
-        outputdir = os.path.dirname(srcfile)
+        assert isinstance(tabmodule, types.ModuleType)
+    else:
+        assert isinstance(tabmodule, str)
 
     # Determine if the module is package of a package or not.
     # If so, fix the tabmodule setting so that tables load correctly
@@ -3209,8 +3219,6 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
     if pkg and isinstance(tabmodule, str):
         if '.' not in tabmodule:
             tabmodule = pkg + '.' + tabmodule
-
-
 
     # Set start symbol if it's specified directly using an argument
     if start is not None:
@@ -3226,22 +3234,14 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
     # Check signature against table files (if any)
     signature = pinfo.signature()
 
-    # Read the tables
-    try:
+    if outputdir is None:
+        # Read the tables
         lr = LRTable()
         read_signature = lr.read_table(tabmodule)
-        if optimize or (read_signature == signature):
-            try:
-                lr.bind_callables(pinfo.pdict)
-                parser = LRParser(lr, pinfo.error_func)
-                parse = parser.parse
-                return parser
-            except Exception as e:
-                errorlog.warning('There was a problem loading the table file: %r', e)
-    except VersionError as e:
-        errorlog.warning(str(e))
-    except ImportError:
-        pass
+        if read_signature != signature:
+            raise YaccError("Parse table signature mismatch")
+        lr.bind_callables(pinfo.pdict)
+        return LRParser(lr, pinfo.error_func)
 
     if debuglog is None:
         if debug:
@@ -3417,18 +3417,6 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
                 errorlog.warning('Rule (%s) is never reduced', rejected)
                 warned_never.append(rejected)
 
-    # Write the table file if requested
-    if write_tables:
-        try:
-            lr.write_table(tabmodule, outputdir, signature)
-            if tabmodule in sys.modules:
-                del sys.modules[tabmodule]
-        except IOError as e:
-            errorlog.warning("Couldn't create %r. %s" % (tabmodule, e))
-
-    # Build the parser
-    lr.bind_callables(pinfo.pdict)
-    parser = LRParser(lr, pinfo.error_func)
-
-    parse = parser.parse
-    return parser
+    # Write the table file
+    lr.write_table(tabmodule, outputdir, signature, module_signature)
+    return None
