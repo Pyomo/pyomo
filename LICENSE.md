@@ -1,5 +1,4 @@
-LICENSE
-=======
+# LICENSE
 
 Copyright (c) 2008-2025 National Technology and Engineering Solutions of
 Sandia, LLC. Under the terms of Contract DE-NA0003525 with National
@@ -36,15 +35,13 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-Additional Notices
-==================
+# Additional Notices
 
-Some modules in Pyomo contain software derived from other projects and
-is included in accordance with their original licenses:
+Some modules in Pyomo contain software derived from other projects.
+This software is included in accordance with their original licenses:
 
 
-Foqus
-+++++
+## Foqus
 
 Foqus was produced under the DOE Carbon Capture Simulation Initiative
 (CCSI), and is copyright (c) 2012 - 2025 by the software owners: Oak
@@ -122,8 +119,7 @@ such enhancements or derivative works thereof, in binary and source code
 form.
 
 
-IDAES
-+++++
+## IDAES
 
 Institute for the Design of Advanced Energy Systems Process Systems Engineering
 Framework (IDAES PSE Framework) Copyright (c) 2018-2024, by the software owners: The
@@ -174,8 +170,7 @@ distribute, and sublicense such enhancements or derivative works thereof, in
 binary and source code form.
 
 
-PLY
-+++
+## PLY
 
 Copyright (C) 2001-2018
 David M. Beazley (Dabeaz LLC)
@@ -209,8 +204,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-PyUtilib
-++++++++
+## PyUtilib
 
 Copyright 2008 Sandia Corporation. Under the terms of Contract
 DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
@@ -246,8 +240,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-Water Security Toolkit (WST)
-++++++++++++++++++++++++++++
+## Water Security Toolkit (WST)
 
 Copyright (c) 2011, Sandia Corporation.
 Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
@@ -290,8 +283,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-WaterTAP
-++++++++
+## WaterTAP
 
 WaterTAP Copyright (c) 2020-2023, The Regents of the University of
 California, through Lawrence Berkeley National Laboratory, Oak Ridge
