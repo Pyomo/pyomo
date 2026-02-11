@@ -3271,22 +3271,6 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
     else:
         pdict = get_caller_module_dict(2)
 
-    if outputdir is None:
-        # If no output directory is set, the location of the output files
-        # is determined according to the following rules:
-        #     - If tabmodule specifies a package, files go into that package directory
-        #     - Otherwise, files go in the same directory as the specifying module
-        assert isinstance(tabmodule, types.ModuleType)
-    else:
-        assert isinstance(tabmodule, str)
-
-    # Determine if the module is package of a package or not.
-    # If so, fix the tabmodule setting so that tables load correctly
-    pkg = pdict.get('__package__')
-    if pkg and isinstance(tabmodule, str):
-        if '.' not in tabmodule:
-            tabmodule = pkg + '.' + tabmodule
-
     # Set start symbol if it's specified directly using an argument
     if start is not None:
         pdict['start'] = start
@@ -3301,7 +3285,7 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
     # Check signature against table files (if any)
     signature = ''  # pinfo.signature()  <-- this has unreliable amount of whitespace
 
-    if outputdir is None:
+    if isinstance(tabmodule, types.ModuleType):
         # Read the tables
         lr = LRTable()
         read_signature = lr.read_table(tabmodule)
@@ -3309,14 +3293,27 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
             raise YaccError(f"Parse table signature mismatch")
         lr.bind_callables(pinfo.pdict)
         return LRParser(lr, pinfo.error_func)
+    else:
+        assert isinstance(tabmodule, str)
+
+    # Determine if the module is package of a package or not.
+    # If so, fix the tabmodule setting so that tables load correctly
+    pkg = pdict.get('__package__')
+    if pkg and '.' not in tabmodule:
+        tabmodule = pkg + '.' + tabmodule
 
     if debuglog is None:
         if debug:
-            try:
-                debuglog = PlyLogger(open(os.path.join(outputdir, debugfile), 'w'))
-            except IOError as e:
-                errorlog.warning("Couldn't open %r. %s" % (debugfile, e))
-                debuglog = NullLogger()
+            if debugfile:
+                if outputdir:
+                    debugfile = os.path.join(outputdir, debugfile)
+                try:
+                    debuglog = PlyLogger(open(debugfile, 'w'))
+                except IOError as e:
+                    errorlog.warning("Couldn't open %r. %s" % (debugfile, e))
+                    debuglog = NullLogger()
+            else:
+                debuglog = PlyLogger(sys.stdout)
         else:
             debuglog = NullLogger()
 
@@ -3485,5 +3482,7 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
                 warned_never.append(rejected)
 
     # Write the table file
-    lr.write_table(tabmodule, outputdir, signature, module_signature)
-    return None
+    if outputdir:
+        lr.write_table(tabmodule, outputdir, signature, module_signature)
+
+    return LRParser(lr, pinfo.error_func)
