@@ -35,7 +35,7 @@ class TestDatParser(unittest.TestCase):
             with self.assertRaisesRegex(
                 DeveloperError,
                 r"DAT parse tables \(pyomo.dataportal._parse_table_datacmds\) "
-                "out of\s+sync with parser definition",
+                r"out of\s+sync with parser definition",
             ):
                 parser.parse_data_commands('')
         finally:
