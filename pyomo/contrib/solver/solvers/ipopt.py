@@ -575,20 +575,14 @@ class Ipopt(SolverBase):
         results.extra_info.iteration_count = parsed_output_data.pop('iters', None)
         _timing = parsed_output_data.pop('cpu_seconds', None)
         if _timing:
-            # TODO: once #3790 is merged, this is just:
-            #   results.timing_info.update(_timing)
-            for k, v in _timing.items():
-                results.timing_info[k] = v
+            results.timing_info.update(_timing)
         # Save the iteration log, but mark it as an "advanced" result
         iter_log = parsed_output_data.pop('iteration_log', None)
         if iter_log is not None:
             results.extra_info.add(
                 'iteration_log', ConfigList(iter_log, visibility=ADVANCED_OPTION)
             )
-        # TODO: once #3790 is merged, this is just:
-        #   results.extra_info.update(parsed_output_data)
-        for k, v in parsed_output_data.items():
-            results.extra_info[k] = v
+        results.extra_info.update(parsed_output_data)
         timer.stop('parse_log')
 
         timer.start('parse_sol')
