@@ -16,6 +16,7 @@ __pycache__/
 *.egg-info/
 
 # Documentation builds
+doc/OnlineDocs/api
 doc/OnlineDocs/_build
 doc/OnlineDocs/**/*.spy
 
