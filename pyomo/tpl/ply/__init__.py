@@ -9,10 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""PLY
-===
+"""
+PLY: Python Lex-Yacc
+====================
 
-This module is derived from the PLY package (3.11) by David Beazley.
+This module is derived from the PLY package (version 3.11) by David Beazley.
 
 It has been modified to disallow loading parse tables from arbitrary
 files or pickles.  This simplifies management of the parse table module
@@ -21,7 +22,9 @@ and avoids potential security concerns.
 The original PLY project (https://github.com/dabeaz/ply) was archived on
 December 21, 2025 and is no longer developed or maintained.
 
+PLY (3.11) documentation is available here:  https://www.dabeaz.com/ply/ply.html
+
 """
 
 __version__ = '3.11.post1'
-__all__ = ['lex','yacc']
+__all__ = ['lex', 'yacc']

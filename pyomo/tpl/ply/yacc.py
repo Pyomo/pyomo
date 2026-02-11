@@ -72,15 +72,16 @@
 # own risk!
 # ----------------------------------------------------------------------------
 
-"""Customized version of ply.yacc
+"""Customized version of ``ply.yacc`` parser
 
-This is a modified version of ply.yacc (from PLY 3.11) that removes
+This is a modified version of ``ply.yacc`` (from PLY 3.11) that removes
 support for loading parse tables from picklefiles or arbitrary locations
-on the filesystem.  ply.yacc.yacc() is expected to be used in a "2-pass"
-mode: either called to generate the parse table module, or else to load
-the module and build the parser.
+on the filesystem.  :py:`yacc()` is expected to be used in a "2-pass"
+mode: either called to generate the parse table module, or else passed
+the imported parse table module to return a fully-constructed parser.
 
-The YACC logic was not changed.
+The YACC logic itself is unchanged from the original distribution.
+
 """
 
 import re
@@ -90,7 +91,7 @@ import os.path
 import inspect
 import warnings
 
-__version__    = '3.11'
+__version__    = '3.11.post1'
 __tabversion__ = '3.10'
 
 #-----------------------------------------------------------------------------
@@ -3196,6 +3197,59 @@ class ParserReflect(object):
 def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, start=None,
          check_recursion=True, debugfile=debug_file,
          outputdir=None, debuglog=None, errorlog=None, module_signature=''):
+    """Generate and return a parser object
+
+    Parameters
+    ==========
+    method : str
+
+        The selected parser method; one of [``'SLR'``, ``'LALR'``]
+
+    debug : int | None
+
+        If evaluates to True, generate a debug log and send it to ``debuglog``
+
+    module : types.ModuleType | None
+
+        The module defining the parser grammar.  If `None`, then the
+        calling context is assumed to contain the grammar.
+
+    tabmodule : types.ModuleType | str | None
+
+        If ``tabmodule`` is a module, then assume it is a cached parse
+        table.  Bind the parser to the tabmodule and the grammar scope
+        it and return it.  If it is a string or None, then the parse
+        table is generated from the grammar (see also ``module``)
+
+    start : str | None
+
+    check_recursion : bool
+
+    debugfile : str
+
+        If ``debug`` and ``debuglog`` is None the debug log is written
+        to this file name.  If ``outputdir`` is non-None, it is joined
+        with ``debugfile`` before opening.
+
+    outputdir : str | None
+
+        If non-None and ``tabmodule`` is not a module, then write the
+        parse table to ``tabfile`` in ``outputdir``.
+
+    debuglog : PyLogger | NullLogger | None
+
+        If non-None, the logger to write the debug log to
+
+    errorlog : PyLogger | NullLogger | None
+
+        Error log file.  If None, the error log is sent to ``sys.stderr``
+
+    module_signature : str
+
+        "Signature" of the grammar module.  Ignoted by yacc, except
+        record it as part of the cached parse table
+
+    """
 
     if tabmodule is None:
         tabmodule = tab_module

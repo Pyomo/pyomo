@@ -44,7 +44,18 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # -----------------------------------------------------------------------------
 
-__version__    = '3.11'
+"""Customized version of ``ply.lex`` lexer for string data
+
+This is copy of ``ply.lex`` (from PLY 3.11) that has been modified to
+prevent loading arbitrary lexer table files.  "Optimized" (cached) lexer
+table modules should be loaded by the client and passed as a module to
+:py:`lex()`.
+
+The LEX logic itself is unchanged from the original distribution.
+
+"""
+
+__version__    = '3.11.post'
 __tabversion__ = '3.10'
 
 import re
@@ -874,8 +885,51 @@ class LexerReflect(object):
 #
 # Build all of the regular expression rules from definitions in the supplied module
 # -----------------------------------------------------------------------------
-def lex(module=None, object=None, debug=False, optimize=False, lextab='lextab',
+def lex(module=None, debug=False, optimize=False, lextab='lextab',
         reflags=int(re.VERBOSE), nowarn=False, outputdir=None, debuglog=None, errorlog=None):
+    """Generate and return a :py:`Lexer` (tokenizer) object
+
+    Parameters
+    ==========
+    module : types.ModuleType | None
+
+        The module defining the lexer grammar.  If `None`, then the
+        calling context is assumed to contain the grammar.
+
+    debug : bool
+
+        If True, generate a debug log and send it to ``debuglog``
+
+    optimize : bool
+
+        If True, generate "optimized" lexer (with less debugging / error
+        checking).
+
+    lextab : types.ModuleType | str | None
+
+        If ``lextab`` is a module, then assume it is a cached tokenizer.
+        Return it.  If it is a string or None, then the tokenizer is
+        generated from the grammar (see also ``module``)
+
+    reflage : int
+
+    nowarn : bool
+
+    outputdir : str | None
+
+        If non-None and ``lextab`` is not a module, then write the
+        lexer table to ``tabfile`` in ``outputdir``.
+
+    debuglog : PyLogger | None
+
+        The logger to write the debug log to.  If None, debug log is
+        sent to ``sys.stderr``.
+
+    errorlog : PyLogger | NullLogger | None
+
+        Error log file.  If None, the error log is sent to ``sys.stderr``
+
+    """
 
     if lextab is None:
         lextab = 'lextab'

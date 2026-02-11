@@ -8,3 +8,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+"""Third-party libraries
+
+This module contains packages that were developed outside Pyomo, but are
+included in the Pyomo source tree to streamline deployment (e.g., they
+are not easily installable via `pip` or `conda`, they are no longer
+under active maintenance, or Pyomo requires custom patches).
+
+"""
