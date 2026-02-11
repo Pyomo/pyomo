@@ -533,7 +533,7 @@ def parse_data_commands(data=None, filename=None, debug=0):
     global dat_yaccer
 
     # if the lexer/yaccer haven't been initialized, do so.
-    if dat_lexer is None:
+    if dat_lexer is None or dat_yaccer is None:
         # Import the parse table, and check that it is valid for this module
         pkg = __name__.rsplit('.', maxsplit=1)[0]
         dat_tabmodule = importlib.import_module('.' + tabmodule, pkg)
