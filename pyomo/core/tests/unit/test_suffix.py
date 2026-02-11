@@ -1849,14 +1849,15 @@ class TestSuffixFinder(unittest.TestCase):
         # Make sure we don't find default suffixes at lower levels
         self.assertEqual(_suffix_finder.find(m.b1.v2), 1)
         self.assertEqual(_suffix_b1_finder.find(m.b1.v2), None)
-        self.assertEqual(_suffix_b2_finder.find(m.b1.v2), None)
+        # Except if the lower level is actually the context
+        self.assertEqual(_suffix_b2_finder.find(m.b1.v2), 2)
 
         # Make sure we don't find specific suffixes at lower levels
         m.b1.b2.suffix[m.v1] = 5
         self.assertEqual(_suffix_finder.find(m.v1), 1)
         self.assertEqual(_suffix_b1_finder.find(m.v1), None)
         # Except if the lower level is actually the context
-        self.assertEqual(_suffix_b2_finder.find(m.v1), 2)
+        self.assertEqual(_suffix_b2_finder.find(m.v1), 5)
 
         # Make sure we can look up Blocks and that they will match
         # suffixes that they hold
@@ -1866,7 +1867,7 @@ class TestSuffixFinder(unittest.TestCase):
 
         self.assertEqual(_suffix_finder.find(m.b1), 1)
         self.assertEqual(_suffix_b1_finder.find(m.b1), None)
-        self.assertEqual(_suffix_b2_finder.find(m.b1), None)
+        self.assertEqual(_suffix_b2_finder.find(m.b1), 2)
 
 
 if __name__ == "__main__":
