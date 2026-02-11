@@ -459,18 +459,31 @@ class SuffixFinder:
     def find(self, component_data):
         """Find suffix value for a given component data object in model tree
 
-        Suffixes are searched by traversing the model hierarchy in three passes:
+        If the `component_data` is attached to a block within the
+        `context` (that is, part of the model hierarchy rooted by the
+        `context` :py:`BlockData`), then :py:`Suffixe` components are
+        searched by traversing the model hierarchy in three passes:
 
-        1. Search for a Suffix matching the specific component_data,
-           starting at the `root` and descending down the tree to
-           the component_data.  Return the first match found.
-        2. Search for a Suffix matching the component_data's container,
-           starting at the `root` and descending down the tree to
-           the component_data.  Return the first match found.
-        3. Search for a Suffix with key `None`, starting from the
-           component_data and working up the tree to the `root`.
+        1. Search for a :py:`Suffix` matching the specific `component_data`,
+           starting at the `root` (context block) and descending down
+           the tree to the `component_data`.  Return the first match
+           found.
+
+        2. Search for a :py:`Suffix` matching the `component_data`'s
+           container, starting at the `root` and descending down the
+           tree to the `component_data`.  Return the first match found.
+
+        3. Search for a :py:`Suffix` with key `None`, starting from the
+           `component_data` and working up the tree to the `root`.
            Return the first match found.
-        4. Return the default value
+
+        If the `component_data` is not part of the `context` hierarchy,
+        then only the :py:`Suffix` attached to the root context is
+        checked for the `component_data`, its container, and `None` (in
+        order).
+
+        If no valid value is found by searching :py:`Suffix` components,
+        then the `default` value is returned.
 
         Parameters
         ----------
@@ -480,7 +493,8 @@ class SuffixFinder:
 
         Returns
         -------
-        The value for Suffix associated with component data if found, else None.
+        Any
+            The value for Suffix associated with component data if found, else None.
 
         """
         # Walk parent tree and search for suffixes
