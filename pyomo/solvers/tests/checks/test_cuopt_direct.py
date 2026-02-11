@@ -138,7 +138,7 @@ class CUOPTTests(unittest.TestCase):
         opt = SolverFactory('cuopt')
         with pytest.raises(ValueError, match=r"contains nonlinear terms"):
             opt.solve(m)
-    
+
 
 if __name__ == "__main__":
     unittest.main()
