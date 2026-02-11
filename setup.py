@@ -205,7 +205,7 @@ class DependenciesCommand(Command):
 setup_kwargs = dict(
     cmdclass={'dependencies': DependenciesCommand},
     version=get_version(),
-    install_requires=['ply'],
+    install_requires=[],
     extras_require={
         # There are certain tests that also require pytest-qt, but because those
         # tests are so environment/machine specific, we are leaving these out of
