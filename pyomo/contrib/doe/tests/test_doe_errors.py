@@ -39,30 +39,11 @@ from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory("ipopt").available()
 
 
-def get_rooney_biegler_experiment():
-    """Get a fresh RooneyBieglerExperiment instance for testing.
-
-    Creates a new experiment instance to ensure test isolation.
-    Each test gets its own instance to avoid state sharing.
-    """
-    data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
-    data_point = data.iloc[0]
-
-    return RooneyBieglerExperiment(
-        data=data_point,
-        theta={'asymptote': 15, 'rate_constant': 0.5},
-        measure_error=0.1,
-    )
-
-
-def get_rooney_biegler_experiment_flag(flag=0):
+def get_rooney_biegler_experiment_flag():
     """Get a fresh RooneyBieglerExperimentFlag instance for testing.
 
     Creates a new experiment instance that supports the flag parameter
     for creating incomplete models for error testing.
-
-    Args:
-        flag: Model completeness flag (0=full, 1-4=missing specific suffix)
     """
     data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
     data_point = data.iloc[0]
@@ -138,7 +119,7 @@ class TestDoEErrors(unittest.TestCase):
         obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
-        experiment = get_rooney_biegler_experiment_flag(flag=flag_val)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -155,7 +136,7 @@ class TestDoEErrors(unittest.TestCase):
         obj_used = "pseudo_trace"
         flag_val = 2  # Value for faulty model build mode - 2: No meas error
 
-        experiment = get_rooney_biegler_experiment_flag(flag=flag_val)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -172,7 +153,7 @@ class TestDoEErrors(unittest.TestCase):
         obj_used = "pseudo_trace"
         flag_val = 3  # Value for faulty model build mode - 3: No exp inputs/design vars
 
-        experiment = get_rooney_biegler_experiment_flag(flag=flag_val)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -189,7 +170,7 @@ class TestDoEErrors(unittest.TestCase):
         obj_used = "pseudo_trace"
         flag_val = 4  # Value for faulty model build mode - 4: No unknown params
 
-        experiment = get_rooney_biegler_experiment_flag(flag=flag_val)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -207,7 +188,7 @@ class TestDoEErrors(unittest.TestCase):
 
         prior_FIM = np.ones((5, 5))
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args['prior_FIM'] = prior_FIM
@@ -231,7 +212,7 @@ class TestDoEErrors(unittest.TestCase):
 
         prior_FIM = -np.ones((2, 2))
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args['prior_FIM'] = prior_FIM
@@ -256,7 +237,7 @@ class TestDoEErrors(unittest.TestCase):
         prior_FIM = np.zeros((2, 2))
         prior_FIM[0, 1] = 1e-3
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args['prior_FIM'] = prior_FIM
@@ -277,7 +258,7 @@ class TestDoEErrors(unittest.TestCase):
 
         jac_init = np.ones((5, 5))
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args['jac_initial'] = jac_init
@@ -298,7 +279,7 @@ class TestDoEErrors(unittest.TestCase):
 
         FIM_update = np.ones((2, 2))
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -317,7 +298,7 @@ class TestDoEErrors(unittest.TestCase):
 
         FIM_update = None
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -333,7 +314,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -351,7 +332,7 @@ class TestDoEErrors(unittest.TestCase):
             5  # Value for faulty model build mode - 5: Mismatch error and output length
         )
 
-        experiment = get_rooney_biegler_experiment_flag(flag=flag_val)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -369,7 +350,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -390,7 +371,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -408,7 +389,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -432,7 +413,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -454,7 +435,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -476,7 +457,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -502,7 +483,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -528,7 +509,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -545,7 +526,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -563,7 +544,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -581,7 +562,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -599,7 +580,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -617,7 +598,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -635,7 +616,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -650,7 +631,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -665,7 +646,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -681,7 +662,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -705,7 +686,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -728,7 +709,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -751,7 +732,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
@@ -769,7 +750,7 @@ class TestDoEErrors(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = get_rooney_biegler_experiment()
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
