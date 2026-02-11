@@ -138,22 +138,22 @@ class NLWriterInfo:
 
     def __init__(
         self,
-        var,
-        con,
-        obj,
-        external_libs,
-        row_labels,
-        col_labels,
-        eliminated_vars,
-        scaling,
+        var=None,
+        con=None,
+        obj=None,
+        external_libs=None,
+        row_labels=None,
+        col_labels=None,
+        eliminated_vars=None,
+        scaling=None,
     ):
-        self.variables = var
-        self.constraints = con
-        self.objectives = obj
-        self.external_function_libraries = external_libs
-        self.row_labels = row_labels
-        self.column_labels = col_labels
-        self.eliminated_vars = eliminated_vars
+        self.variables = var or []
+        self.constraints = con or []
+        self.objectives = obj or []
+        self.external_function_libraries = external_libs or []
+        self.row_labels = row_labels or []
+        self.column_labels = col_labels or []
+        self.eliminated_vars = eliminated_vars or []
         self.scaling = scaling
 
 
