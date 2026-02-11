@@ -90,7 +90,6 @@ where:
     * Parameters and design variables should be defined as Pyomo ``Var`` components 
       when building the model using the ``Experiment`` class so that users can use both 
       ``Parmest`` and ``Pyomo.DoE`` seamlessly.
-
 Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
 .. math::
@@ -128,20 +127,26 @@ Pyomo.DoE provides five design criteria  :math:`\Psi` to measure the information
       - Geometrical meaning
     * - A-optimality
       -   :math:`\text{trace}({\mathbf{M}}^{-1})`
-      - Dimensions of the enclosing box of the confidence ellipse
+      - Dimensions of the enclosing box of the confidence ellipse (derived from the covariance matrix)
     * - Pseudo A-optimality
       -   :math:`\text{trace}({\mathbf{M}})`
-      - Dimensions of the enclosing box of the inverse of the confidence ellipse
+      - Dimensions of the enclosing box of the confidence ellipse (derived from the Fisher Information Matrix)
     * - D-optimality
       -   :math:`\text{det}({\mathbf{M}})`
-      - Volume of the confidence ellipse
+      - Volume of the confidence ellipse (derived from the Fisher Information Matrix)
     * - E-optimality
       -   :math:`\text{min eig}({\mathbf{M}})`
-      - Size of the longest axis of the confidence ellipse
+      - Size of the longest axis of the confidence ellipse (derived from the Fisher Information Matrix)
     * - Modified E-optimality
       -   :math:`\text{cond}({\mathbf{M}})`
-      - Ratio of the longest axis to the shortest axis of the confidence ellipse
+      - Ratio of the longest axis to the shortest axis of the confidence ellipse (derived from the Fisher Information Matrix)
 
+.. note::
+    A confidence ellipse is a geometric representation of the uncertainty in parameter 
+    estimates. It is derived from the covariance matrix or the Fisher Information 
+    Matrix (FIM), depending on the design criterion. The ellipse illustrates the 
+    spread and correlation of parameter estimates, with its axes corresponding to 
+    the eigenvalues and eigenvectors of the respective matrix.
 
 In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
 
