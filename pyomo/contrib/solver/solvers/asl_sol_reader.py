@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import io
-from typing import Sequence, Optional, Mapping
+from typing import Sequence, Optional, Mapping, List, Any
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap
@@ -83,9 +83,9 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
             raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if vars_to_load is not None:
             # If we are given a list of variables to load, it is easiest
-            # to use the filtering in get_primals and then just set
+            # to use the filtering in get_vars and then just set
             # those values.
-            for var, val in self.get_primals(vars_to_load).items():
+            for var, val in self.get_vars(vars_to_load).items():
                 var.set_value(val, skip_validation=True)
             StaleFlagManager.mark_all_as_stale(delayed=True)
             return
