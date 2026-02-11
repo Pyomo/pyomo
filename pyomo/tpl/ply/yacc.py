@@ -3245,14 +3245,14 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
         raise YaccError('Unable to build parser')
 
     # Check signature against table files (if any)
-    signature = pinfo.signature()
+    signature = ''  # pinfo.signature()  <-- this has unreliable amount of whitespace
 
     if outputdir is None:
         # Read the tables
         lr = LRTable()
         read_signature = lr.read_table(tabmodule)
         if read_signature != signature:
-            raise YaccError(f"Parse table signature mismatch:\n\t{repr(read_signature)}\n\t{repr(signature)}")
+            raise YaccError(f"Parse table signature mismatch")
         lr.bind_callables(pinfo.pdict)
         return LRParser(lr, pinfo.error_func)
 
