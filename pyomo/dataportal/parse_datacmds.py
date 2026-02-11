@@ -588,4 +588,3 @@ if __name__ == '__main__':  # pragma:nocover
         debug=100,
         module_signature=_get_this_file_signature(),
     )
-    print(f"Remember to run 'black {this_file_dir()}/{tabmodule}.py'")
