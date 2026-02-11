@@ -225,8 +225,10 @@ class Lexer:
         if isinstance(tabfile, types.ModuleType):
             lextab = tabfile
         else:
-            exec('import %s' % tabfile)
-            lextab = sys.modules[tabfile]
+            raise ValueError(
+                f"{__name__}.lex(): loading parse tables is not supported.  "
+                "Pass the imported parse table module with the 'tabfile=' argument"
+            )
 
         if getattr(lextab, '_tabversion', '0.0') != __tabversion__:
             raise ImportError('Inconsistent PLY version')
@@ -921,16 +923,12 @@ def lex(module=None, object=None, debug=False, optimize=False, lextab='lextab',
         if linfo.validate_all():
             raise SyntaxError("Can't build lexer")
 
-    if optimize and lextab:
-        try:
-            lexobj.readtab(lextab, ldict)
-            token = lexobj.token
-            input = lexobj.input
-            lexer = lexobj
-            return lexobj
-
-        except ImportError:
-            pass
+    if isinstance(lextab, types.ModuleType):
+        lexobj.readtab(lextab, ldict)
+        token = lexobj.token
+        input = lexobj.input
+        lexer = lexobj
+        return lexobj
 
     # Dump some basic debugging information
     if debug:
@@ -1032,29 +1030,8 @@ def lex(module=None, object=None, debug=False, optimize=False, lextab='lextab',
     lexer = lexobj
 
     # If in optimize mode, we write the lextab
-    if lextab and optimize:
-        if outputdir is None:
-            # If no output directory is set, the location of the output files
-            # is determined according to the following rules:
-            #     - If lextab specifies a package, files go into that package directory
-            #     - Otherwise, files go in the same directory as the specifying module
-            if isinstance(lextab, types.ModuleType):
-                srcfile = lextab.__file__
-            else:
-                if '.' not in lextab:
-                    srcfile = ldict['__file__']
-                else:
-                    parts = lextab.split('.')
-                    pkgname = '.'.join(parts[:-1])
-                    exec('import %s' % pkgname)
-                    srcfile = getattr(sys.modules[pkgname], '__file__', '')
-            outputdir = os.path.dirname(srcfile)
-        try:
-            lexobj.writetab(lextab, outputdir)
-            if lextab in sys.modules:
-                del sys.modules[lextab]
-        except IOError as e:
-            errorlog.warning("Couldn't write lextab module %r. %s" % (lextab, e))
+    if lextab and outputdir:
+        lexobj.writetab(lextab, outputdir)
 
     return lexobj
 
