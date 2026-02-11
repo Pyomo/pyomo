@@ -493,8 +493,16 @@ class SuffixFinder:
         except AttributeError:
             # Component was outside the context (eventually parent
             # becomes None and parent.parent_block() raises an
-            # AttributeError): we will return the default value
-            return self.default
+            # AttributeError).
+            #
+            # We will check the context's suffix to see if there is an
+            # entry there.  We will look in the same order: component
+            # data, component, and None
+            #
+            # TBD: Should we check for / accept None?  The simple
+            # solution (and probably correct answer) is yes.
+            suffixes = self._suffixes_by_block[self._context]
+
         # Pass 1: look for the component_data, working root to leaf
         for s in suffixes:
             if component_data in s:

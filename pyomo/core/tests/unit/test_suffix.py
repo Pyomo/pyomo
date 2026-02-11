@@ -1855,7 +1855,8 @@ class TestSuffixFinder(unittest.TestCase):
         m.b1.b2.suffix[m.v1] = 5
         self.assertEqual(_suffix_finder.find(m.v1), 1)
         self.assertEqual(_suffix_b1_finder.find(m.v1), None)
-        self.assertEqual(_suffix_b2_finder.find(m.v1), None)
+        # Except if the lower level is actually the context
+        self.assertEqual(_suffix_b2_finder.find(m.v1), 2)
 
         # Make sure we can look up Blocks and that they will match
         # suffixes that they hold
