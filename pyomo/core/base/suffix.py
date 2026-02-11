@@ -461,7 +461,7 @@ class SuffixFinder:
 
         If the `component_data` is attached to a block within the
         `context` (that is, part of the model hierarchy rooted by the
-        `context` :py:`BlockData`), then :py:`Suffixe` components are
+        `context` :py:`BlockData`), then :py:`Suffix` components are
         searched by traversing the model hierarchy in three passes:
 
         1. Search for a :py:`Suffix` matching the specific `component_data`,
