@@ -3227,9 +3227,9 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
 
     debugfile : str
 
-        If ``debug`` and ``debuglog`` is None the debug log is written
-        to this file name.  If ``outputdir`` is non-None, it is joined
-        with ``debugfile`` before opening.
+        If ``debug`` evaluates to True and ``debuglog`` is None the
+        debug log is written to this file name.  If ``outputdir`` is
+        non-None, it is joined with ``debugfile`` before opening.
 
     outputdir : str | None
 
@@ -3246,7 +3246,7 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
 
     module_signature : str
 
-        "Signature" of the grammar module.  Ignoted by yacc, except
+        "Signature" of the grammar module.  Ignored by yacc, except
         record it as part of the cached parse table
 
     """

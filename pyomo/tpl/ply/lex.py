@@ -911,7 +911,7 @@ def lex(module=None, debug=False, optimize=False, lextab='lextab',
         Return it.  If it is a string or None, then the tokenizer is
         generated from the grammar (see also ``module``)
 
-    reflage : int
+    reflags : int
 
     nowarn : bool
 
