@@ -247,7 +247,9 @@ class TestDependencies(unittest.TestCase):
         def _record_avail(module, avail):
             ans.append(avail)
 
-        mod0, avail0 = attempt_import('pyomo.tpl.ply', defer_import=True, callback=_record_avail)
+        mod0, avail0 = attempt_import(
+            'pyomo.tpl.ply', defer_import=True, callback=_record_avail
+        )
         mod1, avail1 = attempt_import(
             'pyomo.common.tests.dep_mod',
             minimum_version='2.0',
