@@ -31,7 +31,7 @@ quantification workflow shown below:
 
 .. figure:: pyomo_workflow_new.png
   :align: center
-  :scale: 25 %
+  :scale: 90 %
 
    The parameter estimation, uncertainty analysis, and MBDoE are 
    combined into an iterative framework to select, refine, and calibrate science-based 
