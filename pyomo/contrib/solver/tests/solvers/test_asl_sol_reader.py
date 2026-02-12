@@ -541,8 +541,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         nl_info.scaling = ScalingFactors([1, 5, 10], [], [])
         self.assertEqual(
-            loader.get_vars(),
-            ComponentMap([(m.x, 13), (m.y[1], 3.4), (m.y[3], 1.5)]),
+            loader.get_vars(), ComponentMap([(m.x, 13), (m.y[1], 3.4), (m.y[3], 1.5)])
         )
         self.assertEqual(m.x.value, None)
         self.assertEqual(m.y[1].value, None)
@@ -571,9 +570,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         sol_data.primals = []
         loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
-        self.assertEqual(
-            loader.get_vars(), ComponentMap([(m.y[2], 4), (m.y[3], 1.5)])
-        )
+        self.assertEqual(loader.get_vars(), ComponentMap([(m.y[2], 4), (m.y[3], 1.5)]))
         self.assertEqual(m.x.value, None)
         self.assertEqual(m.y[1].value, None)
         self.assertEqual(m.y[2].value, None)
