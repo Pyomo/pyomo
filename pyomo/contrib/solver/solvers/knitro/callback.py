@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections.abc import Callable
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 from pyomo.contrib.solver.solvers.knitro.typing import (
     Callback,
@@ -85,7 +85,7 @@ class ConstraintCallbackHandler(CallbackHandler):
         return 0
 
 
-def build_callback_handler(function: Function, idx: Optional[int]) -> CallbackHandler:
+def build_callback_handler(function: Function, idx: int | None) -> CallbackHandler:
     if idx is None:
         return ObjectiveCallbackHandler(function)
     return ConstraintCallbackHandler(idx, function)

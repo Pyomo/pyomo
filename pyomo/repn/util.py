@@ -97,7 +97,7 @@ class FileDeterminism(enums.IntEnum):
     SORT_SYMBOLS = 30
 
     # We will define __str__ and __format__ so that behavior in python
-    # 3.11 is consistent with 3.7 - 3.10.
+    # 3.11+ is consistent with 3.7 - 3.10.
 
     def __str__(self):
         return enums.Enum.__str__(self)
