@@ -22,7 +22,6 @@ doc/OnlineDocs/**/*.spy
 
 # Running pyomo / tests / solvers occasionally leaves extra files
 *.out
-pyomo/dataportal/parse_table_datacmds.py
 gurobi.log
 cplex.log
 
