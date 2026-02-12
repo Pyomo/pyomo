@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from typing import Sequence, Dict, Optional, Mapping, NoReturn
+from typing import Sequence, Dict, Optional, Mapping
 
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
@@ -23,7 +23,7 @@ class SolutionLoaderBase:
     Intent of this class and its children is to load the solution back into the model.
     """
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
+    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
         """
         Load the solution of the primal variables into the value attribute of the variables.
 

@@ -440,6 +440,18 @@ def test_solver_cases(*args):
         logging.disable(logging.NOTSET)
 
         #
+        # CUOPT
+        #
+        _cuopt_capabilities = set(['linear', 'integer'])
+
+        _test_solver_cases['cuopt', 'python'] = initialize(
+            name='cuopt',
+            io='python',
+            capabilities=_cuopt_capabilities,
+            import_suffixes=['rc', 'dual'],
+        )
+
+        #
         # Error Checks
         #
         for sc in _test_solver_cases.values():
