@@ -628,7 +628,7 @@ class _GMSWriter_impl(object):
                 for stat in stat_vars:
                     ostream.write("\nput '%s' ' ' %s /;\n" % (stat, stat))
 
-        timer.toc("Finished writing .gsm file", level=logging.DEBUG)
+        timer.toc("Finished writing .gms file", level=logging.DEBUG)
 
         info = GAMSWriterInfo(self.var_symbol_map, self.con_symbol_map)
         return info
