@@ -2,6 +2,52 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.10.0   (?? Feb 2026)
+-------------------------------------------------------------------------------
+
+- General
+  - Remove support for Python 3.9 (#3760)
+  - Typo corrections (#3779, #3831)
+  - Remove external `ply` dependency (#3840)
+  - Apply 2026 `black` formatting updates (#3820)
+  - Improvements to `Config` classes, tests, and docs (#3790)
+  - Improve efficiency of nested `StreamIndenter` objects (#3813)
+- Core
+  - Remove sorting from `tabular_writer` (#3804)
+  - Enhance static typing (#3803)
+  - `SuffixFinder`: look in context for "external" data objects (#3844)
+- Documentation
+  - Add support for Sphinx 9.1 (#3815, #3818)
+  - Add formal documentation for future `contrib` changes (#3768)
+  - Fix docstrings in `core.lp_dual` transformation (#3842)
+- GDP
+  - Fix bug transforming Blocks in `gdp.mbigm` transformation (#3811)
+- Solver Interfaces
+  - Update Ipopt interface in `contrib.solver` (#3792)
+  - Add cuopt direct solver (#3620)
+  - Improvements for KNITRO interface (#3762, #3765, #3766, #3802, #3824,
+    #3826, #3827, #3837)
+  - Remove `iteration_count` as a default Results object value (#3767)
+  - Compute `wall_time` using `time.perf_counter` (#3825)
+  - Incorporate Model observer into `gurobi` interface (#3698)
+- Testing
+  - Testing infrastructure cleanup/rework (#3764, #3770, #3773, #3810)
+  - Correct broken URLs (#3761, #3796, #3845)
+  - Pytest version workarounds (#3780, #3784)
+  - Specify `openmpi` build type in testing environment (#3797)
+  - Add flexibility to error checking for `gurobi_minlp` (#3822)
+- Contributed Packages
+  - DoE: Disable unreliable test (#3776)
+  - DoE: Correct A optimality (#3803)
+  - DoE: Replace computationally expensive example with Rooney Biegler (#3828)
+  - observer: Add in Model observer package (#3695, #3829)
+  - Parmest: Consolidate Rooney Biegler (#3793)
+  - Parmest: Update documentation (#3791)
+  - PyROS: Update tests for Python 3.14 (#3782)
+  - PyROS: Fix `IntersectionSet` implementation (#3786)
+  - PyROS: Fix scaling typo in separation objectives (#3817)
+
+-------------------------------------------------------------------------------
 Pyomo 6.9.5   (17 Oct 2025)
 -------------------------------------------------------------------------------
 
