@@ -98,6 +98,7 @@ class TestTiming(unittest.TestCase):
            (0(\.\d+)?) seconds to construct Var x; 2 indices total
            (0(\.\d+)?) seconds to construct Var y; 0 indices total
            (0(\.\d+)?) seconds to construct Suffix Suffix
+           (0(\.\d+)?) seconds to construct SetOf 'y._data'
            (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
            """.strip()
 
@@ -147,6 +148,7 @@ class TestTiming(unittest.TestCase):
            (0(\.\d+)?) seconds to construct Var x; 2 indices total
            (0(\.\d+)?) seconds to construct Var y; 0 indices total
            (0(\.\d+)?) seconds to construct Suffix Suffix
+           (0(\.\d+)?) seconds to construct SetOf 'y._data'
            (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
            """.strip()
 

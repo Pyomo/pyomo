@@ -8,23 +8,25 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from copy import deepcopy
 from itertools import chain
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.errors import MouseTrap
+from pyomo.common.errors import InvalidConstraintError, MouseTrap
 from pyomo.common.numeric_types import native_types, native_numeric_types
 
 import pyomo.core.expr as expr
 import pyomo.repn.linear as linear
-import pyomo.repn.util as util
 
+from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.expr import ExpressionType
 from pyomo.repn.linear import LinearRepn
+from pyomo.repn.util import ExprType, initialize_exit_node_dispatcher, val2str
 
-_CONSTANT = util.ExprType.CONSTANT
-_VARIABLE = util.ExprType.VARIABLE
-_LINEAR = util.ExprType.LINEAR
+_CONSTANT = ExprType.CONSTANT
+_VARIABLE = ExprType.VARIABLE
+_LINEAR = ExprType.LINEAR
 
 code_type = deepcopy.__class__
 
@@ -39,14 +41,29 @@ class LinearTemplateRepn(LinearRepn):
     def __str__(self):
         linear = (
             "{"
-            + ", ".join(f"{_str(k)}: {_str(v)}" for k, v in self.linear.items())
+            + ", ".join(f"{val2str(k)}: {val2str(v)}" for k, v in self.linear.items())
             + "}"
         )
+        linear_sum = []
+        for subrepn, subind, subsets in self.linear_sum:
+            linear_sum.append(
+                val2str(subrepn)
+                + ", ["
+                + ', '.join(
+                    ("(" + ', '.join(val2str(j) for j in i) + ")") for i in subind
+                )
+                + "], ["
+                + ', '.join(
+                    ("(" + ', '.join(val2str(j) for j in i) + ")") for i in subsets
+                )
+                + "]"
+            )
+        linear_sum = '[' + ', '.join(linear_sum) + ']'
         return (
-            f"{self.__class__.__name__}(mult={_str(self.multiplier)}, "
-            f"const={_str(self.constant)}, "
+            f"{self.__class__.__name__}(mult={val2str(self.multiplier)}, "
+            f"const={val2str(self.constant)}, "
             f"linear={linear}, "
-            f"linear_sum={self.linear_sum}, "
+            f"linear_sum={linear_sum}, "
             f"nonlinear={self.nonlinear})"
         )
 
@@ -63,22 +80,26 @@ class LinearTemplateRepn(LinearRepn):
         return 2  # something not 0 or 1
 
     def walker_exitNode(self):
-        if not self.linear and self.linear_sum:
-            # "LINEAR" is "linear or linear_sum"; (temporarily) move
-            # linear_sum to linear so this node is recognized as "LINEAR".
-            linear = self.linear
-            self.linear = self.linear_sum
-            try:
-                return super().walker_exitNode()
-            finally:
-                self.linear = linear
+        assert self.nonlinear is None
+        if self.linear or self.linear_sum:
+            return _LINEAR, self
         else:
-            return super().walker_exitNode()
+            return _CONSTANT, self.multiplier * self.constant
 
     def duplicate(self):
         ans = super().duplicate()
         ans.linear_sum = [(r[0].duplicate(),) + r[1:] for r in self.linear_sum]
         return ans
+
+    def to_expression(self, visitor):
+        # to_expression() is only used by the underlying
+        # LinearRepnVisitor to generate nonlinear expressions.  We are
+        # explicitly disallowing nonlinear expressions here, so we are
+        # going to bail now:
+        raise InvalidConstraintError(
+            "LinearTemplateRepn does not support constraints containing "
+            "general nonlinear terms."
+        )
 
     def append(self, other):
         """Append a child result from StreamBasedExpressionVisitor.acceptChildResult()
@@ -100,74 +121,40 @@ class LinearTemplateRepn(LinearRepn):
                     term[0].multiplier *= mult
             self.linear_sum.extend(other.linear_sum)
 
-    def _build_evaluator(
-        self,
-        smap,
-        expr_cache,
-        multiplier,
-        repetitions,
-        remove_fixed_vars,
-        check_duplicates,
-    ):
+    def _build_evaluator(self, smap, expr_cache, multiplier, repetitions):
+        assert self.nonlinear is None
         ans = []
         multiplier *= self.multiplier
         constant = self.constant
         if constant.__class__ not in native_types or constant:
             constant *= multiplier
-            if not repetitions or (
-                constant.__class__ not in native_types and constant.is_expression_type()
-            ):
+            if not repetitions or constant.__class__ not in native_types:
                 ans.append('const += ' + constant.to_string(smap=smap))
                 constant = 0
             else:
                 constant *= repetitions
-        for k, coef in list(self.linear.items()):
-            coef *= multiplier
-            if coef.__class__ not in native_types and coef.is_expression_type():
-                coef = coef.to_string(smap=smap)
-            elif coef:
-                coef = repr(coef)
-            else:
-                continue
+        if multiplier.__class__ not in native_types or multiplier:
+            for k, coef in list(self.linear.items()):
+                coef *= multiplier
+                if coef.__class__ not in native_types:
+                    coef = coef.to_string(smap=smap)
+                else:
+                    # Note that coef should never be trivially 0 (the
+                    # visitor should remove most of those), so there is
+                    # no reason to check and skip this term...
+                    coef = repr(coef)
 
-            indent = ''
-            if k in expr_cache:
-                k = expr_cache[k]
-                if k.__class__ not in native_types and k.is_expression_type():
-                    ans.append('v = ' + k.to_string(smap=smap))
-                    k = 'v'
-                    if remove_fixed_vars:
-                        ans.append('if v.__class__ is tuple:')
-                        ans.append('    const += v[0] * {coef}')
-                        ans.append('    v = None')
-                        ans.append('else:')
-                        indent = '    '
-                    elif not check_duplicates:
+                indent = ''
+                if k in expr_cache:
+                    k = expr_cache[k]
+                    if k.__class__ not in native_types:
                         # Directly substitute the expression into the
-                        # 'linear[vid] = coef below
-                        #
-                        # Remove the 'v = ' from the beginning of the last line:
-                        k = ans.pop()[4:]
-            if check_duplicates:
-                ans.append(indent + f'if {k} in linear:')
-                ans.append(indent + f'    linear[{k}] += {coef}')
-                ans.append(indent + 'else:')
-                ans.append(indent + f'    linear[{k}] = {coef}')
-            else:
+                        # 'linear[vid] = coef' below
+                        k = k.to_string(smap=smap)
                 ans.append(indent + f'linear_indices.append({k})')
                 ans.append(indent + f'linear_data.append({coef})')
+
         for subrepn, subindices, subsets in self.linear_sum:
-            ans.extend(
-                '    ' * i
-                + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
-                + (
-                    _set.to_string(smap=smap)
-                    if _set.is_expression_type()
-                    else smap.getSymbol(_set)
-                )
-                + ":"
-                for i, (_idx, _set) in enumerate(zip(subindices, subsets))
-            )
             try:
                 subrep = 1
                 for _set in subsets:
@@ -175,60 +162,72 @@ class LinearTemplateRepn(LinearRepn):
             except:
                 subrep = 0
             subans, subconst = subrepn._build_evaluator(
-                smap,
-                expr_cache,
-                multiplier,
-                repetitions * subrep,
-                remove_fixed_vars,
-                check_duplicates,
+                smap, expr_cache, multiplier, repetitions * subrep
             )
-            indent = '    ' * (len(subsets))
-            ans.extend(indent + line for line in subans)
+            if subans:
+                ans.extend(
+                    '    ' * i
+                    + f"for {','.join(smap.getSymbol(i) for i in _idx)} in "
+                    + (
+                        _set.to_string(smap=smap)
+                        if _set.is_expression_type()
+                        else smap.getSymbol(_set)
+                    )
+                    + ":"
+                    for i, (_idx, _set) in enumerate(zip(subindices, subsets))
+                )
+                indent = '    ' * (len(subsets))
+                ans.extend(indent + line for line in subans)
             constant += subconst
         return ans, constant
 
-    def compile(
-        self,
-        env,
-        smap,
-        expr_cache,
-        args,
-        remove_fixed_vars=False,
-        check_duplicates=False,
-    ):
-        ans, constant = self._build_evaluator(
-            smap, expr_cache, 1, 1, remove_fixed_vars, check_duplicates
-        )
+    def _build_evaluator_fcn(self, args, smap, expr_cache):
+        ans, constant = self._build_evaluator(smap, expr_cache, 1, 1)
         if not ans:
-            return constant
+            return lambda _ind, _dat, *_args: constant, None
         indent = '\n    '
         if not constant and ans and ans[0].startswith('const +='):
             # Convert initial "const +=" to "const ="
-            ans[0] = ''.join(ans[0].split('+', 1))
+            const_init = ''.join(ans[0].split('+', 1))
+            fcn_body = indent.join(ans[1:])
         else:
-            ans.insert(0, 'const = ' + repr(constant))
-        fcn_body = indent.join(ans[1:])
+            const_init = 'const = ' + repr(constant)
+            fcn_body = indent.join(ans)
         if 'const' not in fcn_body:
             # No constants in the expression.  Move the initial const
             # term to the return value and avoid declaring the local
             # variable
-            ans = ['return ' + ans[0].split('=', 1)[1]]
-            if fcn_body:
-                ans.insert(0, fcn_body)
+            ret = 'return ' + const_init.split('=', 1)[1].strip()
+            const_init = None
         else:
-            ans = [ans[0], fcn_body, 'return const']
-        if check_duplicates:
-            ans.insert(0, f"def build_expr(linear, {', '.join(args)}):")
-        else:
-            ans.insert(
-                0, f"def build_expr(linear_indices, linear_data, {', '.join(args)}):"
-            )
-        ans = indent.join(ans)
+            ret = 'return const'
+
+        fname = 'build_expr'
+        args = ', '.join(args)
+        return (
+            indent.join(
+                filter(
+                    None,
+                    (
+                        f"def {fname}(linear_indices, linear_data, {args}):",
+                        const_init,
+                        fcn_body,
+                        ret,
+                    ),
+                )
+            ),
+            fname,
+        )
+
+    def compile(self, env, smap, expr_cache, args):
         # build the function in the env namespace, then remove and
         # return the compiled function.  The function's globals will
         # still be bound to env
-        exec(ans, env)
-        return env.pop('build_expr')
+        fcn, fcn_name = self._build_evaluator_fcn(args, smap, expr_cache)
+        if not fcn_name:
+            return fcn
+        exec(fcn, env)
+        return env.pop(fcn_name)
 
 
 class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
@@ -286,7 +285,7 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         if child not in visitor.indexed_params:
             visitor.indexed_params.add(child)
             name = visitor.symbolmap.getSymbol(child)
-            visitor.env[name] = child.extract_values()
+            visitor.env[name] = child.extract_values_sparse()
         return False, (_CONSTANT, child)
 
     @staticmethod
@@ -331,7 +330,7 @@ def _handle_templatesum(visitor, node, comp, *args):
         ans.linear_sum.append((comp[1], node.template_iters(), [a[1] for a in args]))
         return _LINEAR, ans
     else:
-        raise DeveloperError()
+        raise DeveloperError(comp)
 
 
 def define_exit_node_handlers(_exit_node_handlers=None):
@@ -349,10 +348,10 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     Result = LinearTemplateRepn
     before_child_dispatcher = LinearTemplateBeforeChildDispatcher()
     exit_node_dispatcher = linear.ExitNodeDispatcher(
-        util.initialize_exit_node_dispatcher(define_exit_node_handlers())
+        initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
 
-    def __init__(self, subexpression_cache, var_recorder, remove_fixed_vars=False):
+    def __init__(self, subexpression_cache, var_recorder):
         super().__init__(subexpression_cache, var_recorder=var_recorder)
         self.indexed_vars = set()
         self.indexed_params = set()
@@ -360,7 +359,6 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         self.env = var_recorder.env
         self.symbolmap = var_recorder.symbolmap
         self.expanded_templates = {}
-        self.remove_fixed_vars = remove_fixed_vars
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
@@ -380,27 +378,39 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             smap = self.symbolmap
             expr, indices = template_info
             args = [smap.getSymbol(i) for i in indices]
-            if expr.is_expression_type(ExpressionType.RELATIONAL):
-                lb, body, ub = obj.to_bounded_expression()
+            if expr is IndexedComponent.Skip:
+                body = lambda i, c, *ind: 0
+                lb = ub = None
+            elif expr.is_expression_type(ExpressionType.RELATIONAL):
+                try:
+                    lb, body, ub = obj.to_bounded_expression()
+                except InvalidConstraintError:
+                    # Ignore the variable lower/upper bound error (for
+                    # now).  We will check later that the individual
+                    # bounds contain no non-fixed linear terms.
+                    #
+                    # Note: the only way to get this exception is if the
+                    # obj is a RangedExpression, so we know that there
+                    # will be 3 args (and this will explicitly fail if
+                    # that is not the case)
+                    lb, body, ub = expr.args
                 if body is not None:
                     body = self.walk_expression(body).compile(
-                        env, smap, self.expr_cache, args, False
+                        env, smap, self.expr_cache, args
                     )
                 if lb is not None:
                     lb = self.walk_expression(lb).compile(
-                        env, smap, self.expr_cache, args, True
+                        env, smap, self.expr_cache, args
                     )
                 if ub is not None:
                     ub = self.walk_expression(ub).compile(
-                        env, smap, self.expr_cache, args, True
+                        env, smap, self.expr_cache, args
                     )
-            elif expr is not None:
+            else:
                 lb = ub = None
                 body = self.walk_expression(expr).compile(
-                    env, smap, self.expr_cache, args, False
+                    env, smap, self.expr_cache, args
                 )
-            else:
-                body = lb = ub = None
             self.expanded_templates[id(template_info)] = body, lb, ub
 
         linear_indices = []
@@ -414,11 +424,19 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         if lb.__class__ is code_type:
             lb = lb(linear_indices, linear_data, *index)
             if linear_indices:
-                raise RuntimeError(f"Constraint {obj} has non-fixed lower bound")
+                # Note that we will only get here for Ranged constraints
+                # with potentially variable bounds.
+                lb += self._evaluate_fixed_vars(
+                    linear_indices, linear_data, obj, 'lower'
+                )
         if ub.__class__ is code_type:
             ub = ub(linear_indices, linear_data, *index)
             if linear_indices:
-                raise RuntimeError(f"Constraint {obj} has non-fixed upper bound")
+                # Note that we will only get here for Ranged constraints
+                # with potentially variable bounds.
+                ub += self._evaluate_fixed_vars(
+                    linear_indices, linear_data, obj, 'upper'
+                )
         return (
             body(linear_indices, linear_data, *index),
             linear_indices,
@@ -426,3 +444,15 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             lb,
             ub,
         )
+
+    def _evaluate_fixed_vars(self, linear_indices, linear_data, obj, bound):
+        ans = 0
+        vl = self.var_recorder.var_list
+        for i, coef in zip(linear_indices, linear_data):
+            v = vl[i]
+            if not v.fixed:
+                raise RuntimeError(f"Constraint {obj} has non-fixed {bound} bound")
+            ans += v.value * coef
+        linear_indices.clear()
+        linear_data.clear()
+        return ans
