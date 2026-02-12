@@ -78,7 +78,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
         res = ComponentMap()
         if vars_to_load is None:
             vars_to_load = self._gms_info.var_symbol_map.bySymbol.values()
-            
+
         for obj in vars_to_load:
             res[obj] = val_map[id(obj)]
 
