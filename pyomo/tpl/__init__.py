@@ -8,30 +8,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+"""Third-party libraries
 
-# TODO: Disabled until we can confirm application to Pyomo models
-from pyomo.solvers.plugins.solvers import (
-    CBCplugin,
-    GLPK,
-    CPLEX,
-    GUROBI,
-    BARON,
-    ASL,
-    pywrapper,
-    SCIPAMPL,
-    CONOPT,
-    XPRESS,
-    IPOPT,
-    gurobi_direct,
-    gurobi_persistent,
-    cplex_direct,
-    cplex_persistent,
-    cuopt_direct,
-    GAMS,
-    mosek_direct,
-    mosek_persistent,
-    xpress_direct,
-    xpress_persistent,
-    SAS,
-    KNITROAMPL,
-)
+This module contains packages that were developed outside Pyomo, but are
+included in the Pyomo source tree to streamline deployment (e.g., they
+are not easily installable via `pip` or `conda`, they are no longer
+under active maintenance, or Pyomo requires custom patches).
+
+"""
