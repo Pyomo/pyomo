@@ -38,7 +38,7 @@ class GDXFileData:
         self.con_suffixes: Dict[str, Dict[Any]] = {}
         self.obj_suffixes: Dict[str, Dict[int, Any]] = {}
         self.problem_suffixes: Dict[str, List[Any]] = {}
-        self.other: List(str) = []
+        self.other: List[str] = []
 
 
 class GMSSolutionLoader(SolutionLoaderBase):
