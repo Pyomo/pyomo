@@ -102,13 +102,10 @@ class GMSSolutionLoader(SolutionLoaderBase):
 
         res = ComponentMap()
         if cons_to_load is None:
-            cons_to_load = self._gms_info.con_symbol_map.bySymbol.items()
+            cons_to_load = self._gms_info.con_symbol_map.bySymbol.values()
 
-            for sym, obj in cons_to_load:
-                res[obj] = con_map[id(obj)]
-        else:
-            for obj in cons_to_load:
-                res[obj] = con_map[id(obj)]
+        for obj in cons_to_load:
+            res[obj] = con_map[id(obj)]
 
         return res
 
