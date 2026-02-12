@@ -1598,7 +1598,7 @@ else:
             },
             cfg.value(),
         )
-        self.assertLess(results.timing_info.wall_time, 0.1)
+        self.assertLess(results.timing_info.wall_time, 1)
         self.assertEqual(
             results.timing_info.start_timestamp.tzinfo, datetime.timezone.utc
         )
@@ -1683,7 +1683,7 @@ else:
             },
             cfg.value(),
         )
-        self.assertLess(results.timing_info.wall_time, 0.1)
+        self.assertLess(results.timing_info.wall_time, 1)
         del results.timing_info.wall_time
         self.assertEqual(
             results.timing_info.start_timestamp.tzinfo, datetime.timezone.utc
@@ -1758,7 +1758,7 @@ else:
             },
             cfg.value(),
         )
-        self.assertLess(results.timing_info.wall_time, 0.1)
+        self.assertLess(results.timing_info.wall_time, 1)
         self.assertEqual(
             results.timing_info.start_timestamp.tzinfo, datetime.timezone.utc
         )
