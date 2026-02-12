@@ -13,6 +13,7 @@
 # U.S. Department of Energy's Office of Fossil Energy and Carbon Management.
 # ____________________________________________________________________________________
 
+
 class FilterElement:
     def __init__(self, objective, feasible):
         self.objective = objective

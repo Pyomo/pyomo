@@ -82,7 +82,7 @@ if len(sys.argv) > 1:
         ftype = FTYPE
 
 filelist = list(reversed(sys.argv[1:]))
-        
+
 while filelist:
     filename = filelist.pop()
     if not os.path.exists(filename):
@@ -94,7 +94,7 @@ while filelist:
     if not os.path.isfile(filename):
         print(f"WARNING: {filename} is not a file or directory; skipping")
         continue
-    
+
     if not FTYPE:
         ftype = os.path.splitext(filename)[1]
     if ftype not in copyright:
@@ -125,7 +125,7 @@ while filelist:
         for linenum, line in enumerate(data[: min(LOOKAHEAD, dLen)]):
             if separator in line:
                 firstSep = linenum
-                if ftype in ('.h','.c') and line.strip().startswith('/*'):
+                if ftype in ('.h', '.c') and line.strip().startswith('/*'):
                     ftype += 'pp'
                 break
         if firstSep is None:
