@@ -418,13 +418,13 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             - If DirectionNorm.L2: Standard basis vectors and their negatives.
             - If DirectionNorm.Linf: All combinations of {-1, 0, 1} excluding the zero vector.
         """
-        if config.direction_norm in (DirectionNorm.L2, 'L2'):
+        if config.direction_norm == DirectionNorm.L2:
             directions = []
             for i in range(dimension):
                 directions.append(tuple([0] * i + [1] + [0] * (dimension - i - 1)))
                 directions.append(tuple([0] * i + [-1] + [0] * (dimension - i - 1)))
             return directions
-        elif config.direction_norm in (DirectionNorm.Linf, 'Linf'):
+        elif config.direction_norm == DirectionNorm.Linf:
             directions = list(it.product([-1, 0, 1], repeat=dimension))
             directions.remove((0,) * dimension)  # Remove the zero direction
             return directions
