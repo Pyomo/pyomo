@@ -36,13 +36,14 @@ import io
 import logging
 import os
 import pickle
-import ply.lex
 import re
 import sys
 import textwrap
 import types
 
 from operator import attrgetter
+
+import pyomo.tpl.ply.lex as lex
 
 from pyomo.common.collections import Sequence, MutableMapping
 from pyomo.common.deprecation import (
@@ -884,13 +885,13 @@ def _build_lexer(literals=''):
     _quoted_str = r"'(?:[^'\\]|\\.)*'"
     _general_str = "|".join([_quoted_str, _quoted_str.replace("'", '"')])
 
-    @ply.lex.TOKEN(_general_str)
+    @lex.TOKEN(_general_str)
     def t_STRING(t):
         t.value = t.value[1:-1]
         return t
 
     # A "word" contains no whitesspace or commas
-    @ply.lex.TOKEN(r'[^' + repr(t_ignore + literals) + r']+')
+    @lex.TOKEN(r'[^' + repr(t_ignore + literals) + r']+')
     def t_WORD(t):
         t.value = t.value
         return t
@@ -903,7 +904,7 @@ def _build_lexer(literals=''):
             "ERROR: Token '%s' Line %s Column %s" % (t.value, t.lineno, t.lexpos + 1)
         )
 
-    return ply.lex.lex()
+    return lex.lex()
 
 
 def _default_string_list_lexer(value):
