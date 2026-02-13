@@ -162,27 +162,24 @@ class TestGAMSInterface(unittest.TestCase):
 
     def test_available_cache(self):
         opt = gams.GAMS()
-        opt.available()
-        self.assertTrue(opt._available_cache[1])
-        self.assertIsNotNone(opt._available_cache[0])
+        self.assertTrue(opt.available())
         # Now we will try with a custom config that has a fake path
         config = gams.GAMSConfig()
         config.executable = Executable('/a/bogus/path')
-        opt.available(config=config)
-        self.assertFalse(opt._available_cache[1])
-        self.assertIsNone(opt._available_cache[0])
+        opt = gams.GAMS()
+        opt.config = config
+        self.assertFalse(opt.available())
 
     def test_version_cache(self):
         opt = gams.GAMS()
         opt.version()
-        self.assertIsNotNone(opt._version_cache[0])
-        self.assertIsNotNone(opt._version_cache[1])
+        self.assertIsNotNone(opt.version)
         # Now we will try with a custom config that has a fake path
         config = gams.GAMSConfig()
         config.executable = Executable('/a/bogus/path')
-        opt.version(config=config)
-        self.assertIsNone(opt._version_cache[0])
-        self.assertIsNone(opt._version_cache[1])
+        opt = gams.GAMS()
+        opt.config = config
+        self.assertIsNone(opt.version())
 
     def test_write_gms_file(self):
         # We are creating a simple model with 1 variable to check for gams execution
