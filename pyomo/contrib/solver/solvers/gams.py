@@ -232,7 +232,7 @@ class GAMS(SolverBase):
         config: GAMSConfig = self.config(value=kwds, preserve_implicit=True)
 
         # Check if solver is available
-        avail = self.available(config)
+        avail = self.available()
 
         if not avail:
             raise ApplicationError(
