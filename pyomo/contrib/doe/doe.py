@@ -969,7 +969,7 @@ class DesignOfExperiments:
             scenario_results["log10 E-opt"] = np.log10(
                 min(np.linalg.eigvalsh(total_fim_np))
             )
-            scenario_results["FIM Condition Number"] = np.linalg.cond(total_fim_np)
+            scenario_results["log10 ME-opt"] = np.log10(np.linalg.cond(total_fim_np))
 
             # Store unknown parameter values at scenario level (same for all experiments)
             # Use first experiment to get the values
