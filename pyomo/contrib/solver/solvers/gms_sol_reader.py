@@ -58,8 +58,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
         else:
             for sym, obj in self._gms_info.var_symbol_map.bySymbol.items():
                 level = self._gdx_data[sym][0]
-                if obj.parent_component().ctype is Var:
-                    obj.set_value(level, skip_validation=True)
+                obj.set_value(level, skip_validation=True)
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
