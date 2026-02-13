@@ -31,7 +31,6 @@ from .gurobi_direct_base import (
 )
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -44,11 +43,11 @@ class GurobiDirectSolutionLoader(GurobiDirectSolutionLoaderBase):
         self._gurobi_vars = gurobi_vars
         self._con_map = con_map
 
-    def _var_pair_iter(self):
-        return zip(self._pyomo_vars, self._gurobi_vars)
+    def _get_var_lists(self):
+        return self._pyomo_vars, self._gurobi_vars
 
     def _get_var_map(self):
-        return ComponentMap(self._var_pair_iter())
+        return ComponentMap(zip(*self._get_var_lists()))
 
     def _get_con_map(self):
         return self._con_map

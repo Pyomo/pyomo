@@ -14,7 +14,7 @@ import io
 import math
 import os
 import logging
-from typing import Mapping, Optional, Sequence, Dict, List
+from typing import Mapping, Optional, Sequence, Dict, Tuple, List
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigValue
@@ -47,7 +47,6 @@ from pyomo.contrib.solver.common.solution_loader import (
     load_import_suffixes,
 )
 import time
-
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +94,9 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
     def get_solution_ids(self) -> List:
         return list(range(self.get_number_of_solutions()))
 
-    def _var_pair_iter(self):
+    def _get_var_lists(self):
         """
-        Should iterate over pairs of (pyomo var, gurobipy var)
+        Should return a list of pyomo vars and a list of gurobipy vars
         """
         raise NotImplementedError('should be implemented by derived classes')
 
@@ -113,144 +112,61 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         # interface)
         GurobiDirectBase._release_env_client()
 
-    def _load_all_vars_solution_0(self):
-        gvars = [j for i, j in self._var_pair_iter()]
-        vals = self._solver_model.getAttr("X", gvars)
-        for (pv, _), val in zip(self._var_pair_iter(), vals):
-            pv.set_value(val, skip_validation=True)
-
-    def _load_subset_vars_solution_0(self, vars_to_load):
-        var_map = self._get_var_map()
-        gvars = [var_map[i] for i in vars_to_load]
-        vals = self._solver_model.getAttr("X", gvars)
-        for pv, val in zip(vars_to_load, vals):
-            pv.set_value(val, skip_validation=True)
-
-    def _load_all_vars_solution_N(self, solution_number):
-        assert solution_number != 0
-        if (
-            self._solver_model.getAttr('NumIntVars') == 0
-            and self._solver_model.getAttr('NumBinVars') == 0
-        ):
-            raise ValueError(
-                'Cannot obtain suboptimal solutions for a continuous model'
-            )
-        original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
-        self._solver_model.setParam('SolutionNumber', solution_number)
-        gvars = [j for i, j in self._var_pair_iter()]
-        vals = self._solver_model.getAttr("Xn", gvars)
-        for (pv, _), val in zip(self._var_pair_iter(), vals):
-            pv.set_value(val, skip_validation=True)
-        self._solver_model.setParam('SolutionNumber', original_solution_number)
-
-    def _load_subset_vars_solution_N(self, vars_to_load, solution_number):
-        assert solution_number != 0
-        if (
-            self._solver_model.getAttr('NumIntVars') == 0
-            and self._solver_model.getAttr('NumBinVars') == 0
-        ):
-            raise ValueError(
-                'Cannot obtain suboptimal solutions for a continuous model'
-            )
-        original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
-        self._solver_model.setParam('SolutionNumber', solution_number)
-        var_map = self._get_var_map()
-        gvars = [var_map[i] for i in vars_to_load]
-        vals = self._solver_model.getAttr("Xn", gvars)
-        for (pv, _), val in zip(self._var_pair_iter(), vals):
-            pv.set_value(val, skip_validation=True)
-        self._solver_model.setParam('SolutionNumber', original_solution_number)
-
-    def _get_all_vars_solution_0(self):
-        gvars = [j for i, j in self._var_pair_iter()]
-        vals = self._solver_model.getAttr("X", gvars)
-        return ComponentMap((i[0], val) for i, val in zip(self._var_pair_iter(), vals))
-
-    def _get_subset_vars_solution_0(self, vars_to_load):
-        var_map = self._get_var_map()
-        gvars = [var_map[i] for i in vars_to_load]
-        vals = self._solver_model.getAttr("X", gvars)
-        return ComponentMap(zip(vars_to_load, vals))
-
-    def _get_all_vars_solution_N(self, solution_number):
-        assert solution_number != 0
-        if (
-            self._solver_model.getAttr('NumIntVars') == 0
-            and self._solver_model.getAttr('NumBinVars') == 0
-        ):
-            raise ValueError(
-                'Cannot obtain suboptimal solutions for a continuous model'
-            )
-        original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
-        self._solver_model.setParam('SolutionNumber', solution_number)
-        gvars = [j for i, j in self._var_pair_iter()]
-        vals = self._solver_model.getAttr("Xn", gvars)
-        self._solver_model.setParam('SolutionNumber', original_solution_number)
-        return ComponentMap((i[0], val) for i, val in zip(self._var_pair_iter(), vals))
-
-    def _get_subset_vars_solution_N(self, vars_to_load, solution_number):
-        assert solution_number != 0
-        if (
-            self._solver_model.getAttr('NumIntVars') == 0
-            and self._solver_model.getAttr('NumBinVars') == 0
-        ):
-            raise ValueError(
-                'Cannot obtain suboptimal solutions for a continuous model'
-            )
-        original_solution_number = self._solver_model.getParamInfo('SolutionNumber')[2]
-        self._solver_model.setParam('SolutionNumber', solution_number)
-        var_map = self._get_var_map()
-        gvars = [var_map[i] for i in vars_to_load]
-        vals = self._solver_model.getAttr("Xn", gvars)
-        self._solver_model.setParam('SolutionNumber', original_solution_number)
-        return ComponentMap(zip(vars_to_load, vals))
+    def _get_primals(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+    ) -> Tuple[List[VarData], List[float]]:
+        if self._solver_model.SolCount == 0:
+            raise NoSolutionError()
+        if vars_to_load is None:
+            pvars, gvars = self._get_var_lists()
+        else:
+            pvars = vars_to_load
+            gvars = list(map(self._get_var_map().__getitem__, vars_to_load))
+        if solution_id:
+            if (
+                self._solver_model.getAttr('NumIntVars') == 0
+                and self._solver_model.getAttr('NumBinVars') == 0
+            ):
+                raise ValueError(
+                    'Cannot obtain suboptimal solutions for a continuous model'
+                )
+            original_solution_number = self._solver_model.getParamInfo(
+                'SolutionNumber'
+            )[2]
+            self._solver_model.setParam('SolutionNumber', solution_id)
+            grbFcn = "Xn"
+        else:
+            grbFcn = "X"
+        try:
+            vals = self._solver_model.getAttr(grbFcn, gvars)
+        finally:
+            if solution_id:
+                self._solver_model.setParam('SolutionNumber', original_solution_number)
+        return pvars, vals
 
     def load_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> None:
-        if self._solver_model.SolCount == 0:
-            raise NoSolutionError()
-        if solution_id is None:
-            solution_id = 0
-        if vars_to_load is None:
-            if solution_id == 0:
-                self._load_all_vars_solution_0()
-            else:
-                self._load_all_vars_solution_N(solution_number=solution_id)
-        else:
-            if solution_id == 0:
-                self._load_subset_vars_solution_0(vars_to_load=vars_to_load)
-            else:
-                self._load_subset_vars_solution_N(
-                    vars_to_load=vars_to_load, solution_number=solution_id
-                )
+        pvars, vals = self._get_primals(
+            vars_to_load=vars_to_load, solution_id=solution_id
+        )
+        for pv, val in zip(pvars, vals):
+            pv.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
-        if self._solver_model.SolCount == 0:
-            raise NoSolutionError()
-        if solution_id is None:
-            solution_id = 0
-        if vars_to_load is None:
-            if solution_id == 0:
-                res = self._get_all_vars_solution_0()
-            else:
-                res = self._get_all_vars_solution_N(solution_number=solution_id)
-        else:
-            if solution_id == 0:
-                res = self._get_subset_vars_solution_0(vars_to_load=vars_to_load)
-            else:
-                res = self._get_subset_vars_solution_N(
-                    vars_to_load=vars_to_load, solution_number=solution_id
-                )
+        pvars, vals = self._get_primals(
+            vars_to_load=vars_to_load, solution_id=solution_id
+        )
+        res = ComponentMap(zip(pvars, vals))
         return res
 
     def _get_rc_all_vars(self):
-        gvars = [j for _, j in self._var_pair_iter()]
+        pvars, gvars = self._get_var_lists()
         vals = self._solver_model.getAttr("Rc", gvars)
-        return ComponentMap((i[0], val) for i, val in zip(self._var_pair_iter(), vals))
+        return ComponentMap((i, val) for i, val in zip(pvars, vals))
 
     def _get_rc_subset_vars(self, vars_to_load):
         var_map = self._get_var_map()
