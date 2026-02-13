@@ -1,25 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-from pyomo.environ import (
-    SolverFactory,
-    value,
-    Var,
-    Constraint,
-    TransformationFactory,
-    ConcreteModel,
-    BooleanVar,
-    LogicalConstraint,
-    Block,
-)
-from pyomo.gdp import Disjunct, Disjunction
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
+from pyomo.environ import SolverFactory, value, Var, Constraint, TransformationFactory
+from pyomo.gdp import Disjunct
 import pyomo.common.unittest as unittest
 from pyomo.contrib.gdpopt.tests.four_stage_dynamic_model import build_model
 from unittest.mock import MagicMock

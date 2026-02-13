@@ -117,9 +117,9 @@ Dependency Management
 Minimal Core Dependencies
 +++++++++++++++++++++++++
 
-The core Pyomo codebase is designed to be a *Pure Python* library with minimal
-dependencies outside the standard Python library (currently, there is only a
-single hard dependency on ``ply``).
+The core Pyomo codebase is designed to be a *Pure Python* library with
+minimal dependencies outside the standard Python library (currently,
+there are no hard external dependencies).
 
 This approach simplifies installation, reduces the burden on derived packages,
 and lessens the likelihood of triggering dependency conflicts.
