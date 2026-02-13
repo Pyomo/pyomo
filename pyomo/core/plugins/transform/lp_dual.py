@@ -237,9 +237,9 @@ class LinearProgrammingDual:
         Parameters
         ----------
         model: ConcreteModel
-            A primal model passed as an argument to the 'core.lp_dual' transformation
+            A dual model returned from the 'core.lp_dual' transformation
         primal_var: Var
-            A primal variable on 'model'
+            A primal variable on the model passed to the transformation
 
         """
         dual_constraint = model.private_data().dual_constraint
@@ -285,9 +285,9 @@ class LinearProgrammingDual:
         Parameters
         ----------
         model: ConcreteModel
-            A primal model passed as an argument to the 'core.lp_dual' transformation
+            A dual model returned from the 'core.lp_dual' transformation
         primal_constraint: Constraint
-            A constraint on 'model'
+            A constraint on the primal model passed to the transformation
 
         """
         dual_var = model.private_data().dual_var
