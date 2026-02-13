@@ -92,4 +92,10 @@ markers = [
 line-length = 88
 skip-string-normalization = true
 skip-magic-trailing-comma = true
-extend-exclude = 'examples/pyomobook/python-ch/BadIndent.py'
+extend-exclude = """
+(
+  ^/examples/pyomobook/python-ch/BadIndent.py  # This is intentionally bad format
+  | ^/pyomo/tpl  # don't reformat TPLs
+  | ^/pyomo/dataportal/_parse_table_datacmds.py  # This is auto-generated
+)
+"""
