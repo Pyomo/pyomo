@@ -15,7 +15,6 @@ import subprocess
 import time
 import datetime
 from io import StringIO
-from typing import Optional, Tuple
 import sys
 import struct
 
@@ -28,7 +27,6 @@ from pyomo.common.config import (
     Path,
     document_class_CONFIG,
 )
-from pyomo.common.modeling import NOTSET
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import value, Objective
@@ -126,6 +124,9 @@ class GAMS(SolverBase):
         (True, True): "lo=4",
     }
 
+    #: cache of availability / version information
+    _exe_cache: dict[str : tuple[int] | None] = {}
+
     # mapping for GAMS SOLVESTAT
     _SOLVER_STATUS_LOOKUP = {
         1: None,
@@ -175,59 +176,48 @@ class GAMS(SolverBase):
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._writer = GAMSWriter()
-        self._available_cache = NOTSET
-        self._version_cache = NOTSET
 
-    def available(
-        self, config: Optional[GAMSConfig] = None, recheck: bool = False
-    ) -> Availability:
+    def available(self) -> Availability:
+        return (
+            Availability.NotFound
+            if self.version() is None
+            else Availability.FullLicense
+        )
 
-        if config is None:
-            config = self.config
+    def version(self) -> tuple[int, int, int] | None:
+        return self._get_version(self.config.executable.path())
 
-        pth = config.executable.path()
+    def _get_version(self, exe):
+        try:
+            return self._exe_cache[exe]
+        except KeyError:
+            pass
 
-        if recheck:
-            Executable(pth).rehash()
-            recheck = False
+        if exe is None:
+            # No executable (either we couldn't find a matching file, or
+            # the file is not executable)
+            self._exe_cache[None] = None
+            return None
 
-        if pth is None:
-            self._available_cache = (None, Availability.NotFound)
+        cmd = [str(exe), "audit"]
+        res = subprocess.run(cmd, capture_output=True, encoding="utf8", check=False)
+
+        if res.returncode:
+            version = None
         else:
-            self._available_cache = (pth, Availability.FullLicense)
-        if self._available_cache is not NOTSET and recheck == False:
-            return self._available_cache[1]
+            try:
+                version = res.stdout.split()[1]
+                version = tuple(int(i) for i in version.split('.'))
+            except:
+                version = None
 
-    def version(
-        self, config: Optional[GAMSConfig] = None, recheck: bool = False
-    ) -> Optional[Tuple[int, int, int]]:
-
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-
-        if recheck:
-            Executable(pth).rehash()
-            recheck = False
-
-        if pth is None:
-            self._version_cache = (None, None)
-        else:
-            cmd = [pth, "audit", "lo=3"]
-            subprocess_results = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                check=False,
+        if version is None:
+            logger.warning(
+                f"Failed parsing GAMS version: '{exe} audit':\n\n{res.stdout}"
             )
-            version = subprocess_results.stdout.splitlines()[0]
-            version = [char for char in version.split(' ') if len(char) > 0][1]
-            version = tuple(int(i) for i in version.split('.'))
-            self._version_cache = (pth, version)
 
-        if self._version_cache is not NOTSET and recheck == False:
-            return self._version_cache[1]
+        self._exe_cache[exe] = version
+        return version
 
     def solve(self, model, **kwds):
         ####################################################################
