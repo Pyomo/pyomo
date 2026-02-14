@@ -26,6 +26,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.contrib.trustregion.filter import Filter, FilterElement
+from pyomo.contrib.trustregion.funnel import Funnel
 from pyomo.contrib.trustregion.interface import TRFInterface
 from pyomo.contrib.trustregion.util import IterationLogger
 from pyomo.opt import SolverFactory
@@ -78,6 +79,21 @@ def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, c
     # Initialize trust region radius
     trust_radius = config.trust_radius
 
+    # Initialising funnel method
+    use_funnel_globalization_strategy = config.globalization_strategy == 1
+    if use_funnel_globalization_strategy:
+        funnel = Funnel(
+            phi_init=feasibility_k,
+            f_best_init=obj_val_k,
+            phi_min=config.funnel_param_phi_min,
+            kappa_f=config.funnel_param_kappa_f,
+            kappa_r=config.funnel_param_kappa_r,
+            alpha=config.funnel_param_alpha,
+            beta=config.funnel_param_beta,
+            mu_s=config.funnel_param_mu_s,
+            eta=config.funnel_param_eta,
+        )
+
     iteration = 0
 
     TRFLogger.newIteration(
@@ -127,61 +143,121 @@ def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, c
             iteration, feasibility_k, obj_val_k, trust_radius, step_norm_k
         )
 
-        # Check filter acceptance
-        filterElement = FilterElement(obj_val_k, feasibility_k)
-        if not TRFilter.isAcceptable(filterElement, config.maximum_feasibility):
-            # Reject the step
-            TRFLogger.iterrecord.rejected = True
-            trust_radius = max(
-                config.minimum_radius, step_norm_k * config.radius_update_param_gamma_c
-            )
-            rebuildSM = False
-            interface.rejectStep()
-            # Log iteration information
-            TRFLogger.logIteration()
-            if config.verbose:
-                TRFLogger.printIteration()
-            continue
-
-        # Switching condition: Eq. (7) in Yoshio/Biegler (2020)
-        if (obj_val - obj_val_k) >= (
-            config.switch_condition_kappa_theta
-            * pow(feasibility, config.switch_condition_gamma_s)
-        ) and (feasibility <= config.minimum_feasibility):
-            # f-type step
-            TRFLogger.iterrecord.fStep = True
-            trust_radius = min(
-                max(step_norm_k * config.radius_update_param_gamma_e, trust_radius),
-                config.maximum_radius,
-            )
-        else:
-            # theta-type step
-            TRFLogger.iterrecord.thetaStep = True
-            filterElement = FilterElement(
-                obj_val_k - config.param_filter_gamma_f * feasibility_k,
-                (1 - config.param_filter_gamma_theta) * feasibility_k,
-            )
-            TRFilter.addToFilter(filterElement)
-            # Calculate ratio: Eq. (10) in Yoshio/Biegler (2020)
-            rho_k = (
-                feasibility - feasibility_k + config.feasibility_termination
-            ) / max(feasibility, config.feasibility_termination)
-            # Ratio tests: Eq. (8) in Yoshio/Biegler (2020)
-            # If rho_k is between eta_1 and eta_2, trust radius stays same
-            if (rho_k < config.ratio_test_param_eta_1) or (
-                feasibility > config.minimum_feasibility
-            ):
+        # If user opts for filter as a globalization mechanism
+        # Note that filter is also default option
+        if not use_funnel_globalization_strategy:
+            # Check filter acceptance
+            filterElement = FilterElement(obj_val_k, feasibility_k)
+            if not TRFilter.isAcceptable(filterElement, config.maximum_feasibility):
+                # Reject the step
+                TRFLogger.iterrecord.rejected = True
                 trust_radius = max(
                     config.minimum_radius,
-                    (config.radius_update_param_gamma_c * step_norm_k),
+                    step_norm_k * config.radius_update_param_gamma_c,
                 )
-            elif rho_k >= config.ratio_test_param_eta_2:
+                rebuildSM = False
+                interface.rejectStep()
+                # Log iteration information
+                TRFLogger.logIteration()
+                if config.verbose:
+                    TRFLogger.printIteration()
+                continue
+
+            # Switching condition: Eq. (7) in Yoshio/Biegler (2020)
+            if (obj_val - obj_val_k) >= (
+                config.switch_condition_kappa_theta
+                * pow(feasibility, config.switch_condition_gamma_s)
+            ) and (feasibility <= config.minimum_feasibility):
+                # f-type step
+                TRFLogger.iterrecord.fStep = True
                 trust_radius = min(
+                    max(step_norm_k * config.radius_update_param_gamma_e, trust_radius),
                     config.maximum_radius,
-                    max(
-                        trust_radius, (config.radius_update_param_gamma_e * step_norm_k)
-                    ),
                 )
+            else:
+                # theta-type step
+                TRFLogger.iterrecord.thetaStep = True
+                filterElement = FilterElement(
+                    obj_val_k - config.param_filter_gamma_f * feasibility_k,
+                    (1 - config.param_filter_gamma_theta) * feasibility_k,
+                )
+                TRFilter.addToFilter(filterElement)
+                # Calculate ratio: Eq. (10) in Yoshio/Biegler (2020)
+                rho_k = (
+                    feasibility - feasibility_k + config.feasibility_termination
+                ) / max(feasibility, config.feasibility_termination)
+                # Ratio tests: Eq. (8) in Yoshio/Biegler (2020)
+                # If rho_k is between eta_1 and eta_2, trust radius stays same
+                if (rho_k < config.ratio_test_param_eta_1) or (
+                    feasibility > config.minimum_feasibility
+                ):
+                    trust_radius = max(
+                        config.minimum_radius,
+                        (config.radius_update_param_gamma_c * step_norm_k),
+                    )
+                elif rho_k >= config.ratio_test_param_eta_2:
+                    trust_radius = min(
+                        config.maximum_radius,
+                        max(
+                            trust_radius,
+                            (config.radius_update_param_gamma_e * step_norm_k),
+                        ),
+                    )
+
+        # If user opts for funnel as a globalization mechanism
+        else:
+            # Check funnel acceptance
+            status = funnel.classify_step(
+                feasibility, feasibility_k, obj_val, obj_val_k, config.trust_radius
+            )
+
+            if status == 'f':
+                # f-type step
+                funnel.accept_f(feasibility_k, obj_val_k)
+                TRFLogger.iterrecord.fStep = True
+                trust_radius = min(
+                    max(step_norm_k * config.radius_update_param_gamma_e, trust_radius),
+                    config.maximum_radius,
+                )
+            elif status in ('theta', 'theta-relax'):
+                # theta-type step
+                funnel.accept_theta(feasibility_k)
+                TRFLogger.iterrecord.thetaStep = True
+                # Calculate ratio: Eq. (10) in Yoshio/Biegler (2020)
+                rho_k = (
+                    feasibility - feasibility_k + config.feasibility_termination
+                ) / max(feasibility, config.feasibility_termination)
+                # Ratio tests: Eq. (8) in Yoshio/Biegler (2020)
+                # If rho_k is between eta_1 and eta_2, trust radius stays same
+                if (rho_k < config.ratio_test_param_eta_1) or (
+                    feasibility > config.minimum_feasibility
+                ):
+                    trust_radius = max(
+                        config.minimum_radius,
+                        (config.radius_update_param_gamma_c * step_norm_k),
+                    )
+                elif rho_k >= config.ratio_test_param_eta_2:
+                    trust_radius = min(
+                        config.maximum_radius,
+                        max(
+                            trust_radius,
+                            (config.radius_update_param_gamma_e * step_norm_k),
+                        ),
+                    )
+            elif status == 'reject':
+                # Reject the step
+                TRFLogger.iterrecord.rejected = True
+                trust_radius = max(
+                    config.minimum_radius,
+                    step_norm_k * config.radius_update_param_gamma_c,
+                )
+                rebuildSM = False
+                interface.rejectStep()
+                # Log iteration information
+                TRFLogger.logIteration()
+                if config.verbose:
+                    TRFLogger.printIteration()
+                continue
 
         TRFLogger.updateIteration(trustRadius=trust_radius)
         # Accept step and reset for next iteration
@@ -388,7 +464,18 @@ def _trf_config():
             "Default = 0.2.",
         ),
     )
-    ### Filter
+
+    # Default globalization strategy
+    CONFIG.declare(
+        'globalization_strategy',
+        ConfigValue(
+            default=0,
+            domain=In([0, 1]),
+            description='0 = Filter, 1 = Funnel, Default = Filter',
+        ),
+    )
+
+    ### Filter parameters
     CONFIG.declare(
         'maximum_feasibility',
         ConfigValue(
@@ -415,6 +502,66 @@ def _trf_config():
             domain=In(NumericRange(0, 1, 0, (False, False))),
             description="Fixed filter parameter ``gamma_f`` within (0, 1). "
             "Default = 0.01",
+        ),
+    )
+
+    ### Funnel parameters
+    CONFIG.declare(
+        'funnel_param_phi_min',
+        ConfigValue(
+            default=1e-8, domain=PositiveFloat, description='Hard floor on funnel width'
+        ),
+    )
+
+    CONFIG.declare(
+        'funnel_param_kappa_f',
+        ConfigValue(
+            default=0.25,
+            domain=PositiveFloat,
+            description='Funnel‑shrink factor after f‑type',
+        ),
+    )
+
+    CONFIG.declare(
+        'funnel_param_kappa_r',
+        ConfigValue(
+            default=1.05,
+            domain=PositiveFloat,
+            description='Funnel expand factor for relax theta step',
+        ),
+    )
+
+    CONFIG.declare(
+        'funnel_param_eta',
+        ConfigValue(
+            default=0.0001,
+            domain=PositiveFloat,
+            description='Armijo coefficient for f‑type',
+        ),
+    )
+
+    CONFIG.declare(
+        'funnel_param_alpha',
+        ConfigValue(
+            default=0.5,
+            domain=PositiveFloat,
+            description='Curvature exponent ( (theta)^alpha )',
+        ),
+    )
+
+    CONFIG.declare(
+        'funnel_param_beta',
+        ConfigValue(
+            default=0.8,
+            domain=PositiveFloat,
+            description='Extra shrink required for theta‑type',
+        ),
+    )
+
+    CONFIG.declare(
+        'funnel_param_mu_s',
+        ConfigValue(
+            default=0.01, domain=PositiveFloat, description='Switching coefficient δ'
         ),
     )
 
