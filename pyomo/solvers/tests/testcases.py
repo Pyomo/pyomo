@@ -147,6 +147,26 @@ ExpectedFailures['gams', 'python', 'MILP_unbounded'] = (
 )
 
 #
+# GAMS V2
+#
+
+ExpectedFailures['gams_v2', 'gms', 'MILP_unbounded'] = (
+    lambda v: v <= _trunk_version,
+    "GAMS requires finite bounds for integer variables. 1.0E100 is as extreme"
+    "as GAMS will define, and should be enough to appear unbounded. If the"
+    "solver cannot handle this bound, explicitly set a smaller bound on"
+    "the pyomo model, or try a different GAMS solver.",
+)
+
+ExpectedFailures['gams_v2', 'python', 'MILP_unbounded'] = (
+    lambda v: v <= _trunk_version,
+    "GAMS requires finite bounds for integer variables. 1.0E100 is as extreme"
+    "as GAMS will define, and should be enough to appear unbounded. If the"
+    "solver cannot handle this bound, explicitly set a smaller bound on"
+    "the pyomo model, or try a different GAMS solver.",
+)
+
+#
 # GLPK
 #
 
