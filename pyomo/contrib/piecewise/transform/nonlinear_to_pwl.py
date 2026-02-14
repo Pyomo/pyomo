@@ -40,7 +40,7 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np, packaging
 from pyomo.common.enums import IntEnum
 from pyomo.common.modeling import unique_component_name
-from pyomo.core.expr.numeric_expr import SumExpression
+from pyomo.core.expr.numeric_expr import SumExpression, mutable_expression
 from pyomo.core.expr import identify_variables
 from pyomo.core.expr import SumExpression
 from pyomo.core.util import target_list
@@ -646,8 +646,9 @@ class NonlinearToPWL(Transformation):
                 bounds.append((v.bounds, v.is_integer()))
         return bounds
 
-    def _needs_approximating(self, expr, approximate_quadratic):
-        repn = self._quadratic_repn_visitor.walk_expression(expr)
+    def _needs_approximating(self, expr, approximate_quadratic, repn=None):
+        if repn is None:
+            repn = self._quadratic_repn_visitor.walk_expression(expr)
         if repn.nonlinear is None:
             if repn.quadratic is None:
                 # Linear constraint. Always skip.
@@ -659,23 +660,66 @@ class NonlinearToPWL(Transformation):
                 return ExprType.QUADRATIC, True
         return ExprType.GENERAL, True
 
+    def _separate_linear_parts(self, repn):
+        """
+        The idea here is to ensure that linear parts of constraints
+        always get separated from the nonlinear parts, even if
+        additively_decompose if False. The idea is that
+
+        y >= exp(x) + x**3
+
+        should become
+
+        y >= PWL(exp(x) + x**3)
+
+        and not
+
+        0 >= PWL(exp(x) + x**3 - y)
+        """
+        var_map = self._quadratic_repn_visitor.var_map
+        linear = 0
+        nonlinear = 0
+        if repn.nonlinear is not None:
+            nonlinear += repn.nonlinear
+        if repn.quadratic:
+            for (x1, x2), coef in repn.quadratic.items():
+                if repn.multiplier_flag(coef):
+                    if x1 == x2:
+                        nonlinear += coef * var_map[x1] ** 2
+                    else:
+                        nonlinear += coef * (var_map[x1] * var_map[x2])
+        if repn.linear:
+            for vid, coef in repn.linear.items():
+                if repn.multiplier_flag(coef):
+                    linear += coef * var_map[vid]
+        if repn.constant_flag(repn.constant):
+            linear += repn.constant
+        if repn.multiplier_flag(repn.multiplier) != 1:
+            linear *= repn.multiplier
+            nonlinear *= repn.multiplier
+
+        return linear, nonlinear
+
     def _approximate_expression(
         self, expr, obj, trans_block, config, approximate_quadratic
     ):
+        repn = self._quadratic_repn_visitor.walk_expression(expr)
         expr_type, needs_approximating = self._needs_approximating(
-            expr, approximate_quadratic
+            expr, approximate_quadratic, repn
         )
         if not needs_approximating:
             return None, expr_type
 
+        linear_part, nonlinear_part = self._separate_linear_parts(repn)
+
         # Additively decompose expr and work on the pieces
-        pwl_summands = []
+        pwl_summands = [linear_part]
         for k, subexpr in enumerate(
             _additively_decompose_expr(
-                expr, config.min_dimension_to_additively_decompose
+                nonlinear_part, config.min_dimension_to_additively_decompose
             )
             if config.additively_decompose
-            else (expr,)
+            else (nonlinear_part,)
         ):
             # First check if this is a good idea
             expr_vars = list(identify_variables(subexpr, include_fixed=False))
