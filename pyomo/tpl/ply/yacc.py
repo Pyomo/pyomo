@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # This file was derived from PLY 3.11's ply.yacc module.
 #
@@ -334,7 +332,7 @@ class LRParser:
     # certain kinds of advanced parsing situations where the lexer and parser interact with
     # each other or change states (i.e., manipulation of scope, lexer states, etc.).
     #
-    # See:  http://www.gnu.org/software/bison/manual/html_node/Default-Reductions.html#Default-Reductions
+    # See:  https://www.gnu.org/software/bison/manual/html_node/Default-Reductions.html#Default-Reductions
     def set_defaulted_states(self):
         self.defaulted_states = {}
         for state, actions in self.action.items():
