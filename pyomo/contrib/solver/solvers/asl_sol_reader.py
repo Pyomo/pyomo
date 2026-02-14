@@ -8,7 +8,7 @@
 # ____________________________________________________________________________________
 
 import io
-from typing import Sequence, Optional, Mapping
+from typing import Sequence, Optional, Mapping, List, Any
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap
@@ -25,7 +25,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 
 
 class ASLSolFileData:
@@ -53,16 +56,34 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     Loader for solvers that create ASL .sol files (e.g., ipopt)
     """
 
-    def __init__(self, sol_data: ASLSolFileData, nl_info: NLWriterInfo) -> None:
+    def __init__(
+        self, sol_data: ASLSolFileData, nl_info: NLWriterInfo, pyomo_model
+    ) -> None:
         self._sol_data = sol_data
         self._nl_info = nl_info
+        self._pyomo_model = pyomo_model
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
+    def get_number_of_solutions(self) -> int:
+        if self._nl_info is None:
+            return 0
+        return 1
+
+    def get_solution_ids(self) -> List[Any]:
+        return [None]
+
+    def load_import_suffixes(self, solution_id=None):
+        load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
+
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> None:
+        if solution_id is not None:
+            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if vars_to_load is not None:
             # If we are given a list of variables to load, it is easiest
-            # to use the filtering in get_primals and then just set
+            # to use the filtering in get_vars and then just set
             # those values.
-            for var, val in self.get_primals(vars_to_load).items():
+            for var, val in self.get_vars(vars_to_load).items():
                 var.set_value(val, skip_validation=True)
             StaleFlagManager.mark_all_as_stale(delayed=True)
             return
@@ -90,9 +111,11 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+    def get_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
+        if solution_id is not None:
+            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         result = ComponentMap()
         if not self._sol_data.primals:
             # SOL file contained no primal values
@@ -137,8 +160,10 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
         return result
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> dict[ConstraintData, float]:
+        if solution_id is not None:
+            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if len(self._nl_info.eliminated_vars) > 0:
             raise MouseTrap(
                 'Complete duals are not available when variables have '

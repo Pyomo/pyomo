@@ -14,6 +14,7 @@ from .solvers.gurobi.gurobi_direct import GurobiDirect
 from .solvers.gurobi.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
 from .solvers.highs import Highs
+from .solvers.scip.scip_direct import ScipDirect, ScipPersistent
 from .solvers.knitro.direct import KnitroDirectSolver
 
 
@@ -39,6 +40,16 @@ def load():
     SolverFactory.register(
         name="highs", legacy_name="highs", doc="Persistent interface to HiGHS"
     )(Highs)
+    SolverFactory.register(
+        name='scip_direct',
+        legacy_name='scip_direct_v2',
+        doc='Direct interface pyscipopt',
+    )(ScipDirect)
+    SolverFactory.register(
+        name='scip_persistent',
+        legacy_name='scip_persistent_v2',
+        doc='Persistent interface pyscipopt',
+    )(ScipPersistent)
     SolverFactory.register(
         name="knitro_direct",
         legacy_name="knitro_direct",

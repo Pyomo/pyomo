@@ -437,7 +437,16 @@ objno 0""")
 class TestSolFileSolutionLoader(unittest.TestCase):
 
     def test_member_list(self):
-        expected_list = ['load_vars', 'get_primals', 'get_duals', 'get_reduced_costs']
+        expected_list = [
+            'load_vars',
+            'get_vars',
+            'get_duals',
+            'get_reduced_costs',
+            'get_number_of_solutions',
+            'get_solution_ids',
+            'load_import_suffixes',
+            'load_solution',
+        ]
         method_list = [
             method
             for method in dir(ASLSolFileSolutionLoader)
@@ -453,7 +462,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         nl_info = NLWriterInfo(var=[m.x, m.y[1], m.y[3]])
         sol_data = ASLSolFileData()
         sol_data.primals = [3, 7, 5]
-        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
         loader.load_vars()
         self.assertEqual(m.x.value, 3)
@@ -492,7 +501,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         )
         sol_data = ASLSolFileData()
         sol_data.primals = []
-        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
         loader.load_vars()
         self.assertEqual(m.x.value, None)
@@ -500,7 +509,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         self.assertEqual(m.y[2].value, 4)
         self.assertEqual(m.y[3].value, 1.5)
 
-    def test_get_primals(self):
+    def test_get_vars(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var([1, 2, 3])
@@ -508,10 +517,10 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         nl_info = NLWriterInfo(var=[m.x, m.y[1], m.y[3]])
         sol_data = ASLSolFileData()
         sol_data.primals = [3, 7, 5]
-        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
         self.assertEqual(
-            loader.get_primals(), ComponentMap([(m.x, 3), (m.y[1], 7), (m.y[3], 5)])
+            loader.get_vars(), ComponentMap([(m.x, 3), (m.y[1], 7), (m.y[3], 5)])
         )
         self.assertEqual(m.x.value, None)
         self.assertEqual(m.y[1].value, None)
@@ -520,7 +529,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         sol_data.primals = [13, 17, 15]
         self.assertEqual(
-            loader.get_primals(vars_to_load=[m.y[3], m.x]),
+            loader.get_vars(vars_to_load=[m.y[3], m.x]),
             ComponentMap([(m.x, 13), (m.y[3], 15)]),
         )
         self.assertEqual(m.x.value, None)
@@ -530,8 +539,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         nl_info.scaling = ScalingFactors([1, 5, 10], [], [])
         self.assertEqual(
-            loader.get_primals(),
-            ComponentMap([(m.x, 13), (m.y[1], 3.4), (m.y[3], 1.5)]),
+            loader.get_vars(), ComponentMap([(m.x, 13), (m.y[1], 3.4), (m.y[3], 1.5)])
         )
         self.assertEqual(m.x.value, None)
         self.assertEqual(m.y[1].value, None)
@@ -540,7 +548,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         nl_info.eliminated_vars = [(m.y[2], 2 * m.y[3] + 1)]
         self.assertEqual(
-            loader.get_primals(),
+            loader.get_vars(),
             ComponentMap([(m.x, 13), (m.y[1], 3.4), (m.y[2], 4), (m.y[3], 1.5)]),
         )
         self.assertEqual(m.x.value, None)
@@ -548,7 +556,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         self.assertEqual(m.y[2].value, None)
         self.assertEqual(m.y[3].value, None)
 
-    def test_get_primals_empty_model(self):
+    def test_get_vars_empty_model(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var([1, 2, 3])
@@ -558,11 +566,9 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         )
         sol_data = ASLSolFileData()
         sol_data.primals = []
-        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
-        self.assertEqual(
-            loader.get_primals(), ComponentMap([(m.y[2], 4), (m.y[3], 1.5)])
-        )
+        self.assertEqual(loader.get_vars(), ComponentMap([(m.y[2], 4), (m.y[3], 1.5)]))
         self.assertEqual(m.x.value, None)
         self.assertEqual(m.y[1].value, None)
         self.assertEqual(m.y[2].value, None)
