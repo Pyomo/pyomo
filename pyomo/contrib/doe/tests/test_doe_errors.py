@@ -1,15 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-import json
-import os.path
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -20,7 +16,6 @@ from pyomo.common.dependencies import (
 )
 
 from pyomo.common.errors import DeveloperError
-from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 if not (numpy_available and scipy_available):
@@ -30,19 +25,32 @@ if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
         BadExperiment,
-        FullReactorExperiment,
+        RooneyBieglerExperimentFlag,
+    )
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+        RooneyBieglerExperiment,
     )
 
+from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
 
-currdir = this_file_dir()
-file_path = os.path.join(currdir, "..", "examples", "result.json")
 
-with open(file_path) as f:
-    data_ex = json.load(f)
-data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
+def get_rooney_biegler_experiment_flag():
+    """Get a fresh RooneyBieglerExperimentFlag instance for testing.
+
+    Creates a new experiment instance that supports the flag parameter
+    for creating incomplete models for error testing.
+    """
+    data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
+    data_point = data.iloc[0]
+
+    return RooneyBieglerExperimentFlag(
+        data=data_point,
+        theta={'asymptote': 15, 'rate_constant': 0.5},
+        measure_error=0.1,
+    )
 
 
 def get_standard_args(experiment, fd_method, obj_used, flag):
@@ -65,7 +73,8 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     solver.options["max_iter"] = 3000
     args['solver'] = solver
     args['tee'] = False
-    args['get_labeled_model_args'] = {"flag": flag}
+    if flag is not None:
+        args['get_labeled_model_args'] = {"flag": flag}
     args['_Cholesky_option'] = True
     args['_only_compute_fim_lower'] = True
     return args
@@ -73,10 +82,11 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
-class TestReactorExampleErrors(unittest.TestCase):
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestDoEErrors(unittest.TestCase):
     def test_experiment_none_error(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
         with self.assertRaisesRegex(
@@ -89,7 +99,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_get_labeled_model(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
         experiment = BadExperiment()
@@ -104,10 +114,10 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_experiment_outputs(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -121,10 +131,10 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_measurement_error(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 2  # Value for faulty model build mode - 2: No meas error
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -138,10 +148,10 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_experiment_inputs(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 3  # Value for faulty model build mode - 3: No exp inputs/design vars
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -155,10 +165,10 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_no_unknown_parameters(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = 4  # Value for faulty model build mode - 4: No unknown params
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -172,14 +182,13 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_bad_prior_size(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 0: full model
+        obj_used = "pseudo_trace"
 
         prior_FIM = np.ones((5, 5))
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args['prior_FIM'] = prior_FIM
 
         doe_obj = DesignOfExperiments(**DoE_args)
@@ -188,7 +197,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             ValueError,
             "Shape of FIM provided should be n parameters by n parameters, "
             "or {} by {}, FIM provided has shape {} by {}".format(
-                4, 4, prior_FIM.shape[0], prior_FIM.shape[1]
+                2, 2, prior_FIM.shape[0], prior_FIM.shape[1]
             ),
         ):
             doe_obj.create_doe_model()
@@ -197,14 +206,13 @@ class TestReactorExampleErrors(unittest.TestCase):
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 0: full model
+        obj_used = "pseudo_trace"
 
-        prior_FIM = -np.ones((4, 4))
+        prior_FIM = -np.ones((2, 2))
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args['prior_FIM'] = prior_FIM
 
         doe_obj = DesignOfExperiments(**DoE_args)
@@ -222,15 +230,14 @@ class TestReactorExampleErrors(unittest.TestCase):
         from pyomo.contrib.doe.utils import _SMALL_TOLERANCE_SYMMETRY
 
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 0: full model
+        obj_used = "pseudo_trace"
 
-        prior_FIM = np.zeros((4, 4))
+        prior_FIM = np.zeros((2, 2))
         prior_FIM[0, 1] = 1e-3
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args['prior_FIM'] = prior_FIM
 
         doe_obj = DesignOfExperiments(**DoE_args)
@@ -245,14 +252,13 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_bad_jacobian_init_size(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 0: full model
+        obj_used = "pseudo_trace"
 
         jac_init = np.ones((5, 5))
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args['jac_initial'] = jac_init
 
         doe_obj = DesignOfExperiments(**DoE_args)
@@ -261,20 +267,19 @@ class TestReactorExampleErrors(unittest.TestCase):
             ValueError,
             "Shape of Jacobian provided should be n experiment outputs "
             "by n parameters, or {} by {}, Jacobian provided has "
-            "shape {} by {}".format(27, 4, jac_init.shape[0], jac_init.shape[1]),
+            "shape {} by {}".format(1, 2, jac_init.shape[0], jac_init.shape[1]),
         ):
             doe_obj.create_doe_model()
 
     def test_reactor_check_unbuilt_update_FIM(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 0: full model
+        obj_used = "pseudo_trace"
 
-        FIM_update = np.ones((4, 4))
+        FIM_update = np.ones((2, 2))
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -287,14 +292,13 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_none_update_FIM(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 0: full model
+        obj_used = "pseudo_trace"
 
         FIM_update = None
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -306,12 +310,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_results_file_name(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 0: Full model
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -322,12 +325,12 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_measurement_and_output_length_match(self):
         fd_method = "central"
-        obj_used = "trace"
+        obj_used = "pseudo_trace"
         flag_val = (
             5  # Value for faulty model build mode - 5: Mismatch error and output length
         )
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -336,19 +339,18 @@ class TestReactorExampleErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError,
             "Number of experiment outputs, {}, and length of measurement error, "
-            "{}, do not match. Please check model labeling.".format(27, 1),
+            "{}, do not match. Please check model labeling.".format(1, 2),
         ):
             doe_obj.create_doe_model()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_grid_search_des_range_inputs(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -363,14 +365,13 @@ class TestReactorExampleErrors(unittest.TestCase):
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_premature_figure_drawing(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -382,18 +383,17 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_no_des_var_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
+        design_ranges = {"hour": [1, 7, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -407,18 +407,17 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure(results=doe_obj.fim_factorial_results)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_no_sens_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
+        design_ranges = {"hour": [1, 7, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -430,18 +429,17 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_no_fixed_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
+        design_ranges = {"hour": [1, 7, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -453,18 +451,17 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure(sensitivity_design_variables={"dummy": "var"})
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_bad_fixed_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
+        design_ranges = {"hour": [1, 7, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -475,23 +472,22 @@ class TestReactorExampleErrors(unittest.TestCase):
             "Fixed design variables do not all appear in the results object keys.",
         ):
             doe_obj.draw_factorial_figure(
-                sensitivity_design_variables={"CA[0]": 1},
+                sensitivity_design_variables={"hour": 1},
                 fixed_design_variables={"bad": "entry"},
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_figure_drawing_bad_sens_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
+        design_ranges = {"hour": [1, 7, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -504,19 +500,16 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.draw_factorial_figure(
                 sensitivity_design_variables={"bad": "entry"},
-                fixed_design_variables={"CA[0]": 1},
+                fixed_design_variables={"hour": 1},
             )
 
     def test_reactor_check_get_FIM_without_FIM(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -529,14 +522,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_sens_mat_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -550,14 +540,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_exp_inputs_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -571,14 +558,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_exp_outputs_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -592,14 +576,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_unknown_params_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -613,14 +594,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_reactor_check_get_meas_error_without_model(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -634,14 +612,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_multiple_exp_not_implemented_seq(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -652,14 +627,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_multiple_exp_not_implemented_sim(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -670,14 +642,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_update_unknown_parameter_values_not_implemented_seq(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -689,14 +658,11 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_bad_FD_generate_scens(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -716,14 +682,11 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_bad_FD_seq_compute_FIM(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -742,14 +705,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_bad_objective(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -768,14 +728,11 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     def test_no_model_for_objective(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -789,14 +746,11 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_bad_compute_FIM_option(self):
         fd_method = "central"
-        obj_used = "trace"
-        flag_val = (
-            0  # Value for faulty model build mode - 5: Mismatch error and output length
-        )
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment_flag()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -807,6 +761,25 @@ class TestReactorExampleErrors(unittest.TestCase):
             ),
         ):
             doe_obj.compute_FIM(method="Bad Method")
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_invalid_trace_without_cholesky(self):
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        DoE_args['_Cholesky_option'] = False
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.create_doe_model()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
+        ):
+            doe_obj.create_objective_function()
 
 
 if __name__ == "__main__":
