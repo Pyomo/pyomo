@@ -251,7 +251,7 @@ def SSE(model):
 
 
 def L2_regularization(
-    model, prior_FIM, theta_ref=None, param_names = None, regularization_weight=None
+    model, prior_FIM, theta_ref=None, param_names=None, regularization_weight=None
 ):
     """
     L2 Regularization addition term for the objective function, which is used to
@@ -274,7 +274,7 @@ def L2_regularization(
     # Check if prior_FIM is a square matrix
     if prior_FIM.shape[0] != prior_FIM.shape[1]:
         raise ValueError("prior_FIM must be a square matrix")
-    
+
     # Check prior_FIM is positive semi-definite
     if not np.all(np.linalg.eigvals(prior_FIM) >= 0):
         raise ValueError("prior_FIM must be positive semi-definite")
@@ -282,8 +282,9 @@ def L2_regularization(
     # Construct L2 regularization term
     if param_names is None:
         # Get the names of the unknown parameters in the model up to the length of prior_FIM
-        param_names = [param.name for param in model.unknown_parameters][:prior_FIM.shape[0]]
-
+        param_names = [param.name for param in model.unknown_parameters][
+            : prior_FIM.shape[0]
+        ]
 
     # Check if theta_ref is a vector of the same size as prior_FIM
     if len(theta_ref) != prior_FIM.shape[0]:
@@ -847,6 +848,7 @@ class Estimator:
         self,
         experiment_list,
         obj_function=None,
+        regularization=None,
         prior_FIM=None,
         theta_ref=None,
         regularization_weight=None,
@@ -885,6 +887,7 @@ class Estimator:
         self.solver_options = solver_options
 
         # Added keyword arguments for L2 regularization
+        self.regularization = regularization
         self.prior_FIM = prior_FIM
         self.theta_ref = theta_ref
         self.regularization_weight = regularization_weight
@@ -1012,32 +1015,8 @@ class Estimator:
             for obj in model.component_objects(pyo.Objective):
                 obj.deactivate()
 
-            # Completed in PR #3535, this is a temporary solution
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
-            if self.obj_function == 'SSE':
-                # Sum of squared errors
-                second_stage_rule = SSE
-
-            # Added L2 regularization option
-            elif self.obj_function == 'SSE_with_L2_regularization':
-
-                # Prior FIM is required for L2 regularization
-                # If prior_FIM and theta_ref are provided, use them
-                if self.theta_ref.any() is not None:
-                    # Regularize the objective function
-                    second_stage_rule = SSE_with_L2_regularization(
-                        model=self.model_initialized,
-                        prior_FIM=self.prior_FIM,
-                        theta_ref=self.theta_ref,
-                    )
-                # If prior_FIM is provided but theta_ref is not, use
-                # unknown_parameters values as reference
-                elif self.prior_FIM:
-                    theta_ref_none_provided = model.unknown_parameters.values()
-                    second_stage_rule = SSE_with_L2_regularization(
-                        prior_FIM=self.prior_FIM, theta_ref=theta_ref_none_provided
-                    )
             if self.obj_function is ObjectiveType.SSE:
                 second_stage_rule = SSE
                 self.covariance_objective = second_stage_rule
