@@ -54,23 +54,6 @@ def simple_reaction_model(data):
     # fix all of the regressed parameters
     model.k.fix()
 
-    # ===================================================================
-    # # Stage-specific cost computations
-    # def ComputeFirstStageCost_rule(model):
-    #     return 0
-
-    # model.FirstStageCost = Expression(rule=ComputeFirstStageCost_rule)
-
-    # def AllMeasurements(m):
-    #     return (float(data['y']) - m.y) ** 2
-
-    # model.SecondStageCost = Expression(rule=AllMeasurements)
-
-    # def total_cost_rule(m):
-    #     return m.FirstStageCost + m.SecondStageCost
-
-    # model.Total_Cost_Objective = Objective(rule=total_cost_rule, sense=minimize)
-
     return model
 
 
