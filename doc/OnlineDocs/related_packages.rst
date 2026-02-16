@@ -2,9 +2,10 @@ Related Packages
 ================
 
 The following is list of software packages that utilize or build off of
-Pyomo. This is certainly not a comprehensive list.  Please reach out to
-the Pyomo developers if you would like your project added to this list.
-[#f1]_
+Pyomo. [#f1]_ This is certainly not a comprehensive list.  Please reach
+out to the Pyomo developers if you would like your project added to this
+list.
+
 
 Modeling Extensions
 -------------------
