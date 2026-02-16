@@ -82,11 +82,13 @@ class CloneError(pyomo.common.errors.PyomoException):
 
 
 class ComponentBase(PyomoObject):
-    """A base class for Component and ComponentData
+    """A base class for :py:class:`Component` and :py:class:`ComponentData`
 
     This class defines some fundamental methods and properties that are
     expected for all Component-like objects.  They are centralized here
-    to avoid repeated code in the Component and ComponentData classes.
+    to avoid repeated code in the :py:class:`Component` and
+    :py:class:`ComponentData` classes.
+
     """
 
     __slots__ = ()

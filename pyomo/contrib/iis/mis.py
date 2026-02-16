@@ -57,16 +57,14 @@
 # derivative works thereof, in binary and source code form.
 # ___________________________________________________________________________
 
-"""
-Minimal Intractable System (MIS) finder
+"""Minimal Intractable System (MIS) finder
 
-Originally written by Ben Knueven as part of the WaterTAP project:
-   https://github.com/watertap-org/watertap
-That's why this file has the watertap copyright notice.
-
-copied by DLW 18Feb2024 and edited
+Originally written by Ben Knueven as part of the `WaterTAP project
+<https://github.com/watertap-org/watertap>`__.  Copied by DLW 18Feb2024
+and edited.
 
 See: http://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
+
 """
 
 import logging
@@ -122,8 +120,7 @@ class _VariableBoundsAsConstraints(IsomorphicTransformation):
 def compute_infeasibility_explanation(
     model, solver, tee=False, tolerance=1e-8, logger=logger
 ):
-    """
-    This function attempts to determine why a given model is infeasible. It deploys
+    """This function attempts to determine why a given model is infeasible. It deploys
     two main algorithms:
 
     1. Successfully relaxes the constraints of the problem, and reports to the user
@@ -135,15 +132,23 @@ def compute_infeasibility_explanation(
        that removing any single constraint or variable bound would result in a
        feasible subsystem.
 
-    Args
-    ----
-        model: A pyomo block
-        solver: A pyomo solver object or a string for SolverFactory
-        tee (optional):  Display intermediate solves conducted (False)
-        tolerance (optional): The feasibility tolerance to use when declaring a
-            constraint feasible (1e-08)
-        logger:logging.Logger
-            A logger for messages. Uses pyomo.contrib.mis logger by default.
+    Parameters
+    ----------
+    model : BlockData
+        A pyomo block
+
+    solver: OptSolver | SolverBase | str
+        A pyomo solver object or a string for SolverFactory
+
+    tee : bool
+        Display intermediate solves conducted
+
+    tolerance : float
+        The feasibility tolerance to use when declaring a constraint
+        feasible.
+
+    logger: logging.Logger
+        A logger for messages. Uses ``pyomo.contrib.mis`` logger by default.
 
     """
     # Suggested enhancement: It might be useful to return sets of names for each set of relaxed components, as well as the final minimal infeasible system
