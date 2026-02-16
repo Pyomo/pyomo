@@ -739,6 +739,7 @@ class ModelChangeDetector:
     def _check_for_unknown_active_components(self):
         for ctype in self._model.collect_ctypes(active=True, descend_into=True):
             if not issubclass(ctype, ActiveComponent):
+                # strangly, this is needed to skip things like Param
                 continue
             if ctype in self._known_active_ctypes:
                 continue
