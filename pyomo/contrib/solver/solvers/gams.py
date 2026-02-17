@@ -599,14 +599,17 @@ class GAMS(SolverBase):
             statresults_text = statresults_file.read()
 
         stat_vars = dict()
+
         # Skip first line of explanatory text
         for line in statresults_text.splitlines()[1:]:
             items = line.split()
+
             try:
-                stat_vars[items[0]] = float(items[1])
-            except ValueError:
-                # GAMS printed NA, just make it nan
-                stat_vars[items[0]] = float('nan')
+                numval = float(items[1])
+            except:
+                numval = float("nan")
+
+            stat_vars[items[0]] = numval
 
         with open(results_filename, 'r') as results_file:
             results_text = results_file.read()
