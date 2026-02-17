@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.deprecation import moved_module
 
@@ -35,6 +33,12 @@ moved_module(
     'pyomo.contrib.solver.gurobi',
     'pyomo.contrib.solver.solvers.gurobi_persistent',
     version='6.9.2',
+)
+
+moved_module(
+    'pyomo.contrib.solver.solvers.sol_reader',
+    'pyomo.contrib.solver.solvers.asl_sol_reader',
+    version='6.10.0.dev0',
 )
 
 del _module, moved_module

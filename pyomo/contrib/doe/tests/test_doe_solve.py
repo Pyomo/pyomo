@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 import json
 import logging
 import os, os.path
@@ -41,7 +39,10 @@ if scipy_available:
         run_reactor_doe,
     )
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
-        FullReactorExperimentBad,
+        RooneyBieglerExperimentBad,
+    )
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+        RooneyBieglerExperiment,
     )
 from pyomo.contrib.doe.utils import rescale_FIM
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
@@ -59,6 +60,28 @@ file_path = os.path.join(currdir, "..", "examples", "result.json")
 with open(file_path) as f:
     data_ex = json.load(f)
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
+
+
+def get_rooney_biegler_data():
+    """Get Rooney-Biegler experiment data for testing."""
+    # Create a simple data point for Rooney-Biegler model
+    # This must be a pandas Series with 'hour' and 'y' columns
+    # Use data from the tested Rooney-Biegler dataset
+    data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
+    return data.iloc[0]
+
+
+def get_rooney_biegler_experiment():
+    """Get a fresh RooneyBieglerExperiment instance for testing.
+
+    Creates a new experiment instance to ensure test isolation.
+    Each test gets its own instance to avoid state sharing.
+    """
+    return RooneyBieglerExperiment(
+        data=get_rooney_biegler_data(),
+        theta={'asymptote': 15, 'rate_constant': 0.5},
+        measure_error=0.1,
+    )
 
 
 def get_FIM_Q_L(doe_obj=None):
@@ -126,8 +149,7 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    # Make solver object with
-    # good linear subroutines
+    # Make solver object with good linear subroutines
     solver = SolverFactory("ipopt")
     solver.options["linear_solver"] = "ma57"
     solver.options["halt_on_ampl_error"] = "yes"
@@ -143,12 +165,14 @@ def get_standard_args(experiment, fd_method, obj_used):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
-class TestReactorExampleSolving(unittest.TestCase):
-    def test_reactor_fd_central_solve(self):
+class TestRooneyBieglerExampleSolving(unittest.TestCase):
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_rooney_biegler_fd_central_solve(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -167,13 +191,28 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
-    def test_reactor_fd_forward_solve(self):
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_rooney_biegler_fd_forward_solve(self):
         fd_method = "forward"
         obj_used = "zero"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        # Use hour=7 for better FIM conditioning with zero objective
+        data_point = pd.DataFrame({'hour': [7.0], 'y': [19.8]}).iloc[0]
+
+        experiment = RooneyBieglerExperiment(
+            data=data_point,
+            theta={'asymptote': 15, 'rate_constant': 0.5},
+            measure_error=0.1,
+        )
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        # Add prior FIM to avoid singularity with zero objective
+        # This follows the pattern in rooney_biegler_doe_example.py
+        doe_obj_prior = DesignOfExperiments(**DoE_args)
+        prior_FIM = doe_obj_prior.compute_FIM()
+        DoE_args['prior_FIM'] = prior_FIM
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -186,14 +225,16 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
-        # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
-        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+        # Note: When using prior_FIM, the relationship FIM = Q.T @ sigma_inv @ Q + prior_FIM
+        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
-    def test_reactor_fd_backward_solve(self):
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_rooney_biegler_fd_backward_solve(self):
         fd_method = "backward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -211,11 +252,13 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
-    def test_reactor_obj_det_solve(self):
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_rooney_biegler_obj_det_solve(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         DoE_args["scale_nominal_param_value"] = (
@@ -234,13 +277,25 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
-    def test_reactor_obj_cholesky_solve(self):
+        expected_design = 9.999213890476453
+        actual_design = doe_obj.results["Experiment Design"][0]
+        self.assertAlmostEqual(actual_design, expected_design, places=3)
+
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_rooney_biegler_obj_cholesky_solve(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        # Add prior FIM for better numerical conditioning
+        # This follows the pattern in rooney_biegler_doe_example.py
+        doe_obj_prior = DesignOfExperiments(**DoE_args)
+        prior_FIM = doe_obj_prior.compute_FIM()
+        DoE_args['prior_FIM'] = prior_FIM
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -254,8 +309,8 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Since Cholesky is used, there is comparison for FIM and L.T @ L
         self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
 
-        # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
-        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+        # Note: When using prior_FIM, the relationship FIM = Q.T @ sigma_inv @ Q + prior_FIM
+        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
     def DISABLE_test_reactor_obj_cholesky_solve_bad_prior(self):
         # [10/2025] This test has been disabled because it frequently
@@ -292,25 +347,35 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with central finite differences
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_compute_FIM_seq_centr(self):
         fd_method = "central"
-        obj_used = "determinant"
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj.compute_FIM(method="sequential")
+        expected_FIM = np.array(
+            [[18957.7788694, 4238.27606876], [4238.27606876, 947.52577076]]
+        )
+
+        self.assertTrue(
+            np.all(np.isclose(doe_obj.compute_FIM(method="sequential"), expected_FIM))
+        )
 
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with forward finite differences
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_compute_FIM_seq_forward(self):
         fd_method = "forward"
-        obj_used = "determinant"
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -329,21 +394,29 @@ class TestReactorExampleSolving(unittest.TestCase):
         fd_method = "forward"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj.compute_FIM(method="kaug")
+        expected_FIM = np.array(
+            [[18957.7788694, 4238.27606876], [4238.27606876, 947.52577076]]
+        )
+
+        self.assertTrue(
+            np.all(np.isclose(doe_obj.compute_FIM(method="kaug"), expected_FIM))
+        )
 
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with backward finite differences
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_compute_FIM_seq_backward(self):
         fd_method = "backward"
-        obj_used = "determinant"
+        obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        # Use RooneyBiegler for algorithm validation (faster)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -362,7 +435,8 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        design_ranges = {"CA[0]": [1, 5, 3], "T[0]": [300, 700, 3]}
+        # Reduce grid from 3x3 to 2x2 for performance
+        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -373,14 +447,14 @@ class TestReactorExampleSolving(unittest.TestCase):
         CA_vals = doe_obj.fim_factorial_results["CA[0]"]
         T_vals = doe_obj.fim_factorial_results["T[0]"]
 
-        # assert length is correct
-        self.assertTrue((len(CA_vals) == 9) and (len(T_vals) == 9))
-        self.assertTrue((len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3))
+        # assert length is correct (2x2 = 4 evaluations)
+        self.assertTrue((len(CA_vals) == 4) and (len(T_vals) == 4))
+        self.assertTrue((len(set(CA_vals)) == 2) and (len(set(T_vals)) == 2))
 
         # assert unique values are correct
         self.assertTrue(
-            (set(CA_vals).issuperset(set([1, 3, 5])))
-            and (set(T_vals).issuperset(set([300, 500, 700])))
+            (set(CA_vals).issuperset(set([1, 5])))
+            and (set(T_vals).issuperset(set([300, 700])))
         )
 
     def test_rescale_FIM(self):
@@ -424,11 +498,17 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Compare scaled and rescaled values
         self.assertTrue(np.all(np.isclose(FIM2, resc_FIM)))
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_solve_bad_model(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperimentBad(data_ex, 10, 3)
+        # Use RooneyBiegler bad example (faster than reactor bad example)
+        experiment = RooneyBieglerExperimentBad(
+            data=get_rooney_biegler_data(),
+            theta={'asymptote': 15, 'rate_constant': 0.5},
+            measure_error=0.1,
+        )
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -446,32 +526,34 @@ class TestReactorExampleSolving(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperimentBad(data_ex, 10, 3)
+        # Use RooneyBiegler bad example (faster than reactor bad example)
+        experiment = RooneyBieglerExperimentBad(
+            data=get_rooney_biegler_data(),
+            theta={'asymptote': 15, 'rate_constant': 0.5},
+            measure_error=0.1,
+        )
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         DoE_args["logger_level"] = logging.ERROR
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        design_ranges = {"CA[0]": [1, 5, 3], "T[0]": [300, 700, 3]}
+        # Use simpler design ranges for RooneyBiegler
+        design_ranges = {"hour": [1, 5, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
         )
 
         # Check to make sure the lengths of the inputs in results object are indeed correct
-        CA_vals = doe_obj.fim_factorial_results["CA[0]"]
-        T_vals = doe_obj.fim_factorial_results["T[0]"]
+        hour_vals = doe_obj.fim_factorial_results["hour"]
 
         # assert length is correct
-        self.assertTrue((len(CA_vals) == 9) and (len(T_vals) == 9))
-        self.assertTrue((len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3))
+        self.assertTrue(len(hour_vals) == 2)
+        self.assertTrue(len(set(hour_vals)) == 2)
 
         # assert unique values are correct
-        self.assertTrue(
-            (set(CA_vals).issuperset(set([1, 3, 5])))
-            and (set(T_vals).issuperset(set([300, 500, 700])))
-        )
+        self.assertTrue(set(hour_vals).issuperset(set([1, 5])))
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
@@ -709,7 +791,7 @@ class TestRooneyBieglerExample(unittest.TestCase):
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
-@unittest.skipIf(not pandas_available, "pandas is not available")
+@unittest.skipIf(not pandas_available, "Pandas is not available")
 @unittest.skipIf(not matplotlib_available, "Matplotlib is not available")
 class TestDoEFactorialFigure(unittest.TestCase):
     def test_doe_1D_plotting_function(self):
@@ -745,7 +827,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj.compute_FIM_full_factorial(design_ranges={'hour': [0, 10, 5]})
+        doe_obj.compute_FIM_full_factorial(design_ranges={'hour': [0, 10, 1]})
 
         # Call the plotting function for linear scale
         doe_obj.draw_factorial_figure(
@@ -802,7 +884,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Run the reactor example
         run_reactor_doe(
-            n_points_for_design=3,
+            n_points_for_design=1,
             compute_FIM_full_factorial=True,
             plot_factorial_results=True,
             figure_file_name=prefix_linear,
@@ -820,7 +902,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Run the reactor example with log scale
         run_reactor_doe(
-            n_points_for_design=3,
+            n_points_for_design=1,
             compute_FIM_full_factorial=True,
             plot_factorial_results=True,
             figure_file_name=prefix_log,

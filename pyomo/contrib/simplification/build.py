@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import glob
 import logging
@@ -63,7 +61,7 @@ def build_ginac_library(parallel=None, argv=None, env=None):
         assert subprocess.run(make_cmd, cwd=cln_dir, env=env).returncode == 0
         assert subprocess.run(install_cmd, cwd=cln_dir, env=env).returncode == 0
 
-        url = 'https://www.ginac.de/ginac-1.8.9.tar.bz2'
+        url = 'https://www.ginac.de/ginac-1.8.10.tar.bz2'
         ginac_dir = os.path.join(tmpdir, 'ginac')
         downloader.set_destination_filename(ginac_dir)
         logger.info(

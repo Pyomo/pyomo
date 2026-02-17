@@ -26,6 +26,8 @@ jobs:
         verbose: true
         # How many times to retry a failed request (defaults to 1)
         retry_count: 3
+        # The timeout seconds to provide to requests, defaults to 5 seconds
+        timeout: 30
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures

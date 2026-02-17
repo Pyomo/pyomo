@@ -8,4 +8,4 @@ may not work and is **NOT** tested through the standard test harness.
 
 The **authoritative contribution guidelines**, including
 testing, documentation, and dependency expectations, are maintained in the
-[Pyomo Contributing Guide](https://pyomo.readthedocs.io/en/latest/contributing.html).
+[Contribution Guide](https://pyomo.readthedocs.io/en/latest/contribution_guide.html).

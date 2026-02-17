@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import datetime
 import math
@@ -18,6 +16,7 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.gsl import find_GSL
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -2279,6 +2278,23 @@ class TestSolvers(unittest.TestCase):
             raise_exception_on_nonoptimal_result=False,
         )
         assert res.termination_condition == TerminationCondition.iterationLimit
+
+    @parameterized.expand(input=_load_tests(nl_solvers))
+    def test_external_function(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        model = pyo.ConcreteModel()
+        model.z_func = pyo.ExternalFunction(library=DLL, function="gsl_sf_gamma")
+        model.x = pyo.Var(initialize=3, bounds=(1e-5, None))
+        model.o = pyo.Objective(expr=model.z_func(model.x))
+        res = opt.solve(model)
+        self.assertAlmostEqual(pyo.value(model.o), 0.885603194411, 7)
 
 
 class TestLegacySolverInterface(unittest.TestCase):
