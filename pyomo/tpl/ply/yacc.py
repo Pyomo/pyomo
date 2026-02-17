@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # This file was derived from PLY 3.11's ply.yacc module.
 #
@@ -76,7 +74,7 @@
 
 This is a modified version of ``ply.yacc`` (from PLY 3.11) that removes
 support for loading parse tables from picklefiles or arbitrary locations
-on the filesystem.  :py:`yacc()` is expected to be used in a "2-pass"
+on the filesystem.  :py:func:`yacc()` is expected to be used in a "2-pass"
 mode: either called to generate the parse table module, or else passed
 the imported parse table module to return a fully-constructed parser.
 
@@ -334,7 +332,7 @@ class LRParser:
     # certain kinds of advanced parsing situations where the lexer and parser interact with
     # each other or change states (i.e., manipulation of scope, lexer states, etc.).
     #
-    # See:  http://www.gnu.org/software/bison/manual/html_node/Default-Reductions.html#Default-Reductions
+    # See:  https://www.gnu.org/software/bison/manual/html_node/Default-Reductions.html#Default-Reductions
     def set_defaulted_states(self):
         self.defaulted_states = {}
         for state, actions in self.action.items():
@@ -3118,7 +3116,7 @@ class ParserReflect(object):
                 p_functions.append((line, module, name, item.__doc__))
 
         # Sort all of the actions by line number; make sure to stringify
-        # modules to make them sortable, since `line` may not uniquely sort all
+        # modules to make them sortable, since 'line' may not uniquely sort all
         # p functions
         p_functions.sort(key=lambda p_function: (
             p_function[0],
@@ -3207,19 +3205,19 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
 
     debug : int | None
 
-        If evaluates to True, generate a debug log and send it to ``debuglog``
+        If evaluates to True, generate a debug log and send it to `debuglog`
 
     module : types.ModuleType | None
 
-        The module defining the parser grammar.  If `None`, then the
+        The module defining the parser grammar.  If ``None``, then the
         calling context is assumed to contain the grammar.
 
     tabmodule : types.ModuleType | str | None
 
-        If ``tabmodule`` is a module, then assume it is a cached parse
+        If `tabmodule` is a module, then assume it is a cached parse
         table.  Bind the parser to the tabmodule and the grammar scope
         it and return it.  If it is a string or None, then the parse
-        table is generated from the grammar (see also ``module``)
+        table is generated from the grammar (see also `module`)
 
     start : str | None
 
@@ -3227,22 +3225,22 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
 
     debugfile : str
 
-        If ``debug`` evaluates to True and ``debuglog`` is None the
-        debug log is written to this file name.  If ``outputdir`` is
-        non-None, it is joined with ``debugfile`` before opening.
+        If `debug` evaluates to True and `debuglog` is None the
+        debug log is written to this file name.  If `outputdir` is
+        non-None, it is joined with `debugfile` before opening.
 
     outputdir : str | None
 
-        If non-None and ``tabmodule`` is not a module, then write the
-        parse table to ``tabfile`` in ``outputdir``.
+        If non-None and `tabmodule` is not a module, then write the
+        parse table to `tabfile` in `outputdir`.
 
-    debuglog : PyLogger | NullLogger | None
+    debuglog : PlyLogger | NullLogger | None
 
         If non-None, the logger to write the debug log to
 
-    errorlog : PyLogger | NullLogger | None
+    errorlog : PlyLogger | NullLogger | None
 
-        Error log file.  If None, the error log is sent to ``sys.stderr``
+        Error log file.  If None, the error log is sent to :data:`sys.stderr`
 
     module_signature : str
 
