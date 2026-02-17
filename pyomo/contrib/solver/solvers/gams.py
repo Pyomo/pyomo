@@ -216,11 +216,12 @@ class GAMS(SolverBase):
         found = re.search(version_pattern, res.stdout)
 
         if not found:
+            params = (None, Availability.NotFound)
             self._exe_cache[exe] = (None, Availability.NotFound)
             logger.warning(
                 f"Failed parsing GAMS version (version not found while parsing):\n\n{res.stdout}"
             )
-            return
+            return params
 
         version = found.group(0)
         version = tuple(int(i) for i in version.split('.'))
