@@ -307,9 +307,7 @@ class GAMS(SolverBase):
             command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
 
             # handled tee and logfile based on the length of list and string respectively
-            command.append(
-                self._log_levels[(len(config.tee) > 0, config.logfile is not None)]
-            )
+            command.append(self._log_levels[(bool(config.tee), bool(config.logfile))])
 
             ostreams = [StringIO()]
             if config.tee:
