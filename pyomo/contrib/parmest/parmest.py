@@ -310,12 +310,12 @@ def L2_regularized_objective(
         Annotated Pyomo model
     prior_FIM : pd.DataFrame
         Prior Fisher Information Matrix from previous experimental design
-    theta_ref: Reference parameter values, matrix
-        Reference parameter values used for regularization
+    theta_ref: pd.Series, optional
+        Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
     regularization_weight: float, optional
-        Scalar weight to balance the objective and L2 regularization term. If None,
-        the weight is automatically calculated as the ratio of the current objective value
-        to the current L2 term value, which provides a balanced starting point for optimization.
+        Weighting factor for the regularization term. If None, it is automatically calculated as the ratio of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
+    obj_function: callable, optional
+        Built-in objective function selected by the user, e.g., `SSE`. Default is `SSE`.
 
     Returns
     -------
@@ -860,7 +860,7 @@ def _expand_prior_FIM(experiment, prior_FIM, theta_ref):
         for a particular experimental condition
     prior_FIM : pd.DataFrame
         Prior Fisher Information Matrix from previous experimental design
-    theta_ref: Reference parameter values, matrix
+    theta_ref: pd.Series, optional
         Reference parameter values used for regularization
 
     Returns
