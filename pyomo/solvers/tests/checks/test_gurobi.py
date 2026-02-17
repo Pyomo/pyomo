@@ -23,6 +23,7 @@ except:
 
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
+@unittest.pytest.mark.solver("gurobi")
 class GurobiTest(unittest.TestCase):
     @unittest.skipIf(not has_worklimit, "gurobi < 9.5")
     @patch("pyomo.solvers.plugins.solvers.GUROBI_RUN.read")

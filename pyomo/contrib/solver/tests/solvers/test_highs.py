@@ -17,6 +17,7 @@ if not opt.available():
     raise unittest.SkipTest
 
 
+@unittest.pytest.mark.solver("highs")
 class TestBugs(unittest.TestCase):
     def test_mutable_params_with_remove_cons(self):
         m = pyo.ConcreteModel()

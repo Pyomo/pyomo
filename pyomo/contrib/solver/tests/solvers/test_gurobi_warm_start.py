@@ -67,6 +67,7 @@ class TestGurobiWarmStart(unittest.TestCase):
             self.assertEqual(value(m.x[i]), x[i])
 
     @unittest.skipUnless(gurobi_direct.available(), "needs Gurobi Direct interface")
+    @unittest.ptest.mark.solver("gurobi_direct")
     def test_gurobi_direct_warm_start(self):
         m = self.make_model()
 
@@ -82,6 +83,7 @@ class TestGurobiWarmStart(unittest.TestCase):
     @unittest.skipUnless(
         gurobi_direct_minlp.available(), "needs Gurobi Direct MINLP interface"
     )
+    @unittest.ptest.mark.solver("gurobi_direct_minlp")
     def test_gurobi_minlp_warmstart(self):
         m = self.make_model()
 
@@ -97,6 +99,7 @@ class TestGurobiWarmStart(unittest.TestCase):
     @unittest.skipUnless(
         gurobi_persistent.available(), "needs Gurobi persistent interface"
     )
+    @unittest.ptest.mark.solver("gurobi_persistent")
     def test_gurobi_persistent_warmstart(self):
         m = self.make_model()
 
