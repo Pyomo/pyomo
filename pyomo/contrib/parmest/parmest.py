@@ -313,7 +313,8 @@ def L2_regularized_objective(
     theta_ref: pd.Series, optional
         Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
     regularization_weight: float, optional
-        Weighting factor for the regularization term. If None, it is automatically calculated as the ratio of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
+        Weighting factor for the regularization term. If None, it is automatically calculated as the ratio
+        of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
     obj_function: callable, optional
         Built-in objective function selected by the user, e.g., `SSE`. Default is `SSE`.
 
