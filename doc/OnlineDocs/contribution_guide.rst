@@ -574,7 +574,7 @@ test suite and must not have an unconditional import of optional dependencies.
 Tests that exercise functionality requiring optional dependencies must be
 properly guarded (e.g., with ``@unittest.skipIf()`` / ``@unittest.skipUnless()``).
 Pyomo provides a standard tool for supporting the delayed import of optional
-dependencies (see :py:`attempt_import()`) as well as a central location for
+dependencies (see :py:func:`attempt_import()`) as well as a central location for
 importing many common optional dependencies (see :py:mod:`pyomo.common.dependencies`).
 For example, tests that require ``numpy`` may be marked using the Pyomo
 test harness as follows::

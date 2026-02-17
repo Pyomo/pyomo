@@ -426,7 +426,7 @@ class SuffixFinder:
         ----------
         name: str
 
-            Name of Suffix to search for.
+            Name of :py:class:`Suffix` to search for.
 
         default:
 
@@ -459,33 +459,33 @@ class SuffixFinder:
 
         If the `component_data` is attached to a block within the
         `context` (that is, part of the model hierarchy rooted by the
-        `context` :py:`BlockData`), then :py:`Suffix` components are
+        `context` :py:class:`BlockData`), then :py:class:`Suffix` components are
         searched by traversing the model hierarchy in three passes:
 
-        1. Search for a :py:`Suffix` matching the specific `component_data`,
+        1. Search for a :py:class:`Suffix` matching the specific `component_data`,
            starting at the `root` (context block) and descending down
            the tree to the `component_data`.  Return the first match
            found.
 
-        2. Search for a :py:`Suffix` matching the `component_data`'s
+        2. Search for a :py:class:`Suffix` matching the `component_data`'s
            container, starting at the `root` and descending down the
            tree to the `component_data`.  Return the first match found.
 
-        3. Search for a :py:`Suffix` with key `None`, starting from the
+        3. Search for a :py:class:`Suffix` with key ``None``, starting from the
            `component_data` and working up the tree to the `root`.
            Return the first match found.
 
         If the `component_data` is not part of the `context` hierarchy,
-        then only the :py:`Suffix` attached to the root context is
-        checked for the `component_data`, its container, and `None` (in
+        then only the :py:class:`Suffix` attached to the root context is
+        checked for the `component_data`, its container, and ``None`` (in
         order).
 
-        If no valid value is found by searching :py:`Suffix` components,
+        If no valid value is found by searching :py:class:`Suffix` components,
         then the `default` value is returned.
 
         Parameters
         ----------
-        component_data: ComponentDataBase
+        component_data: ComponentBase
 
             Component or component data object to find suffix value for.
 
