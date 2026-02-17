@@ -10,20 +10,53 @@
 import pytest
 
 _implicit_markers = {'default'}
-_extended_implicit_markers = _implicit_markers.union({'solver'})
+_category_markers = {'solver', 'writer'}
+_extended_implicit_markers = _implicit_markers.union(_category_markers)
+
+def pytest_configure(config):
+    # If the user specified "--solver" or "--writer", then add that
+    # logic to the marker expression
+    markexpr = config.option.markexpr
+    for cat in _category_markers:
+        opt = config.getoption('--' + cat)
+        if opt:
+            if markexpr:
+                markexpr = f"({markexpr}) and "
+            markexpr += f"{cat}(id='{opt}')"
+    config.option.markexpr = markexpr
 
 
-def pytest_collection_modifyitems(items):
-    """
-    This method will mark any unmarked tests with the implicit marker ('default')
-
-    """
-    for item in items:
-        try:
-            next(item.iter_markers())
-        except StopIteration:
-            for marker in _implicit_markers:
-                item.add_marker(getattr(pytest.mark, marker))
+def pytest_itemcollected(item):
+    markers = list(item.iter_markers())
+    if not markers:
+        # No markers; add the implicit (default) markers
+        for marker in _implicit_markers:
+            item.add_marker(getattr(pytest.mark, marker))
+        return
+    # We have historically supported:
+    #
+    #     @pytest.mark.solve("highs")
+    #
+    # Unfortunately, pytest doesn't allow for filtering tests with "-m"
+    # based on the marker.args.  We will map the positional argument
+    # (for pytest.mark.solver and pytest.mark.writer) to the keyword
+    # argument "id".
+    #
+    # We will take this opportunity to also set a keyword argument for
+    # the solver/writer "vendor" (defined as the id up to the first
+    # underscore).  This will allow running "all Gurobi tests"
+    # (including, e.g., lp, direct, and persistent) with
+    #
+    #     "-m solver(vendor='gurobi')"
+    #
+    for mark in markers:
+        if mark.name not in _category_markers:
+            continue
+        if mark.args:
+            _id, = mark.args
+            mark.kwargs['id'] = _id
+        if 'vendor' not in mark.kwargs:
+            mark.kwargs['vendor'] = mark.kwargs['id'].split("_")[0]
 
 
 def pytest_runtest_setup(item):
@@ -46,17 +79,12 @@ def pytest_runtest_setup(item):
     the default mode; but if solver tests are also marked with an explicit
     category (e.g., "expensive"), we will skip them.
     """
-    solvernames = [mark.args[0] for mark in item.iter_markers(name="solver")]
-    solveroption = item.config.getoption("--solver")
-    markeroption = item.config.getoption("-m")
-    item_markers = set(mark.name for mark in item.iter_markers())
-    if solveroption:
-        if solveroption not in solvernames:
-            pytest.skip("SKIPPED: Test not marked {!r}".format(solveroption))
-            return
-    elif markeroption:
+    if item.config.option.markexpr:
+        # PyTest has already filtered tests by the marker.  There is
+        # nothing more to check here
         return
-    elif item_markers:
+    item_markers = set(mark.name for mark in item.iter_markers())
+    if item_markers:
         if not _implicit_markers.issubset(item_markers) and not item_markers.issubset(
             _extended_implicit_markers
         ):
@@ -65,7 +93,8 @@ def pytest_runtest_setup(item):
 
 def pytest_addoption(parser):
     """
-    Add another parser option to specify suite of solver tests to run
+    Add parser options as shorthand for running tests marked by specific
+    solvers or writers.
     """
     parser.addoption(
         "--solver",
@@ -73,13 +102,9 @@ def pytest_addoption(parser):
         metavar="SOLVER",
         help="Run tests matching the requested SOLVER.",
     )
-
-
-def pytest_configure(config):
-    """
-    Register additional solver marker, as applicable.
-    This stops pytest from printing a warning about unregistered solver options.
-    """
-    config.addinivalue_line(
-        "markers", "solver(name): mark test to run the named solver"
+    parser.addoption(
+        "--writer",
+        action="store",
+        metavar="WRITER",
+        help="Run tests matching the requested WRITER.",
     )
