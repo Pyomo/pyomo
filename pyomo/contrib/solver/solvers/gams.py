@@ -299,6 +299,9 @@ class GAMS(SolverBase):
                     else:
                         non_solver_config[key] = config.solver_options[key]
 
+                if self._writer.config.add_options is None:
+                    self._writer.config.add_options = {}
+
                 self._writer.config.add_options.update(non_solver_config)
 
                 gms_info = self._writer.write(model, gms_file, **self._writer.config)
