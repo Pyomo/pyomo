@@ -299,7 +299,7 @@ class GAMS(SolverBase):
                     else:
                         non_solver_config[key] = config.solver_options[key]
 
-                self._writer.config['add_options'] = non_solver_config
+                self._writer.config.add_options.update(non_solver_config)
 
                 gms_info = self._writer.write(model, gms_file, **self._writer.config)
 
