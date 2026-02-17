@@ -15,6 +15,8 @@ import datetime
 from io import StringIO
 import sys
 import struct
+import re
+import pathlib
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.fileutils import Executable, ExecutableData
@@ -123,7 +125,7 @@ class GAMS(SolverBase):
     }
 
     #: cache of availability / version information
-    _exe_cache: dict[str : tuple[int] | None] = {}
+    _exe_cache: dict = {}
 
     # mapping for GAMS SOLVESTAT
     _SOLVER_STATUS_LOOKUP = {
@@ -176,46 +178,61 @@ class GAMS(SolverBase):
         self._writer = GAMSWriter()
 
     def available(self) -> Availability:
-        return (
-            Availability.NotFound
-            if self.version() is None
-            else Availability.FullLicense
-        )
+        ver, avail = self._get_version(self.config.executable.path())
+        return avail
 
-    def version(self) -> tuple[int, int, int] | None:
-        return self._get_version(self.config.executable.path())
+    def version(self):
+        ver, avail = self._get_version(self.config.executable.path())
+        return ver
 
     def _get_version(self, exe):
+        # try cache
         try:
             return self._exe_cache[exe]
         except KeyError:
             pass
 
         if exe is None:
-            # No executable (either we couldn't find a matching file, or
-            # the file is not executable)
-            self._exe_cache[None] = None
-            return None
+            exe = ""
 
-        cmd = [str(exe), "audit"]
-        res = subprocess.run(cmd, capture_output=True, encoding="utf8", check=False)
+        # exe must exist and must be executable, otherwise:
+        if not (pathlib.Path(exe).exists() and os.access(exe, os.X_OK)):
+            params = (None, Availability.NotFound)
+            self._exe_cache[None] = params
+            return params
 
+        res = subprocess.run(
+            [str(exe)], capture_output=True, encoding="utf8", check=False
+        )
         if res.returncode:
-            version = None
-        else:
-            try:
-                version = res.stdout.split()[1]
-                version = tuple(int(i) for i in version.split('.'))
-            except:
-                version = None
-
-        if version is None:
+            params = (None, Availability.NotFound)
+            self._exe_cache[exe] = params
             logger.warning(
-                f"Failed parsing GAMS version: '{exe} audit':\n\n{res.stdout}"
+                f"Failed running GAMS command to get version (non-zero returncode):\n\n{res.stdout}"
             )
+            return params
 
-        self._exe_cache[exe] = version
-        return version
+        version_pattern = r"(\d{1,3}\.\d{1,3}\.\d{1,3})"
+        found = re.search(version_pattern, res.stdout)
+
+        if not found:
+            self._exe_cache[exe] = (None, Availability.NotFound)
+            logger.warning(
+                f"Failed parsing GAMS version (version not found while parsing):\n\n{res.stdout}"
+            )
+            return
+
+        version = found.group(0)
+        version = tuple(int(i) for i in version.split('.'))
+
+        if "Demo" in res.stdout:
+            avail = Availability.LimitedLicense
+        else:
+            avail = Availability.FullLicense
+
+        params = (version, avail)
+        self._exe_cache[exe] = params
+        return params
 
     def solve(self, model, **kwds):
         ####################################################################
