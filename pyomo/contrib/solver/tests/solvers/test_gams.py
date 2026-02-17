@@ -21,6 +21,7 @@ from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict
 import pyomo.contrib.solver.solvers.gams as gams
 from pyomo.contrib.solver.common.util import NoDualsError, NoReducedCostsError
+from pyomo.contrib.solver.common.base import Availability
 
 """
 Formatted after pyomo/pyomo/contrib/solver/test/solvers/test_ipopt.py
@@ -145,7 +146,7 @@ class TestGAMSInterface(unittest.TestCase):
     def test_default_instantiation(self):
         opt = gams.GAMS()
         self.assertFalse(opt.is_persistent())
-        self.assertIsNotNone(opt.version())
+        self.assertTrue(opt.version())
         self.assertEqual(opt.name, 'gams')
         self.assertEqual(opt.CONFIG, opt.config)
         self.assertTrue(opt.available())
@@ -160,18 +161,20 @@ class TestGAMSInterface(unittest.TestCase):
 
     def test_available_cache(self):
         opt = gams.GAMS()
-        self.assertTrue(opt.available())
+        self.assertTrue(
+            opt.available() in {Availability.FullLicense, Availability.LimitedLicense}
+        )
         # Now we will try with a custom config that has a fake path
         config = gams.GAMSConfig()
         config.executable = Executable('/a/bogus/path')
         opt = gams.GAMS()
         opt.config = config
-        self.assertFalse(opt.available())
+        self.assertTrue(opt.available() == Availability.NotFound)
 
     def test_version_cache(self):
         opt = gams.GAMS()
         opt.version()
-        self.assertIsNotNone(opt.version)
+        self.assertTrue(opt.version())
         # Now we will try with a custom config that has a fake path
         config = gams.GAMSConfig()
         config.executable = Executable('/a/bogus/path')
