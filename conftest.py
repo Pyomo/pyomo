@@ -13,6 +13,7 @@ _implicit_markers = {'default'}
 _category_markers = {'solver', 'writer'}
 _extended_implicit_markers = _implicit_markers.union(_category_markers)
 
+
 def pytest_configure(config):
     # If the user specified "--solver" or "--writer", then add that
     # logic to the marker expression
@@ -53,7 +54,7 @@ def pytest_itemcollected(item):
         if mark.name not in _category_markers:
             continue
         if mark.args:
-            _id, = mark.args
+            (_id,) = mark.args
             mark.kwargs['id'] = _id
         if 'vendor' not in mark.kwargs:
             mark.kwargs['vendor'] = mark.kwargs['id'].split("_")[0]
