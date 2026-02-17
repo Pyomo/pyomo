@@ -1422,7 +1422,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
         m.y.unfix()
         res = opt.solve(m)
-        # The globaal minimum is +/-(2**.5, 2**.5) without bounds.
+        # The global minimum is +/-(2**.5, 2**.5) without bounds.
         # Bounds force it to the positive side
         self.assertAlmostEqual(m.x.value, 2**0.5, delta=1e-3)
         self.assertAlmostEqual(m.y.value, 2**0.5, delta=1e-3)
