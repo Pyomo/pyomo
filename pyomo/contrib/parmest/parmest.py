@@ -355,14 +355,13 @@ def L2_regularized_objective(
             sub_theta.loc[param] = pyo.value(param_map[param])
 
     # 3. Construct the Quadratic Form (The L2 term)
-    # Correct Math: sum_{i,j} (theta_i - ref_i) * FIM_ij * (theta_j - ref_j)
     l2_term = 0
     for i in common_params:
-        delta_i = param_map[i] - sub_theta.loc[i]  # .iloc[0] if theta_ref is a DF
+        delta_i = param_map[i] - sub_theta.loc[i]  # (theta_i - theta_ref_i)
         for j in common_params:
-            f_ij = sub_FIM.loc[i, j]
+            f_ij = sub_FIM.loc[i, j]  # prior_FIM_ij
             if f_ij != 0:
-                delta_j = param_map[j] - sub_theta.loc[j]
+                delta_j = param_map[j] - sub_theta.loc[j]  # (theta_j - theta_ref_j)
                 l2_term += delta_i * f_ij * delta_j
 
     # 4. Combine with objective
