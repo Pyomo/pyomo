@@ -19,7 +19,10 @@ import json
 # Example for sensitivity analysis on the reactor experiment
 # After sensitivity analysis is done, we perform optimal DoE
 def run_reactor_doe(
-    n_points_for_design=9,
+    n_points_for_C0: int = 9,
+    n_points_for_T0: int = 9,
+    C0_bounds_for_factorial: tuple = (1, 5),
+    T0_bounds_for_factorial: tuple = (300, 700),
     compute_FIM_full_factorial=True,
     plot_factorial_results=True,
     figure_file_name="example_reactor_compute_FIM",
@@ -31,8 +34,10 @@ def run_reactor_doe(
 
     Parameters
     ----------
-    n_points_for_design : int, optional
-        number of points to use for the design ranges, by default 9
+    n_points_for_C0 : int, optional
+        number of points to use for the C0 design range, by default 9
+    n_points_for_T0 : int, optional
+        number of points to use for the T0 design range, by default 9
     compute_FIM_full_factorial : bool, optional
         whether to compute the full factorial design, by default True
     plot_factorial_results : bool, optional
@@ -90,8 +95,8 @@ def run_reactor_doe(
     if compute_FIM_full_factorial:
         # Make design ranges to compute the full factorial design
         design_ranges = {
-            "CA[0]": [1, 5, n_points_for_design],
-            "T[0]": [300, 700, n_points_for_design],
+            "CA[0]": [*C0_bounds_for_factorial, n_points_for_C0],
+            "T[0]": [*T0_bounds_for_factorial, n_points_for_T0],
         }
 
         # Compute the full factorial design with the sequential FIM calculation
@@ -155,4 +160,4 @@ def run_reactor_doe(
 
 
 if __name__ == "__main__":
-    run_reactor_doe()
+    run_reactor_doe(figure_file_name=None)
