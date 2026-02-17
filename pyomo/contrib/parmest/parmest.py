@@ -298,7 +298,7 @@ def SSE_weighted(model):
 
 
 def L2_regularized_objective(
-    model, prior_FIM, theta_ref, regularization_weight=None, obj_function=SSE
+    model, prior_FIM, theta_ref=None, regularization_weight=None, obj_function=SSE
 ):
     """
     Calculates objective + (theta - theta_ref)^T * prior_FIM * (theta - theta_ref)
@@ -342,19 +342,26 @@ def L2_regularized_objective(
     # Slice the dataframes to ONLY the common subset
     # This makes the matrix operations significantly faster/smaller
     sub_FIM = prior_FIM.loc[common_params, common_params]
-    sub_theta = theta_ref.loc[common_params]
+
+    # For the reference theta, we also subset to the common parameters. If theta_ref is None, we create a zero vector of the right size.
+    if theta_ref is not None:
+        sub_theta = theta_ref.loc[common_params]
+    else:
+        sub_theta = pd.Series(0, index=common_params)
+
+        # Fill the sub_theta with the initialized model parameter values (or zeros if not initialized)
+        for param in common_params:
+            sub_theta.loc[param] = pyo.value(param_map[param])
 
     # 3. Construct the Quadratic Form (The L2 term)
     # Correct Math: sum_{i,j} (theta_i - ref_i) * FIM_ij * (theta_j - ref_j)
     l2_term = 0
     for i in common_params:
-        delta_i = (
-            param_map[i] - sub_theta.loc[i].iloc[0]
-        )  # .iloc[0] if theta_ref is a DF
+        delta_i = param_map[i] - sub_theta.loc[i]  # .iloc[0] if theta_ref is a DF
         for j in common_params:
             f_ij = sub_FIM.loc[i, j]
             if f_ij != 0:
-                delta_j = param_map[j] - sub_theta.loc[j].iloc[0]
+                delta_j = param_map[j] - sub_theta.loc[j]
                 l2_term += delta_i * f_ij * delta_j
 
     # 4. Combine with objective
