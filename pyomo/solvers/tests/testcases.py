@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import sys
 import logging
@@ -329,6 +327,19 @@ for prob in ('MILP_unbounded', 'MILP_unbounded_kernel'):
     ExpectedFailures['knitroampl', 'nl', prob] = (
         lambda v: v[:2] <= (14, 2),
         'Unbounded MILP detection not operational in Knitro, fixed in 15.0',
+    )
+
+#
+# CUOPT
+#
+SkipTests['cuopt', 'python', 'LP_duals_maximize'] = (
+    lambda v: True,
+    "cuopt fails on RC for maximization",
+)
+for _test in ('MILP_unbounded', 'MILP_unbounded_kernel'):
+    SkipTests['cuopt', 'python', _test] = (
+        lambda v: True,
+        "cuopt does not differentiate between unbounded and infeasible status",
     )
 
 

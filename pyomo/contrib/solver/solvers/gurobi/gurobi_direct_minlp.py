@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 
 import datetime
@@ -20,15 +18,13 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.errors import InvalidValueError
 from pyomo.common.numeric_types import native_complex_types
+from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
 
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.contrib.solver.common.util import NoSolutionError
-from pyomo.contrib.solver.solvers.gurobi_direct import (
-    GurobiDirect,
-    GurobiDirectSolutionLoader,
-)
+from .gurobi_direct_base import GurobiDirectBase, GurobiDirectSolutionLoaderBase
 
 from pyomo.core.base import (
     Binary,
@@ -580,86 +576,71 @@ class GurobiMINLPWriter:
         return grb_model, visitor.var_map, pyo_obj, grb_cons, pyo_cons
 
 
+class GurobiDirectMINLPSolutionLoader(GurobiDirectSolutionLoaderBase):
+    def __init__(self, solver_model, var_map, con_map) -> None:
+        super().__init__(solver_model)
+        self._var_map = var_map
+        self._con_map = con_map
+
+    def _get_var_lists(self):
+        return list(self._var_map.keys()), list(self._var_map.values())
+
+    def _get_var_map(self):
+        return self._var_map
+
+    def _get_con_map(self):
+        return self._con_map
+
+    def __del__(self):
+        super().__del__()
+        if python_is_shutting_down():
+            return
+        # Free the associated model
+        if self._solver_model is not None:
+            self._var_map = None
+            self._con_map = None
+            # explicitly release the model
+            self._solver_model.dispose()
+            self._solver_model = None
+
+
 @SolverFactory.register(
     'gurobi_direct_minlp',
     doc='Direct interface to Gurobi version 12 and up '
     'supporting general nonlinear expressions',
 )
-class GurobiDirectMINLP(GurobiDirect):
-    def solve(self, model, **kwds):
-        """Solve the model.
+class GurobiDirectMINLP(GurobiDirectBase):
+    _minimum_version = (12, 0, 0)
 
-        Args:
-            model (Block): a Pyomo model or Block to be solved
-        """
-        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        tick = time.perf_counter()
-        config = self.config(value=kwds, preserve_implicit=True)
-        if not self.available():
-            c = self.__class__
-            raise ApplicationError(
-                f'Solver {c.__module__}.{c.__qualname__} is not available '
-                f'({self.available()}).'
-            )
-        if config.timer is None:
-            config.timer = HierarchicalTimer()
-            timer = config.timer
+    def __init__(self, **kwds):
+        super().__init__(**kwds)
+        self._var_map = None
 
-        StaleFlagManager.mark_all_as_stale()
+    def _pyomo_gurobi_var_iter(self):
+        return self._var_map.items()
 
+    def _create_solver_model(self, pyomo_model, config):
+        timer = config.timer
         timer.start('compile_model')
 
         writer = GurobiMINLPWriter()
         grb_model, var_map, pyo_obj, grb_cons, pyo_cons = writer.write(
-            model, symbolic_solver_labels=config.symbolic_solver_labels
+            pyomo_model, symbolic_solver_labels=config.symbolic_solver_labels
         )
 
         timer.stop('compile_model')
 
-        ostreams = [io.StringIO()] + config.tee
+        self._var_map = var_map
+        con_map = {}
+        for pc, gc in zip(pyo_cons, grb_cons):
+            if pc in con_map:
+                # range constraint
+                con_map[pc] = (con_map[pc], gc)
+            else:
+                con_map[pc] = gc
 
-        # set options
-        options = config.solver_options
-
-        grb_model.setParam('LogToConsole', 1)
-
-        if config.threads is not None:
-            grb_model.setParam('Threads', config.threads)
-        if config.time_limit is not None:
-            grb_model.setParam('TimeLimit', config.time_limit)
-        if config.rel_gap is not None:
-            grb_model.setParam('MIPGap', config.rel_gap)
-        if config.abs_gap is not None:
-            grb_model.setParam('MIPGapAbs', config.abs_gap)
-
-        if config.use_mipstart:
-            raise MouseTrap("MIPSTART not yet supported")
-
-        for key, option in options.items():
-            grb_model.setParam(key, option)
-
-        grbsol = grb_model.optimize()
-
-        res = self._postsolve(
-            timer,
-            config,
-            GurobiDirectSolutionLoader(
-                grb_model,
-                grb_cons=grb_cons,
-                grb_vars=var_map.values(),
-                pyo_cons=pyo_cons,
-                pyo_vars=var_map.keys(),
-                pyo_obj=pyo_obj,
-            ),
+        solution_loader = GurobiDirectMINLPSolutionLoader(
+            solver_model=grb_model, var_map=var_map, con_map=con_map
         )
 
-        res.solver_config = config
-        res.solver_name = 'Gurobi'
-        res.solver_version = self.version()
-        res.solver_log = ostreams[0].getvalue()
-
-        tock = time.perf_counter()
-        res.timing_info.start_timestamp = start_timestamp
-        res.timing_info.wall_time = tock - tick
-        res.timing_info.timer = timer
-        return res
+        return grb_model, solution_loader, bool(pyo_obj)
