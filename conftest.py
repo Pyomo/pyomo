@@ -50,7 +50,7 @@ def pytest_itemcollected(item):
     expressions (e.g., for "-m") based on the marker.args.  We will
     map the positional argument (for pytest.mark.solver and
     pytest.mark.writer) to the keyword argument "id".  This will allow
-    querrying againse specific solver interfaces in marker expressions
+    querying againse specific solver interfaces in marker expressions
     with::
 
         solver(id='highs')
