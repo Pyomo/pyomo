@@ -53,19 +53,17 @@ logger = logging.getLogger(__name__)
 
 def _gams_importer():
     try:
-        import gams.core.gdx as gdx
-
-        return gdx
+        import gams.core.gdx as gdxcc
     except ImportError:
         try:
             # fall back to the pre-GAMS-45.0 API
             import gdxcc
-
-            return gdxcc
         except:
-            # suppress the error from the old API and reraise the current API import error
+            # suppress the error from the old API and reraise the
+            # current API import error
             pass
         raise
+    return gdxcc
 
 
 gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer)
