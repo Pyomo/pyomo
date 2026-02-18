@@ -47,7 +47,7 @@
 This is copy of ``ply.lex`` (from PLY 3.11) that has been modified to
 prevent loading arbitrary lexer table files.  "Optimized" (cached) lexer
 table modules should be loaded by the client and passed as a module to
-:py:`lex()`.
+:py:func:`lex()`.
 
 The LEX logic itself is unchanged from the original distribution.
 
@@ -885,18 +885,18 @@ class LexerReflect(object):
 # -----------------------------------------------------------------------------
 def lex(module=None, debug=False, optimize=False, lextab='lextab',
         reflags=int(re.VERBOSE), nowarn=False, outputdir=None, debuglog=None, errorlog=None):
-    """Generate and return a :py:`Lexer` (tokenizer) object
+    """Generate and return a :py:class:`Lexer` (tokenizer) object
 
     Parameters
     ==========
     module : types.ModuleType | None
 
-        The module defining the lexer grammar.  If `None`, then the
+        The module defining the lexer grammar.  If ``None``, then the
         calling context is assumed to contain the grammar.
 
     debug : bool
 
-        If True, generate a debug log and send it to ``debuglog``
+        If True, generate a debug log and send it to `debuglog`
 
     optimize : bool
 
@@ -905,9 +905,9 @@ def lex(module=None, debug=False, optimize=False, lextab='lextab',
 
     lextab : types.ModuleType | str | None
 
-        If ``lextab`` is a module, then assume it is a cached tokenizer.
-        Return it.  If it is a string or None, then the tokenizer is
-        generated from the grammar (see also ``module``)
+        If `lextab` is a module, then assume it is a cached tokenizer.
+        Return it.  If it is a string or ``None``, then the tokenizer is
+        generated from the grammar (see also `module`)
 
     reflags : int
 
@@ -915,17 +915,17 @@ def lex(module=None, debug=False, optimize=False, lextab='lextab',
 
     outputdir : str | None
 
-        If non-None and ``lextab`` is not a module, then write the
-        lexer table to ``tabfile`` in ``outputdir``.
+        If non-None and `lextab` is not a module, then write the
+        lexer table to `tabfile` in `outputdir`.
 
-    debuglog : PyLogger | None
+    debuglog : PlyLogger | None
 
         The logger to write the debug log to.  If None, debug log is
-        sent to ``sys.stderr``.
+        sent to :data:`sys.stderr`.
 
-    errorlog : PyLogger | NullLogger | None
+    errorlog : PlyLogger | NullLogger | None
 
-        Error log file.  If None, the error log is sent to ``sys.stderr``
+        Error log file.  If None, the error log is sent to :data:`sys.stderr`
 
     """
 

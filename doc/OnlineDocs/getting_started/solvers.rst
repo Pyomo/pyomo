@@ -69,7 +69,7 @@ the license requirements for their desired solver.
    * - PyMUMPS
      - ``pip install pymumps``
      - ``conda install ‑c conda‑forge pymumps``
-     - `License <https://github.com/PyMumps/pymumps/blob/master/COPYING>`__
+     - `License <https://github.com/PyMumps/pymumps/blob/master/LICENSE.txt>`__
        `Docs <https://github.com/pymumps/pymumps>`__
    * - SCIP
      - N/A
