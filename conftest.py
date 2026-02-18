@@ -32,7 +32,7 @@ def pytest_configure(config):
 
 
 def pytest_itemcollected(item):
-    """Standardize all pyomo test markers.
+    """Standardize all Pyomo test markers.
 
     This callback ensures that all unmarked tests, along with all tests
     that are only marked by category markers (e.g., "solver" or
@@ -50,7 +50,7 @@ def pytest_itemcollected(item):
     expressions (e.g., for "-m") based on the marker.args.  We will
     map the positional argument (for pytest.mark.solver and
     pytest.mark.writer) to the keyword argument "id".  This will allow
-    querying againse specific solver interfaces in marker expressions
+    querying against specific solver interfaces in marker expressions
     with::
 
         solver(id='highs')
