@@ -10,7 +10,14 @@
 import logging
 from operator import attrgetter
 
-from pyomo.common.config import ConfigBlock, ConfigValue, InEnum, document_class_CONFIG, In, ListOf
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    InEnum,
+    document_class_CONFIG,
+    In,
+    ListOf,
+)
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import (
@@ -109,13 +116,13 @@ class GAMSWriter(object):
             description='Model type',
             doc="""
             If None, will chose from lp, mip. nlp and minlp will be implemented in a future release.
-            """
+            """,
         ),
     )
     CONFIG.declare(
         'gams_options',
         ConfigValue(
-            default=None,
+            default=[],
             domain=ListOf(str),
             doc="""
             List of additional lines to write directly
