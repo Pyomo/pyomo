@@ -53,6 +53,7 @@ def windows_tee_buffer(size=1 << 20):
         tee._pipe_buffersize = old
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptSolverConfig(unittest.TestCase):
     def test_default_instantiation(self):
         config = ipopt.IpoptConfig()
@@ -87,6 +88,7 @@ class TestIpoptSolverConfig(unittest.TestCase):
         self.assertFalse(config.executable.available())
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
         loader = ipopt.IpoptSolutionLoader(
@@ -105,6 +107,7 @@ class TestIpoptSolutionLoader(unittest.TestCase):
             loader.get_duals()
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptInterface(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_command_line_options(self):
@@ -1877,6 +1880,7 @@ else:
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.pytest.mark.solver("ipopt")
 class TestIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
@@ -2091,6 +2095,7 @@ class TestIpopt(unittest.TestCase):
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.pytest.mark.solver("ipopt")
 class TestLegacyIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()

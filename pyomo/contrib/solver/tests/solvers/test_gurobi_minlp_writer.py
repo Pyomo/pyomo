@@ -74,6 +74,7 @@ def make_model():
 
 
 @unittest.skipUnless(gurobipy_available, "Gurobipy 12 is not available")
+@unittest.pytest.mark.solver("gurobi_direct_minlp")
 class TestGurobiMINLPWriter(CommonTest):
     def test_small_model(self):
         grb_model = gurobipy.Model()
