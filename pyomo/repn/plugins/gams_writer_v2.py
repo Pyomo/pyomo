@@ -113,17 +113,6 @@ class GAMSWriter(object):
         ),
     )
     CONFIG.declare(
-        'add_options',
-        ConfigValue(
-            default=None,
-            doc="""
-            List of additional lines to write directly
-            into model file before the solve statement.
-            For model attributes, <model name> is GAMS_MODEL.
-            """,
-        ),
-    )
-    CONFIG.declare(
         'gams_solver_options',
         ConfigValue(
             default=None,
@@ -257,7 +246,6 @@ class _GMSWriter_impl(object):
 
         # Taken from nl_writer.py
         self.symbolic_solver_labels = config.symbolic_solver_labels
-        self.add_options = config.add_options
         self.gams_solver_options = config.gams_solver_options
 
         self.subexpression_cache = {}
@@ -279,7 +267,6 @@ class _GMSWriter_impl(object):
         # Caching some frequently-used objects into the locals()
         model_name = "GAMS_MODEL"
         symbolic_solver_labels = self.symbolic_solver_labels
-        add_options = self.add_options
         gams_solver_options = self.gams_solver_options
         ostream = self.ostream
         config = self.config
@@ -548,11 +535,6 @@ class _GMSWriter_impl(object):
             ostream.write("option savepoint=1;\n")
 
         ostream.write("\n* START USER ADDITIONAL OPTIONS\n")
-        if add_options is not None:
-            for options, val in add_options.items():
-                # ostream.write('option ' + line + '\n')
-                ostream.write(f'option {options}={val};\n')
-
         if gams_solver_options is not None:
             for options in gams_solver_options:
                 ostream.write(f'{options}\n')
