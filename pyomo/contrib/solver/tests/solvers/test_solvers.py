@@ -1428,7 +1428,7 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = False
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
-        m.y = pyo.Var()
+        m.y = pyo.Var(bounds=(-1.4, None))
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pyo.Constraint(expr=m.x == 2 / m.y)
         m.y.fix(1)
@@ -1436,6 +1436,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 2)
         m.y.unfix()
         res = opt.solve(m)
+        # The global minimum is +/-(2**.5, 2**.5) without bounds.
+        # Bounds force it to the positive side
         self.assertAlmostEqual(m.x.value, 2**0.5, delta=1e-3)
         self.assertAlmostEqual(m.y.value, 2**0.5, delta=1e-3)
 
