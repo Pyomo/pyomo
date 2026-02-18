@@ -125,7 +125,7 @@ class GAMS(SolverBase):
     }
 
     #: cache of availability / version information
-    _exe_cache: dict = {}
+    _exe_cache: dict = {None: (None, Availability.NotFound)}
 
     # mapping for GAMS SOLVESTAT
     _SOLVER_STATUS_LOOKUP = {
@@ -192,25 +192,18 @@ class GAMS(SolverBase):
         except KeyError:
             pass
 
-        if exe is None:
-            exe = ""
-
         # exe must exist and must be executable, otherwise:
         if not (pathlib.Path(exe).exists() and os.access(exe, os.X_OK)):
-            params = (None, Availability.NotFound)
-            self._exe_cache[None] = params
-            return params
+            return self._exe_cache[None]
 
         res = subprocess.run(
             [str(exe)], capture_output=True, encoding="utf8", check=False
         )
         if res.returncode:
-            params = (None, Availability.NotFound)
-            self._exe_cache[exe] = params
             logger.warning(
                 f"Failed running GAMS command to get version (non-zero returncode):\n\n{res.stdout}"
             )
-            return params
+            return self._exe_cache[None]
 
         version_pattern = r"(\d{1,3}\.\d{1,3}\.\d{1,3})"
         found = re.search(version_pattern, res.stdout)
