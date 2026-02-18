@@ -148,7 +148,7 @@ class GAMSWriter(object):
         ConfigValue(
             default=False,
             domain=bool,
-            description='If True, output fixed variables as variables; otherwise,output numeric value',
+            description='If True, output fixed variables as variables; otherwise, output numeric value',
         ),
     )
     CONFIG.declare(
