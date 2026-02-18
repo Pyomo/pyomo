@@ -292,17 +292,13 @@ class GAMS(SolverBase):
                 if config.time_limit is not None:
                     config.solver_options['resLim'] = config.time_limit
 
-                non_solver_config = {}
                 for key in config.solver_options.keys():
                     if key in self._writer.config:
                         self._writer.config[key] = config.solver_options[key]
                     else:
-                        non_solver_config[key] = config.solver_options[key]
-
-                if self._writer.config.add_options is None:
-                    self._writer.config.add_options = {}
-
-                self._writer.config.add_options.update(non_solver_config)
+                        raise ValueError(
+                            f"Encountered unknown solver_option '{key}' -- use 'gams_options' to pass a list of arbitrary GAMS option structures"
+                        )
 
                 gms_info = self._writer.write(model, gms_file, **self._writer.config)
 
