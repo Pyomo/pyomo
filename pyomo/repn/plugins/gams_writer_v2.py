@@ -113,7 +113,7 @@ class GAMSWriter(object):
         ),
     )
     CONFIG.declare(
-        'gams_solver_options',
+        'gams_options',
         ConfigValue(
             default=None,
             domain=ListOf(str),
@@ -246,7 +246,7 @@ class _GMSWriter_impl(object):
 
         # Taken from nl_writer.py
         self.symbolic_solver_labels = config.symbolic_solver_labels
-        self.gams_solver_options = config.gams_solver_options
+        self.gams_options = config.gams_options
 
         self.subexpression_cache = {}
         self.subexpression_order = None  # set to [] later
@@ -267,7 +267,7 @@ class _GMSWriter_impl(object):
         # Caching some frequently-used objects into the locals()
         model_name = "GAMS_MODEL"
         symbolic_solver_labels = self.symbolic_solver_labels
-        gams_solver_options = self.gams_solver_options
+        gams_options = self.gams_options
         ostream = self.ostream
         config = self.config
         labeler = config.labeler
@@ -535,8 +535,8 @@ class _GMSWriter_impl(object):
             ostream.write("option savepoint=1;\n")
 
         ostream.write("\n* START USER ADDITIONAL OPTIONS\n")
-        if gams_solver_options is not None:
-            for options in gams_solver_options:
+        if gams_options is not None:
+            for options in gams_options:
                 ostream.write(f'{options}\n')
         ostream.write("* END USER ADDITIONAL OPTIONS\n\n")
 
