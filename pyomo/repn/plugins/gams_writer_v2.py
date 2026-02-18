@@ -511,11 +511,10 @@ class _GMSWriter_impl(object):
         # Writing out the equations/constraints
         #
         ostream.write("EQUATIONS \n")
-        for count, (sym, con) in enumerate(con_list.items()):
-            if count != len(con_list.keys()) - 1:
-                ostream.write(f"\t{sym}\n")
-            else:
-                ostream.write(f"\t{sym};\n\n")
+        for sym, con in con_list.items():
+            ostream.write(f"\t{sym}\n")
+        if con_list:
+            ostream.write(";\n\n")
 
         for _, con in con_list.items():
             ostream.write(con)
