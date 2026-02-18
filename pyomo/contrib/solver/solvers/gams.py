@@ -283,7 +283,8 @@ class GAMS(SolverBase):
                         'gdx' if gdxcc_available else 'dat'
                     )
 
-                # update the writer config if any of the overlapping keys exists in the solver_options
+                # update the writer config if any of the overlapping
+                # keys exists in the solver_options
                 if config.time_limit is not None:
                     if "gams_options" in config.solver_options:
                         config.solver_options["gams_options"].append(
@@ -299,7 +300,9 @@ class GAMS(SolverBase):
                         self._writer.config[key] = config.solver_options[key]
                     else:
                         raise ValueError(
-                            f"Encountered unknown solver_option '{key}' -- use 'gams_options' to pass a list of arbitrary GAMS option structures"
+                            f"Encountered unknown solver_option '{key}' -- "
+                            "use 'gams_options' to pass a list of arbitrary "
+                            "GAMS option structures"
                         )
 
                 gms_info = self._writer.write(model, gms_file, **self._writer.config)
@@ -325,7 +328,8 @@ class GAMS(SolverBase):
             exe_path = config.executable.path()
             command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
 
-            # handled tee and logfile based on the length of list and string respectively
+            # handled tee and logfile based on the length of list and
+            # string respectively
             command.append(self._log_levels[(bool(config.tee), bool(config.logfile))])
 
             ostreams = [StringIO()]

@@ -115,7 +115,8 @@ class GAMSWriter(object):
             domain=str,
             description='Model type',
             doc="""
-            If None, will chose from lp, mip. nlp and minlp will be implemented in a future release.
+            If None, will chose from lp, mip. nlp and minlp will be implemented
+            in a future release.
             """,
         ),
     )
@@ -144,7 +145,10 @@ class GAMSWriter(object):
         ConfigValue(
             default=False,
             domain=bool,
-            description='If True, output fixed variables as variables; otherwise, output numeric value',
+            description="""
+            If True, output fixed variables as variables; otherwise,
+            output numeric value
+            """,
         ),
     )
     CONFIG.declare(
@@ -186,7 +190,11 @@ class GAMSWriter(object):
         'put_results_format',
         ConfigValue(
             domain=In(["gdx", "dat"]),
-            description="Format used for put_results, one of 'gdx', 'dat'",
+            doc="""
+            Format used for put_results, one of 'gdx', 'dat'.
+            If not set, the format will default to 'gdx' if the gdx/gdxcc
+            python module is available and 'dat' otherwise.
+            """,
         ),
     )
     # NOTE: Taken from the lp_writer
@@ -238,7 +246,8 @@ class GAMSWriter(object):
         # representation generates (and disposes of) a large number of
         # small objects.
 
-        # NOTE: First pass write the model but needs variables/equations definition first
+        # NOTE: First pass write the model but needs variables/equations
+        # definition first
         with PauseGC():
             return _GMSWriter_impl(ostream, config).write(model)
 
@@ -355,7 +364,8 @@ class _GMSWriter_impl(object):
         #
         skip_trivial_constraints = self.config.skip_trivial_constraints
         last_parent = None
-        # NOTE: con_list Save the constraint representation and write it after variables/equations declare
+        # NOTE: con_list Save the constraint representation and write it
+        # after variables/equations declare
         con_list = {}
         for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
@@ -369,7 +379,8 @@ class _GMSWriter_impl(object):
             repn = visitor.walk_expression(body)
             if repn.nonlinear is not None:
                 raise ValueError(
-                    f"Model constraint ({con.name}) contains nonlinear terms which are currently not supported in the new gams_writer"
+                    f"Model constraint ({con.name}) contains nonlinear terms "
+                    "which are currently not supported in the new gams_writer"
                 )
 
             # Pull out the constant: we will move it to the bounds
