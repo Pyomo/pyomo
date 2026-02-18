@@ -99,10 +99,11 @@ Markers are declared in ``pyproject.toml``. Some commonly used markers are:
 - ``expensive``: tests that take a long time to run
 - ``mpi``: tests that require MPI
 - ``solver(id='name')``: tests for a specific solver,
-  e.g., ``@pytest.mark.solver("gurobi_direct")``
-- ``solver(vendor='name')``: tests for a set of solvers up to the first underscore,
-  e.g., ``solver(vendor="gurobi")`` will run all ``gurobi``, ``gurobi_direct``,
-  and ``gurobi_persistent`` tests
+  e.g., ``@pytest.mark.solver("name")``
+- ``solver(vendor='name')``: tests for a set of solvers (matching up to the
+  first underscore), e.g., ``solver(vendor="gurobi")`` will run tests marked
+  with ``solver("gurobi")``, ``solver("gurobi_direct")``, and
+  ``solver("gurobi_persistent")``
 
 More details about Pyomo-defined default test behavior can be found in
 the `conftest.py file <https://github.com/Pyomo/pyomo/blob/main/conftest.py>`_.
