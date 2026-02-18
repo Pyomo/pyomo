@@ -283,7 +283,14 @@ class GAMS(SolverBase):
 
                 # update the writer config if any of the overlapping keys exists in the solver_options
                 if config.time_limit is not None:
-                    config.solver_options['resLim'] = config.time_limit
+                    if "gams_options" in config.solver_options:
+                        config.solver_options["gams_options"].append(
+                            f"option resLim={config.time_limit}"
+                        )
+                    else:
+                        config.solver_options.update(
+                            {"gams_options": [f"option resLim={config.time_limit}"]}
+                        )
 
                 for key in config.solver_options.keys():
                     if key in self._writer.config:
