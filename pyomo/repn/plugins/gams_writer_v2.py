@@ -185,7 +185,6 @@ class GAMSWriter(object):
     CONFIG.declare(
         'put_results_format',
         ConfigValue(
-            default='gdx',
             domain=In(["gdx", "dat"]),
             description="Format used for put_results, one of 'gdx', 'dat'",
         ),
@@ -282,6 +281,8 @@ class _GMSWriter_impl(object):
         warmstart = config.warmstart
 
         sorter = FileDeterminism_to_SortComponents(config.file_determinism)
+        if not config.put_results_format:
+            config.put_results_format = 'gdx'
 
         component_map, unknown = categorize_valid_components(
             model,

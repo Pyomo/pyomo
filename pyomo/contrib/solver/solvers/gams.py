@@ -278,9 +278,10 @@ class GAMS(SolverBase):
             with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
                 timer.start(f'write_{output_filename}_file')
                 self._writer.config.set_value(config.writer_config)
-                self._writer.config.put_results_format = (
-                    'gdx' if gdxcc_available else 'dat'
-                )
+                if not self._writer.config.put_results_format:
+                    self._writer.config.put_results_format = (
+                        'gdx' if gdxcc_available else 'dat'
+                    )
 
                 # update the writer config if any of the overlapping keys exists in the solver_options
                 if config.time_limit is not None:
