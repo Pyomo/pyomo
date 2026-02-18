@@ -10,7 +10,7 @@
 import logging
 from operator import attrgetter
 
-from pyomo.common.config import ConfigBlock, ConfigValue, InEnum, document_class_CONFIG
+from pyomo.common.config import ConfigBlock, ConfigValue, InEnum, document_class_CONFIG, In, ListOf
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import (
@@ -128,6 +128,7 @@ class GAMSWriter(object):
         'gams_solver_options',
         ConfigValue(
             default=None,
+            domain=ListOf(str),
             doc="""
             List of additional lines to write directly
             into model file before the solve statement.
@@ -190,6 +191,7 @@ class GAMSWriter(object):
         'put_results_format',
         ConfigValue(
             default='gdx',
+            domain=In(["gdx", "dat"]),
             description="Format used for put_results, one of 'gdx', 'dat'",
         ),
     )
