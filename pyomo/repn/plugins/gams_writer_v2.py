@@ -98,6 +98,7 @@ class GAMSWriter(object):
         'solver',
         ConfigValue(
             default=None,
+            domain=str,
             description='If None, GAMS will use default solver for model type.',
         ),
     )
@@ -105,7 +106,11 @@ class GAMSWriter(object):
         'mtype',
         ConfigValue(
             default=None,
-            description='Model type. If None, will chose from lp, mip. nlp and minlp will be implemented in the future.',
+            domain=str,
+            description='Model type',
+            doc="""
+            If None, will chose from lp, mip. nlp and minlp will be implemented in a future release.
+            """
         ),
     )
     CONFIG.declare(
