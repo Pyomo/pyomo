@@ -181,48 +181,51 @@ class GAMS(SolverBase):
         ver, avail = self._get_version(self.config.executable.path())
         return avail
 
-    def version(self):
+    def version(self) -> tuple(int, int, int) | None:
         ver, avail = self._get_version(self.config.executable.path())
         return ver
 
-    def _get_version(self, exe):
-        # try cache
-        try:
+    def _get_version(self, exe: str | None):
+        # check the cache
+        if exe in self._exe_cache:
             return self._exe_cache[exe]
-        except KeyError:
-            pass
 
-        # exe must exist and must be executable, otherwise:
-        if not (pathlib.Path(exe).exists() and os.access(exe, os.X_OK)):
-            return self._exe_cache[None]
-
-        res = subprocess.run(
-            [str(exe)], capture_output=True, encoding="utf8", check=False
-        )
+        # Note: non-None str paths are guaranteed to exist and be executable files
+        res = subprocess.run([exe], capture_output=True, encoding="utf8", check=False)
         if res.returncode:
             logger.warning(
-                f"Failed running GAMS command to get version (non-zero returncode):\n\n{res.stdout}"
+                "Failed running GAMS command to get version (non-zero returncode):"
+                f"\n\n{res.stdout}"
             )
             return self._exe_cache[None]
 
-        version_pattern = r"(\d{1,3}\.\d{1,3}\.\d{1,3})"
+        version_pattern = r"GAMS Release *: *(\d{1,3}\.\d{1,3}\.\d{1,3})"
         found = re.search(version_pattern, res.stdout)
 
         if not found:
             params = (None, Availability.NotFound)
             self._exe_cache[exe] = (None, Availability.NotFound)
             logger.warning(
-                f"Failed parsing GAMS version (version not found while parsing):\n\n{res.stdout}"
+                "Failed parsing GAMS version (version not found while parsing):"
+                f"\n\n{res.stdout}"
             )
             return params
 
         version = found.group(0)
         version = tuple(int(i) for i in version.split('.'))
 
-        if "Demo" in res.stdout:
+        # TBD: does this also catch Community licenses?
+        if "GAMS Demo" in res.stdout:
             avail = Availability.LimitedLicense
         else:
             avail = Availability.FullLicense
+
+        # TBD: should we run a small problem (1-variable LP) to make
+        # sure the license is still valid?  Alternatively, we can leave
+        # Availability as NOTSET until someone explicitly *asks* for
+        # .available(), in which case we can justify running the small
+        # model (potentially requiring us to checck out a license from a
+        # license server).
 
         params = (version, avail)
         self._exe_cache[exe] = params
