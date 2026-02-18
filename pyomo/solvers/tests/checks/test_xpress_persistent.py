@@ -369,7 +369,7 @@ class TestXpressPersistent(unittest.TestCase):
 
 
 @unittest.pytest.mark.solver("xpress_persistent")
-class TestXpressPersistentMock:
+class TestXpressPersistentMock(unittest.TestCase):
     def test_available(self):
         class mock_xpress:
             def __init__(self, importable, initable):
