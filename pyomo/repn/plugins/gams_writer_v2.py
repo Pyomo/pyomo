@@ -28,7 +28,6 @@ from pyomo.core.base import (
 )
 from pyomo.core.base.label import NumericLabeler
 from pyomo.opt import WriterFactory
-from pyomo.repn.util import ftoa
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
@@ -527,12 +526,12 @@ class _GMSWriter_impl(object):
             pyomo_v = self.var_symbol_map.bySymbol[v]
             if lb is None:
                 lb = float("-inf")
-            ostream.write(f'{v}.lo = {ftoa(lb, False)};\n')
+            ostream.write(f'{v}.lo = {lb};\n')
             if ub is None:
                 ub = float("inf")
-            ostream.write(f'{v}.up = {ftoa(ub, False)};\n')
+            ostream.write(f'{v}.up = {ub};\n')
             if warmstart and pyomo_v.value is not None:
-                ostream.write(f"{v}.l = {ftoa(pyomo_v.value, False)};\n")
+                ostream.write(f"{v}.l = {pyomo_v.value};\n")
 
         ostream.write(f'\nModel {model_name} / all /;\n')
         ostream.write(f'{model_name}.limrow = 0;\n')
