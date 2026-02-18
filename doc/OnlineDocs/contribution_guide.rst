@@ -98,7 +98,7 @@ Markers are declared in ``pyproject.toml``. Some commonly used markers are:
 
 - ``expensive``: tests that take a long time to run
 - ``mpi``: tests that require MPI
-- ``solver(name)``: dynamic marker to label a test for a specific solver,
+- ``solver(vendor='name')``: tests for a specific solver,
   e.g., ``@pytest.mark.solver("gurobi")``
 
 More details about Pyomo-defined default test behavior can be found in

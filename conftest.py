@@ -44,7 +44,7 @@ def pytest_itemcollected(item):
 
     We have historically supported "category markers"::
 
-        @pytest.mark.solve("highs")
+        @pytest.mark.solver("highs")
 
     Unfortunately, pytest doesn't allow for building marker
     expressions (e.g., for "-m") based on the marker.args.  We will
