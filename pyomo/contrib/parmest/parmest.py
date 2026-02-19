@@ -327,7 +327,7 @@ def L2_regularized_objective(
     # 1. Get current model parameters
     # We assume model.unknown_parameters is a list of Pyomo Var objects
     current_param_names = [p.name for p in model.unknown_parameters]
-    param_map = {p.name: p for p in model.unknown_parameters}
+    param_map = {p.name: pyo.value(p) for p in model.unknown_parameters}
 
     # 2. Alignment & Subsetting
     # Confirm all the parameters in the prior_FIM columns are in the model parameters
@@ -364,9 +364,12 @@ def L2_regularized_objective(
         # Fill the sub_theta with the initialized model parameter values (or zeros if not initialized)
         for param in common_params:
             sub_theta.loc[param] = pyo.value(param_map[param])
+        logger.info(
+            "theta_ref is None. Using initialized parameter values as reference."
+        )
 
     # 3. Construct the Quadratic Form (The L2 term)
-    l2_term = 0
+    # l2_term = 0
 
     # Manual for loop version
     # for i in common_params:
@@ -384,7 +387,6 @@ def L2_regularized_objective(
 
     # Compute the quadratic form: delta^T * FIM * delta
     l2_term = delta_params.T @ sub_FIM.values @ delta_params
-
     # 4. Combine with objective
     object_expr = obj_function(model)
 
@@ -399,6 +401,9 @@ def L2_regularized_objective(
             regularization_weight = object_val / l2_val
         else:
             regularization_weight = 1.0
+            logger.warning(
+                "L2 term is zero at the initial parameter values. Setting regularization weight to 1.0."
+            )
 
     return object_expr + (regularization_weight * l2_term)
 
@@ -584,6 +589,7 @@ def compute_covariance_matrix(
     solver,
     tee,
     estimated_var=None,
+    prior_FIM=None,
 ):
     """
     Computes the covariance matrix of the estimated parameters using
@@ -654,7 +660,7 @@ def compute_covariance_matrix(
     # # Add prior_FIM if including regularization. We expand the prior FIM to match the size of the current FIM
     # if prior_FIM is not None:
     #     expanded_prior_FIM = _expand_prior_FIM(
-    #         experiment_list[0], prior_FIM, theta_vals
+    #         experiment_list[0], prior_FIM, # theta_vals
     #     )  # sanity check and alignment
 
     #     # Check that the prior FIM shape is the same as the FIM shape
@@ -869,7 +875,7 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
     return FIM
 
 
-def _expand_prior_FIM(experiment, prior_FIM, theta_ref=None):
+def _expand_prior_FIM(experiment, prior_FIM):
     """
     Expands the prior FIM to match the size of the FIM of the current experiment
 
@@ -880,8 +886,6 @@ def _expand_prior_FIM(experiment, prior_FIM, theta_ref=None):
         for a particular experimental condition
     prior_FIM : pd.DataFrame
         Prior Fisher Information Matrix from previous experimental design
-    theta_ref: pd.Series, optional
-        Reference parameter values used for regularization
 
     Returns
     -------
@@ -897,7 +901,7 @@ def _expand_prior_FIM(experiment, prior_FIM, theta_ref=None):
     # We reindex to match param_names. Parameters not in prior_FIM
     # will be filled with 0, which maintains the PSD property.
     expanded_prior_FIM = prior_FIM.reindex(
-        index=param_names, columns=param_names, fill_value=1e-9
+        index=param_names, columns=param_names, fill_value=0.0
     )
 
     # 3. Sanity Check: Positive Semi-Definiteness
@@ -1524,10 +1528,10 @@ class Estimator:
                             method,
                             obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
-                            prior_FIM=self.prior_FIM,
                             solver=solver,
                             step=step,
                             tee=self.tee,
+                            prior_FIM=self.prior_FIM,
                         )
 
                 else:
@@ -1600,17 +1604,15 @@ class Estimator:
 
         # Add regularization to the covariance matrix if L2 regularization is specified and a prior FIM is provided
         if self.prior_FIM is not None and self.regularization == RegularizationType.L2:
-            #    print("Prior_FIM: \n", self.prior_FIM)
-            #    print("Theta_ref: \n", self.theta_ref)
-            #    print("Estimated Theta: \n", self.estimated_theta)
-            #    print("exp_list[0]: \n", self.exp_list[0])
-            print("Covariance before adding regularization: \n", cov)
+            # print("Prior_FIM: \n", self.prior_FIM)
+            # print("Theta_ref: \n", self.theta_ref)
+            # print("Estimated Theta: \n", self.estimated_theta)
+            # print("exp_list[0]: \n", self.exp_list[0])
+            # print("Covariance before adding regularization: \n", cov)
 
             # Expand the prior FIM to match the size of the FIM of the current experiment
-            expanded_prior_FIM = _expand_prior_FIM(
-                self.exp_list[0], self.prior_FIM
-            )  # self.theta_ref)
-            #    print("Expanded prior FIM: \n", expanded_prior_FIM)
+            expanded_prior_FIM = _expand_prior_FIM(self.exp_list[0], self.prior_FIM)
+            # print("Expanded prior FIM: \n", expanded_prior_FIM)
 
             # Combine the FIM from the current experiment with the expanded prior FIM
             # The prior_FIM may be singular on its own, but the sum should be non-singular
