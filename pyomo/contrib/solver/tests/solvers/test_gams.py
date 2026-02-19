@@ -88,7 +88,8 @@ class TestGAMSSolutionLoader(unittest.TestCase):
         loader._gms_info.var_symbol_map = SymbolMap(NumericLabeler('x'))
         loader._gms_info.con_symbol_map = SymbolMap(NumericLabeler('c'))
 
-        # We are asserting if there is no solution, the SymbolMap for variable length must be 0
+        # We are asserting if there is no solution, the SymbolMap for
+        # variable length must be 0
         loader.get_primals()
 
         # if the model is infeasible, no dual information is returned
@@ -99,7 +100,8 @@ class TestGAMSSolutionLoader(unittest.TestCase):
 @unittest.skipIf(not gams_available, "The 'gams' command is not available")
 @unittest.pytest.mark.solver("gams")
 class TestGAMSInterface(unittest.TestCase):
-    # _simple_model and _run_simple_model are standalone functions to test gams execution
+    # _simple_model and _run_simple_model are standalone functions to
+    # test gams execution
     def _simple_model(self, n):
         return """
             option limrow = 0;
