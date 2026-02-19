@@ -79,7 +79,7 @@ class TestGAMSSolverConfig(unittest.TestCase):
 class TestGAMSSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
         loader = gams.GMSSolutionLoader(None, None)
-        with self.assertRaisesRegex(NoSolutionError):
+        with self.assertRaises(NoSolutionError):
             loader.get_primals()
         with self.assertRaises(NoDualsError):
             loader.get_duals()
