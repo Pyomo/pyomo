@@ -179,7 +179,7 @@ class GAMS(SolverBase):
         ver, avail = self._get_version(self.config.executable.path())
         return avail
 
-    def version(self) -> tuple(int, int, int) | None:
+    def version(self) -> tuple[int, int, int] | None:
         ver, avail = self._get_version(self.config.executable.path())
         return ver
 
@@ -209,7 +209,7 @@ class GAMS(SolverBase):
             )
             return params
 
-        version = found.group(0)
+        version = found.group(1)
         version = tuple(int(i) for i in version.split('.'))
 
         # TBD: does this also catch Community licenses?
