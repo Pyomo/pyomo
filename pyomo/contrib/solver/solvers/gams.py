@@ -355,28 +355,25 @@ class GAMS(SolverBase):
             if config.working_dir:
                 logger.info("\nGAMS WORKING DIRECTORY: %s\n" % config.working_dir)
 
-            if rc == 1 or rc == 127:
-                raise IOError("Command 'gams' was not recognized")
-            elif rc != 0:
+            if rc:
+                # If nothing was raised, or for all other cases, raise this
+                error_message = f"GAMS process encountered an error (returncode={rc})."
                 if rc == 3:
                     # Execution Error
                     # Run check_expr_evaluation, which errors if necessary
-                    logger.error(
-                        'Error rc=3 (GAMS execution error), to be determined later'
+                    error_message += (
+                        "\nError rc=3 (GAMS execution error), to be determined later."
                     )
-                # If nothing was raised, or for all other cases, raise this
-                logger.error(
-                    "GAMS encountered an error during solve. "
-                    "Check listing file for details."
-                )
-                logger.error(txt)
+                error_message += "\nCheck listing file for details.\n"
+                logger.error(error_message)
+                logger.error(txt.strip())
                 if os.path.exists(lst_filename):
                     with open(lst_filename, 'r') as FILE:
-                        logger.error("GAMS Listing file:\n\n%s" % (FILE.read(),))
-                raise RuntimeError(
-                    "GAMS encountered an error during solve. "
-                    "Check listing file for details."
-                )
+                        logger.error(
+                            "\nGAMS Listing file:\n\n%s" % (FILE.read().strip(),)
+                        )
+                raise RuntimeError(error_message)
+
             if self._writer.config.put_results_format == 'gdx':
                 timer.start('parse_gdx')
                 model_soln, stat_vars = self._parse_gdx_results(
