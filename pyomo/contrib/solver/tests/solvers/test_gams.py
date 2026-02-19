@@ -219,7 +219,9 @@ class TestGAMSInterface(unittest.TestCase):
             try:
                 subprocess.run([fname])
             except OSError:
-                raise unittest.Skip("python scripts are not registered as executable")
+                raise unittest.SkipTest(
+                    "python scripts are not registered as executable"
+                )
 
             fname = os.path.join(dname, 'test_rc.py')
             with open(fname, 'w') as F:
@@ -538,7 +540,9 @@ class TestGAMS(unittest.TestCase):
             try:
                 subprocess.run([fname])
             except OSError:
-                raise unittest.Skip("python scripts are not registered as executable")
+                raise unittest.SkipTest(
+                    "python scripts are not registered as executable"
+                )
 
             fname = os.path.join(dname, 'test_rc.py')
             with open(fname, 'w') as F:
