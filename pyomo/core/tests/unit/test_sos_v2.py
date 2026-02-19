@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 # *****************************************************************************
 # *****************************************************************************
@@ -28,7 +26,7 @@ solver_available = bool(check_available_solvers(solver_name))
 
 
 @unittest.skipIf(not solver_available, "The solver is not available.")
-class SOSProblem_nonindexed(object):
+class SOSProblem_nonindexed:
     "Test non-indexed SOS using a single pyomo Var component."
 
     def verify(
@@ -48,7 +46,7 @@ class SOSProblem_nonindexed(object):
 
     def do_it(self, test_number):
         # sos, expect. result, absolute tolerance, use rule parameter, case
-        (sos, exp_res, abs_tol, use_rule, case) = self.test_vectors[test_number]
+        sos, exp_res, abs_tol, use_rule, case = self.test_vectors[test_number]
 
         model = self.set_problem_up(case=case, n=sos, use_rule=use_rule)
 
@@ -505,7 +503,7 @@ class TestSOS_noindex_028(SOSProblem_nonindexed, unittest.TestCase):
 
 
 @unittest.skipIf(not solver_available, "The solver is not available.")
-class SOSProblem_nonindexed_multivar(object):
+class SOSProblem_nonindexed_multivar:
     "Test non-indexed SOS made up of different Var components."
 
     def verify(self, model, sos, exp_res, abs_tol, show_output: bool = False):
@@ -525,7 +523,7 @@ class SOSProblem_nonindexed_multivar(object):
 
     def do_it(self, test_number):
         # sos, expect. result, absolute tolerance, use rule parameter, case
-        (sos, exp_res, abs_tol) = self.test_vectors[test_number]
+        sos, exp_res, abs_tol = self.test_vectors[test_number]
 
         model = self.set_problem_up(n=sos)
 
@@ -599,7 +597,7 @@ class TestSOS_noindexmulti_001(SOSProblem_nonindexed_multivar, unittest.TestCase
 
 
 @unittest.skipIf(not solver_available, "The solver is not available.")
-class SOSProblem_indexed(object):
+class SOSProblem_indexed:
     "Test indexed SOS using a single pyomo Var component."
 
     def verify(
@@ -621,7 +619,7 @@ class SOSProblem_indexed(object):
 
     def do_it(self, test_number):
         # sos, expect. result, absolute tolerance, use rule parameter, case
-        (sos, exp_res, abs_tol, use_rule, case) = self.test_vectors[test_number]
+        sos, exp_res, abs_tol, use_rule, case = self.test_vectors[test_number]
 
         model = self.set_problem_up(case=case, n=sos, use_rule=use_rule)
 
@@ -970,7 +968,7 @@ class TestSOS_indexed_017(SOSProblem_indexed, unittest.TestCase):
 
 
 @unittest.skipIf(not solver_available, "The solver is not available.")
-class SOSProblem_indexedmultivar(object):
+class SOSProblem_indexedmultivar:
     "Test indexed SOS made up of different Var components."
 
     def verify(self, model, sos, exp_res, abs_tol, show_output: bool = False):
@@ -990,7 +988,7 @@ class SOSProblem_indexedmultivar(object):
 
     def do_it(self, test_number):
         # sos, expect. result, absolute tolerance, use rule parameter, case
-        (sos, exp_res, abs_tol) = self.test_vectors[test_number]
+        sos, exp_res, abs_tol = self.test_vectors[test_number]
 
         model = self.set_problem_up(n=sos)
 

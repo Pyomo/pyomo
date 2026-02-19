@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import inspect
 import pyomo.common.unittest as unittest
@@ -17,7 +15,7 @@ from pyomo.core.base.disable_methods import disable_methods
 from pyomo.common.modeling import NOTSET
 
 
-class LocalClass(object):
+class LocalClass:
     def __init__(self, name):
         self._name = name
 
@@ -28,7 +26,7 @@ class LocalClass(object):
 local_instance = LocalClass('local')
 
 
-class _simple(object):
+class _simple:
     def __init__(self, name):
         self.name = name
         self._d = 'd'

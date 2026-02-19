@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import itertools
 import pyomo.common.unittest as unittest
@@ -47,7 +45,7 @@ if not pyo.SolverFactory("ipopt").available():
     raise unittest.SkipTest("Need IPOPT to run ExternalPyomoModel tests")
 
 
-class SimpleModel1(object):
+class SimpleModel1:
     def make_model(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=2.0)
@@ -80,7 +78,7 @@ class SimpleModel1(object):
         return 2 + 0.24 / x**4
 
 
-class SimpleModel2(object):
+class SimpleModel2:
     """
     The purpose of this model is to exercise each term in the computation
     of the d2ydx2 Hessian.
@@ -113,7 +111,7 @@ class SimpleModel2(object):
         return 2 + 6 * 0.2 ** (2 / 3) / x**4
 
 
-class SimpleModel2by2_1(object):
+class SimpleModel2by2_1:
     """
     The purpose of this model is to test second derivative computation
     when the external model is nonlinear only in x. This exercises
@@ -228,7 +226,7 @@ class SimpleModel2by2_1(object):
         return [dy0dxdx, dy1dxdx]
 
 
-class Model2by2(object):
+class Model2by2:
     """
     The purpose of this model is to test d2ydx2 Hessian computation when
     transposes result in a nontrivial modification of Hessian/Jacobian
@@ -904,7 +902,7 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
             # multipliers won't necessarily correspond).
             external_model.set_external_constraint_multipliers(lam)
             hlxx, hlxy, hlyy = external_model.get_full_space_lagrangian_hessians()
-            (pred_hlxx, pred_hlxy, pred_hlyy) = (
+            pred_hlxx, pred_hlxy, pred_hlyy = (
                 model.calculate_full_space_lagrangian_hessians(lam, x)
             )
 

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.timing import HierarchicalTimer
@@ -38,7 +36,7 @@ from pyomo.contrib.incidence_analysis.scc_solver import (
 )
 
 
-class NlpSolverBase(object):
+class NlpSolverBase:
     """A base class that solves an NLP object
 
     Subclasses should implement this interface for compatibility with
@@ -118,7 +116,7 @@ class ScipySolverWrapper(NlpSolverBase):
         return res
 
 
-class PyomoImplicitFunctionBase(object):
+class PyomoImplicitFunctionBase:
     """A base class defining an API for implicit functions defined using
     Pyomo components. In particular, this is the API required by
     ExternalPyomoModel.

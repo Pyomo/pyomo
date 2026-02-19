@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import argparse
 import gc
@@ -512,7 +510,7 @@ def create_model(data):
             io_options['symbolic_solver_labels'] = True
         if data.options.model.file_determinism is not None:
             io_options['file_determinism'] = data.options.model.file_determinism
-        (fname, smap_id) = instance.write(
+        fname, smap_id = instance.write(
             filename=fname, format=format, io_options=io_options
         )
 
@@ -912,7 +910,7 @@ def configure_loggers(options=None, shutdown=False):
 configure_loggers.fileLogger = None
 
 
-class PyomoCommandLogContext(object):
+class PyomoCommandLogContext:
     """Context manager to setup/restore logging for the Pyomo command"""
 
     def __init__(self, options):

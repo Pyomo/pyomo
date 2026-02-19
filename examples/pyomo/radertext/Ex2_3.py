@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 #
 # Problem 2.17 - courtesy Allen Holder
@@ -40,7 +38,7 @@ model.MixtureLowBounds = pyo.Param(
     model.CrudeType, model.GasType, within=pyo.NonNegativeReals, default=0
 )
 
-# Variabls
+# Variables
 model.x = pyo.Var(model.CrudeType, model.GasType, within=pyo.NonNegativeReals)
 model.q = pyo.Var(model.CrudeType, within=pyo.NonNegativeReals)
 model.z = pyo.Var(model.GasType, within=pyo.NonNegativeReals)

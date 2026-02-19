@@ -1,30 +1,30 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the IDAES PSE Framework
+# This module was originally developed as part of the IDAES PSE Framework
 #
-#  Institute for the Design of Advanced Energy Systems Process Systems
-#  Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
-#  software owners: The Regents of the University of California, through
-#  Lawrence Berkeley National Laboratory,  National Technology & Engineering
-#  Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
-#  University Research Corporation, et al. All rights reserved.
+# Institute for the Design of Advanced Energy Systems Process Systems
+# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
+# software owners: The Regents of the University of California, through
+# Lawrence Berkeley National Laboratory,  National Technology & Engineering
+# Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
+# University Research Corporation, et al. All rights reserved.
 #
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 Try to import PySide6, which is the current official Qt 6 Python interface. Then,
 try PyQt5 if that doesn't work. If no compatible Qt Python interface is found,
 use some dummy classes to allow some testing.
 """
+
 __author__ = "John Eslick"
 import sys
 import enum
@@ -62,24 +62,24 @@ for module_str in supported:
 if not available:
     # If Qt is not available, we still want to be able to test as much
     # as we can, so add some dummy classes that allow for testing
-    class Qt(object):
+    class Qt:
         class ItemDataRole(enum.Enum):
             EditRole = 1
             DisplayRole = 2
             ToolTipRole = 3
             ForegroundRole = 4
 
-    class QtCore(object):
+    class QtCore:
         """
         A dummy QtCore class to allow some testing without PyQt
         """
 
-        class QModelIndex(object):
+        class QModelIndex:
             pass
 
         Qt = Qt
 
-    class QAbstractItemModel(object):
+    class QAbstractItemModel:
         """
         A dummy QAbstractItemModel class to allow some testing without PyQt
         """
@@ -87,7 +87,7 @@ if not available:
         def __init__(*args, **kwargs):
             pass
 
-    class QAbstractTableModel(object):
+    class QAbstractTableModel:
         """
         A dummy QAbstractTableModel class to allow some testing without PyQt
         """
@@ -95,14 +95,14 @@ if not available:
         def __init__(*args, **kwargs):
             pass
 
-    class QItemEditorCreatorBase(object):
+    class QItemEditorCreatorBase:
         """
         A dummy QItemEditorCreatorBase class to allow some testing without PyQt
         """
 
         pass
 
-    class QItemDelegate(object):
+    class QItemDelegate:
         """
         A dummy QItemDelegate class to allow some testing without PyQt
         """
@@ -157,8 +157,8 @@ else:
     # if we are building the API documentation.
     if building_documentation():
 
-        class QAbstractItemModel(object):
+        class QAbstractItemModel:
             pass
 
-        class QAbstractTableModel(object):
+        class QAbstractTableModel:
             pass

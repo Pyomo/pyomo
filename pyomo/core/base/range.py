@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import math
 from collections.abc import Sequence
@@ -681,7 +679,7 @@ class NumericRange(AutoSlots.Mixin):
         return ans
 
 
-class NonNumericRange(object):
+class NonNumericRange:
     """A range-like object for representing a single non-numeric value
 
     The class name is a bit of a misnomer, as this object does not
@@ -758,7 +756,7 @@ class NonNumericRange(object):
         return []
 
 
-class AnyRange(object):
+class AnyRange:
     """A range object for representing Any sets"""
 
     __slots__ = ()
@@ -803,7 +801,7 @@ class AnyRange(object):
         return list(other_ranges)
 
 
-class RangeProduct(object):
+class RangeProduct:
     """A range-like object for representing the cross product of ranges"""
 
     __slots__ = ('range_lists',)

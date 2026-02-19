@@ -1,15 +1,14 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """Iteration loop for MindtPy."""
+
 import math
 from io import StringIO
 import pyomo.core.expr as EXPR
@@ -83,7 +82,7 @@ egb, egb_available = attempt_import(
 )
 
 
-class _MindtPyAlgorithm(object):
+class _MindtPyAlgorithm:
     def __init__(self, **kwds):
         """
         This is a common init method for all the MindtPy algorithms, so that we
@@ -3080,7 +3079,7 @@ class _MindtPyAlgorithm(object):
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if self.dual_bound != self.dual_bound_progress[0]:
                 with time_code(self.timing, 'regularization main'):
-                    (regularization_main_mip, regularization_main_mip_results) = (
+                    regularization_main_mip, regularization_main_mip_results = (
                         self.solve_regularization_main()
                     )
                 self.handle_regularization_main_tc(

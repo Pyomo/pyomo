@@ -1,44 +1,47 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from __future__ import annotations
 import sys
 import types
 import logging
-from weakref import ref as weakref_ref
-from pyomo.common.pyomo_typing import overload
 from typing import Union, Type
+from weakref import ref as weakref_ref
 
 from pyomo.common.autoslots import AutoSlots
-from pyomo.common.deprecation import deprecation_warning, RenamedClass
+from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types, value as expr_value
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.enums import SortComponents
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
     UnindexedComponent_set,
     IndexedComponent_NDArrayMixin,
 )
-from pyomo.core.base.initializer import Initializer
+from pyomo.core.base.initializer import Initializer, PartialInitializer
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.set import Reals, _AnySet, SetInitializer
 from pyomo.core.base.units_container import units
 from pyomo.core.expr import GetItemExpression
 
 logger = logging.getLogger('pyomo.core')
+
+
+def _placeholder_rule(*args, **kwargs):
+    pass
 
 
 def _raise_modifying_immutable_error(obj, index):
@@ -299,22 +302,22 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     DefaultMutable = False
     _ComponentDataClass = ParamData
 
-    class NoValue(object):
+    class NoValue:
         """A dummy type that is pickle-safe that we can use as the default
         value for Params to indicate that no valid value is present."""
 
         pass
 
     @overload
-    def __new__(
-        cls: Type[Param], *args, **kwds
-    ) -> Union[ScalarParam, IndexedParam]: ...
-
-    @overload
     def __new__(cls: Type[ScalarParam], *args, **kwds) -> ScalarParam: ...
 
     @overload
     def __new__(cls: Type[IndexedParam], *args, **kwds) -> IndexedParam: ...
+
+    @overload
+    def __new__(
+        cls: Type[Param], *args, **kwds
+    ) -> Union[ScalarParam, IndexedParam]: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Param:
@@ -358,6 +361,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # expression simplification does not remove units from
                 # the expression.
                 self._mutable = True
+        if _init is not NOTSET:
+            # We need a placeholder rule on the Param because the base
+            # class will wrap it to pass in any unrecognized keyword
+            # arguments.  We can't just pass the actual rule because
+            # we want to use is_indexed() to change how we process the rule.
+            self._rule = _placeholder_rule
+        else:
+            self._rule = None
 
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
@@ -370,11 +381,18 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         else:
             self.domain = SetInitializer(_domain_rule)(self.parent_block(), None, self)
         # After IndexedComponent.__init__ so we can call is_indexed().
-        self._rule = Initializer(
+        _rule = Initializer(
             _init,
             treat_sequences_as_mappings=self.is_indexed(),
             arg_not_specified=NOTSET,
         )
+        if self._rule.__class__ is PartialInitializer:
+            # Replace the _placeholder_rule with the user-specified rule
+            self._rule = PartialInitializer(
+                _rule, *self._rule._fcn.args, **self._rule._fcn.keywords
+            )
+        else:
+            self._rule = _rule
 
     def __len__(self):
         """
@@ -405,7 +423,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         return self._mutable
 
     def get_units(self):
-        """Return the units for this ParamData"""
+        """Return the units for this Param"""
         return self._units
 
     #
@@ -413,29 +431,69 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     # only loop over the defined data.
     #
 
-    def sparse_keys(self):
+    def sparse_keys(self, sort=SortComponents.UNSORTED):
         """Return a list of keys in the defined parameters"""
-        return list(self._data.keys())
+        try:
+            # Temporarily remove the default value so that len(self) ==
+            # len(self._dict).  This will cause the base class
+            # implementation of keys() to only return values from
+            # self._data:
+            tmp = self._default_val
+            self._default_val = Param.NoValue
+            return self.keys(sort)
+        finally:
+            self._default_val = tmp
 
-    def sparse_values(self):
+    def sparse_values(self, sort=SortComponents.UNSORTED):
         """Return a list of the defined param data objects"""
-        return list(self._data.values())
+        # Implementing things this way for consistency with items() (and
+        # so that any changes in the base class implementation are
+        # picked up here, too):
+        try:
+            tmp = self._default_val
+            self._default_val = Param.NoValue
+            return self.values(sort)
+        finally:
+            self._default_val = tmp
 
-    def sparse_items(self):
+    def sparse_items(self, sort=SortComponents.UNSORTED):
         """Return a list (index,data) tuples for defined parameters"""
-        return list(self._data.items())
+        # The base class implements special handling for references.
+        # Instead of reimplementing that here, we will follow the
+        # pattern used for sparse_keys (and get len() to "lie")
+        try:
+            tmp = self._default_val
+            self._default_val = Param.NoValue
+            return self.items(sort)
+        finally:
+            self._default_val = tmp
 
+    @deprecated(
+        "The sparse_iterkeys method is deprecated.  Use sparse_keys()",
+        # This should have been deprecated when we dropped Python 2.7
+        version='6.10.0.dev0',
+    )
     def sparse_iterkeys(self):
         """Return an iterator for the keys in the defined parameters"""
-        return self._data.keys()
+        return self.sparse_keys()
 
+    @deprecated(
+        "The sparse_itervalues method is deprecated.  Use sparse_values()",
+        # This should have been deprecated when we dropped Python 2.7
+        version='6.10.0.dev0',
+    )
     def sparse_itervalues(self):
         """Return an iterator for the defined param data objects"""
-        return self._data.values()
+        return self.sparse_values()
 
+    @deprecated(
+        "The sparse_iteritems method is deprecated.  Use sparse_items()",
+        # This should have been deprecated when we dropped Python 2.7
+        version='6.10.0.dev0',
+    )
     def sparse_iteritems(self):
         """Return an iterator of (index,data) tuples for defined parameters"""
-        return self._data.items()
+        return self.sparse_items()
 
     def extract_values(self):
         """
@@ -447,23 +505,20 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         the contents of a parameter.
         """
         if self._mutable:
-            #
-            # The parameter is mutable, parameter data are ParamData types.
-            # Thus, we need to create a temporary dictionary that contains the
-            # values from the ParamData objects.
-            #
-            return {key: param_value() for key, param_value in self.items()}
+            # The parameter is mutable so parameter data are ParamData
+            # types.  We need to evaluate the ParamData back to POD
+            # (numeric) data when creating the result.
+            return {key: param_data() for key, param_data in self.items()}
         elif not self.is_indexed():
-            #
-            # The parameter is a scalar, so we need to create a temporary
-            # dictionary using the value for this parameter.
-            #
-            return {None: self()}
+            # The scalar could be defined (in which case items() will
+            # return the ScalarParam), OR it could be defined by a
+            # default value (in which case items() will return the
+            # actual numeric value).  To cover both cases we will use
+            # value():
+            return {key: expr_value(param_data) for key, param_data in self.items()}
         else:
-            #
             # The parameter is not mutable, so iteritems() can be
             # converted into a dictionary containing parameter values.
-            #
             return dict(self.items())
 
     def extract_values_sparse(self):
@@ -475,28 +530,21 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         repeated __getitem__ calls are too expensive to extract
         the contents of a parameter.
         """
-        if self._mutable:
+        if self._mutable or not self.is_indexed():
+            # The parameter is mutable so parameter data are ParamData
+            # types.  We need to evaluate the ParamData back to POD
+            # (numeric) data when creating the result.
             #
-            # The parameter is mutable, parameter data are ParamData types.
-            # Thus, we need to create a temporary dictionary that contains the
-            # values from the ParamData objects.
-            #
-            ans = {}
-            for key, param_value in self.sparse_iteritems():
-                ans[key] = param_value()
-            return ans
-        elif not self.is_indexed():
-            #
-            # The parameter is a scalar, so we need to create a temporary
-            # dictionary using the value for this parameter.
-            #
-            return {None: self()}
+            # Note that if this is a scalar, sparse_items will return
+            # the ScalarParam only if it is explicitly defined (in which
+            # case it will still be evaluatable by calling it).
+            # ScalarParams whose value comes from the default are not
+            # returned by sparse_items()
+            return {key: param_data() for key, param_data in self.sparse_items()}
         else:
-            #
-            # The parameter is not mutable, so sparse_iteritems() can be
+            # The parameter is not mutable, so sparse_items() can be
             # converted into a dictionary containing parameter values.
-            #
-            return dict(self.sparse_iteritems())
+            return dict(self.sparse_items())
 
     def store_values(self, new_values, check=True):
         """
@@ -914,7 +962,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         ]
         if self._units is not None:
             headers.append(('Units', str(self._units)))
-        return (headers, self.sparse_iteritems(), ("Value",), dataGen)
+        return (headers, self.sparse_items, ("Value",), dataGen)
 
 
 class ScalarParam(ParamData, Param):
@@ -926,7 +974,7 @@ class ScalarParam(ParamData, Param):
     #
     # Since this class derives from Component and Component.__getstate__
     # just packs up the entire __dict__ into the state dict, there s
-    # nothng special that we need to do here.  We will just defer to the
+    # nothing special that we need to do here.  We will just defer to the
     # super() get/set state.  Since all of our get/set state methods
     # rely on super() to traverse the MRO, this will automatically pick
     # up both the Component and Data base classes.

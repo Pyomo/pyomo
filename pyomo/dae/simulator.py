@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 
@@ -175,9 +173,7 @@ def _check_viewsumexpression(expr, i):
         ):
             dv = item
         elif type(item) is EXPR.ProductExpression:
-            # This will contain the constant coefficient if there is one
             lhs = item.arg(0)
-            # This is a potentially variable expression
             rhs = item.arg(1)
             if (
                 type(lhs) in native_numeric_types or not lhs.is_potentially_variable()
@@ -187,6 +183,14 @@ def _check_viewsumexpression(expr, i):
             ):
                 dv = rhs
                 dvcoef = lhs
+            elif (
+                type(rhs) in native_numeric_types or not rhs.is_potentially_variable()
+            ) and (
+                isinstance(lhs, EXPR.GetItemExpression)
+                and type(lhs.arg(0)) is DerivativeVar
+            ):
+                dv = lhs
+                dvcoef = rhs
         else:
             items.append(item)
 

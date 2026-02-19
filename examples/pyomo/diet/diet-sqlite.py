@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 Create the diet.sqlite file with all the appropriate data.
@@ -23,8 +21,7 @@ for table in ['Amount', 'Nutr', 'Food']:
     c.execute('DROP TABLE IF EXISTS ' + table)
 conn.commit()
 
-c.execute(
-    '''
+c.execute('''
 CREATE TABLE Food (
     FOOD text not null,
     cost float not null,
@@ -32,8 +29,7 @@ CREATE TABLE Food (
     f_max float,
     PRIMARY KEY (FOOD)
 )
-'''
-)
+''')
 conn.commit()
 
 Food_data = [
@@ -51,16 +47,14 @@ for row in Food_data:
     c.execute('''INSERT INTO Food VALUES (?,?,?,?)''', row)
 conn.commit()
 
-c.execute(
-    '''
+c.execute('''
 CREATE TABLE Nutr (
     NUTR text not null,
     n_min float,
     n_max float,
     PRIMARY KEY (NUTR)
 )
-'''
-)
+''')
 
 Nutr_data = [
     ("Cal", 2000.0, None),
@@ -75,8 +69,7 @@ for row in Nutr_data:
     c.execute('''INSERT INTO Nutr VALUES (?,?,?)''', row)
 conn.commit()
 
-c.execute(
-    '''
+c.execute('''
 CREATE TABLE Amount (
 NUTR text not null,
 FOOD varchar not null,
@@ -85,8 +78,7 @@ PRIMARY KEY (NUTR, FOOD),
 FOREIGN KEY (NUTR) REFERENCES Nutr (NUTR),
 FOREIGN KEY (FOOD) REFERENCES Food (FOOD)
 )
-'''
-)
+''')
 conn.commit()
 
 Amount_data = [

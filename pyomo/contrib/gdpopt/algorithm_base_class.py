@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from io import StringIO
 
@@ -164,8 +162,7 @@ class _GDPoptAlgorithm:
         config.display(ostream=os)
         config.logger.info(os.getvalue())
 
-        config.logger.info(
-            """
+        config.logger.info("""
             If you use this software, you may cite the following:
             - Implementation:
             Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
@@ -173,8 +170,7 @@ class _GDPoptAlgorithm:
             Pyomo.GDP: an ecosystem for logic based modeling and optimization
             development.
             Optimization and Engineering, 2021.
-            """.strip()
-        )
+            """.strip())
         self._log_citation(config)
 
     def _log_header(self, logger):

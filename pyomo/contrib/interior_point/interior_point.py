@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.contrib.pynumero.interfaces.utils import (
     build_bounds_mask,
@@ -19,7 +17,6 @@ import time
 from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus
 from pyomo.common.timing import HierarchicalTimer
 import enum
-
 
 """
 Interface Requirements
@@ -39,7 +36,7 @@ class InteriorPointStatus(enum.Enum):
     error = 1
 
 
-class LinearSolveContext(object):
+class LinearSolveContext:
     def __init__(
         self,
         interior_point_logger,
@@ -76,7 +73,7 @@ class LinearSolveContext(object):
 #
 #       Define a method for logging IP_reg_info to the linear solver log
 #       Method can be called within linear_solve_context
-class FactorizationContext(object):
+class FactorizationContext:
     def __init__(self, logger):
         # Any reason to pass in a logging level here?
         # ^ So the "regularization log" can have its own outlvl
@@ -126,7 +123,7 @@ class FactorizationContext(object):
         )
 
 
-class InteriorPointSolver(object):
+class InteriorPointSolver:
     """
     Class for creating interior point solvers with different options
     """

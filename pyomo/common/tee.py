@@ -1,21 +1,19 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
-#
+# This module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
+
 import collections.abc
 import io
 import logging
@@ -37,14 +35,17 @@ _poll_rampup = 10
 # ~(13.1 * #threads) seconds
 _poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
 _poll_timeout_deadlock = 100  # seconds
-
+_pipe_buffersize = 1 << 16  # 65536
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
 try:
     if _mswindows:
         from msvcrt import get_osfhandle
-        from win32pipe import PeekNamedPipe
         from win32file import ReadFile
+        from win32pipe import FdCreatePipe, PeekNamedPipe, SetNamedPipeHandleState
+
+        # This constant from Microsoft SetNamedPipeHandleState documentation:
+        PIPE_NOWAIT = 1
     else:
         from select import select
     _peek_available = True
@@ -54,14 +55,53 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class _SignalFlush(object):
+class _SignalFlush:
     def __init__(self, ostream, handle):
         super().__setattr__('_ostream', ostream)
         super().__setattr__('_handle', handle)
 
-    def flush(self):
-        self._ostream.flush()
-        self._handle.flush = True
+    if _mswindows:
+        # Because we are setting the pipe to be non-blocking in Windows,
+        # it is possible that calls to flush() and write() will raise
+        # BlockingIOError.  We will catch and retry.  In addition, we
+        # will chunk the data into pieces that should be well below the
+        # pipe buffer size (so we should avoid deadlock)
+
+        def _retry(self, fcn, *args, retries=10):
+            # Attempting to write to the pipe in the testing harness
+            # occasionally raises OSError ("No space left on disk") or
+            # BlockingIOError (when the write would be truncated).  We
+            # will re-try after a brief pause.
+            failCount = 0
+            while 1:
+                try:
+                    return fcn(*args)
+                except (OSError, BlockingIOError):
+                    failCount += 1
+                    if failCount >= retries:
+                        raise
+                    time.sleep(_poll_rampup_limit / (retries - 1))
+
+        def flush(self):
+            self._retry(self._ostream.flush)
+            self._handle.flush = True
+
+        def write(self, data: str) -> int:
+            ans = 0
+            chunksize = _pipe_buffersize >> 1  # 1/2 the buffer size
+            for i in range(0, len(data), chunksize):
+                ans += self._retry(self._ostream.write, data[i : i + chunksize])
+            return ans
+
+        def writelines(self, data):
+            for line in data:
+                self.write(line)
+
+    else:
+
+        def flush(self):
+            self._ostream.flush()
+            self._handle.flush = True
 
     def __getattr__(self, attr):
         return getattr(self._ostream, attr)
@@ -71,16 +111,32 @@ class _SignalFlush(object):
 
 
 class _AutoFlush(_SignalFlush):
-    def write(self, data):
-        self._ostream.write(data)
-        self.flush()
+    if _mswindows:
+        # Because we define write() and writelines() under windows, we
+        # need to make sure that _AutoFlush calls them
 
-    def writelines(self, data):
-        self._ostream.writelines(data)
-        self.flush()
+        def write(self, data: str) -> int:
+            ans = super().write(data)
+            self.flush()
+            return ans
+
+        def writelines(self, data):
+            super().writelines(data)
+            self.flush()
+
+    else:
+
+        def write(self, data: str) -> int:
+            ans = self._ostream.write(data)
+            self.flush()
+            return ans
+
+        def writelines(self, data):
+            self._ostream.writelines(data)
+            self.flush()
 
 
-class _fd_closer(object):
+class _fd_closer:
     """A context manager to handle closing a specified file descriptor
 
     Ideally we would use `os.fdopen(... closefd=True)`; however, it
@@ -101,7 +157,7 @@ class _fd_closer(object):
         os.close(self.fd)
 
 
-class redirect_fd(object):
+class redirect_fd:
     """Redirect a file descriptor to a new file or file descriptor.
 
     This context manager will redirect the specified file descriptor to
@@ -163,7 +219,7 @@ class redirect_fd(object):
         # inheritable if it is stdout/stderr
         os.dup2(out_fd, self.fd, inheritable=bool(self.std))
 
-        # We no longer need this original file descriptor
+        # We no longer need the original file descriptor
         if not isinstance(self.target, int):
             os.close(out_fd)
 
@@ -189,7 +245,7 @@ class redirect_fd(object):
         os.close(self.original_fd)
 
 
-class capture_output(object):
+class capture_output:
     """Context manager to capture output sent to sys.stdout and sys.stderr
 
     This is a drop-in substitute for PyUtilib's capture_output to
@@ -283,7 +339,9 @@ class capture_output(object):
                 cm.__exit__(et, ev, tb)
             except:
                 _stack = self.context_stack
-                FAIL.append(f"{sys.exc_info()[1]} ({len(_stack)+1}: {cm}@{id(cm):x})")
+                FAIL.append(
+                    f"{sys.exc_info()[0].__name__}: {sys.exc_info()[1]} ({len(_stack)+1}: {cm}@{id(cm):x})"
+                )
         return FAIL
 
     def __enter__(self):
@@ -475,7 +533,7 @@ class capture_output(object):
         return self.__exit__(None, None, None)
 
 
-class _StreamHandle(object):
+class _StreamHandle:
     """A stream handler object used by TeeStream
 
     This handler holds the two sides of the pipe used to communicate
@@ -492,7 +550,33 @@ class _StreamHandle(object):
         self.buffering = buffering
         self.newlines = newline
         self.flush = False
-        self.read_pipe, self.write_pipe = os.pipe()
+        if _peek_available and _mswindows:
+            # This is a re-implementation of os.pipe() on Windows so
+            # that we can explicitly request a larger pipe buffer (64k;
+            # matching *NIX).  Per the docs: on Windows, the pipe buffer
+            # should automatically grow if needed.  However, we have
+            # observed (see #3658) that if it happens, it can cause
+            # deadlock when clients write directly to the underlying
+            # file descriptor.  By explicitly requesting a larger buffer
+            # from the outset, we reduce the likelihood of needing to
+            # reallocate the buffer.
+            self.read_pipe, self.write_pipe = FdCreatePipe(
+                None, _pipe_buffersize, os.O_BINARY if 'b' in mode else os.O_TEXT
+            )
+            self.read_pyhandle = get_osfhandle(self.read_pipe)
+            self.write_pyhandle = get_osfhandle(self.write_pipe)
+            # Because reallocating the pipe buffer can cause deadlock
+            # (at least in the context in which we are using pipes
+            # here), we will set the write pipe to NOWAIT.  This will
+            # guarantee that we don't deadlock, but at the cost of
+            # possibly losing some output (the fprintf() to the FD will
+            # return a number of bytes written less than the string that
+            # was passed.  If the client is ignoring the return value,
+            # then *poof*: the output is truncated)
+            SetNamedPipeHandleState(self.write_pyhandle, PIPE_NOWAIT, None, None)
+        else:
+            self.read_pipe, self.write_pipe = os.pipe()
+
         if not buffering and 'b' not in mode:
             # While we support "unbuffered" behavior in text mode,
             # python does not
@@ -535,9 +619,11 @@ class _StreamHandle(object):
             self.write_file = None
 
         if self.write_pipe is not None:
-            # If someone else has closed the file descriptor, then
-            # python raises an OSError
+            # Close the write side of the pipe: the reader thread is
+            # waiting for the EOF so that it can shut down.
             try:
+                # If someone else has closed the file descriptor, then
+                # python raises an OSError
                 os.close(self.write_pipe)
             except OSError:
                 pass
@@ -550,8 +636,8 @@ class _StreamHandle(object):
         self.decodeIncomingBuffer()
         if ostreams:
             self.writeOutputBuffer(ostreams, True)
+        # Close the read side of the pipe.
         os.close(self.read_pipe)
-
         if self.decoder_buffer:
             logger.error(
                 "Stream handle closed with un-decoded characters "
@@ -643,7 +729,7 @@ class _StreamHandle(object):
                 )
 
 
-class TeeStream(object):
+class TeeStream:
     def __init__(self, *ostreams, encoding=None, buffering=-1):
         self.ostreams = ostreams
         self.encoding = encoding
@@ -680,7 +766,8 @@ class TeeStream(object):
         # Note that is it VERY important to close file handles in the
         # same thread that opens it.  If you don't you can see deadlocks
         # and a peculiar error ("libgcc_s.so.1 must be installed for
-        # pthread_cancel to work"; see https://bugs.python.org/issue18748)
+        # pthread_cancel to work"; see
+        # https://github.com/python/cpython/issues/62948)
         #
         # To accomplish this, we will keep two handle lists: one is the
         # set of "active" handles that the (merged reader) thread is
@@ -827,7 +914,7 @@ class TeeStream(object):
             if _mswindows:
                 for handle in list(handles):
                     try:
-                        pipe = get_osfhandle(handle.read_pipe)
+                        pipe = handle.read_pyhandle
                         numAvail = PeekNamedPipe(pipe, 0)[1]
                         if numAvail:
                             result, new_data = ReadFile(pipe, numAvail, None)

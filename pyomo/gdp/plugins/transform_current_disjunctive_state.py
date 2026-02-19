@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
@@ -290,7 +288,7 @@ class TransformCurrentDisjunctiveState(Transformation):
             disjunction.activate()
         for disjunct in disjunction.disjuncts:
             if disjunct in reverse_token['_disjuncts']:
-                (fixed, val) = reverse_token['_disjuncts'][disjunct]
+                fixed, val = reverse_token['_disjuncts'][disjunct]
                 disjunct.parent_block().reclassify_component_type(disjunct, Disjunct)
                 disjunct.activate()
                 disjunct.indicator_var = val

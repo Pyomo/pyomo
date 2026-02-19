@@ -1,20 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
+# This module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
 
 """A module of utilities for collecting timing information
 
@@ -44,7 +42,7 @@ _construction_logger = logging.getLogger('pyomo.common.timing.construction')
 _transform_logger = logging.getLogger('pyomo.common.timing.transformation')
 
 
-class report_timing(object):
+class report_timing:
     def __init__(self, stream=True, level=logging.INFO):
         """Set reporting of Pyomo timing information.
 
@@ -99,7 +97,7 @@ class report_timing(object):
         self.reset()
 
 
-class GeneralTimer(object):
+class GeneralTimer:
     def __init__(self, fmt, data):
         self.fmt = fmt
         self.data = data
@@ -119,7 +117,7 @@ class GeneralTimer(object):
         return self.fmt % self.data
 
 
-class ConstructionTimer(object):
+class ConstructionTimer:
     __slots__ = ('obj', 'timer')
     msg = "%6.*f seconds to construct %s %s%s"
     in_progress = "ConstructionTimer object for %s %s; %0.3f elapsed seconds"
@@ -184,7 +182,7 @@ class ConstructionTimer(object):
         )
 
 
-class TransformationTimer(object):
+class TransformationTimer:
     __slots__ = ('obj', 'mode', 'timer')
     msg = "%6.*f seconds to apply Transformation %s%s"
     in_progress = "TransformationTimer object for %s%s; %0.3f elapsed seconds"
@@ -233,7 +231,7 @@ class TransformationTimer(object):
 default_timer = time.perf_counter
 
 
-class TicTocTimer(object):
+class TicTocTimer:
     """A class to calculate and report elapsed time.
 
     Examples:
@@ -506,7 +504,7 @@ def _clear_timers_except(timer, to_retain):
             timer.timers.pop(key)
 
 
-class _HierarchicalHelper(object):
+class _HierarchicalHelper:
     def __init__(self):
         self.tic_toc = TicTocTimer()
         self.timers = dict()
@@ -589,7 +587,7 @@ class _HierarchicalHelper(object):
         _clear_timers_except(self, to_retain)
 
 
-class HierarchicalTimer(object):
+class HierarchicalTimer:
     """A class for collecting and displaying hierarchical timing
     information
 

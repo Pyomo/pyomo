@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import re
@@ -32,7 +30,6 @@ from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
-
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -239,10 +236,13 @@ class GurobiDirect(DirectSolver):
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
 
-        if self._tee:
-            self._solver_model.setParam('OutputFlag', 1)
-        else:
-            self._solver_model.setParam('OutputFlag', 0)
+        # We would like to just set OutputFlag to turn off the console
+        # log, but that prevents users from using the Gurobi LogFile
+        # option (see #3589 / #3716).  BUT just setting LogToConsole
+        # triggers Gurobi to write a message to the console.  We will
+        # capture that message here:
+        with capture_output(capture_fd=True):
+            self._solver_model.setParam('LogToConsole', int(bool(self._tee)))
 
         if self._keepfiles:
             # Only save log file when the user wants to keep it.

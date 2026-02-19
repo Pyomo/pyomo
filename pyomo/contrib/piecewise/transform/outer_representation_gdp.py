@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.dependencies.numpy as np
 from pyomo.common.dependencies.scipy import spatial
@@ -43,7 +41,7 @@ class OuterRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
            targets must be Blocks and/or PiecewiseLinearFunctions.
         2) With 'descend_into_expressions' True. This is less computationally
            efficient, but will respect hierarchical structure by finding
-           uses of PiecewiseLinearFunctions in Constraint and Obective
+           uses of PiecewiseLinearFunctions in Constraint and Objective
            expressions and putting their transformed counterparts on the same
            parent Block as the component owning their parent expression. In
            this mode, targets must be Blocks, Constraints, and/or Objectives.
@@ -105,7 +103,7 @@ class OuterRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
 
             linear_func_expr = linear_func(*pw_expr.args)
             disj.set_substitute = Constraint(expr=substitute_var == linear_func_expr)
-            (lb, ub) = compute_bounds_on_expr(linear_func_expr)
+            lb, ub = compute_bounds_on_expr(linear_func_expr)
             if lb is not None and lb < substitute_var_lb:
                 substitute_var_lb = lb
             if ub is not None and ub > substitute_var_ub:

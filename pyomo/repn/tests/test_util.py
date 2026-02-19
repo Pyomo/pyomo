@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import math
@@ -94,7 +92,7 @@ class TestRepnUtils(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "NumPy is not available")
     def test_ftoa_precision(self):
         log = StringIO()
-        with LoggingIntercept(log, 'pyomo.core', logging.WARNING):
+        with LoggingIntercept(log, 'pyomo', logging.WARNING):
             f = np.longdouble('1.1234567890123456789')
             a = ftoa(f)
         self.assertEqual(a, '1.1234567890123457')
@@ -254,7 +252,7 @@ class TestRepnUtils(unittest.TestCase):
             pyomo.repn.util.HALT_ON_EVALUATION_ERROR = _halt
 
     def test_complex_number_error(self):
-        class Visitor(object):
+        class Visitor:
             pass
 
         visitor = Visitor()
@@ -392,7 +390,7 @@ class TestRepnUtils(unittest.TestCase):
         )
 
     def test_initialize_var_map_from_column_order(self):
-        class MockConfig(object):
+        class MockConfig:
             column_order = None
             file_determinism = FileDeterminism(0)
 
@@ -520,7 +518,7 @@ class TestRepnUtils(unittest.TestCase):
         self.assertEqual(MockConfig.column_order, ref)
 
     def test_ordered_active_constraints(self):
-        class MockConfig(object):
+        class MockConfig:
             row_order = None
             file_determinism = FileDeterminism(0)
 
@@ -737,7 +735,7 @@ class TestRepnUtils(unittest.TestCase):
             def _before_named_expression(visitor, child):
                 return child
 
-        class VisitorTester(object):
+        class VisitorTester:
             def check_constant(self, value, node):
                 return value
 

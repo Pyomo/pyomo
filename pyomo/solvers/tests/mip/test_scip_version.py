@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import subprocess
 import sys
@@ -255,7 +253,7 @@ class Test(unittest.TestCase):
         self.assertEqual(self.executable_paths["scipampl"], args[0])
         # check for nl file existence
         self.assertTrue(exists(args[1]))
-        (root, ext) = splitext(args[1])
+        root, ext = splitext(args[1])
         self.assertEqual(".nl", ext)
         # check proper sol filename
         self.assertEqual(root + ".sol", cm.exception.filename)

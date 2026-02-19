@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 import copy
 import itertools
 
@@ -105,11 +103,11 @@ def apply_basic_step(disjunctions_or_constraints):
         ans.disjuncts[idx].improper_constraints = ConstraintList()
         for constr in constraints:
             if constr.is_indexed():
-                for indx in constr:
+                for j in constr:
                     ans.disjuncts[idx].improper_constraints.add(
-                        (constr[indx].lower, constr[indx].body, constr[indx].upper)
+                        (constr[j].lower, constr[j].body, constr[j].upper)
                     )
-                    constr[indx].deactivate()
+                    constr[j].deactivate()
             # need this so that we can take an improper basic step with a
             # ConstraintData
             else:

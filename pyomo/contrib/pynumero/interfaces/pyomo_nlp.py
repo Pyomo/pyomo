@@ -1,12 +1,11 @@
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 """
 This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
@@ -1185,7 +1184,7 @@ class PyomoGreyBoxNLP(NLP):
                 )
 
 
-class _ExternalGreyBoxModelHelper(object):
+class _ExternalGreyBoxModelHelper:
     def __init__(self, ex_grey_box_block, vardata_to_idx, con_offset):
         """This helper takes an ExternalGreyBoxModel and provides the residual,
         Jacobian, and Hessian computation mapped to the correct variable space.

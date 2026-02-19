@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
@@ -17,7 +15,15 @@ from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 
 ipopt_available = pyo.SolverFactory('ipopt').available(exception_flag=False)
 
-for mip_name in ('cplex_direct', 'gurobi_direct', 'gurobi', 'cplex', 'glpk', 'cbc'):
+for mip_name in (
+    'cplex_direct',
+    'gurobi_direct',
+    'gurobi',
+    'cplex',
+    'glpk',
+    'cbc',
+    'highs',
+):
     mip_available = pyo.SolverFactory(mip_name).available(exception_flag=False)
     if mip_available:
         break
@@ -29,7 +35,7 @@ class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
     @unittest.skipIf(not mip_available, 'MIP solver is not available.')
     def test_farmer(self):
-        class Farmer(object):
+        class Farmer:
             def __init__(self):
                 self.crops = ['WHEAT', 'CORN', 'SUGAR_BEETS']
                 self.total_acreage = 500
@@ -252,7 +258,7 @@ class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
     @unittest.skipIf(not mip_available, 'MIP solver is not available.')
     def test_four_scen_farmer(self):
-        class FourScenFarmer(object):
+        class FourScenFarmer:
             def __init__(self):
                 self.crops = ['WHEAT', 'CORN', 'SUGAR_BEETS']
                 self.total_acreage = 500

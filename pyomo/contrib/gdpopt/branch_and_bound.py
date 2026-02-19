@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections import namedtuple
 from heapq import heappush, heappop
@@ -92,15 +90,12 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         return super().solve(model, **kwds)
 
     def _log_citation(self, config):
-        config.logger.info(
-            "\n"
-            + """- LBB algorithm:
+        config.logger.info("\n" + """- LBB algorithm:
         Lee, S; Grossmann, IE.
         New algorithms for nonlinear generalized disjunctive programming.
         Comp. and Chem. Eng. 2000, 24, 2125-2141.
         DOI: 10.1016/S0098-1354(00)00581-0.
-        """.strip()
-        )
+        """.strip())
 
     def _solve_gdp(self, model, config):
         self.explored_nodes = 0

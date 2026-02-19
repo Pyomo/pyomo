@@ -1,17 +1,14 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 # -*- coding: UTF-8 -*-
 """Transformation to remove zero terms from constraints."""
-
 
 from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint
@@ -62,7 +59,7 @@ class RemoveZeroTerms(IsomorphicTransformation):
 
             original_expr = constr.expr
             # get the index of all nonzero coefficient variables
-            nonzero_vars_indx = [
+            nonzero_vars_idx = [
                 i
                 for i, _ in enumerate(repn.linear_vars)
                 if not repn.linear_coefs[i] == 0
@@ -73,8 +70,7 @@ class RemoveZeroTerms(IsomorphicTransformation):
             # nonzero coefficients
             constr_body = (
                 quicksum(
-                    repn.linear_coefs[i] * repn.linear_vars[i]
-                    for i in nonzero_vars_indx
+                    repn.linear_coefs[i] * repn.linear_vars[i] for i in nonzero_vars_idx
                 )
                 + const
             )

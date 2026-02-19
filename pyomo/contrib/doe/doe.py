@@ -1,29 +1,28 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
-#  Initiative (CCSI), and is copyright (c) 2022 by the software owners:
-#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
-#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
-#  Battelle Memorial Institute, University of Notre Dame,
-#  The University of Pittsburgh, The University of Texas at Austin,
-#  University of Toledo, West Virginia University, et al. All rights reserved.
+# Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
+# Initiative (CCSI), and is copyright (c) 2022 by the software owners:
+# TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
+# Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
+# Battelle Memorial Institute, University of Notre Dame,
+# The University of Pittsburgh, The University of Texas at Austin,
+# University of Toledo, West Virginia University, et al. All rights reserved.
 #
-#  NOTICE. This Software was developed under funding from the
-#  U.S. Department of Energy and the U.S. Government consequently retains
-#  certain rights. As such, the U.S. Government has been granted for itself
-#  and others acting on its behalf a paid-up, nonexclusive, irrevocable,
-#  worldwide license in the Software to reproduce, distribute copies to the
-#  public, prepare derivative works, and perform publicly and display
-#  publicly, and to permit other to do so.
-#  ___________________________________________________________________________
+# NOTICE. This Software was developed under funding from the
+# U.S. Department of Energy and the U.S. Government consequently retains
+# certain rights. As such, the U.S. Government has been granted for itself
+# and others acting on its behalf a paid-up, nonexclusive, irrevocable,
+# worldwide license in the Software to reproduce, distribute copies to the
+# public, prepare derivative works, and perform publicly and display
+# publicly, and to permit other to do so.
+# ____________________________________________________________________________________
 
 from enum import Enum
 from itertools import permutations, product
@@ -38,11 +37,18 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pathlib,
     matplotlib as plt,
+    scipy_available,
 )
-from pyomo.common.modeling import unique_component_name
+
+from pyomo.common.errors import DeveloperError
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
+
+if numpy_available and scipy_available:
+    from pyomo.contrib.doe.grey_box_utilities import FIMExternalGreyBox
+
+    from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
@@ -55,10 +61,12 @@ from pyomo.opt import SolverStatus
 
 
 class ObjectiveLib(Enum):
-    determinant = "determinant"
-    trace = "trace"
-    minimum_eigenvalue = "minimum_eigenvalue"
-    zero = "zero"
+    determinant = "determinant"  # det(FIM), D-optimality
+    trace = "trace"  # trace(inv(FIM)), A-optimality
+    pseudo_trace = "pseudo_trace"  # trace(FIM), pseudo-A-optimality
+    minimum_eigenvalue = "minimum_eigenvalue"  # min(eig(FIM)), E-optimality
+    condition_number = "condition_number"  # cond(FIM), ME-optimality
+    zero = "zero"  # Constant zero objective, useful for initialization and debugging
 
 
 class FiniteDifferenceStep(Enum):
@@ -74,6 +82,7 @@ class DesignOfExperiments:
         fd_formula="central",
         step=1e-3,
         objective_option="determinant",
+        use_grey_box_objective=False,
         scale_constant_value=1.0,
         scale_nominal_param_value=False,
         prior_FIM=None,
@@ -81,15 +90,18 @@ class DesignOfExperiments:
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
         solver=None,
+        grey_box_solver=None,
         tee=False,
+        grey_box_tee=False,
         get_labeled_model_args=None,
         logger_level=logging.WARNING,
+        improve_cholesky_roundoff_error=False,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     ):
-        """
-        This package enables model-based design of experiments analysis with Pyomo.
-        Both direct optimization and enumeration modes are supported.
+        """This package enables model-based design of experiments analysis
+        with Pyomo.  Both direct optimization and enumeration modes are
+        supported.
 
         The package has been refactored from its original form as of August 24. See
         the documentation for more information.
@@ -97,39 +109,56 @@ class DesignOfExperiments:
         Parameters
         ----------
         experiment:
-            Experiment object that holds the model and labels all the components. The object
-            should have a ``get_labeled_model`` where a model is returned with the following
-            labeled sets: ``unknown_parameters``, ``experimental_inputs``, ``experimental_outputs``
+            Experiment object that holds the model and labels all the components. The
+            object should have a ``get_labeled_model`` where a model is returned with
+            the following labeled sets:
+
+              - ``unknown_parameters``,
+              - ``experimental_inputs``,
+              - ``experimental_outputs``
+
         fd_formula:
-            Finite difference formula for computing the sensitivity matrix. Must be one of
-            [``central``, ``forward``, ``backward``], default: ``central``
+            Finite difference formula for computing the sensitivity matrix. Must be
+            one of [``central``, ``forward``, ``backward``], default: ``central``
         step:
             Relative step size for the finite difference formula.
             default: 1e-3
         objective_option:
-            String representation of the objective option. Current available options are:
-            ``determinant`` (for determinant, or D-optimality) and ``trace`` (for trace or
-            A-optimality)
+            String representation of the objective option. Current available options
+            are:
+            - ``determinant`` (for determinant, or D-optimality),
+            - ``trace`` (for trace of covariance matrix, or A-optimality),
+            - ``pseudo_trace`` (for trace of Fisher Information Matrix(FIM), or pseudo A-optimality),
+            - ``minimum_eigenvalue``, (for E-optimality), or ``condition_number`` (for ME-optimality)
+            Note: E-optimality and ME-optimality are only supported when using the
+            grey box objective (i.e., ``grey_box_solver`` is True)
+            default: ``determinant``
+        use_grey_box_objective:
+            Boolean of whether or not to use the grey-box version of the objective
+            function. True to use grey box, False to use standard.
+            Default: False (do not use grey box)
         scale_constant_value:
-            Constant scaling for the sensitivity matrix. Every element will be multiplied by this
-            scaling factor.
+            Constant scaling for the sensitivity matrix. Every element will be
+            multiplied by this scaling factor.
             default: 1
         scale_nominal_param_value:
-            Boolean for whether or not to scale the sensitivity matrix by the nominal parameter
-            values. Every column of the sensitivity matrix will be divided by the respective
-            nominal parameter value.
+            Boolean for whether or not to scale the sensitivity matrix by the
+            nominal parameter values. Every column of the sensitivity matrix
+            will be divided by the respective nominal parameter value.
             default: False
         prior_FIM:
-            2D numpy array representing information from prior experiments. If no value is given,
-            the assumed prior will be a matrix of zeros. This matrix will be assumed to be scaled
-            as the user has specified (i.e., if scale_nominal_param_value is true, we will assume
-            the FIM provided here has been scaled by the parameter values)
+            2D numpy array representing information from prior experiments. If
+            no value is given, the assumed prior will be a matrix of zeros. This
+            matrix will be assumed to be scaled as the user has specified (i.e.,
+            if scale_nominal_param_value is true, we will assume the FIM provided
+            here has been scaled by the parameter values)
         jac_initial:
             2D numpy array as the initial values for the sensitivity matrix.
         fim_initial:
             2D numpy array as the initial values for the FIM.
         L_diagonal_lower_bound:
-            Lower bound for the values of the lower triangular Cholesky factorization matrix.
+            Lower bound for the values of the lower triangular Cholesky factorization
+            matrix.
             default: 1e-7
         solver:
             A ``solver`` object specified by the user, default=None.
@@ -137,18 +166,25 @@ class DesignOfExperiments:
         tee:
             Solver option to be passed for verbose output.
         get_labeled_model_args:
-            Additional arguments for the ``get_labeled_model`` function on the Experiment object.
+            Additional arguments for the ``get_labeled_model`` function on the
+            Experiment object.
+        improve_cholesky_roundoff_error:
+            Boolean value of whether or not to improve round-off error. If True, it will
+            apply M[i,i] >= L[i,j]^2. Where, M is the FIM and L is the lower triangular matrix
+            from Cholesky factorization. If the round-off error is not significant, this
+            option can be turned off to improve performance by skipping this constraint.
         _Cholesky_option:
-            Boolean value of whether or not to use the cholesky factorization to compute the
-            determinant for the D-optimality criteria. This parameter should not be changed
-            unless the user intends to make performance worse (i.e., compare an existing tool
-            that uses the full FIM to this algorithm)
+            Boolean value of whether or not to use the cholesky factorization to
+            compute the determinant for the D-optimality criteria. This parameter
+            should not be changed unless the user intends to make performance worse
+            (i.e., compare an existing tool that uses the full FIM to this algorithm)
         _only_compute_fim_lower:
-            If True, only the lower triangle of the FIM is computed. This parameter should not
-            be changed unless the user intends to make performance worse (i.e., compare an
-            existing tool that uses the full FIM to this algorithm)
+            If True, only the lower triangle of the FIM is computed. This parameter
+            should not be changed unless the user intends to make performance worse
+            (i.e., compare an existing tool that uses the full FIM to this algorithm)
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
+
         """
         if experiment is None:
             raise ValueError("Experiment object must be provided to perform DoE.")
@@ -168,6 +204,7 @@ class DesignOfExperiments:
 
         # Set the objective type and scaling options:
         self.objective_option = ObjectiveLib(objective_option)
+        self.use_grey_box = use_grey_box_objective
 
         self.scale_constant_value = scale_constant_value
         self.scale_nominal_param_value = scale_nominal_param_value
@@ -194,6 +231,17 @@ class DesignOfExperiments:
             self.solver = solver
 
         self.tee = tee
+        self.grey_box_tee = grey_box_tee
+
+        if grey_box_solver:
+            self.grey_box_solver = grey_box_solver
+        else:
+            grey_box_solver = pyo.SolverFactory("cyipopt")
+            grey_box_solver.config.options["linear_solver"] = "ma57"
+            grey_box_solver.config.options['tol'] = 1e-4
+            grey_box_solver.config.options['mu_strategy'] = "monotone"
+
+            self.grey_box_solver = grey_box_solver
 
         # Set get_labeled_model_args as an empty dict if no arguments are passed
         if get_labeled_model_args is None:
@@ -207,6 +255,9 @@ class DesignOfExperiments:
         # Set the private options if passed (only developers should pass these)
         self.Cholesky_option = _Cholesky_option
         self.only_compute_fim_lower = _only_compute_fim_lower
+
+        # To improve round-off error in Cholesky-based objectives
+        self.improve_cholesky_roundoff_error = improve_cholesky_roundoff_error
 
         # model attribute to avoid rebuilding models
         self.model = pyo.ConcreteModel()  # Build empty model
@@ -250,17 +301,21 @@ class DesignOfExperiments:
         else:
             # TODO: Add safe naming when a model is passed by the user.
             # doe_block = pyo.Block()
-            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # doe_block_name = unique_component_name(model,
+            #                                        "design_of_experiments_block")
             # model.add_component(doe_block_name, doe_block)
             pass
 
-        # ToDo: potentially work with this for more complicated models
+        # TODO: potentially work with this for more complicated models
         # Create the full DoE model (build scenarios for F.D. scheme)
         if not self._built_scenarios:
             self.create_doe_model(model=model)
 
         # Add the objective function to the model
-        self.create_objective_function(model=model)
+        if self.use_grey_box:
+            self.create_grey_box_objective_function(model=model)
+        else:
+            self.create_objective_function(model=model)
 
         # Track time required to build the DoE model
         build_time = sp_timer.toc(msg=None)
@@ -268,9 +323,12 @@ class DesignOfExperiments:
             "Successfully built the DoE model.\nBuild time: %0.1f seconds" % build_time
         )
 
-        # Solve the square problem first to initialize the fim and
-        # sensitivity constraints
-        # Deactivate objective expression and objective constraints (on a block), and fix design variables
+        # Solve the square problem first to
+        # initialize the fim and
+        # sensitivity constraints. First, we
+        # Deactivate objective expression and
+        # objective constraints (on a block),
+        # and fix the design variables.
         model.objective.deactivate()
         model.obj_cons.deactivate()
         for comp in model.scenario_blocks[0].experiment_inputs:
@@ -282,15 +340,18 @@ class DesignOfExperiments:
         # if pyo.check_optimal_termination(res):
         #     model.load_solution(res)
         # else:
-        #     # The solver was unsuccessful, might want to warn the user or terminate gracefully, etc.
+        #     # The solver was unsuccessful, might want to warn the user
+        #     # or terminate gracefully, etc.
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
         self.solver.solve(model, tee=self.tee)
 
         # Track time to initialize the DoE model
         initialization_time = sp_timer.toc(msg=None)
         self.logger.info(
-            "Successfully initialized the DoE model.\nInitialization time: %0.1f seconds"
-            % initialization_time
+            (
+                "Successfully initialized the DoE model."
+                "\nInitialization time: %0.1f seconds" % initialization_time
+            )
         )
 
         model.dummy_obj.deactivate()
@@ -300,6 +361,33 @@ class DesignOfExperiments:
             comp.unfix()
         model.objective.activate()
         model.obj_cons.activate()
+
+        if self.use_grey_box:
+            # Initialize grey box inputs to be fim values currently
+            for i in model.parameter_names:
+                for j in model.parameter_names:
+                    if list(model.parameter_names).index(i) >= list(
+                        model.parameter_names
+                    ).index(j):
+                        model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
+                            pyo.value(model.fim[(i, j)])
+                        )
+            # Set objective value
+            if self.objective_option == ObjectiveLib.trace:
+                trace_val = np.trace(np.linalg.pinv(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
+            elif self.objective_option == ObjectiveLib.determinant:
+                det_val = np.linalg.det(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
+                    np.log(det_val)
+                )
+            elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
+            elif self.objective_option == ObjectiveLib.condition_number:
+                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
+                cond_number = np.log(np.abs(np.max(eig) / np.min(eig)))
+                model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
 
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):
@@ -313,7 +401,8 @@ class DesignOfExperiments:
                 (len(model.parameter_names), len(model.parameter_names))
             )
 
-            # Need to compute the full FIM before initializing the Cholesky factorization
+            # Need to compute the full FIM before
+            # initializing the Cholesky factorization
             if self.only_compute_fim_lower:
                 fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
 
@@ -323,7 +412,8 @@ class DesignOfExperiments:
             min_eig = np.min(np.linalg.eigvals(fim_np))
 
             if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-                # Raise the minimum eigenvalue to at least _SMALL_TOLERANCE_DEFINITENESS
+                # Raise the minimum eigenvalue to at
+                # least _SMALL_TOLERANCE_DEFINITENESS
                 jitter = np.min(
                     [
                         -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
@@ -342,24 +432,45 @@ class DesignOfExperiments:
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L_vals_sq[i, j]
 
+            # Initialize the inverse of L if it exists
+            if hasattr(model, "L_inv"):
+                L_inv_vals = np.linalg.inv(L_vals_sq)
+
+                for i, c in enumerate(model.parameter_names):
+                    for j, d in enumerate(model.parameter_names):
+                        if i >= j:
+                            model.L_inv[c, d].value = L_inv_vals[i, j]
+                        else:
+                            model.L_inv[c, d].value = 0.0
+                # Initialize the cov_trace if it exists
+                if hasattr(model, "cov_trace"):
+                    initial_cov_trace = np.sum(L_inv_vals**2)
+                    model.cov_trace.value = initial_cov_trace
+
         if hasattr(model, "determinant"):
             model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
 
         # Solve the full model, which has now been initialized with the square solve
-        res = self.solver.solve(model, tee=self.tee)
+        if self.use_grey_box:
+            res = self.grey_box_solver.solve(model, tee=self.grey_box_tee)
+        else:
+            res = self.solver.solve(model, tee=self.tee)
 
         # Track time used to solve the DoE model
         solve_time = sp_timer.toc(msg=None)
 
         self.logger.info(
-            "Successfully optimized experiment.\nSolve time: %0.1f seconds" % solve_time
+            (
+                "Successfully optimized experiment."
+                "\nSolve time: %0.1f seconds" % solve_time
+            )
         )
         self.logger.info(
             "Total time for build, initialization, and solve: %0.1f seconds"
             % (build_time + initialization_time + solve_time)
         )
 
-        #
+        # Avoid accidental carry-over of FIM information
         fim_local = self.get_FIM()
 
         # Make sure stale results don't follow the DoE object instance
@@ -367,6 +478,11 @@ class DesignOfExperiments:
 
         self.results["Solver Status"] = res.solver.status
         self.results["Termination Condition"] = res.solver.termination_condition
+        if type(res.solver.message) is str:
+            results_message = res.solver.message
+        elif type(res.solver.message) is bytes:
+            results_message = res.solver.message.decode("utf-8")
+        self.results["Termination Message"] = results_message
 
         # Important quantities for optimal design
         self.results["FIM"] = fim_local
@@ -396,7 +512,8 @@ class DesignOfExperiments:
 
         # Saving some stats on the FIM for convenience
         self.results["Objective expression"] = str(self.objective_option).split(".")[-1]
-        self.results["log10 A-opt"] = np.log10(np.trace(fim_local))
+        self.results["log10 A-opt"] = np.log10(np.trace(np.linalg.inv(fim_local)))
+        self.results["log10 pseudo A-opt"] = np.log10(np.trace(fim_local))
         self.results["log10 D-opt"] = np.log10(np.linalg.det(fim_local))
         self.results["log10 E-opt"] = np.log10(min(np.linalg.eig(fim_local)[0]))
         self.results["FIM Condition Number"] = np.linalg.cond(fim_local)
@@ -412,8 +529,8 @@ class DesignOfExperiments:
         self.results["Finite Difference Step"] = self.step
         self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
 
-        # ToDo: Add more useful fields to the results object?
-        # ToDo: Add MetaData from the user to the results object? Or leave to the user?
+        # TODO: Add more useful fields to the results object?
+        # TODO: Add MetaData from the user to the results object? Or leave to the user?
 
         # If the user specifies to save the file, do it here as a json
         if results_file is not None:
@@ -453,7 +570,8 @@ class DesignOfExperiments:
         else:
             # TODO: Add safe naming when a model is passed by the user.
             # doe_block = pyo.Block()
-            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # doe_block_name = unique_component_name(model,
+            #                                        "design_of_experiments_block")
             # model.add_component(doe_block_name, doe_block)
             # self.compute_FIM_model = model
             pass
@@ -485,8 +603,9 @@ class DesignOfExperiments:
             self._computed_FIM = self.kaug_FIM
         else:
             raise ValueError(
-                "The method provided, {}, must be either `sequential` or `kaug`".format(
-                    method
+                (
+                    "The method provided, {}, must be either `sequential` "
+                    "or `kaug`".format(method)
                 )
             )
 
@@ -513,7 +632,8 @@ class DesignOfExperiments:
             model.del_component(model.parameter_scenarios)
         model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
-        # Populate parameter scenarios, and scenario inds based on finite difference scheme
+        # Populate parameter scenarios, and scenario
+        # inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
             model.parameter_scenarios.update(
                 (2 * ind, k) for ind, k in enumerate(model.unknown_parameters.keys())
@@ -532,8 +652,9 @@ class DesignOfExperiments:
             )
             model.scenarios = range(len(model.unknown_parameters) + 1)
         else:
-            raise AttributeError(
-                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+            raise DeveloperError(
+                "Finite difference option not recognized. Please "
+                "contact the developers as you should not see this error."
             )
 
         # Fix design variables
@@ -573,13 +694,17 @@ class DesignOfExperiments:
                 res = self.solver.solve(model, tee=self.tee)
                 pyo.assert_optimal_termination(res)
             except:
-                # TODO: Make error message more verbose, i.e., add unknown parameter values so the
-                # user can try to solve the model instance outside of the pyomo.DoE framework.
+                # TODO: Make error message more verbose,
+                #       (i.e., add unknown parameter values so the user
+                #       can try to solve the model instance outside of
+                #       the pyomo.DoE framework)
                 raise RuntimeError(
-                    "Model from experiment did not solve appropriately. Make sure the model is well-posed."
+                    "Model from experiment did not solve appropriately."
+                    " Make sure the model is well-posed."
                 )
 
-            # Reset value of parameter to default value before computing finite difference perturbation
+            # Reset value of parameter to default value
+            # before computing finite difference perturbation
             param.set_value(model.unknown_parameters[param])
 
             # Extract the measurement values for the scenario and append
@@ -600,7 +725,8 @@ class DesignOfExperiments:
         # Counting variable for loop
         i = 0
 
-        # Loop over parameter values and grab correct columns for finite difference calculation
+        # Loop over parameter values and grab correct
+        # columns for finite difference calculation
 
         for k, v in model.unknown_parameters.items():
             curr_step = v * self.step
@@ -616,7 +742,8 @@ class DesignOfExperiments:
                 col_1 = 0
                 col_2 = i
 
-            # If scale_nominal_param_value is active, scale by nominal parameter value (v)
+            # If scale_nominal_param_value is active, scale
+            # by nominal parameter value (v)
             scale_factor = (1.0 / curr_step) * self.scale_constant_value
             if self.scale_nominal_param_value:
                 scale_factor *= v
@@ -629,12 +756,14 @@ class DesignOfExperiments:
             # Increment the count
             i += 1
 
-        # ToDo: As more complex measurement error schemes are put in place, this needs to change
-        # Add independent (non-correlated) measurement error for FIM calculation
+        # TODO: As more complex measurement error schemes
+        #       are put in place, this needs to change
+        # Add independent (non-correlated) measurement
+        # error for FIM calculation
         cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
         count = 0
         for k, v in model.measurement_error.items():
-            cov_y[count, count] = 1 / v
+            cov_y[count, count] = 1 / v**2
             count += 1
 
         # Compute and record FIM
@@ -725,10 +854,10 @@ class DesignOfExperiments:
         cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
         count = 0
         for k, v in model.measurement_error.items():
-            cov_y[count, count] = 1 / v
+            cov_y[count, count] = 1 / v**2
             count += 1
 
-        # ToDo: need to add a covariance matrix for measurements (sigma inverse)
+        # TODO: need to add a covariance matrix for measurements (sigma inverse)
         # i.e., cov_y = self.cov_y or model.cov_y
         # Still deciding where this would be best.
 
@@ -756,19 +885,23 @@ class DesignOfExperiments:
         else:
             # TODO: Add safe naming when a model is passed by the user.
             # doe_block = pyo.Block()
-            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # doe_block_name = unique_component_name(model,
+            #                                        "design_of_experiments_block")
             # model.add_component(doe_block_name, doe_block)
             pass
 
-        # Developer recommendation: use the Cholesky decomposition for D-optimality
-        # The explicit formula is available for benchmarking purposes and is NOT recommended
+        # Developer recommendation: use the Cholesky
+        # decomposition for D-optimality. The explicit
+        # formula is available for benchmarking purposes
+        # and is NOT recommended.
         if (
             self.only_compute_fim_lower
             and self.objective_option == ObjectiveLib.determinant
             and not self.Cholesky_option
         ):
             raise ValueError(
-                "Cannot compute determinant with explicit formula if only_compute_fim_lower is True."
+                "Cannot compute determinant with explicit formula "
+                "if only_compute_fim_lower is True."
             )
 
         # Generate scenarios for finite difference formulae
@@ -807,7 +940,8 @@ class DesignOfExperiments:
             dict_jac_initialize = {}
             for i, bu in enumerate(model.output_names):
                 for j, un in enumerate(model.parameter_names):
-                    # Jacobian is a numpy array, rows are experimental outputs, columns are unknown parameters
+                    # Jacobian is a numpy array, rows are experimental
+                    # outputs, columns are unknown parameters
                     dict_jac_initialize[(bu, un)] = self.jac_initial[i][j]
 
         # Initialize the Jacobian matrix
@@ -817,8 +951,10 @@ class DesignOfExperiments:
                 return dict_jac_initialize[(i, j)]
             # Otherwise initialize to 0.1 (which is an arbitrary non-zero value)
             else:
-                raise AttributeError(
-                    "Jacobian being initialized when the jac_initial attribute is None. Please contact the developers as you should not see this error."
+                raise DeveloperError(
+                    "Jacobian being initialized when the jac_initial attribute "
+                    "is None. Please contact the developers as you should not "
+                    "see this error."
                 )
 
         model.sensitivity_jacobian = pyo.Var(
@@ -828,29 +964,62 @@ class DesignOfExperiments:
         # Initialize the FIM
         if self.fim_initial is not None:
             dict_fim_initialize = {
-                (bu, un): self.fim_initial[i][j]
+                (bu, un): self.fim_initial[i, j]
                 for i, bu in enumerate(model.parameter_names)
                 for j, un in enumerate(model.parameter_names)
             }
+            if self.objective_option == ObjectiveLib.trace:
+                fim_initial_inv = np.linalg.pinv(self.fim_initial)
+                dict_fim_inv_initialize = {
+                    (bu, un): fim_initial_inv[i, j]
+                    for i, bu in enumerate(model.parameter_names)
+                    for j, un in enumerate(model.parameter_names)
+                }
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
+
+        def initialize_fim_inv(m, j, d):
+            return dict_fim_inv_initialize[(j, d)]
 
         if self.fim_initial is not None:
             model.fim = pyo.Var(
                 model.parameter_names, model.parameter_names, initialize=initialize_fim
             )
+            if self.objective_option == ObjectiveLib.trace:
+                model.fim_inv = pyo.Var(
+                    model.parameter_names,
+                    model.parameter_names,
+                    initialize=initialize_fim_inv,
+                )
         else:
             model.fim = pyo.Var(
                 model.parameter_names, model.parameter_names, initialize=identity_matrix
             )
+            if self.objective_option == ObjectiveLib.trace:
+                model.fim_inv = pyo.Var(
+                    model.parameter_names,
+                    model.parameter_names,
+                    initialize=identity_matrix,
+                )
 
         # To-Do: Look into this functionality.....
         # if cholesky, define L elements as variables
-        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+        if self.Cholesky_option and self.objective_option in (
+            ObjectiveLib.determinant,
+            ObjectiveLib.trace,
+        ):
             model.L = pyo.Var(
                 model.parameter_names, model.parameter_names, initialize=identity_matrix
             )
+
+            # If trace objective, also need L inverse
+            if self.objective_option == ObjectiveLib.trace:
+                model.L_inv = pyo.Var(
+                    model.parameter_names,
+                    model.parameter_names,
+                    initialize=identity_matrix,
+                )
 
             # loop over parameter name
             for i, c in enumerate(model.parameter_names):
@@ -858,10 +1027,14 @@ class DesignOfExperiments:
                     # fix the 0 half of L matrix to be 0.0
                     if i < j:
                         model.L[c, d].fix(0.0)
+                        if self.objective_option == ObjectiveLib.trace:
+                            model.L_inv[c, d].fix(0.0)
                     # Give LB to the diagonal entries
                     if self.L_diagonal_lower_bound:
                         if c == d:
                             model.L[c, d].setlb(self.L_diagonal_lower_bound)
+                            if self.objective_option == ObjectiveLib.trace:
+                                model.L_inv[c, d].setlb(self.L_diagonal_lower_bound)
 
         # jacobian rule
         def jacobian_rule(m, n, p):
@@ -923,7 +1096,9 @@ class DesignOfExperiments:
             model.parameter_names, model.parameter_names, rule=read_prior
         )
 
-        # Off-diagonal elements are symmetric, so only half of the off-diagonal elements need to be specified.
+        # Off-diagonal elements are symmetric, so only
+        # half of the off-diagonal elements need to be
+        # specified.
         def fim_rule(m, p, q):
             """
             m: Pyomo model
@@ -949,6 +1124,7 @@ class DesignOfExperiments:
                         / m.scenario_blocks[0].measurement_error[
                             pyo.ComponentUID(n).find_component_on(m.scenario_blocks[0])
                         ]
+                        ** 2
                         * m.sensitivity_jacobian[n, p]
                         * m.sensitivity_jacobian[n, q]
                         for n in m.output_names
@@ -971,6 +1147,8 @@ class DesignOfExperiments:
                 for ind_q, q in enumerate(model.parameter_names):
                     if ind_p < ind_q:
                         model.fim[p, q].fix(0.0)
+                        if self.objective_option == ObjectiveLib.trace:
+                            model.fim_inv[p, q].fix(0.0)
 
     # Create scenario block structure
     def _generate_scenario_blocks(self, model=None):
@@ -1008,7 +1186,8 @@ class DesignOfExperiments:
 
         if self.n_measurement_error != self.n_experiment_outputs:
             raise ValueError(
-                "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
+                "Number of experiment outputs, {}, and length of measurement error, "
+                "{}, do not match. Please check model labeling.".format(
                     self.n_experiment_outputs, self.n_measurement_error
                 )
             )
@@ -1029,10 +1208,12 @@ class DesignOfExperiments:
         else:
             self.jac_initial = np.eye(self.n_experiment_outputs, self.n_parameters)
 
-        # Make a new Suffix to hold which scenarios are associated with parameters
+        # Make a new Suffix to hold which scenarios
+        # are associated with parameters
         model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
-        # Populate parameter scenarios, and scenario inds based on finite difference scheme
+        # Populate parameter scenarios, and scenario
+        # inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
             model.parameter_scenarios.update(
                 (2 * ind, k)
@@ -1053,13 +1234,10 @@ class DesignOfExperiments:
             )
             model.scenarios = range(len(model.base_model.unknown_parameters) + 1)
         else:
-            raise AttributeError(
-                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+            raise DeveloperError(
+                "Finite difference option not recognized. Please contact "
+                "the developers as you should not see this error."
             )
-
-        # TODO: Allow Params for `unknown_parameters` and `experiment_inputs`
-        #       May need to make a new converter Param to Var that allows non-string names/references to be passed
-        #       Waiting on updates to the parmest params_to_vars utility function.....
 
         # Run base model to get initialized model and check model function
         for comp in model.base_model.experiment_inputs:
@@ -1071,7 +1249,8 @@ class DesignOfExperiments:
             self.logger.info("Model from experiment solved.")
         except:
             raise RuntimeError(
-                "Model from experiment did not solve appropriately. Make sure the model is well-posed."
+                "Model from experiment did not solve appropriately. "
+                "Make sure the model is well-posed."
             )
 
         for comp in model.base_model.experiment_inputs:
@@ -1083,7 +1262,8 @@ class DesignOfExperiments:
             m = b.model()
             b.transfer_attributes_from(m.base_model.clone())
 
-            # Forward/Backward difference have a stationary case (s == 0), no parameter to perturb
+            # Forward/Backward difference have a stationary
+            # case (s == 0), no parameter to perturb
             if self.fd_formula in [
                 FiniteDifferenceStep.forward,
                 FiniteDifferenceStep.backward,
@@ -1103,7 +1283,7 @@ class DesignOfExperiments:
             elif self.fd_formula == FiniteDifferenceStep.forward:
                 diff = self.step  # Forward always positive
             else:
-                # To-Do: add an error message for this as not being implemented yet
+                # TODO: add an error message for this as not being implemented yet
                 diff = 0
                 pass
 
@@ -1124,8 +1304,8 @@ class DesignOfExperiments:
 
         model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
 
-        # To-Do: this might have to change if experiment inputs have
-        # a different value in the Suffix (currently it is the CUID)
+        # TODO: this might have to change if experiment inputs have
+        #       a different value in the Suffix (currently it is the CUID)
         design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
 
         # Add constraints to equate block design with global design:
@@ -1148,7 +1328,7 @@ class DesignOfExperiments:
         # Clean up the base model used to generate the scenarios
         model.del_component(model.base_model)
 
-        # ToDo: consider this logic? Multi-block systems need something more fancy
+        # TODO: consider this logic? Multi-block systems need something more fancy
         self._built_scenarios = True
 
     # Create objective function
@@ -1172,15 +1352,18 @@ class DesignOfExperiments:
         if self.objective_option not in [
             ObjectiveLib.determinant,
             ObjectiveLib.trace,
+            ObjectiveLib.pseudo_trace,
             ObjectiveLib.zero,
         ]:
-            raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
+            raise DeveloperError(
+                "Objective option not recognized. Please contact the "
+                "developers as you should not see this error."
             )
 
         if not hasattr(model, "fim"):
             raise RuntimeError(
-                "Model provided does not have variable `fim`. Please make sure the model is built properly before creating the objective."
+                "Model provided does not have variable `fim`. Please make "
+                "sure the model is built properly before creating the objective."
             )
 
         small_number = 1e-10
@@ -1199,12 +1382,15 @@ class DesignOfExperiments:
         )
 
         ### Initialize the Cholesky decomposition matrix
-        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+        if self.Cholesky_option and self.objective_option in (
+            ObjectiveLib.determinant,
+            ObjectiveLib.trace,
+        ):
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
 
-            # If the smallest eigenvalue is (practically) negative, add a diagonal matrix to make it positive definite
-            small_number = 1e-10
+            # If the smallest eigenvalue is (practically) negative,
+            # add a diagonal matrix to make it positive definite
             if min(eig) < small_number:
                 fim = fim + np.eye(len(model.parameter_names)) * (
                     small_number - min(eig)
@@ -1217,6 +1403,13 @@ class DesignOfExperiments:
             for i, c in enumerate(model.parameter_names):
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L[i, j]
+
+            # Compute L inverse for trace objective and initialize
+            if self.objective_option == ObjectiveLib.trace:
+                L_inv = np.linalg.inv(L)
+                for i, c in enumerate(model.parameter_names):
+                    for j, d in enumerate(model.parameter_names):
+                        model.L_inv[c, d].value = L_inv[i, j]
 
         def cholesky_imp(b, c, d):
             """
@@ -1236,12 +1429,86 @@ class DesignOfExperiments:
                 # This is the empty half of L above the diagonal
                 return pyo.Constraint.Skip
 
+        # If trace objective, need L inverse constraints
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
+
+            def cholesky_inv_imp(b, c, d):
+                """
+                Calculate Cholesky L inverse matrix using algebraic constraints
+                """
+                # If the row is greater than or equal to the column, we are in the
+                # lower triangle region of the L_inv matrix.
+                # This region is where our equations are well-defined.
+                m = b.model()
+                if list(m.parameter_names).index(c) >= list(m.parameter_names).index(d):
+                    return m.fim_inv[c, d] == sum(
+                        m.L_inv[m.parameter_names.at(k + 1), c]
+                        * m.L_inv[m.parameter_names.at(k + 1), d]
+                        for k in range(
+                            list(m.parameter_names).index(c), len(m.parameter_names)
+                        )
+                    )
+                else:
+                    # This is the empty half of L_inv above the diagonal
+                    return pyo.Constraint.Skip
+
+            # If trace objective, need L * L^-1 = Identity matrix constraints
+            def cholesky_LLinv_imp(b, c, d):
+                """
+                Calculate Cholesky L * L inverse matrix using algebraic constraints
+                """
+                # If the row is greater than or equal to the column, we are in the
+                # lower triangle region of the L and L_inv matrices.
+                # This region is where our equations are well-defined.
+                m = b.model()
+                param_list = list(m.parameter_names)
+                idx_c = param_list.index(c)
+                idx_d = param_list.index(d)
+                # Do not need to calculate upper triangle entries
+                if idx_c < idx_d:
+                    return pyo.Constraint.Skip
+
+                target_value = 1 if idx_c == idx_d else 0
+                return (
+                    sum(
+                        m.L[c, m.parameter_names.at(k + 1)]
+                        * m.L_inv[m.parameter_names.at(k + 1), d]
+                        for k in range(len(m.parameter_names))
+                    )
+                    == target_value
+                )
+
+            # To improve round off error in Cholesky decomposition
+            if self.improve_cholesky_roundoff_error:
+
+                def cholesky_fim_diag(b, c, d):
+                    """
+                    M[c,c] >= L[c,d]^2 to improve round off error
+                    """
+                    m = b.model()
+                    return m.fim[c, c] >= m.L[c, d] ** 2
+
+                def cholesky_fim_inv_diag(b, c, d):
+                    """
+                    M_inv[c,c] >= L_inv[c,d]^2 to improve round off error
+                    """
+                    m = b.model()
+                    return m.fim_inv[c, c] >= m.L_inv[c, d] ** 2
+
+            def cov_trace_calc(b):
+                """
+                Calculate trace of covariance matrix (inverse of FIM).
+                Can scale each element with 1000 for performance
+                """
+                m = b.model()
+                return m.cov_trace == sum(m.fim_inv[j, j] for j in m.parameter_names)
+
         def trace_calc(b):
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
             m = b.model()
-            return m.trace == sum(m.fim[j, j] for j in m.parameter_names)
+            return m.fim_trace == sum(m.fim[j, j] for j in m.parameter_names)
 
         def determinant_general(b):
             r"""Calculate determinant. Can be applied to FIM of any size.
@@ -1259,12 +1526,14 @@ class DesignOfExperiments:
             for i in range(len(list_p)):
                 name_order = []
                 x_order = list_p[i]
-                # sigma_i is the value in the i-th position after the reordering \sigma
+                # sigma_i is the value in the i-th
+                # position after the reordering \sigma
                 for x in range(len(x_order)):
                     for y, element in enumerate(m.parameter_names):
                         if x_order[x] == y:
                             name_order.append(element)
-            # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
+            # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) *
+            #          \Prod_{i=1}^n a_{i,\sigma_i})
             det_perm = sum(
                 self._sgn(list_p[d])
                 * math.prod(
@@ -1285,7 +1554,8 @@ class DesignOfExperiments:
             )
 
         elif self.objective_option == ObjectiveLib.determinant:
-            # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+            # if not Cholesky but determinant, calculating
+            # det and evaluate the OBJ with det
             model.determinant = pyo.Var(
                 initialize=np.linalg.det(fim), bounds=(small_number, None)
             )
@@ -1295,16 +1565,120 @@ class DesignOfExperiments:
             )
 
         elif self.objective_option == ObjectiveLib.trace:
-            # if not determinant or cholesky, calculating the OBJ with trace
-            model.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
+            if not self.Cholesky_option:
+                raise ValueError(
+                    "objective_option='trace' currently only implemented with ``_Cholesky option=True``."
+                )
+            # if Cholesky and trace, calculating
+            # the OBJ with trace
+            model.cov_trace = pyo.Var(
+                initialize=np.trace(np.linalg.inv(fim)), bounds=(small_number, None)
+            )
+            model.obj_cons.cholesky_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_imp
+            )
+            model.obj_cons.cholesky_inv_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_inv_imp
+            )
+            model.obj_cons.cholesky_LLinv_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_LLinv_imp
+            )
+            if self.improve_cholesky_roundoff_error:
+                model.obj_cons.cholesky_fim_diag_cons = pyo.Constraint(
+                    model.parameter_names, model.parameter_names, rule=cholesky_fim_diag
+                )
+                model.obj_cons.cholesky_fim_inv_diag_cons = pyo.Constraint(
+                    model.parameter_names,
+                    model.parameter_names,
+                    rule=cholesky_fim_inv_diag,
+                )
+            model.obj_cons.cov_trace_rule = pyo.Constraint(rule=cov_trace_calc)
+            model.objective = pyo.Objective(expr=model.cov_trace, sense=pyo.minimize)
+
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            # if not determinant or Cholesky, calculating
+            # the OBJ with trace
+            model.fim_trace = pyo.Var(
+                initialize=np.trace(fim), bounds=(small_number, None)
+            )
             model.obj_cons.trace_rule = pyo.Constraint(rule=trace_calc)
             model.objective = pyo.Objective(
-                expr=pyo.log10(model.trace), sense=pyo.maximize
+                expr=pyo.log10(model.fim_trace), sense=pyo.maximize
             )
 
+        # TODO: Add warning (should be unreachable) if the user calls
+        #       the grey box objectives with the standard model
         elif self.objective_option == ObjectiveLib.zero:
             # add dummy objective function
             model.objective = pyo.Objective(expr=0)
+
+    def create_grey_box_objective_function(self, model=None):
+        # Add external grey box block to a block named ``obj_cons`` to
+        # reuse material for initializing the objective-free square model
+        if model is None:
+            model = model = self.model
+
+        # TODO: Make this naming convention robust
+        model.obj_cons = pyo.Block()
+
+        # Create FIM External Grey Box object
+        grey_box_FIM = FIMExternalGreyBox(
+            doe_object=self,
+            objective_option=self.objective_option,
+            logger_level=self.logger.getEffectiveLevel(),
+        )
+
+        # Attach External Grey Box Model
+        # to the model as an External
+        # Grey Box Block
+        model.obj_cons.egb_fim_block = ExternalGreyBoxBlock(external_model=grey_box_FIM)
+
+        # Adding constraints to for all grey box input values to equate to fim values
+        def FIM_egb_cons(m, p1, p2):
+            """
+
+            m: Pyomo model
+            p1: parameter 1
+            p2: parameter 2
+
+            """
+            # Using upper triangular FIM to
+            # make numerics better.
+            if list(model.parameter_names).index(p1) >= list(
+                model.parameter_names
+            ).index(p2):
+                return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p2, p1)]
+            else:
+                return pyo.Constraint.Skip
+
+        # Add the FIM and External Grey
+        # Box inputs constraints
+        model.obj_cons.FIM_equalities = pyo.Constraint(
+            model.parameter_names, model.parameter_names, rule=FIM_egb_cons
+        )
+
+        # Add objective based on user provided
+        # type within ObjectiveLib
+        if self.objective_option == ObjectiveLib.trace:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["A-opt"], sense=pyo.minimize
+            )
+        elif self.objective_option == ObjectiveLib.determinant:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["log-D-opt"],
+                sense=pyo.maximize,
+            )
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["E-opt"], sense=pyo.maximize
+            )
+        elif self.objective_option == ObjectiveLib.condition_number:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["ME-opt"], sense=pyo.minimize
+            )
+        # Else error not needed for spurious objective
+        # options as the error will always appear
+        # when creating the FIMExternalGreyBox block
 
     # Check to see if the model has all the required suffixes
     def check_model_labels(self, model=None):
@@ -1370,23 +1744,26 @@ class DesignOfExperiments:
 
         if FIM.shape != (self.n_parameters, self.n_parameters):
             raise ValueError(
-                "Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
+                "Shape of FIM provided should be n parameters by n parameters, "
+                "or {} by {}, FIM provided has shape {} by {}".format(
                     self.n_parameters, self.n_parameters, FIM.shape[0], FIM.shape[1]
                 )
             )
 
-        # Check FIM is positive definite and symmetric
         check_FIM(FIM)
 
         self.logger.info(
-            "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
+            "FIM provided matches expected dimensions from model "
+            "and is approximately positive (semi) definite."
         )
 
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
         if jac.shape != (self.n_experiment_outputs, self.n_parameters):
             raise ValueError(
-                "Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
+                "Shape of Jacobian provided should be n experiment outputs "
+                "by n parameters, or {} by {}, Jacobian provided has "
+                "shape {} by {}".format(
                     self.n_experiment_outputs,
                     self.n_parameters,
                     jac.shape[0],
@@ -1419,7 +1796,8 @@ class DesignOfExperiments:
 
         if not hasattr(model, "fim"):
             raise RuntimeError(
-                "``fim`` is not defined on the model provided. Please build the model first."
+                "``fim`` is not defined on the model provided. "
+                "Please build the model first."
             )
 
         self.check_model_FIM(model=model, FIM=FIM)
@@ -1431,14 +1809,15 @@ class DesignOfExperiments:
 
         self.logger.info("FIM prior has been updated.")
 
-    # TODO: Add an update function for the parameter values? --> closed loop parameter estimation?
-    # Or leave this to the user?????
+    # TODO: Add an update function for the parameter values?
+    #       Closed loop parameter estimation?
     def update_unknown_parameter_values(self, model=None, param_vals=None):
         raise NotImplementedError(
             "Updating unknown parameter values not yet supported."
         )
 
-    # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
+    # Evaluates FIM and statistics for a
+    # full factorial space (same as run_grid_search)
     def compute_FIM_full_factorial(
         self, model=None, design_ranges=None, method="sequential"
     ):
@@ -1467,12 +1846,14 @@ class DesignOfExperiments:
             - keys of model's experiment_inputs
             - "log10 D-opt": list of log10(D-optimality)
             - "log10 A-opt": list of log10(A-optimality)
+            - "log10 pseudo A-opt": list of log10(trace(FIM))
             - "log10 E-opt": list of log10(E-optimality)
             - "log10 ME-opt": list of log10(ME-optimality)
             - "eigval_min": list of minimum eigenvalues
             - "eigval_max": list of maximum eigenvalues
             - "det_FIM": list of determinants
-            - "trace_FIM": list of traces
+            - "trace_cov": list of traces of covariance matrix
+            - "trace_FIM": list of traces of FIM
             - "solve_time": list of solve times
 
         Raises
@@ -1522,11 +1903,13 @@ class DesignOfExperiments:
             {
                 "log10 D-opt": [],
                 "log10 A-opt": [],
+                "log10 pseudo A-opt": [],
                 "log10 E-opt": [],
                 "log10 ME-opt": [],
                 "eigval_min": [],
                 "eigval_max": [],
                 "det_FIM": [],
+                "trace_cov": [],
                 "trace_FIM": [],
                 "solve_time": [],
             }
@@ -1589,9 +1972,18 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
-                compute_FIM_metrics(FIM)
-            )
+            (
+                det_FIM,
+                trace_cov,
+                trace_FIM,
+                E_vals,
+                E_vecs,
+                D_opt,
+                A_opt,
+                pseudo_A_opt,
+                E_opt,
+                ME_opt,
+            ) = compute_FIM_metrics(FIM)
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
@@ -1599,11 +1991,13 @@ class DesignOfExperiments:
 
             fim_factorial_results["log10 D-opt"].append(D_opt)
             fim_factorial_results["log10 A-opt"].append(A_opt)
+            fim_factorial_results["log10 pseudo A-opt"].append(pseudo_A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
             fim_factorial_results["eigval_min"].append(E_vals.min())
             fim_factorial_results["eigval_max"].append(E_vals.max())
             fim_factorial_results["det_FIM"].append(det_FIM)
+            fim_factorial_results["trace_cov"].append(trace_cov)
             fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
@@ -1628,23 +2022,32 @@ class DesignOfExperiments:
         log_scale=True,
     ):
         """
-        Extract results needed for drawing figures from the results dictionary provided by
-        the ``compute_FIM_full_factorial`` function.
+        Extract results needed for drawing figures from
+        the results dictionary provided by the
+        ``compute_FIM_full_factorial`` function.
 
         Draw either the 1D sensitivity curve or 2D heatmap.
 
         Parameters
         ----------
-        results: dictionary, results dictionary from ``compute_FIM_full_factorial``, default: None (self.fim_factorial_results)
+        results: dictionary, results dictionary from ``compute_FIM_full_factorial``
+                 default: None (self.fim_factorial_results)
         sensitivity_design_variables: a list, design variable names to draw sensitivity
-        fixed_design_variables: a dictionary, keys are the design variable names to be fixed, values are the value of it to be fixed.
+        fixed_design_variables: a dictionary, keys are the design variable names to be
+                                fixed, values are the value of it to be fixed.
         full_design_variable_names: a list, all the design variables in the problem.
         title_text: a string, name for the figure
-        xlabel_text: a string, label for the x-axis of the figure (default: last design variable name)
-            In a 1D sensitivity curve, it should be design variable by which the curve is drawn.
-            In a 2D heatmap, it should be the second design variable in the design_ranges
-        ylabel_text: a string, label for the y-axis of the figure (default: None (1D); first design variable name (2D))
-            A 1D sensitivity curve does not need it. In a 2D heatmap, it should be the first design variable in the dv_ranges
+        xlabel_text: a string, label for the x-axis of the figure
+                    default: last design variable name
+            In a 1D sensitivity curve, it should be design variable by
+            which the curve is drawn
+            In a 2D heatmap, it should be the second design variable
+            in the design_ranges
+        ylabel_text: a string, label for the y-axis of the figure
+                    default: None (1D); first design variable name (2D)
+            A 1D sensitivity curve does not need it.
+            In a 2D heatmap, it should be the first
+            design variable in the dv_ranges
         figure_file_name: string or Path, path to save the figure as
         font_axes: axes label font size
         font_tick: tick label font size
@@ -1654,7 +2057,8 @@ class DesignOfExperiments:
         if results is None:
             if not hasattr(self, "fim_factorial_results"):
                 raise RuntimeError(
-                    "Results must be provided or the compute_FIM_full_factorial function must be run."
+                    "Results must be provided or the "
+                    "compute_FIM_full_factorial function must be run."
                 )
             results = self.fim_factorial_results
             full_design_variable_names = [
@@ -1663,13 +2067,14 @@ class DesignOfExperiments:
         else:
             if full_design_variable_names is None:
                 raise ValueError(
-                    "If results object is provided, you must include all the design variable names."
+                    "If results object is provided, you must "
+                    "include all the design variable names."
                 )
 
         des_names = full_design_variable_names
 
         # Inputs must exist for the function to do anything
-        # ToDo: Put in a default value function?????
+        # TODO: Put in a default value function?????
         if sensitivity_design_variables is None:
             raise ValueError("``sensitivity_design_variables`` must be included.")
 
@@ -1686,14 +2091,16 @@ class DesignOfExperiments:
 
         if not check_des_vars:
             raise ValueError(
-                "Fixed design variables do not all appear in the results object keys."
+                "Fixed design variables do not all appear "
+                "in the results object keys."
             )
         if not check_sens_vars:
             raise ValueError(
-                "Sensitivity design variables do not all appear in the results object keys."
+                "Sensitivity design variables do not all appear "
+                "in the results object keys."
             )
 
-        # ToDo: Make it possible to plot pair-wise sensitivities for all variables
+        # TODO: Make it possible to plot pair-wise sensitivities for all variables
         #       e.g. a curve like low-dimensional posterior distributions
         if len(sensitivity_design_variables) > 2:
             raise NotImplementedError(
@@ -1704,7 +2111,8 @@ class DesignOfExperiments:
             sensitivity_design_variables
         ) != len(des_names):
             raise ValueError(
-                "Error: All design variables that are not used to generate sensitivity plots must be fixed."
+                "Error: All design variables that are not used to "
+                "generate sensitivity plots must be fixed."
             )
 
         if type(results) is dict:
@@ -1712,7 +2120,8 @@ class DesignOfExperiments:
         else:
             results_pd = results
 
-        # generate a combination of logic sentences to filter the results of the DOF needed.
+        # generate a combination of logic to
+        # filter the results of the DOF needed.
         # an example filter: (self.store_all_results_dataframe["CA0"]==5).
         if len(fixed_design_variables.keys()) != 0:
             filter = ""
@@ -1759,7 +2168,7 @@ class DesignOfExperiments:
                 log_scale=log_scale,
                 figure_file_name=figure_file_name,
             )
-        # ToDo: Add the multidimensional plotting
+        # TODO: Add the multidimensional plotting
         else:
             pass
 
@@ -1779,7 +2188,8 @@ class DesignOfExperiments:
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
-            In a 1D sensitivity curve, it is the design variable by which the curve is drawn.
+            In a 1D sensitivity curve, it is the design
+            variable by which the curve is drawn.
         font_axes: axes label font size
         font_tick: tick label font size
         figure_file_name: string or Path, path to save the figure as
@@ -1787,7 +2197,7 @@ class DesignOfExperiments:
 
         Returns
         --------
-        4 Figures of 1D sensitivity curves for each criteria
+        5 Figures of 1D sensitivity curves for each criterion
         """
         if figure_file_name is not None:
             show_fig = False
@@ -1800,6 +2210,9 @@ class DesignOfExperiments:
         # decide if the results are log scaled
         if log_scale:
             y_range_A = np.log10(self.figure_result_data["log10 A-opt"].values.tolist())
+            y_range_pseudo_A = np.log10(
+                self.figure_result_data["log10 pseudo A-opt"].values.tolist()
+            )
             y_range_D = np.log10(self.figure_result_data["log10 D-opt"].values.tolist())
             y_range_E = np.log10(self.figure_result_data["log10 E-opt"].values.tolist())
             y_range_ME = np.log10(
@@ -1807,6 +2220,9 @@ class DesignOfExperiments:
             )
         else:
             y_range_A = self.figure_result_data["log10 A-opt"].values.tolist()
+            y_range_pseudo_A = self.figure_result_data[
+                "log10 pseudo A-opt"
+            ].values.tolist()
             y_range_D = self.figure_result_data["log10 D-opt"].values.tolist()
             y_range_E = self.figure_result_data["log10 E-opt"].values.tolist()
             y_range_ME = self.figure_result_data["log10 ME-opt"].values.tolist()
@@ -1822,7 +2238,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_A)
         ax.scatter(x_range, y_range_A)
-        ax.set_ylabel("$log_{10}$ Trace")
+        ax.set_ylabel("$log_{10}$(Trace of Covariance)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": A-optimality")
         if show_fig:
@@ -1830,6 +2246,28 @@ class DesignOfExperiments:
         else:
             plt.pyplot.savefig(
                 pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+            )
+        # Draw pseudo A-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_pseudo_A)
+        ax.scatter(x_range, y_range_pseudo_A)
+        ax.set_ylabel("$log_{10}$(Trace of FIM)")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": pseudo A-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                pathlib.Path(figure_file_name + "_pseudo_A_opt.png"),
+                format="png",
+                dpi=450,
             )
 
         # Draw D-optimality
@@ -1843,7 +2281,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_D)
         ax.scatter(x_range, y_range_D)
-        ax.set_ylabel("$log_{10}$ Determinant")
+        ax.set_ylabel("$log_{10}$(Determinant)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": D-optimality")
         if show_fig:
@@ -1864,7 +2302,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_E)
         ax.scatter(x_range, y_range_E)
-        ax.set_ylabel("$log_{10}$ Minimal eigenvalue")
+        ax.set_ylabel("$log_{10}$ (Minimum eigenvalue)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": E-optimality")
         if show_fig:
@@ -1885,7 +2323,7 @@ class DesignOfExperiments:
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_ME)
         ax.scatter(x_range, y_range_ME)
-        ax.set_ylabel("$log_{10}$ Condition number")
+        ax.set_ylabel("$log_{10}$(Condition number)")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": Modified E-optimality")
         if show_fig:
@@ -1912,9 +2350,11 @@ class DesignOfExperiments:
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
-            In a 2D heatmap, it should be the second design variable in the design_ranges
+            In a 2D heatmap, it should be the second
+            design variable in the design_ranges
         ylabel_text: y label title, a string.
-            In a 2D heatmap, it should be the first design variable in the dv_ranges
+            In a 2D heatmap, it should be the first
+            design variable in the dv_ranges
         font_axes: axes label font size
         font_tick: tick label font size
         figure_file_name: string or Path, path to save the figure as
@@ -1922,7 +2362,7 @@ class DesignOfExperiments:
 
         Returns
         --------
-        4 Figures of 2D heatmap for each criteria
+        4 Figures of 2D heatmap for each criterion
         """
         if figure_file_name is not None:
             show_fig = False
@@ -1939,17 +2379,20 @@ class DesignOfExperiments:
 
         # extract the design criteria values
         A_range = self.figure_result_data["log10 A-opt"].values.tolist()
+        pseudo_A_range = self.figure_result_data["log10 pseudo A-opt"].values.tolist()
         D_range = self.figure_result_data["log10 D-opt"].values.tolist()
         E_range = self.figure_result_data["log10 E-opt"].values.tolist()
         ME_range = self.figure_result_data["log10 ME-opt"].values.tolist()
 
         # reshape the design criteria values for heatmaps
         cri_a = np.asarray(A_range).reshape(len(x_range), len(y_range))
+        cri_pseudo_a = np.asarray(pseudo_A_range).reshape(len(x_range), len(y_range))
         cri_d = np.asarray(D_range).reshape(len(x_range), len(y_range))
         cri_e = np.asarray(E_range).reshape(len(x_range), len(y_range))
         cri_e_cond = np.asarray(ME_range).reshape(len(x_range), len(y_range))
 
         self.cri_a = cri_a
+        self.cri_pseudo_a = cri_pseudo_a
         self.cri_d = cri_d
         self.cri_e = cri_e
         self.cri_e_cond = cri_e_cond
@@ -1957,11 +2400,13 @@ class DesignOfExperiments:
         # decide if log scaled
         if log_scale:
             hes_a = np.log10(self.cri_a)
+            hes_pseudo_a = np.log10(self.cri_pseudo_a)
             hes_e = np.log10(self.cri_e)
             hes_d = np.log10(self.cri_d)
             hes_e2 = np.log10(self.cri_e_cond)
         else:
             hes_a = self.cri_a
+            hes_pseudo_a = self.cri_pseudo_a
             hes_e = self.cri_e
             hes_d = self.cri_d
             hes_e2 = self.cri_e_cond
@@ -1987,13 +2432,41 @@ class DesignOfExperiments:
         ax.set_xlabel(xlabel_text)
         im = ax.imshow(hes_a.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
-        ba.set_label("log10(trace(FIM))")
+        ba.set_label("log10(trace(cov))")
         plt.pyplot.title(title_text + ": A-optimality")
         if show_fig:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
                 pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+            )
+
+        # pseudo A-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_pseudo_a.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(trace(FIM))")
+        plt.pyplot.title(title_text + ": pseudo A-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                pathlib.Path(figure_file_name + "_pseudo_A_opt.png"),
+                format="png",
+                dpi=450,
             )
 
         # D-optimality
@@ -2093,7 +2566,8 @@ class DesignOfExperiments:
 
         if not hasattr(model, "fim"):
             raise RuntimeError(
-                "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`"
+                "Model provided does not have variable `fim`. Please make sure "
+                "the model is built properly before calling `get_FIM`"
             )
 
         fim_vals = [
@@ -2133,7 +2607,9 @@ class DesignOfExperiments:
 
         if not hasattr(model, "sensitivity_jacobian"):
             raise RuntimeError(
-                "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`"
+                "Model provided does not have variable `sensitivity_jacobian`. "
+                "Please make sure the model is built properly before calling "
+                "`get_sensitivity_matrix`"
             )
 
         Q_vals = [
@@ -2169,7 +2645,9 @@ class DesignOfExperiments:
         if not hasattr(model, "experiment_inputs"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                    "Model provided does not have expected structure. "
+                    "Please make sure model is built properly before "
+                    "calling `get_experiment_input_values`"
                 )
 
             d_vals = [
@@ -2194,7 +2672,8 @@ class DesignOfExperiments:
 
         Returns
         -------
-        theta: 1D list of unknown parameter values at which this experiment was designed
+        theta: 1D list of unknown parameter values at which
+               this experiment was designed
 
         """
         if model is None:
@@ -2203,7 +2682,9 @@ class DesignOfExperiments:
         if not hasattr(model, "unknown_parameters"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_unknown_parameter_values`"
+                    "Model provided does not have expected structure. Please make "
+                    "sure model is built properly before calling "
+                    "`get_unknown_parameter_values`"
                 )
 
             theta_vals = [
@@ -2237,7 +2718,9 @@ class DesignOfExperiments:
         if not hasattr(model, "experiment_outputs"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_output_values`"
+                    "Model provided does not have expected structure. Please make "
+                    "sure model is built properly before calling "
+                    "`get_experiment_output_values`"
                 )
 
             y_hat_vals = [
@@ -2249,7 +2732,7 @@ class DesignOfExperiments:
 
         return y_hat_vals
 
-    # ToDo: For more complicated error structures, this should become
+    # TODO: For more complicated error structures, this should become
     #       get cov_y, or so, and this method will be deprecated
     # Gets the measurement error values from an existing model
     def get_measurement_error_values(self, model=None):
@@ -2273,7 +2756,9 @@ class DesignOfExperiments:
         if not hasattr(model, "measurement_error"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_measurement_error_values`"
+                    "Model provided does not have expected structure. Please make "
+                    "sure model is built properly before calling "
+                    "`get_measurement_error_values`"
                 )
 
             sigma_vals = [

@@ -1,28 +1,14 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
-# ______________________________________________________________________________
+# ____________________________________________________________________________________
 #
 # Pyomo: Python Optimization Modeling Objects
-# Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-# Under the terms of Contract DE-NA0003525 with National Technology and
-# Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-# rights in this software.
-# This software is distributed under the 3-clause BSD License
-# ______________________________________________________________________________
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 import os
 from pyomo.environ import SolverFactory
 from pyomo.common.tempfiles import TempfileManager
-
 
 debug_dir = "kaug_debug"
 gjh_dir = "GJH"
@@ -42,7 +28,7 @@ known_files = [
 ]
 
 
-class InTempDir(object):
+class InTempDir:
     def __init__(self, suffix=None, prefix=None, dir=None):
         self._suffix = suffix
         self._prefix = prefix
@@ -63,7 +49,7 @@ class InTempDir(object):
         TempfileManager.pop()
 
 
-class K_augInterface(object):
+class K_augInterface:
     """
     k_aug and dot_sens store information in the user's filesystem,
     some of which is mandatory for subsequent calls.

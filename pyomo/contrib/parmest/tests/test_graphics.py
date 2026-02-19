@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -19,10 +17,6 @@ from pyomo.common.dependencies import (
     matplotlib,
     matplotlib_available,
 )
-
-import platform
-
-is_osx = platform.mac_ver()[0] != ''
 
 import pyomo.common.unittest as unittest
 import sys
@@ -42,10 +36,6 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 )
 @unittest.skipIf(
     not graphics.imports_available, "parmest.graphics imports are unavailable"
-)
-@unittest.skipIf(
-    is_osx,
-    "Disabling graphics tests on OSX due to issue in Matplotlib, see Pyomo PR #1337",
 )
 class TestGraphics(unittest.TestCase):
     def setUp(self):

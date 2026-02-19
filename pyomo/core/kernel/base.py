@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import copy
 import weakref
@@ -28,7 +26,7 @@ def _abstract_readonly_property(**kwds):
     return p
 
 
-class _no_ctype(object):
+class _no_ctype:
     """The default argument for methods that accept a ctype."""
 
     pass
@@ -162,7 +160,7 @@ class ICategorizedObject(AutoSlots.Mixin):
                 storage key into a string
                 representation. Default is the built-in
                 function str.
-            relative_to (object): When generating a fully
+            relative_to : When generating a fully
                 qualified name, generate the name relative
                 to this block.
 

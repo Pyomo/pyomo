@@ -1,19 +1,21 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
+
+import logging
 
 from pyomo.gdp import GDP_Error
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
 import pyomo.contrib.fbbt.interval as interval
 from pyomo.core import Suffix
+
+logger = logging.getLogger(__name__)
 
 
 def _convert_M_to_tuple(M, constraint, disjunct=None):
@@ -23,7 +25,7 @@ def _convert_M_to_tuple(M, constraint, disjunct=None):
         else:
             try:
                 M = (-M, M)
-            except:
+            except Exception:
                 logger.error(
                     "Error converting scalar M-value %s "
                     "to (-M,M).  Is %s not a numeric type?" % (M, type(M))
@@ -90,7 +92,7 @@ def _warn_for_unused_bigM_args(bigM, used_args, logger):
             logger.warning(warning_msg)
 
 
-class _BigM_MixIn(object):
+class _BigM_MixIn:
     def _get_bigM_arg_list(self, bigm_args, block):
         # Gather what we know about blocks from args exactly once. We'll still
         # check for constraints in the moment, but if that fails, we've
@@ -152,7 +154,7 @@ class _BigM_MixIn(object):
         parent = constraint.parent_component()
         if constraint in bigMargs:
             m = bigMargs[constraint]
-            (lower, upper, need_lower, need_upper) = self._process_M_value(
+            lower, upper, need_lower, need_upper = self._process_M_value(
                 m,
                 lower,
                 upper,
@@ -167,7 +169,7 @@ class _BigM_MixIn(object):
                 return lower, upper
         elif parent in bigMargs:
             m = bigMargs[parent]
-            (lower, upper, need_lower, need_upper) = self._process_M_value(
+            lower, upper, need_lower, need_upper = self._process_M_value(
                 m,
                 lower,
                 upper,
@@ -184,7 +186,7 @@ class _BigM_MixIn(object):
         # use the precomputed traversal up the blocks
         for arg in arg_list:
             for block, val in arg.items():
-                (lower, upper, need_lower, need_upper) = self._process_M_value(
+                lower, upper, need_lower, need_upper = self._process_M_value(
                     val,
                     lower,
                     upper,
@@ -201,7 +203,7 @@ class _BigM_MixIn(object):
         # last check for value for None!
         if None in bigMargs:
             m = bigMargs[None]
-            (lower, upper, need_lower, need_upper) = self._process_M_value(
+            lower, upper, need_lower, need_upper = self._process_M_value(
                 m,
                 lower,
                 upper,

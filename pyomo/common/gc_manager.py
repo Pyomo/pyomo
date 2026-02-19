@@ -1,26 +1,24 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
+# This module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
 
 import gc
 from pyomo.common.multithread import MultiThreadWrapper
 
 
-class __PauseGCCompanion(object):
+class __PauseGCCompanion:
     def __init__(self):
         self._stack_depth = 0
 
@@ -41,7 +39,7 @@ PauseGCCompanion: __PauseGCCompanion = MultiThreadWrapper(__PauseGCCompanion)
 # the GC will be re-enabled (if it was not initially disabled).  It is
 # safe to nest instances of PauseGC That is, you don't have to worry
 # if an outer function/method has its own instance of PauseGC.
-class PauseGC(object):
+class PauseGC:
     __slots__ = ("reenable_gc", "stack_pointer")
 
     def __init__(self):

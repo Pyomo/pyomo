@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import abc
 import logging
@@ -26,7 +24,6 @@ from pyomo.core.base.set import UnindexedComponent_set
 from pyomo.core.base.reference import Reference
 
 from ..sparse.block_matrix import BlockMatrix
-
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -89,7 +86,7 @@ Note:
 """
 
 
-class ExternalGreyBoxModel(object):
+class ExternalGreyBoxModel:
     """
     This is the base class for building external input output models
     for use with Pyomo and CyIpopt. See the module documentation above,

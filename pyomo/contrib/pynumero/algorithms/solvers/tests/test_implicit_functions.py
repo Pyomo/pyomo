@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import itertools
 import pyomo.common.unittest as unittest
@@ -42,7 +40,7 @@ if not AmplInterface.available():
     )
 
 
-class ImplicitFunction1(object):
+class ImplicitFunction1:
     def __init__(self):
         self._model = self._make_model()
 
@@ -137,7 +135,7 @@ class ImplicitFunctionWithExtraVariables(ImplicitFunction1):
         return m
 
 
-class ImplicitFunctionInputsDontAppear(object):
+class ImplicitFunctionInputsDontAppear:
     """This is an implicit function designed to test the edge case
     where inputs do not appear in the system defining the implicit
     function (i.e. the function is constant).

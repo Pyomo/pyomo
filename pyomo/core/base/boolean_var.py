@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 from weakref import ref as weakref_ref, ReferenceType
@@ -29,13 +27,12 @@ from pyomo.core.base.set import Set, BooleanSet, Binary
 from pyomo.core.base.util import is_functor
 from pyomo.core.base.var import Var
 
-
 logger = logging.getLogger('pyomo.core')
 
 _logical_var_types = {bool, type(None)}
 
 
-class _DeprecatedImplicitAssociatedBinaryVariable(object):
+class _DeprecatedImplicitAssociatedBinaryVariable:
     __slots__ = ('_boolvar',)
 
     def __init__(self, boolvar):
@@ -457,7 +454,7 @@ class BooleanVar(IndexedComponent):
                 ("Size", len(self)),
                 ("Index", self._index_set if self.is_indexed() else None),
             ],
-            self._data.items(),
+            self.items,
             ("Value", "Fixed", "Stale"),
             lambda k, v: [v.value, v.fixed, v.stale],
         )

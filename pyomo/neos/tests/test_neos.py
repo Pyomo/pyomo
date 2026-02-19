@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Test NEOS solver interface
 #
@@ -212,7 +210,7 @@ class TestKestrel(unittest.TestCase):
                 self.fail(f"RunAllNEOSSolvers missing test for '{solver}'")
 
 
-class RunAllNEOSSolvers(object):
+class RunAllNEOSSolvers:
     def test_baron(self):
         self._run('baron')
 
@@ -297,7 +295,7 @@ class RunAllNEOSSolvers(object):
         self._run('lgo')
 
 
-class DirectDriver(object):
+class DirectDriver:
     def _run(self, opt, constrained=True):
         m = _model(self.sense)
         with pyo.SolverManagerFactory('neos') as solver_manager:
@@ -318,7 +316,7 @@ class DirectDriver(object):
         self.assertAlmostEqual(pyo.value(m.y), expected_y, delta=1e-5)
 
 
-class PyomoCommandDriver(object):
+class PyomoCommandDriver:
     def _run(self, opt, constrained=True):
         expected_y = {
             (pyo.minimize, True): -1,

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections import namedtuple
 from pyomo.core.base.objective import Objective
@@ -115,12 +113,10 @@ class RootNlpSolver(DenseSquareNlpSolver):
             default="hybr",
             domain=In({"hybr", "lm"}),
             description="Method used to solve for the function root",
-            doc=(
-                """The 'method' argument in the scipy.optimize.root function.
+            doc=("""The 'method' argument in the scipy.optimize.root function.
             For now only 'hybr' (Powell hybrid method from MINPACK) and
             'lm' (Levenberg-Marquardt from MINPACK) are supported.
-            """
-            ),
+            """),
         ),
     )
 
@@ -255,7 +251,7 @@ class SecantNewtonNlpSolver(NewtonNlpSolver):
         return results
 
 
-class PyomoScipySolver(object):
+class PyomoScipySolver:
     def __init__(self, options=None):
         if options is None:
             options = {}

@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import argparse
 import importlib
@@ -75,7 +73,7 @@ class TimingHandler(logging.Handler):
             cat_data[name] = val
 
 
-class DataRecorder(object):
+class DataRecorder:
     """pytest plugin to add a 'testdata' attribute to all tests
 
     This plugin adds an OrderedDict `testdata` attribute to all tests,

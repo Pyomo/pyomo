@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 ##############################################################################
 # Institute for the Design of Advanced Energy Systems Process Systems
@@ -26,6 +24,7 @@ Rooney Biegler model, based on Rooney, W. C. and Biegler, L. T. (2001). Design f
 model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 47(8), 1794-1804.
 """
+
 from pyomo.common.dependencies import pandas as pd
 import pyomo.environ as pyo
 

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -37,6 +35,13 @@ sys.path.insert(0, os.path.abspath('../../../pyutilib'))
 sys.path.insert(0, os.path.abspath('../..'))
 # our sphinx extensions
 sys.path.insert(0, os.path.abspath('ext'))
+
+# -- Mark that we are running Sphinx --------------------------------------
+import pyomo
+
+# Mark a "convenient" and reasonably unique global flag that we can use
+# elsewhere to reliably tell if Sphinx is building / testing the docs
+pyomo.__sphinx_build__ = True
 
 # -- Rebuild SPY files ----------------------------------------------------
 sys.path.insert(0, os.path.abspath('src'))
@@ -107,7 +112,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Pyomo'
-copyright = u'2008-2025, Sandia National Laboratories'
+copyright = u'2008-2026, Sandia National Laboratories'
 author = u'Pyomo Development Team'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -161,6 +166,94 @@ trim_doctest_flags = True
 # If true, figures, tables and code-blocks are automatically numbered if
 # they have a caption.
 numfig = True
+
+
+# We want to be able to document the CONFIG class attribute in a special
+# section.  Nominally, we would use the napoleon_custom_sections hook.
+# Unfortunately, there isn't a generic "kwargs_style", and aliasing
+# 'Keyword Arguments' would render the section header in the
+# documentation as 'Keyword Arguments'.
+#
+# Our solution is to declare a new PyObject field type (:config:) and
+# define a new parser that generates :config: fields.  We register the
+# new parser with Napoleon by monkey-patching _load_custom_sections().
+def _monkey_patch_napoleon():
+    from sphinx.ext.napoleon.docstring import GoogleDocstring
+    from sphinx.domains.python._object import PyObject, PyTypedField
+    from sphinx.locale import _
+    from sphinx import addnodes
+    from functools import partial
+
+    class PyConfigDomainField(PyTypedField):
+        def make_xref(
+            self,
+            rolename: str,
+            domain: str,
+            target: str,
+            innernode=addnodes.literal_emphasis,
+            contnode=None,
+            env=None,
+            inliner=None,
+            location=None,
+        ):
+            ans = super().make_xref(
+                rolename=rolename,
+                domain=domain,
+                target=target,
+                innernode=innernode,
+                contnode=contnode,
+                env=env,
+                inliner=inliner,
+                location=location,
+            )
+            # Part of the call stack will override the reftype to
+            # "class".  We want to support a broader set of domain
+            # types, so we will set it to "anything" (i.e., object)
+            ans['reftype'] = 'obj'
+            return ans
+
+    PyObject.doc_field_types.append(
+        PyConfigDomainField(
+            'config',
+            label=_('CONFIG'),
+            names=('config',),
+            typerolename='obj',
+            typenames=('configtype',),
+            can_collapse=True,
+        )
+    )
+    PyObject.doc_field_types.append(
+        PyConfigDomainField(
+            'option',
+            label=_('Options'),
+            names=('option',),
+            typerolename='obj',
+            typenames=('optiontype',),
+            can_collapse=True,
+        )
+    )
+
+    def _parse_config_section(self, field: str, section: str) -> list[str]:
+        fields = self._consume_fields()
+        if self._config.napoleon_use_keyword:
+            return self._format_docutils_params(
+                fields, field_role=field, type_role=field + 'type'
+            )
+        else:
+            return self._format_fields(_(section), fields)
+
+    original_loader = GoogleDocstring._load_custom_sections
+
+    def _load_custom_sections(self):
+        self._sections['config'] = partial(self._parse_config_section, 'config')
+        self._sections['options'] = partial(self._parse_config_section, 'option')
+        return original_loader(self)
+
+    GoogleDocstring._parse_config_section = _parse_config_section
+    GoogleDocstring._load_custom_sections = _load_custom_sections
+
+
+_monkey_patch_napoleon()
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -262,6 +355,10 @@ texinfo_documents = []
 
 # autodoc_member_order = 'bysource'
 autodoc_member_order = 'groupwise'
+# Starting in Sphinx 9.1, the new implementation of autodoc isn't
+# compatible with our autosummary extension (See
+# https://github.com/sphinx-doc/sphinx/issues/14089)
+autodoc_use_legacy_class_based = True
 
 autosummary_generate = True
 autosummary_ignore_module_all = True

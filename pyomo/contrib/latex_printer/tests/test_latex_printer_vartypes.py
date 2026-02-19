@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.latex_printer import latex_printer
@@ -49,16 +47,14 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
             & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -69,16 +65,14 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
             & \text{s.t.} 
             & & x^{2} \leq 5 & \label{con:basicFormulation_constraint_1} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -89,8 +83,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -99,8 +92,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -111,8 +103,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -121,8 +112,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 0 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -133,8 +123,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -143,8 +132,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -155,8 +143,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -165,8 +152,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0 \leq x \leq 0 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -177,8 +163,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -187,8 +172,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -199,8 +183,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -209,8 +192,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -221,8 +203,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -231,8 +212,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0 \leq x \leq 1 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -243,8 +223,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -253,8 +232,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -265,8 +243,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -275,8 +252,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -287,8 +263,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -297,8 +272,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 < x & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -309,8 +283,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -319,8 +292,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 < x & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -331,8 +303,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -341,8 +312,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 < x \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -380,8 +350,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -390,8 +359,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 < x \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -402,8 +370,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -412,8 +379,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -424,8 +390,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -434,8 +399,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 < x \leq 1 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -446,8 +410,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -456,8 +419,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -468,8 +430,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -478,8 +439,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -490,8 +450,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -500,8 +459,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -512,8 +470,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -522,8 +479,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -534,8 +490,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -544,8 +499,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -556,8 +510,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -566,8 +519,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -578,8 +530,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -588,8 +539,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -600,8 +550,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -610,8 +559,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -622,8 +570,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -632,8 +579,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -653,8 +599,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -663,8 +608,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{R}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -693,8 +637,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -703,8 +646,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -715,8 +657,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -725,8 +666,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -737,8 +677,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -747,8 +686,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -759,8 +697,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -769,8 +706,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x < 0  & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -781,8 +717,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -791,8 +726,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{R}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -857,8 +791,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -867,8 +800,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -879,8 +811,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -889,8 +820,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -901,8 +831,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -911,8 +840,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 10 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -923,8 +851,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -933,8 +860,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -954,8 +880,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -964,8 +889,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -976,8 +900,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -986,8 +909,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 10 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -998,8 +920,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1008,8 +929,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1020,8 +940,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1030,8 +949,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1042,8 +960,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1052,8 +969,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1064,8 +980,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1074,8 +989,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1086,8 +1000,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1096,8 +1009,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1108,8 +1020,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1118,8 +1029,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1130,8 +1040,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1140,8 +1049,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1152,8 +1060,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1162,8 +1069,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 0 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1174,8 +1080,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1184,8 +1089,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1196,8 +1100,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1206,8 +1109,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0 \leq x \leq 0 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1218,8 +1120,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1228,8 +1129,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1240,8 +1140,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1250,8 +1149,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1262,8 +1160,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1272,8 +1169,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0 \leq x \leq 1 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1284,8 +1180,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1294,8 +1189,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1306,8 +1200,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1316,8 +1209,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{Z} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1328,8 +1220,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1338,8 +1229,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1350,8 +1240,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1360,8 +1249,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1372,8 +1260,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1382,8 +1269,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1421,8 +1307,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1431,8 +1316,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1443,8 +1327,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1453,8 +1336,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1465,8 +1347,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1475,8 +1356,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 1 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1487,8 +1367,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1497,8 +1376,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1509,8 +1387,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1519,8 +1396,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 0.75 & \qquad \in \mathds{Z}_{> 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1531,8 +1407,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1541,8 +1416,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1553,8 +1427,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1563,8 +1436,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1575,8 +1447,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1585,8 +1456,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1597,8 +1467,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1607,8 +1476,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1619,8 +1487,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1629,8 +1496,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1641,8 +1507,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1651,8 +1516,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1663,8 +1527,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1673,8 +1536,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1694,8 +1556,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1704,8 +1565,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 = x \leq 0  & \qquad \in \mathds{Z}_{\leq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1734,8 +1594,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1744,8 +1603,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x \leq -1 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1756,8 +1614,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1766,8 +1623,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x \leq -1 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1778,8 +1634,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1788,8 +1643,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq -1 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1800,8 +1654,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1810,8 +1663,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq -1 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1822,8 +1674,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1832,8 +1683,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & -10 \leq x \leq -2 & \qquad \in \mathds{Z}_{< 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1898,8 +1748,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1908,8 +1757,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1920,8 +1768,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1930,8 +1777,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1942,8 +1788,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1952,8 +1797,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1964,8 +1808,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -1974,8 +1817,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -1995,8 +1837,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2005,8 +1846,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2017,8 +1857,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2027,8 +1866,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2039,8 +1877,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2049,8 +1886,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 2 \leq x \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2061,8 +1897,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2071,8 +1906,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2083,8 +1917,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2093,8 +1926,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 1 \leq x \leq 10 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2105,8 +1937,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2115,8 +1946,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{Z}_{\geq 0} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2127,8 +1957,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2137,8 +1966,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2149,8 +1977,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2159,8 +1986,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2171,8 +1997,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2181,8 +2006,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2193,8 +2017,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2203,8 +2026,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2215,8 +2037,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2225,8 +2046,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2237,8 +2057,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2247,8 +2066,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2259,8 +2077,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2269,8 +2086,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2281,8 +2097,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2291,8 +2106,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2303,8 +2117,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2313,8 +2126,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2325,8 +2137,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2335,8 +2146,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2347,8 +2157,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2357,8 +2166,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ \text{True} , \text{False} \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2369,8 +2177,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2379,8 +2186,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2391,8 +2197,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2401,8 +2206,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2413,8 +2217,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2423,8 +2226,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2435,8 +2237,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2445,8 +2246,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2457,8 +2257,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2467,8 +2266,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2479,8 +2277,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2489,8 +2286,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2501,8 +2297,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2511,8 +2306,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2523,8 +2317,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2533,8 +2326,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2545,8 +2337,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2555,8 +2346,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2567,8 +2357,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2577,8 +2366,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2589,8 +2377,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2599,8 +2386,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \left\{ 0 , 1 \right \} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2611,8 +2397,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2621,8 +2406,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2633,8 +2417,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2643,8 +2426,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2655,8 +2437,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2665,8 +2446,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2677,8 +2457,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2687,8 +2466,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2699,8 +2477,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2709,8 +2486,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2721,8 +2497,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2731,8 +2506,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2743,8 +2517,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2753,8 +2526,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2765,8 +2537,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2775,8 +2546,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2787,8 +2557,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2797,8 +2566,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2809,8 +2577,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2819,8 +2586,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2831,8 +2597,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2841,8 +2606,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & x & \qquad \in \varnothing \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2853,8 +2617,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2863,8 +2626,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2875,8 +2637,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2885,8 +2646,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2897,8 +2657,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2907,8 +2666,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2919,8 +2677,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2929,8 +2686,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2950,8 +2706,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2960,8 +2715,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -2972,8 +2726,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -2982,8 +2735,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3003,8 +2755,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3013,8 +2764,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3025,8 +2775,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3035,8 +2784,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  = 1 x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3047,8 +2795,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3057,8 +2804,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3069,8 +2815,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3079,8 +2824,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3091,8 +2835,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3101,8 +2844,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3113,8 +2855,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3123,8 +2864,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3135,8 +2875,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3145,8 +2884,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3166,8 +2904,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3176,8 +2913,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x = 0  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3188,8 +2924,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3198,8 +2933,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3219,8 +2953,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3229,8 +2962,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  0 \leq x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3241,8 +2973,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3251,8 +2982,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & &  = 1 x \leq 1  & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 
@@ -3263,8 +2993,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
         m.constraint_1 = pyo.Constraint(expr=m.x**2 <= 5.0)
         pstr = latex_printer(m)
 
-        bstr = dedent(
-            r"""
+        bstr = dedent(r"""
         \begin{align} 
             & \min 
             & & x & \label{obj:basicFormulation_objective} \\ 
@@ -3273,8 +3002,7 @@ class TestLatexPrinterVariableTypes(unittest.TestCase):
             & \text{w.b.} 
             & & 0.25 \leq x \leq 0.75 & \qquad \in \mathds{R} \label{con:basicFormulation_x_bound} 
         \end{align} 
-        """
-        )
+        """)
 
         self.assertEqual("\n" + pstr + "\n", bstr)
 

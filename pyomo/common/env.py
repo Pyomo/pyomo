@@ -1,17 +1,15 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import os
 
-from .dependencies import ctypes
+from .dependencies import ctypes, multiprocessing
 
 
 def _as_bytes(val):
@@ -66,9 +64,12 @@ def _load_dll(name, timeout=10):
     if not ctypes.util.find_library(name):
         return False, None
 
-    import multiprocessing
-
     if _load_dll.pool is None:
+        # Resolving the deferred multiprocessing import could change the
+        # local "multiprocessing" variable (replacing it with the
+        # imported module).  This can result in an UnboundLocalError.
+        # By explicitly declaring it "global" we can avoid the error.
+        global multiprocessing
         try:
             _load_dll.pool = multiprocessing.Pool(1)
         except AssertionError:
@@ -99,7 +100,7 @@ def _load_dll(name, timeout=10):
 _load_dll.pool = None
 
 
-class _RestorableEnvironInterface(object):
+class _RestorableEnvironInterface:
     """Interface to track environment changes and restore state"""
 
     def __init__(self, dll):
@@ -160,7 +161,7 @@ class _RestorableEnvironInterface(object):
             self.dll.putenv_s(key, b'')
 
 
-class _OSEnviron(object):
+class _OSEnviron:
     """Helper class to proxy a "DLL-like" interface to os.environ"""
 
     _libname = 'os.environ'
@@ -205,7 +206,7 @@ class _OSEnviron(object):
         os.environ[key] = val
 
 
-class _MsvcrtDLL(object):
+class _MsvcrtDLL:
     """Helper class to manage the interface with the MSVCRT runtime"""
 
     def __init__(self, name):
@@ -280,7 +281,7 @@ class _MsvcrtDLL(object):
         return ans
 
 
-class _Win32DLL(object):
+class _Win32DLL:
     """Helper class to manage the interface with the Win32 runtime"""
 
     def __init__(self, name):
@@ -381,7 +382,7 @@ class _Win32DLL(object):
         return ans
 
 
-class CtypesEnviron(object):
+class CtypesEnviron:
     """A context manager for managing environment variables
 
     This class provides a simplified interface for consistently setting

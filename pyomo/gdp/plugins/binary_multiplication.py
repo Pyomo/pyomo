@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from .gdp_to_mip_transformation import GDP_to_MIP_Transformation
 from pyomo.common.config import ConfigDict, ConfigValue
@@ -16,7 +14,6 @@ from pyomo.core.util import target_list
 from pyomo.gdp import Disjunction
 from weakref import ref as weakref_ref
 import logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +79,7 @@ class GDPBinaryMultiplicationTransformation(GDP_to_MIP_Transformation):
     def _transform_disjunctionData(
         self, obj, index, parent_disjunct=None, root_disjunct=None
     ):
-        (transBlock, xorConstraint) = self._setup_transform_disjunctionData(
+        transBlock, xorConstraint = self._setup_transform_disjunctionData(
             obj, root_disjunct
         )
 

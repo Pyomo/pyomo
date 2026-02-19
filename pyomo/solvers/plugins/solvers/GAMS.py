@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from io import StringIO
 import shlex
@@ -65,7 +63,7 @@ gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer)
 logger = logging.getLogger('pyomo.solvers')
 
 
-class _GAMSSolver(object):
+class _GAMSSolver:
     """Aggregate of common methods for GAMS interfaces"""
 
     def __init__(self, **kwds):
@@ -137,9 +135,7 @@ class _GAMSSolver(object):
             obj.. ans =g= sum(I, x(I));
             model test / all /;
             solve test using lp minimizing ans;
-            """ % (
-            n,
-        )
+            """ % (n,)
 
     #
     # Support "with" statements.
@@ -324,7 +320,7 @@ class GAMSDirect(_GAMSSolver):
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
-            (_, smap_id) = model.write(
+            _, smap_id = model.write(
                 filename=output_file, format=ProblemFormat.gams, io_options=io_options
             )
             symbolMap = model.solutions.symbol_map[smap_id]
@@ -883,7 +879,7 @@ class GAMSShell(_GAMSSolver):
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
-            (_, smap_id) = model.write(
+            _, smap_id = model.write(
                 filename=output_filename,
                 format=ProblemFormat.gams,
                 io_options=io_options,

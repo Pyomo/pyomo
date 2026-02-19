@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import os
 
@@ -35,12 +33,12 @@ from pyomo.solvers.plugins.solvers.CPLEX import (
 )
 
 
-class _mock_cplex_128(object):
+class _mock_cplex_128:
     def version(self):
         return (12, 8, 0)
 
 
-class _mock_cplex_126(object):
+class _mock_cplex_126:
     def version(self):
         return (12, 6, 0)
 
@@ -129,7 +127,7 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
     def get_mock_cplex_shell(self, mock_model):
         solver = MockCPLEX()
-        (solver._problem_files, solver._problem_format, solver._smap_id) = (
+        solver._problem_files, solver._problem_format, solver._smap_id = (
             convert_problem(
                 (mock_model,),
                 ProblemFormat.cpxlp,

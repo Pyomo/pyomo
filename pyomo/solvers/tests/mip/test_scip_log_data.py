@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -198,11 +196,29 @@ def test_scip_some_more():
     list_extra_data_expected = [
         (),  # problem_lp_unbounded(),
         (),  # problem_lp_infeasible(),
-        ('Time', 'Gap', 'Primal bound', 'Dual bound'),  # problem_lp_optimal(),
+        (
+            'Time',
+            'Gap',
+            'Node count',
+            'Primal bound',
+            'Dual bound',
+        ),  # problem_lp_optimal(),
         (),  # problem_milp_unbounded(),
         (),  # problem_milp_infeasible(),
-        ('Time', 'Gap', 'Primal bound', 'Dual bound'),  # problem_milp_optimal(),
-        ('Time', 'Gap', 'Primal bound', 'Dual bound'),  # problem_milp_feasible()
+        (
+            'Time',
+            'Gap',
+            'Node count',
+            'Primal bound',
+            'Dual bound',
+        ),  # problem_milp_optimal(),
+        (
+            'Time',
+            'Gap',
+            'Node count',
+            'Primal bound',
+            'Dual bound',
+        ),  # problem_milp_feasible()
     ]
 
     # **************************************************************************

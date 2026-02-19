@@ -1,16 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
-
 
 logger = logging.getLogger('pyomo.core')
 
@@ -20,7 +17,7 @@ _virtual_sets = []
 #
 # Dummy types used by Kernel as domain flags
 #
-class RealSet(object):
+class RealSet:
     @staticmethod
     def get_interval():
         return (None, None, 0)
@@ -38,7 +35,7 @@ class RealSet(object):
         return False
 
 
-class IntegerSet(object):
+class IntegerSet:
     @staticmethod
     def get_interval():
         return (None, None, 1)
@@ -56,7 +53,7 @@ class IntegerSet(object):
         return False
 
 
-class BinarySet(object):
+class BinarySet:
     @staticmethod
     def get_interval():
         return (0, 1, 1)

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import json
 import pyomo.environ as pyo
@@ -48,7 +46,7 @@ class Solution:
         ----------
             model : ConcreteModel
                 A concrete Pyomo model.
-            variable_list: A collection of Pyomo _GenereralVarData variables
+            variable_list: A collection of Pyomo _GeneralVarData variables
                 The variables for which the solution will be stored.
             include_fixed : boolean
                 Boolean indicating that fixed variables should be added to the

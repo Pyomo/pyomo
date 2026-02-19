@@ -1,22 +1,25 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import enum
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.enums import ExtendedEnumType, ObjectiveSense
+from pyomo.common.enums import (
+    ExtendedEnumType,
+    ObjectiveSense,
+    SolverAPIVersion,
+    IntEnum,
+)
 
 
-class ProblemSense(enum.IntEnum, metaclass=ExtendedEnumType):
+class ProblemSense(IntEnum, metaclass=ExtendedEnumType):
     __base_enum__ = ObjectiveSense
 
     unknown = 0
@@ -95,3 +98,36 @@ class TestObjectiveSense(unittest.TestCase):
     def test_str(self):
         self.assertEqual(str(ObjectiveSense.minimize), 'minimize')
         self.assertEqual(str(ObjectiveSense.maximize), 'maximize')
+
+
+class TestSolverAPIVersion(unittest.TestCase):
+    def test_members(self):
+        self.assertEqual(
+            list(SolverAPIVersion),
+            [SolverAPIVersion.V1, SolverAPIVersion.APPSI, SolverAPIVersion.V2],
+        )
+
+    def test_call(self):
+        self.assertIs(SolverAPIVersion(10), SolverAPIVersion.V1)
+        self.assertIs(SolverAPIVersion(15), SolverAPIVersion.APPSI)
+        self.assertIs(SolverAPIVersion(20), SolverAPIVersion.V2)
+
+        self.assertIs(SolverAPIVersion('V1'), SolverAPIVersion.V1)
+        self.assertIs(SolverAPIVersion('APPSI'), SolverAPIVersion.APPSI)
+        self.assertIs(SolverAPIVersion('V2'), SolverAPIVersion.V2)
+
+        with self.assertRaisesRegex(
+            ValueError, "'foo' is not a valid SolverAPIVersion"
+        ):
+            SolverAPIVersion('foo')
+
+
+class TestEnumBackport(unittest.TestCase):
+    def test_bytes(self):
+        # Test that the Int portability wrappers (if present) define
+        # functional to_bytes / from_bytes
+        class TestEnum(IntEnum):
+            field = 100
+
+        self.assertEqual(TestEnum.field.to_bytes(), b'd')
+        self.assertIs(TestEnum.from_bytes(b'd'), TestEnum.field)

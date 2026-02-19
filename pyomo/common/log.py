@@ -1,23 +1,21 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
-#
-# Utility classes for working with the logger
-#
+# This module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
+
+"""Utility classes for working with loggers"""
+
 import inspect
 import io
 import logging
@@ -237,7 +235,7 @@ class StdoutHandler(logging.StreamHandler):
             self.stream = orig
 
 
-class Preformatted(object):
+class Preformatted:
     __slots__ = ('msg',)
 
     def __init__(self, msg):
@@ -250,7 +248,7 @@ class Preformatted(object):
         return f'Preformatted({self.msg!r})'
 
 
-class _GlobalLogFilter(object):
+class _GlobalLogFilter:
     def __init__(self):
         self.logger = logging.getLogger()
 
@@ -292,7 +290,7 @@ class LogHandler(logging.StreamHandler):
         self.setFormatter(LegacyPyomoFormatter(base=base, verbosity=verbosity))
 
 
-class LoggingIntercept(object):
+class LoggingIntercept:
     r"""Context manager for intercepting messages sent to a log stream
 
     This class is designed to enable easy testing of log messages.
@@ -461,7 +459,7 @@ class LogStream(io.TextIOBase):
                 yield _LastResortRedirector(redirects[fd].original_fd)
 
 
-class _StreamRedirector(object):
+class _StreamRedirector:
     def __init__(self, handler, fd):
         self.handler = handler
         self.fd = fd
@@ -488,7 +486,7 @@ class _StreamRedirector(object):
             self.handler.stream = self.orig_stream
 
 
-class _LastResortRedirector(object):
+class _LastResortRedirector:
     def __init__(self, fd):
         self.fd = fd
         self.local_fd = None

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import platform
@@ -22,11 +20,9 @@ logger = logging.getLogger('pyomo.common')
     version='6.5.0',
 )
 def get_gsl(downloader):
-    logger.info(
-        "As of February 9, 2023, AMPL GSL can no longer be downloaded \
+    logger.info("As of February 9, 2023, AMPL GSL can no longer be downloaded \
         through download-extensions. Visit https://portal.ampl.com/ \
-        to download the AMPL GSL binaries."
-    )
+        to download the AMPL GSL binaries.")
 
 
 def find_GSL():

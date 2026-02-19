@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pickle
 
@@ -235,7 +233,7 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotIn({0: -1}, NR(0, None, 0))
         self.assertNotIn({1: 1}, NR(0, None, 0))
 
-        class _Unrelated(object):
+        class _Unrelated:
             pass
 
         self.assertNotIn(_Unrelated(), NR(0, None, 0))
@@ -270,7 +268,7 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotIn(_NotCastable(1), NR(0, None, 0))
         self.assertNotIn(_NotCastable, NR._types_comparable_to_int)
 
-        class _Custom(object):
+        class _Custom:
             def __init__(self, val):
                 self.val = val
 

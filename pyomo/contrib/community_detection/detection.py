@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 Main module for community detection integration with Pyomo models.
@@ -282,7 +280,7 @@ def detect_communities(
     )
 
 
-class CommunityMap(object):
+class CommunityMap:
     """
     This class is used to create CommunityMap objects which are returned by the detect_communities function. Instances
     of this class allow dict-like usage and store relevant information about the given community map, such as the
@@ -465,7 +463,7 @@ class CommunityMap(object):
         if type_of_graph != self.type_of_community_map:
             # Use the generate_model_graph function to create a NetworkX graph of the given model (along with
             # number_component_map and constraint_variable_map, which will be used to help with drawing the graph)
-            (model_graph, number_component_map, constraint_variable_map) = (
+            model_graph, number_component_map, constraint_variable_map = (
                 generate_model_graph(
                     self.model,
                     type_of_graph=type_of_graph,

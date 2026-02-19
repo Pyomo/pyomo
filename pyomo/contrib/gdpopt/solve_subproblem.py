@@ -1,15 +1,14 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """Functions for solving the nonlinear subproblem."""
+
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException, DeveloperError
 from pyomo.contrib import appsi
@@ -162,7 +161,7 @@ def solve_linear_subproblem(subproblem, config, timing):
     if subprob_terminate_cond is tc.optimal:
         return tc.optimal
     elif subprob_terminate_cond is tc.infeasibleOrUnbounded:
-        (results, subprob_terminate_cond) = distinguish_mip_infeasible_or_unbounded(
+        results, subprob_terminate_cond = distinguish_mip_infeasible_or_unbounded(
             subproblem, config
         )
     if subprob_terminate_cond is tc.infeasible:
@@ -240,7 +239,7 @@ def detect_unfixed_discrete_vars(model):
     return var_set
 
 
-class preprocess_subproblem(object):
+class preprocess_subproblem:
     def __init__(self, util_block, config):
         self.util_block = util_block
         self.config = config

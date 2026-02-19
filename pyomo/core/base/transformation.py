@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common import Factory
 from pyomo.common.collections import ComponentSet
@@ -17,11 +15,11 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import TransformationTimer
 
 
-class TransformationInfo(object):
+class TransformationInfo:
     pass
 
 
-class TransformationData(object):
+class TransformationData:
     """
     This is a container class that supports named data objects.
     """
@@ -35,7 +33,7 @@ class TransformationData(object):
         return self._data[name]
 
 
-class Transformation(object):
+class Transformation:
     """
     Base class for all model transformations.
     """
@@ -109,7 +107,7 @@ class Transformation(object):
         return instance
 
 
-class ReverseTransformationToken(object):
+class ReverseTransformationToken:
     """
     Class returned by reversible transformations' apply_to methods that
     can be passed back to the transformation in order to revert its changes

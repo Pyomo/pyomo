@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Unit Tests for Set() Objects
 #
@@ -37,6 +35,7 @@ currdir = dirname(abspath(__file__)) + os.sep
 
 import pyomo.common.unittest as unittest
 
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.core.base
 from pyomo.core.base.util import flatten_tuple
 from pyomo.environ import (
@@ -2754,36 +2753,45 @@ class TestSetArgs2(PyomoModel):
         #
         # Create data file to test a successful validation using indexed sets
         #
-        OUTPUT = open(currdir + "setsAB.dat", "w")
-        OUTPUT.write(
-            "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5; end;"
-        )
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
-        self.model.B = Set(self.model.Z, validate=lambda model, x, i: x in model.A[i])
-        self.instance = self.model.create_instance(currdir + "setsAB.dat")
+        with TempfileManager.new_context() as TMP:
+            file = TMP.create_tempfile('setsAB.dat')
+            with open(file, 'w') as OUTPUT:
+                OUTPUT.write(
+                    "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5; end;"
+                )
+            #
+            # Create A with an error
+            #
+            self.model.Z = Set()
+            self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
+            self.model.B = Set(
+                self.model.Z, validate=lambda model, x, i: x in model.A[i]
+            )
+            self.instance = self.model.create_instance(file)
 
     def test_validation3_fail(self):
         #
         # Create data file to test a failed validation using indexed sets
         #
-        OUTPUT = open(currdir + "setsAB.dat", "w")
-        OUTPUT.write(
-            "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5 6; end;"
-        )
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
-        self.model.B = Set(self.model.Z, validate=lambda model, x, i: x in model.A[i])
-        with self.assertRaisesRegex(ValueError, ".*violates the validation rule of"):
-            self.instance = self.model.create_instance(currdir + "setsAB.dat")
+
+        with TempfileManager.new_context() as TMP:
+            file = TMP.create_tempfile('setsAB.dat')
+            with open(file, 'w') as OUTPUT:
+                OUTPUT.write(
+                    "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5 6; end;"
+                )
+            #
+            # Create A with an error
+            #
+            self.model.Z = Set()
+            self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
+            self.model.B = Set(
+                self.model.Z, validate=lambda model, x, i: x in model.A[i]
+            )
+            with self.assertRaisesRegex(
+                ValueError, ".*violates the validation rule of"
+            ):
+                self.instance = self.model.create_instance(file)
 
     def test_validation4_pass(self):
         #
@@ -3339,6 +3347,18 @@ class TestSetErrors(PyomoModel):
         model.Y = RangeSet(model.C)
         model.X = Param(model.C, default=0.0)
 
+    def test_setargs6(self):
+        # Test that we can create an indexed set from a function that returns
+        # a dict to define the set
+        model = ConcreteModel()
+        model.A = Set(initialize=[1, 2])
+        model.B = Set(model.A, initialize={1: [2, 3], 2: [3, 4]})
+        model.C = Set(model.A, initialize=lambda m: {x: [x + 1, x + 2] for x in m.A})
+        # convert to native data types for easier comparison
+        B = {k: v.ordered_data() for (k, v) in model.B.items()}
+        C = {k: v.ordered_data() for (k, v) in model.C.items()}
+        self.assertEqual(B, C)
+
     @unittest.skip("_verify was removed during the set rewrite")
     def test_verify(self):
         a = Set(initialize=[1, 2, 3])
@@ -3469,7 +3489,7 @@ class TestSetErrors(PyomoModel):
         #    pass
         self.assertTrue(Integers.issubset(Reals))
         # Prior to the set rewrite, SetOperators (like issubset) between
-        # sets with differing dimentionality generated an error.
+        # sets with differing dimensionality generated an error.
         # Because of vagueness around the concept of the UnknownSetDimen
         # and dimen=None, we no longer generate those errors.  This
         # means that two empty sets (a and b) with differing

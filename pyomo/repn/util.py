@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import collections
 import functools
@@ -46,7 +44,7 @@ from pyomo.core.expr.numvalue import is_fixed, value
 import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger(__name__)
 
 valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
 valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
@@ -67,6 +65,10 @@ int_float = {int, float}
 
 
 class ExprType(enums.IntEnum):
+    # Note that the ordering is meaningful, and we will compare
+    # instances using relational operators.  In particular, we assume
+    # that the Enum values increase in polynomial degree, starting at
+    # CONSTANT and endine at GENERAL (nonlinear).
     CONSTANT = 0
     FIXED = 3
     VARIABLE = 5
@@ -93,7 +95,7 @@ class FileDeterminism(enums.IntEnum):
     SORT_SYMBOLS = 30
 
     # We will define __str__ and __format__ so that behavior in python
-    # 3.11 is consistent with 3.7 - 3.10.
+    # 3.11+ is consistent with 3.7 - 3.10.
 
     def __str__(self):
         return enums.Enum.__str__(self)
@@ -117,6 +119,21 @@ class FileDeterminism(enums.IntEnum):
             )
             return new
         return super()._missing_(value)
+
+
+def val2str(val):
+    """Converts an object to str with special handling for InvalidNumber
+
+    This will convert the ``val`` to a string.  If ``val`` is an
+    InvalidNumber, the conversion to string will bypass the exception
+    raised by :py:meth:`InvalidNumber.__str__`.
+
+    """
+    if hasattr(val, '_str'):
+        return val._str()
+    if hasattr(val, 'to_string'):
+        return val.to_string()
+    return repr(val)
 
 
 class InvalidNumber(PyomoObject):
@@ -152,11 +169,14 @@ class InvalidNumber(PyomoObject):
         args, causes = InvalidNumber.parse_args(*args)
         try:
             return InvalidNumber(op(*args), causes)
-        except (TypeError, ArithmeticError):
+        except TypeError:
             # TypeError will be raised when operating on incompatible
-            # types (e.g., int + None); ArithmeticError can be raised by
-            # invalid operations (like divide by zero)
+            # types (e.g., int + None);
             return InvalidNumber(self.value, causes)
+        except (ArithmeticError, ValueError):
+            # ArithmeticError and ValueError can be raised by invalid
+            # operations (like divide by zero or log of a negative number)
+            return InvalidNumber(float('nan'), causes)
 
     def __eq__(self, other):
         ans = self._cmp(operator.eq, other)
@@ -392,14 +412,14 @@ class BeforeChildDispatcher(collections.defaultdict):
         try:
             return False, (
                 _CONSTANT,
-                visitor.check_constant(visitor.evaluate(child), child),
+                check_constant(visitor.evaluate(child), child, visitor),
             )
         except (ValueError, ArithmeticError):
             return True, None
 
     @staticmethod
     def _before_param(visitor, child):
-        return False, (_CONSTANT, visitor.check_constant(child.value, child))
+        return False, (_CONSTANT, check_constant(child.value, child, visitor))
 
     @staticmethod
     def _before_index_template(visitor, child):
@@ -651,7 +671,7 @@ def categorize_valid_components(
                     ctype=ctype,
                     active=active,
                     descend_into=False,
-                    sort=SortComponents.unsorted,
+                    sort=SortComponents.deterministic,
                 )
             )
     return component_map, {k: v for k, v in unrecognized.items() if v}
@@ -726,17 +746,17 @@ def initialize_var_map_from_column_order(model, config, var_map):
     return var_map
 
 
-def ordered_active_constraints(model, config):
-    sorter = FileDeterminism_to_SortComponents(config.file_determinism)
-    constraints = model.component_data_objects(Constraint, active=True, sort=sorter)
-
+def row_order2row_map(config):
+    """Convert a row_order (list or ComponentMap) into a dict mapping
+    constraint id -> row index. Returns an empty dict if no ordering."""
     row_order = config.row_order
-    if row_order is None or row_order.__class__ is bool:
-        return constraints
-    elif isinstance(row_order, ComponentMap):
-        # The row order has historically also supported a ComponentMap of
-        # component to position in addition to the simple list of
-        # components.  Convert it to the simple list
+    if row_order is None or isinstance(row_order, bool):
+        return {}
+
+    sorter = FileDeterminism_to_SortComponents(config.file_determinism)
+
+    if isinstance(row_order, ComponentMap):
+        # Convert ComponentMap to sorted list based on its values
         row_order = sorted(row_order, key=row_order.__getitem__)
 
     row_map = {}
@@ -746,10 +766,18 @@ def ordered_active_constraints(model, config):
                 row_map[id(c)] = c
         else:
             row_map[id(con)] = con
+
+    # Map the implicit dict ordering to an explicit 0..n ordering
+    return {_id: i for i, _id in enumerate(row_map)}
+
+
+def ordered_active_constraints(model, config):
+    sorter = FileDeterminism_to_SortComponents(config.file_determinism)
+    constraints = model.component_data_objects(Constraint, active=True, sort=sorter)
+
+    row_map = row_order2row_map(config)
     if not row_map:
         return constraints
-    # map the implicit dict ordering to an explicit 0..n ordering
-    row_map = {_id: i for i, _id in enumerate(row_map)}
     # sorted() is stable (per Python docs), so we can let all
     # unspecified rows have a row number one bigger than the
     # number of rows specified by the user ordering.
@@ -758,7 +786,7 @@ def ordered_active_constraints(model, config):
     return sorted(constraints, key=lambda x: _row_getter(id(x), _n))
 
 
-class VarRecorder(object):
+class VarRecorder:
     def __init__(self, var_map, sorter):
         self.var_map = var_map
         self.sorter = sorter
@@ -781,7 +809,7 @@ class VarRecorder(object):
                 vm[id(v)] = v
 
 
-class OrderedVarRecorder(object):
+class OrderedVarRecorder:
     def __init__(self, var_map, var_order, sorter):
         self.var_map = var_map
         self.var_order = var_order
@@ -808,13 +836,33 @@ class OrderedVarRecorder(object):
                 vm[vid] = v
 
 
-class TemplateVarRecorder(object):
-    def __init__(self, var_map, var_order, sorter):
+class TemplateVarRecorder:
+    def __init__(self, var_map, sorter):
         self.var_map = var_map
-        self._var_order = var_order
+        self._var_order = None
         self.sorter = sorter
         self.env = {None: 0}
         self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
+        if var_map:
+            # If the user provided an initial var_map, we want to honor
+            # that ordering.  This means we need to both initialize the
+            # env dict with all the Vars referenced, PLUS fill in any
+            # additional vars that we would have indexed/recorded in
+            # add()
+            next_i = len(var_map)
+            for i, v in enumerate(list(var_map.values())):
+                var_comp = v.parent_component()
+                name = self.symbolmap.getSymbol(var_comp)
+                ve = self.env.get(name, None)
+                if ve is None:
+                    ve = self.env[name] = {}
+                    for idx, vdata in var_comp.items():
+                        vid = id(vdata)
+                        if vid not in var_map:
+                            var_map[vid] = v
+                            ve[idx] = next_i
+                            next_i += 1
+                ve[v.index()] = i
 
     @property
     def var_order(self):
@@ -840,18 +888,18 @@ class TemplateVarRecorder(object):
         # order in which we would see the variables)
         vm = self.var_map
         ve = self.env[name] = {}
-        vo = self._var_order
         try:
             _iter = var_comp.items(self.sorter)
         except AttributeError:
             # Note that this only works for the AML, as kernel does not
             # provide a parent_component()
-            _iter = (var,)
-        if vo is None:
+            _iter = (None, var)
+        if self._var_order is None:
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vm[id(v)] = v
                 ve[idx] = i
         else:
+            vo = self._var_order
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vid = id(v)
                 vm[vid] = v
@@ -915,3 +963,49 @@ def ftoa(val, parenthesize_negative_values=False):
         return '(' + a[:i] + ')'
     else:
         return a[:i]
+
+
+def check_constant(ans, obj, visitor):
+    # [ESJ 10/15/25]: The only reason this takes the visitor as an
+    # argument is to pass it to the complex_number_error function, and
+    # the only reason it needs it is to get the name of the class. But
+    # it is public, so I'm not changing anything about that at the
+    # moment.
+    if ans.__class__ not in native_numeric_types:
+        # None can be returned from uninitialized Var/Param objects
+        if ans is None:
+            return InvalidNumber(
+                None, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
+            )
+        if ans.__class__ is InvalidNumber:
+            return ans
+        elif ans.__class__ in native_complex_types:
+            return complex_number_error(ans, visitor, obj)
+        else:
+            # It is possible to get other non-numeric types.  Most
+            # common are bool and 1-element numpy.array().  We will
+            # attempt to convert the value to a float before
+            # proceeding.
+            #
+            # Note that as of NumPy 1.25, blindly casting a
+            # 1-element ndarray to a float will generate a
+            # deprecation warning.  We will explicitly test for
+            # that, but want to do the test without triggering the
+            # numpy import
+            for cls in ans.__class__.__mro__:
+                if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
+                    if len(ans) == 1:
+                        ans = ans[0]
+                    break
+            # TODO: we should check bool and warn/error (while bool is
+            # convertible to float in Python, they have very
+            # different semantic meanings in Pyomo).
+            try:
+                ans = float(ans)
+            except:
+                return InvalidNumber(
+                    ans, f"'{obj}' evaluated to a nonnumeric value '{ans}'"
+                )
+    if ans != ans:
+        return InvalidNumber(nan, f"'{obj}' evaluated to a nonnumeric value '{ans}'")
+    return ans

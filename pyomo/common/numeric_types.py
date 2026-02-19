@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import sys
@@ -318,13 +316,11 @@ def check_if_numeric_type(obj):
     # Generate a warning, since Pyomo's management of third-party
     # numeric types is more robust when registering explicitly.
     #
-    logger.warning(
-        f"""Dynamically registering the following numeric type:
+    logger.warning(f"""Dynamically registering the following numeric type:
     {obj_class.__module__}.{obj_class.__name__}
 Dynamic registration is supported for convenience, but there are known
 limitations to this approach.  We recommend explicitly registering
-numeric types using RegisterNumericType() or RegisterIntegerType()."""
-    )
+numeric types using RegisterNumericType() or RegisterIntegerType().""")
     return True
 
 

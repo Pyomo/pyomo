@@ -1,17 +1,19 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import sys
 import copy
+import logging
+import traceback
 from pyomo.common.deprecation import deprecation_warning
+
+logger = logging.getLogger(__name__)
 
 
 pyomo_commands = []
@@ -20,12 +22,7 @@ pyomo_commands = []
 def load_entry_points():
     import importlib.metadata
 
-    try:
-        # Python >= 3.10
-        ep_list = importlib.metadata.entry_points(group='pyomo.command')
-    except:
-        # Python 3.8 - 3.9
-        ep_list = importlib.metadata.entry_points().get('pyomo.command', [])
+    ep_list = importlib.metadata.entry_points(group='pyomo.command')
     for ep in ep_list:
         try:
             pyomo_commands.append(ep.load())

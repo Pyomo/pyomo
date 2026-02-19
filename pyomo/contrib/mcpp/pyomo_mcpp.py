@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 # Note: the self.mcpp.* functions are all C-style functions implemented
 # in the compiled MC++ wrapper library
 # Note: argument to pow must be an integer
@@ -384,7 +382,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         return node_result
 
 
-class McCormick(object):
+class McCormick:
     """
     This class takes the constructed expression from MCPP_Visitor and
     allows for MC methods to be performed on pyomo expressions.

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 r"""The pyomo.contrib.pynumero.interfaces.nlp module includes abstract
 classes to represent nonlinear programming problems. There are two
 classes that provide different representations for the NLP.
@@ -316,7 +314,7 @@ class NLP(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def evaluate_constraints(self, out=None):
         """Returns the values for the constraints evaluated at
-        the values given for the primal variales in set_primals
+        the values given for the primal variables in set_primals
 
         Parameters
         ----------
@@ -534,7 +532,7 @@ class ExtendedNLP(NLP, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def evaluate_eq_constraints(self, out=None):
         """Returns the values for the equality constraints evaluated at
-        the values given for the primal variales in set_primals
+        the values given for the primal variables in set_primals
 
         Parameters
         ----------

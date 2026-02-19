@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from io import StringIO
 from typing import Sequence, Dict, Optional, Mapping, MutableMapping
@@ -141,7 +139,7 @@ class TestTerminationCondition(unittest.TestCase):
 class TestSolutionStatus(unittest.TestCase):
     def test_member_list(self):
         member_list = results.SolutionStatus._member_names_
-        expected_list = ['noSolution', 'infeasible', 'feasible', 'optimal']
+        expected_list = ['noSolution', 'unknown', 'infeasible', 'feasible', 'optimal']
         self.assertEqual(member_list, expected_list)
 
     def test_codes(self):
@@ -157,7 +155,6 @@ class TestResults(unittest.TestCase):
         expected_declared = {
             'extra_info',
             'incumbent_objective',
-            'iteration_count',
             'objective_bound',
             'solution_loader',
             'solution_status',
@@ -182,7 +179,6 @@ class TestResults(unittest.TestCase):
         self.assertEqual(res.solution_status, results.SolutionStatus.noSolution)
         self.assertIsNone(res.solver_name)
         self.assertIsNone(res.solver_version)
-        self.assertIsNone(res.iteration_count)
         self.assertIsInstance(res.timing_info, ConfigDict)
         self.assertIsInstance(res.extra_info, ConfigDict)
         self.assertIsNone(res.timing_info.start_timestamp)
@@ -198,7 +194,6 @@ incumbent_objective: None
 objective_bound: None
 solver_name: None
 solver_version: None
-iteration_count: None
 timing_info:
   start_timestamp: None
   wall_time: None

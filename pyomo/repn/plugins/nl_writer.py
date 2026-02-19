@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import os
@@ -18,12 +16,7 @@ from math import log10 as _log10
 from operator import itemgetter, attrgetter
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import (
-    ConfigDict,
-    ConfigValue,
-    InEnum,
-    document_kwargs_from_configdict,
-)
+from pyomo.common.config import ConfigDict, ConfigValue, InEnum, document_class_CONFIG
 from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
 from pyomo.common.gc_manager import PauseGC
@@ -86,7 +79,7 @@ ScalingFactors = namedtuple(
 
 
 # TODO: make a proper base class
-class NLWriterInfo(object):
+class NLWriterInfo:
     """Return type for NLWriter.write()
 
     Attributes
@@ -143,27 +136,30 @@ class NLWriterInfo(object):
 
     def __init__(
         self,
-        var,
-        con,
-        obj,
-        external_libs,
-        row_labels,
-        col_labels,
-        eliminated_vars,
-        scaling,
+        var=None,
+        con=None,
+        obj=None,
+        external_libs=None,
+        row_labels=None,
+        col_labels=None,
+        eliminated_vars=None,
+        scaling=None,
     ):
-        self.variables = var
-        self.constraints = con
-        self.objectives = obj
-        self.external_function_libraries = external_libs
-        self.row_labels = row_labels
-        self.column_labels = col_labels
-        self.eliminated_vars = eliminated_vars
+        self.variables = var or []
+        self.constraints = con or []
+        self.objectives = obj or []
+        self.external_function_libraries = external_libs or []
+        self.row_labels = row_labels or []
+        self.column_labels = col_labels or []
+        self.eliminated_vars = eliminated_vars or []
         self.scaling = scaling
 
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
-class NLWriter(object):
+@document_class_CONFIG(methods=['write'])
+class NLWriter:
+    #: Global class configuration;
+    #: see :ref:`pyomo.repn.plugins.nl_writer.NLWriter::CONFIG`.
     CONFIG = ConfigDict('nlwriter')
     CONFIG.declare(
         'show_section_timing',
@@ -283,6 +279,8 @@ class NLWriter(object):
     )
 
     def __init__(self):
+        #: Instance configuration;
+        #: see :ref:`pyomo.repn.plugins.nl_writer.NLWriter::CONFIG`.
         self.config = self.CONFIG()
 
     def __call__(self, model, filename, solver_capability, io_options):
@@ -337,7 +335,6 @@ class NLWriter(object):
         # was generated and the symbol_map
         return filename, symbol_map
 
-    @document_kwargs_from_configdict(CONFIG)
     def write(
         self, model, ostream, rowstream=None, colstream=None, **options
     ) -> NLWriterInfo:
@@ -389,7 +386,7 @@ class NLWriter(object):
         return symbol_map
 
 
-class _SuffixData(object):
+class _SuffixData:
     def __init__(self, name):
         self.name = name
         self.obj = {}
@@ -492,14 +489,14 @@ class CachingNumericSuffixFinder(SuffixFinder):
         return ans
 
 
-class _NoScalingFactor(object):
+class _NoScalingFactor:
     scale = False
 
     def __call__(self, obj):
         return 1
 
 
-class _NLWriter_impl(object):
+class _NLWriter_impl:
     def __init__(self, ostream, rowstream, colstream, config):
         self.ostream = ostream
         self.rowstream = rowstream
@@ -610,6 +607,7 @@ class _NLWriter_impl(object):
             del suffix_data['scaling_factor']
         else:
             scaling_factor = _NoScalingFactor()
+            scaling_cache = None
         scale_model = scaling_factor.scale
 
         timer.toc("Collected suffixes", level=logging.DEBUG)
@@ -1361,7 +1359,7 @@ class _NLWriter_impl(object):
                 # Note: checking target_expr == 0 is equivalent to
                 # testing "(_con_id is not None and _obj_id is not None)
                 # or _con_id == 0 or _obj_id == 0"
-                self._write_v_line(_id, 0)
+                self._write_v_line(_id, 0, scale_model, scaling_cache)
             else:
                 if target_expr not in single_use_subexpressions:
                     single_use_subexpressions[target_expr] = []
@@ -1396,7 +1394,7 @@ class _NLWriter_impl(object):
                 break
             if single_use_subexpressions:
                 for _id in single_use_subexpressions.get(id(info[0]), ()):
-                    self._write_v_line(_id, row_idx + 1)
+                    self._write_v_line(_id, row_idx + 1, scale_model, scaling_cache)
             ostream.write(f'C{row_idx}{row_comments[row_idx]}\n')
             self._write_nl_expression(info[1], False)
 
@@ -1409,7 +1407,9 @@ class _NLWriter_impl(object):
                     # Note that "Writing .nl files" (2005) is incorrectly
                     # missing the "+ 1" in the description of V lines
                     # appearing in only Objectives (bottom of page 9).
-                    self._write_v_line(_id, n_cons + n_lcons + obj_idx + 1)
+                    self._write_v_line(
+                        _id, n_cons + n_lcons + obj_idx + 1, scale_model, scaling_cache
+                    )
             lbl = row_comments[n_cons + obj_idx]
             sense = 0 if info[0].sense == minimize else 1
             ostream.write(f'O{obj_idx} {sense}{lbl}\n')
@@ -1905,7 +1905,7 @@ class _NLWriter_impl(object):
 
         # Note: the ASL will (silently) produce incorrect answers if the
         # nonlinear portion of a defined variable is a constant
-        # expression.  This may not be the case if all the variables in
+        # expression.  This may now be the case if all the variables in
         # the original nonlinear expression have been fixed.
         for _id, (expr, info, sub) in self.subexpression_cache.items():
             if info.nonlinear:
@@ -1983,7 +1983,7 @@ class _NLWriter_impl(object):
         else:
             self.ostream.write(self.template.const % 0)
 
-    def _write_v_line(self, expr_id, k):
+    def _write_v_line(self, expr_id, k, scale_model, scaling_cache):
         ostream = self.ostream
         column_order = self.column_order
         info = self.subexpression_cache[expr_id]
@@ -1995,10 +1995,14 @@ class _NLWriter_impl(object):
         # Do NOT write out 0 coefficients here: doing so fouls up the
         # ASL's logic for calculating derivatives, leading to 'nan' in
         # the Hessian results.
-        linear = dict(item for item in info[1].linear.items() if item[1])
+        linear = info[1].linear
+        linear_ids = list(_id for _id, coef in linear.items() if coef)
+        if scale_model:
+            for _id in linear_ids:
+                linear[_id] /= scaling_cache[_id]
         #
-        ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
-        for _id in sorted(linear, key=column_order.__getitem__):
+        ostream.write(f'V{self.next_V_line_id} {len(linear_ids)} {k}{lbl}\n')
+        for _id in sorted(linear_ids, key=column_order.__getitem__):
             ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
         self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1

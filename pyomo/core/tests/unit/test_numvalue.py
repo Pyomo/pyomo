@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Unit Tests for Python numeric values
 #
@@ -44,7 +42,7 @@ from pyomo.core.expr.numvalue import (
 from pyomo.common.numeric_types import _native_boolean_types
 
 
-class MyBogusType(object):
+class MyBogusType:
     def __init__(self, val=0):
         self.val = float(val)
 
@@ -84,7 +82,7 @@ class Test_is_numeric_data(unittest.TestCase):
         self.assertEqual(is_numeric_data(NumericConstant(1.0)), True)
 
     def test_error(self):
-        class A(object):
+        class A:
             pass
 
         val = A()
@@ -170,7 +168,7 @@ class Test_value(unittest.TestCase):
         self.assertEqual(None, value(m.x, exception=False))
 
     def test_error1(self):
-        class A(object):
+        class A:
             pass
 
         val = A()
@@ -262,7 +260,7 @@ class Test_polydegree(unittest.TestCase):
         self.assertTrue(1, polynomial_degree(m.x))
 
     def test_error1(self):
-        class A(object):
+        class A:
             pass
 
         val = A()
@@ -311,7 +309,7 @@ class Test_is_constant(unittest.TestCase):
         self.assertTrue(is_constant(val))
 
     def test_error(self):
-        class A(object):
+        class A:
             pass
 
         val = A()
@@ -354,7 +352,7 @@ class Test_is_fixed(unittest.TestCase):
         self.assertTrue(is_fixed(val))
 
     def test_error(self):
-        class A(object):
+        class A:
             pass
 
         val = A()
@@ -397,7 +395,7 @@ class Test_is_variable_type(unittest.TestCase):
         self.assertFalse(is_variable_type(val))
 
     def test_error(self):
-        class A(object):
+        class A:
             pass
 
         val = A()
@@ -433,7 +431,7 @@ class Test_is_potentially_variable(unittest.TestCase):
         self.assertFalse(is_potentially_variable(val))
 
     def test_error(self):
-        class A(object):
+        class A:
             pass
 
         val = A()
@@ -499,7 +497,7 @@ class Test_as_numeric(unittest.TestCase):
         self.assertEqual(1.0, as_numeric(val))
 
     def test_error1(self):
-        class A(object):
+        class A:
             pass
 
         val = A()

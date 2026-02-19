@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 
@@ -129,7 +127,7 @@ class RelaxIntegerVars(Transformation):
             deprecation_warning(
                 "The 'undo' argument is deprecated. Please use the 'reverse' "
                 "argument to undo the transformation.",
-                version='6.9.3.dev0',
+                version='6.9.3',
             )
             for v, d in model._relaxed_integer_vars[None].values():
                 bounds = v.bounds
@@ -189,7 +187,7 @@ class RelaxIntegerVars(Transformation):
                         "The `transform_deactivated_blocks` arguments is deprecated. "
                         "Either specify deactivated Blocks as targets to activate them "
                         "if transforming them is the desired behavior.",
-                        version='6.9.3.dev0',
+                        version='6.9.3',
                     )
                 else:
                     continue

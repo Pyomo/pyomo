@@ -1,20 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
+# This module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
 
 import inspect
 from weakref import ref as weakref_ref
@@ -23,7 +21,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.deprecation import deprecated, deprecation_warning
 
 
-class PluginGlobals(object):
+class PluginGlobals:
     @staticmethod
     @deprecated(
         "The PluginGlobals environment manager is deprecated: "
@@ -254,7 +252,7 @@ class SingletonPlugin(Plugin):
     __singleton__ = True
 
 
-class ExtensionPoint(object):
+class ExtensionPoint:
     def __init__(self, interface):
         assert issubclass(interface, Interface)
         self._interface = interface
@@ -302,7 +300,7 @@ class ExtensionPoint(object):
             )
 
 
-class PluginFactory(object):
+class PluginFactory:
     def __init__(self, interface):
         self.interface = interface
 

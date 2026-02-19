@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import sys
 
@@ -31,7 +29,7 @@ from statistics import stdev, mean
 #      stdev(x)**2 / card(x)  +  stdev(y)**2 / card(y) )
 
 
-class Result(object):
+class Result:
     z_threshold = 1.6448536269514722  # 95%
     # z_threshold = 1.2815515655446004  # 90%
     # z_threshold = 0.8416212335729143  # 80%

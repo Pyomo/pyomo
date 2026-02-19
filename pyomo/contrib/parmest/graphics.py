@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import itertools
 from pyomo.common.dependencies import (
@@ -386,10 +384,8 @@ def pairwise_plot(
     colors = ["r", "mediumblue", "darkgray"]
     if (alpha is not None) and (len(distributions) > 0):
         if theta_star is None:
-            print(
-                """theta_star is not defined, confidence region slice will be 
-                  plotted at the mean value of theta"""
-            )
+            print("""theta_star is not defined, confidence region slice will be 
+                  plotted at the mean value of theta""")
             theta_star = thetas.mean()
 
         mvn_dist = None

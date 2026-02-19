@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import inspect
 import textwrap
@@ -95,7 +93,8 @@ def format_exception(msg, prolog=None, epilog=None, exception=None, width=76):
             # We want to strip off the leading indent that we just
             # added, but only if there is no prolog
             msg = msg.lstrip()
-    fields.append(msg)
+    if msg:
+        fields.append(msg)
 
     if epilog is not None:
         if '\n' not in epilog:
@@ -148,8 +147,11 @@ class DeveloperError(PyomoException, NotImplementedError):
     """
 
     def __str__(self):
+        msg = super().__str__()
+        if msg:
+            msg = repr(msg)
         return format_exception(
-            repr(super().__str__()),
+            msg,
             prolog="Internal Pyomo implementation error:",
             epilog="Please report this to the Pyomo Developers.",
             exception=self,

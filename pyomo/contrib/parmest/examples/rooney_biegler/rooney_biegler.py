@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 Rooney Biegler model, based on Rooney, W. C. and Biegler, L. T. (2001). Design for
@@ -20,86 +18,120 @@ import pyomo.environ as pyo
 from pyomo.contrib.parmest.experiment import Experiment
 
 
-def rooney_biegler_model(data):
+def rooney_biegler_model(data, theta=None):
+    """Create a Pyomo model for the Rooney-Biegler parameter estimation problem.
+
+    This model implements an exponential response function based on Rooney & Biegler (2001).
+    The response is: y = asymptote * (1 - exp(-rate_constant * hour))
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        DataFrame containing 'hour' and 'y' columns for the experiment data point.
+    theta : dict, optional
+        Dictionary with 'asymptote' and 'rate_constant' keys for parameter initialization.
+        Default is {'asymptote': 15, 'rate_constant': 0.5}.
+
+    Returns
+    -------
+    pyo.ConcreteModel
+        A Pyomo ConcreteModel with fixed parameters, experiment inputs (hour),
+        and response variable (y) with the exponential constraint.
+    """
     model = pyo.ConcreteModel()
 
-    model.asymptote = pyo.Var(initialize=15)
-    model.rate_constant = pyo.Var(initialize=0.5)
+    if theta is None:
+        theta = {'asymptote': 15, 'rate_constant': 0.5}
 
-    model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-    model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+    model.asymptote = pyo.Var(initialize=theta['asymptote'])
+    model.rate_constant = pyo.Var(initialize=theta['rate_constant'])
 
-    def response_rule(m, h):
-        expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
-        return expr
+    # Fix the unknown parameters
+    model.asymptote.fix()
+    model.rate_constant.fix()
 
-    model.response_function = pyo.Expression(data.hour, rule=response_rule)
+    # Add the experiment inputs
+    model.hour = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-    def SSE_rule(m):
-        return sum(
-            (data.y[i] - m.response_function[data.hour[i]]) ** 2 for i in data.index
-        )
+    # Fix the experiment inputs
+    model.hour.fix()
 
-    model.SSE = pyo.Objective(rule=SSE_rule, sense=pyo.minimize)
+    # Add the response variable
+    model.y = pyo.Var(within=pyo.PositiveReals, initialize=data["y"].iloc[0])
+
+    def response_rule(m):
+        return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour))
+
+    model.response_function = pyo.Constraint(rule=response_rule)
 
     return model
 
 
 class RooneyBieglerExperiment(Experiment):
+    """Experiment class for Rooney-Biegler parameter estimation and design of experiments.
 
-    def __init__(self, data):
+    This class wraps the Rooney-Biegler exponential model for use with Pyomo's
+    parmest (parameter estimation) and DoE (Design of Experiments) tools.
+    """
+
+    def __init__(self, data, measure_error=None, theta=None):
+        """Initialize a Rooney-Biegler experiment instance.
+
+        Parameters
+        ----------
+        data : pandas.Series or dict
+            Experiment data containing 'hour' (time input) and 'y' (response) values.
+        measure_error : float, optional
+            Standard deviation of measurement error for the response variable.
+            Required for DoE and covariance estimation. Default is None.
+        theta : dict, optional
+            Initial parameter values with 'asymptote' and 'rate_constant' keys.
+            Default is None, which uses {'asymptote': 15, 'rate_constant': 0.5}.
+        """
         self.data = data
         self.model = None
+        self.measure_error = measure_error
+        self.theta = theta
 
     def create_model(self):
         # rooney_biegler_model expects a dataframe
-        data_df = self.data.to_frame().transpose()
-        self.model = rooney_biegler_model(data_df)
+        if hasattr(self.data, 'to_frame'):
+            # self.data is a pandas Series
+            data_df = self.data.to_frame().transpose()
+        else:
+            # self.data is a dict
+            data_df = pd.DataFrame([self.data])
+        self.model = rooney_biegler_model(data_df, theta=self.theta)
 
     def label_model(self):
 
         m = self.model
 
+        # Add experiment outputs as a suffix
+        # Experiment outputs suffix is required for parmest
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update(
-            [(m.hour, self.data['hour']), (m.y, self.data['y'])]
-        )
+        m.experiment_outputs.update([(m.y, self.data['y'])])
 
+        # Add unknown parameters as a suffix
+        # Unknown parameters suffix is required for both Pyomo.DoE and parmest
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
-            (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+            (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
         )
 
-    def finalize_model(self):
+        # Add measurement error as a suffix
+        # Measurement error suffix is required for Pyomo.DoE and
+        #  `cov` estimation in parmest
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, self.measure_error)])
 
-        m = self.model
-
-        # Experiment output values
-        m.hour = self.data['hour']
-        m.y = self.data['y']
+        # Add hour as an experiment input
+        # Experiment inputs suffix is required for Pyomo.DoE
+        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_inputs.update([(m.hour, self.data['hour'])])
 
     def get_labeled_model(self):
-        self.create_model()
-        self.label_model()
-        self.finalize_model()
-
+        if self.model is None:
+            self.create_model()
+            self.label_model()
         return self.model
-
-
-def main():
-    # These were taken from Table A1.4 in Bates and Watts (1988).
-    data = pd.DataFrame(
-        data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-        columns=['hour', 'y'],
-    )
-
-    model = rooney_biegler_model(data)
-    solver = pyo.SolverFactory('ipopt')
-    solver.solve(model)
-
-    print('asymptote = ', model.asymptote())
-    print('rate constant = ', model.rate_constant())
-
-
-if __name__ == '__main__':
-    main()

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import ctypes
 import logging
@@ -38,6 +36,7 @@ from pyomo.common.fileutils import (
     _libExt,
     ExecutableData,
     import_file,
+    to_legal_filename,
 )
 from pyomo.common.download import FileDownloader
 
@@ -497,3 +496,35 @@ class TestFileUtils(unittest.TestCase):
         Executable(f_in_path2).rehash()
         self.assertTrue(Executable(f_in_path2).available())
         self.assertEqual(Executable(f_in_path2).path(), f_loc)
+
+    def test_to_legal_filename(self):
+        self.assertEqual('abc', to_legal_filename('abc'))
+        self.assertEqual('', to_legal_filename(''))
+        if envvar.is_windows:
+            self.assertEqual('_abc', to_legal_filename(' abc'))
+            self.assertEqual('abc_', to_legal_filename('abc.'))
+            self.assertEqual('abc_', to_legal_filename('abc '))
+            self.assertEqual('abc_def', to_legal_filename('abc/def'))
+            self.assertEqual('abc_def', to_legal_filename('abc\\def'))
+            self.assertEqual(
+                'a_b_c', to_legal_filename(''.join(['a', chr(0), 'b', chr(7), 'c']))
+            )
+        else:
+            self.assertEqual(' abc', to_legal_filename(' abc'))
+            self.assertEqual('abc.', to_legal_filename('abc.'))
+            self.assertEqual('abc ', to_legal_filename('abc '))
+            self.assertEqual('abc_def', to_legal_filename('abc/def'))
+            self.assertEqual('abc\\def', to_legal_filename('abc\\def'))
+            self.assertEqual(
+                'a_b' + chr(7) + 'c',
+                to_legal_filename(''.join(['a', chr(0), 'b', chr(7), 'c'])),
+            )
+
+        self.assertEqual('_abc', to_legal_filename(' abc', True))
+        self.assertEqual('abc_', to_legal_filename('abc.', True))
+        self.assertEqual('abc_', to_legal_filename('abc ', True))
+        self.assertEqual('abc_def', to_legal_filename('abc/def', True))
+        self.assertEqual('abc_def', to_legal_filename('abc\\def', True))
+        self.assertEqual(
+            'a_b_c', to_legal_filename(''.join(['a', chr(0), 'b', chr(7), 'c']), True)
+        )

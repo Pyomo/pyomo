@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
@@ -44,7 +42,7 @@ DeclareGlobalSet(
 )
 
 
-class _fill_in_known_wildcards(object):
+class _fill_in_known_wildcards:
     """Variant of "six.advance_iterator" that substitutes wildcard values
 
     This object is initialized with a tuple of index values.  Calling
@@ -582,7 +580,7 @@ def Reference(reference, ctype=NOTSET):
     refer to the same :py:class:`Set` objects for all data identified by
     the slice, then the resulting indexed component will be indexed by
     the product of those sets.  However, if all data do not share common
-    set objects, or only a subset of indices in a multidimentional set
+    set objects, or only a subset of indices in a multidimensional set
     appear as wildcards, then the resulting indexed component will be
     indexed by a :py:class:`SetOf` containing a
     :py:class:`_ReferenceSet` for the slice.

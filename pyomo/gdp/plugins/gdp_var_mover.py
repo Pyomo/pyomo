@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """Collection of GDP-related hacks.
 
@@ -101,14 +99,11 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                             'individual Disjuncts?' % (disjunct.name,)
                         )
                     else:
-                        raise GDP_Error(
-                            """
+                        raise GDP_Error("""
                         Reclassifying active Disjunct "%s" as a Block.  This
                         is generally an error as it indicates that the model
                         was not completely relaxed before applying the
-                        gdp.reclassify transformation"""
-                            % (disjunct.name,)
-                        )
+                        gdp.reclassify transformation""" % (disjunct.name,))
 
             # Reclassify this disjunct as a block
             disjunct_component.parent_block().reclassify_component_type(

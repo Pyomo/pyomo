@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 # ScenariosCreator.py - Class to create and deliver scenarios using parmest
 # DLW March 2020
@@ -19,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ScenarioSet(object):
+class ScenarioSet:
     """
     Class to hold scenario sets
 
@@ -94,7 +92,7 @@ class ScenarioSet(object):
                 f.write('\n')
 
 
-class ParmestScen(object):
+class ParmestScen:
     """A little container for scenarios; the Args are the attributes.
 
     Args:
@@ -113,7 +111,7 @@ class ParmestScen(object):
 ############################################################
 
 
-class ScenarioCreator(object):
+class ScenarioCreator:
     """Create scenarios from parmest.
 
     Args:

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import enum
 from typing import Optional, Tuple
@@ -112,6 +110,9 @@ class SolutionStatus(enum.Enum):
     solutions was returned.
     """
 
+    unknown = 5
+    "Solution returned, but feasibility/optimality unknown."
+
     infeasible = 10
     "Solution point does not satisfy some domains and/or constraints."
 
@@ -195,14 +196,6 @@ class Results(ConfigDict):
             ConfigValue(
                 domain=tuple,
                 description="A tuple representing the version of the solver in use.",
-            ),
-        )
-        self.iteration_count: Optional[int] = self.declare(
-            'iteration_count',
-            ConfigValue(
-                domain=NonNegativeInt,
-                default=None,
-                description="The total number of iterations.",
             ),
         )
         self.timing_info: ConfigDict = self.declare(

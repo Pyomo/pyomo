@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.environ import (
     Param,
@@ -133,7 +131,7 @@ def _add_sensitivity_suffixes(block):
             block.add_component(name, Suffix(direction=direction))
 
 
-class _NotAnIndex(object):
+class _NotAnIndex:
     pass
 
 
@@ -509,7 +507,7 @@ def line_num(file_name, target):
     raise Exception(file_name + " does not include " + target)
 
 
-class SensitivityInterface(object):
+class SensitivityInterface:
     def __init__(self, instance, clone_model=True):
         """Constructor clones model if necessary and attaches
         to this object.

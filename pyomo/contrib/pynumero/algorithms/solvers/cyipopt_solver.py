@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 """
 The cyipopt_solver module includes two solvers that call CyIpopt. One,
 CyIpoptSolver, is a solver that operates on a CyIpoptProblemInterface
@@ -15,6 +13,7 @@ CyIpoptSolver, is a solver that operates on a CyIpoptProblemInterface
 Pyomo model.
 
 """
+
 import io
 import sys
 import logging
@@ -180,7 +179,7 @@ _ipopt_term_cond = {
 }
 
 
-class CyIpoptSolver(object):
+class CyIpoptSolver:
     def __init__(self, problem_interface, options=None):
         """Create an instance of the CyIpoptSolver. You must
         provide a problem_interface that corresponds to
@@ -243,7 +242,7 @@ def _numpy_vector(val):
     return ans
 
 
-class PyomoCyIpoptSolver(object):
+class PyomoCyIpoptSolver:
     CONFIG = ConfigBlock("cyipopt")
     CONFIG.declare(
         "tee",

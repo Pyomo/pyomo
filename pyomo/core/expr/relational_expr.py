@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import collections
 import operator
@@ -87,8 +85,7 @@ class RelationalExpression(ExpressionBase, BooleanValue):
     def __bool__(self):
         if self.is_constant():
             return bool(self())
-        raise PyomoException(
-            """
+        raise PyomoException("""
 Cannot convert non-constant Pyomo expression (%s) to bool.
 This error is usually caused by using a Var, unit, or mutable Param in a
 Boolean context such as an "if" statement, or when checking container
@@ -100,9 +97,7 @@ and
     >>> m.y = Var()
     >>> if m.y in [m.x, m.y]:
     ...     pass
-would both cause this exception.""".strip()
-            % (self,)
-        )
+would both cause this exception.""".strip() % (self,))
 
     @property
     def args(self):

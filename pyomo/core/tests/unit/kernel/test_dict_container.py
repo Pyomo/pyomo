@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import collections.abc
 import pickle
@@ -36,11 +34,11 @@ from pyomo.core.kernel.block import block, block_dict
 _pickle_test_protocol = pickle.HIGHEST_PROTOCOL
 
 
-class _bad_ctype(object):
+class _bad_ctype:
     ctype = "_this_is_definitely_not_the_ctype_being_tested"
 
 
-class _TestDictContainerBase(object):
+class _TestDictContainerBase:
     # set by derived class
     _container_type = None
     _ctype_factory = None

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 
 import sys
@@ -51,7 +49,7 @@ def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
-class StandardRepn(object):
+class StandardRepn:
     """
     This class defines a standard/common representation for Pyomo expressions
     that provides an efficient interface for writing all models.
@@ -421,7 +419,7 @@ def generate_standard_repn(
 ##-----------------------------------------------------------------------
 
 
-class ResultsWithQuadratics(object):
+class ResultsWithQuadratics:
     __slot__ = ('const', 'nonl', 'linear', 'quadratic')
 
     def __init__(self, constant=0, nonl=0, linear=None, quadratic=None):
@@ -447,7 +445,7 @@ class ResultsWithQuadratics(object):
         )
 
 
-class ResultsWithoutQuadratics(object):
+class ResultsWithoutQuadratics:
     __slot__ = ('const', 'nonl', 'linear')
 
     def __init__(self, constant=0, nonl=0, linear=None):

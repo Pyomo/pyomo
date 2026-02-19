@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import os
 from os.path import abspath, dirname
@@ -771,7 +769,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def test_numerical_instability_almost_canceling(self):
         # It's possible that we get almost-but-not-quite zero on the variable
         # being eliminated when we are doing this with floating point
-        # arithmetic. This can get ugly later because it might get muliplied by
+        # arithmetic. This can get ugly later because it might get multiplied by
         # a large number later and start to "reappear"
         m = ConcreteModel()
         m.x = Var()

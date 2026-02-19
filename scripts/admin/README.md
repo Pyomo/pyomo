@@ -42,7 +42,7 @@ in the backlog.
 
 ### Requirements
 
-1. Python 3.9+
+1. Python 3.10+
 1. [PyGithub](https://pypi.org/project/PyGithub/)
 1. A [GitHub Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) with `repo` access, exported to the environment variable `GH_TOKEN`
 

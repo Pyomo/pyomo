@@ -6,7 +6,7 @@ Publications
    Note to developers: For these references, we will use the package
    name followed by a description of the publication type.
 
-These publications describe various Pyomo capabilitites or subpackages:
+These publications describe various Pyomo capabilities or subpackages:
 
 .. [Pyomo-paper] William E. Hart, Jean-Paul Watson, David L. Woodruff.
    "Pyomo: modeling and solving mathematical programs in Python,"
@@ -93,6 +93,11 @@ Bibliography
    *SIAM Journal on Applied Mathematics* 23(1), 61-19, 1972.
    DOI `10.1137/0123007 <https://doi.org/10.1137/0123007>`_
 
+.. [Dje20] H. Djelassi. "Discretization-based algorithms for the
+   global solution of hierarchical programs".
+   Dissertation, Rheinisch-Westfälische Technische Hochschule Aachen, 2020.
+   DOI `10.18154/RWTH-2020-09163 <https://doi.org/10.18154/RWTH-2020-09163>`_.
+
 .. [FGK02] R. Fourer, D. M. Gay, and B. W. Kernighan. *AMPL: A Modeling
    Language for Mathematical Programming*, 2nd Edition, Duxbury
    Press, 2002.
@@ -107,6 +112,10 @@ Bibliography
    of discrete-continuous optimization models through generalized
    disjunctive programming", *AIChE Journal*, 59(9),
    3276–3295. 2013.  DOI `10.1002/aic.14088 <https://doi.org/10.1002/aic.14088>`_
+
+.. [HG83] K. P. Halemane and I. E. Grossmann.  "Optimal process design
+   under uncertainty", *AIChE Journal*, 29(3), 425--433. 1983.
+   DOI `10.1002/aic.690290312 <https://doi.org/10.1002/aic.690290312>`_
 
 .. [IAE+21] N. M. Isenberg, P. Akula, J. C. Eslick, D. Bhattacharyya,
    D. C. Miller, and C. E. Gounaris.  "A generalized cutting‐set approach
@@ -124,6 +133,12 @@ Bibliography
 .. [KMT21] J. Kronqvist, R. Misener, and C. Tsay. "Between Steps:
    Intermediate Relaxations between big-M and Convex Hull
    Reformulations". 2021.  https://arxiv.org/abs/2101.12708
+
+.. [MHJ+25] M. Mundt, W. E. Hart, E. S. Johnson, B. Nicholson, and
+   J. D. Siirola. "Pyomo: Accidentally outrunning the bear", *Patterns*,
+   6(7), 101311. 2025. ISSN 2666-3899. DOI
+   `10.1016/j.patter.2025.101311
+   <https://doi.org/10.1016/j.patter.2025.101311>`_
 
 .. [NW88] G. L. Nemhauser and L. A. Wolsey. *Integer and combinatorial
    optimization*, New York: Wiley. 1988.
@@ -153,6 +168,14 @@ Bibliography
 .. [VAN10] J. P. Vielma, S. Ahmed, and G. Nemhauser. "Mixed-Integer
    Models for Non-separable Piecewise Linear Optimization: Unifying
    framework and Extensions", *Operations Research* 58(2), 303-315. 2010.
+
+.. [Vie15] J. P. Vielma. "Mixed Integer Linear Programming Formluation
+   Techniques", *SIAM Review*, 57(1), 3-57.  2015.  DOI
+   `10.1137/130915303 <https://doi.org/10.1137/130915303>`_
+
+.. [YLH18] Y. Yuan, Z. Li, and B. Huang.  "Nonlinear robust optimization
+   for process design", *AIChE Journal*, 64(2), 481--494. 2018.
+   DOI `10.1002/aic.15950 <https://doi.org/10.1002/aic.15950>`_
 
 .. [NW99] Nocedal, Jorge, and Stephen J. Wright, eds. Numerical
    optimization. New York, NY: Springer New York, 1999.

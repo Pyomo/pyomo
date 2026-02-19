@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections import defaultdict
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -1482,7 +1480,7 @@ def fbbt(
     ----------
     comp: pyomo.core.base.constraint.Constraint or pyomo.core.base.block.Block or pyomo.core.base.PyomoModel.ConcreteModel
     deactivate_satisfied_constraints: bool
-        If deactivate_satisfied_constraints is True and a constraint is always satisfied, then the constranit
+        If deactivate_satisfied_constraints is True and a constraint is always satisfied, then the constraint
         will be deactivated
     integer_tol: float
         If the lower bound computed on a binary variable is less than or equal to integer_tol, then the
@@ -1579,7 +1577,7 @@ def compute_bounds_on_expr(expr, ignore_fixed=False):
     return lb, ub
 
 
-class BoundsManager(object):
+class BoundsManager:
     def __init__(self, comp):
         self._vars = ComponentSet()
         self._saved_bounds = list()

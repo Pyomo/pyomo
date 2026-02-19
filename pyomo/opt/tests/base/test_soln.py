@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Unit Tests for pyomo.opt.results
 #
@@ -614,6 +612,34 @@ J:
         self.assertIs(d.a, e.a)
         self.assertIs(d.b, e.b)
         self.assertEqual(d.c, e.c)
+
+    def test_eq(self):
+        d = container.MapContainer()
+        d.declare('x', value=1)
+        d.declare('y', value='a')
+        d.declare('z', value=container.ListContainer(container.MapContainer))
+        self.assertFalse(d == container.MapContainer())
+        self.assertFalse(d == "Something else")
+
+        e = container.ListContainer(container.UndefinedData)
+        self.assertFalse(d == e)
+
+        dd = container.MapContainer()
+        dd.declare('x', value=1)
+        dd.declare('y', value=1)
+        dd.declare('z', value=container.ListContainer(container.UndefinedData))
+        self.assertFalse(d == dd)
+        d.y = 'b'
+        dd.y = 'b'
+        dd.declare('z', value=container.ListContainer(container.MapContainer))
+        self.assertTrue(d == dd)
+
+        d.z.add()
+        d.z[0].declare('a', value=0)
+        self.assertFalse(d == dd)
+        dd.z.add()
+        dd.z[0].declare('a', value=0)
+        self.assertTrue(d == dd)
 
 
 if __name__ == "__main__":

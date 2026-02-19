@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
@@ -143,7 +141,7 @@ def make_lower_triangular_full(lower_triangular_matrix):
     return coo_matrix((data, (row, col)), shape=lower_triangular_matrix.shape)
 
 
-class CondensedSparseSummation(object):
+class CondensedSparseSummation:
     def __init__(self, list_of_matrices):
         """
         This class is used to perform a summation of sparse matrices

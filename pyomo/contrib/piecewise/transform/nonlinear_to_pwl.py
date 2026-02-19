@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections import defaultdict
 import itertools
@@ -39,7 +37,7 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, PositiveInt, InEnum
 from pyomo.common.dependencies import attempt_import
-from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import numpy as np, packaging
 from pyomo.common.enums import IntEnum
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numeric_expr import SumExpression
@@ -50,10 +48,31 @@ from pyomo.contrib.piecewise import PiecewiseLinearExpression, PiecewiseLinearFu
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
 from pyomo.repn.quadratic import QuadraticRepnVisitor
-from pyomo.repn.util import ExprType
+from pyomo.repn.util import ExprType, OrderedVarRecorder
 
 
-lineartree, lineartree_available = attempt_import('lineartree')
+def _lt_importer():
+    import lineartree
+    import importlib.metadata
+
+    # linear-tree through version 0.3.5 relies on a private method from
+    # scikit-learn.  That method was removed in scikit-learn version
+    # 1.7.0.  We will report linear-tree as "unavailable" if
+    # scikit-learn is "too new."
+    lt_ver = packaging.version.parse(importlib.metadata.version('linear-tree'))
+    if lt_ver <= packaging.version.Version('0.3.5'):
+        import sklearn
+
+        skl_ver = packaging.version.parse(sklearn.__version__)
+        if skl_ver >= packaging.version.Version('1.7.0'):
+            raise ImportError(
+                f"linear-tree<=0.3.5 (found {lt_ver}) is incompatible with "
+                f"scikit-learn>=1.7.0 (found {skl_ver})"
+            )
+    return lineartree
+
+
+lineartree, lineartree_available = attempt_import('lineartree', importer=_lt_importer)
 sklearn_lm, sklearn_available = attempt_import('sklearn.linear_model')
 
 logger = logging.getLogger(__name__)
@@ -419,7 +438,7 @@ class NonlinearToPWL(Transformation):
 
             It is recommended to leave this False as long as no nonlinear constraint 
             involves more than about 5-6 variables. For constraints with higher-
-            dimmensional nonlinear functions, additive decomposition will improve
+            dimensional nonlinear functions, additive decomposition will improve
             the scalability of the approximation (since partitioning the domain is
             subject to the curse of dimensionality).""",
         ),
@@ -497,7 +516,8 @@ class NonlinearToPWL(Transformation):
         self._transformation_blocks = {}
         self._transformation_block_set = ComponentSet()
         self._quadratic_repn_visitor = QuadraticRepnVisitor(
-            subexpression_cache={}, var_map={}, var_order={}, sorter=None
+            subexpression_cache={},
+            var_recorder=OrderedVarRecorder(var_map={}, var_order={}, sorter=None),
         )
 
     def _apply_to(self, instance, **kwds):

@@ -1,20 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 # These classes are for checking types consistently and raising errors
 
 from ..dependencies import numpy as np
 
 
-class BaseBlockVector(object):
+class BaseBlockVector:
     """Base class for block vectors"""
 
     def __init__(self):
@@ -132,7 +130,7 @@ class BaseBlockVector(object):
         raise NotImplementedError(msg)
 
 
-class BaseBlockMatrix(object):
+class BaseBlockMatrix:
     """Base class for block matrices"""
 
     def __init__(self):

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import io
 import logging
@@ -358,6 +356,26 @@ Constructing component 'q' from data=None failed:
         self.check_lor_on_disjunct(model, model.disj.disjuncts[1], model.y, model.z)
 
     # TODO look to test_con.py for inspiration
+    def test_deprecated_rule_attribute(self):
+        def rule(m):
+            return m.x.implies(m.x)
+
+        def new_rule(m):
+            return m.x.implies(~m.x)
+
+        m = ConcreteModel()
+        m.x = BooleanVar()
+        m.con = LogicalConstraint(rule=rule)
+
+        self.assertIs(m.con.rule._fcn, rule)
+        with LoggingIntercept() as LOG:
+            m.con.rule = new_rule
+        self.assertIn(
+            "DEPRECATED: The 'LogicalConstraint.rule' attribute will be made "
+            "read-\nonly",
+            LOG.getvalue(),
+        )
+        self.assertIs(m.con.rule, new_rule)
 
 
 class TestLogicalConstraintList(unittest.TestCase):

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 
 import pyomo.common.unittest as unittest
@@ -17,6 +15,7 @@ import logging
 import math
 import os
 import re
+import sys
 
 import pyomo.repn.util as repn_util
 import pyomo.repn.plugins.nl_writer as nl_writer
@@ -51,7 +50,7 @@ import pyomo.environ as pyo
 nan = float('nan')
 
 
-class INFO(object):
+class INFO:
     def __init__(self, symbolic=False):
         self.subexpression_cache = {}
         self.external_functions = {}
@@ -452,10 +451,14 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         info = INFO()
         with LoggingIntercept() as LOG:
             repn = info.visitor.walk_expression((log(m.p), None, None, 1))
+        if sys.version_info[:2] < (3, 14):
+            msg = 'math domain error'
+        else:
+            msg = 'expected a positive input'
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'log(0)'\n"
-            "\tmessage: math domain error\n"
+            f"\tmessage: {msg}\n"
             "\texpression: log(p)\n",
         )
         self.assertEqual(repn.nl, None)
@@ -2116,6 +2119,92 @@ G0 3
 
         # Debugging: this diffs the unscaled & scaled models
         # self.assertEqual(*nl_diff(nl1, nl2))
+
+    def test_scaling_named_expressions(self):
+        m = pyo.ConcreteModel()
+
+        m.x = pyo.Var(initialize=1 / 2)
+        m.y = pyo.Var(initialize=1 / 4)
+
+        m.lin_expr = pyo.Expression(expr=m.x + m.y + m.x**3 + m.y**5)
+        m.eqn1 = pyo.Constraint(expr=m.lin_expr**2 == 2)
+        m.eqn2 = pyo.Constraint(expr=m.x**2 + m.y == 3)
+
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.x] = 2
+        m.scaling_factor[m.y] = 4
+        m.scaling_factor[m.eqn1] = 0.5
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, scale_model=True, linear_presolve=False
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+        nl2 = OUT.getvalue()
+
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0       #problem unknown
+ 2 2 0 0 2     #vars, constraints, objectives, ranges, eqns
+ 2 0 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 2 0 0 #nonlinear vars in constraints, objectives, both
+ 0 0 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 4 0   #nonzeros in Jacobian, obj. gradient
+ 0 0   #max name lengths: constraints, variables
+ 0 0 0 2 0     #common exprs: b,c,o,c1,o1
+V2 0 1
+o0
+o5
+o3
+v0
+n2
+n3
+o5
+o3
+v1
+n4
+n5
+V3 2 1
+0 0.5
+1 0.25
+v2
+C0
+o2
+n0.5
+o5
+v3
+n2
+C1
+o5
+o3
+v0
+n2
+n2
+x2
+0 1
+1 1
+r
+4 1
+4 3
+b
+3
+3
+k1
+2
+J0 2
+0 0
+1 0
+J1 2
+0 0
+1 0.25
+""",
+                nl2,
+            )
+        )
 
     def test_named_expressions(self):
         # This tests an error possibly reported by #2810

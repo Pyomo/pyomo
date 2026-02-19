@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 """Utility functions and classes for the GDPopt solver."""
 
 from contextlib import contextmanager
@@ -37,7 +35,7 @@ from pyomo.gdp.util import _parent_disjunct
 from pyomo.opt import SolverFactory
 
 
-class _DoNothing(object):
+class _DoNothing:
     """Do nothing, literally.
 
     This class is used in situations of "do something if attribute exists."
@@ -56,7 +54,7 @@ class _DoNothing(object):
         return _do_nothing
 
 
-class SuppressInfeasibleWarning(object):
+class SuppressInfeasibleWarning:
     """Suppress the infeasible model warning message from solve().
 
     The "WARNING: Loading a SolverResults object with a warning status" warning
@@ -217,7 +215,7 @@ def fix_discrete_var(var, val, config):
             var.fix(val, skip_validation=True)
 
 
-class fix_discrete_solution_in_subproblem(object):
+class fix_discrete_solution_in_subproblem:
     def __init__(
         self,
         true_disjuncts,

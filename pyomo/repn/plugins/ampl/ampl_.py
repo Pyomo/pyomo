@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 #
 # AMPL Problem Writer Plugin
@@ -201,7 +199,7 @@ def _get_bound(exp):
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
-class StopWatch(object):
+class StopWatch:
     def __init__(self):
         self.start = time.time()
 
@@ -212,7 +210,7 @@ class StopWatch(object):
         self.start = time.time()
 
 
-class _Counter(object):
+class _Counter:
     def __init__(self, start):
         self._id = start
 
@@ -222,8 +220,8 @@ class _Counter(object):
         return tmp
 
 
-class ModelSOS(object):
-    class AmplSuffix(object):
+class ModelSOS:
+    class AmplSuffix:
         def __init__(self, name):
             self.name = name
             self.ids = []
@@ -310,7 +308,7 @@ class ModelSOS(object):
             self.ref.add(ID, weight)
 
 
-class RepnWrapper(object):
+class RepnWrapper:
     __slots__ = ('repn', 'linear_vars', 'nonlinear_vars')
 
     def __init__(self, repn, linear, nonlinear):
