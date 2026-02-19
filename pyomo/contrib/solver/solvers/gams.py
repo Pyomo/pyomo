@@ -251,12 +251,10 @@ class GAMS(SolverBase):
         # preserve_implicit=True is required to extract solver_options ConfigDict
         config: GAMSConfig = self.config(value=kwds, preserve_implicit=True)
 
-        # Check if solver is available
-        avail = self.available()
-
-        if not avail:
+        # Check if the solver executable exists:
+        if not config.executable:
             raise ApplicationError(
-                f'Solver {self.__class__} is not available ({avail}).'
+                f"{self.__class__.__name__}: 'gams' executable not found"
             )
 
         if config.timer is None:
