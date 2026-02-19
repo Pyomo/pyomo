@@ -18,7 +18,7 @@ def main():
 
     # Rooney & Biegler Reference Values
     # a = 19.14, b = 0.53
-    theta_ref = pd.Series({'asymptote': 15.0, 'rate_constant': 0.8})
+    theta_ref = pd.Series({'asymptote': 20.0, 'rate_constant': 0.8})
 
     # Create a 'Stiff' Prior for 'asymptote' but leave 'rate_constant' flexible
     prior_FIM = pd.DataFrame(
@@ -45,6 +45,7 @@ def main():
         regularization='L2',
         prior_FIM=prior_FIM,
         theta_ref=theta_ref,
+        regularization_weight=None,
     )
 
     # Parameter estimation and covariance
