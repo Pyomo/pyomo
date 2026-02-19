@@ -27,6 +27,7 @@ from pyomo.contrib.solver.common.util import (
     NoDualsError,
     NoOptimalSolutionError,
     NoReducedCostsError,
+    NoSolutionError,
 )
 from pyomo.contrib.solver.common.base import Availability
 from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
@@ -78,7 +79,7 @@ class TestGAMSSolverConfig(unittest.TestCase):
 class TestGAMSSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
         loader = gams.GMSSolutionLoader(None, None)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaisesRegex(NoSolutionError):
             loader.get_primals()
         with self.assertRaises(NoDualsError):
             loader.get_duals()

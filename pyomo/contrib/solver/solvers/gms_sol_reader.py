@@ -64,7 +64,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
         if self._gms_info is None:
-            raise RuntimeError()
+            raise NoSolutionError()
         val_map = {}
         if self._gdx_data is None:
             assert len(self._gms_info.var_symbol_map.bySymbol) == 0
