@@ -222,7 +222,7 @@ class GAMS(SolverBase):
         # sure the license is still valid?  Alternatively, we can leave
         # Availability as NOTSET until someone explicitly *asks* for
         # .available(), in which case we can justify running the small
-        # model (potentially requiring us to checck out a license from a
+        # model (potentially requiring us to check out a license from a
         # license server).
 
         params = (version, avail)
