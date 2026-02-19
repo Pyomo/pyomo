@@ -554,7 +554,9 @@ class Estimator(object):
                         )
                         # Check if the user provided dataframe has the same theta names as the model
                         # if not, raise an error
-                    if not all(theta in theta_names for theta in user_provided_df.columns):
+                    if not all(
+                        theta in theta_names for theta in user_provided_df.columns
+                    ):
                         raise ValueError(
                             "The user provided dataframe must have the same theta names as the model."
                         )
@@ -615,7 +617,7 @@ class Estimator(object):
         model = self._create_parmest_model(experiment_number)
         return model
 
-    # TODO: Add a way to pass in a parmest_model to this function, currently cannot 
+    # TODO: Add a way to pass in a parmest_model to this function, currently cannot
     # access the model within the build function.
 
     # I need to check, if I use the update model utility BEFORE calling _Q_opt, does it still
@@ -699,7 +701,7 @@ class Estimator(object):
                 for ndname, Var, solval in ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
-                (solve_result, inv_red_hes) = (
+                solve_result, inv_red_hes = (
                     inverse_reduced_hessian.inv_reduced_hessian_barrier(
                         self.ef_instance,
                         independent_variables=ind_vars,
@@ -900,7 +902,7 @@ class Estimator(object):
                 if self.diagnostic_mode:
                     print('      Experiment = ', snum)
                     print('     First solve with special diagnostics wrapper')
-                    (status_obj, solved, iters, time, regu) = (
+                    status_obj, solved, iters, time, regu = (
                         utils.ipopt_solve_with_stats(
                             instance, optimizer, max_iter=500, max_cpu_time=120
                         )
@@ -1018,11 +1020,9 @@ class Estimator(object):
 
                     attempts += 1
                     if attempts > num_samples:  # arbitrary timeout limit
-                        raise RuntimeError(
-                            """Internal error: timeout constructing
+                        raise RuntimeError("""Internal error: timeout constructing
                                            a sample, the dim of theta may be too
-                                           close to the samplesize"""
-                        )
+                                           close to the samplesize""")
 
                 samplelist.append((i, sample))
 
@@ -2072,7 +2072,7 @@ class _DeprecatedEstimator(object):
                 for ndname, Var, solval in ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
-                (solve_result, inv_red_hes) = (
+                solve_result, inv_red_hes = (
                     inverse_reduced_hessian.inv_reduced_hessian_barrier(
                         self.ef_instance,
                         independent_variables=ind_vars,
@@ -2268,7 +2268,7 @@ class _DeprecatedEstimator(object):
                 if self.diagnostic_mode:
                     print('      Experiment = ', snum)
                     print('     First solve with special diagnostics wrapper')
-                    (status_obj, solved, iters, time, regu) = (
+                    status_obj, solved, iters, time, regu = (
                         utils.ipopt_solve_with_stats(
                             instance, optimizer, max_iter=500, max_cpu_time=120
                         )
@@ -2386,11 +2386,9 @@ class _DeprecatedEstimator(object):
 
                     attempts += 1
                     if attempts > num_samples:  # arbitrary timeout limit
-                        raise RuntimeError(
-                            """Internal error: timeout constructing
+                        raise RuntimeError("""Internal error: timeout constructing
                                            a sample, the dim of theta may be too
-                                           close to the samplesize"""
-                        )
+                                           close to the samplesize""")
 
                 samplelist.append((i, sample))
 
