@@ -986,7 +986,9 @@ class Estimator:
         model = self._create_parmest_model(experiment_number)
         return model
 
-    def _create_scenario_blocks(self, bootlist=None, theta_vals=None, fix_theta=False):
+    def _create_scenario_blocks(
+        self, bootlist=None, theta_vals=None, fix_theta=False, multistart=False
+    ):
         # Create scenario block structure
         """
         Create scenario blocks for parameter estimation
@@ -1097,6 +1099,7 @@ class Estimator:
         calc_cov=NOTSET,
         cov_n=NOTSET,
         fix_theta=False,
+        multistart=False,
     ):
         '''
         Making new version of _Q_opt that uses scenario blocks, similar to DoE.
@@ -1176,7 +1179,7 @@ class Estimator:
 
         # Separate handling of termination conditions for _Q_at_theta vs _Q_opt
         # If not fixing theta, ensure optimal termination of the solve to return result
-        if not fix_theta:
+        if not fix_theta and not multistart:
             # Ensure optimal termination
             assert_optimal_termination(solve_result)
         # If fixing theta, capture termination condition if not optimal unless infeasible
@@ -1210,7 +1213,7 @@ class Estimator:
         self.estimated_theta = theta_estimates
 
         # If fixing theta, return objective value, theta estimates, and worst status
-        if fix_theta:
+        if fix_theta or multistart:
             return obj_value, theta_estimates, worst_status
 
         # Return theta estimates as a pandas Series
@@ -1890,6 +1893,84 @@ class Estimator:
             results.append((sample, test, training))
 
         return results
+
+    # Updated version that uses _Q_opt
+    def theta_est_multistart(self, theta_values=None):
+        """
+        Objective value for each theta, solving parameter estimation problem for each theta value provided.
+
+        Parameters
+        ----------
+        theta_values: pd.DataFrame, columns=theta_names
+            Values of theta used to compute the objective
+
+        Returns
+        -------
+        obj_at_theta: pd.DataFrame
+            Objective value for each theta (infeasible solutions are
+            omitted).
+        """
+
+        if theta_values is None:
+            all_thetas = {}  # dictionary to store fitted variables
+            # use appropriate theta names member
+            # Get theta names from fresh parmest model, assuming this can be called
+            # directly after creating Estimator.
+            theta_names = self._expand_indexed_unknowns(self._create_parmest_model(0))
+        else:
+            assert isinstance(theta_values, pd.DataFrame)
+            # for parallel code we need to use lists and dicts in the loop
+            theta_names = theta_values.columns
+            # # check if theta_names are in model
+            # Clean names, ignore quotes, and compare sets
+            clean_provided = [t.replace("'", "") for t in theta_names]
+            clean_expected = [
+                t.replace("'", "")
+                for t in self._expand_indexed_unknowns(self._create_parmest_model(0))
+            ]
+            # If they do not match, raise error
+            if set(clean_provided) != set(clean_expected):
+                raise ValueError(
+                    f"Provided theta values {clean_provided} do not match expected theta names {clean_expected}."
+                )
+            # Rename columns using cleaned names
+            if set(clean_provided) != set(theta_names):
+                theta_values.columns = clean_provided
+
+            # Convert to list of dicts for parallel processing
+            all_thetas = theta_values.to_dict('records')
+
+        # Initialize task manager
+        num_tasks = len(all_thetas) if all_thetas else 1
+        task_mgr = utils.ParallelTaskManager(num_tasks)
+
+        # Use local theta values for each task if all_thetas is provided, else empty list
+        if all_thetas:
+            local_thetas = task_mgr.global_to_local_data(all_thetas)
+
+        # walk over the mesh, return objective function
+        all_obj = list()
+        if len(all_thetas) > 0:
+            print("Running multistart parameter estimation...")
+            for Theta in local_thetas:
+                obj, thetvals, worststatus = self._Q_opt(
+                    theta_vals=Theta, multistart=True
+                )
+                if worststatus != pyo.TerminationCondition.infeasible:
+                    # Make list out of
+                    # Append original theta values, objective value, and estimated theta values to all_obj
+                    all_obj.append(
+                        list(Theta.values()) + [obj] + list(thetvals.values())
+                    )
+        else:
+            obj, thetvals, worststatus = self._Q_opt(theta_vals=None, multistart=True)
+            if worststatus != pyo.TerminationCondition.infeasible:
+                all_obj.append(list(thetvals.values()) + [obj])
+
+        global_all_obj = task_mgr.allgather_global_data(all_obj)
+        dfcols = list(theta_names) + ['obj'] + list(thetvals.keys())
+        obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
+        return obj_at_theta
 
     # Updated version that uses _Q_opt
     def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
