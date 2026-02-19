@@ -110,6 +110,8 @@ class GAMSConfig(SolverConfig):
 
 @document_class_CONFIG(methods=['solve'])
 class GAMS(SolverBase):
+    #: Global class configuration;
+    #: see :ref:`pyomo.contrib.solver.solvers.gams.GAMS::CONFIG`.
     CONFIG = GAMSConfig()
 
     # default behaviour of gams is to print to console, for
@@ -173,6 +175,10 @@ class GAMS(SolverBase):
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
+
+        #: Instance configuration;
+        #: see :ref:`pyomo.contrib.solver.solvers.gams.GAMS::CONFIG`.
+        self.config = self.config
 
     def available(self) -> Availability:
         ver, avail = self._get_version(self.config.executable.path())
