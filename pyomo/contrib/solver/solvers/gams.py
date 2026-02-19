@@ -189,23 +189,33 @@ class GAMS(SolverBase):
             return self._exe_cache[exe]
 
         # Note: non-None str paths are guaranteed to exist and be executable files
-        res = subprocess.run([exe], capture_output=True, encoding="utf8", check=False)
+        res = subprocess.run(
+            [exe],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            encoding="utf8",
+            check=False,
+        )
         if res.returncode:
+            params = (None, Availability.NotFound)
+            self._exe_cache[exe] = params
+            out = res.stdout.replace('\n', '\n    ').strip()
             logger.warning(
-                "Failed running GAMS command to get version (non-zero returncode):"
-                f"\n\n{res.stdout}"
+                "Failed running GAMS command to get version (non-zero returncode "
+                f"{res.returncode}):\n    {out}"
             )
-            return self._exe_cache[None]
+            return params
 
         version_pattern = r"GAMS Release *: *(\d{1,3}\.\d{1,3}\.\d{1,3})"
         found = re.search(version_pattern, res.stdout)
 
         if not found:
             params = (None, Availability.NotFound)
-            self._exe_cache[exe] = (None, Availability.NotFound)
+            self._exe_cache[exe] = params
+            out = res.stdout.replace('\n', '\n    ').strip()
             logger.warning(
                 "Failed parsing GAMS version (version not found while parsing):"
-                f"\n\n{res.stdout}"
+                f"\n    {out}"
             )
             return params
 
