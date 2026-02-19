@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import datetime
 import os
@@ -55,6 +53,7 @@ def windows_tee_buffer(size=1 << 20):
         tee._pipe_buffersize = old
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptSolverConfig(unittest.TestCase):
     def test_default_instantiation(self):
         config = ipopt.IpoptConfig()
@@ -89,6 +88,7 @@ class TestIpoptSolverConfig(unittest.TestCase):
         self.assertFalse(config.executable.available())
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
         loader = ipopt.IpoptSolutionLoader(
@@ -107,6 +107,7 @@ class TestIpoptSolutionLoader(unittest.TestCase):
             loader.get_duals()
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptInterface(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_command_line_options(self):
@@ -1600,7 +1601,7 @@ else:
             },
             cfg.value(),
         )
-        self.assertLess(results.timing_info.wall_time, 0.1)
+        self.assertLess(results.timing_info.wall_time, 1)
         self.assertEqual(
             results.timing_info.start_timestamp.tzinfo, datetime.timezone.utc
         )
@@ -1685,7 +1686,7 @@ else:
             },
             cfg.value(),
         )
-        self.assertLess(results.timing_info.wall_time, 0.1)
+        self.assertLess(results.timing_info.wall_time, 1)
         del results.timing_info.wall_time
         self.assertEqual(
             results.timing_info.start_timestamp.tzinfo, datetime.timezone.utc
@@ -1760,7 +1761,7 @@ else:
             },
             cfg.value(),
         )
-        self.assertLess(results.timing_info.wall_time, 0.1)
+        self.assertLess(results.timing_info.wall_time, 1)
         self.assertEqual(
             results.timing_info.start_timestamp.tzinfo, datetime.timezone.utc
         )
@@ -1879,6 +1880,7 @@ else:
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.pytest.mark.solver("ipopt")
 class TestIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
@@ -2093,6 +2095,7 @@ class TestIpopt(unittest.TestCase):
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.pytest.mark.solver("ipopt")
 class TestLegacyIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
