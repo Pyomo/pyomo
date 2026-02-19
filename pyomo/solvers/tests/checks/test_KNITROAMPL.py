@@ -23,10 +23,9 @@ from pyomo.opt import SolverFactory, TerminationCondition
 knitroampl_available = SolverFactory('knitroampl').available(False)
 
 
+@unittest.skipIf(not knitroampl_available, "The 'knitroampl' command is not available")
+@unittest.pytest.mark.solver("knitroampl")
 class TestKNITROAMPLInterface(unittest.TestCase):
-    @unittest.skipIf(
-        not knitroampl_available, "The 'knitroampl' command is not available"
-    )
     def test_infeasible_lp(self):
         with SolverFactory('knitroampl') as opt:
             model = ConcreteModel()
@@ -41,9 +40,6 @@ class TestKNITROAMPLInterface(unittest.TestCase):
                 results.solver.termination_condition, TerminationCondition.infeasible
             )
 
-    @unittest.skipIf(
-        not knitroampl_available, "The 'knitroampl' command is not available"
-    )
     def test_unbounded_lp(self):
         with SolverFactory('knitroampl') as opt:
             model = ConcreteModel()
@@ -60,9 +56,6 @@ class TestKNITROAMPLInterface(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipIf(
-        not knitroampl_available, "The 'knitroampl' command is not available"
-    )
     def test_optimal_lp(self):
         with SolverFactory('knitroampl') as opt:
             model = ConcreteModel()
@@ -77,9 +70,6 @@ class TestKNITROAMPLInterface(unittest.TestCase):
             )
             self.assertAlmostEqual(value(model.X), 2.5)
 
-    @unittest.skipIf(
-        not knitroampl_available, "The 'knitroampl' command is not available"
-    )
     def test_get_duals_lp(self):
         with SolverFactory('knitroampl') as opt:
             model = ConcreteModel()
@@ -99,9 +89,6 @@ class TestKNITROAMPLInterface(unittest.TestCase):
             self.assertAlmostEqual(model.dual[model.C1], 0.4)
             self.assertAlmostEqual(model.dual[model.C2], 0.2)
 
-    @unittest.skipIf(
-        not knitroampl_available, "The 'knitroampl' command is not available"
-    )
     def test_infeasible_mip(self):
         with SolverFactory('knitroampl') as opt:
             model = ConcreteModel()
@@ -116,9 +103,6 @@ class TestKNITROAMPLInterface(unittest.TestCase):
                 results.solver.termination_condition, TerminationCondition.infeasible
             )
 
-    @unittest.skipIf(
-        not knitroampl_available, "The 'knitroampl' command is not available"
-    )
     def test_optimal_mip(self):
         with SolverFactory('knitroampl') as opt:
             model = ConcreteModel()

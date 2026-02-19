@@ -39,6 +39,7 @@ gurobi_direct = SolverFactory('gurobi_direct_minlp')
 
 
 @unittest.skipUnless(gurobi_direct.available(), "needs Gurobi Direct MINLP interface")
+@unittest.pytest.mark.solver("gurobi_direct_minlp")
 class TestGurobiMINLP(unittest.TestCase):
     def test_gurobi_minlp_sincosexp(self):
         m = ConcreteModel(name="test")
