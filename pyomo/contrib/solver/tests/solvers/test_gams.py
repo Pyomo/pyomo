@@ -214,13 +214,12 @@ class TestGAMSInterface(unittest.TestCase):
             # executables (an issue on Windows)
             fname = os.path.join(dname, 'test.py')
             with open(fname, 'w') as F:
-                F.write(f"#!{sys.executable}\nprint('hi')\n")
+                F.write(f"#!{sys.executable}\nimport sysn\n")
             os.chmod(fname, 0o755)
             try:
                 subprocess.run([fname])
             except OSError:
-                subprocess.run(['assoc', '.py=Python'])
-                subprocess.run(['ftype', f'Python="{sys.executable}"', '%1', '%*'])
+                raise unittest.Skip("python scripts are not registered as executable")
 
             fname = os.path.join(dname, 'test_rc.py')
             with open(fname, 'w') as F:
@@ -535,12 +534,11 @@ class TestGAMS(unittest.TestCase):
             # executables (an issue on Windows)
             fname = os.path.join(dname, 'test.py')
             with open(fname, 'w') as F:
-                F.write(f"#!{sys.executable}\nprint('hi')\n")
+                F.write(f"#!{sys.executable}\nimport sys\n")
             try:
                 subprocess.run([fname])
             except OSError:
-                subprocess.run(['assoc', '.py=Python'])
-                subprocess.run(['ftype', f'Python="{sys.executable}"', '%1', '%*'])
+                raise unittest.Skip("python scripts are not registered as executable")
 
             fname = os.path.join(dname, 'test_rc.py')
             with open(fname, 'w') as F:
