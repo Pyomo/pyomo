@@ -121,13 +121,13 @@ class GAMSWriter(object):
         ),
     )
     CONFIG.declare(
-        'gams_options',
+        'gams_commands',
         ConfigValue(
             default=[],
             domain=ListOf(str),
             doc="""
-            List of additional lines to write directly
-            into model file before the solve statement.
+            List of additional GAMS commands to write directly
+            into the GAMS model file before the solve statement.
             Specifically for solvers.
             """,
         ),
@@ -217,10 +217,8 @@ class GAMSWriter(object):
         if filename is None:
             filename = 'GAMS_MODEL' + ".gms"
 
-        config = self.config(io_options)
-
         with open(filename, 'w', newline='') as FILE:
-            info = self.write(model, FILE, config=config)
+            info = self.write(model, FILE, **io_options)
 
         return filename, info.symbol_map
 
@@ -240,7 +238,7 @@ class GAMSWriter(object):
             The text output stream where the GMS "file" will be written.
             Could be an opened file or a io.StringIO.
         """
-        config = self.config(options)
+        config = options.pop('config', self.config)(options)
 
         # Pause the GC, as the walker that generates the compiled GMS
         # representation generates (and disposes of) a large number of
@@ -261,7 +259,6 @@ class _GMSWriter_impl(object):
 
         # Taken from nl_writer.py
         self.symbolic_solver_labels = config.symbolic_solver_labels
-        self.gams_options = config.gams_options
 
         self.subexpression_cache = {}
         self.subexpression_order = None  # set to [] later
@@ -282,7 +279,6 @@ class _GMSWriter_impl(object):
         # Caching some frequently-used objects into the locals()
         model_name = "GAMS_MODEL"
         symbolic_solver_labels = self.symbolic_solver_labels
-        gams_options = self.gams_options
         ostream = self.ostream
         config = self.config
         labeler = config.labeler
@@ -362,12 +358,12 @@ class _GMSWriter_impl(object):
         #
         # Tabulate constraints
         #
-        skip_trivial_constraints = self.config.skip_trivial_constraints
+        skip_trivial_constraints = config.skip_trivial_constraints
         last_parent = None
         # NOTE: con_list Save the constraint representation and write it
         # after variables/equations declare
         con_list = {}
-        for con in ordered_active_constraints(model, self.config):
+        for con in ordered_active_constraints(model, config):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
@@ -554,10 +550,9 @@ class _GMSWriter_impl(object):
             ostream.write("option savepoint=1;\n")
 
         ostream.write("\n* START USER ADDITIONAL OPTIONS\n")
-        if gams_options is not None:
-            for options in gams_options:
-                ostream.write(f'{options}\n')
-        ostream.write("* END USER ADDITIONAL OPTIONS\n\n")
+        if config.gams_commands:
+            ostream.write('\n'.join(config.gams_commands))
+        ostream.write("\n* END USER ADDITIONAL OPTIONS\n\n")
 
         ostream.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n"

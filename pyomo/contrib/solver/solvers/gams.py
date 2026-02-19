@@ -173,7 +173,6 @@ class GAMS(SolverBase):
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
-        self._writer = GAMSWriter()
 
     def available(self) -> Availability:
         ver, avail = self._get_version(self.config.executable.path())
@@ -262,6 +261,24 @@ class GAMS(SolverBase):
         timer = config.timer
         StaleFlagManager.mark_all_as_stale()
 
+        # update the writer config if any of the overlapping
+        # keys exists in the solver_options
+
+        for key, val in config.solver_options.items():
+            config.writer_config.gams_commands.append(f"option {key}={val};")
+
+        if not config.writer_config.put_results_format:
+            config.writer_config.put_results_format = (
+                'gdx' if gdxcc_available else 'dat'
+            )
+
+        # Copy resLim last so that time_limit overrides any limit set in
+        # solver_options (or writer_config.gams_commands)
+        if config.time_limit is not None:
+            config.writer_config.gams_commands.append(
+                f"option resLim={config.time_limit};"
+            )
+
         # local variable to hold the working directory name and flags
         dname = None
         lst = "output.lst"
@@ -274,7 +291,7 @@ class GAMS(SolverBase):
             # made, if not keepfiles. That way the user can select a directory
             # they already have, like the current directory, without having to
             # worry about the rest of the contents of that directory being deleted.
-            if config.working_dir is None:
+            if not config.working_dir:
                 dname = tempfile.mkdtemp()
             else:
                 dname = config.working_dir
@@ -283,51 +300,26 @@ class GAMS(SolverBase):
             basename = os.path.join(dname, model_name)
             output_filename = basename + '.gms'
             lst_filename = os.path.join(dname, lst)
+
+            timer.start(f'write_gms_file')
             with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
-                timer.start(f'write_{output_filename}_file')
-                self._writer.config.set_value(config.writer_config)
-                if not self._writer.config.put_results_format:
-                    self._writer.config.put_results_format = (
-                        'gdx' if gdxcc_available else 'dat'
-                    )
-
-                # update the writer config if any of the overlapping
-                # keys exists in the solver_options
-                if config.time_limit is not None:
-                    if "gams_options" in config.solver_options:
-                        config.solver_options["gams_options"].append(
-                            f"option resLim={config.time_limit}"
-                        )
-                    else:
-                        config.solver_options.update(
-                            {"gams_options": [f"option resLim={config.time_limit}"]}
-                        )
-
-                for key in config.solver_options.keys():
-                    if key in self._writer.config:
-                        self._writer.config[key] = config.solver_options[key]
-                    else:
-                        raise ValueError(
-                            f"Encountered unknown solver_option '{key}' -- "
-                            "use 'gams_options' to pass a list of arbitrary "
-                            "GAMS option structures"
-                        )
-
-                gms_info = self._writer.write(model, gms_file, **self._writer.config)
-
+                gms_info = GAMSWriter().write(
+                    model, gms_file, config=config.writer_config
+                )
                 # NOTE: omit InfeasibleConstraintException for now
-                timer.stop(f'write_{output_filename}_file')
-            if self._writer.config.put_results_format == 'gdx':
+            timer.stop(f'write_gms_file')
+
+            if config.writer_config.put_results_format == 'gdx':
                 results_filename = os.path.join(dname, "GAMS_MODEL_p.gdx")
                 statresults_filename = os.path.join(
-                    dname, "%s_s.gdx" % (self._writer.config.put_results,)
+                    dname, "%s_s.gdx" % (config.writer_config.put_results,)
                 )
             else:
                 results_filename = os.path.join(
-                    dname, "%s.dat" % (self._writer.config.put_results,)
+                    dname, "%s.dat" % (config.writer_config.put_results,)
                 )
                 statresults_filename = os.path.join(
-                    dname, "%sstat.dat" % (self._writer.config.put_results,)
+                    dname, "%sstat.dat" % (config.writer_config.put_results,)
                 )
 
             ####################################################################
@@ -374,19 +366,16 @@ class GAMS(SolverBase):
                         )
                 raise RuntimeError(error_message)
 
-            if self._writer.config.put_results_format == 'gdx':
-                timer.start('parse_gdx')
+            timer.start('parse_results')
+            if config.writer_config.put_results_format == 'gdx':
                 model_soln, stat_vars = self._parse_gdx_results(
                     config, results_filename, statresults_filename
                 )
-                timer.stop('parse_gdx')
-
             else:
-                timer.start('parse_dat')
                 model_soln, stat_vars = self._parse_dat_results(
                     config, results_filename, statresults_filename
                 )
-                timer.stop('parse_dat')
+            timer.stop('parse_results')
 
             ####################################################################
             # Postsolve (WIP)
