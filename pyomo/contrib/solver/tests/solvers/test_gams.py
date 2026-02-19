@@ -241,9 +241,17 @@ class TestGAMS(unittest.TestCase):
         self.assertIsNone(solver.config.executable.path())
         self.assertTrue(solver.config.executable._registered_name.startswith('/path'))
 
-    def test_gams_solve(self):
+    @unittest.skipIf(not gams.gdxcc_available, "'gdx' requires the gdx/gdxcc module")
+    def test_gams_solve_gdx(self):
         # Gut check - does it solve?
         model = self.create_model()
-        gams.GAMS().solve(model)
+        gams.GAMS().solve(model, writer_config={'put_results_format': 'gdx'})
+        self.assertAlmostEqual(model.x.value, 5)
+        self.assertAlmostEqual(model.y.value, -5)
+
+    def test_gams_solve_dat(self):
+        # Gut check - does it solve?
+        model = self.create_model()
+        gams.GAMS().solve(model, writer_config={'put_results_format': 'dat'})
         self.assertAlmostEqual(model.x.value, 5)
         self.assertAlmostEqual(model.y.value, -5)
