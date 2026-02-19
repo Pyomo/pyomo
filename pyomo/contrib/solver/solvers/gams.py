@@ -347,7 +347,7 @@ class GAMS(SolverBase):
             with TeeStream(*ostreams) as t:
                 timer.start('subprocess')
                 subprocess_result = subprocess.run(
-                    command, stdout=t.STDOUT, stderr=t.STDERR
+                    command, stdout=t.STDOUT, stderr=t.STDERR, cwd=dname
                 )
                 timer.stop('subprocess')
             rc = subprocess_result.returncode
