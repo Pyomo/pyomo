@@ -1,15 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
-from typing import Sequence, Dict, Optional, Mapping, NoReturn
+from typing import Sequence, Dict, Optional, Mapping
 
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
@@ -23,7 +21,7 @@ class SolutionLoaderBase:
     Intent of this class and its children is to load the solution back into the model.
     """
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
+    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
         """
         Load the solution of the primal variables into the value attribute of the variables.
 

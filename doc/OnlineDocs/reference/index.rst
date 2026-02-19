@@ -16,6 +16,7 @@ Reference Guides
 .. toctree::
    :maxdepth: 1
 
+   ../principles
    future
    ../errors
    ../related_packages

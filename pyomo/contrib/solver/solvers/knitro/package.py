@@ -1,16 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import io
-from typing import Optional
 
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.contrib.solver.common.base import Availability
@@ -61,7 +58,7 @@ class Package:
         return knitro.KN_new_lm(lmc)
 
     @staticmethod
-    def get_version() -> Optional[tuple[int, int, int]]:
+    def get_version() -> tuple[int, int, int] | None:
         """Get the version of the KNITRO solver as a tuple.
 
         Returns:
@@ -97,7 +94,7 @@ class Package:
 
 
 class PackageChecker:
-    _available_cache: Optional[Availability]
+    _available_cache: Availability | None
 
     def __init__(self) -> None:
         self._available_cache = None
@@ -107,5 +104,5 @@ class PackageChecker:
             self._available_cache = Package.check_availability()
         return self._available_cache
 
-    def version(self) -> Optional[tuple[int, int, int]]:
+    def version(self) -> tuple[int, int, int] | None:
         return Package.get_version()

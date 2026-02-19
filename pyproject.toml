@@ -76,20 +76,20 @@ markers = [
     "mpi: marks tests that require MPI",
     "neos: marks tests that require NEOS server connections",
     "importtest: marks tests that checks for warnings when importing modules",
-    "book: marks tests from the Pyomo book",
     "performance: marks performance tests",
-    "long: marks long performance tests",
-    "short: marks short performance tests",
-    "devel: marks developer-created performance tests",
-    "nl: marks nl tests",
-    "lp: marks lp tests",
-    "gams: marks gams tests",
-    "bar: marks bar tests",
     "builders: tests that should be run when testing custom (extension) builders",
+    "solver(name): mark test to run the named solver",
+    "writer(name): mark test to run the named problem writer",
 ]
 
 [tool.black]
 line-length = 88
 skip-string-normalization = true
 skip-magic-trailing-comma = true
-extend-exclude = 'examples/pyomobook/python-ch/BadIndent.py'
+extend-exclude = """
+(
+  ^/examples/pyomobook/python-ch/BadIndent.py  # This is intentionally bad format
+  | ^/pyomo/tpl  # don't reformat TPLs
+  | ^/pyomo/dataportal/_parse_table_datacmds.py  # This is auto-generated
+)
+"""
