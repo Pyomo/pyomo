@@ -32,6 +32,7 @@ gams_available = gams.GAMS().available()
 
 
 @unittest.skipIf(not gams_available, "The 'gams' command is not available")
+@unittest.pytest.mark.solver("gams")
 class TestGAMSSolverConfig(unittest.TestCase):
     def test_default_instantiation(self):
         config = gams.GAMSConfig()
@@ -64,6 +65,7 @@ class TestGAMSSolverConfig(unittest.TestCase):
         self.assertFalse(config.executable.available())
 
 
+@unittest.pytest.mark.solver("gams")
 class TestGAMSSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
         loader = gams.GMSSolutionLoader(None, None)
@@ -95,6 +97,7 @@ class TestGAMSSolutionLoader(unittest.TestCase):
 
 
 @unittest.skipIf(not gams_available, "The 'gams' command is not available")
+@unittest.pytest.mark.solver("gams")
 class TestGAMSInterface(unittest.TestCase):
     # _simple_model and _run_simple_model are standalone functions to test gams execution
     def _simple_model(self, n):
@@ -210,6 +213,7 @@ class TestGAMSInterface(unittest.TestCase):
 
 
 @unittest.skipIf(not gams_available, "The 'gams' command is not available")
+@unittest.pytest.mark.solver("gams")
 class TestGAMS(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel('TestModel')
