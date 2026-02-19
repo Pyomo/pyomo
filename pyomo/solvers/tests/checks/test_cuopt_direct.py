@@ -32,6 +32,7 @@ import pyomo.common.unittest as unittest
 from pyomo.solvers.plugins.solvers.cuopt_direct import cuopt_available
 
 
+@unittest.pytest.mark.solver("cuopt")
 class CUOPTTests(unittest.TestCase):
     @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
     def test_values_and_rc(self):

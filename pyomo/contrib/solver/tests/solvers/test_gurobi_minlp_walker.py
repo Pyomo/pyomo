@@ -64,6 +64,7 @@ class CommonTest(unittest.TestCase):
 
 
 @unittest.skipUnless(gurobipy_available, "gurobipy is not available")
+@unittest.pytest.mark.solver("gurobi_direct_minlp")
 class TestGurobiMINLPWalker(CommonTest):
     def _get_nl_expr_tree(self, visitor, expr):
         # This is a bit hacky, but the only way that I know to get the expression tree
