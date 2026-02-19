@@ -209,6 +209,19 @@ class TestGAMSInterface(unittest.TestCase):
         # Now try pointing to "executables" that are not GAMS
         with TempfileManager as tmp:
             dname = tmp.mkdtemp()
+
+            # Make sure we can run python files as if they we
+            # executables (an issue on Windows)
+            fname = os.path.join(dname, 'test.py')
+            with open(fname, 'w') as F:
+                F.write(f"#!{sys.executable}\nprint('hi')\n")
+            os.chmod(fname, 0o755)
+            try:
+                subprocess.run([fname])
+            except OSError:
+                subprocess.run(['assoc', '.py=Python'])
+                subprocess.run(['ftype', f'Python="{sys.executable}"', '%1', '%*'])
+
             fname = os.path.join(dname, 'test_rc.py')
             with open(fname, 'w') as F:
                 F.write(f"""\
@@ -517,6 +530,17 @@ class TestGAMS(unittest.TestCase):
         with TempfileManager as tmp:
             dname = tmp.mkdtemp()
             solver.config.working_dir = dname
+
+            # Make sure we can run python files as if they we
+            # executables (an issue on Windows)
+            fname = os.path.join(dname, 'test.py')
+            with open(fname, 'w') as F:
+                F.write(f"#!{sys.executable}\nprint('hi')\n")
+            try:
+                subprocess.run([fname])
+            except OSError:
+                subprocess.run(['assoc', '.py=Python'])
+                subprocess.run(['ftype', f'Python="{sys.executable}"', '%1', '%*'])
 
             fname = os.path.join(dname, 'test_rc.py')
             with open(fname, 'w') as F:
