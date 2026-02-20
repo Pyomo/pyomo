@@ -52,23 +52,6 @@ def simple_reaction_model(data):
     # fix all of the regressed parameters
     model.k.fix()
 
-    # ===================================================================
-    # Stage-specific cost computations
-    def ComputeFirstStageCost_rule(model):
-        return 0
-
-    model.FirstStageCost = Expression(rule=ComputeFirstStageCost_rule)
-
-    def AllMeasurements(m):
-        return (float(data['y']) - m.y) ** 2
-
-    model.SecondStageCost = Expression(rule=AllMeasurements)
-
-    def total_cost_rule(m):
-        return m.FirstStageCost + m.SecondStageCost
-
-    model.Total_Cost_Objective = Objective(rule=total_cost_rule, sense=minimize)
-
     return model
 
 
@@ -90,6 +73,8 @@ class SimpleReactionExperiment(Experiment):
         m.experiment_outputs.update(
             [(m.x1, self.data['x1']), (m.x2, self.data['x2']), (m.y, self.data['y'])]
         )
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, None), (m.x1, None), (m.x2, None)])
 
         return m
 
@@ -161,7 +146,7 @@ def main():
     # Only estimate the parameter k[1]. The parameter k[2] will remain fixed
     # at its initial value
 
-    pest = parmest.Estimator(exp_list)
+    pest = parmest.Estimator(exp_list, obj_function="SSE")
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)
@@ -174,7 +159,7 @@ def main():
 
     # =======================================================================
     # Estimate both k1 and k2 and compute the covariance matrix
-    pest = parmest.Estimator(exp_list)
+    pest = parmest.Estimator(exp_list, obj_function="SSE")
     n = 15  # total number of data points used in the objective (y in 15 scenarios)
     obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=n)
     print(obj)

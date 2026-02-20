@@ -7,7 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.common.dependencies import pandas as pd
+from pyomo.common.dependencies import numpy as np, pandas as pd
+from itertools import product
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
@@ -33,13 +34,17 @@ def main():
 
     pest = parmest.Estimator(exp_list, obj_function='SSE')
 
-    # Parameter estimation with covariance
-    obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=19)
-    print("Least squares objective value:", obj)
-    print("Estimated parameters (theta):\n")
-    print(theta)
-    print("Covariance matrix:\n")
-    print(cov)
+    # Parameter estimation
+    obj, theta = pest.theta_est()
+
+    # Find the objective value at each theta estimate
+    k1 = [0.8, 1.6, 2.4]
+    k2 = [1.6, 2.4, 3.2]
+    k3 = [0.00016, 0.00032, 0.005]
+    theta_vals = pd.DataFrame(list(product(k1, k2, k3)), columns=["k1", "k2", "k3"])
+    multistart_results = pest.theta_est_multistart(theta_vals)
+
+    print(multistart_results)
 
 
 if __name__ == "__main__":
