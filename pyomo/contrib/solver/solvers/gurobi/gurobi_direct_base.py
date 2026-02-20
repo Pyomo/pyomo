@@ -39,7 +39,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 import time
 
 logger = logging.getLogger(__name__)
@@ -76,10 +79,17 @@ class GurobiConfig(BranchAndBoundConfig):
 
 
 class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
-    def __init__(self, solver_model) -> None:
+    def __init__(self, solver_model, pyomo_model) -> None:
         super().__init__()
         self._solver_model = solver_model
+        self._pyomo_model = pyomo_model  # needed for suffixes
         GurobiDirectBase._register_env_client()
+
+    def get_number_of_solutions(self) -> int:
+        return self._solver_model.SolCount
+
+    def get_solution_ids(self) -> List:
+        return list(range(self.get_number_of_solutions()))
 
     def _get_var_lists(self):
         """
@@ -132,7 +142,7 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         return pvars, vals
 
     def load_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> None:
         pvars, vals = self._get_primals(
             vars_to_load=vars_to_load, solution_id=solution_id
@@ -141,8 +151,8 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
             pv.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=0
+    def get_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
         pvars, vals = self._get_primals(
             vars_to_load=vars_to_load, solution_id=solution_id
@@ -162,13 +172,15 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         return ComponentMap(zip(vars_to_load, vals))
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
+        if solution_id is not None and solution_id != 0:
+            raise NoReducedCostsError('Can only get reduced costs for solution_id = 0')
         if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
             raise NoReducedCostsError()
         if self._solver_model.IsMIP:
             # this will also return True for continuous, nonconvex models
-            raise NoReducedCostsError()
+            raise NoReducedCostsError('Can only get reduced costs for convex problems')
         if vars_to_load is None:
             res = self._get_rc_all_vars()
         else:
@@ -176,13 +188,15 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
         return res
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> Dict[ConstraintData, float]:
+        if solution_id is not None and solution_id != 0:
+            raise NoDualsError('Can only get duals for solution_id = 0')
         if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
             raise NoDualsError()
         if self._solver_model.IsMIP:
             # this will also return True for continuous, nonconvex models
-            raise NoDualsError()
+            raise NoDualsError('Can only get duals for convex problems')
 
         qcons = set(self._solver_model.getQConstrs())
         con_map = self._get_con_map()
@@ -208,6 +222,11 @@ class GurobiDirectSolutionLoaderBase(SolutionLoaderBase):
                     duals[c] = gurobi_con.Pi
 
         return duals
+
+    def load_import_suffixes(self, solution_id=None):
+        load_import_suffixes(
+            pyomo_model=self._pyomo_model, solution_loader=self, solution_id=solution_id
+        )
 
 
 class GurobiDirectBase(SolverBase):
@@ -453,7 +472,7 @@ class GurobiDirectBase(SolverBase):
         config.timer.start('load solution')
         if config.load_solutions:
             if grb_model.SolCount > 0:
-                results.solution_loader.load_vars()
+                results.solution_loader.load_solution()
             else:
                 raise NoFeasibleSolutionError()
         config.timer.stop('load solution')

@@ -92,7 +92,7 @@ class TestIpoptSolverConfig(unittest.TestCase):
 class TestIpoptSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
         loader = ipopt.IpoptSolutionLoader(
-            ipopt.ASLSolFileData(), NLWriterInfo(eliminated_vars=[1])
+            ipopt.ASLSolFileData(), NLWriterInfo(eliminated_vars=[1]), None
         )
         with self.assertRaisesRegex(
             MouseTrap, "Complete reduced costs are not available"
@@ -101,7 +101,7 @@ class TestIpoptSolutionLoader(unittest.TestCase):
 
     def test_get_duals_error(self):
         loader = ipopt.IpoptSolutionLoader(
-            ipopt.ASLSolFileData(), NLWriterInfo(eliminated_vars=[1])
+            ipopt.ASLSolFileData(), NLWriterInfo(eliminated_vars=[1]), None
         )
         with self.assertRaisesRegex(MouseTrap, "Complete duals are not available"):
             loader.get_duals()
