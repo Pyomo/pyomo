@@ -8,10 +8,50 @@
 # ____________________________________________________________________________________
 
 from pyomo.common.config import Bool, ConfigValue
-from pyomo.contrib.solver.common.config import SolverConfig
+from pyomo.contrib.solver.common.config import PersistentSolverConfig, SolverConfig
 
 
 class KnitroConfig(SolverConfig):
+    """Configuration for the direct Knitro solver interface."""
+
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ) -> None:
+        super().__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+
+        self.restore_variable_values_after_solve: bool = self.declare(
+            "restore_variable_values_after_solve",
+            ConfigValue(
+                domain=Bool,
+                default=False,
+                doc=(
+                    "To evaluate non-linear constraints, KNITRO solver sets "
+                    "explicit values on variables. This option controls "
+                    "whether to restore the original variable values after "
+                    "solving."
+                ),
+            ),
+        )
+
+
+class KnitroPersistentConfig(KnitroConfig, PersistentSolverConfig):
+    """Configuration for the persistent Knitro solver interface.
+
+    Extends KnitroConfig with persistent solver capabilities including
+    auto_updates configuration.
+    """
+
     def __init__(
         self,
         description=None,
@@ -39,20 +79,6 @@ class KnitroConfig(SolverConfig):
                     "rebuild the whole model when variable removal is "
                     "attempted. When `rebuild_model_on_remove_var` is set to "
                     "True, the model will be rebuilt."
-                ),
-            ),
-        )
-
-        self.restore_variable_values_after_solve: bool = self.declare(
-            "restore_variable_values_after_solve",
-            ConfigValue(
-                domain=Bool,
-                default=False,
-                doc=(
-                    "To evaluate non-linear constraints, KNITRO solver sets "
-                    "explicit values on variables. This option controls "
-                    "whether to restore the original variable values after "
-                    "solving."
                 ),
             ),
         )
