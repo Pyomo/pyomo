@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
@@ -21,6 +22,9 @@ if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 import pyomo.contrib.pynumero.interfaces.utils as utils
+from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
+    PyomoNLPWithGreyBoxBlocks,
+)
 
 
 class TestCondensedSparseSummation(unittest.TestCase):
@@ -84,6 +88,46 @@ class TestCondensedSparseSummation(unittest.TestCase):
         self.assertTrue(np.array_equal(expected_data, C.data))
         self.assertTrue(np.array_equal(expected_row, C.row))
         self.assertTrue(np.array_equal(expected_col, C.col))
+
+    def test_empty_hessian_linear_model_does_not_crash(self):
+        """
+        Regression test for CondensedSparseSummation bug where an empty
+        union of nonzeros caused unpack failure.
+
+        Linear model -> Lagrangian Hessian has no nonzeros.
+        Previously this crashed inside CondensedSparseSummation._build_maps().
+        """
+
+        m = pyo.ConcreteModel()
+
+        # Linear model (same structure as user's example)
+        m.v1 = pyo.Var(initialize=1e-8)
+        m.v2 = pyo.Var(initialize=1)
+        m.v3 = pyo.Var(initialize=1)
+
+        m.c1 = pyo.Constraint(expr=m.v1 == m.v2)
+        m.c2 = pyo.Constraint(expr=m.v1 == 1e-8 * m.v3)
+        m.c3 = pyo.Constraint(expr=1e8 * m.v1 + 1e10 * m.v2 == 1e-6 * m.v3)
+
+        # PyNumero requires an objective
+        m.obj = pyo.Objective(expr=0)
+
+        # This used to crash during initialization due to empty
+        # union of nonzeros in the Hessian of the Lagrangian
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+
+        # Explicitly evaluate Hessian of Lagrangian
+        hess = nlp.evaluate_hessian_lag()
+
+        # Shape should match number of primals
+        n = nlp.n_primals()
+        assert hess.shape == (n, n)
+
+        # For a purely linear model, Hessian must be structurally empty
+        assert hess.nnz == 0
+
+        # Also verify the sparse data vector is empty
+        assert len(hess.data) == 0
 
 
 if __name__ == '__main__':
