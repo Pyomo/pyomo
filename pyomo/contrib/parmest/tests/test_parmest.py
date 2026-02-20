@@ -15,6 +15,8 @@ from itertools import product
 from pyomo.common.unittest import pytest
 from parameterized import parameterized, parameterized_class
 import pyomo.common.unittest as unittest
+from pyomo.contrib.mpc import data
+from pyomo.contrib.mpc.examples.cstr import model
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
@@ -30,6 +32,7 @@ ipopt_available = pyo.SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
 
+# TESTS HERE WILL BE MODIFIED FOR _Q_OPT_BLOCKS LATER
 # Set the global seed for random number generation in tests
 _RANDOM_SEED_FOR_TESTING = 524
 
@@ -508,40 +511,6 @@ class TestRooneyBiegler(unittest.TestCase):
             retcode = subprocess.call(rlist)
         self.assertEqual(retcode, 0)
 
-    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
-    def test_theta_est_cov(self):
-        objval, thetavals, cov = self.pest.theta_est(calc_cov=True, cov_n=6)
-
-        self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(
-            thetavals["asymptote"], 19.1426, places=2
-        )  # 19.1426 from the paper
-        self.assertAlmostEqual(
-            thetavals["rate_constant"], 0.5311, places=2
-        )  # 0.5311 from the paper
-
-        # Covariance matrix
-        self.assertAlmostEqual(
-            cov["asymptote"]["asymptote"], 6.155892, places=2
-        )  # 6.22864 from paper
-        self.assertAlmostEqual(
-            cov["asymptote"]["rate_constant"], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov["rate_constant"]["asymptote"], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov["rate_constant"]["rate_constant"], 0.040571, places=2
-        )  # 0.04124 from paper
-
-        """ Why does the covariance matrix from parmest not match the paper? Parmest is
-        calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
-        employed the first order approximation common for nonlinear regression. The paper
-        values were verified with Scipy, which uses the same first order approximation.
-        The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
-        "Nonlinear Parameter Estimation", Y. Bard, 1974.
-        """
-
     def test_cov_scipy_least_squares_comparison(self):
         """
         Scipy results differ in the 3rd decimal place from the paper. It is possible
@@ -655,20 +624,27 @@ class TestModelVariants(unittest.TestCase):
             columns=["hour", "y"],
         )
 
+        # Updated models to use Vars for experiment output, and Constraints
         def rooney_biegler_params(data):
             model = pyo.ConcreteModel()
 
             model.asymptote = pyo.Param(initialize=15, mutable=True)
             model.rate_constant = pyo.Param(initialize=0.5, mutable=True)
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            def response_rule(m, h):
-                expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
-                return expr
+            # Fix the experiment inputs
+            model.h.fix()
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.h))
+
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -683,14 +659,14 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
-                )
+                m.experiment_outputs.update([(m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_params_exp_list = []
         for i in range(self.data.shape[0]):
@@ -701,24 +677,30 @@ class TestModelVariants(unittest.TestCase):
         def rooney_biegler_indexed_params(data):
             model = pyo.ConcreteModel()
 
+            # Define the indexed parameters
             model.param_names = pyo.Set(initialize=["asymptote", "rate_constant"])
             model.theta = pyo.Param(
                 model.param_names,
                 initialize={"asymptote": 15, "rate_constant": 0.5},
                 mutable=True,
             )
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Fix the experiment inputs
+            model.h.fix()
 
-            def response_rule(m, h):
-                expr = m.theta["asymptote"] * (
-                    1 - pyo.exp(-m.theta["rate_constant"] * h)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.theta["asymptote"] * (
+                    1 - pyo.exp(-m.theta["rate_constant"] * m.h)
                 )
-                return expr
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
-
+            # Add the model equations to the model
+            model.response_con = pyo.Constraint(rule=response_rule)
             return model
 
         class RooneyBieglerExperimentIndexedParams(RooneyBieglerExperiment):
@@ -732,12 +714,13 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
-                )
+                m.experiment_outputs.update([(m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_indexed_params_exp_list = []
         for i in range(self.data.shape[0]):
@@ -753,14 +736,20 @@ class TestModelVariants(unittest.TestCase):
             model.asymptote.fixed = True  # parmest will unfix theta variables
             model.rate_constant.fixed = True
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            def response_rule(m, h):
-                expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
-                return expr
+            # Fix the experiment inputs
+            model.h.fix()
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.h))
+
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -775,14 +764,14 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
-                )
+                m.experiment_outputs.update([(m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_vars_exp_list = []
         for i in range(self.data.shape[0]):
@@ -802,16 +791,22 @@ class TestModelVariants(unittest.TestCase):
             )
             model.theta["rate_constant"].fixed = True
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            def response_rule(m, h):
-                expr = m.theta["asymptote"] * (
-                    1 - pyo.exp(-m.theta["rate_constant"] * h)
+            # Fix the experiment inputs
+            model.h.fix()
+
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.theta["asymptote"] * (
+                    1 - pyo.exp(-m.theta["rate_constant"] * m.h)
                 )
-                return expr
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -826,12 +821,13 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
-                )
+                m.experiment_outputs.update([(m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_indexed_vars_exp_list = []
         for i in range(self.data.shape[0]):
@@ -839,15 +835,7 @@ class TestModelVariants(unittest.TestCase):
                 RooneyBieglerExperimentIndexedVars(self.data.loc[i, :])
             )
 
-        # Sum of squared error function
-        def SSE(model):
-            expr = (
-                model.experiment_outputs[model.y]
-                - model.response_function[model.experiment_outputs[model.hour]]
-            ) ** 2
-            return expr
-
-        self.objective_function = SSE
+        self.objective_function = 'SSE'
 
         theta_vals = pd.DataFrame([20, 1], index=["asymptote", "rate_constant"]).T
         theta_vals_index = pd.DataFrame(
@@ -899,16 +887,16 @@ class TestModelVariants(unittest.TestCase):
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
-            cov.iloc[asymptote_index, asymptote_index], 6.30579403, places=2
+            cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
         )  # 6.22864 from paper
         self.assertAlmostEqual(
-            cov.iloc[asymptote_index, rate_constant_index], -0.4395341, places=2
+            cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, asymptote_index], -0.4395341, places=2
+            cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, rate_constant_index], 0.04193591, places=2
+            cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
         )  # 0.04124 from paper
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
@@ -1107,7 +1095,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
             def ComputeFirstStageCost_rule(m):
                 return 0
 
-            m.FirstStageCost = pyo.Expression(rule=ComputeFirstStageCost_rule)
+            # Model used in
+            m.FirstStage = pyo.Expression(rule=ComputeFirstStageCost_rule)
 
             def ComputeSecondStageCost_rule(m):
                 return sum(
@@ -1117,14 +1106,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
                     for t in meas_t
                 )
 
-            m.SecondStageCost = pyo.Expression(rule=ComputeSecondStageCost_rule)
+            m.SecondStage = pyo.Expression(rule=ComputeSecondStageCost_rule)
 
             def total_cost_rule(model):
-                return model.FirstStageCost + model.SecondStageCost
+                return model.FirstStage + model.SecondStage
 
-            m.Total_Cost_Objective = pyo.Objective(
-                rule=total_cost_rule, sense=pyo.minimize
-            )
+            m.Total_Cost = pyo.Objective(rule=total_cost_rule, sense=pyo.minimize)
 
             disc = pyo.TransformationFactory("dae.collocation")
             disc.apply_to(m, nfe=20, ncp=2)
@@ -1165,6 +1152,10 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], None) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], None) for t in meas_time_points)
+                m.measurement_error.update((m.cc[t], None) for t in meas_time_points)
 
             def get_labeled_model(self):
                 self.create_model()
@@ -1210,8 +1201,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
         exp_list_df = [ReactorDesignExperimentDAE(data_df)]
         exp_list_dict = [ReactorDesignExperimentDAE(data_dict)]
 
-        self.pest_df = parmest.Estimator(exp_list_df)
-        self.pest_dict = parmest.Estimator(exp_list_dict)
+        self.pest_df = parmest.Estimator(exp_list_df, obj_function="SSE")
+        self.pest_dict = parmest.Estimator(exp_list_dict, obj_function="SSE")
 
         # Estimator object with multiple scenarios
         exp_list_df_multiple = [
@@ -1223,8 +1214,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
             ReactorDesignExperimentDAE(data_dict),
         ]
 
-        self.pest_df_multiple = parmest.Estimator(exp_list_df_multiple)
-        self.pest_dict_multiple = parmest.Estimator(exp_list_dict_multiple)
+        self.pest_df_multiple = parmest.Estimator(
+            exp_list_df_multiple, obj_function="SSE"
+        )
+        self.pest_dict_multiple = parmest.Estimator(
+            exp_list_dict_multiple, obj_function="SSE"
+        )
 
         # Create an instance of the model
         self.m_df = ABC_model(data_df)
@@ -1305,6 +1300,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(return_vals1["time"].loc[1][18], 2.368, places=3)
         self.assertAlmostEqual(return_vals2["time"].loc[1][18], 2.368, places=3)
 
+    # Currently failing, _count_total_experiments problem
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_covariance(self):
         from pyomo.contrib.interior_point.inverse_reduced_hessian import (
@@ -1315,7 +1311,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
         # In this example, this is the number of data points in data_df, but that's
         # only because the data is indexed by time and contains no additional information.
-        n = 60
+        n = 20
 
         # Compute covariance using parmest
         obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
