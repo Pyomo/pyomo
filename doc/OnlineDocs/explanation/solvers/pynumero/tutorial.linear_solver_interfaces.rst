@@ -69,7 +69,7 @@ Interface to MUMPS
    >>> solver = MumpsCentralizedAssembledLinearSolver(sym=2, par=1, comm=None)  # symmetric matrix; solve in serial
    >>> solver.do_symbolic_factorization(A)
    >>> solver.do_numeric_factorization(A)
-   >>> x = solver.do_back_solve(rhs)
+   >>> x, status = solver.do_back_solve(rhs)
    >>> np.max(np.abs(A*x - rhs)) <= 1e-15
    True
 
