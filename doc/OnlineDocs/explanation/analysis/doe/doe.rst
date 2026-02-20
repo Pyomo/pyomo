@@ -340,6 +340,23 @@ with a :math:`\log_{10}` determinant of FIM being around -5. For D-, Pseudo A-, 
 E-optimality we want to maximize the objective function, while for A- and Modified 
 E-optimality we want to minimize the objective function.
 
+However, in this sensitivity analysis plot (heatmap), we only varied the initial 
+concentration and the initial temperature, while the temperature at other time points is fixed at 300 K.
+
+.. math::
+   :nowrap:
+
+   \[
+   T(t) = \begin{cases}
+     T_0, & t \le 0.125 \\
+     300\ \text{K}, & t > 0.125
+   \end{cases}
+   \]
+
+Since all the temperature is at 300K when :math:`t > 0.125`, the parameters 
+:math:`A_1, E1, A_2, E_2` are not sensitive to the design variables, which 
+results in a small determinant of the FIM and a large condition number of the FIM.
+
 
 Step 6: Performing an optimal experimental design
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
