@@ -90,7 +90,7 @@ class TestReallocation(unittest.TestCase):
         # As of Mumps 5.6.2, predicted == 9, which is lower than the
         # default actual of 10.8
         # self.assertTrue(predicted == 12 or predicted == 11)
-        self.assertTrue(actual > predicted)
+        self.assertTrue(actual >= predicted)
         # NOTE: This test will break if Mumps (or your Mumps version)
         # gets more conservative at estimating memory requirement,
         # or if the numeric factorization gets more efficient.

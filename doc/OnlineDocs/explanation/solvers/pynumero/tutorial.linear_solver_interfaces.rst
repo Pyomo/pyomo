@@ -67,10 +67,10 @@ Interface to MUMPS
           [-1.        , -1.        , -1.        ,  0.        ,  0.        ]])
    >>> rhs = np.array([-0.67025575, -1.2,  0.1,  1.14872127,  1.25])
    >>> solver = MumpsCentralizedAssembledLinearSolver(sym=2, par=1, comm=None)  # symmetric matrix; solve in serial
-   >>> solver.do_symbolic_factorization(A)
-   >>> solver.do_numeric_factorization(A)
-   >>> x = solver.do_back_solve(rhs)
+   >>> status = solver.do_symbolic_factorization(A)
+   >>> status = solver.do_numeric_factorization(A)
+   >>> x, status = solver.do_back_solve(rhs)
    >>> np.max(np.abs(A*x - rhs)) <= 1e-15
-   True
+   np.True_
 
 Of course, SciPy solvers can also be used. See SciPy documentation for details.
