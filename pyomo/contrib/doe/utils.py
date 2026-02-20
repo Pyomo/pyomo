@@ -26,7 +26,7 @@
 
 import pyomo.environ as pyo
 
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import numpy as np, numpy_available, pandas as pd
 
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
@@ -91,41 +91,43 @@ def rescale_FIM(FIM, param_vals):
     return scaled_FIM
 
 
-def check_FIM(FIM):
+def check_matrix(mat):
     """
-    Checks that the FIM is square, positive definite, and symmetric.
+    Checks that the matrix is square, positive definite, and symmetric.
 
     Parameters
     ----------
-    FIM: 2D numpy array representing the FIM
+    mat: 2D numpy array representing the matrix
 
     Returns
     -------
     None, but will raise error messages as needed
     """
-    # Check that the FIM is a square matrix
-    if FIM.shape[0] != FIM.shape[1]:
-        raise ValueError("FIM must be a square matrix")
+    # Check that the matrix is a square matrix
+    if mat.ndim != 2 or mat.shape[0] != mat.shape[1]:
+        raise ValueError("argument mat must be a 2D square matrix")
 
-    # Compute the eigenvalues of the FIM
-    evals = np.linalg.eigvals(FIM)
+    # Compute the eigenvalues of the matrix
+    evals = np.linalg.eigvals(mat)
 
-    # Check if the FIM is positive definite
+    # Check if the matrix is positive definite
     if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
         raise ValueError(
-            "FIM provided is not positive definite. It has one or more negative "
+            "Matrix provided is not positive definite. It has one or more negative "
             + "eigenvalue(s) less than -{:.1e}".format(_SMALL_TOLERANCE_DEFINITENESS)
         )
 
-    # Check if the FIM is symmetric
-    if not np.allclose(FIM, FIM.T, atol=_SMALL_TOLERANCE_SYMMETRY):
+    # Check if the matrix is symmetric
+    if not np.allclose(mat, mat.T, atol=_SMALL_TOLERANCE_SYMMETRY):
         raise ValueError(
-            "FIM provided is not symmetric using absolute tolerance {}".format(
+            "Matrix provided is not symmetric using absolute tolerance {}".format(
                 _SMALL_TOLERANCE_SYMMETRY
             )
         )
 
 
+# TODO: probably can merge compute_FIM_metrics() and get_FIM_metrics() in a single +
+# TODO: function with an argument (e.g., return_dict = True) to compute the metrics
 # Functions to compute FIM metrics
 def compute_FIM_metrics(FIM):
     """
@@ -161,7 +163,7 @@ def compute_FIM_metrics(FIM):
     """
 
     # Check whether the FIM is square, positive definite, and symmetric
-    check_FIM(FIM)
+    check_matrix(FIM)
 
     # Compute FIM metrics
     det_FIM = np.linalg.det(FIM)
@@ -266,3 +268,105 @@ def get_FIM_metrics(FIM):
         "log10(E-Optimality)": E_opt,
         "log10(Modified E-Optimality)": ME_opt,
     }
+
+
+def snake_traversal_grid_sampling(*array_like_args):
+    """
+    Generates a multi-dimensional pattern for an arbitrary number of 1D array-like arguments.
+    This pattern is useful for generating patterns for sensitivity analysis when we want
+    to change one variable at a time. This function uses recursion and acts as a generator.
+
+    Parameters
+    ----------
+    *array_like_args: A variable number of 1D array-like objects as arguments.
+
+    Yields
+    ------
+    A tuple representing points in the snake pattern.
+    """
+    # throw an error if the array_like_args are not array-like or all 1D
+    for i, arg in enumerate(array_like_args):
+        try:
+            arr_np = np.asarray(arg)
+        except Exception:
+            raise ValueError(f"Argument at position {i} is not 1D array-like.")
+
+        if arr_np.ndim != 1:
+            raise ValueError(
+                f"Argument at position {i} is not 1D. Got shape {arr_np.shape}."
+            )
+
+    # The main logic is in a nested recursive helper function.
+    def _generate_recursive(depth, index_sum):
+        # Base case: If we've processed all lists, we're at the end of a path.
+        if depth == len(array_like_args):
+            yield ()
+            return
+
+        current_list = array_like_args[depth]
+
+        # Determine the iteration direction based on the sum of parent indices.
+        # This is the mathematical rule for the zigzag.
+        is_forward = index_sum % 2 == 0
+        iterable = current_list if is_forward else reversed(current_list)
+
+        # Enumerate to get the index `i` for the *next* recursive call's sum.
+        for i, value in enumerate(iterable):
+            # Recur for the next list, updating the index_sum.
+            for sub_pattern in _generate_recursive(depth + 1, index_sum + i):
+                # Prepend the current value to the results from deeper levels.
+                yield (value,) + sub_pattern
+
+    # Start the recursion at the first list (depth 0) with an initial sum of 0.
+    yield from _generate_recursive(depth=0, index_sum=0)
+
+
+def compute_correlation_matrix(
+    covariance_matrix, var_name: list = None, significant_digits=3
+):
+    """
+    Computes the correlation matrix from a covariance matrix.
+
+    Parameters
+    ----------
+    covariance_matrix : numpy.ndarray
+        2D array representing the covariance matrix.
+    var_name : list, optional
+        List of variable names corresponding to the rows/columns of the covariance matrix.
+    significant_digits : int, optional
+        Number of significant digits to round the correlation matrix to. Default: 3.
+
+    Returns
+    -------
+    pandas.DataFrame/numpy.ndarray
+        If `var_name` is provided, returns a pandas DataFrame with the correlation matrix
+        and the specified variable names as both index and columns. If `var_name` is not
+        provided, returns a numpy array representing the correlation matrix in the same
+        order as the covariance matrix.
+    """
+    # Check if covariance matrix is symmetric and square
+    check_matrix(covariance_matrix)
+
+    if var_name:
+        assert len(var_name) == covariance_matrix.shape[0], (
+            "Length of var_name must match the number of rows/columns in the "
+            "covariance matrix."
+        )
+
+    if not np.all(np.isfinite(covariance_matrix)):
+        raise ValueError("Covariance matrix contains non-finite values.")
+
+    std_dev = np.sqrt(np.diag(covariance_matrix))
+
+    std_dev_matrix = np.outer(std_dev, std_dev)
+
+    correlation_matrix = covariance_matrix / std_dev_matrix
+
+    # Set the index to the variable names if provided,
+    corr_df = (
+        pd.DataFrame(correlation_matrix, index=var_name, columns=var_name)
+        if var_name
+        else correlation_matrix
+    )
+
+    return corr_df.round(significant_digits) if significant_digits else corr_df

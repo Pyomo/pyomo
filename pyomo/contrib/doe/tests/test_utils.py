@@ -6,13 +6,20 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import (
+    numpy as np,
+    numpy_available,
+    pandas as pd,
+    pandas_available,
+)
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.utils import (
-    check_FIM,
+    check_matrix,
     compute_FIM_metrics,
     get_FIM_metrics,
+    snake_traversal_grid_sampling,
+    compute_correlation_matrix as compcorr,
     _SMALL_TOLERANCE_DEFINITENESS,
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
@@ -20,45 +27,49 @@ from pyomo.contrib.doe.utils import (
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not pandas_available, "Pandas is not available")
 class TestUtilsFIM(unittest.TestCase):
-    """Test the check_FIM() from utils.py."""
+    """Test the check_matrix() from utils.py."""
 
-    def test_check_FIM_valid(self):
+    # TODO: add tests when `check_pos_def = False` is used in check_matrix()
+    def test_check_matrix_valid(self):
         """Test case where the FIM is valid (square, positive definite, symmetric)."""
         FIM = np.array([[4, 1], [1, 3]])
         try:
-            check_FIM(FIM)
+            check_matrix(FIM)
         except ValueError as e:
             self.fail(f"Unexpected error: {e}")
 
-    def test_check_FIM_non_square(self):
+    def test_check_matrix_non_square(self):
         """Test case where the FIM is not square."""
         FIM = np.array([[4, 1], [1, 3], [2, 1]])
-        with self.assertRaisesRegex(ValueError, "FIM must be a square matrix"):
-            check_FIM(FIM)
+        with self.assertRaisesRegex(
+            ValueError, "argument mat must be a 2D square matrix"
+        ):
+            check_matrix(FIM)
 
-    def test_check_FIM_non_positive_definite(self):
+    def test_check_matrix_non_positive_definite(self):
         """Test case where the FIM is not positive definite."""
         FIM = np.array([[1, 0], [0, -2]])
         with self.assertRaisesRegex(
             ValueError,
-            "FIM provided is not positive definite. It has one or more negative "
+            "Matrix provided is not positive definite. It has one or more negative "
             + r"eigenvalue\(s\) less than -{:.1e}".format(
                 _SMALL_TOLERANCE_DEFINITENESS
             ),
         ):
-            check_FIM(FIM)
+            check_matrix(FIM)
 
-    def test_check_FIM_non_symmetric(self):
+    def test_check_matrix_non_symmetric(self):
         """Test case where the FIM is not symmetric."""
         FIM = np.array([[4, 1], [0, 3]])
         with self.assertRaisesRegex(
             ValueError,
-            "FIM provided is not symmetric using absolute tolerance {}".format(
+            "Matrix provided is not symmetric using absolute tolerance {}".format(
                 _SMALL_TOLERANCE_SYMMETRY
             ),
         ):
-            check_FIM(FIM)
+            check_matrix(FIM)
 
     """Test the compute_FIM_metrics() from utils.py."""
 
@@ -151,6 +162,142 @@ class TestUtilsFIM(unittest.TestCase):
         self.assertAlmostEqual(fim_metrics["log10(E-Optimality)"], expected['E_opt'])
         self.assertAlmostEqual(
             fim_metrics["log10(Modified E-Optimality)"], expected['ME_opt']
+        )
+
+    def test_snake_traversal_grid_sampling_errors(self):
+        # Test the error handling with lists
+        list_2d_bad = [[1, 2, 3], [4, 5, 6]]
+        with self.assertRaises(ValueError) as cm:
+            list(snake_traversal_grid_sampling(list_2d_bad))
+        self.assertEqual(
+            str(cm.exception), "Argument at position 0 is not 1D. Got shape (2, 3)."
+        )
+
+        list_2d_wrong_shape_bad = [[1, 2, 3], [4, 5, 6, 7]]
+        with self.assertRaises(ValueError) as cm:
+            list(snake_traversal_grid_sampling(list_2d_wrong_shape_bad))
+        self.assertEqual(
+            str(cm.exception), "Argument at position 0 is not 1D array-like."
+        )
+
+        # Test the error handling with tuples
+        tuple_2d_bad = ((1, 2, 3), (4, 5, 6))
+        with self.assertRaises(ValueError) as cm:
+            list(snake_traversal_grid_sampling(tuple_2d_bad))
+        self.assertEqual(
+            str(cm.exception), "Argument at position 0 is not 1D. Got shape (2, 3)."
+        )
+
+        tuple_2d_wrong_shape_bad = ((1, 2, 3), (4, 5, 6, 7))
+        with self.assertRaises(ValueError) as cm:
+            list(snake_traversal_grid_sampling(tuple_2d_wrong_shape_bad))
+        self.assertEqual(
+            str(cm.exception), "Argument at position 0 is not 1D array-like."
+        )
+
+        # Test the error handling with numpy arrays
+        array_2d_bad = np.array([[1, 2, 3], [4, 5, 6]])
+        with self.assertRaises(ValueError) as cm:
+            list(snake_traversal_grid_sampling(array_2d_bad))
+        self.assertEqual(
+            str(cm.exception), "Argument at position 0 is not 1D. Got shape (2, 3)."
+        )
+
+    def test_snake_traversal_grid_sampling_values(self):
+        # Test with lists
+        # Test with a single list
+        list1 = [1, 2, 3]
+        result_list1 = list(snake_traversal_grid_sampling(list1))
+        expected_list1 = [(1,), (2,), (3,)]
+        self.assertEqual(result_list1, expected_list1)
+
+        # Test with two lists
+        list2 = [4, 5, 6]
+        result_list2 = list(snake_traversal_grid_sampling(list1, list2))
+        expected_list2 = [
+            (1, 4),
+            (1, 5),
+            (1, 6),
+            (2, 6),
+            (2, 5),
+            (2, 4),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+        ]
+        self.assertEqual(result_list2, expected_list2)
+
+        # Test with three lists
+        list3 = [7, 8]
+        result_list3 = list(snake_traversal_grid_sampling(list1, list2, list3))
+        expected_list3 = [
+            (1, 4, 7),
+            (1, 4, 8),
+            (1, 5, 8),
+            (1, 5, 7),
+            (1, 6, 7),
+            (1, 6, 8),
+            (2, 6, 8),
+            (2, 6, 7),
+            (2, 5, 7),
+            (2, 5, 8),
+            (2, 4, 8),
+            (2, 4, 7),
+            (3, 4, 7),
+            (3, 4, 8),
+            (3, 5, 8),
+            (3, 5, 7),
+            (3, 6, 7),
+            (3, 6, 8),
+        ]
+        self.assertEqual(result_list3, expected_list3)
+
+        # Test with tuples
+        tuple1 = (1, 2, 3)
+        result_tuple1 = list(snake_traversal_grid_sampling(tuple1))
+        tuple2 = (4, 5, 6)
+        result_tuple2 = list(snake_traversal_grid_sampling(tuple1, tuple2))
+        tuple3 = (7, 8)
+        result_tuple3 = list(snake_traversal_grid_sampling(tuple1, tuple2, tuple3))
+        self.assertEqual(result_tuple1, expected_list1)
+        self.assertEqual(result_tuple2, expected_list2)
+        self.assertEqual(result_tuple3, expected_list3)
+
+        # Test with numpy arrays
+        array1 = np.array([1, 2, 3])
+        array2 = np.array([4, 5, 6])
+        array3 = np.array([7, 8])
+        result_array1 = list(snake_traversal_grid_sampling(array1))
+        result_array2 = list(snake_traversal_grid_sampling(array1, array2))
+        result_array3 = list(snake_traversal_grid_sampling(array1, array2, array3))
+        self.assertEqual(result_array1, expected_list1)
+        self.assertEqual(result_array2, expected_list2)
+        self.assertEqual(result_array3, expected_list3)
+
+        # Test with mixed types(List, Tuple, numpy array)
+        result_mixed = list(snake_traversal_grid_sampling(list1, tuple2, array3))
+        self.assertEqual(result_mixed, expected_list3)
+
+    # TODO: Add more tests as needed
+    def test_compute_correlation_matrix(self):
+        # Create a sample covariance matrix
+        covariance_matrix = np.array([[4, 2], [2, 3]])
+        var_name = ["X1", "X2"]
+
+        # Compute the correlation matrix
+        correlation_matrix = compcorr(covariance_matrix, var_name)
+
+        # Expected correlation matrix
+        expected_correlation_matrix = pd.DataFrame(
+            [[1.0, 0.577], [0.577, 1.0]], index=var_name, columns=var_name
+        )
+
+        # Check if the computed correlation matrix matches the expected one
+        pd.testing.assert_frame_equal(
+            correlation_matrix,
+            expected_correlation_matrix,
+            check_exact=False,
+            atol=1e-6,
         )
 
 
