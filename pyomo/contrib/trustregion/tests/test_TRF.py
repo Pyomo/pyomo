@@ -108,6 +108,48 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.maximum_feasibility, 50.0)
         self.assertEqual(CONFIG.param_filter_gamma_theta, 0.01)
         self.assertEqual(CONFIG.param_filter_gamma_f, 0.01)
+        self.assertEqual(CONFIG.globalization_strategy, 0)  # 0 -> default - filter
+        self.assertEqual(CONFIG.funnel_param_phi_min, 1e-8)
+        self.assertEqual(CONFIG.funnel_param_kappa_f, 0.25)
+        self.assertEqual(CONFIG.funnel_param_kappa_r, 1.05)
+        self.assertEqual(CONFIG.funnel_param_eta, 0.0001)
+        self.assertEqual(CONFIG.funnel_param_alpha, 0.5)
+        self.assertEqual(CONFIG.funnel_param_beta, 0.8)
+        self.assertEqual(CONFIG.funnel_param_mu_s, 0.01)
+
+    def test_funnel_globalization(self):
+        self.TRF = SolverFactory(
+            'trustregion', globalization_strategy=1
+        )  # Set Funnel strategy
+
+        log_OUTPUT = StringIO()
+        print_OUTPUT = StringIO()
+        sys.stdout = print_OUTPUT
+        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+            solve_status = self.try_solve()
+        sys.stdout = sys.__stdout__
+
+        # Assertions
+        self.assertTrue(solve_status)
+        self.assertIn('Iteration 0', log_OUTPUT.getvalue())
+        self.assertIn('EXIT: Optimal solution found.', print_OUTPUT.getvalue())
+
+    def test_filter_globalization(self):
+        self.TRF = SolverFactory(
+            'trustregion', globalization_strategy=0
+        )  # Set Filter strategy (default)
+
+        log_OUTPUT = StringIO()
+        print_OUTPUT = StringIO()
+        sys.stdout = print_OUTPUT
+        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+            solve_status = self.try_solve()
+        sys.stdout = sys.__stdout__
+
+        # Assertions
+        self.assertTrue(solve_status)
+        self.assertIn('Iteration 0', log_OUTPUT.getvalue())
+        self.assertIn('EXIT: Optimal solution found.', print_OUTPUT.getvalue())
 
     def test_config_vars(self):
         # Initialized with 1.0
@@ -236,3 +278,47 @@ class TestTrustRegionMethod(unittest.TestCase):
         self.assertEqual(result.name, self.m.name)
         # The values should not be the same
         self.assertNotEqual(value(result.obj), value(self.m.obj))
+
+
+@unittest.skipIf(
+    not SolverFactory('ipopt').available(False), "The IPOPT solver is not available"
+)
+class TestTrustRegionMethod(unittest.TestCase):
+    def setUp(self):
+        self.m = ConcreteModel()
+        self.m.x = Var(range(2), domain=Reals, initialize=0.0)
+
+        def blackbox(a):
+            return (a**3) + (a**2) - a
+
+        def grad_blackbox(args, fixed):
+            a = args[0]
+            return [3 * a**2 + 2 * a - 1]
+
+        self.m.bb = ExternalFunction(blackbox, grad_blackbox)
+
+        self.m.obj = Objective(expr=(self.m.x[0]) ** 2 + (self.m.x[1]) ** 2)
+        self.m.c = Constraint(
+            expr=self.m.bb(self.m.x[0]) + self.m.x[0] + 1 == self.m.x[1]
+        )
+
+        self.ext_fcn_surrogate_map_rule = lambda comp, ef: 0
+        self.decision_variables = [self.m.x[0]]
+
+    def test_funnel_step_rejection(self):
+        """Test Funnel globalization strategy with a problem that invokes step rejection."""
+        self.TRF = SolverFactory(
+            'trustregion', globalization_strategy=1  # Funnel strategy
+        )
+
+        # Run the solver
+        log_OUTPUT = StringIO()
+        print_OUTPUT = StringIO()
+        sys.stdout = print_OUTPUT
+        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+            solve_status = self.TRF.solve(self.m, self.decision_variables)
+        sys.stdout = sys.__stdout__
+
+        # Assertions
+        self.assertTrue(solve_status)  # Solver should succeed
+        self.assertIn('rejected', log_OUTPUT.getvalue())

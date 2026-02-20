@@ -61,7 +61,9 @@ def basis_rule(component, ef_expr):
 
 # This problem takes more than the default maximum iterations (50) to solve.
 # In testing (Mac 10.15/ipopt version 3.12.12 from conda),
-# it took 70 iterations.
+# it took 70 iterations using default filter globalization strategy.
+# If the user opts for funnel strategy, i.e., globalization_strategy=1 in
+# solver's options, it takes 15 iterations to converge to same result
 def main():
     m = create_model()
     optTRF = SolverFactory('trustregion', maximum_iterations=100, verbose=True)
