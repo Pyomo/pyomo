@@ -297,6 +297,117 @@ def SSE_weighted(model):
         )
 
 
+def L2_regularized_objective(
+    model, prior_FIM, theta_ref=None, regularization_weight=None, obj_function=SSE
+):
+    """
+    Calculates objective + (theta - theta_ref)^T * prior_FIM * (theta - theta_ref)
+    using label-based alignment for safety and subsets for efficiency.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Annotated Pyomo model
+    prior_FIM : pd.DataFrame
+        Prior Fisher Information Matrix from previous experimental design
+    theta_ref: pd.Series, optional
+        Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
+    regularization_weight: float, optional
+        Weighting factor for the regularization term. If None, it is automatically calculated as the ratio
+        of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
+    obj_function: callable, optional
+        Built-in objective function selected by the user, e.g., `SSE`. Default is `SSE`.
+
+    Returns
+    -------
+    expr : Pyomo expression
+        Expression representing the L2-regularized objective
+    """
+
+    # 1. Get current model parameters
+    # We assume model.unknown_parameters is a list of Pyomo Var objects
+    current_param_names = [p.name for p in model.unknown_parameters]
+    param_map = {p.name: pyo.value(p) for p in model.unknown_parameters}
+
+    # 2. Alignment & Subsetting
+    # Confirm all the parameters in the prior_FIM columns are in the model parameters
+    common_params = [p for p in current_param_names if p in prior_FIM.columns]
+
+    if len(common_params) == 0:
+
+        logger.warning(
+            "Warning: No matching parameters found between Model and Prior FIM. Returning standard objective."
+        )
+
+        return obj_function(model)
+    elif len(common_params) < len(prior_FIM.columns):
+
+        logger.warning(
+            "Warning: Only a subset of parameters in the Prior FIM match the Model parameters. "
+            "Regularization will be applied only to the matching subset."
+        )
+    else:
+
+        logger.info(
+            "All parameters in the Prior FIM match the Model parameters. Regularization will be applied to all parameters."
+        )
+
+    # Slice the dataframes to ONLY the common subset
+    sub_FIM = prior_FIM.loc[common_params, common_params]
+
+    # For the reference theta, we also subset to the common parameters. If theta_ref is None, we create a zero vector of the right size.
+    if theta_ref is not None:
+        sub_theta = theta_ref.loc[common_params]
+    else:
+        sub_theta = pd.Series(0, index=common_params)
+
+        # Fill the sub_theta with the initialized model parameter values (or zeros if not initialized)
+        for param in common_params:
+            sub_theta.loc[param] = pyo.value(param_map[param])
+        logger.info(
+            "theta_ref is None. Using initialized parameter values as reference."
+        )
+
+    # 3. Construct the Quadratic Form (The L2 term)
+    # l2_term = 0
+
+    # Manual for loop version
+    # for i in common_params:
+    #     delta_i = param_map[i] - sub_theta.loc[i]  # (theta_i - theta_ref_i)
+    #     for j in common_params:
+    #         f_ij = sub_FIM.loc[i, j]  # prior_FIM_ij
+    #         if f_ij != 0:
+    #             delta_j = param_map[j] - sub_theta.loc[j]  # (theta_j - theta_ref_j)
+    #             l2_term += delta_i * f_ij * delta_j
+
+    # Vectorized version using matrix operations
+    delta_params = np.array(
+        [param_map[p] - sub_theta.loc[p] for p in common_params]
+    )  # (theta - theta_ref) vector
+
+    # Compute the quadratic form: delta^T * FIM * delta
+    l2_term = delta_params.T @ sub_FIM.values @ delta_params
+    # 4. Combine with objective
+    object_expr = obj_function(model)
+
+    # To avoid the 'expression/expression' issue, use current values
+    if regularization_weight is None:
+        # Calculate current numerical values to get a scalar weight
+        object_val = pyo.value(object_expr)
+        l2_val = pyo.value(l2_term)
+
+        # Avoid division by zero if l2_term is 0 at start
+        if l2_val != 0:
+            regularization_weight = object_val / l2_val
+        else:
+            regularization_weight = 1.0
+            logger.warning(
+                "L2 term is zero at the initial parameter values. Setting regularization weight to 1.0."
+            )
+
+    return object_expr + (regularization_weight * l2_term)
+
+
 def _check_model_labels(model):
     """
     Checks if the annotated Pyomo model contains the necessary suffixes
@@ -373,6 +484,10 @@ class CovarianceMethod(Enum):
 class ObjectiveType(Enum):
     SSE = "SSE"
     SSE_weighted = "SSE_weighted"
+
+
+class RegularizationType(Enum):
+    L2 = "L2"
 
 
 # Compute the Jacobian matrix of measured variables with respect to the parameters
@@ -474,6 +589,7 @@ def compute_covariance_matrix(
     solver,
     tee,
     estimated_var=None,
+    prior_FIM=None,
 ):
     """
     Computes the covariance matrix of the estimated parameters using
@@ -539,6 +655,20 @@ def compute_covariance_matrix(
             )
 
     FIM = np.sum(FIM_all_exp, axis=0)
+
+    # # Code to add prior_FIM in covariance calculation here.
+    # # Add prior_FIM if including regularization. We expand the prior FIM to match the size of the current FIM
+    # if prior_FIM is not None:
+    #     expanded_prior_FIM = _expand_prior_FIM(
+    #         experiment_list[0], prior_FIM, # theta_vals
+    #     )  # sanity check and alignment
+
+    #     # Check that the prior FIM shape is the same as the FIM shape
+    #     if expanded_prior_FIM.shape != FIM.shape:
+    #         raise ValueError(
+    #             "The shape of the prior FIM must be the same as the shape of the FIM."
+    #         )
+    #     FIM += expanded_prior_FIM
 
     # calculate the covariance matrix
     try:
@@ -745,6 +875,44 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
     return FIM
 
 
+def _expand_prior_FIM(experiment, prior_FIM):
+    """
+    Expands the prior FIM to match the size of the FIM of the current experiment
+
+    Parameters
+    ----------
+    experiment : Experiment class
+        Experiment class object that contains the Pyomo model
+        for a particular experimental condition
+    prior_FIM : pd.DataFrame
+        Prior Fisher Information Matrix from previous experimental design
+
+    Returns
+    -------
+    expanded_prior_FIM : pd.DataFrame
+        Expanded prior FIM with the same size as the FIM of the current experiment
+    """
+    model = _get_labeled_model(experiment)
+
+    # Extract parameter names from the Pyomo model
+    param_names = [param.name for param in model.unknown_parameters]
+
+    # 1. Expand Prior FIM
+    # We reindex to match param_names. Parameters not in prior_FIM
+    # will be filled with 0, which maintains the PSD property.
+    expanded_prior_FIM = prior_FIM.reindex(
+        index=param_names, columns=param_names, fill_value=0.0
+    )
+
+    # 3. Sanity Check: Positive Semi-Definiteness
+    # An FIM must have non-negative eigenvalues to be valid for optimization.
+    eigenvalues = np.linalg.eigvals(expanded_prior_FIM.values)
+    if np.any(eigenvalues < -1e-10):  # Tolerance for numerical noise
+        raise ValueError("The expanded prior FIM is not positive semi-definite.")
+
+    return expanded_prior_FIM
+
+
 class Estimator:
     """
     Parameter estimation class
@@ -780,6 +948,10 @@ class Estimator:
         self,
         experiment_list,
         obj_function=None,
+        regularization=None,
+        prior_FIM=None,
+        theta_ref=None,
+        regularization_weight=None,
         tee=False,
         diagnostic_mode=False,
         solver_options=None,
@@ -810,9 +982,25 @@ class Estimator:
         else:
             self.obj_function = obj_function
 
+        if isinstance(regularization, str):
+            try:
+                self.regularization = RegularizationType(regularization)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid regularization type: '{regularization}'. "
+                    f"Choose from: {[e.value for e in RegularizationType]}."
+                )
+        else:
+            self.regularization = regularization
+
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
+
+        # Added keyword arguments for L2 regularization
+        self.prior_FIM = prior_FIM
+        self.theta_ref = theta_ref
+        self.regularization_weight = regularization_weight
 
         # TODO: delete this when the deprecated interface is removed
         self.pest_deprecated = None
@@ -939,12 +1127,26 @@ class Estimator:
 
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
-            if self.obj_function is ObjectiveType.SSE:
-                second_stage_rule = SSE
-                self.covariance_objective = second_stage_rule
-            elif self.obj_function is ObjectiveType.SSE_weighted:
-                second_stage_rule = SSE_weighted
-                self.covariance_objective = second_stage_rule
+
+            if self.obj_function in ObjectiveType:
+
+                if self.obj_function == ObjectiveType.SSE:
+                    self.covariance_objective = SSE
+
+                elif self.obj_function == ObjectiveType.SSE_weighted:
+                    self.covariance_objective = SSE_weighted
+
+                if RegularizationType.L2 and self.prior_FIM is not None:
+                    second_stage_rule = lambda m: L2_regularized_objective(
+                        model=m,
+                        prior_FIM=self.prior_FIM,
+                        theta_ref=self.theta_ref,
+                        regularization_weight=self.regularization_weight,
+                        obj_function=self.covariance_objective,
+                    )
+                else:
+                    second_stage_rule = self.covariance_objective
+
             else:
                 # A custom function uses model.experiment_outputs as data
                 second_stage_rule = self.obj_function
@@ -1298,6 +1500,7 @@ class Estimator:
                             method,
                             obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
+                            prior_FIM=self.prior_FIM,
                             solver=solver,
                             step=step,
                             tee=self.tee,
@@ -1328,7 +1531,9 @@ class Estimator:
                             solver=solver,
                             step=step,
                             tee=self.tee,
+                            prior_FIM=self.prior_FIM,
                         )
+
                 else:
                     raise ValueError(
                         "One or more values of the measurement errors have "
@@ -1366,6 +1571,7 @@ class Estimator:
                             method,
                             obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
+                            prior_FIM=self.prior_FIM,
                             step=step,
                             solver=solver,
                             tee=self.tee,
@@ -1380,6 +1586,47 @@ class Estimator:
                 raise AttributeError(
                     'Experiment model does not have suffix "measurement_error".'
                 )
+
+        # @Reviewers: Is it better to add the prior_FIM to the covariance matrix after it is calculated using the current experiment, or to incorporate the prior_FIM
+        # into the covariance matrix calculation itself with the prior_FIM added to the FIM of the current experiment before inverting to get the covariance matrix?
+        # The prior_FIM, if using parameter subsets, will be singular, so I cannot invert it and add it to the covariance.
+        # Issue is adding it in the compute_covariance_matrix function does not include the reduced hessian method.
+        # Adding it below requires inverting the cov, adding the prior_FIM, and inverting again to get the regularized covariance matrix,
+        # which could introduce numerical issues.
+
+        # Options:
+        # 1) Add below, invert cov, add prior FIM, invert total.
+        # 2) Add in compute_covariance_matrix (line 572), add prior FIM to FIM before inverting. Does not support reduced hessian method.
+
+        # Code addition:
+        # Assumes same objective choice, same scaling, and same measurement error when
+        # calculating the covariance matrix for the current experiment and the prior FIM.
+
+        # Add regularization to the covariance matrix if L2 regularization is specified and a prior FIM is provided
+        if self.prior_FIM is not None and self.regularization == RegularizationType.L2:
+            # print("Prior_FIM: \n", self.prior_FIM)
+            # print("Theta_ref: \n", self.theta_ref)
+            # print("Estimated Theta: \n", self.estimated_theta)
+            # print("exp_list[0]: \n", self.exp_list[0])
+            # print("Covariance before adding regularization: \n", cov)
+
+            # Expand the prior FIM to match the size of the FIM of the current experiment
+            expanded_prior_FIM = _expand_prior_FIM(self.exp_list[0], self.prior_FIM)
+            # print("Expanded prior FIM: \n", expanded_prior_FIM)
+
+            # Combine the FIM from the current experiment with the expanded prior FIM
+            # The prior_FIM may be singular on its own, but the sum should be non-singular
+            # if the current experiment is informative
+
+            FIM = pd.DataFrame(
+                np.linalg.inv(cov.values), index=cov.index, columns=cov.columns
+            )
+            FIM += expanded_prior_FIM
+
+            # Calculate the covariance matrix as the inverse of the combined FIM
+            cov = pd.DataFrame(
+                np.linalg.inv(FIM.values), index=FIM.index, columns=FIM.columns
+            )
 
         return cov
 
@@ -1610,6 +1857,8 @@ class Estimator:
 
         return samplelist
 
+    # @Reviewers: Currently regularization chosen with objective at Estimator initialization,
+    # Would it be preferable to have regularization choice as an argument in the theta_est function instead?
     def theta_est(
         self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
     ):
