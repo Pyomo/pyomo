@@ -341,7 +341,8 @@ E-optimality we want to maximize the objective function, while for A- and Modifi
 E-optimality we want to minimize the objective function.
 
 However, in this sensitivity analysis plot (heatmap), we only varied the initial 
-concentration and the initial temperature, while the temperature at other time points is fixed at 300 K.
+concentration and the initial temperature, while the temperature at other time 
+points is fixed at 300 K.
 
 .. math::
    :nowrap:
@@ -353,9 +354,20 @@ concentration and the initial temperature, while the temperature at other time p
    \end{cases}
    \]
 
-Since all the temperature is at 300K when :math:`t > 0.125`, the parameters 
-:math:`A_1, E1, A_2, E_2` are not sensitive to the design variables, which 
-results in a small determinant of the FIM and a large condition number of the FIM.
+If :math:`T_0 = 300\ \text{K}`, the reaction is conducted under strictly isothermal 
+conditions. Because the temperature is constant, the sensitivities of the species 
+concentrations with respect to the Arrhenius parameters (:math:`A_i` and :math:`E_i`) 
+become linearly dependent. This high correlation means the effects of the 
+pre-exponential factor and the activation energy cannot be uniquely distinguished 
+from the measurements. Consequently, the Fisher Information Matrix (FIM) becomes 
+ill-conditioned, resulting in a near-zero determinant and a very large condition number. 
+
+To break this correlation and make the parameters identifiable, introducing a time-
+varying temperature profile (for example, a temperature step or a ramp) is required.
+As shown in the heatmap, when the initial temperature :math:`T_0` differs from the
+subsequent 300 K baseline, such a temperature change breaks the linear dependence,
+yielding a well-conditioned FIM and identifiable parameters.
+
 
 
 Step 6: Performing an optimal experimental design
