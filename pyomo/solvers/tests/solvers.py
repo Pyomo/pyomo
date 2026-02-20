@@ -191,6 +191,26 @@ def test_solver_cases(*args):
         )
 
         #
+        # GAMS V2
+        #
+
+        _gams_v2_capabilities = set(['linear', 'integer'])
+
+        _test_solver_cases['gams_v2', 'gms'] = initialize(
+            name='gams_v2',
+            io='gms',
+            capabilities=_gams_v2_capabilities,
+            import_suffixes=['dual', 'rc'],
+        )
+
+        _test_solver_cases['gams_v2', 'python'] = initialize(
+            name='gams_v2',
+            io='python',
+            capabilities=_gams_v2_capabilities,
+            import_suffixes=['dual', 'rc'],
+        )
+
+        #
         # GUROBI
         #
         # **NOTE: Gurobi does not handle quadratic constraints before

@@ -57,6 +57,9 @@ with existing interfaces).
    * - KNITRO
      - ``knitro_direct``
      - ``knitro_direct``
+   * - GAMS
+     - ``gams``
+     - ``gams_v2``
 
 Using the new interfaces through the legacy interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
