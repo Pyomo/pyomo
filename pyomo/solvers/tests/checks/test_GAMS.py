@@ -38,6 +38,7 @@ opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
 
 
+@unittest.pytest.mark.solver("gams")
 class GAMSTests(unittest.TestCase):
     @unittest.skipIf(
         not gamspy_available, "The 'gams' python bindings are not available"
@@ -387,6 +388,7 @@ class GAMSLogfileTestBase(unittest.TestCase):
 
 
 @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
+@unittest.pytest.mark.solver("gams")
 class GAMSLogfileGmsTests(GAMSLogfileTestBase):
     """Test class for testing permultations of tee and logfile options.
 
@@ -450,6 +452,7 @@ class GAMSLogfileGmsTests(GAMSLogfileTestBase):
 
 
 @unittest.skipIf(not gamspy_available, "The 'gams' python bindings are not available")
+@unittest.pytest.mark.solver("gams")
 class GAMSLogfilePyTests(GAMSLogfileTestBase):
     """Test class for testing permultations of tee and logfile options.
 

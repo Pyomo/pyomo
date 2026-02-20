@@ -15,6 +15,7 @@ ipopt_available = IPOPT.IPOPT().available()
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptInterface(unittest.TestCase):
     def test_has_linear_solver(self):
         opt = IPOPT.IPOPT()
