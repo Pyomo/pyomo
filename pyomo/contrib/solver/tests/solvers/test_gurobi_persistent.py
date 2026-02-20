@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
@@ -124,6 +122,7 @@ def create_pmedian_model():
     return model
 
 
+@unittest.pytest.mark.solver("gurobi_persistent")
 class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
     def setUp(self):
         self.m = pyo.ConcreteModel()
@@ -185,6 +184,7 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         self.assertAlmostEqual(y, self.m.y.value)
 
 
+@unittest.pytest.mark.solver("gurobi_persistent")
 class TestGurobiPersistent(unittest.TestCase):
     def test_nonconvex_qcp_objective_bound_1(self):
         # the goal of this test is to ensure we can get an objective bound
@@ -495,6 +495,7 @@ class TestGurobiPersistent(unittest.TestCase):
             self.assertIsNone(res.incumbent_objective)
 
 
+@unittest.pytest.mark.solver("gurobi_persistent")
 class TestManualMode(unittest.TestCase):
     def setUp(self):
         opt = GurobiPersistent()

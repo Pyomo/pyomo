@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import sys
 import logging
@@ -108,24 +106,24 @@ SkipTests['cplex', 'nl', 'QCP_simple'] = (
 
 # 12.0.3 (for AMPL only) returns all zeros for suffixes
 MissingSuffixFailures['gurobi', 'nl', 'LP_duals_maximize'] = (
-    lambda v: v[:3] == (12, 0, 3),
+    lambda v: v[:3] >= (12, 0, 3),
     {'dual': (False, {})},
-    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+    "AMPL Gurobi>=12.0.3 fails to report duals for problems solved in presolve",
 )
 MissingSuffixFailures['gurobi', 'nl', 'LP_duals_minimize'] = (
-    lambda v: v[:3] == (12, 0, 3),
+    lambda v: v[:3] >= (12, 0, 3),
     {'dual': (False, {})},
-    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+    "AMPL Gurobi>=12.0.3 fails to report duals for problems solved in presolve",
 )
 MissingSuffixFailures['gurobi', 'nl', 'LP_inactive_index'] = (
-    lambda v: v[:3] == (12, 0, 3),
+    lambda v: v[:3] >= (12, 0, 3),
     {'dual': (False, {})},
-    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+    "AMPL Gurobi>=12.0.3 fails to report duals for problems solved in presolve",
 )
 MissingSuffixFailures['gurobi', 'nl', 'QP_simple'] = (
-    lambda v: v[:3] == (12, 0, 3),
+    lambda v: v[:3] >= (12, 0, 3),
     {'dual': (False, {})},
-    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+    "AMPL Gurobi>=12.0.3 fails to report duals for problems solved in presolve",
 )
 
 #

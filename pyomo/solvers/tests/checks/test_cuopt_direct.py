@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import os
 from pyomo.environ import (
@@ -34,6 +32,7 @@ import pyomo.common.unittest as unittest
 from pyomo.solvers.plugins.solvers.cuopt_direct import cuopt_available
 
 
+@unittest.pytest.mark.solver("cuopt")
 class CUOPTTests(unittest.TestCase):
     @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
     def test_values_and_rc(self):
