@@ -575,7 +575,13 @@ class DesignOfExperiments:
                 json.dump(self.results, file)
 
     def optimize_experiments(
-        self, parameter_scenarios=None, stochastic_objective=None, results_file=None
+        self,
+        parameter_scenarios=None,
+        results_file=None,
+        n_exp: int = None,
+        initialization_method=None,
+        lhs_n_samples: int = 5,
+        lhs_seed: int = None,
     ):
         """
         Optimize single experiment or multiple experiments simultaneously for
@@ -591,20 +597,45 @@ class DesignOfExperiments:
             optimization. This is a placeholder for future functionality to
             incorporate parametric uncertainty. Default: None
 
-        stochastic_objective:
-            `expected_value`, `cvar`. This is a placeholder for future functionality
-            to incorporate parametric uncertainty. Default: None
-
         results_file:
             string name of the file path to save the results to in the form
             of a .json file
 
+        initialization_method:
+            Method used to initialize the experiment design variables before
+            optimization. Options are:
+
+            - ``None`` (default): No special initialization; use the initial
+              values from ``get_labeled_model()``. To provide a custom starting
+              point, initialize the ``Experiment`` objects with the desired
+              design values before passing them in ``experiment_list``.
+            - ``"lhs"``: Use Latin Hypercube Sampling (LHS) to find a good
+              initial design. For each experiment-input dimension, ``lhs_n_samples``
+              points are sampled independently using 1-D LHS, and their Cartesian
+              product forms the set of candidate experiment designs. The FIM is
+              evaluated at every candidate, and the combination of ``n_exp``
+              candidates (without replacement) that best satisfies the chosen
+              objective is selected as the starting point for the optimization.
+
+        lhs_n_samples:
+            Number of LHS samples per experiment-input dimension when
+            ``initialization_method="lhs"``. The total number of candidate
+            designs is ``lhs_n_samples ** n_inputs``. A warning is issued
+            when this exceeds 10,000. Default: 5.
+
+        lhs_seed:
+            Integer seed for the LHS random-number generator (for
+            reproducibility). Used only when ``initialization_method="lhs"``.
+            Default: ``None`` (non-deterministic).
+
         Notes
         -----
         Number of Experiments:
-            The number of experiments to optimize is determined by the length
-            of the experiment_list parameter passed to the DesignOfExperiments
-            constructor.
+            When ``len(experiment_list) == 1`` (template mode), pass ``n_exp``
+            to specify how many experiments to optimize.  When
+            ``len(experiment_list) > 1`` (user-initialized mode), the list
+            length determines the number of experiments and ``n_exp`` must
+            not be set.
 
         Symmetry Breaking (for multiple experiments):
             To prevent equivalent permutations of identical experiments, you must
@@ -619,6 +650,18 @@ class DesignOfExperiments:
             This will add constraints: exp[k-1].primary_var <= exp[k].primary_var
             for k = 1, ..., n_exp-1, which breaks permutation symmetry and can
             significantly reduce solve times.
+
+        LHS Initialization (initialization_method="lhs"):
+            Each dimension of the experiment inputs is sampled independently
+            using a 1-D Latin Hypercube, giving ``lhs_n_samples`` evenly-spaced
+            stratified samples across the variable bounds. The joint candidate
+            set is the Cartesian product of these per-dimension samples (i.e.,
+            a ``lhs_n_samples^n_inputs`` grid with good marginal coverage). The
+            FIM is evaluated sequentially at each candidate, then all
+            ``C(n_candidates, n_exp)`` combinations are scored and the best one
+            is used as the initial point for the NLP solver. This can
+            significantly improve solution quality when the problem has multiple
+            local optima.
         """
         # Check results file name
         if results_file is not None:
@@ -627,8 +670,50 @@ class DesignOfExperiments:
                     "``results_file`` must be either a Path object or a string."
                 )
 
-        # Infer number of experiments from experiment_list
-        n_exp = len(self.experiment_list)
+        # --- Resolve n_exp and determine operating mode ---
+        n_list = len(self.experiment_list)
+        if n_list > 1:
+            # User-initialized mode: experiment_list already contains all
+            # pre-initialized experiment objects.
+            if n_exp is not None:
+                raise ValueError(
+                    "``n_exp`` must not be set when ``experiment_list`` contains "
+                    f"more than one experiment (got {n_list} experiments in the "
+                    "list).  Either pass a single template experiment and set "
+                    "``n_exp``, or pass a fully-initialized list and omit ``n_exp``."
+                )
+            n_exp = n_list
+            _template_mode = False
+        else:
+            # Template mode: single experiment object cloned n_exp times.
+            if n_exp is None:
+                n_exp = 1  # default: single-experiment optimization
+            elif not isinstance(n_exp, int) or n_exp < 1:
+                raise ValueError(
+                    f"``n_exp`` must be a positive integer, got {n_exp!r}."
+                )
+            _template_mode = True
+        # ---------------------------------------------------
+
+        # --- Validate initialization arguments ---
+        if initialization_method not in (None, "lhs"):
+            raise ValueError(
+                "``initialization_method`` must be one of [None, 'lhs'], "
+                f"got '{initialization_method}'."
+            )
+
+        if initialization_method == "lhs":
+            if not scipy_available:
+                raise ImportError(
+                    "LHS initialization requires scipy. "
+                    "Please install scipy to use initialization_method='lhs'."
+                )
+            if not isinstance(lhs_n_samples, int) or lhs_n_samples < 1:
+                raise ValueError(
+                    "``lhs_n_samples`` must be a positive integer, "
+                    f"got {lhs_n_samples!r}."
+                )
+        # -----------------------------------------
 
         # Start timer
         sp_timer = TicTocTimer()
@@ -638,7 +723,7 @@ class DesignOfExperiments:
         )
 
         if parameter_scenarios is None:
-            n_scenarios = 1  # number of scenarios
+            n_param_scenarios = 1  # number of parameter scenarios
             self.scenario_weights = [1.0]  # Single scenario, weight = 1
         else:
             # TODO: Add parameter scenarios when incorporating parametric uncertainty
@@ -647,19 +732,20 @@ class DesignOfExperiments:
                 "not yet supported."
             )
         # Add parameter scenario blocks to the model
-        self.model.param_scenario_blocks = pyo.Block(range(n_scenarios))
+        self.model.param_scenario_blocks = pyo.Block(range(n_param_scenarios))
 
         # Add experiment(s) for each scenario
         # TODO: Add s_prev = 0 to handle parameter scenarios
-        for s in range(n_scenarios):
+        for s in range(n_param_scenarios):
             self.model.param_scenario_blocks[s].exp_blocks = pyo.Block(range(n_exp))
-            # We are assuming that the user will provide the initialized experiments
             for k in range(n_exp):
-                # Generate FIM and Sensitivity expressions for each experiment
-                # !Note: Be careful whether new model is being built when k changes
+                # Generate FIM and Sensitivity expressions for each experiment.
+                # In template mode all experiments share the single template
+                # (experiment_index=0); in user-initialized mode each experiment
+                # maps to its own entry in experiment_list (experiment_index=k).
                 self.create_doe_model(
                     model=self.model.param_scenario_blocks[s].exp_blocks[k],
-                    experiment_index=k,
+                    experiment_index=0 if _template_mode else k,
                     _for_multi_experiment=True,  # Skip creating L matrix per experiment
                 )
                 # TODO: Update the parameter scenarios for each experiment block
@@ -705,7 +791,7 @@ class DesignOfExperiments:
                 )
 
             # Add constraints for each scenario
-            for s in range(n_scenarios):
+            for s in range(n_param_scenarios):
                 for k in range(1, n_exp):
                     # Get the variable from experiment k-1
                     var_prev = pyo.ComponentUID(
@@ -746,16 +832,42 @@ class DesignOfExperiments:
             % build_time
         )
 
+        # --- Apply experiment initialization (if requested) ---
+        # This must be done AFTER the model is built but BEFORE the square solve
+        # so that the solver uses the correct starting design.
+        if initialization_method == "lhs":
+            self.logger.info(
+                f"Applying LHS initialization with {lhs_n_samples} samples per "
+                f"experiment-input dimension..."
+            )
+            best_initial_points = self._lhs_initialize_experiments(
+                lhs_n_samples=lhs_n_samples,
+                lhs_seed=lhs_seed,
+                n_exp=n_exp,
+            )
+            self.logger.info(
+                "Setting LHS best-found initial design in the optimization model..."
+            )
+            for s in range(n_param_scenarios):
+                for k in range(n_exp):
+                    exp_input_vars = self._get_experiment_input_vars(
+                        self.model.param_scenario_blocks[s].exp_blocks[k]
+                    )
+                    for var, val in zip(exp_input_vars, best_initial_points[k]):
+                        var.set_value(val)
+
+        # ------------------------------------------------------
+
         # Solve the square problem first to initialize the FIM and sensitivity constraints
         # Deactivate objective expression and objective constraints
         self.model.objective.deactivate()
         # Deactivate obj_cons for each scenario (holds Cholesky/determinant/trace constraints)
-        for s in range(n_scenarios):
+        for s in range(n_param_scenarios):
             if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
                 self.model.param_scenario_blocks[s].obj_cons.deactivate()
 
         # Fix the design variables across all scenarios and experiments
-        for s in range(n_scenarios):
+        for s in range(n_param_scenarios):
             for k in range(n_exp):
                 for comp in (
                     self.model.param_scenario_blocks[s]
@@ -782,7 +894,7 @@ class DesignOfExperiments:
         self.model.dummy_obj.deactivate()
 
         # Reactivate objective, obj_cons, and unfix experimental design decisions
-        for s in range(n_scenarios):
+        for s in range(n_param_scenarios):
             for k in range(n_exp):
                 for comp in (
                     self.model.param_scenario_blocks[s]
@@ -792,7 +904,7 @@ class DesignOfExperiments:
                 ):
                     comp.unfix()
         self.model.objective.activate()
-        for s in range(n_scenarios):
+        for s in range(n_param_scenarios):
             if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
                 self.model.param_scenario_blocks[s].obj_cons.activate()
 
@@ -802,7 +914,7 @@ class DesignOfExperiments:
             self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
         )
 
-        for s in range(n_scenarios):
+        for s in range(n_param_scenarios):
             scenario = self.model.param_scenario_blocks[s]
             # Update total_fim values from solved individual experiment FIMs
             # Individual experiment FIMs don't include prior_FIM in multi-experiment mode,
@@ -937,7 +1049,7 @@ class DesignOfExperiments:
 
         # Store results for each scenario
         self.results["Scenarios"] = []
-        for s in range(n_scenarios):
+        for s in range(n_param_scenarios):
             scenario = self.model.param_scenario_blocks[s]
             scenario_results = {}
 
@@ -1029,13 +1141,22 @@ class DesignOfExperiments:
         ]
 
         # Store general settings and info
-        self.results["Number of Scenarios"] = n_scenarios
+        self.results["Number of Scenarios"] = n_param_scenarios
         self.results["Number of Experiments per Scenario"] = n_exp
         self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
         self.results["Objective expression"] = str(self.objective_option).split(".")[-1]
         self.results["Finite Difference Scheme"] = str(self.fd_formula).split(".")[-1]
         self.results["Finite Difference Step"] = self.step
         self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
+
+        # Initialization info
+        self.results["Initialization Method"] = (
+            initialization_method if initialization_method is not None else "none"
+        )
+        if initialization_method == "lhs":
+            self.results["LHS Samples Per Dimension"] = lhs_n_samples
+            self.results["LHS Seed"] = lhs_seed
+            self.results["LHS Best Initial Points"] = best_initial_points
 
         # Timing statistics
         self.results["Build Time"] = build_time
@@ -1048,6 +1169,313 @@ class DesignOfExperiments:
             with open(results_file, "w") as file:
                 json.dump(self.results, file, indent=2)
 
+    # -----------------------------------------------------------------------
+    # LHS-initialization helpers
+    # -----------------------------------------------------------------------
+
+    def _get_experiment_input_vars(self, exp_block):
+        """
+        Return the experiment-input Pyomo variable objects for an experiment
+        block, abstracting over the specific sensitivity-computation structure
+        (FD, AD, etc.).
+
+        When the block exposes ``experiment_inputs`` directly (e.g. in a future
+        automatic-differentiation path), those are used.  Otherwise the method
+        falls back to the FD structure (``exp_block.fd_scenario_blocks[0]``).
+
+        Parameters
+        ----------
+        exp_block : Pyomo Block
+            An ``exp_blocks[k]`` sub-block of the multi-experiment model.
+
+        Returns
+        -------
+        list
+            Ordered list of Pyomo :class:`Var` objects corresponding to the
+            experiment inputs.
+        """
+        if hasattr(exp_block, "experiment_inputs"):
+            return list(exp_block.experiment_inputs.keys())
+        # FD structure: inputs live on the base finite-difference scenario block
+        return list(exp_block.fd_scenario_blocks[0].experiment_inputs.keys())
+
+    def _evaluate_objective_from_fim(self, fim_matrix):
+        """
+        Compute the scalar DoE objective from a numpy FIM matrix.
+
+        Parameters
+        ----------
+        fim_matrix : np.ndarray
+            Square FIM to score.
+
+        Returns
+        -------
+        float
+            Objective value.  For maximisation objectives (``determinant``,
+            ``pseudo_trace``) a larger value is better.  For minimisation
+            objectives (``trace`` / A-optimality) a smaller value is better.
+            LHS initialization is not supported for ``minimum_eigenvalue`` or
+            ``condition_number``; those return 0.0.
+        """
+        _maximize = {
+            ObjectiveLib.determinant,
+            ObjectiveLib.pseudo_trace,
+        }
+        _bad = -np.inf if self.objective_option in _maximize else np.inf
+
+        try:
+            if self.objective_option == ObjectiveLib.determinant:
+                return float(np.linalg.det(fim_matrix))
+            elif self.objective_option == ObjectiveLib.pseudo_trace:
+                return float(np.trace(fim_matrix))
+            elif self.objective_option == ObjectiveLib.trace:
+                return float(np.trace(np.linalg.inv(fim_matrix)))
+            else:  # minimum_eigenvalue, condition_number, zero, or unknown
+                return 0.0
+        except (np.linalg.LinAlgError, ValueError):
+            return _bad
+
+    def _compute_fim_at_point_no_prior(self, experiment_index, input_values):
+        """
+        Compute the FIM (without the prior FIM contribution) for the given
+        experiment at the specified experiment-input values using the
+        sequential finite-difference method.
+
+        Parameters
+        ----------
+        experiment_index : int
+            Index of the experiment in ``self.experiment_list`` to evaluate.
+        input_values : list
+            Numeric values for each experiment input variable (same order as
+            ``model.experiment_inputs``).
+
+        Returns
+        -------
+        np.ndarray
+            ``(n_params, n_params)`` FIM matrix, **excluding** the prior.
+            A zero matrix is returned on solver failure (with a warning).
+        """
+        # Get a fresh labeled model for this experiment
+        model = (
+            self.experiment_list[experiment_index]
+            .get_labeled_model(**self.get_labeled_model_args)
+            .clone()
+        )
+        self.check_model_labels(model=model)
+        n_params = len(model.unknown_parameters)
+
+        # Override experiment input values
+        for var, val in zip(model.experiment_inputs.keys(), input_values):
+            var.set_value(val)
+
+        # Temporarily zero the prior so that seq_FIM = Q^T * 𝚺^{-1} * Q only
+        saved_prior = self.prior_FIM
+        self.prior_FIM = np.zeros((n_params, n_params))
+
+        try:
+            self._sequential_FIM(model=model)
+            fim = self.seq_FIM.copy()
+        except Exception as exc:
+            self.logger.warning(
+                f"FIM evaluation failed at point {input_values}: {exc}. "
+                "Using zero matrix as fallback."
+            )
+            fim = np.zeros((n_params, n_params))
+        finally:
+            self.prior_FIM = saved_prior
+
+        return fim
+
+    def _lhs_initialize_experiments(self, lhs_n_samples, lhs_seed, n_exp):
+        """
+        Use per-dimension Latin Hypercube Sampling to identify a good initial
+        experiment design for ``optimize_experiments``.
+
+        The algorithm:
+
+        1. For every experiment-input dimension generate ``lhs_n_samples``
+           1-D LHS samples within the variable bounds.
+        2. Take the Cartesian product of the per-dimension samples to obtain
+           ``lhs_n_samples ** n_inputs`` candidate experiment designs.
+        3. Evaluate the FIM (without the prior) at every candidate design via
+           the sequential finite-difference method.
+        4. Enumerate all ``C(n_candidates, n_exp)`` combinations of candidate
+           designs without replacement.  For each combination sum the
+           candidate FIMs and add the prior FIM, then evaluate the DoE
+           objective.
+        5. Return the combination that maximises / minimises the objective
+           (consistent with ``self.objective_option``).
+
+        Parameters
+        ----------
+        lhs_n_samples : int
+            Number of LHS samples per experiment-input dimension.
+        lhs_seed : int or None
+            Seed for the LHS random-number generator.
+        n_exp : int
+            Number of experiments to design simultaneously.
+
+        Returns
+        -------
+        list of list
+            ``n_exp`` lists, each containing the initial values for every
+            experiment input of the corresponding experiment.
+        """
+        from itertools import combinations as _combinations
+        from scipy.stats.qmc import LatinHypercube
+
+        lhs_timer = TicTocTimer()
+        lhs_timer.tic(msg=None)
+
+        # ------------------------------------------------------------------
+        # 1.  Get experiment-input bounds from the already-built model
+        # ------------------------------------------------------------------
+        first_exp_block = (
+            self.model.param_scenario_blocks[0]
+            .exp_blocks[0]
+        )
+        exp_input_vars = self._get_experiment_input_vars(first_exp_block)
+        n_inputs = len(exp_input_vars)
+        n_params = len(list(
+            self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
+        ))
+
+        # Require explicit bounds on all experiment inputs
+        missing = [
+            var.name
+            for var in exp_input_vars
+            if var.lb is None or var.ub is None
+        ]
+        if missing:
+            raise ValueError(
+                "LHS initialization requires explicit lower and upper bounds on "
+                "all experiment input variables. The following variables are "
+                f"missing bounds: {missing}. "
+                "Set bounds in your experiment's ``get_labeled_model()`` before "
+                "calling ``optimize_experiments`` with "
+                "``initialization_method='lhs'``."
+            )
+
+        lb_vals = np.array([var.lb for var in exp_input_vars])
+        ub_vals = np.array([var.ub for var in exp_input_vars])
+
+        # ------------------------------------------------------------------
+        # 2.  Generate per-dimension 1-D LHS samples and take Cartesian product
+        # ------------------------------------------------------------------
+        rng = np.random.default_rng(lhs_seed)
+        per_dim_samples = []
+        for i in range(n_inputs):
+            dim_seed = int(rng.integers(0, 2**31))
+            sampler = LatinHypercube(d=1, seed=dim_seed)
+            s_unit = sampler.random(n=lhs_n_samples).flatten()  # [0, 1)
+            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
+            per_dim_samples.append(s_scaled.tolist())
+
+        candidate_points = list(product(*per_dim_samples))
+        n_candidates = len(candidate_points)  # = lhs_n_samples ** n_inputs
+
+        if n_candidates > 10_000:
+            warnings.warn(
+                f"LHS initialization generated {n_candidates:,} candidate "
+                f"experiment designs (lhs_n_samples={lhs_n_samples}, "
+                f"n_inputs={n_inputs}). Evaluating FIM at all candidates may "
+                "take a long time. Consider reducing ``lhs_n_samples``.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        if hasattr(first_exp_block, "fd_scenario_blocks"):
+            n_scenarios_per_candidate = len(list(first_exp_block.fd_scenario_blocks))
+        else:
+            n_scenarios_per_candidate = 1
+        self.logger.info(
+            f"LHS: evaluating FIM at {n_candidates} candidate designs "
+            f"({n_candidates * n_scenarios_per_candidate} sequential solver calls expected)."
+        )
+
+        # ------------------------------------------------------------------
+        # 3.  Evaluate FIM at every candidate design
+        # ------------------------------------------------------------------
+        candidate_fims = []
+        for pt_idx, pt in enumerate(candidate_points):
+            fim = self._compute_fim_at_point_no_prior(
+                experiment_index=0, input_values=list(pt)
+            )
+            candidate_fims.append(fim)
+
+            # Periodic progress report
+            if (pt_idx + 1) % max(1, n_candidates // 10) == 0:
+                elapsed = lhs_timer.toc(msg=None)
+                frac_done = (pt_idx + 1) / n_candidates
+                est_total = elapsed / frac_done if frac_done > 0 else 0
+                self.logger.info(
+                    f"  LHS FIM eval: {pt_idx + 1}/{n_candidates} "
+                    f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
+                )
+
+        fim_eval_time = lhs_timer.toc(msg=None)
+        self.logger.info(
+            f"LHS: completed FIM evaluations in {fim_eval_time:.1f}s."
+        )
+
+        # ------------------------------------------------------------------
+        # 4.  Enumerate combinations and score
+        # ------------------------------------------------------------------
+        n_combinations = math.comb(n_candidates, n_exp)
+        self.logger.info(
+            f"LHS: scoring {n_combinations:,} combinations of {n_exp} experiments..."
+        )
+
+        if n_combinations > 100_000:
+            self.logger.warning(
+                f"LHS: {n_combinations:,} combinations to evaluate. "
+                "This may be slow. Consider reducing ``lhs_n_samples``."
+            )
+
+        # Prior FIM to add to every combination
+        prior = self.prior_FIM.copy()
+
+        _maximize = {
+            ObjectiveLib.determinant,
+            ObjectiveLib.pseudo_trace,
+        }
+        is_maximize = self.objective_option in _maximize
+        best_obj = -np.inf if is_maximize else np.inf
+        best_combo = tuple(range(n_exp))  # fallback: first n_exp candidates
+
+        for combo in _combinations(range(n_candidates), n_exp):
+            fim_total = prior.copy()
+            for idx in combo:
+                fim_total = fim_total + candidate_fims[idx]
+            obj_val = self._evaluate_objective_from_fim(fim_total)
+            if is_maximize:
+                if obj_val > best_obj:
+                    best_obj = obj_val
+                    best_combo = combo
+            else:
+                if obj_val < best_obj:
+                    best_obj = obj_val
+                    best_combo = combo
+
+        combo_time = lhs_timer.toc(msg=None)
+        self.logger.info(
+            f"LHS: best {self.objective_option.value} objective = {best_obj:.6g}  "
+            f"(combo scoring took {combo_time:.1f}s)."
+        )
+
+        # ------------------------------------------------------------------
+        # 5.  Return one initial design per experiment
+        # ------------------------------------------------------------------
+        best_initial_points = [list(candidate_points[i]) for i in best_combo]
+        self.logger.info(
+            f"LHS initial design: "
+            + ", ".join(
+                f"exp[{k}]={best_initial_points[k]}" for k in range(n_exp)
+            )
+        )
+        return best_initial_points
+
+    # -----------------------------------------------------------------------
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
         raise NotImplementedError("Multiple experiment optimization not yet supported.")
