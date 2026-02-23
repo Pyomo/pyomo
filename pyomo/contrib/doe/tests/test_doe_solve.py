@@ -10,8 +10,11 @@ import json
 import logging
 import os, os.path
 import subprocess
+import tempfile
+import warnings
 from itertools import combinations, product
 from glob import glob
+from unittest.mock import patch
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -1001,6 +1004,15 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             places=10,
         )
 
+    def test_evaluate_objective_from_fim_fallback_paths(self):
+        singular_fim = np.zeros((2, 2))
+
+        doe_trace = self._make_template_doe("trace")
+        self.assertEqual(doe_trace._evaluate_objective_from_fim(singular_fim), np.inf)
+
+        doe_zero = self._make_template_doe("zero")
+        self.assertEqual(doe_zero._evaluate_objective_from_fim(singular_fim), 0.0)
+
     def test_compute_fim_at_point_no_prior_restores_prior(self):
         doe_no_prior = self._make_template_doe("pseudo_trace")
         doe_no_prior.prior_FIM = np.zeros((2, 2))
@@ -1083,6 +1095,46 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             np.zeros_like(total_fim),
         )
         self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior, atol=1e-6))
+
+    def test_optimize_experiments_writes_results_file(self):
+        doe = self._make_template_doe("pseudo_trace")
+        fd, results_path = tempfile.mkstemp(suffix=".json")
+        os.close(fd)
+        self.addCleanup(lambda: os.path.exists(results_path) and os.remove(results_path))
+
+        doe.optimize_experiments(n_exp=1, results_file=results_path)
+
+        with open(results_path) as f:
+            payload = json.load(f)
+        self.assertEqual(payload["Initialization Method"], "none")
+        self.assertIn("Scenarios", payload)
+
+    def test_lhs_initialization_large_space_emits_warnings(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+            with warnings.catch_warnings(record=True) as warn_cm:
+                warnings.simplefilter("always")
+                with patch(
+                    "itertools.combinations", return_value=iter([(0, 1)])
+                ):
+                    with patch.object(
+                        doe, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
+                    ):
+                        best_points = doe._lhs_initialize_experiments(
+                            lhs_n_samples=10001,
+                            lhs_seed=11,
+                            n_exp=2,
+                        )
+
+        self.assertEqual(len(best_points), 2)
+        self.assertTrue(
+            any("candidate experiment designs" in str(w.message) for w in warn_cm)
+        )
+        self.assertTrue(
+            any("combinations to evaluate" in msg for msg in log_cm.output)
+        )
 
 
 if __name__ == "__main__":

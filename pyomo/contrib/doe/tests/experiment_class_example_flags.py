@@ -143,3 +143,63 @@ class RooneyBieglerMultiExperiment(Experiment):
         m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.sym_break_cons[m.hour] = None
         return m
+
+
+class RooneyBieglerMultiInputExperimentFlag(Experiment):
+    """
+    Two-input Rooney-Biegler style experiment for symmetry-breaking tests.
+
+    Parameters
+    ----------
+    sym_break_flag : int
+        0 -> do not add ``sym_break_cons`` suffix
+        1 -> add single marker (hour)
+        2 -> add multiple markers (hour and temp)
+    """
+
+    def __init__(self, hour=2.0, temp=300.0, y=10.0, sym_break_flag=1):
+        self.hour = hour
+        self.temp = temp
+        self.y = y
+        self.sym_break_flag = sym_break_flag
+
+    def get_labeled_model(self):
+        m = pyo.ConcreteModel()
+        m.asymptote = pyo.Var(initialize=15.0)
+        m.rate_constant = pyo.Var(initialize=0.5)
+        m.asymptote.fix()
+        m.rate_constant.fix()
+
+        m.hour = pyo.Var(initialize=self.hour, bounds=(1.0, 10.0))
+        m.temp = pyo.Var(initialize=self.temp, bounds=(280.0, 340.0))
+        m.hour.fix()
+        m.temp.fix()
+
+        m.y = pyo.Var(within=pyo.PositiveReals, initialize=self.y)
+        m.response_function = pyo.Constraint(
+            expr=m.y
+            == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour)) + 0.01 * m.temp
+        )
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs[m.y] = self.y
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update(
+            (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
+        )
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error[m.y] = 0.1
+
+        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_inputs[m.hour] = self.hour
+        m.experiment_inputs[m.temp] = self.temp
+
+        if self.sym_break_flag in (1, 2):
+            m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.sym_break_cons[m.hour] = None
+            if self.sym_break_flag == 2:
+                m.sym_break_cons[m.temp] = None
+
+        return m

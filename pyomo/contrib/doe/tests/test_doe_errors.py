@@ -806,6 +806,20 @@ class TestDoEErrors(unittest.TestCase):
                 lhs_n_samples=0,
             )
 
+    def test_optimize_experiments_invalid_lhs_n_samples_float(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``lhs_n_samples`` must be a positive integer, got 2.5.",
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method="lhs",
+                lhs_n_samples=2.5,
+            )
+
     def test_optimize_experiments_n_exp_with_multi_list(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[
@@ -830,6 +844,27 @@ class TestDoEErrors(unittest.TestCase):
             r"``n_exp`` must be a positive integer, got 0.",
         ):
             doe_obj.optimize_experiments(n_exp=0)
+
+    def test_optimize_experiments_results_file_bad_type(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"``results_file`` must be either a Path object or a string."
+        ):
+            doe_obj.optimize_experiments(results_file=5)
+
+    def test_optimize_experiments_parameter_scenarios_not_implemented(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            r"Parameter scenarios for multi-experiment optimization not yet supported.",
+        ):
+            doe_obj.optimize_experiments(parameter_scenarios={"dummy": 1})
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_lhs_missing_bounds_error_message(self):

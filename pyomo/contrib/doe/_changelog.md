@@ -84,3 +84,28 @@
   - `pytest -q pyomo/contrib/doe/tests`
 - Result:
   - **86 passed, 34 skipped, 0 failed**
+
+## Additional Branch-Coverage Tests
+
+### Added coverage in `test_doe_errors.py`
+- Added `lhs_n_samples` non-integer validation test (`2.5`).
+- Added `optimize_experiments(results_file=...)` invalid-type validation test.
+- Added `parameter_scenarios` not-implemented branch test.
+
+### Added coverage in `test_doe_solve.py`
+- Added helper fallback tests for `_evaluate_objective_from_fim`:
+  - singular `trace` returns `np.inf`
+  - unsupported LHS-scoring objective (e.g., `minimum_eigenvalue`) returns `0.0`
+- Added `results_file` write-path test for `optimize_experiments`.
+- Added warning-path test for `_lhs_initialize_experiments`:
+  - candidate-count warning (`>10,000`)
+  - combination-count warning (`>100,000`)
+
+### Added coverage in `test_doe_build.py`
+- Added symmetry-breaking fallback warning test when `sym_break_cons` is missing.
+- Added warning test for multiple `sym_break_cons` markers.
+
+### Validation
+- Full DoE suite run after these additions:
+  - `pytest -q pyomo/contrib/doe/tests`
+  - **94 passed, 34 skipped, 0 failed**
