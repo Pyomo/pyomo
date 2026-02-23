@@ -109,3 +109,32 @@
 - Full DoE suite run after these additions:
   - `pytest -q pyomo/contrib/doe/tests`
   - **94 passed, 34 skipped, 0 failed**
+
+## Structured `optimize_experiments` Results Payload
+
+### Implemented in `pyomo/contrib/doe/doe.py`
+- Added new structured sections to `optimize_experiments()` results while retaining legacy keys for backward compatibility:
+  - `run_info`
+  - `settings`
+  - `timing`
+  - `names`
+  - `diagnostics`
+  - `scenarios` (lowercase, structured)
+- Added `id` fields for scenario and experiment entries in the new structured payload.
+- Added objective sense derivation (`maximize`/`minimize`) under `settings.objective.sense`.
+- Added symmetry-breaking diagnostics:
+  - `diagnostics.symmetry_breaking.enabled`
+  - `diagnostics.symmetry_breaking.variable`
+  - `diagnostics.symmetry_breaking.source`
+  - `diagnostics.warnings`
+
+### Tests updated
+- `pyomo/contrib/doe/tests/test_doe_build.py`
+  - Extended multi-experiment structure test to validate new structured keys and IDs.
+- `pyomo/contrib/doe/tests/test_doe_solve.py`
+  - Extended results-file test to validate new structured sections are written.
+
+### Validation
+- Full DoE suite after implementation:
+  - `pytest -q pyomo/contrib/doe/tests`
+  - **94 passed, 34 skipped, 0 failed**

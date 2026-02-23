@@ -733,6 +733,12 @@ class DesignOfExperiments:
             )
         # Add parameter scenario blocks to the model
         self.model.param_scenario_blocks = pyo.Block(range(n_param_scenarios))
+        symmetry_breaking_info = {
+            "enabled": n_exp > 1,
+            "variable": None,
+            "source": None,
+        }
+        diagnostics_warnings = []
 
         # Add experiment(s) for each scenario
         # TODO: Add s_prev = 0 to handle parameter scenarios
@@ -769,12 +775,18 @@ class DesignOfExperiments:
                 sym_break_var_list = list(first_exp_block.sym_break_cons.keys())
 
                 if len(sym_break_var_list) > 1:
-                    self.logger.warning(
+                    warning_msg = (
                         f"Multiple variables marked in sym_break_cons. "
                         f"Using {sym_break_var_list[0].name} for symmetry breaking."
                     )
+                    self.logger.warning(
+                        warning_msg
+                    )
+                    diagnostics_warnings.append(warning_msg)
 
                 sym_break_var = sym_break_var_list[0]
+                symmetry_breaking_info["variable"] = sym_break_var.local_name
+                symmetry_breaking_info["source"] = "user"
                 self.logger.info(
                     f"Using user-specified variable '{sym_break_var.local_name}' for symmetry breaking."
                 )
@@ -782,12 +794,18 @@ class DesignOfExperiments:
                 # Use first experiment input as default symmetry breaking variable
                 # Note: experiment_inputs is validated earlier to be non-empty
                 sym_break_var = next(iter(first_exp_block.experiment_inputs))
+                symmetry_breaking_info["variable"] = sym_break_var.local_name
+                symmetry_breaking_info["source"] = "auto"
                 self.logger.warning(
                     f"No symmetry breaking variable specified. Automatically using the first "
                     f"experiment input '{sym_break_var.local_name}' for ordering constraints. "
                     f"To specify a different variable, add: "
                     f"m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
                     f"m.sym_break_cons[m.your_variable] = None"
+                )
+                diagnostics_warnings.append(
+                    f"No symmetry breaking variable specified. Automatically using "
+                    f"'{sym_break_var.local_name}'."
                 )
 
             # Add constraints for each scenario
@@ -1049,6 +1067,7 @@ class DesignOfExperiments:
 
         # Store results for each scenario
         self.results["Scenarios"] = []
+        scenarios_structured = []
         for s in range(n_param_scenarios):
             scenario = self.model.param_scenario_blocks[s]
             scenario_results = {}
@@ -1091,6 +1110,20 @@ class DesignOfExperiments:
 
             # Store results for each experiment in this scenario
             scenario_results["Experiments"] = []
+            scenario_structured = {
+                "id": s,
+                "total_fim": total_fim_np.tolist(),
+                "metrics": {
+                    "a_opt_log10": scenario_results["log10 A-opt"],
+                    "pseudo_a_opt_log10": scenario_results["log10 pseudo A-opt"],
+                    "d_opt_log10": scenario_results["log10 D-opt"],
+                    "e_opt_log10": scenario_results["log10 E-opt"],
+                    "me_opt_log10": scenario_results["log10 ME-opt"],
+                    "condition_number": float(np.linalg.cond(total_fim_np)),
+                },
+                "unknown_parameters": None,
+                "experiments": [],
+            }
             for k in range(n_exp):
                 exp_block = scenario.exp_blocks[k]
                 exp_results = {}
@@ -1117,8 +1150,24 @@ class DesignOfExperiments:
                     )
 
                 scenario_results["Experiments"].append(exp_results)
+                experiment_structured = {
+                    "id": k,
+                    "design": exp_results["Experiment Design"],
+                    "outputs": exp_results["Experiment Outputs"],
+                    "measurement_error": exp_results["Measurement Error"],
+                    "fim": exp_results["FIM"],
+                }
+                if "Sensitivity Matrix" in exp_results:
+                    experiment_structured["sensitivity"] = exp_results[
+                        "Sensitivity Matrix"
+                    ]
+                scenario_structured["experiments"].append(experiment_structured)
 
             self.results["Scenarios"].append(scenario_results)
+            scenario_structured["unknown_parameters"] = scenario_results[
+                "Unknown Parameters"
+            ]
+            scenarios_structured.append(scenario_structured)
 
         # Store variable names once (structural properties, same across all scenarios/experiments)
         # Use first scenario's first experiment to get the structure
@@ -1163,6 +1212,67 @@ class DesignOfExperiments:
         self.results["Initialization Time"] = initialization_time
         self.results["Solve Time"] = solve_time
         self.results["Wall-clock Time"] = build_time + initialization_time + solve_time
+
+        # Structured result payload
+        _maximize = {
+            ObjectiveLib.determinant,
+            ObjectiveLib.pseudo_trace,
+            ObjectiveLib.minimum_eigenvalue,
+        }
+        objective_sense = "maximize" if self.objective_option in _maximize else "minimize"
+
+        self.results["run_info"] = {
+            "api": "DesignOfExperiments.optimize_experiments",
+            "solver": {
+                "name": getattr(self.solver, "name", str(self.solver)),
+                "status": self.results["Solver Status"],
+                "termination_condition": self.results["Termination Condition"],
+                "message": self.results["Termination Message"],
+            },
+        }
+        self.results["settings"] = {
+            "objective": {
+                "name": self.results["Objective expression"],
+                "sense": objective_sense,
+            },
+            "finite_difference": {
+                "scheme": self.results["Finite Difference Scheme"],
+                "step": self.results["Finite Difference Step"],
+            },
+            "scaling": {
+                "nominal_parameter_scaling": self.results["Nominal Parameter Scaling"],
+            },
+            "initialization": {
+                "method": self.results["Initialization Method"],
+                "lhs_n_samples": self.results.get("LHS Samples Per Dimension"),
+                "lhs_seed": self.results.get("LHS Seed"),
+                "best_points": self.results.get("LHS Best Initial Points"),
+            },
+            "modeling": {
+                "n_scenarios": self.results["Number of Scenarios"],
+                "n_experiments_per_scenario": self.results[
+                    "Number of Experiments per Scenario"
+                ],
+            },
+            "prior_fim": self.results["Prior FIM"],
+        }
+        self.results["timing"] = {
+            "build_s": self.results["Build Time"],
+            "initialization_s": self.results["Initialization Time"],
+            "solve_s": self.results["Solve Time"],
+            "total_s": self.results["Wall-clock Time"],
+        }
+        self.results["names"] = {
+            "experiment_design": self.results["Experiment Design Names"],
+            "experiment_output": self.results["Experiment Output Names"],
+            "unknown_parameter": self.results["Unknown Parameter Names"],
+            "measurement_error": self.results["Measurement Error Names"],
+        }
+        self.results["diagnostics"] = {
+            "symmetry_breaking": symmetry_breaking_info,
+            "warnings": diagnostics_warnings,
+        }
+        self.results["scenarios"] = scenarios_structured
 
         # Save results to file if requested
         if results_file is not None:

@@ -721,6 +721,23 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertEqual(len(doe_obj.results["Experiment Design Names"]), 1)
         self.assertEqual(len(doe_obj.results["Unknown Parameter Names"]), 2)
 
+        # New structured payload checks
+        self.assertIn("run_info", doe_obj.results)
+        self.assertIn("settings", doe_obj.results)
+        self.assertIn("timing", doe_obj.results)
+        self.assertIn("names", doe_obj.results)
+        self.assertIn("scenarios", doe_obj.results)
+        self.assertEqual(
+            doe_obj.results["run_info"]["solver"]["status"], doe_obj.results["Solver Status"]
+        )
+        self.assertEqual(
+            doe_obj.results["settings"]["modeling"]["n_experiments_per_scenario"], 2
+        )
+        self.assertEqual(len(doe_obj.results["scenarios"]), 1)
+        self.assertEqual(doe_obj.results["scenarios"][0]["id"], 0)
+        self.assertEqual(len(doe_obj.results["scenarios"][0]["experiments"]), 2)
+        self.assertEqual(doe_obj.results["scenarios"][0]["experiments"][0]["id"], 0)
+
         # hour of exp[0] should be <= hour of exp[1] due to symmetry breaking
         h0 = scenario_result["Experiments"][0]["Experiment Design"][0]
         h1 = scenario_result["Experiments"][1]["Experiment Design"][0]

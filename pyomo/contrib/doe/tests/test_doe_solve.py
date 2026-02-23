@@ -1108,6 +1108,11 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             payload = json.load(f)
         self.assertEqual(payload["Initialization Method"], "none")
         self.assertIn("Scenarios", payload)
+        self.assertIn("run_info", payload)
+        self.assertIn("settings", payload)
+        self.assertIn("timing", payload)
+        self.assertIn("names", payload)
+        self.assertIn("scenarios", payload)
 
     def test_lhs_initialization_large_space_emits_warnings(self):
         doe = self._make_template_doe("pseudo_trace")
