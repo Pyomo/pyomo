@@ -614,6 +614,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_models.PressureDropSingleOutput())
+        assert not m.egb.has_implicit_constraint_objects
         m.obj = pyo.Objective(expr=1)
         with self.assertRaises(ValueError):
             pyomo_nlp = PyomoGreyBoxNLP(m)
@@ -622,6 +623,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_models.PressureDropSingleOutput())
+        assert not m.egb.has_implicit_constraint_objects
         m.egb.inputs['Pin'].fix(100)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         with self.assertRaises(NotImplementedError):
@@ -630,6 +632,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_models.PressureDropTwoOutputs())
+        assert not m.egb.has_implicit_constraint_objects
         m.egb.outputs['P2'].fix(50)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         with self.assertRaises(NotImplementedError):
@@ -647,6 +650,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_model)
+        assert not m.egb.has_implicit_constraint_objects
         m.egb.inputs['Pin'].value = 100
         m.egb.inputs['Pin'].setlb(50)
         m.egb.inputs['Pin'].setub(150)

@@ -89,7 +89,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
             'egb.outputs[Pout]',
         ]
         x_order = egb_nlp.primals_names()
-        comparison_c_order = ['egb.output_constraints[Pout]']
+        comparison_c_order = ['egb.Pout_constraint']
         c_order = egb_nlp.constraint_names()
 
         xlb = egb_nlp.primals_lb()
@@ -387,8 +387,8 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         ]
         x_order = egb_nlp.primals_names()
         comparison_c_order = [
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
         ]
         c_order = egb_nlp.constraint_names()
 
@@ -717,8 +717,8 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         comparison_c_order = [
             'egb.pdrop1',
             'egb.pdrop3',
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
         ]
         c_order = egb_nlp.constraint_names()
 
@@ -938,8 +938,8 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         comparison_c_order = [
             'egb.pdrop1',
             'egb.pdrop3',
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
         ]
         c_order = egb_nlp.constraint_names()
 
@@ -1054,7 +1054,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
             'egb.outputs[Pout]',
         ]
         x_order = pyomo_nlp.primals_names()
-        comparison_c_order = ['egb.output_constraints[Pout]']
+        comparison_c_order = ['egb.Pout_constraint']
         c_order = pyomo_nlp.constraint_names()
 
         xlb = pyomo_nlp.primals_lb()
@@ -1379,8 +1379,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         ]
         x_order = pyomo_nlp.primals_names()
         comparison_c_order = [
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
         ]
         c_order = pyomo_nlp.constraint_names()
 
@@ -1734,8 +1734,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         comparison_c_order = [
             'egb.pdrop1',
             'egb.pdrop3',
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
         ]
         c_order = pyomo_nlp.constraint_names()
 
@@ -1948,8 +1948,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         comparison_c_order = [
             'egb.pdrop1',
             'egb.pdrop3',
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
             'incon',
             'outcon',
         ]
@@ -2255,8 +2255,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         comparison_c_order = [
             'egb.pdrop1',
             'egb.pdrop3',
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
             'incon',
             'outcon',
         ]
@@ -2301,8 +2301,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         comparison_c_order = [
             'egb.pdrop1',
             'egb.pdrop3',
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
             'incon',
             'outcon',
         ]
@@ -2380,8 +2380,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         comparison_c_order = [
             'egb.pdrop1',
             'egb.pdrop3',
-            'egb.output_constraints[P2]',
-            'egb.output_constraints[Pout]',
+            'egb.P2_constraint',
+            'egb.Pout_constraint',
             'incon',
             'outcon',
         ]
@@ -2477,7 +2477,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertIn('c scaling provided', solver_trace)
         self.assertIn('d scaling provided', solver_trace)
         # x_order: ['egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.inputs[Pin]', 'egb.inputs[c]', 'egb.outputs[P2]', 'egb.outputs[Pout]', 'mu']
-        # c_order: ['ccon', 'pcon', 'pincon', 'egb.pdrop1', 'egb.pdrop3', 'egb.output_constraints[P2]', 'egb.output_constraints[Pout]']
+        # c_order: ['ccon', 'pcon', 'pincon', 'egb.pdrop1', 'egb.pdrop3', 'egb.P2_constraint', 'egb.Pout_constraint']
         self.assertIn('DenseVector "x scaling vector" with 8 elements:', solver_trace)
         self.assertIn(
             'x scaling vector[    1]= 1.3000000000000000e+00', solver_trace
@@ -2549,7 +2549,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 20.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), 50.0, places=3)
         self.assertAlmostEqual(
-            m.dual[m.egb]['egb.output_constraints[o]'], -100.0, places=3
+            m.dual[m.egb.o_constraint], -100.0, places=3
         )
         self.assertAlmostEqual(
             pyo.value(m.ipopt_zL_out[m.egb.inputs['u']]), 500.0, places=3
@@ -2567,7 +2567,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 50.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), -125.0, places=3)
         self.assertAlmostEqual(
-            m.dual[m.egb]['egb.output_constraints[o]'], 250.0, places=3
+            m.dual[m.egb.o_constraint], 250.0, places=3
         )
         self.assertAlmostEqual(
             pyo.value(m.ipopt_zL_out[m.egb.inputs['u']]), 0.0, places=3
@@ -2594,9 +2594,9 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 5.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), 12.5, places=3)
         self.assertAlmostEqual(
-            m.dual[m.egb]['egb.output_constraints[o]'], -25.0, places=3
+            m.dual[m.egb.o_constraint], -25.0, places=3
         )
-        self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
+        self.assertAlmostEqual(m.dual[m.egb.u2_con], 62.5, places=3)
 
 
 class TestGreyBoxObjectives(unittest.TestCase):
@@ -2611,6 +2611,144 @@ class TestGreyBoxObjectives(unittest.TestCase):
     @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
     def test_constrained_with_hessian(self):
         solve_constrained_with_hessian()
+
+
+# Regression tests to make sure PyomoNLPWithGreyBoxBlocks correctly handles variables that
+# are external to the block when creating the NLP, but references in the constraints.
+class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
+    def test_no_greybox_block(self):
+        m = pyo.ConcreteModel()
+        # Variable on the main model
+        m.x = pyo.Var(initialize=1)
+
+        # One block contains constraints that reference the variable on the main model
+        m.b = pyo.Block()
+        m.b.y = pyo.Var(initialize=2)
+
+        m.b.cons1 = pyo.Constraint(expr=m.x + 2*m.b.y == 5)
+        m.b.cons2 = pyo.Constraint(expr=3*m.x - 4*m.b.y == -5)
+
+        # Create  NLP from m.b - should contain m.v even though it is external to the block
+        pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
+
+        assert pyomo_nlp._pyomo_model_var_names_to_datas == {
+            'x': m.x,
+            'b.y': m.b.y,
+        }
+
+        jac = pyomo_nlp.evaluate_jacobian().tocsr()
+
+        # Due to external variable, the order is m.b.y, m.x
+        assert jac.shape == (2, 2)
+        assert jac[0, 0] == 2.0
+        assert jac[0, 1] == 1.0
+        assert jac[1, 0] == -4.0
+        assert jac[1, 1] == 3.0
+
+    def test_greybox_block_w_external_var(self):
+        m = pyo.ConcreteModel()
+        m.v = pyo.Var()
+
+        m.b = pyo.Block()
+        m.b.egb = ExternalGreyBoxBlock()
+        m.b.egb.set_external_model(
+            ex_models.PressureDropSingleOutput(),
+            build_implicit_constraint_objects=False,
+        )
+
+        # Set egb variable values
+        m.b.egb.inputs['Pin'].value = 100
+        m.b.egb.inputs['c'].value = 2
+        m.b.egb.inputs['F'].value = 3
+        m.b.egb.outputs['Pout'].value = 80
+
+        m.b.cons = pyo.Constraint(expr=m.v == m.b.egb.inputs['F'])
+
+        # Create  NLP from m.b - should contain m.v even though it is external to the block
+        pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
+
+        assert pyomo_nlp._pyomo_model_var_names_to_datas == {
+            'v': m.v,
+            'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
+            'b.egb.inputs[c]': m.b.egb.inputs['c'],
+            'b.egb.inputs[F]': m.b.egb.inputs['F'],
+            'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
+        }
+
+        jac = pyomo_nlp.evaluate_jacobian().tocsr()
+
+        assert jac.shape == (2, 5)
+        primals = pyomo_nlp.primals_names()
+        constraints = pyomo_nlp.constraint_names()
+
+        expected = {
+            ('b.cons', 'v'): 1.0,
+            ('b.cons', 'b.egb.inputs[F]'): -1.0,
+            ('b.cons', 'b.egb.inputs[Pin]'): 0.0,
+            ('b.cons', 'b.egb.inputs[c]'): 0.0,
+            ('b.cons', 'b.egb.outputs[Pout]'): 0.0,
+            ('b.egb.output_constraints[Pout]', 'v'): 0.0,
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[F]'): -48.0,  # -4*c*2*F
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[Pin]'): 1.0,
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[c]'): -36.0,  # -4*F**2
+            ('b.egb.output_constraints[Pout]', 'b.egb.outputs[Pout]'): -1.0,
+        }
+
+        for (c, v), val in expected.items():
+            print(c, v)
+            self.assertAlmostEqual(jac[constraints.index(c), primals.index(v)], val)
+
+    def test_greybox_block_w_constraints_w_external_var(self):
+        m = pyo.ConcreteModel()
+        m.v = pyo.Var()
+
+        m.b = pyo.Block()
+        m.b.egb = ExternalGreyBoxBlock()
+        m.b.egb.set_external_model(
+            ex_models.PressureDropSingleOutput(),
+            build_implicit_constraint_objects=True,
+        )
+
+        # Set egb variable values
+        m.b.egb.inputs['Pin'].value = 100
+        m.b.egb.inputs['c'].value = 2
+        m.b.egb.inputs['F'].value = 3
+        m.b.egb.outputs['Pout'].value = 80
+
+        m.b.cons = pyo.Constraint(expr=m.v == m.b.egb.inputs['F'])
+
+        # Create  NLP from m.b - should contain m.v even though it is external to the block
+        pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
+
+        assert pyomo_nlp._pyomo_model_var_names_to_datas == {
+            'v': m.v,
+            'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
+            'b.egb.inputs[c]': m.b.egb.inputs['c'],
+            'b.egb.inputs[F]': m.b.egb.inputs['F'],
+            'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
+        }
+
+        jac = pyomo_nlp.evaluate_jacobian().tocsr()
+
+        assert jac.shape == (2, 5)
+        primals = pyomo_nlp.primals_names()
+        constraints = pyomo_nlp.constraint_names()
+
+        expected = {
+            ('b.cons', 'v'): 1.0,
+            ('b.cons', 'b.egb.inputs[F]'): -1.0,
+            ('b.cons', 'b.egb.inputs[Pin]'): 0.0,
+            ('b.cons', 'b.egb.inputs[c]'): 0.0,
+            ('b.cons', 'b.egb.outputs[Pout]'): 0.0,
+            ('b.egb.Pout_constraint', 'v'): 0.0,
+            ('b.egb.Pout_constraint', 'b.egb.inputs[F]'): -48.0,  # -4*c*2*F
+            ('b.egb.Pout_constraint', 'b.egb.inputs[Pin]'): 1.0,
+            ('b.egb.Pout_constraint', 'b.egb.inputs[c]'): -36.0,  # -4*F**2
+            ('b.egb.Pout_constraint', 'b.egb.outputs[Pout]'): -1.0,
+        }
+
+        for (c, v), val in expected.items():
+            self.assertAlmostEqual(jac[constraints.index(c), primals.index(v)], val)
 
 
 if __name__ == '__main__':

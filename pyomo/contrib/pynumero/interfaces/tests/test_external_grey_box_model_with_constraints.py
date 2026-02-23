@@ -503,6 +503,8 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         """
         m = self.build_model()
 
+        assert m.egb.has_implicit_constraint_objects
+
         # Check that the get_incident_variables method on the implicit constraint body returns the correct variables
         # Implicit constraint: 'pdrop1'
         body_obj1 = m.egb.pdrop1.body
@@ -608,6 +610,7 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         a model containing both grey box and other components
         """
         m = self.build_model_with_pyomo_components()
+        assert m.egb.has_implicit_constraint_objects
 
         # Check Dulmage-Mendelsohn partitioning of the incidence graph
         igraph = IncidenceGraphInterface(m, include_inequality=False)

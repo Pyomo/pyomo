@@ -370,6 +370,7 @@ class ExternalGreyBoxBlockData(BlockData):
 
         """
         self._ex_model = ex_model = external_grey_box_model
+        self._has_implicit_constraint_objects = build_implicit_constraint_objects
         if ex_model is None:
             self._input_names = self._output_names = None
             self.inputs = self.outputs = None
@@ -418,7 +419,7 @@ class ExternalGreyBoxBlockData(BlockData):
         external_grey_box_model.finalize_block_construction(self)
 
         # If required, construct the ExternalGreyBoxConstraint objects
-        if build_implicit_constraint_objects:
+        if self._has_implicit_constraint_objects:
             for con_name in self._equality_constraint_names:
                 setattr(
                     self,
@@ -440,6 +441,10 @@ class ExternalGreyBoxBlockData(BlockData):
 
     def get_external_model(self):
         return self._ex_model
+    
+    @property
+    def has_implicit_constraint_objects(self):
+        return self._has_implicit_constraint_objects
 
 
 class ExternalGreyBoxBlock(Block):
