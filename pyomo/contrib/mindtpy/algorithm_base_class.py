@@ -322,37 +322,7 @@ class _MindtPyAlgorithm:
                 if len(results.solution) > 0:
                     self.original_model.solutions.load_from(results)
 
-                # Mirror direct solver status into MindtPy results
-                prob.sense = obj.sense
-                self.results.solver.status = getattr(
-                    results.solver, 'status', SolverStatus.ok
-                )
-                self.results.solver.termination_condition = (
-                    results.solver.termination_condition
-                )
-                self.results.solver.message = getattr(results.solver, 'message', None)
-
-                # Prefer bound info from the direct NLP solver results if present
-                lb = getattr(results.problem, 'lower_bound', None)
-                ub = getattr(results.problem, 'upper_bound', None)
-                if lb is not None:
-                    prob.lower_bound = lb
-                if ub is not None:
-                    prob.upper_bound = ub
-
-                # If the solver reported an optimal termination but did not
-                # provide explicit bounds, fall back to using the objective value.
-                if (
-                    getattr(self.results.solver, 'termination_condition', None)
-                    == tc.optimal
-                    and getattr(results.problem, 'lower_bound', None) is None
-                    and getattr(results.problem, 'upper_bound', None) is None
-                ):
-                    obj_val = value(obj.expr, exception=False)
-                    if obj_val is not None:
-                        # For a direct continuous optimal solve, primal==dual.
-                        prob.lower_bound = obj_val
-                        prob.upper_bound = obj_val
+                self._mirror_direct_solve_results(results=results, obj=obj, prob=prob)
                 return False
             else:
                 config.logger.info(
@@ -373,36 +343,7 @@ class _MindtPyAlgorithm:
                 if len(results.solution) > 0:
                     self.original_model.solutions.load_from(results)
 
-                # Mirror direct solver status into MindtPy results
-                prob.sense = obj.sense
-                self.results.solver.status = getattr(
-                    results.solver, 'status', SolverStatus.ok
-                )
-                self.results.solver.termination_condition = (
-                    results.solver.termination_condition
-                )
-                self.results.solver.message = getattr(results.solver, 'message', None)
-
-                # Prefer bound info from the direct solver results if present
-                lb = getattr(results.problem, 'lower_bound', None)
-                ub = getattr(results.problem, 'upper_bound', None)
-                if lb is not None:
-                    prob.lower_bound = lb
-                if ub is not None:
-                    prob.upper_bound = ub
-
-                # Fallback: if the LP solver reports optimal termination but does
-                # not provide explicit bounds, infer them from the objective value.
-                if (
-                    (lb is None or ub is None)
-                    and self.results.solver.termination_condition == tc.optimal
-                    and len(self.original_model.solutions) > 0
-                ):
-                    obj_val = value(obj)
-                    if lb is None:
-                        prob.lower_bound = obj_val
-                    if ub is None:
-                        prob.upper_bound = obj_val
+                self._mirror_direct_solve_results(results=results, obj=obj, prob=prob)
                 return False
 
         # Set up dual value reporting
@@ -417,6 +358,51 @@ class _MindtPyAlgorithm:
         # TODO if any continuous variables are multiplied with binary ones,
         #  need to do some kind of transformation (Glover?) or throw an error message
         return True
+
+    def _mirror_direct_solve_results(self, results, obj, prob):
+        """Mirror a direct (LP/NLP) solve result into MindtPy's results object.
+
+        This is used by `model_is_valid()` when the instance is purely continuous
+        (no discrete variables) and MindtPy short-circuits to a direct LP/NLP
+        solve.
+
+        Parameters
+        ----------
+        results : SolverResults
+            Results returned by the direct solver.
+        obj : ObjectiveData
+            The (active) objective on the model that was solved.
+        prob : ProblemInformation
+            The MindtPy `self.results.problem` object to populate.
+        """
+        prob.sense = obj.sense
+
+        # Solver status / termination metadata
+        self.results.solver.status = getattr(results.solver, 'status', SolverStatus.ok)
+        self.results.solver.termination_condition = results.solver.termination_condition
+        self.results.solver.message = getattr(results.solver, 'message', None)
+
+        # Prefer bound info from the direct solver results if present
+        lb = getattr(results.problem, 'lower_bound', None)
+        ub = getattr(results.problem, 'upper_bound', None)
+        if lb is not None:
+            prob.lower_bound = lb
+        if ub is not None:
+            prob.upper_bound = ub
+
+        # Fallback: if the solver reports optimal termination but does not provide
+        # explicit bounds, infer them from the objective value. For a direct
+        # continuous optimal solve, primal==dual.
+        if (
+            (lb is None or ub is None)
+            and getattr(self.results.solver, 'termination_condition', None) == tc.optimal
+        ):
+            obj_val = value(obj.expr, exception=False)
+            if obj_val is not None:
+                if lb is None:
+                    prob.lower_bound = obj_val
+                if ub is None:
+                    prob.upper_bound = obj_val
 
     def build_ordered_component_lists(self, model):
         """Define lists used for future data transfer.
