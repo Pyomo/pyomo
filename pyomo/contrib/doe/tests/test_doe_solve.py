@@ -1141,6 +1141,32 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             any("combinations to evaluate" in msg for msg in log_cm.output)
         )
 
+    def test_optimize_experiments_determinant_expected_values(self):
+        # Match the multi-experiment example style (explicit experiment list)
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
+            RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
+        ]
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+
+        doe = DesignOfExperiments(
+            experiment_list=exp_list,
+            objective_option="determinant",
+            step=1e-2,
+            solver=solver,
+        )
+        doe.optimize_experiments()
+
+        scenario = doe.results["Scenarios"][0]
+        got_hours = sorted(exp["Experiment Design"][0] for exp in scenario["Experiments"])
+        expected_hours = [1.9321985035514362, 9.999999685577139]
+
+        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
+        self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
+
 
 if __name__ == "__main__":
     unittest.main()
