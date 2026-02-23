@@ -9,6 +9,8 @@
 import json
 import logging
 import os, os.path
+import subprocess
+from itertools import combinations, product
 from glob import glob
 
 from pyomo.common.dependencies import (
@@ -40,6 +42,7 @@ if scipy_available:
     )
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
         RooneyBieglerExperimentBad,
+        RooneyBieglerMultiExperiment,
     )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
@@ -53,6 +56,37 @@ from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
 k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
+
+
+def k_aug_runtime_available():
+    """
+    Check that k_aug is not only discoverable but also runnable in this
+    environment (e.g., no missing dynamic libraries).
+    """
+    if not k_aug_available.available(False):
+        return False
+    exe = k_aug_available.executable()
+    if not exe:
+        return False
+
+    try:
+        # Trigger dynamic loader checks; return code may be nonzero for usage,
+        # so we inspect output for runtime-linker failures.
+        proc = subprocess.run(
+            [exe, "--help"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return False
+
+    output = (proc.stdout or "") + (proc.stderr or "")
+    bad_runtime_markers = ("Library not loaded", "dyld:", "libgfortran")
+    if any(marker in output for marker in bad_runtime_markers):
+        return False
+    return True
 
 currdir = this_file_dir()
 file_path = os.path.join(currdir, "..", "examples", "result.json")
@@ -388,7 +422,8 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
     # scheme is needed.
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     @unittest.skipIf(
-        not k_aug_available.available(False), "The 'k_aug' command is not available"
+        not k_aug_runtime_available(),
+        "The 'k_aug' command is not available or not runnable in this environment",
     )
     def test_compute_FIM_kaug(self):
         fd_method = "forward"
@@ -917,6 +952,137 @@ class TestDoEFactorialFigure(unittest.TestCase):
             len(expected_plot_log) == 5,
             f"Expected 5 plot files, but found {len(expected_plot_log)}. Files found: {expected_plot_log}",
         )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
+class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
+    def _make_template_doe(self, objective_option="pseudo_trace"):
+        exp = RooneyBieglerMultiExperiment(hour=2.0, y=10.0)
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+        return DesignOfExperiments(
+            experiment_list=[exp],
+            objective_option=objective_option,
+            step=1e-2,
+            solver=solver,
+        )
+
+    def _build_template_model_for_multi_experiment(self, doe_obj, n_exp):
+        doe_obj.model.param_scenario_blocks = pyo.Block(range(1))
+        doe_obj.model.param_scenario_blocks[0].exp_blocks = pyo.Block(range(n_exp))
+        for k in range(n_exp):
+            doe_obj.create_doe_model(
+                model=doe_obj.model.param_scenario_blocks[0].exp_blocks[k],
+                experiment_index=0,
+                _for_multi_experiment=True,
+            )
+
+    def test_evaluate_objective_from_fim_numerical_values(self):
+        fim = np.array([[4.0, 1.0], [1.0, 3.0]])
+
+        doe_det = self._make_template_doe("determinant")
+        self.assertAlmostEqual(
+            doe_det._evaluate_objective_from_fim(fim), np.linalg.det(fim), places=10
+        )
+
+        doe_ptr = self._make_template_doe("pseudo_trace")
+        self.assertAlmostEqual(
+            doe_ptr._evaluate_objective_from_fim(fim), np.trace(fim), places=10
+        )
+
+        doe_tr = self._make_template_doe("trace")
+        self.assertAlmostEqual(
+            doe_tr._evaluate_objective_from_fim(fim),
+            np.trace(np.linalg.inv(fim)),
+            places=10,
+        )
+
+    def test_compute_fim_at_point_no_prior_restores_prior(self):
+        doe_no_prior = self._make_template_doe("pseudo_trace")
+        doe_no_prior.prior_FIM = np.zeros((2, 2))
+        expected = doe_no_prior.compute_FIM(method="sequential")
+
+        doe = self._make_template_doe("pseudo_trace")
+        saved_prior = np.array([[7.0, 0.0], [0.0, 5.0]])
+        doe.prior_FIM = saved_prior
+        got = doe._compute_fim_at_point_no_prior(experiment_index=0, input_values=[2.0])
+
+        self.assertTrue(np.allclose(got, expected, atol=1e-8))
+        self.assertIs(doe.prior_FIM, saved_prior)
+        self.assertTrue(np.allclose(doe.prior_FIM, saved_prior, atol=1e-12))
+
+    def test_optimize_experiments_lhs_matches_bruteforce_combo(self):
+        n_exp = 2
+        lhs_n_samples = 3
+        lhs_seed = 17
+
+        # Build expected best combo using the same helper path and objective scoring.
+        expected_obj = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(expected_obj, n_exp=n_exp)
+
+        first_exp_block = (
+            expected_obj.model.param_scenario_blocks[0].exp_blocks[0]
+        )
+        exp_input_vars = expected_obj._get_experiment_input_vars(first_exp_block)
+        lb_vals = np.array([v.lb for v in exp_input_vars])
+        ub_vals = np.array([v.ub for v in exp_input_vars])
+
+        rng = np.random.default_rng(lhs_seed)
+        from scipy.stats.qmc import LatinHypercube
+
+        per_dim_samples = []
+        for i in range(len(exp_input_vars)):
+            dim_seed = int(rng.integers(0, 2**31))
+            sampler = LatinHypercube(d=1, seed=dim_seed)
+            s_unit = sampler.random(n=lhs_n_samples).flatten()
+            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
+            per_dim_samples.append(s_scaled.tolist())
+
+        candidate_points = list(product(*per_dim_samples))
+        candidate_fims = [
+            expected_obj._compute_fim_at_point_no_prior(0, list(pt))
+            for pt in candidate_points
+        ]
+
+        best_combo = None
+        best_obj = -np.inf
+        for combo in combinations(range(len(candidate_points)), n_exp):
+            fim_total = sum((candidate_fims[idx] for idx in combo), np.zeros((2, 2)))
+            obj_val = expected_obj._evaluate_objective_from_fim(fim_total)
+            if obj_val > best_obj:
+                best_obj = obj_val
+                best_combo = combo
+
+        expected_points = [list(candidate_points[i]) for i in best_combo]
+
+        # Run full optimization with LHS initialization and compare chosen points.
+        doe = self._make_template_doe("pseudo_trace")
+        doe.optimize_experiments(
+            n_exp=n_exp,
+            initialization_method="lhs",
+            lhs_n_samples=lhs_n_samples,
+            lhs_seed=lhs_seed,
+        )
+
+        actual_points = doe.results["LHS Best Initial Points"]
+        actual_points_norm = sorted(tuple(np.round(p, 8)) for p in actual_points)
+        expected_points_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(actual_points_norm, expected_points_norm)
+        self.assertEqual(doe.results["Initialization Method"], "lhs")
+
+        # Numerical consistency of aggregated FIM in result payload.
+        scenario = doe.results["Scenarios"][0]
+        total_fim = np.array(scenario["Total FIM"])
+        prior = np.array(doe.results["Prior FIM"])
+        exp_fim_sum = sum(
+            (np.array(exp_data["FIM"]) for exp_data in scenario["Experiments"]),
+            np.zeros_like(total_fim),
+        )
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior, atol=1e-6))
 
 
 if __name__ == "__main__":

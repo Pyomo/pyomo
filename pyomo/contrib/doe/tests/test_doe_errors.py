@@ -26,6 +26,7 @@ if scipy_available:
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
         BadExperiment,
         RooneyBieglerExperimentFlag,
+        RooneyBieglerMultiExperiment,
     )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
@@ -90,7 +91,7 @@ class TestDoEErrors(unittest.TestCase):
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
         with self.assertRaisesRegex(
-            ValueError, "The 'experiment_list' parameter must be provided"
+            ValueError, "The 'experiment_list' parameter is required"
         ):
             # Experiment provided as None
             DoE_args = get_standard_args(None, fd_method, obj_used, flag_val)
@@ -779,6 +780,73 @@ class TestDoEErrors(unittest.TestCase):
             "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
         ):
             doe_obj.create_objective_function()
+
+    def test_optimize_experiments_invalid_initialization_method(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``initialization_method`` must be one of \[None, 'lhs'\], got 'bad'.",
+        ):
+            doe_obj.optimize_experiments(initialization_method="bad")
+
+    def test_optimize_experiments_invalid_lhs_n_samples(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``lhs_n_samples`` must be a positive integer, got 0.",
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method="lhs",
+                lhs_n_samples=0,
+            )
+
+    def test_optimize_experiments_n_exp_with_multi_list(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[
+                RooneyBieglerMultiExperiment(hour=2.0),
+                RooneyBieglerMultiExperiment(hour=3.0),
+            ],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``n_exp`` must not be set when ``experiment_list`` contains more than one experiment",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
+
+    def test_optimize_experiments_n_exp_not_positive(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``n_exp`` must be a positive integer, got 0.",
+        ):
+            doe_obj.optimize_experiments(n_exp=0)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_lhs_missing_bounds_error_message(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[
+                RooneyBieglerMultiExperiment(hour=2.0, hour_bounds=(None, 10.0))
+            ],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"LHS initialization requires explicit lower and upper bounds on all experiment input variables",
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method="lhs",
+                lhs_n_samples=2,
+            )
 
 
 if __name__ == "__main__":

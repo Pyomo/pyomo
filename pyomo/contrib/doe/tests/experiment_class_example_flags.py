@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 import pyomo.environ as pyo
 
+from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
     RooneyBieglerExperiment,
 )
@@ -69,4 +70,76 @@ class RooneyBieglerExperimentBad(RooneyBieglerExperiment):
         m.bad_con_1 = pyo.Constraint(expr=m.hour >= 10.0)
         m.bad_con_2 = pyo.Constraint(expr=m.hour <= 0.0)
 
+        return m
+
+
+def rooney_biegler_multiexperiment_model(data, theta=None, hour_bounds=(1.0, 10.0)):
+    """Small Rooney-Biegler model for fast multi-experiment DoE tests."""
+    model = pyo.ConcreteModel()
+
+    if theta is None:
+        theta = {'asymptote': 15, 'rate_constant': 0.5}
+
+    model.asymptote = pyo.Var(initialize=theta['asymptote'])
+    model.rate_constant = pyo.Var(initialize=theta['rate_constant'])
+    model.asymptote.fix()
+    model.rate_constant.fix()
+
+    model.hour = pyo.Var(initialize=data['hour'], bounds=hour_bounds)
+    model.hour.fix()
+
+    model.y = pyo.Var(within=pyo.PositiveReals, initialize=data['y'])
+    model.response_function = pyo.Constraint(
+        expr=model.y
+        == model.asymptote * (1 - pyo.exp(-model.rate_constant * model.hour))
+    )
+    return model
+
+
+class RooneyBieglerMultiExperiment(Experiment):
+    """
+    Experiment class based on the multi-experiment Rooney-Biegler prototype.
+
+    This mirrors the implementation in
+    ``examples/multiexperiment-prototype/rooney_biegler_multiexperiment.py``
+    while allowing test-time control over initial hour and bounds.
+    """
+
+    def __init__(
+        self,
+        hour=2.0,
+        y=10.0,
+        theta=None,
+        measure_error=0.1,
+        hour_bounds=(1.0, 10.0),
+    ):
+        self.hour = hour
+        self.y = y
+        self.theta = theta if theta is not None else {'asymptote': 15, 'rate_constant': 0.5}
+        self.measure_error = measure_error
+        self.hour_bounds = hour_bounds
+
+    def get_labeled_model(self):
+        m = rooney_biegler_multiexperiment_model(
+            {'hour': self.hour, 'y': self.y},
+            theta=self.theta,
+            hour_bounds=self.hour_bounds,
+        )
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs[m.y] = self.y
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update(
+            (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
+        )
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error[m.y] = self.measure_error
+
+        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_inputs[m.hour] = self.hour
+
+        m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.sym_break_cons[m.hour] = None
         return m

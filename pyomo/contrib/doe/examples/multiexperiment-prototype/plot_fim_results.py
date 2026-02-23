@@ -59,8 +59,18 @@ a_optimality = []
 pseudo_a_optimality = []
 
 for idx, row in results_df.iterrows():
-    if row['log10_det'] is not None:
-        FIM = np.array(row['FIM']) + FIM_0
+    # Use stored FIM values (JSON note: stored WITHOUT prior) rather than relying on
+    # a `log10_det` flag which may be null. Compute metrics when a numeric FIM is present.
+    if row.get('FIM') is not None:
+        try:
+            FIM = np.asarray(row['FIM'], dtype=float) + FIM_0
+        except Exception as e:
+            print(f"Failed to construct FIM array at idx={idx}: {e}")
+            d_optimality.append(np.nan)
+            a_optimality.append(np.nan)
+            pseudo_a_optimality.append(np.nan)
+            continue
+
         try:
             (
                 det_FIM,
@@ -78,7 +88,15 @@ for idx, row in results_df.iterrows():
             d_optimality.append(D_opt)
             a_optimality.append(A_opt)
             pseudo_a_optimality.append(pseudo_A_opt)
-        except:
+        except Exception as e:
+            print(f"compute_FIM_metrics failed at idx={idx}: {e}")
+            try:
+                print(f"  FIM (shape): {np.asarray(row['FIM']).shape}")
+                print(
+                    f"  FIM (sample): {np.asarray(row['FIM'], dtype=float).ravel()[:6]}"
+                )
+            except Exception:
+                print(f"  Could not display FIM for idx={idx}")
             d_optimality.append(np.nan)
             a_optimality.append(np.nan)
             pseudo_a_optimality.append(np.nan)
@@ -86,40 +104,59 @@ for idx, row in results_df.iterrows():
         d_optimality.append(np.nan)
         a_optimality.append(np.nan)
         pseudo_a_optimality.append(np.nan)
+        pseudo_a_optimality.append(np.nan)
 
 # Add metrics to dataframe
 results_df['D_optimality'] = d_optimality
 results_df['A_optimality'] = a_optimality
 results_df['pseudo_A_optimality'] = pseudo_a_optimality
 
-# Find optimal values for each metric
+# Find optimal values for each metric (guard against empty valid sets)
 # D-optimality: maximize
 valid_d = results_df[results_df['D_optimality'].notna()].copy()
-best_d_idx = valid_d['D_optimality'].idxmax()
-best_d = valid_d.loc[best_d_idx]
+if not valid_d.empty:
+    best_d_idx = valid_d['D_optimality'].idxmax()
+    best_d = valid_d.loc[best_d_idx]
+else:
+    best_d = None
 
 # A-optimality: minimize (trace of covariance)
 valid_a = results_df[results_df['A_optimality'].notna()].copy()
-best_a_idx = valid_a['A_optimality'].idxmin()
-best_a = valid_a.loc[best_a_idx]
+if not valid_a.empty:
+    best_a_idx = valid_a['A_optimality'].idxmin()
+    best_a = valid_a.loc[best_a_idx]
+else:
+    best_a = None
 
 # Pseudo-A-optimality: maximize (trace of FIM)
 valid_pa = results_df[results_df['pseudo_A_optimality'].notna()].copy()
-best_pa_idx = valid_pa['pseudo_A_optimality'].idxmax()
-best_pa = valid_pa.loc[best_pa_idx]
+if not valid_pa.empty:
+    best_pa_idx = valid_pa['pseudo_A_optimality'].idxmax()
+    best_pa = valid_pa.loc[best_pa_idx]
+else:
+    best_pa = None
 
 print(f"Valid results: {len(valid_d)}")
-print(f"\nBest D-optimality design:")
-print(f"  Hour1: {best_d['hour1']:.4f}, Hour2: {best_d['hour2']:.4f}")
-print(f"  log10(det): {best_d['D_optimality']:.4f}")
+if best_d is not None:
+    print(f"\nBest D-optimality design:")
+    print(f"  Hour1: {best_d['hour1']:.4f}, Hour2: {best_d['hour2']:.4f}")
+    print(f"  log10(det): {best_d['D_optimality']:.4f}")
+else:
+    print("\nBest D-optimality design: None (no valid D-optimality results)")
 
-print(f"\nBest A-optimality design (minimize trace of covariance):")
-print(f"  Hour1: {best_a['hour1']:.4f}, Hour2: {best_a['hour2']:.4f}")
-print(f"  log10(trace(cov)): {best_a['A_optimality']:.4f}")
+if best_a is not None:
+    print(f"\nBest A-optimality design (minimize trace of covariance):")
+    print(f"  Hour1: {best_a['hour1']:.4f}, Hour2: {best_a['hour2']:.4f}")
+    print(f"  log10(trace(cov)): {best_a['A_optimality']:.4f}")
+else:
+    print("\nBest A-optimality design: None (no valid A-optimality results)")
 
-print(f"\nBest Pseudo-A-optimality design (maximize trace of FIM):")
-print(f"  Hour1: {best_pa['hour1']:.4f}, Hour2: {best_pa['hour2']:.4f}")
-print(f"  log10(trace(FIM)): {best_pa['pseudo_A_optimality']:.4f}")
+if best_pa is not None:
+    print(f"\nBest Pseudo-A-optimality design (maximize trace of FIM):")
+    print(f"  Hour1: {best_pa['hour1']:.4f}, Hour2: {best_pa['hour2']:.4f}")
+    print(f"  log10(trace(FIM)): {best_pa['pseudo_A_optimality']:.4f}")
+else:
+    print("\nBest Pseudo-A-optimality design: None (no valid pseudo-A results)")
 
 
 # Create the plots

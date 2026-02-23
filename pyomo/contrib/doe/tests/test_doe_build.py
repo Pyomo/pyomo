@@ -28,6 +28,9 @@ if scipy_available:
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
     )
+    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+        RooneyBieglerMultiExperiment,
+    )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
@@ -654,6 +657,69 @@ class TestDoEObjectiveOptions(unittest.TestCase):
 
                 expected = 1.0 if i == j else 0.0
                 self.assertAlmostEqual(val, expected, places=4)
+
+
+class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
+    def test_get_experiment_input_vars_direct_and_fd_fallback(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+
+        model_direct = pyo.ConcreteModel()
+        model_direct.x = pyo.Var(initialize=2.0, bounds=(1.0, 10.0))
+        model_direct.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        model_direct.experiment_inputs[model_direct.x] = 2.0
+        vars_direct = doe_obj._get_experiment_input_vars(model_direct)
+        self.assertEqual([v.name for v in vars_direct], [model_direct.x.name])
+
+        model_fd = pyo.ConcreteModel()
+        model_fd.fd_scenario_blocks = pyo.Block([0])
+        model_fd.fd_scenario_blocks[0].x = pyo.Var(initialize=3.0, bounds=(1.0, 10.0))
+        model_fd.fd_scenario_blocks[0].experiment_inputs = pyo.Suffix(
+            direction=pyo.Suffix.LOCAL
+        )
+        model_fd.fd_scenario_blocks[0].experiment_inputs[
+            model_fd.fd_scenario_blocks[0].x
+        ] = 3.0
+        vars_fd = doe_obj._get_experiment_input_vars(model_fd)
+        self.assertEqual(
+            [v.name for v in vars_fd], [model_fd.fd_scenario_blocks[0].x.name]
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_multi_experiment_structure_and_results(self):
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+
+        doe_obj = DesignOfExperiments(
+            experiment_list=[
+                RooneyBieglerMultiExperiment(hour=2.0),
+                RooneyBieglerMultiExperiment(hour=4.0),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=solver,
+        )
+        doe_obj.optimize_experiments()
+
+        scenario_block = doe_obj.model.param_scenario_blocks[0]
+        self.assertTrue(hasattr(scenario_block, "symmetry_breaking_s0_exp1"))
+        self.assertEqual(len(list(scenario_block.exp_blocks.keys())), 2)
+
+        scenario_result = doe_obj.results["Scenarios"][0]
+        self.assertEqual(doe_obj.results["Initialization Method"], "none")
+        self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 2)
+        self.assertEqual(len(scenario_result["Experiments"]), 2)
+        self.assertEqual(len(doe_obj.results["Experiment Design Names"]), 1)
+        self.assertEqual(len(doe_obj.results["Unknown Parameter Names"]), 2)
+
+        # hour of exp[0] should be <= hour of exp[1] due to symmetry breaking
+        h0 = scenario_result["Experiments"][0]["Experiment Design"][0]
+        h1 = scenario_result["Experiments"][1]["Experiment Design"][0]
+        self.assertLessEqual(h0, h1)
 
 
 if __name__ == "__main__":
