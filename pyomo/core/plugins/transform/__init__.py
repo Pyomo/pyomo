@@ -23,4 +23,5 @@ from pyomo.core.plugins.transform import (
     scaling,
     logical_to_linear,
     lp_dual,
+    kkt,
 )
