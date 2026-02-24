@@ -1,4 +1,11 @@
-
+# ____________________________________________________________________________________
+#
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 
 from pyomo.opt import TerminationCondition
@@ -18,6 +25,7 @@ from pyomo.environ import (
     minimize,
     value,
 )
+
 required_nlp_solvers = 'ipopt'
 required_mip_solvers = ['cplex_persistent', 'gurobi_persistent']
 available_mip_solvers = [
@@ -46,10 +54,10 @@ short_circuit_subsolvers_available = all(
     for s in short_circuit_required_solvers
 )
 
+
 @unittest.skipIf(
     not short_circuit_subsolvers_available,
-    'Required subsolvers %s are not available'
-    % (short_circuit_required_solvers,),
+    'Required subsolvers %s are not available' % (short_circuit_required_solvers,),
 )
 class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
     def test_no_discrete_decisions_short_circuit_loads_values(self):
@@ -92,8 +100,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
         )
         obj_val = value(m.objective.expr, exception=False)
         self.assertIsNotNone(
-            obj_val,
-            "Objective evaluates to None; model variables were not populated",
+            obj_val, "Objective evaluates to None; model variables were not populated"
         )
         # Sanity check on the solution (y is fixed to 0, so x >= 1)
         self.assertGreaterEqual(m.x.value, 1.0 - 1e-6)
@@ -122,8 +129,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
 
         self.assertIsNotNone(results)
         self.assertEqual(
-            results.solver.termination_condition,
-            TerminationCondition.infeasible,
+            results.solver.termination_condition, TerminationCondition.infeasible
         )
 
     def test_short_circuit_linear_model_uses_lp_path(self):
