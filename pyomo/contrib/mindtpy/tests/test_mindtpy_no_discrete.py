@@ -24,19 +24,6 @@ from pyomo.environ import (
 )
 
 required_nlp_solvers = 'ipopt'
-required_mip_solvers = ['cplex_persistent', 'gurobi_persistent']
-available_mip_solvers = [
-    s for s in required_mip_solvers if SolverFactory(s).available(False)
-]
-
-if (
-    SolverFactory(required_nlp_solvers).available(exception_flag=False)
-    and available_mip_solvers
-):
-    subsolvers_available = True
-else:
-    subsolvers_available = False
-
 # Open-source (or generally available) solver pair used by MindtPy tests that
 # don't require persistent commercial solvers.
 if SolverFactory('appsi_highs').available(exception_flag=False) and SolverFactory(
