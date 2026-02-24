@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 import logging
 
 import pyomo.common.unittest as unittest
@@ -22,8 +20,9 @@ from pyomo.solvers.plugins.solvers.xpress_persistent import XpressPersistent
 xpress_available = pyo.SolverFactory('xpress_persistent').available(False)
 
 
+@unittest.skipIf(not xpress_available, "xpress is not available")
+@unittest.pytest.mark.solver("xpress_persistent")
 class TestXpressPersistent(unittest.TestCase):
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_basics(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(-10, 10))
@@ -83,33 +82,24 @@ class TestXpressPersistent(unittest.TestCase):
         m.x.setlb(-5)
         m.x.setub(5)
         opt.update_var(m.x)
-        # a nice wrapper for xpress isn't implemented,
-        # so we'll do this directly
-        x_idx = opt._solver_model.getIndex(opt._pyomo_var_to_solver_var_map[m.x])
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        ub = []
-        opt._solver_model.getub(ub, x_idx, x_idx)
-        self.assertEqual(lb[0], -5)
-        self.assertEqual(ub[0], 5)
+        lb = opt._get_lb(m.x)
+        ub = opt._get_ub(m.x)
+        self.assertEqual(lb, -5)
+        self.assertEqual(ub, 5)
 
         m.x.fix(0)
         opt.update_var(m.x)
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        ub = []
-        opt._solver_model.getub(ub, x_idx, x_idx)
-        self.assertEqual(lb[0], 0)
-        self.assertEqual(ub[0], 0)
+        lb = opt._get_lb(m.x)
+        ub = opt._get_ub(m.x)
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, 0)
 
         m.x.unfix()
         opt.update_var(m.x)
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        ub = []
-        opt._solver_model.getub(ub, x_idx, x_idx)
-        self.assertEqual(lb[0], -5)
-        self.assertEqual(ub[0], 5)
+        lb = opt._get_lb(m.x)
+        ub = opt._get_ub(m.x)
+        self.assertEqual(lb, -5)
+        self.assertEqual(ub, 5)
 
         m.c2 = pyo.Constraint(expr=m.y >= m.x**2)
         opt.add_constraint(m.c2)
@@ -128,7 +118,6 @@ class TestXpressPersistent(unittest.TestCase):
         del m.z
         self.assertEqual(opt.get_xpress_attribute('cols'), 2)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_vartype_change(self):
         # test for issue #3565
         m = pyo.ConcreteModel()
@@ -141,19 +130,15 @@ class TestXpressPersistent(unittest.TestCase):
         m.x.fix(1)
         opt.update_var(m.x)
 
-        x_idx = opt._solver_model.getIndex(opt._pyomo_var_to_solver_var_map[m.x])
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        self.assertEqual(lb[0], 1)
+        lb = opt._get_lb(m.x)
+        self.assertEqual(lb, 1)
 
         m.x.domain = pyo.Binary
         opt.update_var(m.x)
 
-        lb = []
-        opt._solver_model.getlb(lb, x_idx, x_idx)
-        self.assertEqual(lb[0], 1)
+        lb = opt._get_lb(m.x)
+        self.assertEqual(lb, 1)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_qconstraint(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -172,7 +157,6 @@ class TestXpressPersistent(unittest.TestCase):
         opt.add_constraint(m.c1)
         self.assertEqual(opt.get_xpress_attribute('rows'), 1)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_lconstraint(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -191,7 +175,6 @@ class TestXpressPersistent(unittest.TestCase):
         opt.add_constraint(m.c2)
         self.assertEqual(opt.get_xpress_attribute('rows'), 1)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_sosconstraint(self):
         m = pyo.ConcreteModel()
         m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
@@ -210,7 +193,6 @@ class TestXpressPersistent(unittest.TestCase):
         opt.add_sos_constraint(m.c1)
         self.assertEqual(opt.get_xpress_attribute('sets'), 1)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_sosconstraint2(self):
         m = pyo.ConcreteModel()
         m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
@@ -228,7 +210,6 @@ class TestXpressPersistent(unittest.TestCase):
         opt.remove_sos_constraint(m.c2)
         self.assertEqual(opt.get_xpress_attribute('sets'), 1)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_var(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -249,7 +230,6 @@ class TestXpressPersistent(unittest.TestCase):
         opt.remove_var(m.x)
         self.assertEqual(opt.get_xpress_attribute('cols'), 1)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_column(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(within=pyo.NonNegativeReals)
@@ -269,7 +249,6 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 0.5)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_column_exceptions(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -319,7 +298,6 @@ class TestXpressPersistent(unittest.TestCase):
         # var already in solver model
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1])
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     @unittest.skipIf(
         xpd.xpress_available and xpd.xpress.__version__ == '9.8.0',
         "Xpress 9.8 always runs global optimizer",
@@ -355,7 +333,6 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertGreater(m.x2.value, 0.0)
         self.assertGreater(m.x3.value, 0.0)
 
-    @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_nonconvexqp_infeasible(self):
         """Test non-convex QP which xpress_direct should prove infeasible."""
         m = pyo.ConcreteModel()
@@ -378,6 +355,9 @@ class TestXpressPersistent(unittest.TestCase):
             results.solver.termination_condition, TerminationCondition.infeasible
         )
 
+
+@unittest.pytest.mark.solver("xpress_persistent")
+class TestXpressPersistentMock(unittest.TestCase):
     def test_available(self):
         class mock_xpress:
             def __init__(self, importable, initable):
