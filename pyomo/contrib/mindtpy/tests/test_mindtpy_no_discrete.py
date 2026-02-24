@@ -136,4 +136,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
             )
 
         self.assertIsNotNone(results)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
         self.assertAlmostEqual(m.x.value, 1.0, places=4)
