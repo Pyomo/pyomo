@@ -11,9 +11,6 @@
 from pyomo.opt import TerminationCondition
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
-
-
 from pyomo.environ import (
     Binary,
     ConcreteModel,
