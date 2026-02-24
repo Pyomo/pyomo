@@ -394,9 +394,8 @@ class _MindtPyAlgorithm:
         # explicit bounds, infer them from the objective value. For a direct
         # continuous optimal solve, primal==dual.
         if (
-            (lb is None or ub is None)
-            and self.results.solver.termination_condition == tc.optimal
-        ):
+            lb is None or ub is None
+        ) and self.results.solver.termination_condition == tc.optimal:
             obj_val = value(obj.expr, exception=False)
             if obj_val is not None:
                 if lb is None:
