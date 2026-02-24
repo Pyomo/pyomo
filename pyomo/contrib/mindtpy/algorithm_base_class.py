@@ -395,7 +395,7 @@ class _MindtPyAlgorithm:
         # continuous optimal solve, primal==dual.
         if (
             (lb is None or ub is None)
-            and getattr(self.results.solver, 'termination_condition', None) == tc.optimal
+            and self.results.solver.termination_condition == tc.optimal
         ):
             obj_val = value(obj.expr, exception=False)
             if obj_val is not None:
