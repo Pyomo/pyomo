@@ -1279,10 +1279,7 @@ class DesignOfExperiments:
             with open(results_file, "w") as file:
                 json.dump(self.results, file, indent=2)
 
-    # -----------------------------------------------------------------------
     # LHS-initialization helpers
-    # -----------------------------------------------------------------------
-
     def _get_experiment_input_vars(self, exp_block):
         """
         Return the experiment-input Pyomo variable objects for an experiment
@@ -1375,8 +1372,9 @@ class DesignOfExperiments:
         n_params = len(model.unknown_parameters)
 
         # Override experiment input values
-        for var, val in zip(model.experiment_inputs.keys(), input_values):
-            var.set_value(val)
+        from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
+        update_model_from_suffix(suffix_obj=model.experiment_inputs, values=input_values)
+
 
         # Temporarily zero the prior so that seq_FIM = Q^T * 𝚺^{-1} * Q only
         saved_prior = self.prior_FIM
@@ -1437,18 +1435,13 @@ class DesignOfExperiments:
         lhs_timer = TicTocTimer()
         lhs_timer.tic(msg=None)
 
-        # ------------------------------------------------------------------
         # 1.  Get experiment-input bounds from the already-built model
-        # ------------------------------------------------------------------
         first_exp_block = (
             self.model.param_scenario_blocks[0]
             .exp_blocks[0]
         )
         exp_input_vars = self._get_experiment_input_vars(first_exp_block)
         n_inputs = len(exp_input_vars)
-        n_params = len(list(
-            self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
-        ))
 
         # Require explicit bounds on all experiment inputs
         missing = [
@@ -1461,7 +1454,7 @@ class DesignOfExperiments:
                 "LHS initialization requires explicit lower and upper bounds on "
                 "all experiment input variables. The following variables are "
                 f"missing bounds: {missing}. "
-                "Set bounds in your experiment's ``get_labeled_model()`` before "
+                "Set bounds in your experiment input variables before "
                 "calling ``optimize_experiments`` with "
                 "``initialization_method='lhs'``."
             )
@@ -1469,11 +1462,14 @@ class DesignOfExperiments:
         lb_vals = np.array([var.lb for var in exp_input_vars])
         ub_vals = np.array([var.ub for var in exp_input_vars])
 
-        # ------------------------------------------------------------------
+
         # 2.  Generate per-dimension 1-D LHS samples and take Cartesian product
-        # ------------------------------------------------------------------
         rng = np.random.default_rng(lhs_seed)
         per_dim_samples = []
+        # We draw a fresh integer seed for each input dimension from the
+        # master RNG so that every dimension gets an independent LHS sampler.
+        # Using the master rng with a fixed ``lhs_seed`` makes the entire set
+        # of per-dimension samples reproducible across runs.
         for i in range(n_inputs):
             dim_seed = int(rng.integers(0, 2**31))
             sampler = LatinHypercube(d=1, seed=dim_seed)
@@ -1503,9 +1499,7 @@ class DesignOfExperiments:
             f"({n_candidates * n_scenarios_per_candidate} sequential solver calls expected)."
         )
 
-        # ------------------------------------------------------------------
         # 3.  Evaluate FIM at every candidate design
-        # ------------------------------------------------------------------
         candidate_fims = []
         for pt_idx, pt in enumerate(candidate_points):
             fim = self._compute_fim_at_point_no_prior(
@@ -1528,9 +1522,7 @@ class DesignOfExperiments:
             f"LHS: completed FIM evaluations in {fim_eval_time:.1f}s."
         )
 
-        # ------------------------------------------------------------------
         # 4.  Enumerate combinations and score
-        # ------------------------------------------------------------------
         n_combinations = math.comb(n_candidates, n_exp)
         self.logger.info(
             f"LHS: scoring {n_combinations:,} combinations of {n_exp} experiments..."
