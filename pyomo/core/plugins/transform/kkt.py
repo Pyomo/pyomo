@@ -366,9 +366,7 @@ class NonLinearProgrammingKKT:
         """
 
         if (constraint is None) and (variable is None):
-            raise ValueError(
-                "Must provide 'constraint' or 'variable'."
-            )
+            raise ValueError("Must provide 'constraint' or 'variable'.")
         if (constraint is not None) and (variable is not None):
             raise ValueError(
                 "Cannot provide both 'constraint' and 'variable'. " "Provide only one."
@@ -404,7 +402,7 @@ class NonLinearProgrammingKKT:
                 if is_ranged:
                     raise ValueError(
                         f"Constraint '{constraint.name}' is a ranged constraint. "
-                        f"Provide as tuple: constraint=(constraint_obj, 'lb'|'ub')."
+                        "Provide as tuple: constraint=(constraint_obj, 'lb'|'ub')."
                     )
                 raise ValueError(
                     f"Constraint '{constraint.name}' does not exist on {model.name}."
