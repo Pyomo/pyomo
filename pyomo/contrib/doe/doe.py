@@ -25,6 +25,7 @@
 # ____________________________________________________________________________________
 
 from enum import Enum
+from itertools import combinations as _combinations, islice as _islice
 from itertools import permutations, product
 
 import concurrent.futures as _cf
@@ -32,6 +33,8 @@ import json
 import logging
 import math
 import os
+import threading
+import time
 import warnings
 
 from pyomo.common.dependencies import (
@@ -913,12 +916,13 @@ class DesignOfExperiments:
         # --- Apply experiment initialization (if requested) ---
         # This must be done AFTER the model is built but BEFORE the square solve
         # so that the solver uses the correct starting design.
+        lhs_init_diagnostics = None
         if initialization_method == "lhs":
             self.logger.info(
                 f"Applying LHS initialization with {lhs_n_samples} samples per "
                 f"experiment-input dimension..."
             )
-            best_initial_points = self._lhs_initialize_experiments(
+            best_initial_points, lhs_init_diagnostics = self._lhs_initialize_experiments(
                 lhs_n_samples=lhs_n_samples,
                 lhs_seed=lhs_seed,
                 n_exp=n_exp,
@@ -1317,6 +1321,20 @@ class DesignOfExperiments:
                 "lhs_n_samples": self.results.get("LHS Samples Per Dimension"),
                 "lhs_seed": self.results.get("LHS Seed"),
                 "best_points": self.results.get("LHS Best Initial Points"),
+                "lhs_parallel": lhs_parallel if initialization_method == "lhs" else None,
+                "lhs_combo_parallel": lhs_combo_parallel
+                if initialization_method == "lhs"
+                else None,
+                "lhs_n_workers": lhs_n_workers if initialization_method == "lhs" else None,
+                "lhs_combo_chunk_size": lhs_combo_chunk_size
+                if initialization_method == "lhs"
+                else None,
+                "lhs_combo_parallel_threshold": lhs_combo_parallel_threshold
+                if initialization_method == "lhs"
+                else None,
+                "lhs_max_wall_clock_time": lhs_max_wall_clock_time
+                if initialization_method == "lhs"
+                else None,
             },
             "modeling": {
                 "n_scenarios": self.results["Number of Scenarios"],
@@ -1341,6 +1359,7 @@ class DesignOfExperiments:
         self.results["diagnostics"] = {
             "symmetry_breaking": symmetry_breaking_info,
             "warnings": diagnostics_warnings,
+            "lhs_initialization": lhs_init_diagnostics,
         }
         self.results["scenarios"] = scenarios_structured
 
@@ -1376,6 +1395,23 @@ class DesignOfExperiments:
         # FD structure: inputs live on the base finite-difference scenario block
         return list(exp_block.fd_scenario_blocks[0].experiment_inputs.keys())
 
+    @staticmethod
+    def _evaluate_objective_for_option(fim_matrix, objective_option):
+        _maximize = {ObjectiveLib.determinant, ObjectiveLib.pseudo_trace}
+        _bad = -np.inf if objective_option in _maximize else np.inf
+
+        try:
+            if objective_option == ObjectiveLib.determinant:
+                return float(np.linalg.det(fim_matrix))
+            elif objective_option == ObjectiveLib.pseudo_trace:
+                return float(np.trace(fim_matrix))
+            elif objective_option == ObjectiveLib.trace:
+                return float(np.trace(np.linalg.inv(fim_matrix)))
+            else:  # minimum_eigenvalue, condition_number, zero, or unknown
+                return 0.0
+        except (np.linalg.LinAlgError, ValueError):
+            return _bad
+
     def _evaluate_objective_from_fim(self, fim_matrix):
         """
         Compute the scalar DoE objective from a numpy FIM matrix.
@@ -1394,20 +1430,7 @@ class DesignOfExperiments:
             LHS initialization is not supported for ``minimum_eigenvalue`` or
             ``condition_number``; those return 0.0.
         """
-        _maximize = {ObjectiveLib.determinant, ObjectiveLib.pseudo_trace}
-        _bad = -np.inf if self.objective_option in _maximize else np.inf
-
-        try:
-            if self.objective_option == ObjectiveLib.determinant:
-                return float(np.linalg.det(fim_matrix))
-            elif self.objective_option == ObjectiveLib.pseudo_trace:
-                return float(np.trace(fim_matrix))
-            elif self.objective_option == ObjectiveLib.trace:
-                return float(np.trace(np.linalg.inv(fim_matrix)))
-            else:  # minimum_eigenvalue, condition_number, zero, or unknown
-                return 0.0
-        except (np.linalg.LinAlgError, ValueError):
-            return _bad
+        return self._evaluate_objective_for_option(fim_matrix, self.objective_option)
 
     def _compute_fim_at_point_no_prior(self, experiment_index, input_values):
         """
@@ -1478,65 +1501,17 @@ class DesignOfExperiments:
         """
         Use per-dimension Latin Hypercube Sampling to identify a good initial
         experiment design for ``optimize_experiments``.
-
-        The algorithm:
-
-        1. For every experiment-input dimension generate ``lhs_n_samples``
-           1-D LHS samples within the variable bounds.
-        2. Take the Cartesian product of the per-dimension samples to obtain
-           ``lhs_n_samples ** n_inputs`` candidate experiment designs.
-        3. Evaluate the FIM (without the prior) at every candidate design via
-           the sequential finite-difference method.
-        4. Enumerate all ``C(n_candidates, n_exp)`` combinations of candidate
-           designs without replacement.  For each combination sum the
-           candidate FIMs and add the prior FIM, then evaluate the DoE
-           objective.
-        5. Return the combination that maximises / minimises the objective
-           (consistent with ``self.objective_option``).
-
-        Parameters
-        ----------
-        lhs_n_samples : int
-            Number of LHS samples per experiment-input dimension.
-        lhs_seed : int or None
-            Seed for the LHS random-number generator.
-        n_exp : int
-            Number of experiments to design simultaneously.
-        lhs_parallel : bool
-            If True, evaluate candidate-point FIMs in parallel.
-        lhs_combo_parallel : bool
-            If True, score exact combinations in parallel.
-        lhs_n_workers : int or None
-            Number of worker threads for parallel combo scoring.
-        lhs_combo_chunk_size : int
-            Number of combinations scored per worker task.
-        lhs_combo_parallel_threshold : int
-            Combination count threshold to activate combo parallelism.
-        lhs_max_wall_clock_time : float or None
-            Optional time budget in seconds for combo scoring.
-
-        Returns
-        -------
-        list of list
-            ``n_exp`` lists, each containing the initial values for every
-            experiment input of the corresponding experiment.
         """
-        from itertools import combinations as _combinations
-        from itertools import islice as _islice
         from scipy.stats.qmc import LatinHypercube
 
-        lhs_timer = TicTocTimer()
-        lhs_timer.tic(msg=None)
+        t_start = time.perf_counter()
 
         # 1.  Get experiment-input bounds from the already-built model
         first_exp_block = self.model.param_scenario_blocks[0].exp_blocks[0]
         exp_input_vars = self._get_experiment_input_vars(first_exp_block)
         n_inputs = len(exp_input_vars)
 
-        # Require explicit bounds on all experiment inputs
-        missing = [
-            var.name for var in exp_input_vars if var.lb is None or var.ub is None
-        ]
+        missing = [v.name for v in exp_input_vars if v.lb is None or v.ub is None]
         if missing:
             raise ValueError(
                 "LHS initialization requires explicit lower and upper bounds on "
@@ -1547,25 +1522,22 @@ class DesignOfExperiments:
                 "``initialization_method='lhs'``."
             )
 
-        lb_vals = np.array([var.lb for var in exp_input_vars])
-        ub_vals = np.array([var.ub for var in exp_input_vars])
+        lb_vals = np.array([v.lb for v in exp_input_vars])
+        ub_vals = np.array([v.ub for v in exp_input_vars])
 
         # 2.  Generate per-dimension 1-D LHS samples and take Cartesian product
         rng = np.random.default_rng(lhs_seed)
         per_dim_samples = []
-        # We draw a fresh integer seed for each input dimension from the
-        # master RNG so that every dimension gets an independent LHS sampler.
-        # Using the master rng with a fixed ``lhs_seed`` makes the entire set
-        # of per-dimension samples reproducible across runs.
         for i in range(n_inputs):
             dim_seed = int(rng.integers(0, 2**31))
             sampler = LatinHypercube(d=1, seed=dim_seed)
-            s_unit = sampler.random(n=lhs_n_samples).flatten()  # [0, 1)
+            s_unit = sampler.random(n=lhs_n_samples).flatten()
             s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
             per_dim_samples.append(s_scaled.tolist())
 
         candidate_points = list(product(*per_dim_samples))
-        n_candidates = len(candidate_points)  # = lhs_n_samples ** n_inputs
+        t_after_sampling = time.perf_counter()
+        n_candidates = len(candidate_points)
 
         if n_candidates > 10_000:
             warnings.warn(
@@ -1578,64 +1550,81 @@ class DesignOfExperiments:
             )
 
         if hasattr(first_exp_block, "fd_scenario_blocks"):
-            # If the FD structure is present, it means that each experiment design
-            # point will be evaluated across multiple FD scenarios (e.g. for central
-            # differences or to compute sensitivities)
             n_scenarios_per_candidate = len(list(first_exp_block.fd_scenario_blocks))
         else:
-            # If the FD structure is not present, we assume a single scenario per
-            # candidate design in symbolic mode (e.g. for automatic differentiation)
             n_scenarios_per_candidate = 1
         self.logger.info(
             f"LHS: evaluating FIM at {n_candidates} candidate designs "
             f"({n_candidates * n_scenarios_per_candidate} sequential solver calls expected)."
         )
 
-        if lhs_n_workers is None:
-            lhs_n_workers = max(1, min(os.cpu_count() or 1, 8))
+        resolved_workers = (
+            lhs_n_workers
+            if lhs_n_workers is not None
+            else max(1, min(os.cpu_count() or 1, 8))
+        )
+
+        _solver_fallback_lock = threading.Lock()
+        _solver_fallback_logged = [False]
 
         def _make_worker_solver():
-            # Build a fresh solver object per task to avoid shared-state races.
             solver_name = getattr(self.solver, "name", None)
             if solver_name is None:
+                with _solver_fallback_lock:
+                    if not _solver_fallback_logged[0]:
+                        self.logger.debug(
+                            "LHS parallel: solver has no 'name' attribute; worker DoE "
+                            "will use default solver settings."
+                        )
+                        _solver_fallback_logged[0] = True
                 return None
             worker_solver = pyo.SolverFactory(solver_name)
             if worker_solver is None:
+                with _solver_fallback_lock:
+                    if not _solver_fallback_logged[0]:
+                        self.logger.debug(
+                            f"LHS parallel: could not construct solver '{solver_name}'; "
+                            "worker DoE will use default solver settings."
+                        )
+                        _solver_fallback_logged[0] = True
                 return None
             try:
-                if hasattr(self.solver, "options") and hasattr(
-                    worker_solver, "options"
-                ):
+                if hasattr(self.solver, "options") and hasattr(worker_solver, "options"):
                     worker_solver.options.update(self.solver.options)
             except Exception:
                 pass
             return worker_solver
 
+        thread_state = threading.local()
+
         def _compute_candidate_fim(idx_pt):
             idx, pt = idx_pt
-            worker_solver = _make_worker_solver()
-            worker_doe = DesignOfExperiments(
-                experiment_list=self.experiment_list,
-                fd_formula=self.fd_formula.value,
-                step=self.step,
-                objective_option=self.objective_option.value,
-                use_grey_box_objective=self.use_grey_box,
-                scale_constant_value=self.scale_constant_value,
-                scale_nominal_param_value=self.scale_nominal_param_value,
-                prior_FIM=self.prior_FIM,
-                jac_initial=self.jac_initial,
-                fim_initial=self.fim_initial,
-                L_diagonal_lower_bound=self.L_diagonal_lower_bound,
-                solver=worker_solver,
-                grey_box_solver=self.grey_box_solver,
-                tee=False,
-                grey_box_tee=False,
-                get_labeled_model_args=self.get_labeled_model_args,
-                logger_level=logging.ERROR,
-                improve_cholesky_roundoff_error=self.improve_cholesky_roundoff_error,
-                _Cholesky_option=self.Cholesky_option,
-                _only_compute_fim_lower=self.only_compute_fim_lower,
-            )
+            worker_doe = getattr(thread_state, "doe", None)
+            if worker_doe is None:
+                worker_solver = _make_worker_solver()
+                worker_doe = DesignOfExperiments(
+                    experiment_list=self.experiment_list,
+                    fd_formula=self.fd_formula.value,
+                    step=self.step,
+                    objective_option=self.objective_option.value,
+                    use_grey_box_objective=self.use_grey_box,
+                    scale_constant_value=self.scale_constant_value,
+                    scale_nominal_param_value=self.scale_nominal_param_value,
+                    prior_FIM=self.prior_FIM,
+                    jac_initial=self.jac_initial,
+                    fim_initial=self.fim_initial,
+                    L_diagonal_lower_bound=self.L_diagonal_lower_bound,
+                    solver=worker_solver,
+                    grey_box_solver=self.grey_box_solver,
+                    tee=False,
+                    grey_box_tee=False,
+                    get_labeled_model_args=self.get_labeled_model_args,
+                    logger_level=logging.ERROR,
+                    improve_cholesky_roundoff_error=self.improve_cholesky_roundoff_error,
+                    _Cholesky_option=self.Cholesky_option,
+                    _only_compute_fim_lower=self.only_compute_fim_lower,
+                )
+                thread_state.doe = worker_doe
             fim = worker_doe._compute_fim_at_point_no_prior(
                 experiment_index=0, input_values=list(pt)
             )
@@ -1643,12 +1632,12 @@ class DesignOfExperiments:
 
         # 3.  Evaluate FIM at every candidate design
         candidate_fims = [None] * n_candidates
-        use_parallel_fim = lhs_parallel and lhs_n_workers > 1
+        use_parallel_fim = lhs_parallel and resolved_workers > 1
         if use_parallel_fim:
             self.logger.info(
-                f"LHS: using parallel candidate FIM evaluation with {lhs_n_workers} workers."
+                f"LHS: using parallel candidate FIM evaluation with {resolved_workers} workers."
             )
-            with _cf.ThreadPoolExecutor(max_workers=lhs_n_workers) as ex:
+            with _cf.ThreadPoolExecutor(max_workers=resolved_workers) as ex:
                 futures = [
                     ex.submit(_compute_candidate_fim, (pt_idx, pt))
                     for pt_idx, pt in enumerate(candidate_points)
@@ -1659,7 +1648,7 @@ class DesignOfExperiments:
                     candidate_fims[pt_idx] = fim
                     n_done += 1
                     if n_done % max(1, n_candidates // 10) == 0:
-                        elapsed = lhs_timer.toc(msg=None)
+                        elapsed = time.perf_counter() - t_start
                         frac_done = n_done / n_candidates
                         est_total = elapsed / frac_done if frac_done > 0 else 0
                         self.logger.info(
@@ -1672,10 +1661,8 @@ class DesignOfExperiments:
                     experiment_index=0, input_values=list(pt)
                 )
                 candidate_fims[pt_idx] = fim
-
-                # Periodic progress report
                 if (pt_idx + 1) % max(1, n_candidates // 10) == 0:
-                    elapsed = lhs_timer.toc(msg=None)
+                    elapsed = time.perf_counter() - t_start
                     frac_done = (pt_idx + 1) / n_candidates
                     est_total = elapsed / frac_done if frac_done > 0 else 0
                     self.logger.info(
@@ -1683,7 +1670,8 @@ class DesignOfExperiments:
                         f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
                     )
 
-        fim_eval_time = lhs_timer.toc(msg=None)
+        t_after_fim = time.perf_counter()
+        fim_eval_time = t_after_fim - t_after_sampling
         self.logger.info(f"LHS: completed FIM evaluations in {fim_eval_time:.1f}s.")
 
         # 4.  Enumerate combinations and score
@@ -1691,35 +1679,45 @@ class DesignOfExperiments:
         self.logger.info(
             f"LHS: scoring {n_combinations:,} combinations of {n_exp} experiments..."
         )
-
         if n_combinations > 100_000:
             self.logger.warning(
                 f"LHS: {n_combinations:,} combinations to evaluate. "
                 "This may be slow. Consider reducing ``lhs_n_samples``."
             )
 
-        # Prior FIM to add to every combination
         prior = self.prior_FIM.copy()
-
-        _maximize = {ObjectiveLib.determinant, ObjectiveLib.pseudo_trace}
-        is_maximize = self.objective_option in _maximize
+        _obj_option = self.objective_option
+        is_maximize = _obj_option in {
+            ObjectiveLib.determinant,
+            ObjectiveLib.pseudo_trace,
+        }
         best_obj = -np.inf if is_maximize else np.inf
-        best_combo = tuple(range(n_exp))  # fallback: first n_exp candidates
+        best_combo = None
+        timed_out = False
+        deadline = (
+            None
+            if lhs_max_wall_clock_time is None
+            else (t_start + lhs_max_wall_clock_time)
+        )
 
-        # Helper: score one chunk and return local best.
-        def _score_chunk(combo_chunk):
+        def _score_chunk(combo_chunk, deadline_ts):
             local_best_obj = -np.inf if is_maximize else np.inf
             local_best_combo = None
-            k = n_exp
+            local_timed_out = False
             for combo in combo_chunk:
-                if k == 2:
+                if deadline_ts is not None and time.perf_counter() > deadline_ts:
+                    local_timed_out = True
+                    break
+                if n_exp == 2:
                     i, j = combo
                     fim_total = prior + candidate_fims[i] + candidate_fims[j]
                 else:
                     fim_total = prior.copy()
                     for idx in combo:
                         fim_total = fim_total + candidate_fims[idx]
-                obj_val = self._evaluate_objective_from_fim(fim_total)
+                obj_val = self._evaluate_objective_for_option(
+                    fim_total, _obj_option
+                )
                 if is_maximize:
                     if obj_val > local_best_obj:
                         local_best_obj = obj_val
@@ -1728,38 +1726,39 @@ class DesignOfExperiments:
                     if obj_val < local_best_obj:
                         local_best_obj = obj_val
                         local_best_combo = combo
-            return local_best_obj, local_best_combo
-
-        def _elapsed():
-            return lhs_timer.toc(msg=None)
+            return local_best_obj, local_best_combo, local_timed_out
 
         use_parallel_combo = (
             lhs_combo_parallel
             and n_combinations >= lhs_combo_parallel_threshold
-            and lhs_n_workers > 1
+            and resolved_workers > 1
         )
 
         if use_parallel_combo:
             self.logger.info(
-                f"LHS: using parallel combination scoring with {lhs_n_workers} workers "
+                f"LHS: using parallel combination scoring with {resolved_workers} workers "
                 f"(chunk_size={lhs_combo_chunk_size})."
             )
             combo_iter = _combinations(range(n_candidates), n_exp)
-            max_pending = max(1, 2 * lhs_n_workers)
-            with _cf.ThreadPoolExecutor(max_workers=lhs_n_workers) as ex:
+            max_pending = max(1, 2 * resolved_workers)
+            with _cf.ThreadPoolExecutor(max_workers=resolved_workers) as ex:
                 pending = set()
                 while True:
                     while len(pending) < max_pending:
+                        if deadline is not None and time.perf_counter() > deadline:
+                            timed_out = True
+                            break
                         chunk = list(_islice(combo_iter, lhs_combo_chunk_size))
                         if not chunk:
                             break
-                        pending.add(ex.submit(_score_chunk, chunk))
+                        pending.add(ex.submit(_score_chunk, chunk, deadline))
                     if not pending:
                         break
 
                     done, pending = _cf.wait(pending, return_when=_cf.FIRST_COMPLETED)
                     for fut in done:
-                        local_obj, local_combo = fut.result()
+                        local_obj, local_combo, local_timed_out = fut.result()
+                        timed_out = timed_out or local_timed_out
                         if local_combo is None:
                             continue
                         if is_maximize:
@@ -1771,19 +1770,16 @@ class DesignOfExperiments:
                                 best_obj = local_obj
                                 best_combo = local_combo
 
-                    if (
-                        lhs_max_wall_clock_time is not None
-                        and _elapsed() > lhs_max_wall_clock_time
-                    ):
-                        self.logger.warning(
-                            f"LHS combination scoring reached time budget "
-                            f"({lhs_max_wall_clock_time}s). Returning best-so-far."
-                        )
+                    if deadline is not None and time.perf_counter() > deadline:
+                        timed_out = True
                         for fut in pending:
                             fut.cancel()
                         break
         else:
             for combo in _combinations(range(n_candidates), n_exp):
+                if deadline is not None and time.perf_counter() > deadline:
+                    timed_out = True
+                    break
                 if n_exp == 2:
                     i, j = combo
                     fim_total = prior + candidate_fims[i] + candidate_fims[j]
@@ -1791,7 +1787,9 @@ class DesignOfExperiments:
                     fim_total = prior.copy()
                     for idx in combo:
                         fim_total = fim_total + candidate_fims[idx]
-                obj_val = self._evaluate_objective_from_fim(fim_total)
+                obj_val = self._evaluate_objective_for_option(
+                    fim_total, _obj_option
+                )
                 if is_maximize:
                     if obj_val > best_obj:
                         best_obj = obj_val
@@ -1801,29 +1799,46 @@ class DesignOfExperiments:
                         best_obj = obj_val
                         best_combo = combo
 
-                if (
-                    lhs_max_wall_clock_time is not None
-                    and _elapsed() > lhs_max_wall_clock_time
-                ):
-                    self.logger.warning(
-                        f"LHS combination scoring reached time budget "
-                        f"({lhs_max_wall_clock_time}s). Returning best-so-far."
-                    )
-                    break
+        if timed_out:
+            self.logger.warning(
+                f"LHS combination scoring reached time budget "
+                f"({lhs_max_wall_clock_time}s). Returning best-so-far."
+            )
 
-        combo_time = lhs_timer.toc(msg=None)
+        t_after_combo = time.perf_counter()
+        combo_time = t_after_combo - t_after_fim
         self.logger.info(
             f"LHS: best {self.objective_option.value} objective = {best_obj:.6g}  "
             f"(combo scoring took {combo_time:.1f}s)."
         )
 
-        # 5.  Return one initial design per experiment
+        if best_combo is None:
+            self.logger.warning(
+                "LHS combination scoring ended before any combination was scored. "
+                "Falling back to the first n_exp candidate points."
+            )
+            best_combo = tuple(range(n_exp))
+
         best_initial_points = [list(candidate_points[i]) for i in best_combo]
         self.logger.info(
             f"LHS initial design: "
             + ", ".join(f"exp[{k}]={best_initial_points[k]}" for k in range(n_exp))
         )
-        return best_initial_points
+
+        lhs_diagnostics = {
+            "candidate_fim_mode": "thread" if use_parallel_fim else "serial",
+            "combo_mode": "thread" if use_parallel_combo else "serial",
+            "n_workers": resolved_workers,
+            "n_candidates": n_candidates,
+            "n_combinations": n_combinations,
+            "elapsed_sampling_s": t_after_sampling - t_start,
+            "elapsed_fim_eval_s": fim_eval_time,
+            "elapsed_combo_scoring_s": combo_time,
+            "elapsed_total_s": t_after_combo - t_start,
+            "timed_out": timed_out,
+            "time_budget_s": lhs_max_wall_clock_time,
+        }
+        return best_initial_points, lhs_diagnostics
 
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):

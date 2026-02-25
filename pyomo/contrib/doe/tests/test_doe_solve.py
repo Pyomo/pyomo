@@ -1123,12 +1123,12 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             with warnings.catch_warnings(record=True) as warn_cm:
                 warnings.simplefilter("always")
                 with patch(
-                    "itertools.combinations", return_value=iter([(0, 1)])
+                    "pyomo.contrib.doe.doe._combinations", return_value=iter([(0, 1)])
                 ):
                     with patch.object(
                         doe, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
                     ):
-                        best_points = doe._lhs_initialize_experiments(
+                        best_points, _ = doe._lhs_initialize_experiments(
                             lhs_n_samples=10001,
                             lhs_seed=11,
                             n_exp=2,
@@ -1152,7 +1152,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             return np.array([[x + 1.0, 0.0], [0.0, 2.0 * x + 1.0]])
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            points_serial = doe._lhs_initialize_experiments(
+            points_serial, _ = doe._lhs_initialize_experiments(
                 lhs_n_samples=4,
                 lhs_seed=123,
                 n_exp=2,
@@ -1160,7 +1160,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             )
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            points_parallel = doe._lhs_initialize_experiments(
+            points_parallel, _ = doe._lhs_initialize_experiments(
                 lhs_n_samples=4,
                 lhs_seed=123,
                 n_exp=2,
@@ -1190,20 +1190,46 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             autospec=True,
             side_effect=_fake_fim,
         ):
-            points_serial = doe._lhs_initialize_experiments(
+            points_serial, _ = doe._lhs_initialize_experiments(
                 lhs_n_samples=4,
                 lhs_seed=321,
                 n_exp=2,
                 lhs_parallel=False,
             )
 
-            points_parallel = doe._lhs_initialize_experiments(
+            points_parallel, _ = doe._lhs_initialize_experiments(
                 lhs_n_samples=4,
                 lhs_seed=321,
                 n_exp=2,
                 lhs_parallel=True,
                 lhs_n_workers=2,
             )
+
+        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
+        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
+        self.assertEqual(serial_norm, parallel_norm)
+
+    def test_lhs_parallel_fim_eval_real_path_smoke(self):
+        doe_serial = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe_serial, n_exp=2)
+        points_serial, _ = doe_serial._lhs_initialize_experiments(
+            lhs_n_samples=3,
+            lhs_seed=9,
+            n_exp=2,
+            lhs_parallel=False,
+            lhs_combo_parallel=False,
+        )
+
+        doe_parallel = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe_parallel, n_exp=2)
+        points_parallel, _ = doe_parallel._lhs_initialize_experiments(
+            lhs_n_samples=3,
+            lhs_seed=9,
+            n_exp=2,
+            lhs_parallel=True,
+            lhs_n_workers=2,
+            lhs_combo_parallel=False,
+        )
 
         serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
         parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
@@ -1218,7 +1244,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             return np.array([[x + 2.0, 0.0], [0.0, x + 1.0]])
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            points_serial = doe._lhs_initialize_experiments(
+            points_serial, _ = doe._lhs_initialize_experiments(
                 lhs_n_samples=5,
                 lhs_seed=99,
                 n_exp=2,
@@ -1226,7 +1252,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             )
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            points_parallel = doe._lhs_initialize_experiments(
+            points_parallel, _ = doe._lhs_initialize_experiments(
                 lhs_n_samples=5,
                 lhs_seed=99,
                 n_exp=2,
@@ -1248,14 +1274,18 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             x = float(input_values[0])
             return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
 
-        def _slow_obj(fim):
+        def _slow_obj(fim, objective_option):
             time.sleep(0.003)
             return float(np.trace(fim))
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            with patch.object(doe, "_evaluate_objective_from_fim", side_effect=_slow_obj):
+            with patch.object(
+                DesignOfExperiments,
+                "_evaluate_objective_for_option",
+                side_effect=_slow_obj,
+            ):
                 with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
-                    points = doe._lhs_initialize_experiments(
+                    points, _ = doe._lhs_initialize_experiments(
                         lhs_n_samples=6,
                         lhs_seed=7,
                         n_exp=2,
@@ -1265,6 +1295,61 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         self.assertEqual(len(points), 2)
         self.assertTrue(any("time budget" in msg for msg in log_cm.output))
+
+    def test_lhs_combo_scoring_parallel_timeout_returns_best_so_far(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+
+        def _slow_obj(fim, objective_option):
+            time.sleep(0.003)
+            return float(np.trace(fim))
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            with patch.object(
+                DesignOfExperiments,
+                "_evaluate_objective_for_option",
+                side_effect=_slow_obj,
+            ):
+                with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+                    points, _ = doe._lhs_initialize_experiments(
+                        lhs_n_samples=6,
+                        lhs_seed=12,
+                        n_exp=2,
+                        lhs_combo_parallel=True,
+                        lhs_n_workers=2,
+                        lhs_combo_chunk_size=5,
+                        lhs_combo_parallel_threshold=1,
+                        lhs_max_wall_clock_time=0.001,
+                    )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(any("time budget" in msg for msg in log_cm.output))
+
+    def test_optimize_experiments_lhs_diagnostics_populated(self):
+        doe = self._make_template_doe("pseudo_trace")
+        doe.optimize_experiments(
+            n_exp=2,
+            initialization_method="lhs",
+            lhs_n_samples=2,
+            lhs_seed=11,
+            lhs_parallel=True,
+            lhs_combo_parallel=True,
+            lhs_n_workers=2,
+            lhs_combo_chunk_size=2,
+            lhs_combo_parallel_threshold=1,
+            lhs_max_wall_clock_time=60.0,
+        )
+        lhs_diag = doe.results["diagnostics"]["lhs_initialization"]
+        self.assertIsNotNone(lhs_diag)
+        self.assertEqual(lhs_diag["candidate_fim_mode"], "thread")
+        self.assertEqual(lhs_diag["combo_mode"], "thread")
+        self.assertEqual(lhs_diag["n_workers"], 2)
+        self.assertFalse(lhs_diag["timed_out"])
+        self.assertGreater(lhs_diag["elapsed_total_s"], 0.0)
 
     def test_optimize_experiments_determinant_expected_values(self):
         # Match the multi-experiment example style (explicit experiment list)

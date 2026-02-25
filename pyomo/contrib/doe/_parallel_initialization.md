@@ -122,7 +122,7 @@ This file is a living design record.
 ### Milestone 4: Timeout and diagnostics
 - [x] Implement `lhs_max_wall_clock_time` handling
 - [x] Define behavior on timeout (best-so-far return)
-- [ ] Record diagnostics fields (mode, workers, timings, timeout/warnings)
+- [x] Record diagnostics fields (mode, workers, timings, timeout/warnings)
 
 ### Milestone 5: Tests
 - [x] Serial vs parallel exact-equivalence tests (small deterministic case)
@@ -138,5 +138,79 @@ This file is a living design record.
 
 ### Current State
 - Design finalized in this file: **Yes**
-- Code implementation started: **Yes (Milestones 1, 2, 3; partial 4)**
+- Code implementation started: **Yes (Milestones 1, 2, 3, 4)**
 - Test implementation started: **Yes (Milestone 5 in progress)**
+
+---
+
+## Parallel Initialization Feedback
+
+### Round 1 — Issues raised and resolution status
+
+| ID  | Severity | Summary                                                      | Status      |
+|-----|----------|--------------------------------------------------------------|-------------|
+| C-1 | Critical | `ThreadPool` for CPU-bound solvers; GIL prevents Stage A speedup | **Open (deferred)** — see below |
+| C-2 | Critical | Full `DesignOfExperiments` reconstructed per candidate       | **Fixed** — `threading.local()` worker reuse |
+| C-3 | Critical | `fut.cancel()` no-op on in-flight threads                    | **Substantially fixed** — `deadline_ts` passed into `_score_chunk`; cooperative check at top of inner loop; `fut.cancel()` now only applies to not-yet-started futures (correct semantics) |
+| H-1 | High     | Pre-timeout fallback returned unscored default combo         | **Fixed** — `best_combo = None` init; fallback only triggered when `None` |
+| H-2 | High     | Timeout check was post-score                                 | **Fixed** — deadline checked at TOP of serial loop body |
+| M-1 | Medium   | `_evaluate_objective_from_fim` called across threads via `self` | **Fixed** — extracted as `_evaluate_objective_for_option` `@staticmethod` |
+| M-2 | Medium   | `lhs_n_workers` mutated unconditionally                      | **Fixed** — `resolved_workers` local variable |
+| M-3 | Medium   | LHS diagnostics missing from `self.results`                  | **Fixed** — `lhs_init_diagnostics` dict wired into `results["diagnostics"]` |
+| L-1 | Low      | `k = n_exp` alias shadowing in `_score_chunk`                | **Fixed** — `n_exp == 2` used inline |
+| L-2 | Low      | `toc()` cumulative totals, not delta timings                 | **Fixed** — `time.perf_counter()` checkpoints per stage |
+| T-1 | Medium   | Worker DoE construction path untested                        | **Fixed** — `test_lhs_parallel_fim_eval_real_path_smoke` added |
+| T-2 | Medium   | Parallel combo timeout had no test                           | **Fixed** — `test_lhs_combo_scoring_parallel_timeout_returns_best_so_far` added |
+| T-3 | Low      | `itertools.combinations` patch target fragile to import hoisting | **Fixed** — `from itertools import combinations as _combinations` hoisted to module level; patch target is now `"pyomo.contrib.doe.doe._combinations"` |
+
+---
+
+### Round 2 — New findings after the above fixes
+
+| ID  | Severity | Summary                                                     | Status |
+|-----|----------|-------------------------------------------------------------|--------|
+| N-1 | Medium   | `_score_chunk` read `self.objective_option` implicitly      | **Fixed** — snapshot `_obj_option` before threaded scoring |
+| N-2 | Low      | `_lhs_initialize_experiments` had polymorphic return type   | **Fixed** — always returns `(best_initial_points, diagnostics)` |
+| N-3 | Medium   | real-path parallel smoke test too thin (`lhs_n_samples=2`)  | **Fixed** — raised to `lhs_n_samples=3` |
+| N-4 | Low      | diagnostics test only checked key presence                  | **Fixed** — now validates expected values |
+| N-5 | Low      | solver fallback in `_make_worker_solver` was silent         | **Fixed** — added debug fallback logging |
+
+---
+
+### Open Item — Stage A `ThreadPoolExecutor` vs `ProcessPoolExecutor`
+
+The current deferral rationale is: *"Moving to a process backend is deferred due to higher
+cross-platform complexity (pickling experiment objects, solver/process lifecycle)."*
+
+**Assessment after the `threading.local()` fix (C-2):**
+
+The fix in C-2 means the per-task overhead of a full `DesignOfExperiments` constructor is
+gone — each thread now creates one worker DoE on first use and reuses it.  The practical
+question is therefore: **how much real parallelism do threads give for this workload?**
+
+The workload per candidate is:
+1. `experiment.get_labeled_model().clone()` — pure Python, GIL-bound, ~10 ms range.
+2. `update_model_from_suffix` — pure Python, GIL-bound.
+3. `solver.solve(model)` — launches IPOPT as a `subprocess.Popen`.  The Python interpreter
+   *releases the GIL* while blocked on subprocess I/O.  This is typically the dominant cost
+   (seconds per solve).
+
+Because step 3 dominates and releases the GIL, **threads already provide meaningful
+parallelism for solver-heavy experiments**.  The remaining GIL-bound steps (1–2) serialize,
+but they are small relative to the solver call.  The deferred rationale is therefore
+**valid and reasonable for the current use case**.
+
+A `ProcessPoolExecutor` migration would be worthwhile if:
+- Pyomo model construction becomes a bottleneck (e.g. very large models with many constraints).
+- The experiment class is not automatically picklable (common for objects with Pyomo components),
+  which would require explicit `__getstate__`/`__setstate__` implementation.
+
+**Recommended path for deferral:**
+1. Measure the fraction of time in steps 1–2 vs step 3 on a representative experiment.
+   If > 10 % of wall-clock is in Python model setup with `lhs_n_workers > 1`, re-evaluate
+   the process switch.
+2. When switching, use the `ProcessPoolExecutor` `initializer=` pattern:
+   pass only the picklable experiment *factory* (callable + arguments) and reconstruct the
+   model inside each worker process, rather than pickling a live Pyomo `ConcreteModel`.
+3. Consider `multiprocessing.get_context("spawn")` explicitly for cross-platform safety
+   (avoids `fork`-unsafe patterns with IPOPT file handles on macOS/Linux).
