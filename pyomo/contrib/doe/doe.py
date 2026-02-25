@@ -55,6 +55,7 @@ if numpy_available and scipy_available:
     from pyomo.contrib.doe.grey_box_utilities import FIMExternalGreyBox
 
     from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+    from scipy.stats.qmc import LatinHypercube
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
@@ -62,6 +63,7 @@ from pyomo.contrib.doe.utils import (
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
 )
+from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 
 from pyomo.opt import SolverStatus
 
@@ -1462,8 +1464,6 @@ class DesignOfExperiments:
         n_params = len(model.unknown_parameters)
 
         # Override experiment input values
-        from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
-
         update_model_from_suffix(
             suffix_obj=model.experiment_inputs, values=input_values
         )
@@ -1502,8 +1502,6 @@ class DesignOfExperiments:
         Use per-dimension Latin Hypercube Sampling to identify a good initial
         experiment design for ``optimize_experiments``.
         """
-        from scipy.stats.qmc import LatinHypercube
-
         t_start = time.perf_counter()
 
         # 1.  Get experiment-input bounds from the already-built model
@@ -1557,6 +1555,14 @@ class DesignOfExperiments:
             f"LHS: evaluating FIM at {n_candidates} candidate designs "
             f"({n_candidates * n_scenarios_per_candidate} sequential solver calls expected)."
         )
+        if not hasattr(first_exp_block, "fd_scenario_blocks") or len(
+            first_exp_block.fd_scenario_blocks
+        ) == 0:
+            raise RuntimeError(
+                "_lhs_initialize_experiments requires finite-difference scenario "
+                "blocks on the experiment model. Ensure optimize_experiments is "
+                "using the sequential FIM path."
+            )
 
         resolved_workers = (
             lhs_n_workers
@@ -1565,28 +1571,29 @@ class DesignOfExperiments:
         )
 
         _solver_fallback_lock = threading.Lock()
-        _solver_fallback_logged = [False]
+        _solver_fallback_logged = False
 
         def _make_worker_solver():
+            nonlocal _solver_fallback_logged
             solver_name = getattr(self.solver, "name", None)
             if solver_name is None:
                 with _solver_fallback_lock:
-                    if not _solver_fallback_logged[0]:
+                    if not _solver_fallback_logged:
                         self.logger.debug(
                             "LHS parallel: solver has no 'name' attribute; worker DoE "
                             "will use default solver settings."
                         )
-                        _solver_fallback_logged[0] = True
+                        _solver_fallback_logged = True
                 return None
             worker_solver = pyo.SolverFactory(solver_name)
             if worker_solver is None:
                 with _solver_fallback_lock:
-                    if not _solver_fallback_logged[0]:
+                    if not _solver_fallback_logged:
                         self.logger.debug(
                             f"LHS parallel: could not construct solver '{solver_name}'; "
                             "worker DoE will use default solver settings."
                         )
-                        _solver_fallback_logged[0] = True
+                        _solver_fallback_logged = True
                 return None
             try:
                 if hasattr(self.solver, "options") and hasattr(worker_solver, "options"):
@@ -1596,39 +1603,54 @@ class DesignOfExperiments:
             return worker_solver
 
         thread_state = threading.local()
+        n_params = len(first_exp_block.fd_scenario_blocks[0].unknown_parameters)
 
         def _compute_candidate_fim(idx_pt):
             idx, pt = idx_pt
-            worker_doe = getattr(thread_state, "doe", None)
-            if worker_doe is None:
-                worker_solver = _make_worker_solver()
-                worker_doe = DesignOfExperiments(
-                    experiment_list=self.experiment_list,
-                    fd_formula=self.fd_formula.value,
-                    step=self.step,
-                    objective_option=self.objective_option.value,
-                    use_grey_box_objective=self.use_grey_box,
-                    scale_constant_value=self.scale_constant_value,
-                    scale_nominal_param_value=self.scale_nominal_param_value,
-                    prior_FIM=self.prior_FIM,
-                    jac_initial=self.jac_initial,
-                    fim_initial=self.fim_initial,
-                    L_diagonal_lower_bound=self.L_diagonal_lower_bound,
-                    solver=worker_solver,
-                    grey_box_solver=self.grey_box_solver,
-                    tee=False,
-                    grey_box_tee=False,
-                    get_labeled_model_args=self.get_labeled_model_args,
-                    logger_level=logging.ERROR,
-                    improve_cholesky_roundoff_error=self.improve_cholesky_roundoff_error,
-                    _Cholesky_option=self.Cholesky_option,
-                    _only_compute_fim_lower=self.only_compute_fim_lower,
+            try:
+                worker_doe = getattr(thread_state, "doe", None)
+                if worker_doe is None:
+                    if getattr(thread_state, "construction_failed", False):
+                        return idx, np.zeros((n_params, n_params))
+                    worker_solver = _make_worker_solver()
+                    worker_doe = DesignOfExperiments(
+                        experiment_list=self.experiment_list,
+                        fd_formula=self.fd_formula.value,
+                        step=self.step,
+                        objective_option=self.objective_option.value,
+                        use_grey_box_objective=self.use_grey_box,
+                        scale_constant_value=self.scale_constant_value,
+                        scale_nominal_param_value=self.scale_nominal_param_value,
+                        prior_FIM=self.prior_FIM,
+                        jac_initial=self.jac_initial,
+                        fim_initial=self.fim_initial,
+                        L_diagonal_lower_bound=self.L_diagonal_lower_bound,
+                        solver=worker_solver,
+                        grey_box_solver=self.grey_box_solver,
+                        tee=False,
+                        grey_box_tee=False,
+                        get_labeled_model_args=self.get_labeled_model_args,
+                        logger_level=logging.ERROR,
+                        improve_cholesky_roundoff_error=self.improve_cholesky_roundoff_error,
+                        _Cholesky_option=self.Cholesky_option,
+                        _only_compute_fim_lower=self.only_compute_fim_lower,
+                    )
+                    thread_state.doe = worker_doe
+                # LHS initialization evaluates candidate points against the
+                # canonical experiment template (experiment_list[0]).
+                fim = worker_doe._compute_fim_at_point_no_prior(
+                    experiment_index=0, input_values=list(pt)
                 )
-                thread_state.doe = worker_doe
-            fim = worker_doe._compute_fim_at_point_no_prior(
-                experiment_index=0, input_values=list(pt)
-            )
-            return idx, fim
+                return idx, fim
+            except Exception as exc:
+                if not getattr(thread_state, "construction_failed", False):
+                    thread_state.construction_failed = True
+                    self.logger.error(
+                        f"LHS: worker DoE construction/evaluation failed on thread "
+                        f"{threading.current_thread().name}: {exc}. "
+                        "Remaining candidates on this thread will use zero FIM."
+                    )
+                return idx, np.zeros((n_params, n_params))
 
         # 3.  Evaluate FIM at every candidate design
         candidate_fims = [None] * n_candidates
@@ -1694,6 +1716,7 @@ class DesignOfExperiments:
         best_obj = -np.inf if is_maximize else np.inf
         best_combo = None
         timed_out = False
+        _score_obj = DesignOfExperiments._evaluate_objective_for_option
         deadline = (
             None
             if lhs_max_wall_clock_time is None
@@ -1715,9 +1738,7 @@ class DesignOfExperiments:
                     fim_total = prior.copy()
                     for idx in combo:
                         fim_total = fim_total + candidate_fims[idx]
-                obj_val = self._evaluate_objective_for_option(
-                    fim_total, _obj_option
-                )
+                obj_val = _score_obj(fim_total, _obj_option)
                 if is_maximize:
                     if obj_val > local_best_obj:
                         local_best_obj = obj_val
@@ -1787,9 +1808,7 @@ class DesignOfExperiments:
                     fim_total = prior.copy()
                     for idx in combo:
                         fim_total = fim_total + candidate_fims[idx]
-                obj_val = self._evaluate_objective_for_option(
-                    fim_total, _obj_option
-                )
+                obj_val = _score_obj(fim_total, _obj_option)
                 if is_maximize:
                     if obj_val > best_obj:
                         best_obj = obj_val
@@ -1818,6 +1837,14 @@ class DesignOfExperiments:
                 "Falling back to the first n_exp candidate points."
             )
             best_combo = tuple(range(n_exp))
+            if n_exp == 2:
+                i, j = best_combo
+                fim_total = prior + candidate_fims[i] + candidate_fims[j]
+            else:
+                fim_total = prior.copy()
+                for idx in best_combo:
+                    fim_total = fim_total + candidate_fims[idx]
+            best_obj = float(_score_obj(fim_total, _obj_option))
 
         best_initial_points = [list(candidate_points[i]) for i in best_combo]
         self.logger.info(
@@ -1837,6 +1864,7 @@ class DesignOfExperiments:
             "elapsed_total_s": t_after_combo - t_start,
             "timed_out": timed_out,
             "time_budget_s": lhs_max_wall_clock_time,
+            "best_obj": best_obj,
         }
         return best_initial_points, lhs_diagnostics
 

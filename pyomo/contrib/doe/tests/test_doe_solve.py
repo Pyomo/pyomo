@@ -1285,7 +1285,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                 side_effect=_slow_obj,
             ):
                 with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
-                    points, _ = doe._lhs_initialize_experiments(
+                    points, diag = doe._lhs_initialize_experiments(
                         lhs_n_samples=6,
                         lhs_seed=7,
                         n_exp=2,
@@ -1295,6 +1295,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         self.assertEqual(len(points), 2)
         self.assertTrue(any("time budget" in msg for msg in log_cm.output))
+        self.assertTrue(diag["timed_out"])
 
     def test_lhs_combo_scoring_parallel_timeout_returns_best_so_far(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -1315,7 +1316,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                 side_effect=_slow_obj,
             ):
                 with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
-                    points, _ = doe._lhs_initialize_experiments(
+                    points, diag = doe._lhs_initialize_experiments(
                         lhs_n_samples=6,
                         lhs_seed=12,
                         n_exp=2,
@@ -1328,6 +1329,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         self.assertEqual(len(points), 2)
         self.assertTrue(any("time budget" in msg for msg in log_cm.output))
+        self.assertTrue(diag["timed_out"])
 
     def test_optimize_experiments_lhs_diagnostics_populated(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -1350,6 +1352,94 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertEqual(lhs_diag["n_workers"], 2)
         self.assertFalse(lhs_diag["timed_out"])
         self.assertGreater(lhs_diag["elapsed_total_s"], 0.0)
+        self.assertIn("best_obj", lhs_diag)
+        self.assertIsInstance(lhs_diag["best_obj"], float)
+        self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
+        self.assertGreater(lhs_diag["best_obj"], 0.0)
+
+    def test_lhs_combo_scoring_n_exp_3_parallel_matches_serial(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=3)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, 0.5 * x + 2.0]])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_serial, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=5,
+                lhs_seed=1234,
+                n_exp=3,
+                lhs_combo_parallel=False,
+            )
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_parallel, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=5,
+                lhs_seed=1234,
+                n_exp=3,
+                lhs_combo_parallel=True,
+                lhs_n_workers=2,
+                lhs_combo_chunk_size=3,
+                lhs_combo_parallel_threshold=1,
+            )
+
+        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
+        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
+        self.assertEqual(serial_norm, parallel_norm)
+        self.assertEqual(len(points_serial), 3)
+
+    def test_lhs_combo_scoring_n_exp_3_matches_oracle(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=3)
+        lhs_n_samples = 5
+        lhs_seed = 2
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, 2.0 * x + 0.5]])
+
+        # Recreate the exact candidate points from LHS generation (independent
+        # oracle for combination scoring logic).
+        first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
+        exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
+        lb_vals = np.array([v.lb for v in exp_input_vars])
+        ub_vals = np.array([v.ub for v in exp_input_vars])
+        rng = np.random.default_rng(lhs_seed)
+        from scipy.stats.qmc import LatinHypercube
+
+        per_dim_samples = []
+        for i in range(len(exp_input_vars)):
+            dim_seed = int(rng.integers(0, 2**31))
+            sampler = LatinHypercube(d=1, seed=dim_seed)
+            s_unit = sampler.random(n=lhs_n_samples).flatten()
+            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
+            per_dim_samples.append(s_scaled.tolist())
+        candidate_points = list(product(*per_dim_samples))
+
+        # Oracle over all combinations of size 3.
+        fims = [_fake_fim(0, pt) for pt in candidate_points]
+        best_obj = -np.inf
+        best_combo = None
+        for combo in combinations(range(len(candidate_points)), 3):
+            fim_total = sum((fims[i] for i in combo), np.zeros((2, 2)))
+            obj = float(np.trace(fim_total))
+            if obj > best_obj:
+                best_obj = obj
+                best_combo = combo
+        expected_points = [list(candidate_points[i]) for i in best_combo]
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            got_points, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=lhs_n_samples,
+                lhs_seed=lhs_seed,
+                n_exp=3,
+                lhs_combo_parallel=False,
+            )
+
+        got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
+        exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(got_norm, exp_norm)
 
     def test_optimize_experiments_determinant_expected_values(self):
         # Match the multi-experiment example style (explicit experiment list)
