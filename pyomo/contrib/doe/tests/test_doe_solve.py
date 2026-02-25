@@ -11,6 +11,7 @@ import logging
 import os, os.path
 import subprocess
 import tempfile
+import time
 import warnings
 from itertools import combinations, product
 from glob import glob
@@ -1140,6 +1141,130 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertTrue(
             any("combinations to evaluate" in msg for msg in log_cm.output)
         )
+
+    def test_lhs_combo_parallel_matches_serial(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        # Use deterministic synthetic FIMs to isolate combo scorer behavior.
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, 2.0 * x + 1.0]])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_serial = doe._lhs_initialize_experiments(
+                lhs_n_samples=4,
+                lhs_seed=123,
+                n_exp=2,
+                lhs_combo_parallel=False,
+            )
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_parallel = doe._lhs_initialize_experiments(
+                lhs_n_samples=4,
+                lhs_seed=123,
+                n_exp=2,
+                lhs_combo_parallel=True,
+                lhs_n_workers=2,
+                lhs_combo_chunk_size=2,
+                lhs_combo_parallel_threshold=1,
+            )
+
+        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
+        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
+        self.assertEqual(serial_norm, parallel_norm)
+
+    def test_lhs_parallel_fim_eval_matches_serial(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        # Patch at class level so both serial path (self) and parallel worker
+        # DOE objects use the same deterministic synthetic FIM mapping.
+        def _fake_fim(self_obj, experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 0.5, 0.0], [0.0, 3.0 * x + 0.5]])
+
+        with patch.object(
+            DesignOfExperiments,
+            "_compute_fim_at_point_no_prior",
+            autospec=True,
+            side_effect=_fake_fim,
+        ):
+            points_serial = doe._lhs_initialize_experiments(
+                lhs_n_samples=4,
+                lhs_seed=321,
+                n_exp=2,
+                lhs_parallel=False,
+            )
+
+            points_parallel = doe._lhs_initialize_experiments(
+                lhs_n_samples=4,
+                lhs_seed=321,
+                n_exp=2,
+                lhs_parallel=True,
+                lhs_n_workers=2,
+            )
+
+        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
+        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
+        self.assertEqual(serial_norm, parallel_norm)
+
+    def test_lhs_combo_parallel_chunk_boundary_matches_serial(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 2.0, 0.0], [0.0, x + 1.0]])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_serial = doe._lhs_initialize_experiments(
+                lhs_n_samples=5,
+                lhs_seed=99,
+                n_exp=2,
+                lhs_combo_parallel=False,
+            )
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_parallel = doe._lhs_initialize_experiments(
+                lhs_n_samples=5,
+                lhs_seed=99,
+                n_exp=2,
+                lhs_combo_parallel=True,
+                lhs_n_workers=2,
+                lhs_combo_chunk_size=3,  # C(5,2)=10, non-divisible chunking
+                lhs_combo_parallel_threshold=1,
+            )
+
+        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
+        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
+        self.assertEqual(serial_norm, parallel_norm)
+
+    def test_lhs_combo_scoring_timeout_returns_best_so_far(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+
+        def _slow_obj(fim):
+            time.sleep(0.003)
+            return float(np.trace(fim))
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            with patch.object(doe, "_evaluate_objective_from_fim", side_effect=_slow_obj):
+                with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+                    points = doe._lhs_initialize_experiments(
+                        lhs_n_samples=6,
+                        lhs_seed=7,
+                        n_exp=2,
+                        lhs_combo_parallel=False,
+                        lhs_max_wall_clock_time=0.001,
+                    )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(any("time budget" in msg for msg in log_cm.output))
 
     def test_optimize_experiments_determinant_expected_values(self):
         # Match the multi-experiment example style (explicit experiment list)
