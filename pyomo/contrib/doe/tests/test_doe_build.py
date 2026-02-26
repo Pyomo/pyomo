@@ -589,7 +589,7 @@ class TestDoEObjectiveOptions(unittest.TestCase):
 
         for i, c in enumerate(params):
             for j, d in enumerate(params):
-                # cholesky_inv_imp: only defined for i >= j
+                # inverse constraint only exists for lower triangle (i >= j)
                 if i >= j:
                     self.assertIn(
                         (c, d),
@@ -603,7 +603,7 @@ class TestDoEObjectiveOptions(unittest.TestCase):
                         msg=f"Unexpected cholesky_inv_cons[{c},{d}]",
                     )
 
-                # cholesky_LLinv_imp: only defined for i >= j
+                # identity constraint only defined for lower triangle (i >= j)
                 if i >= j:
                     self.assertIn(
                         (c, d),

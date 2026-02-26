@@ -667,10 +667,15 @@ class DesignOfExperiments:
             If True, evaluate candidate-point FIMs in parallel during LHS
             initialization. Default: False.
         lhs_combo_parallel:
-            If True, score exact combinations in parallel using a thread pool.
+            If True, the scoring of Latin hypercube candidate combinations
+            (``C(n_candidates, n_exp)`` during ``initialization_method="lhs"``)
+            is split across a thread pool.  Each worker computes the scalar
+            objective derived from the FIM for its chunk of combinations.  The
+            flag has no effect unless ``initialization_method="lhs"`` and the
+            total number of combinations exceeds ``lhs_combo_parallel_threshold``.
             Default: False.
         lhs_n_workers:
-            Number of worker threads for combination scoring when
+            Number of worker threads for combination FIM metric when
             ``lhs_combo_parallel=True``. Default: ``None`` (auto-select).
         lhs_combo_chunk_size:
             Number of combinations scored per worker task. Default: 5000.
@@ -826,7 +831,8 @@ class DesignOfExperiments:
 
         if parameter_scenarios is None:
             n_param_scenarios = 1  # number of parameter scenarios
-            self.scenario_weights = [1.0]  # Single scenario, weight = 1
+            # Use an immutable tuple since weights are not intended to be modified
+            self.scenario_weights = (1.0,)  # Single scenario, weight = 1
         else:
             # TODO: Add parameter scenarios when incorporating parametric uncertainty
             raise NotImplementedError(
@@ -901,16 +907,15 @@ class DesignOfExperiments:
                 )
             else:
                 # Use first experiment input as default symmetry breaking variable
-                # Note: experiment_inputs is validated earlier to be non-empty
                 sym_break_var = next(iter(first_exp_block.experiment_inputs))
                 symmetry_breaking_info["variable"] = sym_break_var.local_name
                 symmetry_breaking_info["source"] = "auto"
                 self.logger.warning(
-                    f"No symmetry breaking variable specified. Automatically using the first "
+                    "No symmetry breaking variable specified. Automatically using the first "
                     f"experiment input '{sym_break_var.local_name}' for ordering constraints. "
-                    f"To specify a different variable, add: "
-                    f"m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
-                    f"m.sym_break_cons[m.your_variable] = None"
+                    "To specify a different variable, add: "
+                    "m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
+                    "m.sym_break_cons[m.your_variable] = None"
                 )
                 diagnostics_warnings.append(
                     f"No symmetry breaking variable specified. Automatically using "
@@ -1528,6 +1533,41 @@ class DesignOfExperiments:
     def _symmetrize_lower_tri(mat):
         """Mirror lower-triangle FIM entries to the upper triangle."""
         return mat + mat.T - np.diag(np.diag(mat))
+
+    @staticmethod
+    def _make_cholesky_rule(fim_expr, L_expr, parameter_names):
+        """
+        Return a constraint rule that enforces ``fim_expr = L_expr * L_expr^T``
+        on the lower-triangular portion defined by ``parameter_names``.
+
+        The produced rule follows the Pyomo signature ``rule(block, p, q)``
+        but does **not** actually use `block` in its body; the two matrix
+        expressions are captured from the enclosing scope.
+
+        Parameters
+        ----------
+        fim_expr : Var-like
+            Indexed by ``(p, q)``; usually ``model.fim`` or
+            ``scenario.total_fim``.
+        L_expr : Var-like
+            Indexed by ``(p, q)``; the corresponding lower-triangular
+            Cholesky factors.
+        parameter_names : Set
+            Pyomo Set listing the parameter indices in order.
+        """
+        def rule(p, q):
+            p_idx = list(parameter_names).index(p)
+            q_idx = list(parameter_names).index(q)
+            if p_idx >= q_idx:
+                return fim_expr[p, q] == sum(
+                    L_expr[p, parameter_names.at(k + 1)]
+                    * L_expr[q, parameter_names.at(k + 1)]
+                    for k in range(q_idx + 1)
+                )
+            else:
+                return pyo.Constraint.Skip
+
+        return rule
 
     def _compute_fim_at_point_no_prior(self, experiment_index, input_values):
         """
@@ -2841,10 +2881,11 @@ class DesignOfExperiments:
         model.obj_cons = pyo.Block()
 
         # Assemble the FIM matrix. This is helpful for initialization!
+        # collect current FIM values in row-major order
         fim_vals = [
             model.fim[bu, un].value
-            for i, bu in enumerate(model.parameter_names)
-            for j, un in enumerate(model.parameter_names)
+            for bu in model.parameter_names
+            for un in model.parameter_names
         ]
         fim = np.array(fim_vals).reshape(
             len(model.parameter_names), len(model.parameter_names)
@@ -2880,23 +2921,10 @@ class DesignOfExperiments:
                     for j, d in enumerate(model.parameter_names):
                         model.L_inv[c, d].value = L_inv[i, j]
 
-        def cholesky_imp(b, c, d):
-            """
-            Calculate Cholesky L matrix using algebraic constraints
-            """
-            # If the row is greater than or equal to the column, we are in the
-            # lower triangle region of the L and FIM matrices.
-            # This region is where our equations are well-defined.
-            m = b.model()
-            if list(m.parameter_names).index(c) >= list(m.parameter_names).index(d):
-                return m.fim[c, d] == sum(
-                    m.L[c, m.parameter_names.at(k + 1)]
-                    * m.L[d, m.parameter_names.at(k + 1)]
-                    for k in range(list(m.parameter_names).index(d) + 1)
-                )
-            else:
-                # This is the empty half of L above the diagonal
-                return pyo.Constraint.Skip
+        # build a reusable Cholesky rule for the current model instance
+        cholesky_imp = self._make_cholesky_rule(
+            model.fim, model.L, model.parameter_names
+        )
 
         # If trace objective, need L inverse constraints
         if self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
@@ -3119,9 +3147,9 @@ class DesignOfExperiments:
 
         # Get weights from instance attribute (set in optimize_experiments) and
         # default to uniform weights if not provided
-        scenario_weights = getattr(
-            self, 'scenario_weights', [1.0 / n_scenarios] * n_scenarios
-        )
+        # retrieve weights; default to uniform tuple of appropriate length
+        default_weights = tuple([1.0 / n_scenarios] * n_scenarios)
+        scenario_weights = getattr(self, 'scenario_weights', default_weights)
 
         # Get parameter names from first experiment (same across all)
         parameter_names = model.param_scenario_blocks[0].exp_blocks[0].parameter_names
@@ -3191,19 +3219,13 @@ class DesignOfExperiments:
                         elif i == j and self.L_diagonal_lower_bound:
                             scenario.obj_cons.L[p, q].setlb(self.L_diagonal_lower_bound)
 
-                # Cholesky constraint: total_fim = L * L^T
-                def cholesky_rule(b, p, q):
-                    p_idx = list(parameter_names).index(p)
-                    q_idx = list(parameter_names).index(q)
-                    if p_idx >= q_idx:
-                        return scenario.total_fim[p, q] == sum(
-                            b.L[p, parameter_names.at(k + 1)]
-                            * b.L[q, parameter_names.at(k + 1)]
-                            for k in range(q_idx + 1)
-                        )
-                    else:
-                        # Skip upper triangle constraints since L is lower triangular
-                        return pyo.Constraint.Skip
+                # reuse shared helper to create the constraint rule
+                cholesky_rule = self._make_cholesky_rule(
+                    scenario.total_fim, scenario.obj_cons.L, parameter_names
+                )
+                scenario.obj_cons.cholesky_cons = pyo.Constraint(
+                    parameter_names, parameter_names, rule=cholesky_rule
+                )
 
                 scenario.obj_cons.cholesky_cons = pyo.Constraint(
                     parameter_names, parameter_names, rule=cholesky_rule
@@ -3227,50 +3249,23 @@ class DesignOfExperiments:
                         elif i == j and self.L_diagonal_lower_bound:
                             scenario.obj_cons.L[p, q].setlb(self.L_diagonal_lower_bound)
 
-                # Cholesky constraint: total_fim = L * L^T
-                def cholesky_rule(b, p, q):
-                    p_idx = list(parameter_names).index(p)
-                    q_idx = list(parameter_names).index(q)
-                    if p_idx >= q_idx:
-                        return scenario.total_fim[p, q] == sum(
-                            b.L[p, parameter_names.at(k + 1)]
-                            * b.L[q, parameter_names.at(k + 1)]
-                            for k in range(q_idx + 1)
-                        )
-                    else:
-                        return pyo.Constraint.Skip
+                # reuse shared helper to create the constraint rule
+                cholesky_rule = self._make_cholesky_rule(
+                    scenario.total_fim, scenario.obj_cons.L, parameter_names
+                )
+                scenario.obj_cons.cholesky_cons = pyo.Constraint(
+                    parameter_names, parameter_names, rule=cholesky_rule
+                )
 
-                # Cholesky inverse constraint: fim_inv = L_inv^T * L_inv
-                def cholesky_inv_rule(b, p, q):
-                    p_idx = list(parameter_names).index(p)
-                    q_idx = list(parameter_names).index(q)
-                    if p_idx >= q_idx:
-                        return b.fim_inv[p, q] == sum(
-                            b.L_inv[parameter_names.at(k + 1), p]
-                            * b.L_inv[parameter_names.at(k + 1), q]
-                            for k in range(p_idx, len(parameter_names))
-                        )
-                    else:
-                        return pyo.Constraint.Skip
+                # reuse helpers for the inverse and identity rules instead of
+                # re-implementing the logic in-place
+                cholesky_inv_rule = self._make_cholesky_inv_rule(
+                    scenario.obj_cons.fim_inv, scenario.obj_cons.L_inv, parameter_names
+                )
 
-                # L * L_inv = Identity constraint
-                def cholesky_LLinv_rule(b, p, q):
-                    param_list = list(parameter_names)
-                    idx_p = param_list.index(p)
-                    idx_q = param_list.index(q)
-                    # Only compute lower triangle
-                    if idx_p < idx_q:
-                        return pyo.Constraint.Skip
-
-                    target_value = 1 if idx_p == idx_q else 0
-                    return (
-                        sum(
-                            b.L[p, parameter_names.at(k + 1)]
-                            * b.L_inv[parameter_names.at(k + 1), q]
-                            for k in range(len(parameter_names))
-                        )
-                        == target_value
-                    )
+                cholesky_LLinv_rule = self._make_cholesky_LLinv_rule(
+                    scenario.obj_cons.L, scenario.obj_cons.L_inv, parameter_names
+                )
 
                 # Covariance trace calculation
                 def cov_trace_rule(b):
