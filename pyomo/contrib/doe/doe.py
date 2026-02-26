@@ -745,7 +745,7 @@ class DesignOfExperiments:
                 )
             if not isinstance(lhs_parallel, bool):
                 raise ValueError(
-                    "``lhs_parallel`` must be a bool, got {lhs_parallel!r}."
+                    f"``lhs_parallel`` must be a bool, got {lhs_parallel!r}."
                 )
             if not isinstance(lhs_combo_parallel, bool):
                 raise ValueError(
@@ -1135,7 +1135,22 @@ class DesignOfExperiments:
             results_message = res.solver.message
         elif type(res.solver.message) is bytes:
             results_message = res.solver.message.decode("utf-8")
+        else:
+            results_message = (
+                str(res.solver.message) if res.solver.message is not None else ""
+            )
         self.results["Termination Message"] = results_message
+
+        def _safe_metric(metric_name, compute_fn, scenario_index):
+            try:
+                val = float(compute_fn())
+                return val if np.isfinite(val) else float("nan")
+            except Exception as exc:
+                self.logger.warning(
+                    f"Scenario {scenario_index}: failed to compute {metric_name}: {exc}. "
+                    "Setting metric to NaN."
+                )
+                return float("nan")
 
         # Store results for each scenario
         self.results["Scenarios"] = []
@@ -1163,16 +1178,33 @@ class DesignOfExperiments:
             # Store the completed (symmetric) FIM
             scenario_results["Total FIM"] = total_fim_np.tolist()
 
-            # Statistics on the aggregated FIM (consistent with run_doe)
-            scenario_results["log10 A-opt"] = np.log10(
-                np.trace(np.linalg.inv(total_fim_np))
+            # Statistics on the aggregated FIM (consistent with run_doe), guarded
+            # against singular/indefinite matrices and numerical failures.
+            scenario_results["log10 A-opt"] = _safe_metric(
+                "log10 A-opt",
+                lambda: np.log10(np.trace(np.linalg.inv(total_fim_np))),
+                s,
             )
-            scenario_results["log10 pseudo A-opt"] = np.log10(np.trace(total_fim_np))
-            scenario_results["log10 D-opt"] = np.log10(np.linalg.det(total_fim_np))
-            scenario_results["log10 E-opt"] = np.log10(
-                min(np.linalg.eigvalsh(total_fim_np))
+            scenario_results["log10 pseudo A-opt"] = _safe_metric(
+                "log10 pseudo A-opt",
+                lambda: np.log10(np.trace(total_fim_np)),
+                s,
             )
-            scenario_results["log10 ME-opt"] = np.log10(np.linalg.cond(total_fim_np))
+            scenario_results["log10 D-opt"] = _safe_metric(
+                "log10 D-opt",
+                lambda: np.log10(np.linalg.det(total_fim_np)),
+                s,
+            )
+            scenario_results["log10 E-opt"] = _safe_metric(
+                "log10 E-opt",
+                lambda: np.log10(min(np.linalg.eigvalsh(total_fim_np))),
+                s,
+            )
+            scenario_results["log10 ME-opt"] = _safe_metric(
+                "log10 ME-opt",
+                lambda: np.log10(np.linalg.cond(total_fim_np)),
+                s,
+            )
 
             # Store unknown parameter values at scenario level (same for all experiments)
             # Use first experiment to get the values
@@ -1191,7 +1223,9 @@ class DesignOfExperiments:
                     "d_opt_log10": scenario_results["log10 D-opt"],
                     "e_opt_log10": scenario_results["log10 E-opt"],
                     "me_opt_log10": scenario_results["log10 ME-opt"],
-                    "condition_number": float(np.linalg.cond(total_fim_np)),
+                    "condition_number": _safe_metric(
+                        "condition_number", lambda: np.linalg.cond(total_fim_np), s
+                    ),
                 },
                 "unknown_parameters": None,
                 "experiments": [],
