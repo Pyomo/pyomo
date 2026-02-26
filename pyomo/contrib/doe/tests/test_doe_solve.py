@@ -1115,6 +1115,78 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertIn("names", payload)
         self.assertIn("scenarios", payload)
 
+    def test_optimize_experiments_is_reentrant_on_same_object(self):
+        doe = self._make_template_doe("pseudo_trace")
+        doe.optimize_experiments(n_exp=1)
+        first_design = doe.results["Scenarios"][0]["Experiments"][0]["Experiment Design"]
+
+        doe.optimize_experiments(n_exp=1)
+        second_design = doe.results["Scenarios"][0]["Experiments"][0]["Experiment Design"]
+
+        self.assertEqual(len(first_design), len(second_design))
+        self.assertIn("timing", doe.results)
+
+    def test_optimize_experiments_lhs_seed_requires_integer(self):
+        doe = self._make_template_doe("pseudo_trace")
+        with self.assertRaisesRegex(
+            ValueError, "``lhs_seed`` must be None or an integer"
+        ):
+            doe.optimize_experiments(
+                n_exp=2,
+                initialization_method="lhs",
+                lhs_n_samples=2,
+                lhs_seed=1.5,
+            )
+
+    def test_optimize_experiments_sym_break_var_must_be_input(self):
+        class _BadSymBreakExperiment:
+            def __init__(self, base_exp):
+                self._base_exp = base_exp
+
+            def get_labeled_model(self, **kwargs):
+                m = self._base_exp.get_labeled_model(**kwargs)
+                m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.sym_break_cons[next(iter(m.unknown_parameters.keys()))] = None
+                return m
+
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+        exp = _BadSymBreakExperiment(RooneyBieglerMultiExperiment(hour=2.0, y=10.0))
+        doe = DesignOfExperiments(
+            experiment_list=[exp],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=solver,
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "sym_break_cons.*must also be an experiment input variable"
+        ):
+            doe.optimize_experiments(n_exp=2)
+
+    def test_optimize_experiments_timing_includes_lhs_phase_separately(self):
+        doe = self._make_template_doe("pseudo_trace")
+        doe.optimize_experiments(
+            n_exp=2,
+            initialization_method="lhs",
+            lhs_n_samples=2,
+            lhs_seed=11,
+        )
+
+        timing = doe.results["timing"]
+        self.assertIn("lhs_initialization_s", timing)
+        self.assertGreaterEqual(timing["lhs_initialization_s"], 0.0)
+        self.assertAlmostEqual(
+            timing["total_s"],
+            timing["build_s"]
+            + timing["lhs_initialization_s"]
+            + timing["initialization_s"]
+            + timing["solve_s"],
+            places=8,
+        )
+
     def test_lhs_initialization_large_space_emits_warnings(self):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=2)

@@ -9,9 +9,12 @@ correctness issues, API concerns, and test gaps.
 - [x] OE-2: guard `results_message` when solver message is neither `str` nor `bytes`
 - [x] OE-5: fix missing `f` prefix in `lhs_parallel` validation error message
 - [x] OE-8: guard FIM metric computation (`A/D/E/ME` and structured `condition_number`) against numerical failures
-- [ ] OE-1: add explicit optimal-termination guards around square solve and main solve (deferred by decision)
-- [ ] OE-4: make `optimize_experiments` re-entrant on same object (open)
-- [ ] OE-7: change Cholesky jitter policy for strongly indefinite FIM (deferred by decision)
+- [x] OE-3: add JSON-safe serialization for numpy/enum payloads
+- [x] OE-4: make `optimize_experiments` re-entrant on same object
+- [x] OE-9: separate LHS preprocessing time from square-solve initialization time
+- [x] OE-13: validate `sym_break_cons` variable is an experiment input
+- [x] OE-16: validate `lhs_seed` type (`None` or `int`)
+- [x] OE-10: remove `dummy_obj` after square solve to avoid component reuse
 
 ---
 
@@ -238,32 +241,7 @@ this would not know why setting only block 0 is sufficient.  Add a comment:
 
 ## 6. Square Solve (Initialization Phase)
 
-### 6.1 No optimal-termination check
-
-```python
-self.model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
-self.solver.solve(self.model, tee=self.tee)
-initialization_time = sp_timer.toc(msg=None)
-```
-
-The result of the square solve is discarded.  If the solver returns infeasible or
-errors out, execution continues silently and the subsequent NLP solve starts from a
-potentially garbage state.  The same issue exists in `run_doe`.
-
-**Recommended pattern:**
-```python
-init_res = self.solver.solve(self.model, tee=self.tee, load_solutions=False)
-if pyo.check_optimal_termination(init_res):
-    self.model.solutions.load_from(init_res)
-else:
-    self.logger.warning(
-        f"Square-solve initialization failed: {init_res.solver.termination_condition}. "
-        "Proceeding with uninitialized values — main solve quality may be poor."
-    )
-    self.model.solutions.load_from(init_res)  # still load best available
-```
-
-### 6.2 `dummy_obj` left on the model permanently
+### 6.1 `dummy_obj` left on the model permanently
 
 ```python
 self.model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
@@ -287,29 +265,7 @@ This block (lines ~1000–1112) manually computes:
 - L (Cholesky), L_inv, fim_inv, cov_trace for the A-optimality (trace) objective
 - determinant, pseudo_trace for the respective objectives
 
-### 7.1 `np.linalg.cholesky` can raise on near-singular FIM
-
-```python
-L_vals = np.linalg.cholesky(total_fim_np + jitter * np.eye(...))
-```
-
-The jitter computation is sound, but if `total_fim_np` itself is all zeros (e.g., every
-candidate FIM evaluation failed and returned zero via the R-3 fallback), then
-`total_fim_np + jitter * I` is `jitter * I`, which is positive definite.  However,
-`jitter` is computed as `min(-min_eig + eps, eps)` — when `min_eig << 0` (highly
-indefinite), `jitter = eps = 1e-7`, which is insufficient.  The matrix must be
-`jitter * I` only when `min_eig < 0`; when `min_eig ≤ -1`, the jitter should be at
-least `|min_eig| + eps`.
-
-The correct formula is:
-```python
-if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-    jitter = abs(min_eig) + _SMALL_TOLERANCE_DEFINITENESS
-else:
-    jitter = 0.0
-```
-
-### 7.2 `only_compute_fim_lower` symmetrization applied inconsistently
+### 7.1 `only_compute_fim_lower` symmetrization applied inconsistently
 
 ```python
 if self.only_compute_fim_lower:
@@ -325,34 +281,7 @@ needs to change.
 
 ## 8. Main NLP Solve
 
-### 8.1 No optimal-termination guard before results collection
-
-```python
-res = self.solver.solve(self.model, tee=self.tee)
-...
-self.results["Scenarios"] = []
-for s in range(n_param_scenarios):
-    ...
-    scenario_results["log10 A-opt"] = np.log10(np.trace(np.linalg.inv(total_fim_np)))
-```
-
-If the solve returns infeasible or hits iteration limits, `total_fim_np` may be
-nearly-singular or garbage.  `np.linalg.inv` will either raise `LinAlgError` or return
-a numerically meaningless result.  Both `run_doe` and `optimize_experiments` have this
-same gap.
-
-**Fix:** Add a check and either skip metric computation or log a warning:
-```python
-res = self.solver.solve(self.model, tee=self.tee, load_solutions=False)
-if not pyo.check_optimal_termination(res):
-    self.logger.warning(
-        f"Solver returned non-optimal status: {res.solver.termination_condition}. "
-        "Results may be invalid."
-    )
-self.model.solutions.load_from(res)
-```
-
-### 8.2 `results_message` can be undefined
+### 8.1 `results_message` can be undefined
 
 ```python
 if type(res.solver.message) is str:
@@ -487,37 +416,24 @@ optimize_experiments()
 
 | ID   | Severity | Location                     | Summary                                                               | Status |
 |------|----------|------------------------------|-----------------------------------------------------------------------|--------|
-| OE-1 | High     | Square / main solve          | No `check_optimal_termination` guard; bad solves silently proceed     | Open   |
 | OE-2 | High     | Results collection           | `results_message` unbound when `res.solver.message` is `None`        | Fixed  |
-| OE-3 | High     | Results serialization        | `json.dump` raises on Pyomo enums and `np.float64` scalars            | Open   |
-| OE-4 | High     | Model reuse / re-entrant use | `self.model` mutated in place; second call raises `DeveloperError`    | Open   |
+| OE-3 | High     | Results serialization        | `json.dump` raises on Pyomo enums and `np.float64` scalars            | Fixed  |
+| OE-4 | High     | Model reuse / re-entrant use | `self.model` mutated in place; second call raises `DeveloperError`    | Fixed  |
 | OE-5 | Medium   | LHS arg validation           | f-string bug in `lhs_parallel` validation error message               | Fixed  |
 | OE-6 | Medium   | Symmetry breaking            | `logger.info` fires `n_exp-1` times with identical message per scenario | Open |
-| OE-7 | Medium   | Cholesky initialization      | Jitter formula insufficient for highly indefinite FIM (`min_eig << 0`) | Open  |
 | OE-8 | Medium   | FIM metric computation       | `inv`, `det`, `eigvalsh` can raise / return `nan` on bad FIM          | Fixed  |
-| OE-9 | Medium   | Timing                       | `initialization_time` includes model build + LHS + square solve       | Open   |
-| OE-10| Low      | Dummy objective              | `dummy_obj` deactivated but not deleted; breaks on second call        | Open   |
+| OE-9 | Medium   | Timing                       | `initialization_time` includes model build + LHS + square solve       | Fixed  |
+| OE-10| Low      | Dummy objective              | `dummy_obj` deactivated but not deleted; breaks on second call        | Fixed  |
 | OE-11| Low      | `parameter_scenarios`        | Parameter accepted but immediately raises `NotImplementedError`       | Open   |
 | OE-12| Low      | Results structure            | Dual flat+nested results layout; no deprecation path for flat keys    | Open   |
-| OE-13| Low      | Symmetry breaking            | `sym_break_cons` variable not validated to be an experiment input     | Open   |
+| OE-13| Low      | Symmetry breaking            | `sym_break_cons` variable not validated to be an experiment input     | Fixed  |
 | OE-14| Low      | `_maximize` set              | Defined inconsistently in two places; should be a class constant      | Open   |
 | OE-15| Low      | `only_compute_fim_lower`     | Symmetrization logic duplicated 2× in the method; extract to helper  | Open   |
-| OE-16| Low      | `lhs_seed` validation        | Float seeds accepted silently (only `int` should be valid)            | Open   |
+| OE-16| Low      | `lhs_seed` validation        | Float seeds accepted silently (only `int` should be valid)            | Fixed  |
 
 ---
 
 ## 12. Detailed Issue Descriptions
-
-### OE-1 · High · No optimal-termination check on square solve or main NLP solve
-
-Both solver calls proceed without checking `pyo.check_optimal_termination(res)`.  A
-solver failure (infeasible, iteration limit, numerical error) silently propagates into
-results collection where `np.linalg.inv(total_fim_np)` or `np.log10(...)` will raise or
-return `nan`.
-
-**Fix:** wrap both solver calls with a termination guard + warning.  Use
-`load_solutions=False` then `model.solutions.load_from(res)` to allow partial loading
-even when the solve is not optimal so remaining code continues to operate.
 
 ### OE-2 · High · `results_message` unbound when solver message is not str/bytes
 
@@ -529,6 +445,7 @@ even when the solve is not optimal so remaining code continues to operate.
 assignment.
 
 ### OE-3 · High · `json.dump` fails on Pyomo enum and numpy scalar types
+**Status:** Fixed on current branch.
 
 `res.solver.status` is `SolverStatus.ok` (a Python `str`-backed enum — actually fine),
 but `res.solver.termination_condition` is `TerminationCondition.optimal` (also str-backed).
@@ -539,6 +456,7 @@ not `float` and `json.JSONEncoder` raises `TypeError` for them.
 Pyomo enums.
 
 ### OE-4 · High · `self.model` mutated in place; calling twice raises `DeveloperError`
+**Status:** Fixed on current branch.
 
 `self.model = pyo.ConcreteModel()` in `__init__`, then
 `self.model.param_scenario_blocks = pyo.Block(...)` in `optimize_experiments`.  On a
@@ -567,20 +485,6 @@ The error message will literally say `{lhs_parallel!r}` rather than the actual v
 
 See Section 4.1.  Move the `logger.info` outside the `for k in range(1, n_exp)` loop.
 
-### OE-7 · Medium · Cholesky jitter insufficient for highly indefinite FIM
-
-The current formula `jitter = min(-min_eig + eps, eps)` caps jitter at `eps = 1e-7`.
-When `min_eig = -1000`, the matrix `total_fim_np + 1e-7 * I` is still almost maximally
-indefinite and `np.linalg.cholesky` will raise.
-
-**Fix:**
-```python
-if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-    jitter = abs(min_eig) + _SMALL_TOLERANCE_DEFINITENESS
-else:
-    jitter = 0.0
-```
-
 ### OE-8 · Medium · FIM metric computation can raise or return `nan`
 
 `np.linalg.inv(total_fim_np)` raises `LinAlgError` for singular FIM.
@@ -596,6 +500,7 @@ except np.linalg.LinAlgError:
 ```
 
 ### OE-9 · Medium · `initialization_time` measures too much
+**Status:** Fixed on current branch.
 
 `sp_timer.tic()` fires before model building, and `initialization_time = sp_timer.toc()`
 fires after the square solve.  So `initialization_time ≥ build_time + lhs_time + square_solve_time`.
@@ -605,8 +510,9 @@ implying it should only cover the square solve.
 **Fix:** reset the sub-timer between the LHS step and the square solve call.
 
 ### OE-10 · Low · `dummy_obj` deactivated but not deleted
+**Status:** Fixed on current branch.
 
-See Section 6.2.  Add `self.model.del_component("dummy_obj")` after deactivating.
+See Section 6.1.  Add `self.model.del_component("dummy_obj")` after deactivating.
 
 ### OE-11 · Low · `parameter_scenarios` accepted but always raises
 
@@ -621,6 +527,7 @@ Both exist simultaneously with no guidance.  Add a deprecation warning when acce
 flat keys, or document clearly which interface is primary.
 
 ### OE-13 · Low · `sym_break_cons` variable not validated
+**Status:** Fixed on current branch.
 
 If a user puts a non-experiment-input variable in `sym_break_cons`, the constraint
 `var_prev <= var_curr` is silently added but doesn't constrain the experiment design.
@@ -648,6 +555,7 @@ total_fim_np = total_fim_np + total_fim_np.T - np.diag(np.diag(total_fim_np))
 Extract to a static helper: `_symmetrize_lower_tri(mat: np.ndarray) -> np.ndarray`.
 
 ### OE-16 · Low · `lhs_seed` accepts float silently
+**Status:** Fixed on current branch.
 
 `numpy.random.default_rng(1.5)` does not raise but creates an RNG with
 implementation-defined behavior.  Add `isinstance(lhs_seed, int)` check alongside
@@ -659,12 +567,10 @@ the `is not None` guard.
 
 | Gap | Description |
 |-----|-------------|
-| Second `optimize_experiments` call on same DoE object | Would expose OE-4 (`dummy_obj` / `param_scenario_blocks` reuse crash) |
-| Solver infeasibility / iteration limit during square solve | Would expose OE-1 silent failure |
-| Solver infeasibility / iteration limit during main NLP solve | Would expose OE-1 + OE-2 `results_message` |
-| `results_file` output with real solver run | Would expose OE-3 JSON serialization failure |
+| Second `optimize_experiments` call on same DoE object | Covered (regression test added for OE-4 re-entrant behavior) |
+| `results_file` output with real solver run | Covered (regression test writes + loads JSON results) |
 | `parameter_scenarios != None` | Should verify `NotImplementedError` is raised |
-| `sym_break_cons` with a non-experiment-input variable | Would expose OE-13 silent mis-behavior |
+| `sym_break_cons` with a non-experiment-input variable | Covered (regression test now expects validation error) |
 | `n_exp=1` with `initialization_method="lhs"` | Edge case: `C(N,1)=N`; trivially best is highest-obj single candidate |
 | User-initialized mode + `initialization_method="lhs"` | Currently each experiment should sample from its own model, but `experiment_index=0` is hardcoded (V-4) |
 

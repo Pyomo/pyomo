@@ -83,7 +83,28 @@ class FiniteDifferenceStep(Enum):
     backward = "backward"
 
 
+class _DoEResultsJSONEncoder(json.JSONEncoder):
+    """JSON encoder for DoE result payloads with numpy/Pyomo objects."""
+
+    def default(self, obj):
+        if isinstance(obj, np.generic):
+            return obj.item()
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, Enum):
+            return str(obj)
+        return super().default(obj)
+
+
 class DesignOfExperiments:
+    _MAXIMIZE_OBJECTIVES = frozenset(
+        {
+            ObjectiveLib.determinant,
+            ObjectiveLib.pseudo_trace,
+            ObjectiveLib.minimum_eigenvalue,
+        }
+    )
+
     def __init__(
         self,
         experiment=None,
@@ -733,6 +754,11 @@ class DesignOfExperiments:
             )
 
         if initialization_method == "lhs":
+            if not _template_mode:
+                raise ValueError(
+                    "``initialization_method='lhs'`` is currently supported only in "
+                    "template mode (``len(experiment_list) == 1``)."
+                )
             if not scipy_available:
                 raise ImportError(
                     "LHS initialization requires scipy. "
@@ -742,6 +768,11 @@ class DesignOfExperiments:
                 raise ValueError(
                     "``lhs_n_samples`` must be a positive integer, "
                     f"got {lhs_n_samples!r}."
+                )
+            if lhs_seed is not None and not isinstance(lhs_seed, int):
+                raise ValueError(
+                    "``lhs_seed`` must be None or an integer, "
+                    f"got {lhs_seed!r}."
                 )
             if not isinstance(lhs_parallel, bool):
                 raise ValueError(
@@ -788,6 +819,8 @@ class DesignOfExperiments:
         self.logger.info(
             f"Beginning multi-experiment optimization with {n_exp} experiments."
         )
+        # Rebuild the multi-experiment model from a clean base each call.
+        self.model = pyo.ConcreteModel()
 
         if parameter_scenarios is None:
             n_param_scenarios = 1  # number of parameter scenarios
@@ -850,6 +883,15 @@ class DesignOfExperiments:
                     diagnostics_warnings.append(warning_msg)
 
                 sym_break_var = sym_break_var_list[0]
+                if not any(
+                    sym_break_var is inp
+                    for inp in first_exp_block.experiment_inputs.keys()
+                ):
+                    raise ValueError(
+                        "Variable selected in ``sym_break_cons`` must also be an "
+                        "experiment input variable. "
+                        f"Got non-input variable '{sym_break_var.name}'."
+                    )
                 symmetry_breaking_info["variable"] = sym_break_var.local_name
                 symmetry_breaking_info["source"] = "user"
                 self.logger.info(
@@ -900,10 +942,10 @@ class DesignOfExperiments:
                         con_name, pyo.Constraint(expr=var_prev <= var_curr)
                     )
 
-                    self.logger.info(
-                        f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
-                        f"using variable: {sym_break_var.name}"
-                    )
+                self.logger.info(
+                    f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
+                    f"using variable: {sym_break_var.name}"
+                )
 
         # Create aggregated objective for multi-experiment optimization
         self.create_multi_experiment_objective_function(self.model)
@@ -919,7 +961,10 @@ class DesignOfExperiments:
         # This must be done AFTER the model is built but BEFORE the square solve
         # so that the solver uses the correct starting design.
         lhs_init_diagnostics = None
+        lhs_initialization_time = 0.0
         if initialization_method == "lhs":
+            lhs_timer = TicTocTimer()
+            lhs_timer.tic(msg=None)
             self.logger.info(
                 f"Applying LHS initialization with {lhs_n_samples} samples per "
                 f"experiment-input dimension..."
@@ -945,8 +990,11 @@ class DesignOfExperiments:
                     )
                     for var, val in zip(exp_input_vars, best_initial_points[k]):
                         var.set_value(val)
+            lhs_initialization_time = lhs_timer.toc(msg=None)
 
         # ------------------------------------------------------
+        # Reset delta timing so initialization_time measures only square solve.
+        sp_timer.tic(msg=None)
 
         # Solve the square problem first to initialize the FIM and sensitivity constraints
         # Deactivate objective expression and objective constraints
@@ -982,6 +1030,7 @@ class DesignOfExperiments:
 
         # Deactivate dummy objective
         self.model.dummy_obj.deactivate()
+        self.model.del_component("dummy_obj")
 
         # Reactivate objective, obj_cons, and unfix experimental design decisions
         for s in range(n_param_scenarios):
@@ -1036,9 +1085,7 @@ class DesignOfExperiments:
 
                 # Complete FIM if only computing lower triangle
                 if self.only_compute_fim_lower:
-                    total_fim_np = (
-                        total_fim_np + total_fim_np.T - np.diag(np.diag(total_fim_np))
-                    )
+                    total_fim_np = self._symmetrize_lower_tri(total_fim_np)
 
                 # Check positive definiteness and add jitter if needed
                 min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
@@ -1171,9 +1218,7 @@ class DesignOfExperiments:
 
             # Complete FIM if only computing lower triangle
             if self.only_compute_fim_lower:
-                total_fim_np = (
-                    total_fim_np + total_fim_np.T - np.diag(np.diag(total_fim_np))
-                )
+                total_fim_np = self._symmetrize_lower_tri(total_fim_np)
 
             # Store the completed (symmetric) FIM
             scenario_results["Total FIM"] = total_fim_np.tolist()
@@ -1318,17 +1363,15 @@ class DesignOfExperiments:
         # Timing statistics
         self.results["Build Time"] = build_time
         self.results["Initialization Time"] = initialization_time
+        self.results["LHS Initialization Time"] = lhs_initialization_time
         self.results["Solve Time"] = solve_time
-        self.results["Wall-clock Time"] = build_time + initialization_time + solve_time
+        self.results["Wall-clock Time"] = (
+            build_time + lhs_initialization_time + initialization_time + solve_time
+        )
 
         # Structured result payload
-        _maximize = {
-            ObjectiveLib.determinant,
-            ObjectiveLib.pseudo_trace,
-            ObjectiveLib.minimum_eigenvalue,
-        }
         objective_sense = (
-            "maximize" if self.objective_option in _maximize else "minimize"
+            "maximize" if self.objective_option in self._MAXIMIZE_OBJECTIVES else "minimize"
         )
 
         self.results["run_info"] = {
@@ -1382,6 +1425,7 @@ class DesignOfExperiments:
         }
         self.results["timing"] = {
             "build_s": self.results["Build Time"],
+            "lhs_initialization_s": self.results["LHS Initialization Time"],
             "initialization_s": self.results["Initialization Time"],
             "solve_s": self.results["Solve Time"],
             "total_s": self.results["Wall-clock Time"],
@@ -1402,7 +1446,7 @@ class DesignOfExperiments:
         # Save results to file if requested
         if results_file is not None:
             with open(results_file, "w") as file:
-                json.dump(self.results, file, indent=2)
+                json.dump(self.results, file, indent=2, cls=_DoEResultsJSONEncoder)
 
     # LHS-initialization helpers
     def _get_experiment_input_vars(self, exp_block):
@@ -1433,8 +1477,11 @@ class DesignOfExperiments:
 
     @staticmethod
     def _evaluate_objective_for_option(fim_matrix, objective_option):
-        _maximize = {ObjectiveLib.determinant, ObjectiveLib.pseudo_trace}
-        _bad = -np.inf if objective_option in _maximize else np.inf
+        _bad = (
+            -np.inf
+            if objective_option in DesignOfExperiments._MAXIMIZE_OBJECTIVES
+            else np.inf
+        )
 
         try:
             if objective_option == ObjectiveLib.determinant:
@@ -1467,6 +1514,11 @@ class DesignOfExperiments:
             ``condition_number``; those return 0.0.
         """
         return self._evaluate_objective_for_option(fim_matrix, self.objective_option)
+
+    @staticmethod
+    def _symmetrize_lower_tri(mat):
+        """Mirror lower-triangle FIM entries to the upper triangle."""
+        return mat + mat.T - np.diag(np.diag(mat))
 
     def _compute_fim_at_point_no_prior(self, experiment_index, input_values):
         """
@@ -1743,10 +1795,7 @@ class DesignOfExperiments:
 
         prior = self.prior_FIM.copy()
         _obj_option = self.objective_option
-        is_maximize = _obj_option in {
-            ObjectiveLib.determinant,
-            ObjectiveLib.pseudo_trace,
-        }
+        is_maximize = _obj_option in self._MAXIMIZE_OBJECTIVES
         best_obj = -np.inf if is_maximize else np.inf
         best_combo = None
         timed_out = False
