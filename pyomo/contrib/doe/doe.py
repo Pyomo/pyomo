@@ -628,8 +628,10 @@ class DesignOfExperiments:
         ----------
         parameter_scenarios:
             `dataclass` of parameter scenarios to consider for the multi-experiment
-            optimization. This is a placeholder for future functionality to
-            incorporate parametric uncertainty. Default: None
+            optimization. This is currently unsupported; passing anything other
+            than ``None`` raises ``NotImplementedError``. It is a placeholder
+            for future functionality to incorporate parametric uncertainty.
+            Default: None
 
         results_file:
             string name of the file path to save the results to in the form
@@ -935,6 +937,13 @@ class DesignOfExperiments:
                         .exp_blocks[k]
                         .fd_scenario_blocks[0]
                     )
+                    if var_prev is None or var_curr is None:
+                        raise RuntimeError(
+                            "Failed to map symmetry breaking variable "
+                            f"'{sym_break_var.name}' onto scenario {s}, "
+                            f"experiment pair ({k - 1}, {k}). Ensure the variable "
+                            "exists on all experiment blocks with compatible labels."
+                        )
 
                     # Add symmetry breaking constraint
                     con_name = f"symmetry_breaking_s{s}_exp{k}"
@@ -1263,11 +1272,11 @@ class DesignOfExperiments:
                 "id": s,
                 "total_fim": total_fim_np.tolist(),
                 "metrics": {
-                    "a_opt_log10": scenario_results["log10 A-opt"],
-                    "pseudo_a_opt_log10": scenario_results["log10 pseudo A-opt"],
-                    "d_opt_log10": scenario_results["log10 D-opt"],
-                    "e_opt_log10": scenario_results["log10 E-opt"],
-                    "me_opt_log10": scenario_results["log10 ME-opt"],
+                    "log10_a_opt": scenario_results["log10 A-opt"],
+                    "log10_pseudo_a_opt": scenario_results["log10 pseudo A-opt"],
+                    "log10_d_opt": scenario_results["log10 D-opt"],
+                    "log10_e_opt": scenario_results["log10 E-opt"],
+                    "log10_me_opt": scenario_results["log10 ME-opt"],
                     "condition_number": _safe_metric(
                         "condition_number", lambda: np.linalg.cond(total_fim_np), s
                     ),

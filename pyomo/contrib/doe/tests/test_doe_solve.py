@@ -39,6 +39,7 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
+    from pyomo.contrib.doe.doe import ObjectiveLib
     from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
@@ -1186,6 +1187,47 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             + timing["solve_s"],
             places=8,
         )
+
+    def test_optimize_experiments_parameter_scenarios_unsupported(self):
+        doe = self._make_template_doe("pseudo_trace")
+        with self.assertRaises(NotImplementedError):
+            doe.optimize_experiments(parameter_scenarios={"p": [1.0]}, n_exp=1)
+
+    def test_optimize_experiments_symmetry_log_once_per_scenario(self):
+        doe = self._make_template_doe("pseudo_trace")
+        with self.assertLogs("pyomo.contrib.doe.doe", level="INFO") as log_cm:
+            doe.optimize_experiments(n_exp=3)
+
+        matching = [
+            m
+            for m in log_cm.output
+            if "Added 2 symmetry breaking constraints for scenario 0" in m
+        ]
+        self.assertEqual(len(matching), 1)
+
+    def test_optimize_experiments_symmetry_mapping_failure_raises(self):
+        doe = self._make_template_doe("pseudo_trace")
+        with patch("pyomo.contrib.doe.doe.pyo.ComponentUID.find_component_on") as patched:
+            patched.return_value = None
+            with self.assertRaisesRegex(
+                RuntimeError, "Failed to map symmetry breaking variable"
+            ):
+                doe.optimize_experiments(n_exp=2)
+
+    def test_maximize_objective_set_contents(self):
+        maximize = DesignOfExperiments._MAXIMIZE_OBJECTIVES
+        self.assertIn(ObjectiveLib.determinant, maximize)
+        self.assertIn(ObjectiveLib.pseudo_trace, maximize)
+        self.assertIn(ObjectiveLib.minimum_eigenvalue, maximize)
+        self.assertNotIn(ObjectiveLib.trace, maximize)
+        self.assertNotIn(ObjectiveLib.condition_number, maximize)
+        self.assertNotIn(ObjectiveLib.zero, maximize)
+
+    def test_symmetrize_lower_tri_helper(self):
+        m = np.array([[1.0, 0.0, 0.0], [2.0, 3.0, 0.0], [4.0, 5.0, 6.0]])
+        got = DesignOfExperiments._symmetrize_lower_tri(m)
+        expected = np.array([[1.0, 2.0, 4.0], [2.0, 3.0, 5.0], [4.0, 5.0, 6.0]])
+        self.assertTrue(np.allclose(got, expected, atol=1e-12))
 
     def test_lhs_initialization_large_space_emits_warnings(self):
         doe = self._make_template_doe("pseudo_trace")

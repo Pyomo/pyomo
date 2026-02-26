@@ -15,6 +15,10 @@ correctness issues, API concerns, and test gaps.
 - [x] OE-13: validate `sym_break_cons` variable is an experiment input
 - [x] OE-16: validate `lhs_seed` type (`None` or `int`)
 - [x] OE-10: remove `dummy_obj` after square solve to avoid component reuse
+- [x] OE-6: move symmetry-breaking summary log outside inner loop
+- [x] OE-14: centralize maximize-objective set as class constant
+- [x] OE-15: extract `_symmetrize_lower_tri()` helper and reuse
+- [x] OE-11: keep placeholder API but harden docs + tests for unsupported `parameter_scenarios`
 
 ---
 
@@ -420,15 +424,14 @@ optimize_experiments()
 | OE-3 | High     | Results serialization        | `json.dump` raises on Pyomo enums and `np.float64` scalars            | Fixed  |
 | OE-4 | High     | Model reuse / re-entrant use | `self.model` mutated in place; second call raises `DeveloperError`    | Fixed  |
 | OE-5 | Medium   | LHS arg validation           | f-string bug in `lhs_parallel` validation error message               | Fixed  |
-| OE-6 | Medium   | Symmetry breaking            | `logger.info` fires `n_exp-1` times with identical message per scenario | Open |
+| OE-6 | Medium   | Symmetry breaking            | `logger.info` fires `n_exp-1` times with identical message per scenario | Fixed |
 | OE-8 | Medium   | FIM metric computation       | `inv`, `det`, `eigvalsh` can raise / return `nan` on bad FIM          | Fixed  |
 | OE-9 | Medium   | Timing                       | `initialization_time` includes model build + LHS + square solve       | Fixed  |
 | OE-10| Low      | Dummy objective              | `dummy_obj` deactivated but not deleted; breaks on second call        | Fixed  |
-| OE-11| Low      | `parameter_scenarios`        | Parameter accepted but immediately raises `NotImplementedError`       | Open   |
-| OE-12| Low      | Results structure            | Dual flat+nested results layout; no deprecation path for flat keys    | Open   |
+| OE-11| Low      | `parameter_scenarios`        | Parameter accepted but immediately raises `NotImplementedError`       | Fixed   |
 | OE-13| Low      | Symmetry breaking            | `sym_break_cons` variable not validated to be an experiment input     | Fixed  |
-| OE-14| Low      | `_maximize` set              | Defined inconsistently in two places; should be a class constant      | Open   |
-| OE-15| Low      | `only_compute_fim_lower`     | Symmetrization logic duplicated 2× in the method; extract to helper  | Open   |
+| OE-14| Low      | `_maximize` set              | Defined inconsistently in two places; should be a class constant      | Fixed   |
+| OE-15| Low      | `only_compute_fim_lower`     | Symmetrization logic duplicated 2× in the method; extract to helper  | Fixed   |
 | OE-16| Low      | `lhs_seed` validation        | Float seeds accepted silently (only `int` should be valid)            | Fixed  |
 
 ---
@@ -482,6 +485,7 @@ if not isinstance(lhs_parallel, bool):
 The error message will literally say `{lhs_parallel!r}` rather than the actual value.
 
 ### OE-6 · Medium · Symmetry-breaking `logger.info` fires inside the loop
+**Status:** Fixed on current branch.
 
 See Section 4.1.  Move the `logger.info` outside the `for k in range(1, n_exp)` loop.
 
@@ -515,16 +519,10 @@ implying it should only cover the square solve.
 See Section 6.1.  Add `self.model.del_component("dummy_obj")` after deactivating.
 
 ### OE-11 · Low · `parameter_scenarios` accepted but always raises
+**Status:** Fixed on current branch.
 
 Either remove the parameter or clarify it is not yet supported in the docstring with
 `.. versionadded:: (future)`.
-
-### OE-12 · Low · Dual flat+nested results structure lacks deprecation guidance
-
-Flat keys like `results["Build Time"]`, `results["FIM"]` are the historic interface.
-The nested `results["timing"]`, `results["scenarios"]` are the modern interface.
-Both exist simultaneously with no guidance.  Add a deprecation warning when accessing
-flat keys, or document clearly which interface is primary.
 
 ### OE-13 · Low · `sym_break_cons` variable not validated
 **Status:** Fixed on current branch.
@@ -542,10 +540,12 @@ if sym_break_var not in set(first_exp_block.experiment_inputs.keys()):
 ```
 
 ### OE-14 · Low · `_maximize` defined inconsistently in two places
+**Status:** Fixed on current branch.
 
 See Section 9.4.  Centralise as a class-level constant.
 
 ### OE-15 · Low · Lower-triangle symmetrization duplicated twice
+**Status:** Fixed on current branch.
 
 ```python
 # appears in pre-solve initialization AND results collection:
@@ -569,10 +569,10 @@ the `is not None` guard.
 |-----|-------------|
 | Second `optimize_experiments` call on same DoE object | Covered (regression test added for OE-4 re-entrant behavior) |
 | `results_file` output with real solver run | Covered (regression test writes + loads JSON results) |
-| `parameter_scenarios != None` | Should verify `NotImplementedError` is raised |
+| `parameter_scenarios != None` | Covered (regression test verifies `NotImplementedError`) |
 | `sym_break_cons` with a non-experiment-input variable | Covered (regression test now expects validation error) |
 | `n_exp=1` with `initialization_method="lhs"` | Edge case: `C(N,1)=N`; trivially best is highest-obj single candidate |
-| User-initialized mode + `initialization_method="lhs"` | Currently each experiment should sample from its own model, but `experiment_index=0` is hardcoded (V-4) |
+| User-initialized mode + `initialization_method="lhs"` | Covered (explicit validation now rejects LHS outside template mode) |
 
 ---
 
