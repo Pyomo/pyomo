@@ -1554,7 +1554,7 @@ class DesignOfExperiments:
         parameter_names : Set
             Pyomo Set listing the parameter indices in order.
         """
-        def rule(p, q):
+        def rule(_b, p, q):
             p_idx = list(parameter_names).index(p)
             q_idx = list(parameter_names).index(q)
             if p_idx >= q_idx:
@@ -2928,10 +2928,10 @@ class DesignOfExperiments:
                     for j, d in enumerate(model.parameter_names):
                         model.L_inv[c, d].value = L_inv[i, j]
 
-        # build a reusable Cholesky rule for the current model instance
-        cholesky_imp = self._make_cholesky_rule(
-            model.fim, model.L, model.parameter_names
-        )
+        if self.objective_option == ObjectiveLib.trace and not self.Cholesky_option:
+            raise ValueError(
+                "objective_option='trace' currently only implemented with ``_Cholesky option=True``."
+            )
 
         # If trace objective, need L inverse constraints
         if self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
@@ -3051,7 +3051,9 @@ class DesignOfExperiments:
 
         if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
             model.obj_cons.cholesky_cons = pyo.Constraint(
-                model.parameter_names, model.parameter_names, rule=cholesky_imp
+                model.parameter_names,
+                model.parameter_names,
+                rule=self._make_cholesky_rule(model.fim, model.L, model.parameter_names),
             )
             model.objective = pyo.Objective(
                 expr=2 * sum(pyo.log10(model.L[j, j]) for j in model.parameter_names),
@@ -3070,17 +3072,15 @@ class DesignOfExperiments:
             )
 
         elif self.objective_option == ObjectiveLib.trace:
-            if not self.Cholesky_option:
-                raise ValueError(
-                    "objective_option='trace' currently only implemented with ``_Cholesky option=True``."
-                )
             # if Cholesky and trace, calculating
             # the OBJ with trace
             model.cov_trace = pyo.Var(
                 initialize=np.trace(np.linalg.inv(fim)), bounds=(small_number, None)
             )
             model.obj_cons.cholesky_cons = pyo.Constraint(
-                model.parameter_names, model.parameter_names, rule=cholesky_imp
+                model.parameter_names,
+                model.parameter_names,
+                rule=self._make_cholesky_rule(model.fim, model.L, model.parameter_names),
             )
             model.obj_cons.cholesky_inv_cons = pyo.Constraint(
                 model.parameter_names, model.parameter_names, rule=cholesky_inv_imp

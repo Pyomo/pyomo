@@ -1207,8 +1207,27 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
     def test_optimize_experiments_symmetry_mapping_failure_raises(self):
         doe = self._make_template_doe("pseudo_trace")
-        with patch("pyomo.contrib.doe.doe.pyo.ComponentUID.find_component_on") as patched:
-            patched.return_value = None
+        probe_model = doe.experiment_list[0].get_labeled_model(**doe.get_labeled_model_args)
+        sym_var_name = next(iter(probe_model.experiment_inputs.keys())).local_name
+        original_find = pyo.ComponentUID.find_component_on
+
+        def _fail_only_symmetry_mapping(cuid, block):
+            # Only fail the experiment-input mapping used for symmetry constraints.
+            # Keep all other ComponentUID lookups (e.g., FD parameter perturbations)
+            # untouched so we reach the intended RuntimeError path.
+            if (
+                cuid._cids[0][0] == sym_var_name
+                and hasattr(block, "experiment_inputs")
+                and block.index() == 0
+            ):
+                return None
+            return original_find(cuid, block)
+
+        with patch(
+            "pyomo.contrib.doe.doe.pyo.ComponentUID.find_component_on",
+            autospec=True,
+            side_effect=_fail_only_symmetry_mapping,
+        ):
             with self.assertRaisesRegex(
                 RuntimeError, "Failed to map symmetry breaking variable"
             ):
