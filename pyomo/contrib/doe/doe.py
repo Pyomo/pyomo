@@ -25,8 +25,7 @@
 # ____________________________________________________________________________________
 
 from enum import Enum
-from itertools import combinations as _combinations, islice as _islice
-from itertools import permutations, product
+from itertools import permutations, product, combinations as _combinations, islice as _islice
 
 import concurrent.futures as _cf
 import json
@@ -1637,6 +1636,8 @@ class DesignOfExperiments:
         Use per-dimension Latin Hypercube Sampling to identify a good initial
         experiment design for ``optimize_experiments``.
         """
+        # Use a monotonic wall-clock for progress estimates and deadline checks
+        # in both serial and threaded LHS evaluation loops.
         t_start = time.perf_counter()
 
         # 1.  Get experiment-input bounds from the already-built model
@@ -1659,6 +1660,8 @@ class DesignOfExperiments:
         ub_vals = np.array([v.ub for v in exp_input_vars])
 
         # 2.  Generate per-dimension 1-D LHS samples and take Cartesian product
+        # Split the user seed into per-dimension seeds so each 1-D LHS draw
+        # is independent while remaining reproducible for a fixed lhs_seed.
         rng = np.random.default_rng(lhs_seed)
         per_dim_samples = []
         for i in range(n_inputs):
@@ -1668,7 +1671,7 @@ class DesignOfExperiments:
             s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
             per_dim_samples.append(s_scaled.tolist())
 
-        candidate_points = list(product(*per_dim_samples))
+        candidate_points = tuple(product(*per_dim_samples))
         t_after_sampling = time.perf_counter()
         n_candidates = len(candidate_points)
 
@@ -1690,6 +1693,8 @@ class DesignOfExperiments:
             f"LHS: evaluating FIM at {n_candidates} candidate designs "
             f"({n_candidates * n_scenarios_per_candidate} sequential solver calls expected)."
         )
+        # Change the following block if we add support for LHS initialization with 
+        # non-FD structures (e.g. AD)
         if not hasattr(first_exp_block, "fd_scenario_blocks") or len(
             first_exp_block.fd_scenario_blocks
         ) == 0:
@@ -1705,6 +1710,7 @@ class DesignOfExperiments:
             else max(1, min(os.cpu_count() or 1, 8))
         )
 
+        # Track worker DoE construction failures to avoid repeated logging of the same issue
         _solver_fallback_lock = threading.Lock()
         _solver_fallback_logged = False
 
@@ -1745,8 +1751,9 @@ class DesignOfExperiments:
             try:
                 worker_doe = getattr(thread_state, "doe", None)
                 if worker_doe is None:
-                    if getattr(thread_state, "construction_failed", False):
-                        return idx, np.zeros((n_params, n_params))
+                    # Retry worker DoE construction on subsequent points even if a
+                    # previous point failed; transient failures should not disable
+                    # the rest of this thread's candidate evaluations.
                     worker_solver = _make_worker_solver()
                     worker_doe = DesignOfExperiments(
                         experiment_list=self.experiment_list,
@@ -1783,7 +1790,7 @@ class DesignOfExperiments:
                     self.logger.error(
                         f"LHS: worker DoE construction/evaluation failed on thread "
                         f"{threading.current_thread().name}: {exc}. "
-                        "Remaining candidates on this thread will use zero FIM."
+                        "Using zero FIM for this candidate and continuing."
                     )
                 return idx, np.zeros((n_params, n_params))
 
