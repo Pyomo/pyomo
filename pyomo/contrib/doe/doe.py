@@ -719,6 +719,13 @@ class DesignOfExperiments:
             is used as the initial point for the NLP solver. This can
             significantly improve solution quality when the problem has multiple
             local optima.
+
+        Solver options in LHS worker evaluations:
+            When ``lhs_parallel=True``, worker threads construct solver instances
+            using the same solver name and options as ``self.solver`` (when
+            available). Therefore, per-solve limits (e.g., iteration/time limits)
+            configured on the main DoE solver are propagated to candidate FIM
+            evaluations.
         """
         # Check results file name
         if results_file is not None:
@@ -1281,9 +1288,6 @@ class DesignOfExperiments:
                     "log10_d_opt": scenario_results["log10 D-opt"],
                     "log10_e_opt": scenario_results["log10 E-opt"],
                     "log10_me_opt": scenario_results["log10 ME-opt"],
-                    "condition_number": _safe_metric(
-                        "condition_number", lambda: np.linalg.cond(total_fim_np), s
-                    ),
                 },
                 "unknown_parameters": None,
                 "experiments": [],
@@ -1568,6 +1572,50 @@ class DesignOfExperiments:
 
         return rule
 
+    @staticmethod
+    def _make_cholesky_inv_rule(fim_inv_expr, L_inv_expr, parameter_names):
+        """
+        Return a rule that enforces ``fim_inv_expr = L_inv_expr^T * L_inv_expr``
+        over the lower-triangular index region.
+        """
+
+        def rule(_b, p, q):
+            p_idx = list(parameter_names).index(p)
+            q_idx = list(parameter_names).index(q)
+            if p_idx >= q_idx:
+                return fim_inv_expr[p, q] == sum(
+                    L_inv_expr[parameter_names.at(k + 1), p]
+                    * L_inv_expr[parameter_names.at(k + 1), q]
+                    for k in range(p_idx, len(parameter_names))
+                )
+            return pyo.Constraint.Skip
+
+        return rule
+
+    @staticmethod
+    def _make_cholesky_LLinv_rule(L_expr, L_inv_expr, parameter_names):
+        """
+        Return a rule that enforces ``L_expr * L_inv_expr = I`` over the
+        lower-triangular index region.
+        """
+
+        def rule(_b, p, q):
+            p_idx = list(parameter_names).index(p)
+            q_idx = list(parameter_names).index(q)
+            if p_idx < q_idx:
+                return pyo.Constraint.Skip
+            target = 1 if p_idx == q_idx else 0
+            return (
+                sum(
+                    L_expr[p, parameter_names.at(k + 1)]
+                    * L_inv_expr[parameter_names.at(k + 1), q]
+                    for k in range(len(parameter_names))
+                )
+                == target
+            )
+
+        return rule
+
     def _compute_fim_at_point_no_prior(self, experiment_index, input_values):
         """
         Compute the FIM (without the prior FIM contribution) for the given
@@ -1797,30 +1845,62 @@ class DesignOfExperiments:
         # 3.  Evaluate FIM at every candidate design
         candidate_fims = [None] * n_candidates
         use_parallel_fim = lhs_parallel and resolved_workers > 1
+        timed_out = False
+        deadline = (
+            None
+            if lhs_max_wall_clock_time is None
+            else (t_start + lhs_max_wall_clock_time)
+        )
         if use_parallel_fim:
             self.logger.info(
                 f"LHS: using parallel candidate FIM evaluation with {resolved_workers} workers."
             )
+            idx_iter = iter(enumerate(candidate_points))
+            max_pending = max(1, 2 * resolved_workers)
             with _cf.ThreadPoolExecutor(max_workers=resolved_workers) as ex:
-                futures = [
-                    ex.submit(_compute_candidate_fim, (pt_idx, pt))
-                    for pt_idx, pt in enumerate(candidate_points)
-                ]
+                pending = set()
                 n_done = 0
-                for fut in _cf.as_completed(futures):
-                    pt_idx, fim = fut.result()
-                    candidate_fims[pt_idx] = fim
-                    n_done += 1
-                    if n_done % max(1, n_candidates // 10) == 0:
-                        elapsed = time.perf_counter() - t_start
-                        frac_done = n_done / n_candidates
-                        est_total = elapsed / frac_done if frac_done > 0 else 0
-                        self.logger.info(
-                            f"  LHS FIM eval: {n_done}/{n_candidates} "
-                            f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
-                        )
+                while True:
+                    while len(pending) < max_pending:
+                        if deadline is not None and time.perf_counter() > deadline:
+                            timed_out = True
+                            break
+                        try:
+                            idx_pt = next(idx_iter)
+                        except StopIteration:
+                            break
+                        pending.add(ex.submit(_compute_candidate_fim, idx_pt))
+
+                    if not pending:
+                        break
+
+                    done_now, pending = _cf.wait(
+                        pending,
+                        timeout=0.1,
+                        return_when=_cf.FIRST_COMPLETED,
+                    )
+                    for fut in done_now:
+                        pt_idx, fim = fut.result()
+                        candidate_fims[pt_idx] = fim
+                        n_done += 1
+                        if n_done % max(1, n_candidates // 10) == 0:
+                            elapsed = time.perf_counter() - t_start
+                            frac_done = n_done / n_candidates
+                            est_total = elapsed / frac_done if frac_done > 0 else 0
+                            self.logger.info(
+                                f"  LHS FIM eval: {n_done}/{n_candidates} "
+                                f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
+                            )
+
+                    if timed_out:
+                        for fut in pending:
+                            fut.cancel()
+                        break
         else:
             for pt_idx, pt in enumerate(candidate_points):
+                if deadline is not None and time.perf_counter() > deadline:
+                    timed_out = True
+                    break
                 fim = self._compute_fim_at_point_no_prior(
                     experiment_index=0, input_values=list(pt)
                 )
@@ -1830,9 +1910,35 @@ class DesignOfExperiments:
                     frac_done = (pt_idx + 1) / n_candidates
                     est_total = elapsed / frac_done if frac_done > 0 else 0
                     self.logger.info(
-                        f"  LHS FIM eval: {pt_idx + 1}/{n_candidates} "
-                        f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
-                    )
+                            f"  LHS FIM eval: {pt_idx + 1}/{n_candidates} "
+                            f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
+                        )
+
+        computed_pairs = [
+            (pt, fim) for pt, fim in zip(candidate_points, candidate_fims) if fim is not None
+        ]
+        if not computed_pairs:
+            timed_out = True
+            computed_pairs = [
+                (candidate_points[0], np.zeros((n_params, n_params))),
+            ]
+
+        # If timeout stops FIM evaluation early, retain only scored candidates so
+        # downstream combination scoring does not use missing entries.
+        if len(computed_pairs) < n_candidates:
+            self.logger.warning(
+                "LHS candidate FIM evaluation reached time budget "
+                f"({lhs_max_wall_clock_time}s). Scored {len(computed_pairs)}/{n_candidates} "
+                "candidates; continuing with best available subset."
+            )
+            if len(computed_pairs) < n_exp:
+                first_pt, first_fim = computed_pairs[0]
+                computed_pairs.extend(
+                    (first_pt, first_fim.copy()) for _ in range(n_exp - len(computed_pairs))
+                )
+            candidate_points = tuple(pt for pt, _ in computed_pairs)
+            candidate_fims = [fim for _, fim in computed_pairs]
+            n_candidates = len(candidate_points)
 
         t_after_fim = time.perf_counter()
         fim_eval_time = t_after_fim - t_after_sampling
@@ -1854,13 +1960,7 @@ class DesignOfExperiments:
         is_maximize = _obj_option in self._MAXIMIZE_OBJECTIVES
         best_obj = -np.inf if is_maximize else np.inf
         best_combo = None
-        timed_out = False
         _score_obj = DesignOfExperiments._evaluate_objective_for_option
-        deadline = (
-            None
-            if lhs_max_wall_clock_time is None
-            else (t_start + lhs_max_wall_clock_time)
-        )
 
         def _score_chunk(combo_chunk, deadline_ts):
             local_best_obj = -np.inf if is_maximize else np.inf
@@ -1965,10 +2065,6 @@ class DesignOfExperiments:
 
         t_after_combo = time.perf_counter()
         combo_time = t_after_combo - t_after_fim
-        self.logger.info(
-            f"LHS: best {self.objective_option.value} objective = {best_obj:.6g}  "
-            f"(combo scoring took {combo_time:.1f}s)."
-        )
 
         if best_combo is None:
             self.logger.warning(
@@ -1984,6 +2080,16 @@ class DesignOfExperiments:
                 for idx in best_combo:
                     fim_total = fim_total + candidate_fims[idx]
             best_obj = float(_score_obj(fim_total, _obj_option))
+
+        best_obj_log10 = (
+            float(np.log10(best_obj))
+            if np.isfinite(best_obj) and best_obj > 0
+            else None
+        )
+        self.logger.info(
+            f"LHS: best {self.objective_option.value} objective = {best_obj:.6g}  "
+            f"(combo scoring took {combo_time:.1f}s)."
+        )
 
         best_initial_points = [list(candidate_points[i]) for i in best_combo]
         self.logger.info(
@@ -2004,6 +2110,7 @@ class DesignOfExperiments:
             "timed_out": timed_out,
             "time_budget_s": lhs_max_wall_clock_time,
             "best_obj": best_obj,
+            "best_obj_log10": best_obj_log10,
         }
         return best_initial_points, lhs_diagnostics
 
@@ -3234,10 +3341,6 @@ class DesignOfExperiments:
                     parameter_names, parameter_names, rule=cholesky_rule
                 )
 
-                scenario.obj_cons.cholesky_cons = pyo.Constraint(
-                    parameter_names, parameter_names, rule=cholesky_rule
-                )
-
             elif self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
                 # Add lower triangular Cholesky variables per scenario
                 scenario.obj_cons.L = pyo.Var(parameter_names, parameter_names)
@@ -3279,9 +3382,6 @@ class DesignOfExperiments:
                     return b.cov_trace == sum(b.fim_inv[j, j] for j in parameter_names)
 
                 # Add all constraints
-                scenario.obj_cons.cholesky_cons = pyo.Constraint(
-                    parameter_names, parameter_names, rule=cholesky_rule
-                )
                 scenario.obj_cons.cholesky_inv_cons = pyo.Constraint(
                     parameter_names, parameter_names, rule=cholesky_inv_rule
                 )

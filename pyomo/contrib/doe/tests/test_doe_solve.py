@@ -1464,6 +1464,30 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertTrue(any("time budget" in msg for msg in log_cm.output))
         self.assertTrue(diag["timed_out"])
 
+    def test_lhs_fim_evaluation_timeout_stops_early(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _slow_fim(experiment_index, input_values):
+            time.sleep(0.01)
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 2.0]])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_slow_fim) as p:
+            points, diag = doe._lhs_initialize_experiments(
+                lhs_n_samples=10,
+                lhs_seed=3,
+                n_exp=2,
+                lhs_parallel=False,
+                lhs_combo_parallel=False,
+                lhs_max_wall_clock_time=0.03,
+            )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(diag["timed_out"])
+        self.assertLess(p.call_count, 10)
+        self.assertLess(diag["n_candidates"], 10)
+
     def test_optimize_experiments_lhs_diagnostics_populated(self):
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(
@@ -1489,6 +1513,11 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertIsInstance(lhs_diag["best_obj"], float)
         self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
         self.assertGreater(lhs_diag["best_obj"], 0.0)
+        self.assertIn("best_obj_log10", lhs_diag)
+        self.assertIsInstance(lhs_diag["best_obj_log10"], float)
+        self.assertAlmostEqual(
+            lhs_diag["best_obj_log10"], np.log10(lhs_diag["best_obj"]), places=12
+        )
 
     def test_lhs_combo_scoring_n_exp_3_parallel_matches_serial(self):
         doe = self._make_template_doe("pseudo_trace")
