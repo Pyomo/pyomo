@@ -1139,7 +1139,6 @@ class Estimator:
 
         return model_theta_list
 
-
     # Reviewers: Put in architecture to calculate a regularization weight based on the current parameter values and the prior FIM.
     # However, if the prior_FIM is properly defined, this should not be necessary. Are there any use cases for this where we should give
     # the user a scaling option, or remove and trust the prior_FIM to be properly scaled?
