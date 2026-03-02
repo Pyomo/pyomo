@@ -636,7 +636,8 @@ jobs:
         fi
         if test $TRY_PYPI -ne 0; then
             echo "Installing GAMS Python bindings from PyPI"
-            $PYTHON_EXE -m pip install gamspy gamspy-highs gamspy-ipopt
+            # Note: we are seeing segfaults with 53.1 under pytest on GHA/linux
+            $PYTHON_EXE -m pip install 'gamsapi!=53.1' gamspy-highs gamspy-ipopt
         fi
 
     - name: Install BARON
