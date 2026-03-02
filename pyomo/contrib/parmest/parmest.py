@@ -656,19 +656,19 @@ def compute_covariance_matrix(
 
     FIM = np.sum(FIM_all_exp, axis=0)
 
-    # # Code to add prior_FIM in covariance calculation here.
-    # # Add prior_FIM if including regularization. We expand the prior FIM to match the size of the current FIM
-    # if prior_FIM is not None:
-    #     expanded_prior_FIM = _expand_prior_FIM(
-    #         experiment_list[0], prior_FIM, # theta_vals
-    #     )  # sanity check and alignment
+    # Add prior_FIM if including regularization. We expand the prior FIM to match the size of the
+    # FIM and align it based on parameter names to ensure correct addition.
+    if prior_FIM is not None:
+        expanded_prior_FIM = _expand_prior_FIM(
+            experiment_list[0], prior_FIM  # theta_vals
+        )  # sanity check and alignment
 
-    #     # Check that the prior FIM shape is the same as the FIM shape
-    #     if expanded_prior_FIM.shape != FIM.shape:
-    #         raise ValueError(
-    #             "The shape of the prior FIM must be the same as the shape of the FIM."
-    #         )
-    #     FIM += expanded_prior_FIM
+        # Check that the prior FIM shape is the same as the FIM shape
+        if expanded_prior_FIM.shape != FIM.shape:
+            raise ValueError(
+                "The shape of the prior FIM must be the same as the shape of the FIM."
+            )
+        FIM += expanded_prior_FIM
 
     # calculate the covariance matrix
     try:
@@ -1586,47 +1586,6 @@ class Estimator:
                 raise AttributeError(
                     'Experiment model does not have suffix "measurement_error".'
                 )
-
-        # @Reviewers: Is it better to add the prior_FIM to the covariance matrix after it is calculated using the current experiment, or to incorporate the prior_FIM
-        # into the covariance matrix calculation itself with the prior_FIM added to the FIM of the current experiment before inverting to get the covariance matrix?
-        # The prior_FIM, if using parameter subsets, will be singular, so I cannot invert it and add it to the covariance.
-        # Issue is adding it in the compute_covariance_matrix function does not include the reduced hessian method.
-        # Adding it below requires inverting the cov, adding the prior_FIM, and inverting again to get the regularized covariance matrix,
-        # which could introduce numerical issues.
-
-        # Options:
-        # 1) Add below, invert cov, add prior FIM, invert total.
-        # 2) Add in compute_covariance_matrix (line 572), add prior FIM to FIM before inverting. Does not support reduced hessian method.
-
-        # Code addition:
-        # Assumes same objective choice, same scaling, and same measurement error when
-        # calculating the covariance matrix for the current experiment and the prior FIM.
-
-        # Add regularization to the covariance matrix if L2 regularization is specified and a prior FIM is provided
-        if self.prior_FIM is not None and self.regularization == RegularizationType.L2:
-            # print("Prior_FIM: \n", self.prior_FIM)
-            # print("Theta_ref: \n", self.theta_ref)
-            # print("Estimated Theta: \n", self.estimated_theta)
-            # print("exp_list[0]: \n", self.exp_list[0])
-            # print("Covariance before adding regularization: \n", cov)
-
-            # Expand the prior FIM to match the size of the FIM of the current experiment
-            expanded_prior_FIM = _expand_prior_FIM(self.exp_list[0], self.prior_FIM)
-            # print("Expanded prior FIM: \n", expanded_prior_FIM)
-
-            # Combine the FIM from the current experiment with the expanded prior FIM
-            # The prior_FIM may be singular on its own, but the sum should be non-singular
-            # if the current experiment is informative
-
-            FIM = pd.DataFrame(
-                np.linalg.inv(cov.values), index=cov.index, columns=cov.columns
-            )
-            FIM += expanded_prior_FIM
-
-            # Calculate the covariance matrix as the inverse of the combined FIM
-            cov = pd.DataFrame(
-                np.linalg.inv(FIM.values), index=FIM.index, columns=FIM.columns
-            )
 
         return cov
 
