@@ -643,10 +643,12 @@ def compute_covariance_matrix(
         in cases where the user does not supply the
         measurement error standard deviation
     prior_FIM: pd.DataFrame, optional
-        Prior Fisher Information Matrix from previous experimental design to be added to the FIM of the current experiments for covariance estimation. The prior_FIM should be a square matrix with parameter names as both row and column labels.
+        Prior Fisher Information Matrix from previous experimental design
+        to be added to the FIM of the current experiments for covariance estimation.
+        The prior_FIM should be a square matrix with parameter names as both
+        row and column labels.
     regularization_weight: float, optional
-        Weighting factor for the regularization term. Needed if prior_FIM is provided.
-
+        Weighting factor for the regularization term. Default is 1.0.
     Returns
     -------
     cov : pd.DataFrame
@@ -971,13 +973,20 @@ class Estimator:
         Default is None.
 
         Added keyword arguments for L2 regularization:
+    regularization: string or function, optional
+        Built-in regularization type ("L2") or custom function used to
+        formulate the regularization term. If no regularization is specified,
+        no regularization term is added to the objective. Default is None.
     prior_FIM: pd.DataFrame, optional
-        Prior Fisher Information Matrix from previous experimental design to be added to the FIM of the current experiments for regularization. The prior_FIM should be a square matrix with parameter names as both row and column labels.
+        Prior Fisher Information Matrix from previous experimental design
+        to be added to the FIM of the current experiments for regularization.
+        The prior_FIM should be a square matrix with parameter names as both
+        row and column labels.
     theta_ref: pd.Series, optional
-        Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
+        Reference parameter values used in regularization.
+        If None, defaults to the current parameter values in the model.
     regularization_weight: float, optional
         Weighting factor for the regularization term. Default is 1.0.
-        If None, it is automatically calculated as the ratio of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
     """
 
     # The singledispatchmethod decorator is used here as a deprecation
