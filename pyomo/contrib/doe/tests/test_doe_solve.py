@@ -14,7 +14,13 @@ import tempfile
 import time
 import warnings
 from itertools import combinations, product
+import subprocess
+import tempfile
+import time
+import warnings
+from itertools import combinations, product
 from glob import glob
+from unittest.mock import patch
 from unittest.mock import patch
 
 from pyomo.common.dependencies import (
@@ -92,6 +98,7 @@ def k_aug_runtime_available():
     if any(marker in output for marker in bad_runtime_markers):
         return False
     return True
+
 
 currdir = this_file_dir()
 file_path = os.path.join(currdir, "..", "examples", "result.json")
@@ -1038,9 +1045,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         expected_obj = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(expected_obj, n_exp=n_exp)
 
-        first_exp_block = (
-            expected_obj.model.param_scenario_blocks[0].exp_blocks[0]
-        )
+        first_exp_block = expected_obj.model.param_scenario_blocks[0].exp_blocks[0]
         exp_input_vars = expected_obj._get_experiment_input_vars(first_exp_block)
         lb_vals = np.array([v.lb for v in exp_input_vars])
         ub_vals = np.array([v.ub for v in exp_input_vars])
@@ -1102,7 +1107,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         fd, results_path = tempfile.mkstemp(suffix=".json")
         os.close(fd)
-        self.addCleanup(lambda: os.path.exists(results_path) and os.remove(results_path))
+        self.addCleanup(
+            lambda: os.path.exists(results_path) and os.remove(results_path)
+        )
 
         doe.optimize_experiments(n_exp=1, results_file=results_path)
 
@@ -1119,10 +1126,14 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
     def test_optimize_experiments_is_reentrant_on_same_object(self):
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(n_exp=1)
-        first_design = doe.results["Scenarios"][0]["Experiments"][0]["Experiment Design"]
+        first_design = doe.results["Scenarios"][0]["Experiments"][0][
+            "Experiment Design"
+        ]
 
         doe.optimize_experiments(n_exp=1)
-        second_design = doe.results["Scenarios"][0]["Experiments"][0]["Experiment Design"]
+        second_design = doe.results["Scenarios"][0]["Experiments"][0][
+            "Experiment Design"
+        ]
 
         self.assertEqual(len(first_design), len(second_design))
         self.assertIn("timing", doe.results)
@@ -1133,10 +1144,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             ValueError, "``lhs_seed`` must be None or an integer"
         ):
             doe.optimize_experiments(
-                n_exp=2,
-                initialization_method="lhs",
-                lhs_n_samples=2,
-                lhs_seed=1.5,
+                n_exp=2, initialization_method="lhs", lhs_n_samples=2, lhs_seed=1.5
             )
 
     def test_optimize_experiments_sym_break_var_must_be_input(self):
@@ -1170,10 +1178,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
     def test_optimize_experiments_timing_includes_lhs_phase_separately(self):
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(
-            n_exp=2,
-            initialization_method="lhs",
-            lhs_n_samples=2,
-            lhs_seed=11,
+            n_exp=2, initialization_method="lhs", lhs_n_samples=2, lhs_seed=11
         )
 
         timing = doe.results["timing"]
@@ -1207,7 +1212,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
     def test_optimize_experiments_symmetry_mapping_failure_raises(self):
         doe = self._make_template_doe("pseudo_trace")
-        probe_model = doe.experiment_list[0].get_labeled_model(**doe.get_labeled_model_args)
+        probe_model = doe.experiment_list[0].get_labeled_model(
+            **doe.get_labeled_model_args
+        )
         sym_var_name = next(iter(probe_model.experiment_inputs.keys())).local_name
         original_find = pyo.ComponentUID.find_component_on
 
@@ -1262,18 +1269,14 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                         doe, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
                     ):
                         best_points, _ = doe._lhs_initialize_experiments(
-                            lhs_n_samples=10001,
-                            lhs_seed=11,
-                            n_exp=2,
+                            lhs_n_samples=10001, lhs_seed=11, n_exp=2
                         )
 
         self.assertEqual(len(best_points), 2)
         self.assertTrue(
             any("candidate experiment designs" in str(w.message) for w in warn_cm)
         )
-        self.assertTrue(
-            any("combinations to evaluate" in msg for msg in log_cm.output)
-        )
+        self.assertTrue(any("combinations to evaluate" in msg for msg in log_cm.output))
 
     def test_lhs_combo_parallel_matches_serial(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -1286,10 +1289,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
             points_serial, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=4,
-                lhs_seed=123,
-                n_exp=2,
-                lhs_combo_parallel=False,
+                lhs_n_samples=4, lhs_seed=123, n_exp=2, lhs_combo_parallel=False
             )
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
@@ -1324,10 +1324,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             side_effect=_fake_fim,
         ):
             points_serial, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=4,
-                lhs_seed=321,
-                n_exp=2,
-                lhs_parallel=False,
+                lhs_n_samples=4, lhs_seed=321, n_exp=2, lhs_parallel=False
             )
 
             points_parallel, _ = doe._lhs_initialize_experiments(
@@ -1378,10 +1375,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
             points_serial, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=5,
-                lhs_seed=99,
-                n_exp=2,
-                lhs_combo_parallel=False,
+                lhs_n_samples=5, lhs_seed=99, n_exp=2, lhs_combo_parallel=False
             )
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
@@ -1417,7 +1411,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                 "_evaluate_objective_for_option",
                 side_effect=_slow_obj,
             ):
-                with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+                with self.assertLogs(
+                    "pyomo.contrib.doe.doe", level="WARNING"
+                ) as log_cm:
                     points, diag = doe._lhs_initialize_experiments(
                         lhs_n_samples=6,
                         lhs_seed=7,
@@ -1448,7 +1444,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                 "_evaluate_objective_for_option",
                 side_effect=_slow_obj,
             ):
-                with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+                with self.assertLogs(
+                    "pyomo.contrib.doe.doe", level="WARNING"
+                ) as log_cm:
                     points, diag = doe._lhs_initialize_experiments(
                         lhs_n_samples=6,
                         lhs_seed=12,
@@ -1473,7 +1471,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             x = float(input_values[0])
             return np.array([[x + 1.0, 0.0], [0.0, x + 2.0]])
 
-        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_slow_fim) as p:
+        with patch.object(
+            doe, "_compute_fim_at_point_no_prior", side_effect=_slow_fim
+        ) as p:
             points, diag = doe._lhs_initialize_experiments(
                 lhs_n_samples=10,
                 lhs_seed=3,
@@ -1529,10 +1529,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
             points_serial, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=5,
-                lhs_seed=1234,
-                n_exp=3,
-                lhs_combo_parallel=False,
+                lhs_n_samples=5, lhs_seed=1234, n_exp=3, lhs_combo_parallel=False
             )
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
@@ -1623,7 +1620,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe.optimize_experiments()
 
         scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(exp["Experiment Design"][0] for exp in scenario["Experiments"])
+        got_hours = sorted(
+            exp["Experiment Design"][0] for exp in scenario["Experiments"]
+        )
         expected_hours = [1.9321985035514362, 9.999999685577139]
 
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)

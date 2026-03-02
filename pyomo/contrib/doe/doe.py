@@ -25,12 +25,28 @@
 # ____________________________________________________________________________________
 
 from enum import Enum
-from itertools import permutations, product, combinations as _combinations, islice as _islice
+from itertools import (
+    permutations,
+    product,
+    combinations as _combinations,
+    islice as _islice,
+)
+from itertools import (
+    permutations,
+    product,
+    combinations as _combinations,
+    islice as _islice,
+)
 
+import concurrent.futures as _cf
 import concurrent.futures as _cf
 import json
 import logging
 import math
+import os
+import threading
+import time
+import warnings
 import os
 import threading
 import time
@@ -55,6 +71,7 @@ if numpy_available and scipy_available:
 
     from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
     from scipy.stats.qmc import LatinHypercube
+    from scipy.stats.qmc import LatinHypercube
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
@@ -62,6 +79,7 @@ from pyomo.contrib.doe.utils import (
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
 )
+from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 
 from pyomo.opt import SolverStatus
@@ -95,7 +113,28 @@ class _DoEResultsJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+class _DoEResultsJSONEncoder(json.JSONEncoder):
+    """JSON encoder for DoE result payloads with numpy/Pyomo objects."""
+
+    def default(self, obj):
+        if isinstance(obj, np.generic):
+            return obj.item()
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, Enum):
+            return str(obj)
+        return super().default(obj)
+
+
 class DesignOfExperiments:
+    _MAXIMIZE_OBJECTIVES = frozenset(
+        {
+            ObjectiveLib.determinant,
+            ObjectiveLib.pseudo_trace,
+            ObjectiveLib.minimum_eigenvalue,
+        }
+    )
+
     _MAXIMIZE_OBJECTIVES = frozenset(
         {
             ObjectiveLib.determinant,
@@ -107,6 +146,7 @@ class DesignOfExperiments:
     def __init__(
         self,
         experiment=None,
+        experiment_list=None,
         experiment_list=None,
         fd_formula="central",
         step=1e-3,
@@ -784,8 +824,7 @@ class DesignOfExperiments:
                 )
             if lhs_seed is not None and not isinstance(lhs_seed, int):
                 raise ValueError(
-                    "``lhs_seed`` must be None or an integer, "
-                    f"got {lhs_seed!r}."
+                    "``lhs_seed`` must be None or an integer, " f"got {lhs_seed!r}."
                 )
             if not isinstance(lhs_parallel, bool):
                 raise ValueError(
@@ -989,16 +1028,18 @@ class DesignOfExperiments:
                 f"Applying LHS initialization with {lhs_n_samples} samples per "
                 f"experiment-input dimension..."
             )
-            best_initial_points, lhs_init_diagnostics = self._lhs_initialize_experiments(
-                lhs_n_samples=lhs_n_samples,
-                lhs_seed=lhs_seed,
-                n_exp=n_exp,
-                lhs_parallel=lhs_parallel,
-                lhs_combo_parallel=lhs_combo_parallel,
-                lhs_n_workers=lhs_n_workers,
-                lhs_combo_chunk_size=lhs_combo_chunk_size,
-                lhs_combo_parallel_threshold=lhs_combo_parallel_threshold,
-                lhs_max_wall_clock_time=lhs_max_wall_clock_time,
+            best_initial_points, lhs_init_diagnostics = (
+                self._lhs_initialize_experiments(
+                    lhs_n_samples=lhs_n_samples,
+                    lhs_seed=lhs_seed,
+                    n_exp=n_exp,
+                    lhs_parallel=lhs_parallel,
+                    lhs_combo_parallel=lhs_combo_parallel,
+                    lhs_n_workers=lhs_n_workers,
+                    lhs_combo_chunk_size=lhs_combo_chunk_size,
+                    lhs_combo_parallel_threshold=lhs_combo_parallel_threshold,
+                    lhs_max_wall_clock_time=lhs_max_wall_clock_time,
+                )
             )
             self.logger.info(
                 "Setting LHS best-found initial design in the optimization model..."
@@ -1251,14 +1292,10 @@ class DesignOfExperiments:
                 s,
             )
             scenario_results["log10 pseudo A-opt"] = _safe_metric(
-                "log10 pseudo A-opt",
-                lambda: np.log10(np.trace(total_fim_np)),
-                s,
+                "log10 pseudo A-opt", lambda: np.log10(np.trace(total_fim_np)), s
             )
             scenario_results["log10 D-opt"] = _safe_metric(
-                "log10 D-opt",
-                lambda: np.log10(np.linalg.det(total_fim_np)),
-                s,
+                "log10 D-opt", lambda: np.log10(np.linalg.det(total_fim_np)), s
             )
             scenario_results["log10 E-opt"] = _safe_metric(
                 "log10 E-opt",
@@ -1266,9 +1303,7 @@ class DesignOfExperiments:
                 s,
             )
             scenario_results["log10 ME-opt"] = _safe_metric(
-                "log10 ME-opt",
-                lambda: np.log10(np.linalg.cond(total_fim_np)),
-                s,
+                "log10 ME-opt", lambda: np.log10(np.linalg.cond(total_fim_np)), s
             )
 
             # Store unknown parameter values at scenario level (same for all experiments)
@@ -1388,7 +1423,9 @@ class DesignOfExperiments:
 
         # Structured result payload
         objective_sense = (
-            "maximize" if self.objective_option in self._MAXIMIZE_OBJECTIVES else "minimize"
+            "maximize"
+            if self.objective_option in self._MAXIMIZE_OBJECTIVES
+            else "minimize"
         )
 
         self.results["run_info"] = {
@@ -1417,20 +1454,26 @@ class DesignOfExperiments:
                 "lhs_n_samples": self.results.get("LHS Samples Per Dimension"),
                 "lhs_seed": self.results.get("LHS Seed"),
                 "best_points": self.results.get("LHS Best Initial Points"),
-                "lhs_parallel": lhs_parallel if initialization_method == "lhs" else None,
-                "lhs_combo_parallel": lhs_combo_parallel
-                if initialization_method == "lhs"
-                else None,
-                "lhs_n_workers": lhs_n_workers if initialization_method == "lhs" else None,
-                "lhs_combo_chunk_size": lhs_combo_chunk_size
-                if initialization_method == "lhs"
-                else None,
-                "lhs_combo_parallel_threshold": lhs_combo_parallel_threshold
-                if initialization_method == "lhs"
-                else None,
-                "lhs_max_wall_clock_time": lhs_max_wall_clock_time
-                if initialization_method == "lhs"
-                else None,
+                "lhs_parallel": (
+                    lhs_parallel if initialization_method == "lhs" else None
+                ),
+                "lhs_combo_parallel": (
+                    lhs_combo_parallel if initialization_method == "lhs" else None
+                ),
+                "lhs_n_workers": (
+                    lhs_n_workers if initialization_method == "lhs" else None
+                ),
+                "lhs_combo_chunk_size": (
+                    lhs_combo_chunk_size if initialization_method == "lhs" else None
+                ),
+                "lhs_combo_parallel_threshold": (
+                    lhs_combo_parallel_threshold
+                    if initialization_method == "lhs"
+                    else None
+                ),
+                "lhs_max_wall_clock_time": (
+                    lhs_max_wall_clock_time if initialization_method == "lhs" else None
+                ),
             },
             "modeling": {
                 "n_scenarios": self.results["Number of Scenarios"],
@@ -1558,6 +1601,7 @@ class DesignOfExperiments:
         parameter_names : Set
             Pyomo Set listing the parameter indices in order.
         """
+
         def rule(_b, p, q):
             p_idx = list(parameter_names).index(p)
             q_idx = list(parameter_names).index(q)
@@ -1741,11 +1785,12 @@ class DesignOfExperiments:
             f"LHS: evaluating FIM at {n_candidates} candidate designs "
             f"({n_candidates * n_scenarios_per_candidate} sequential solver calls expected)."
         )
-        # Change the following block if we add support for LHS initialization with 
+        # Change the following block if we add support for LHS initialization with
         # non-FD structures (e.g. AD)
-        if not hasattr(first_exp_block, "fd_scenario_blocks") or len(
-            first_exp_block.fd_scenario_blocks
-        ) == 0:
+        if (
+            not hasattr(first_exp_block, "fd_scenario_blocks")
+            or len(first_exp_block.fd_scenario_blocks) == 0
+        ):
             raise RuntimeError(
                 "_lhs_initialize_experiments requires finite-difference scenario "
                 "blocks on the experiment model. Ensure optimize_experiments is "
@@ -1785,7 +1830,9 @@ class DesignOfExperiments:
                         _solver_fallback_logged = True
                 return None
             try:
-                if hasattr(self.solver, "options") and hasattr(worker_solver, "options"):
+                if hasattr(self.solver, "options") and hasattr(
+                    worker_solver, "options"
+                ):
                     worker_solver.options.update(self.solver.options)
             except Exception:
                 pass
@@ -1875,9 +1922,7 @@ class DesignOfExperiments:
                         break
 
                     done_now, pending = _cf.wait(
-                        pending,
-                        timeout=0.1,
-                        return_when=_cf.FIRST_COMPLETED,
+                        pending, timeout=0.1, return_when=_cf.FIRST_COMPLETED
                     )
                     for fut in done_now:
                         pt_idx, fim = fut.result()
@@ -1910,18 +1955,18 @@ class DesignOfExperiments:
                     frac_done = (pt_idx + 1) / n_candidates
                     est_total = elapsed / frac_done if frac_done > 0 else 0
                     self.logger.info(
-                            f"  LHS FIM eval: {pt_idx + 1}/{n_candidates} "
-                            f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
-                        )
+                        f"  LHS FIM eval: {pt_idx + 1}/{n_candidates} "
+                        f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
+                    )
 
         computed_pairs = [
-            (pt, fim) for pt, fim in zip(candidate_points, candidate_fims) if fim is not None
+            (pt, fim)
+            for pt, fim in zip(candidate_points, candidate_fims)
+            if fim is not None
         ]
         if not computed_pairs:
             timed_out = True
-            computed_pairs = [
-                (candidate_points[0], np.zeros((n_params, n_params))),
-            ]
+            computed_pairs = [(candidate_points[0], np.zeros((n_params, n_params)))]
 
         # If timeout stops FIM evaluation early, retain only scored candidates so
         # downstream combination scoring does not use missing entries.
@@ -1934,7 +1979,8 @@ class DesignOfExperiments:
             if len(computed_pairs) < n_exp:
                 first_pt, first_fim = computed_pairs[0]
                 computed_pairs.extend(
-                    (first_pt, first_fim.copy()) for _ in range(n_exp - len(computed_pairs))
+                    (first_pt, first_fim.copy())
+                    for _ in range(n_exp - len(computed_pairs))
                 )
             candidate_points = tuple(pt for pt, _ in computed_pairs)
             candidate_fims = [fim for _, fim in computed_pairs]
@@ -2598,11 +2644,7 @@ class DesignOfExperiments:
         if (
             not _for_multi_experiment
             and self.Cholesky_option
-            and self.objective_option
-            in (
-                ObjectiveLib.determinant,
-                ObjectiveLib.trace,
-            )
+            and self.objective_option in (ObjectiveLib.determinant, ObjectiveLib.trace)
         ):
             model.L = pyo.Var(
                 model.parameter_names, model.parameter_names, initialize=identity_matrix
@@ -3160,7 +3202,9 @@ class DesignOfExperiments:
             model.obj_cons.cholesky_cons = pyo.Constraint(
                 model.parameter_names,
                 model.parameter_names,
-                rule=self._make_cholesky_rule(model.fim, model.L, model.parameter_names),
+                rule=self._make_cholesky_rule(
+                    model.fim, model.L, model.parameter_names
+                ),
             )
             model.objective = pyo.Objective(
                 expr=2 * sum(pyo.log10(model.L[j, j]) for j in model.parameter_names),
@@ -3187,7 +3231,9 @@ class DesignOfExperiments:
             model.obj_cons.cholesky_cons = pyo.Constraint(
                 model.parameter_names,
                 model.parameter_names,
-                rule=self._make_cholesky_rule(model.fim, model.L, model.parameter_names),
+                rule=self._make_cholesky_rule(
+                    model.fim, model.L, model.parameter_names
+                ),
             )
             model.obj_cons.cholesky_inv_cons = pyo.Constraint(
                 model.parameter_names, model.parameter_names, rule=cholesky_inv_imp
