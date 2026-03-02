@@ -12,6 +12,7 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
@@ -148,3 +149,19 @@ class TestConstraintResidualUtility(unittest.TestCase):
         self.assertEqual(residuals[0]["constraint_name"], "c1")
         self.assertEqual(residuals[0]["constraint_type"], "inequality")
         self.assertEqual(residuals[1]["constraint_type"], "equation")
+
+
+class TestCholeskyInitialization(unittest.TestCase):
+    def test_compute_cholesky_jitter_raises_negative_eigenvalue(self):
+        doe_obj = _make_doe_object()
+        min_eig = -1.0e-3
+        jitter = doe_obj._compute_cholesky_jitter(min_eig)
+        self.assertAlmostEqual(
+            jitter, _SMALL_TOLERANCE_DEFINITENESS - min_eig, places=14
+        )
+
+    def test_compute_cholesky_jitter_zero_when_not_needed(self):
+        doe_obj = _make_doe_object()
+        min_eig = 1.0e-2
+        jitter = doe_obj._compute_cholesky_jitter(min_eig)
+        self.assertEqual(jitter, 0.0)

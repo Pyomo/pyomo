@@ -451,20 +451,8 @@ class DesignOfExperiments:
             # Check if the FIM is positive definite
             # If not, add jitter to the diagonal
             # to ensure positive definiteness
-            min_eig = np.min(np.linalg.eigvals(fim_np))
-
-            if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-                # Raise the minimum eigenvalue to at
-                # least _SMALL_TOLERANCE_DEFINITENESS
-                jitter = np.min(
-                    [
-                        -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
-                        _SMALL_TOLERANCE_DEFINITENESS,
-                    ]
-                )
-            else:
-                # No jitter needed
-                jitter = 0
+            min_eig = float(np.min(np.linalg.eigvalsh(fim_np)))
+            jitter = self._compute_cholesky_jitter(min_eig)
 
             # Add jitter to the diagonal to ensure positive definiteness
             L_vals_sq = np.linalg.cholesky(
@@ -635,6 +623,10 @@ class DesignOfExperiments:
                     del options[key]
             for key, val in previous_values.items():
                 options[key] = val
+
+    def _compute_cholesky_jitter(self, min_eig):
+        """Compute diagonal shift to guarantee minimum eigenvalue tolerance."""
+        return max(0.0, _SMALL_TOLERANCE_DEFINITENESS - float(min_eig))
 
     def get_constraint_residuals(self, model=None, top_n=20):
         """Return sorted residual diagnostics for active constraints."""
