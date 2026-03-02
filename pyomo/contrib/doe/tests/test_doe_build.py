@@ -22,7 +22,7 @@ from pyomo.common.dependencies import (
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe.doe import ObjectiveLib
+from pyomo.contrib.doe.doe import ObjectiveLib, _DoEResultsJSONEncoder
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
@@ -880,6 +880,19 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertNotIn(ObjectiveLib.trace, maximize)
         self.assertNotIn(ObjectiveLib.condition_number, maximize)
         self.assertNotIn(ObjectiveLib.zero, maximize)
+
+    def test_doe_results_json_encoder_handles_numpy_and_enum(self):
+        payload = {
+            "scalar": np.int64(7),
+            "array": np.array([1.0, 2.0]),
+            "objective": ObjectiveLib.trace,
+        }
+        encoded = json.dumps(payload, cls=_DoEResultsJSONEncoder)
+        decoded = json.loads(encoded)
+
+        self.assertEqual(decoded["scalar"], 7)
+        self.assertEqual(decoded["array"], [1.0, 2.0])
+        self.assertEqual(decoded["objective"], str(ObjectiveLib.trace))
 
     def test_symmetrize_lower_tri_helper(self):
         m = np.array([[1.0, 0.0, 0.0], [2.0, 3.0, 0.0], [4.0, 5.0, 6.0]])

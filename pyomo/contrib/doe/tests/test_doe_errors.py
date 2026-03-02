@@ -6,6 +6,7 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+import json
 import warnings
 from pyomo.common.dependencies import (
     numpy as np,
@@ -24,7 +25,10 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.doe import InitializationMethod
+    from pyomo.contrib.doe.doe import (
+        InitializationMethod,
+        _DoEResultsJSONEncoder,
+    )
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
         BadExperiment,
         RooneyBieglerExperimentFlag,
@@ -108,6 +112,16 @@ class TestDoEErrors(unittest.TestCase):
             DoE_args = get_standard_args(None, fd_method, obj_used, flag_val)
 
             doe_obj = DesignOfExperiments(**DoE_args)
+
+    def test_experiment_list_empty_error(self):
+        with self.assertRaisesRegex(
+            ValueError, "The 'experiment_list' cannot be empty"
+        ):
+            DesignOfExperiments(experiment_list=[], objective_option="pseudo_trace")
+
+    def test_doe_results_json_encoder_unsupported_object_raises(self):
+        with self.assertRaises(TypeError):
+            json.dumps({"x": object()}, cls=_DoEResultsJSONEncoder)
 
     def test_reactor_check_no_get_labeled_model(self):
         fd_method = "central"
@@ -842,6 +856,102 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.optimize_experiments(
                 initialization_method="lhs",
                 init_n_samples=2.5,
+            )
+
+    def test_optimize_experiments_lhs_requires_template_mode(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[
+                RooneyBieglerMultiExperiment(hour=2.0),
+                RooneyBieglerMultiExperiment(hour=3.0),
+            ],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``initialization_method='lhs'`` is currently supported only in template mode",
+        ):
+            doe_obj.optimize_experiments(initialization_method="lhs")
+
+    def test_optimize_experiments_lhs_requires_scipy(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with patch("pyomo.contrib.doe.doe.scipy_available", False):
+            with self.assertRaisesRegex(
+                ImportError, r"LHS initialization requires scipy"
+            ):
+                doe_obj.optimize_experiments(initialization_method="lhs")
+
+    def test_optimize_experiments_init_parallel_requires_bool(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"``init_parallel`` must be a bool, got 1."
+        ):
+            doe_obj.optimize_experiments(initialization_method="lhs", init_parallel=1)
+
+    def test_optimize_experiments_init_combo_parallel_requires_bool(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"``init_combo_parallel`` must be a bool"
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method="lhs", init_combo_parallel="yes"
+            )
+
+    def test_optimize_experiments_init_n_workers_must_be_positive_integer(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"``init_n_workers`` must be None or a positive integer"
+        ):
+            doe_obj.optimize_experiments(initialization_method="lhs", init_n_workers=0)
+
+    def test_optimize_experiments_init_combo_chunk_size_must_be_positive_integer(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``init_combo_chunk_size`` must be a positive integer",
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method="lhs", init_combo_chunk_size=0
+            )
+
+    def test_optimize_experiments_init_combo_parallel_threshold_positive_integer(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``init_combo_parallel_threshold`` must be a positive integer",
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method="lhs", init_combo_parallel_threshold=0
+            )
+
+    def test_optimize_experiments_init_max_wall_clock_time_must_be_positive(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``init_max_wall_clock_time`` must be None or a positive number",
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method="lhs", init_max_wall_clock_time=0
             )
 
     def test_optimize_experiments_n_exp_with_multi_list(self):

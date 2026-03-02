@@ -1462,6 +1462,92 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
         self.assertAlmostEqual(scenario["log10 A-opt"], -2.2347, places=3)
 
+    def test_optimize_experiments_termination_message_bytes(self):
+        doe = self._make_template_doe("pseudo_trace")
+        original_solve = doe.solver.solve
+
+        def _solve_with_bytes_message(*args, **kwargs):
+            res = original_solve(*args, **kwargs)
+            res.solver.message = b"byte-message"
+            return res
+
+        with patch.object(doe.solver, "solve", side_effect=_solve_with_bytes_message):
+            doe.optimize_experiments(n_exp=1)
+
+        self.assertEqual(doe.results["Termination Message"], "byte-message")
+
+    def test_optimize_experiments_termination_message_fallback_to_str(self):
+        doe = self._make_template_doe("pseudo_trace")
+        original_solve = doe.solver.solve
+
+        class _CustomMessage:
+            def __str__(self):
+                return "custom-message"
+
+        def _solve_with_custom_message(*args, **kwargs):
+            res = original_solve(*args, **kwargs)
+            res.solver.message = _CustomMessage()
+            return res
+
+        with patch.object(doe.solver, "solve", side_effect=_solve_with_custom_message):
+            doe.optimize_experiments(n_exp=1)
+
+        self.assertEqual(doe.results["Termination Message"], "custom-message")
+
+    def test_optimize_experiments_safe_metric_failure_sets_nan(self):
+        doe = self._make_template_doe("pseudo_trace")
+        with patch("pyomo.contrib.doe.doe.np.linalg.inv", side_effect=RuntimeError("boom")):
+            with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+                doe.optimize_experiments(n_exp=1)
+
+        scenario = doe.results["Scenarios"][0]
+        self.assertTrue(np.isnan(scenario["log10 A-opt"]))
+        self.assertTrue(
+            any("failed to compute log10 A-opt" in msg for msg in log_cm.output)
+        )
+
+    def test_optimize_experiments_non_cholesky_determinant_initialization(self):
+        exp = RooneyBieglerMultiExperiment(hour=2.0, y=10.0)
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+        doe = DesignOfExperiments(
+            experiment_list=[exp],
+            objective_option="determinant",
+            step=1e-2,
+            solver=solver,
+            _Cholesky_option=False,
+            _only_compute_fim_lower=False,
+        )
+        original_solve = doe.solver.solve
+        solve_count = {"n": 0}
+
+        class _MockSolverInfo:
+            status = "ok"
+            termination_condition = "optimal"
+            message = "mock-solve"
+
+        class _MockResults:
+            solver = _MockSolverInfo()
+
+        def _solve_first_real_then_mock(*args, **kwargs):
+            solve_count["n"] += 1
+            if solve_count["n"] == 1:
+                return original_solve(*args, **kwargs)
+            return _MockResults()
+
+        with patch.object(doe.solver, "solve", side_effect=_solve_first_real_then_mock):
+            doe.optimize_experiments(n_exp=1)
+
+        scenario_block = doe.model.param_scenario_blocks[0]
+        self.assertTrue(hasattr(scenario_block.obj_cons, "determinant"))
+        total_fim = np.array(doe.results["Scenarios"][0]["Total FIM"])
+        expected_det = np.linalg.det(total_fim)
+        self.assertAlmostEqual(
+            pyo.value(scenario_block.obj_cons.determinant), expected_det, places=6
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
