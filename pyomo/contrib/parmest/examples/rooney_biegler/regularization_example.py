@@ -45,7 +45,7 @@ def main():
         regularization='L2',
         prior_FIM=prior_FIM,
         theta_ref=theta_ref,
-        regularization_weight=1,
+        regularization_weight=None,
     )
 
     # Parameter estimation and covariance
