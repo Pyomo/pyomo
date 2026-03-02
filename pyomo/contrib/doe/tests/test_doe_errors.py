@@ -809,39 +809,39 @@ class TestDoEErrors(unittest.TestCase):
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
-            ValueError, r"``lhs_n_samples`` must be a positive integer, got 0."
+            ValueError, r"``init_n_samples`` must be a positive integer, got 0."
         ):
             doe_obj.optimize_experiments(
                 initialization_method=InitializationMethod.lhs,
-                lhs_n_samples=0,
+                init_n_samples=0,
             )
 
-    def test_optimize_experiments_invalid_lhs_n_samples(self):
+    def test_optimize_experiments_invalid_init_n_samples(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
             ValueError,
-            r"``lhs_n_samples`` must be a positive integer, got 0.",
+            r"``init_n_samples`` must be a positive integer, got 0.",
         ):
             doe_obj.optimize_experiments(
                 initialization_method="lhs",
-                lhs_n_samples=0,
+                init_n_samples=0,
             )
 
-    def test_optimize_experiments_invalid_lhs_n_samples_float(self):
+    def test_optimize_experiments_invalid_init_n_samples_float(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
             ValueError,
-            r"``lhs_n_samples`` must be a positive integer, got 2.5.",
+            r"``init_n_samples`` must be a positive integer, got 2.5.",
         ):
             doe_obj.optimize_experiments(
                 initialization_method="lhs",
-                lhs_n_samples=2.5,
+                init_n_samples=2.5,
             )
 
     def test_optimize_experiments_n_exp_with_multi_list(self):
@@ -890,16 +890,16 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(_parameter_scenarios={"dummy": 1})
 
-    def test_optimize_experiments_lhs_seed_requires_integer(self):
+    def test_optimize_experiments_init_seed_requires_integer(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
-            ValueError, r"``lhs_seed`` must be None or an integer"
+            ValueError, r"``init_seed`` must be None or an integer"
         ):
             doe_obj.optimize_experiments(
-                n_exp=2, initialization_method="lhs", lhs_n_samples=2, lhs_seed=1.5
+                n_exp=2, initialization_method="lhs", init_n_samples=2, init_seed=1.5
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -1086,7 +1086,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(
                 initialization_method="lhs",
-                lhs_n_samples=2,
+                init_n_samples=2,
             )
 
 

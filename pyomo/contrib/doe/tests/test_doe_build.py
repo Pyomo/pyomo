@@ -802,7 +802,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=self._make_solver(),
         )
         doe_obj.optimize_experiments(
-            n_exp=2, initialization_method="lhs", lhs_n_samples=2, lhs_seed=11
+            n_exp=2, initialization_method="lhs", init_n_samples=2, init_seed=11
         )
 
         timing = doe_obj.results["timing"]
@@ -846,14 +846,14 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         doe_obj.optimize_experiments(
             n_exp=2,
             initialization_method="lhs",
-            lhs_n_samples=2,
-            lhs_seed=11,
-            lhs_parallel=True,
-            lhs_combo_parallel=True,
-            lhs_n_workers=2,
-            lhs_combo_chunk_size=2,
-            lhs_combo_parallel_threshold=1,
-            lhs_max_wall_clock_time=60.0,
+            init_n_samples=2,
+            init_seed=11,
+            init_parallel=True,
+            init_combo_parallel=True,
+            init_n_workers=2,
+            init_combo_chunk_size=2,
+            init_combo_parallel_threshold=1,
+            init_max_wall_clock_time=60.0,
         )
         lhs_diag = doe_obj.results["diagnostics"]["lhs_initialization"]
         self.assertIsNotNone(lhs_diag)

@@ -1074,8 +1074,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe.optimize_experiments(
             n_exp=n_exp,
             initialization_method="lhs",
-            lhs_n_samples=lhs_n_samples,
-            lhs_seed=lhs_seed,
+            init_n_samples=lhs_n_samples,
+            init_seed=lhs_seed,
         )
 
         actual_points = doe.results["LHS Best Initial Points"]

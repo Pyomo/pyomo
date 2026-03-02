@@ -87,8 +87,8 @@ class RooneyBieglerExperiment(Experiment):
 
 def run_rb_multi_experiment_example(
     objective_option="determinant",
-    lhs_n_samples=50,
-    lhs_seed=7,
+    init_n_samples=50,
+    init_seed=7,
     tee=False,
     results_file=None,
 ):
@@ -118,13 +118,13 @@ def run_rb_multi_experiment_example(
         results_file=results_file,
         n_exp=2,
         initialization_method="lhs",
-        lhs_n_samples=lhs_n_samples,
-        lhs_seed=lhs_seed,
-        lhs_parallel=True,
-        lhs_combo_parallel=True,
-        lhs_combo_chunk_size=500,
-        lhs_combo_parallel_threshold=1000,
-        lhs_max_wall_clock_time=1,
+        init_n_samples=init_n_samples,
+        init_seed=init_seed,
+        init_parallel=True,
+        init_combo_parallel=True,
+        init_combo_chunk_size=500,
+        init_combo_parallel_threshold=1000,
+        init_max_wall_clock_time=1,
     )
 
     print("Solver Status:", doe_obj.results["Solver Status"])
@@ -143,6 +143,6 @@ def run_rb_multi_experiment_example(
 
 if __name__ == "__main__":
     doe_obj_solved = run_rb_multi_experiment_example(
-        tee=False, objective_option="trace", lhs_n_samples=1000, lhs_seed=7
+        tee=False, objective_option="trace", init_n_samples=1000, init_seed=7
     )
     # print(doe_obj_solved.results)

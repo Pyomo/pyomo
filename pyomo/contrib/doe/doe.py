@@ -616,14 +616,14 @@ class DesignOfExperiments:
         results_file=None,
         n_exp: int = None,
         initialization_method=None,
-        lhs_n_samples: int = 5,
-        lhs_seed: int = None,
-        lhs_parallel: bool = False,
-        lhs_combo_parallel: bool = False,
-        lhs_n_workers: int = None,
-        lhs_combo_chunk_size: int = 5000,
-        lhs_combo_parallel_threshold: int = 20000,
-        lhs_max_wall_clock_time: float = None,
+        init_n_samples: int = 5,
+        init_seed: int = None,
+        init_parallel: bool = False,
+        init_combo_parallel: bool = False,
+        init_n_workers: int = None,
+        init_combo_chunk_size: int = 5000,
+        init_combo_parallel_threshold: int = 20000,
+        init_max_wall_clock_time: float = None,
     ):
         """
         Optimize single experiment or multiple experiments simultaneously for
@@ -654,43 +654,43 @@ class DesignOfExperiments:
               point, initialize the ``Experiment`` objects with the desired
               design values before passing them in ``experiment_list``.
             - ``"lhs"`` (or ``InitializationMethod.lhs``): Use Latin Hypercube Sampling (LHS) to find a good
-              initial design. For each experiment-input dimension, ``lhs_n_samples``
+              initial design. For each experiment-input dimension, ``init_n_samples``
               points are sampled independently using 1-D LHS, and their Cartesian
               product forms the set of candidate experiment designs. The FIM is
               evaluated at every candidate, and the combination of ``n_exp``
               candidates (without replacement) that best satisfies the chosen
               objective is selected as the starting point for the optimization.
 
-        lhs_n_samples:
+        init_n_samples:
             Number of LHS samples per experiment-input dimension when
             ``initialization_method="lhs"``. The total number of candidate
-            designs is ``lhs_n_samples ** n_inputs``. A warning is issued
+            designs is ``init_n_samples ** n_inputs``. A warning is issued
             when this exceeds 10,000. Default: 5.
 
-        lhs_seed:
+        init_seed:
             Integer seed for the LHS random-number generator (for
             reproducibility). Used only when ``initialization_method="lhs"``.
             Default: ``None`` (non-deterministic).
-        lhs_parallel:
+        init_parallel:
             If True, evaluate candidate-point FIMs in parallel during LHS
             initialization. Default: False.
-        lhs_combo_parallel:
+        init_combo_parallel:
             If True, the scoring of Latin hypercube candidate combinations
             (``C(n_candidates, n_exp)`` during ``initialization_method="lhs"``)
             is split across a thread pool.  Each worker computes the scalar
             objective derived from the FIM for its chunk of combinations.  The
             flag has no effect unless ``initialization_method="lhs"`` and the
-            total number of combinations exceeds ``lhs_combo_parallel_threshold``.
+            total number of combinations exceeds ``init_combo_parallel_threshold``.
             Default: False.
-        lhs_n_workers:
+        init_n_workers:
             Number of worker threads for combination FIM metric when
-            ``lhs_combo_parallel=True``. Default: ``None`` (auto-select).
-        lhs_combo_chunk_size:
+            ``init_combo_parallel=True``. Default: ``None`` (auto-select).
+        init_combo_chunk_size:
             Number of combinations scored per worker task. Default: 5000.
-        lhs_combo_parallel_threshold:
+        init_combo_parallel_threshold:
             Parallel combo scoring is used only when number of combinations is
             at least this value. Default: 20000.
-        lhs_max_wall_clock_time:
+        init_max_wall_clock_time:
             Optional time budget (seconds) for LHS initialization. If exceeded
             during combination scoring, best-so-far is returned.
 
@@ -719,10 +719,10 @@ class DesignOfExperiments:
 
         LHS Initialization (initialization_method="lhs"):
             Each dimension of the experiment inputs is sampled independently
-            using a 1-D Latin Hypercube, giving ``lhs_n_samples`` evenly-spaced
+            using a 1-D Latin Hypercube, giving ``init_n_samples`` evenly-spaced
             stratified samples across the variable bounds. The joint candidate
             set is the Cartesian product of these per-dimension samples (i.e.,
-            a ``lhs_n_samples^n_inputs`` grid with good marginal coverage). The
+            a ``init_n_samples^n_inputs`` grid with good marginal coverage). The
             FIM is evaluated sequentially at each candidate, then all
             ``C(n_candidates, n_exp)`` combinations are scored and the best one
             is used as the initial point for the NLP solver. This can
@@ -730,7 +730,7 @@ class DesignOfExperiments:
             local optima.
 
         Solver options in LHS worker evaluations:
-            When ``lhs_parallel=True``, worker threads construct solver instances
+            When ``init_parallel=True``, worker threads construct solver instances
             using the same solver name and options as ``self.solver`` (when
             available). Therefore, per-solve limits (e.g., iteration/time limits)
             configured on the main DoE solver are propagated to candidate FIM
@@ -796,51 +796,55 @@ class DesignOfExperiments:
                     "LHS initialization requires scipy. "
                     "Please install scipy to use initialization_method='lhs'."
                 )
-            if not isinstance(lhs_n_samples, int) or lhs_n_samples < 1:
+            if not isinstance(init_n_samples, int) or init_n_samples < 1:
                 raise ValueError(
-                    "``lhs_n_samples`` must be a positive integer, "
-                    f"got {lhs_n_samples!r}."
+                    "``init_n_samples`` must be a positive integer, "
+                    f"got {init_n_samples!r}."
                 )
-            if lhs_seed is not None and not isinstance(lhs_seed, int):
+            if init_seed is not None and not isinstance(init_seed, int):
                 raise ValueError(
-                    "``lhs_seed`` must be None or an integer, " f"got {lhs_seed!r}."
+                    "``init_seed`` must be None or an integer, "
+                    f"got {init_seed!r}."
                 )
-            if not isinstance(lhs_parallel, bool):
+            if not isinstance(init_parallel, bool):
                 raise ValueError(
-                    f"``lhs_parallel`` must be a bool, got {lhs_parallel!r}."
+                    f"``init_parallel`` must be a bool, got {init_parallel!r}."
                 )
-            if not isinstance(lhs_combo_parallel, bool):
+            if not isinstance(init_combo_parallel, bool):
                 raise ValueError(
-                    "``lhs_combo_parallel`` must be a bool, "
-                    f"got {lhs_combo_parallel!r}."
+                    "``init_combo_parallel`` must be a bool, "
+                    f"got {init_combo_parallel!r}."
                 )
-            if lhs_n_workers is not None and (
-                not isinstance(lhs_n_workers, int) or lhs_n_workers < 1
+            if init_n_workers is not None and (
+                not isinstance(init_n_workers, int) or init_n_workers < 1
             ):
                 raise ValueError(
-                    "``lhs_n_workers`` must be None or a positive integer, "
-                    f"got {lhs_n_workers!r}."
-                )
-            if not isinstance(lhs_combo_chunk_size, int) or lhs_combo_chunk_size < 1:
-                raise ValueError(
-                    "``lhs_combo_chunk_size`` must be a positive integer, "
-                    f"got {lhs_combo_chunk_size!r}."
+                    "``init_n_workers`` must be None or a positive integer, "
+                    f"got {init_n_workers!r}."
                 )
             if (
-                not isinstance(lhs_combo_parallel_threshold, int)
-                or lhs_combo_parallel_threshold < 1
+                not isinstance(init_combo_chunk_size, int)
+                or init_combo_chunk_size < 1
             ):
                 raise ValueError(
-                    "``lhs_combo_parallel_threshold`` must be a positive integer, "
-                    f"got {lhs_combo_parallel_threshold!r}."
+                    "``init_combo_chunk_size`` must be a positive integer, "
+                    f"got {init_combo_chunk_size!r}."
                 )
-            if lhs_max_wall_clock_time is not None and (
-                not isinstance(lhs_max_wall_clock_time, (int, float))
-                or lhs_max_wall_clock_time <= 0
+            if (
+                not isinstance(init_combo_parallel_threshold, int)
+                or init_combo_parallel_threshold < 1
             ):
                 raise ValueError(
-                    "``lhs_max_wall_clock_time`` must be None or a positive number, "
-                    f"got {lhs_max_wall_clock_time!r}."
+                    "``init_combo_parallel_threshold`` must be a positive integer, "
+                    f"got {init_combo_parallel_threshold!r}."
+                )
+            if init_max_wall_clock_time is not None and (
+                not isinstance(init_max_wall_clock_time, (int, float))
+                or init_max_wall_clock_time <= 0
+            ):
+                raise ValueError(
+                    "``init_max_wall_clock_time`` must be None or a positive number, "
+                    f"got {init_max_wall_clock_time!r}."
                 )
         # -----------------------------------------
         # Start timer
@@ -1003,20 +1007,20 @@ class DesignOfExperiments:
             lhs_timer = TicTocTimer()
             lhs_timer.tic(msg=None)
             self.logger.info(
-                f"Applying LHS initialization with {lhs_n_samples} samples per "
+                f"Applying LHS initialization with {init_n_samples} samples per "
                 f"experiment-input dimension..."
             )
             best_initial_points, lhs_init_diagnostics = (
                 self._lhs_initialize_experiments(
-                    lhs_n_samples=lhs_n_samples,
-                    lhs_seed=lhs_seed,
+                    lhs_n_samples=init_n_samples,
+                    lhs_seed=init_seed,
                     n_exp=n_exp,
-                    lhs_parallel=lhs_parallel,
-                    lhs_combo_parallel=lhs_combo_parallel,
-                    lhs_n_workers=lhs_n_workers,
-                    lhs_combo_chunk_size=lhs_combo_chunk_size,
-                    lhs_combo_parallel_threshold=lhs_combo_parallel_threshold,
-                    lhs_max_wall_clock_time=lhs_max_wall_clock_time,
+                    lhs_parallel=init_parallel,
+                    lhs_combo_parallel=init_combo_parallel,
+                    lhs_n_workers=init_n_workers,
+                    lhs_combo_chunk_size=init_combo_chunk_size,
+                    lhs_combo_parallel_threshold=init_combo_parallel_threshold,
+                    lhs_max_wall_clock_time=init_max_wall_clock_time,
                 )
             )
             self.logger.info(
@@ -1388,8 +1392,8 @@ class DesignOfExperiments:
             else "none"
         )
         if resolved_initialization_method == InitializationMethod.lhs:
-            self.results["LHS Samples Per Dimension"] = lhs_n_samples
-            self.results["LHS Seed"] = lhs_seed
+            self.results["LHS Samples Per Dimension"] = init_n_samples
+            self.results["LHS Seed"] = init_seed
             self.results["LHS Best Initial Points"] = best_initial_points
 
         # Timing statistics
@@ -1435,32 +1439,32 @@ class DesignOfExperiments:
                 "lhs_seed": self.results.get("LHS Seed"),
                 "best_points": self.results.get("LHS Best Initial Points"),
                 "lhs_parallel": (
-                    lhs_parallel
+                    init_parallel
                     if resolved_initialization_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_combo_parallel": (
-                    lhs_combo_parallel
+                    init_combo_parallel
                     if resolved_initialization_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_n_workers": (
-                    lhs_n_workers
+                    init_n_workers
                     if resolved_initialization_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_combo_chunk_size": (
-                    lhs_combo_chunk_size
+                    init_combo_chunk_size
                     if resolved_initialization_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_combo_parallel_threshold": (
-                    lhs_combo_parallel_threshold
+                    init_combo_parallel_threshold
                     if resolved_initialization_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_max_wall_clock_time": (
-                    lhs_max_wall_clock_time
+                    init_max_wall_clock_time
                     if resolved_initialization_method == InitializationMethod.lhs
                     else None
                 ),
