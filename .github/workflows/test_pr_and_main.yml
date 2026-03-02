@@ -532,7 +532,7 @@ jobs:
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
         echo "PYOMO_PATH=$IPOPT_DIR:$PYOMO_PATH" >> $GITHUB_ENV
-        mkdir -p $IPOPT_DIR
+        mkdir -p "$IPOPT_DIR"
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
@@ -545,15 +545,15 @@ jobs:
             fi
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
-                curl $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz -o $IPOPT_TAR
+                curl $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz -o "$IPOPT_TAR"
             elif test "${{matrix.TARGET}}" == osx; then
-                curl $URL/idaes-solvers-darwin-aarch64.tar.gz -o $IPOPT_TAR
+                curl $URL/idaes-solvers-darwin-aarch64.tar.gz -o "$IPOPT_TAR"
             else
-                curl $URL/idaes-solvers-windows-x86_64.tar.gz -o $IPOPT_TAR
+                curl $URL/idaes-solvers-windows-x86_64.tar.gz -o "$IPOPT_TAR"
             fi
         fi
-        cd $IPOPT_DIR
-        tar -xzf $IPOPT_TAR
+        cd "$IPOPT_DIR"
+        tar -xzf "$IPOPT_TAR"
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
