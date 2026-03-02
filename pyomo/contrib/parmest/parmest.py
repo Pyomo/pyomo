@@ -393,7 +393,7 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
 
 
 def L2_regularized_objective(
-    model, prior_FIM, theta_ref=None, regularization_weight=None, obj_function=SSE
+    model, prior_FIM, theta_ref=None, regularization_weight=1.0, obj_function=SSE
 ):
     """
     Calculates objective + (theta - theta_ref)^T * prior_FIM * (theta - theta_ref)
@@ -969,6 +969,15 @@ class Estimator:
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute).
         Default is None.
+
+        Added keyword arguments for L2 regularization:
+    prior_FIM: pd.DataFrame, optional
+        Prior Fisher Information Matrix from previous experimental design to be added to the FIM of the current experiments for regularization. The prior_FIM should be a square matrix with parameter names as both row and column labels.
+    theta_ref: pd.Series, optional
+        Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
+    regularization_weight: float, optional
+        Weighting factor for the regularization term. Default is 1.0.
+        If None, it is automatically calculated as the ratio of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
     """
 
     # The singledispatchmethod decorator is used here as a deprecation
@@ -1130,58 +1139,63 @@ class Estimator:
 
         return model_theta_list
 
-    def _calc_regularization_weight(self, solver='ipopt'):
-        """
-        Calculate regularization weight as the ratio of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
-        """
-        # Solve the model at the current parameter values to get the objective function value
-        sse_vals = []
-        for experiment in self.exp_list:
-            model = _get_labeled_model(experiment)
 
-            # fix the value of the unknown parameters to the estimated values
-            for param in model.unknown_parameters:
-                param.fix(pyo.value(param))
+    # Reviewers: Put in architecture to calculate a regularization weight based on the current parameter values and the prior FIM.
+    # However, if the prior_FIM is properly defined, this should not be necessary. Are there any use cases for this where we should give
+    # the user a scaling option, or remove and trust the prior_FIM to be properly scaled?
 
-            # re-solve the model with the estimated parameters
-            results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
-            assert_optimal_termination(results)
+    # def _calc_regularization_weight(self, solver='ipopt'):
+    #     """
+    #     Calculate regularization weight as the ratio of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
+    #     """
+    #     # Solve the model at the current parameter values to get the objective function value
+    #     sse_vals = []
+    #     for experiment in self.exp_list:
+    #         model = _get_labeled_model(experiment)
 
-            # choose and evaluate the sum of squared errors expression
-            if self.obj_function == ObjectiveType.SSE:
-                sse_expr = SSE(model)
-            elif self.obj_function == ObjectiveType.SSE_weighted:
-                sse_expr = SSE_weighted(model)
-            else:
-                raise ValueError(
-                    f"Invalid objective function for covariance calculation. "
-                    f"The covariance matrix can only be calculated using the built-in "
-                    f"objective functions: {[e.value for e in ObjectiveType]}. Supply "
-                    f"the Estimator object one of these built-in objectives and "
-                    f"re-run the code."
-                )
-            l2_expr = _calculate_L2_penalty(model, self.prior_FIM, self.theta_ref)
+    #         # fix the value of the unknown parameters to the estimated values
+    #         for param in model.unknown_parameters:
+    #             param.fix(pyo.value(param))
 
-            # evaluate the numerical SSE and store it
-            sse_val = pyo.value(sse_expr)
-            sse_vals.append(sse_val)
+    #         # re-solve the model with the estimated parameters
+    #         results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
+    #         assert_optimal_termination(results)
 
-        sse = sum(sse_vals)
+    #         # choose and evaluate the sum of squared errors expression
+    #         if self.obj_function == ObjectiveType.SSE:
+    #             sse_expr = SSE(model)
+    #         elif self.obj_function == ObjectiveType.SSE_weighted:
+    #             sse_expr = SSE_weighted(model)
+    #         else:
+    #             raise ValueError(
+    #                 f"Invalid objective function for covariance calculation. "
+    #                 f"The covariance matrix can only be calculated using the built-in "
+    #                 f"objective functions: {[e.value for e in ObjectiveType]}. Supply "
+    #                 f"the Estimator object one of these built-in objectives and "
+    #                 f"re-run the code."
+    #             )
+    #         l2_expr = _calculate_L2_penalty(model, self.prior_FIM, self.theta_ref)
 
-        if l2_expr is None:
-            l2_value = 0
-        else:
-            l2_value = pyo.value(l2_expr)
+    #         # evaluate the numerical SSE and store it
+    #         sse_val = pyo.value(sse_expr)
+    #         sse_vals.append(sse_val)
 
-        if l2_value == 0:
-            logger.warning(
-                "L2 penalty is zero at the current parameter values. Regularization weight set to 1.0 by default."
-            )
-            return 1.0
+    #     sse = sum(sse_vals)
 
-        reg_weight = float(pyo.value(sse) / (pyo.value(l2_value)))
-        logger.info(f"Calculated regularization weight: {reg_weight}")
-        return reg_weight
+    #     if l2_expr is None:
+    #         l2_value = 0
+    #     else:
+    #         l2_value = pyo.value(l2_expr)
+
+    #     if l2_value == 0:
+    #         logger.warning(
+    #             "L2 penalty is zero at the current parameter values. Regularization weight set to 1.0 by default."
+    #         )
+    #         return 1.0
+
+    #     reg_weight = float(pyo.value(sse) / (pyo.value(l2_value)))
+    #     logger.info(f"Calculated regularization weight: {reg_weight}")
+    #     return reg_weight
 
     def _create_parmest_model(self, experiment_number):
         """
@@ -1225,9 +1239,11 @@ class Estimator:
                 if RegularizationType.L2 and self.prior_FIM is not None:
 
                     if self.regularization_weight is None:
-                        self.regularization_weight = self._calc_regularization_weight(
-                            solver='ipopt'
-                        )
+                        self.regularization_weight = 1.0
+
+                        # self.regularization_weight = self._calc_regularization_weight(
+                        #     solver='ipopt'
+                        # )
 
                     second_stage_rule = lambda m: L2_regularized_objective(
                         m,
