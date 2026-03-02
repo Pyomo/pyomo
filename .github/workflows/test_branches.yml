@@ -485,27 +485,27 @@ jobs:
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
             URL=https://github.com/IDAES/idaes-ext
-            RELEASE=$(curl -H 'Accept: application/json' ${URL}/releases/latest)
+            RELEASE=$(curl -s -H 'Accept: application/json' ${URL}/releases/latest)
             VER=$(echo $RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
+            if test -z "$VER"; then
+                echo "FAILED identifying IPOPT release"
+                exit 1
+            fi
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
                 curl $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz -o $IPOPT_TAR
             elif test "${{matrix.TARGET}}" == osx; then
                 curl $URL/idaes-solvers-darwin-aarch64.tar.gz -o $IPOPT_TAR
             else
-                curl $URL/idaes-solvers-windows-x86_64.tar.gz \
-                    $URL/idaes-lib-windows-x86_64.tar.gz > $IPOPT_TAR
+                curl $URL/idaes-solvers-windows-x86_64.tar.gz -o $IPOPT_TAR
             fi
         fi
         cd $IPOPT_DIR
-        if test "${{matrix.TARGET}}" == win; then
-            tar -xzi < $IPOPT_TAR
-        else
-            tar -xzf $IPOPT_TAR
-        fi
+        tar -xzf $IPOPT_TAR
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
+        $IPOPT_DIR/ipopt -v
 
     - name: Install GAMS
       if: ${{ ! matrix.slim && matrix.TARGET != 'osx' }}
