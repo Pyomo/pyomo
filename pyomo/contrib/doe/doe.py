@@ -31,22 +31,10 @@ from itertools import (
     combinations as _combinations,
     islice as _islice,
 )
-from itertools import (
-    permutations,
-    product,
-    combinations as _combinations,
-    islice as _islice,
-)
-
-import concurrent.futures as _cf
 import concurrent.futures as _cf
 import json
 import logging
 import math
-import os
-import threading
-import time
-import warnings
 import os
 import threading
 import time
@@ -71,7 +59,6 @@ if numpy_available and scipy_available:
 
     from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
     from scipy.stats.qmc import LatinHypercube
-    from scipy.stats.qmc import LatinHypercube
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
@@ -79,7 +66,6 @@ from pyomo.contrib.doe.utils import (
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
 )
-from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 
 from pyomo.opt import SolverStatus
@@ -113,28 +99,9 @@ class _DoEResultsJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-class _DoEResultsJSONEncoder(json.JSONEncoder):
-    """JSON encoder for DoE result payloads with numpy/Pyomo objects."""
-
-    def default(self, obj):
-        if isinstance(obj, np.generic):
-            return obj.item()
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if isinstance(obj, Enum):
-            return str(obj)
-        return super().default(obj)
-
-
 class DesignOfExperiments:
-    _MAXIMIZE_OBJECTIVES = frozenset(
-        {
-            ObjectiveLib.determinant,
-            ObjectiveLib.pseudo_trace,
-            ObjectiveLib.minimum_eigenvalue,
-        }
-    )
-
+    # Objective options whose scalar score is compared with "larger is better"
+    # in initialization and diagnostics paths.
     _MAXIMIZE_OBJECTIVES = frozenset(
         {
             ObjectiveLib.determinant,
@@ -146,7 +113,6 @@ class DesignOfExperiments:
     def __init__(
         self,
         experiment=None,
-        experiment_list=None,
         experiment_list=None,
         fd_formula="central",
         step=1e-3,

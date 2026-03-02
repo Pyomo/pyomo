@@ -14,13 +14,7 @@ import tempfile
 import time
 import warnings
 from itertools import combinations, product
-import subprocess
-import tempfile
-import time
-import warnings
-from itertools import combinations, product
 from glob import glob
-from unittest.mock import patch
 from unittest.mock import patch
 
 from pyomo.common.dependencies import (
