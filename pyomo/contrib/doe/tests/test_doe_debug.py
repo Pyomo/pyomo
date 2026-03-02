@@ -10,6 +10,7 @@
 from pyomo.common.dependencies import numpy_available, scipy_available
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
+from pyomo.common.config import ConfigBlock, ConfigValue
 
 from pyomo.contrib.doe import DesignOfExperiments
 from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
@@ -143,8 +144,10 @@ class TestDoeDebugOptions(unittest.TestCase):
     def test_split_scenario_and_final_solver_options(self):
         doe_obj = _make_doe_object()
         doe_obj.run_doe(
-            scenario_solver_options={"max_iter": 25},
-            final_solver_options={"max_iter": 0},
+            run_config={
+                "scenario_solver_options": {"max_iter": 25},
+                "final_solver_options": {"max_iter": 0},
+            },
         )
 
         self.assertEqual(
@@ -157,9 +160,10 @@ class TestDoeDebugOptions(unittest.TestCase):
     def test_inspection_mode_generates_expected_schema(self):
         doe_obj = _make_doe_object()
         doe_obj.run_doe(
-            solve_final_model=False,
-            inspect_constraints=True,
-            inspect_top_constraints=3,
+            run_config={
+                "final_solve": False,
+                "inspection": {"enabled": True, "top_constraints": 3},
+            },
         )
 
         self.assertEqual(doe_obj.results["Solver Status"], "not_run")
@@ -184,8 +188,10 @@ class TestDoeDebugOptions(unittest.TestCase):
     def test_max_iter_zero_final_does_not_block_scenario_solves(self):
         doe_obj = _make_doe_object()
         doe_obj.run_doe(
-            scenario_solver_options={"max_iter": 100},
-            final_solver_options={"max_iter": 0},
+            run_config={
+                "scenario_solver_options": {"max_iter": 100},
+                "final_solver_options": {"max_iter": 0},
+            },
         )
 
         self.assertEqual(doe_obj.solver.solve_call_options[0]["max_iter"], 100)
@@ -226,10 +232,13 @@ class TestCholeskyInitialization(unittest.TestCase):
 
     def test_trace_initialization_resynchronizes_fim_inverse_variables(self):
         doe_obj = _make_trace_doe_object()
+        run_config = ConfigBlock()
+        run_config.declare("final_solve", ConfigValue(default=False))
+        run_config.declare("inspection", ConfigBlock())
+        run_config.inspection.declare("enabled", ConfigValue(default=True))
+        run_config.inspection.declare("top_constraints", ConfigValue(default=200))
         doe_obj.run_doe(
-            solve_final_model=False,
-            inspect_constraints=True,
-            inspect_top_constraints=200,
+            run_config=run_config,
         )
         residuals = doe_obj.results["Constraint Residuals"]["post_initialization"]
         by_name = {entry["constraint_name"]: entry["violation"] for entry in residuals}

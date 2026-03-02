@@ -27,7 +27,6 @@
 from contextlib import contextmanager
 from enum import Enum
 from itertools import permutations, product
-from collections.abc import Mapping
 
 import json
 import logging
@@ -43,6 +42,7 @@ from pyomo.common.dependencies import (
 )
 
 from pyomo.common.errors import DeveloperError
+from pyomo.common.config import ConfigBlock, ConfigValue, PositiveInt
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
@@ -78,6 +78,58 @@ class FiniteDifferenceStep(Enum):
 
 
 class DesignOfExperiments:
+    RUN_DOE_CONFIG = ConfigBlock("run_doe")
+    RUN_DOE_CONFIG.declare(
+        "scenario_solver_options",
+        ConfigBlock(
+            implicit=True,
+            description=(
+                "Advanced: solver options applied only to scenario-generation "
+                "and initialization solves."
+            ),
+        ),
+    )
+    RUN_DOE_CONFIG.declare(
+        "final_solver_options",
+        ConfigBlock(
+            implicit=True,
+            description=(
+                "Advanced: solver options applied only to the final optimization solve."
+            ),
+        ),
+    )
+    RUN_DOE_CONFIG.declare(
+        "final_solve",
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="If False, skip the final optimization solve.",
+        ),
+    )
+    RUN_DOE_CONFIG.declare(
+        "inspection",
+        ConfigBlock(
+            implicit=False,
+            description="Advanced: structured model inspection controls.",
+        ),
+    )
+    RUN_DOE_CONFIG.inspection.declare(
+        "enabled",
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="If True, capture structured constraint residual reports.",
+        ),
+    )
+    RUN_DOE_CONFIG.inspection.declare(
+        "top_constraints",
+        ConfigValue(
+            default=20,
+            domain=PositiveInt,
+            description="Number of largest-violation constraints to report.",
+        ),
+    )
+
     def __init__(
         self,
         experiment=None,
@@ -276,11 +328,7 @@ class DesignOfExperiments:
         self,
         model=None,
         results_file=None,
-        scenario_solver_options=None,
-        final_solver_options=None,
-        solve_final_model=True,
-        inspect_constraints=False,
-        inspect_top_constraints=20,
+        run_config=None,
     ):
         """
         Runs DoE for a single experiment estimation. Can save results in
@@ -292,17 +340,28 @@ class DesignOfExperiments:
         results_file: string name of the file path to save the results
                       to in the form of a .json file
                       default: None --> don't save
-        scenario_solver_options: optional dict-like set of solver options
-                      to apply only to scenario-generation/base solves and
-                      initialization solves.
-        final_solver_options: optional dict-like set of solver options
-                      to apply only to the final optimization solve.
-        solve_final_model: if False, skips the final optimization solve after
-                      assembling and initializing the DoE model.
-        inspect_constraints: if True, stores a structured report of the
-                      largest active constraint violations.
-        inspect_top_constraints: number of largest violations to keep in
-                      each residual report.
+        run_config: optional advanced ConfigBlock or dict for expert controls.
+                    Supported keys are:
+                    - ``scenario_solver_options`` (dict-like)
+                    - ``final_solver_options`` (dict-like)
+                    - ``final_solve`` (bool)
+                    - ``inspection.enabled`` (bool)
+                    - ``inspection.top_constraints`` (positive int)
+
+        Examples
+        --------
+        Basic usage (most users):
+            doe_obj.run_doe()
+
+        Advanced usage with a config dictionary:
+            doe_obj.run_doe(
+                run_config={
+                    "scenario_solver_options": {"max_iter": 200},
+                    "final_solver_options": {"max_iter": 0},
+                    "final_solve": True,
+                    "inspection": {"enabled": True, "top_constraints": 50},
+                }
+            )
 
         """
         # Check results file name
@@ -311,17 +370,22 @@ class DesignOfExperiments:
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
-        if scenario_solver_options is not None and not isinstance(
-            scenario_solver_options, Mapping
-        ):
-            raise ValueError("``scenario_solver_options`` must be dict-like.")
-        if final_solver_options is not None and not isinstance(
-            final_solver_options, Mapping
-        ):
-            raise ValueError("``final_solver_options`` must be dict-like.")
-        if inspect_top_constraints is not None:
-            if not isinstance(inspect_top_constraints, int) or inspect_top_constraints <= 0:
-                raise ValueError("``inspect_top_constraints`` must be a positive integer.")
+        run_config_block = self.RUN_DOE_CONFIG()
+        if run_config is not None:
+            run_config_block.set_value(run_config)
+        scenario_solver_options = (
+            dict(run_config_block.scenario_solver_options)
+            if len(run_config_block.scenario_solver_options) > 0
+            else None
+        )
+        final_solver_options = (
+            dict(run_config_block.final_solver_options)
+            if len(run_config_block.final_solver_options) > 0
+            else None
+        )
+        solve_final_model = run_config_block.final_solve
+        inspect_constraints = run_config_block.inspection.enabled
+        inspect_top_constraints = run_config_block.inspection.top_constraints
 
         # Start timer
         sp_timer = TicTocTimer()
