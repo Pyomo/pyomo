@@ -11,6 +11,7 @@ import os
 import os.path
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -871,6 +872,54 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertAlmostEqual(
             lhs_diag["best_obj_log10"], np.log10(lhs_diag["best_obj"]), places=12
         )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_termination_message_bytes(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        original_solve = doe_obj.solver.solve
+
+        def _solve_with_bytes_message(*args, **kwargs):
+            res = original_solve(*args, **kwargs)
+            res.solver.message = b"byte-message"
+            return res
+
+        with patch.object(
+            doe_obj.solver, "solve", side_effect=_solve_with_bytes_message
+        ):
+            doe_obj.optimize_experiments(n_exp=1)
+
+        self.assertEqual(doe_obj.results["Termination Message"], "byte-message")
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_termination_message_fallback_to_str(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        original_solve = doe_obj.solver.solve
+
+        class _CustomMessage:
+            def __str__(self):
+                return "custom-message"
+
+        def _solve_with_custom_message(*args, **kwargs):
+            res = original_solve(*args, **kwargs)
+            res.solver.message = _CustomMessage()
+            return res
+
+        with patch.object(
+            doe_obj.solver, "solve", side_effect=_solve_with_custom_message
+        ):
+            doe_obj.optimize_experiments(n_exp=1)
+
+        self.assertEqual(doe_obj.results["Termination Message"], "custom-message")
 
     def test_maximize_objective_set_contents(self):
         maximize = DesignOfExperiments._MAXIMIZE_OBJECTIVES
