@@ -11,7 +11,6 @@ import pyomo.environ as pyo
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
     RooneyBieglerExperiment,
 )
-from pyomo.contrib.parmest.experiment import Experiment
 
 
 class BadExperiment:
@@ -98,7 +97,7 @@ class RooneyBieglerMultiExperiment(RooneyBieglerExperiment):
         return m
 
 
-class RooneyBieglerMultiInputExperimentFlag(Experiment):
+class RooneyBieglerMultiInputExperimentFlag(RooneyBieglerExperiment):
     """
     Two-input Rooney-Biegler style experiment for symmetry-breaking tests.
 
@@ -111,42 +110,27 @@ class RooneyBieglerMultiInputExperimentFlag(Experiment):
     """
 
     def __init__(self, hour=2.0, temp=300.0, y=10.0, sym_break_flag=1):
+        data = {'hour': hour, 'y': y}
+        super().__init__(data=data, measure_error=0.1, theta={'asymptote': 15, 'rate_constant': 0.5})
         self.hour = hour
         self.temp = temp
-        self.y = y
         self.sym_break_flag = sym_break_flag
 
     def get_labeled_model(self):
-        m = pyo.ConcreteModel()
-        m.asymptote = pyo.Var(initialize=15.0)
-        m.rate_constant = pyo.Var(initialize=0.5)
-        m.asymptote.fix()
-        m.rate_constant.fix()
+        m = super().get_labeled_model()
 
-        m.hour = pyo.Var(initialize=self.hour, bounds=(1.0, 10.0))
+        m.hour.setlb(1.0)
+        m.hour.setub(10.0)
         m.temp = pyo.Var(initialize=self.temp, bounds=(280.0, 340.0))
-        m.hour.fix()
         m.temp.fix()
 
-        m.y = pyo.Var(within=pyo.PositiveReals, initialize=self.y)
+        # Replace base Rooney-Biegler response with two-input synthetic variant
+        # used only for symmetry-breaking tests.
+        m.del_component(m.response_function)
         m.response_function = pyo.Constraint(
             expr=m.y
             == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour)) + 0.01 * m.temp
         )
-
-        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs[m.y] = self.y
-
-        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update(
-            (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
-        )
-
-        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error[m.y] = 0.1
-
-        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_inputs[m.hour] = self.hour
         m.experiment_inputs[m.temp] = self.temp
 
         if self.sym_break_flag in (1, 2):

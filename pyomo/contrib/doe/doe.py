@@ -86,6 +86,10 @@ class FiniteDifferenceStep(Enum):
     backward = "backward"
 
 
+class InitializationMethod(Enum):
+    lhs = "lhs"
+
+
 class _DoEResultsJSONEncoder(json.JSONEncoder):
     """JSON encoder for DoE result payloads with numpy/Pyomo objects."""
 
@@ -355,11 +359,10 @@ class DesignOfExperiments:
         """
         # Check results file name
         if results_file is not None:
-            if type(results_file) not in [pathlib.Path, str]:
+            if not isinstance(results_file, (pathlib.Path, str)):
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
-
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -609,7 +612,7 @@ class DesignOfExperiments:
 
     def optimize_experiments(
         self,
-        parameter_scenarios=None,
+        _parameter_scenarios=None,
         results_file=None,
         n_exp: int = None,
         initialization_method=None,
@@ -631,7 +634,7 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        parameter_scenarios:
+        _parameter_scenarios:
             `dataclass` of parameter scenarios to consider for the multi-experiment
             optimization. This is currently unsupported; passing anything other
             than ``None`` raises ``NotImplementedError``. It is a placeholder
@@ -650,7 +653,7 @@ class DesignOfExperiments:
               values from ``get_labeled_model()``. To provide a custom starting
               point, initialize the ``Experiment`` objects with the desired
               design values before passing them in ``experiment_list``.
-            - ``"lhs"``: Use Latin Hypercube Sampling (LHS) to find a good
+            - ``"lhs"`` (or ``InitializationMethod.lhs``): Use Latin Hypercube Sampling (LHS) to find a good
               initial design. For each experiment-input dimension, ``lhs_n_samples``
               points are sampled independently using 1-D LHS, and their Cartesian
               product forms the set of candidate experiment designs. The FIM is
@@ -735,10 +738,11 @@ class DesignOfExperiments:
         """
         # Check results file name
         if results_file is not None:
-            if type(results_file) not in [pathlib.Path, str]:
+            if not isinstance(results_file, (pathlib.Path, str)):
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
+        parameter_scenarios = _parameter_scenarios
 
         # --- Resolve n_exp and determine operating mode ---
         n_list = len(self.experiment_list)
@@ -766,13 +770,22 @@ class DesignOfExperiments:
         # ---------------------------------------------------
 
         # --- Validate initialization arguments ---
-        if initialization_method not in (None, "lhs"):
-            raise ValueError(
-                "``initialization_method`` must be one of [None, 'lhs'], "
-                f"got '{initialization_method}'."
-            )
+        if initialization_method is None:
+            resolved_initialization_method = None
+        else:
+            try:
+                resolved_initialization_method = InitializationMethod(
+                    initialization_method
+                )
+            except ValueError:
+                valid = ", ".join(f"'{m.value}'" for m in InitializationMethod)
+                raise ValueError(
+                    "``initialization_method`` must be one of [None, "
+                    + valid
+                    + f"], got {initialization_method!r}."
+                )
 
-        if initialization_method == "lhs":
+        if resolved_initialization_method == InitializationMethod.lhs:
             if not _template_mode:
                 raise ValueError(
                     "``initialization_method='lhs'`` is currently supported only in "
@@ -830,7 +843,6 @@ class DesignOfExperiments:
                     f"got {lhs_max_wall_clock_time!r}."
                 )
         # -----------------------------------------
-
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -896,7 +908,7 @@ class DesignOfExperiments:
                 if len(sym_break_var_list) > 1:
                     warning_msg = (
                         f"Multiple variables marked in sym_break_cons. "
-                        f"Using {sym_break_var_list[0].name} for symmetry breaking."
+                        f"Using {sym_break_var_list[0].local_name} for symmetry breaking."
                     )
                     self.logger.warning(warning_msg)
                     diagnostics_warnings.append(warning_msg)
@@ -909,7 +921,7 @@ class DesignOfExperiments:
                     raise ValueError(
                         "Variable selected in ``sym_break_cons`` must also be an "
                         "experiment input variable. "
-                        f"Got non-input variable '{sym_break_var.name}'."
+                        f"Got non-input variable '{sym_break_var.local_name}'."
                     )
                 symmetry_breaking_info["variable"] = sym_break_var.local_name
                 symmetry_breaking_info["source"] = "user"
@@ -956,7 +968,7 @@ class DesignOfExperiments:
                     if var_prev is None or var_curr is None:
                         raise RuntimeError(
                             "Failed to map symmetry breaking variable "
-                            f"'{sym_break_var.name}' onto scenario {s}, "
+                            f"'{sym_break_var.local_name}' onto scenario {s}, "
                             f"experiment pair ({k - 1}, {k}). Ensure the variable "
                             "exists on all experiment blocks with compatible labels."
                         )
@@ -969,7 +981,7 @@ class DesignOfExperiments:
 
                 self.logger.info(
                     f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
-                    f"using variable: {sym_break_var.name}"
+                    f"using variable: {sym_break_var.local_name}"
                 )
 
         # Create aggregated objective for multi-experiment optimization
@@ -987,7 +999,7 @@ class DesignOfExperiments:
         # so that the solver uses the correct starting design.
         lhs_init_diagnostics = None
         lhs_initialization_time = 0.0
-        if initialization_method == "lhs":
+        if resolved_initialization_method == InitializationMethod.lhs:
             lhs_timer = TicTocTimer()
             lhs_timer.tic(msg=None)
             self.logger.info(
@@ -1371,9 +1383,11 @@ class DesignOfExperiments:
 
         # Initialization info
         self.results["Initialization Method"] = (
-            initialization_method if initialization_method is not None else "none"
+            resolved_initialization_method.value
+            if resolved_initialization_method is not None
+            else "none"
         )
-        if initialization_method == "lhs":
+        if resolved_initialization_method == InitializationMethod.lhs:
             self.results["LHS Samples Per Dimension"] = lhs_n_samples
             self.results["LHS Seed"] = lhs_seed
             self.results["LHS Best Initial Points"] = best_initial_points
@@ -1421,24 +1435,34 @@ class DesignOfExperiments:
                 "lhs_seed": self.results.get("LHS Seed"),
                 "best_points": self.results.get("LHS Best Initial Points"),
                 "lhs_parallel": (
-                    lhs_parallel if initialization_method == "lhs" else None
+                    lhs_parallel
+                    if resolved_initialization_method == InitializationMethod.lhs
+                    else None
                 ),
                 "lhs_combo_parallel": (
-                    lhs_combo_parallel if initialization_method == "lhs" else None
+                    lhs_combo_parallel
+                    if resolved_initialization_method == InitializationMethod.lhs
+                    else None
                 ),
                 "lhs_n_workers": (
-                    lhs_n_workers if initialization_method == "lhs" else None
+                    lhs_n_workers
+                    if resolved_initialization_method == InitializationMethod.lhs
+                    else None
                 ),
                 "lhs_combo_chunk_size": (
-                    lhs_combo_chunk_size if initialization_method == "lhs" else None
+                    lhs_combo_chunk_size
+                    if resolved_initialization_method == InitializationMethod.lhs
+                    else None
                 ),
                 "lhs_combo_parallel_threshold": (
                     lhs_combo_parallel_threshold
-                    if initialization_method == "lhs"
+                    if resolved_initialization_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_max_wall_clock_time": (
-                    lhs_max_wall_clock_time if initialization_method == "lhs" else None
+                    lhs_max_wall_clock_time
+                    if resolved_initialization_method == InitializationMethod.lhs
+                    else None
                 ),
             },
             "modeling": {
@@ -1446,6 +1470,7 @@ class DesignOfExperiments:
                 "n_experiments_per_scenario": self.results[
                     "Number of Experiments per Scenario"
                 ],
+                "template_mode": _template_mode,
             },
             "prior_fim": self.results["Prior FIM"],
         }
@@ -2005,6 +2030,21 @@ class DesignOfExperiments:
             and n_combinations >= lhs_combo_parallel_threshold
             and resolved_workers > 1
         )
+        if lhs_combo_parallel and not use_parallel_combo:
+            reasons = []
+            if n_combinations < lhs_combo_parallel_threshold:
+                reasons.append(
+                    f"n_combinations={n_combinations} < "
+                    f"lhs_combo_parallel_threshold={lhs_combo_parallel_threshold}"
+                )
+            if resolved_workers <= 1:
+                reasons.append(f"resolved_workers={resolved_workers} <= 1")
+            reason_txt = "; ".join(reasons) if reasons else "parallel preconditions not met"
+            self.logger.warning(
+                "LHS combination scoring requested with "
+                "``lhs_combo_parallel=True``, but running serially: "
+                f"{reason_txt}."
+            )
 
         if use_parallel_combo:
             self.logger.info(

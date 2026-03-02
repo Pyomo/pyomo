@@ -10,9 +10,7 @@ import json
 import logging
 import os, os.path
 import subprocess
-import tempfile
 import time
-import warnings
 from itertools import combinations, product
 from glob import glob
 from unittest.mock import patch
@@ -39,7 +37,6 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.doe import ObjectiveLib
     from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
@@ -1097,26 +1094,6 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
         self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior, atol=1e-6))
 
-    def test_optimize_experiments_writes_results_file(self):
-        doe = self._make_template_doe("pseudo_trace")
-        fd, results_path = tempfile.mkstemp(suffix=".json")
-        os.close(fd)
-        self.addCleanup(
-            lambda: os.path.exists(results_path) and os.remove(results_path)
-        )
-
-        doe.optimize_experiments(n_exp=1, results_file=results_path)
-
-        with open(results_path) as f:
-            payload = json.load(f)
-        self.assertEqual(payload["Initialization Method"], "none")
-        self.assertIn("Scenarios", payload)
-        self.assertIn("run_info", payload)
-        self.assertIn("settings", payload)
-        self.assertIn("timing", payload)
-        self.assertIn("names", payload)
-        self.assertIn("scenarios", payload)
-
     def test_optimize_experiments_is_reentrant_on_same_object(self):
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(n_exp=1)
@@ -1131,146 +1108,6 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         self.assertEqual(len(first_design), len(second_design))
         self.assertIn("timing", doe.results)
-
-    def test_optimize_experiments_lhs_seed_requires_integer(self):
-        doe = self._make_template_doe("pseudo_trace")
-        with self.assertRaisesRegex(
-            ValueError, "``lhs_seed`` must be None or an integer"
-        ):
-            doe.optimize_experiments(
-                n_exp=2, initialization_method="lhs", lhs_n_samples=2, lhs_seed=1.5
-            )
-
-    def test_optimize_experiments_sym_break_var_must_be_input(self):
-        class _BadSymBreakExperiment:
-            def __init__(self, base_exp):
-                self._base_exp = base_exp
-
-            def get_labeled_model(self, **kwargs):
-                m = self._base_exp.get_labeled_model(**kwargs)
-                m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.sym_break_cons[next(iter(m.unknown_parameters.keys()))] = None
-                return m
-
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
-        exp = _BadSymBreakExperiment(RooneyBieglerMultiExperiment(hour=2.0, y=10.0))
-        doe = DesignOfExperiments(
-            experiment_list=[exp],
-            objective_option="pseudo_trace",
-            step=1e-2,
-            solver=solver,
-        )
-
-        with self.assertRaisesRegex(
-            ValueError, "sym_break_cons.*must also be an experiment input variable"
-        ):
-            doe.optimize_experiments(n_exp=2)
-
-    def test_optimize_experiments_timing_includes_lhs_phase_separately(self):
-        doe = self._make_template_doe("pseudo_trace")
-        doe.optimize_experiments(
-            n_exp=2, initialization_method="lhs", lhs_n_samples=2, lhs_seed=11
-        )
-
-        timing = doe.results["timing"]
-        self.assertIn("lhs_initialization_s", timing)
-        self.assertGreaterEqual(timing["lhs_initialization_s"], 0.0)
-        self.assertAlmostEqual(
-            timing["total_s"],
-            timing["build_s"]
-            + timing["lhs_initialization_s"]
-            + timing["initialization_s"]
-            + timing["solve_s"],
-            places=8,
-        )
-
-    def test_optimize_experiments_parameter_scenarios_unsupported(self):
-        doe = self._make_template_doe("pseudo_trace")
-        with self.assertRaises(NotImplementedError):
-            doe.optimize_experiments(parameter_scenarios={"p": [1.0]}, n_exp=1)
-
-    def test_optimize_experiments_symmetry_log_once_per_scenario(self):
-        doe = self._make_template_doe("pseudo_trace")
-        with self.assertLogs("pyomo.contrib.doe.doe", level="INFO") as log_cm:
-            doe.optimize_experiments(n_exp=3)
-
-        matching = [
-            m
-            for m in log_cm.output
-            if "Added 2 symmetry breaking constraints for scenario 0" in m
-        ]
-        self.assertEqual(len(matching), 1)
-
-    def test_optimize_experiments_symmetry_mapping_failure_raises(self):
-        doe = self._make_template_doe("pseudo_trace")
-        probe_model = doe.experiment_list[0].get_labeled_model(
-            **doe.get_labeled_model_args
-        )
-        sym_var_name = next(iter(probe_model.experiment_inputs.keys())).local_name
-        original_find = pyo.ComponentUID.find_component_on
-
-        def _fail_only_symmetry_mapping(cuid, block):
-            # Only fail the experiment-input mapping used for symmetry constraints.
-            # Keep all other ComponentUID lookups (e.g., FD parameter perturbations)
-            # untouched so we reach the intended RuntimeError path.
-            if (
-                cuid._cids[0][0] == sym_var_name
-                and hasattr(block, "experiment_inputs")
-                and block.index() == 0
-            ):
-                return None
-            return original_find(cuid, block)
-
-        with patch(
-            "pyomo.contrib.doe.doe.pyo.ComponentUID.find_component_on",
-            autospec=True,
-            side_effect=_fail_only_symmetry_mapping,
-        ):
-            with self.assertRaisesRegex(
-                RuntimeError, "Failed to map symmetry breaking variable"
-            ):
-                doe.optimize_experiments(n_exp=2)
-
-    def test_maximize_objective_set_contents(self):
-        maximize = DesignOfExperiments._MAXIMIZE_OBJECTIVES
-        self.assertIn(ObjectiveLib.determinant, maximize)
-        self.assertIn(ObjectiveLib.pseudo_trace, maximize)
-        self.assertIn(ObjectiveLib.minimum_eigenvalue, maximize)
-        self.assertNotIn(ObjectiveLib.trace, maximize)
-        self.assertNotIn(ObjectiveLib.condition_number, maximize)
-        self.assertNotIn(ObjectiveLib.zero, maximize)
-
-    def test_symmetrize_lower_tri_helper(self):
-        m = np.array([[1.0, 0.0, 0.0], [2.0, 3.0, 0.0], [4.0, 5.0, 6.0]])
-        got = DesignOfExperiments._symmetrize_lower_tri(m)
-        expected = np.array([[1.0, 2.0, 4.0], [2.0, 3.0, 5.0], [4.0, 5.0, 6.0]])
-        self.assertTrue(np.allclose(got, expected, atol=1e-12))
-
-    def test_lhs_initialization_large_space_emits_warnings(self):
-        doe = self._make_template_doe("pseudo_trace")
-        self._build_template_model_for_multi_experiment(doe, n_exp=2)
-
-        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
-            with warnings.catch_warnings(record=True) as warn_cm:
-                warnings.simplefilter("always")
-                with patch(
-                    "pyomo.contrib.doe.doe._combinations", return_value=iter([(0, 1)])
-                ):
-                    with patch.object(
-                        doe, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
-                    ):
-                        best_points, _ = doe._lhs_initialize_experiments(
-                            lhs_n_samples=10001, lhs_seed=11, n_exp=2
-                        )
-
-        self.assertEqual(len(best_points), 2)
-        self.assertTrue(
-            any("candidate experiment designs" in str(w.message) for w in warn_cm)
-        )
-        self.assertTrue(any("combinations to evaluate" in msg for msg in log_cm.output))
 
     def test_lhs_combo_parallel_matches_serial(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -1481,37 +1318,6 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertTrue(diag["timed_out"])
         self.assertLess(p.call_count, 10)
         self.assertLess(diag["n_candidates"], 10)
-
-    def test_optimize_experiments_lhs_diagnostics_populated(self):
-        doe = self._make_template_doe("pseudo_trace")
-        doe.optimize_experiments(
-            n_exp=2,
-            initialization_method="lhs",
-            lhs_n_samples=2,
-            lhs_seed=11,
-            lhs_parallel=True,
-            lhs_combo_parallel=True,
-            lhs_n_workers=2,
-            lhs_combo_chunk_size=2,
-            lhs_combo_parallel_threshold=1,
-            lhs_max_wall_clock_time=60.0,
-        )
-        lhs_diag = doe.results["diagnostics"]["lhs_initialization"]
-        self.assertIsNotNone(lhs_diag)
-        self.assertEqual(lhs_diag["candidate_fim_mode"], "thread")
-        self.assertEqual(lhs_diag["combo_mode"], "thread")
-        self.assertEqual(lhs_diag["n_workers"], 2)
-        self.assertFalse(lhs_diag["timed_out"])
-        self.assertGreater(lhs_diag["elapsed_total_s"], 0.0)
-        self.assertIn("best_obj", lhs_diag)
-        self.assertIsInstance(lhs_diag["best_obj"], float)
-        self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
-        self.assertGreater(lhs_diag["best_obj"], 0.0)
-        self.assertIn("best_obj_log10", lhs_diag)
-        self.assertIsInstance(lhs_diag["best_obj_log10"], float)
-        self.assertAlmostEqual(
-            lhs_diag["best_obj_log10"], np.log10(lhs_diag["best_obj"]), places=12
-        )
 
     def test_lhs_combo_scoring_n_exp_3_parallel_matches_serial(self):
         doe = self._make_template_doe("pseudo_trace")

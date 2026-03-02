@@ -6,7 +6,7 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-
+import warnings
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
@@ -17,22 +17,26 @@ from pyomo.common.dependencies import (
 
 from pyomo.common.errors import DeveloperError
 import pyomo.common.unittest as unittest
+from unittest.mock import patch
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
+    from pyomo.contrib.doe.doe import InitializationMethod
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
         BadExperiment,
         RooneyBieglerExperimentFlag,
         RooneyBieglerMultiExperiment,
+        RooneyBieglerMultiInputExperimentFlag,
     )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
+import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
@@ -85,6 +89,13 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEErrors(unittest.TestCase):
+    def _make_solver(self):
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+        return solver
+
     def test_experiment_none_error(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -792,6 +803,19 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(initialization_method="bad")
 
+    def test_optimize_experiments_initialization_method_enum(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"``lhs_n_samples`` must be a positive integer, got 0."
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method=InitializationMethod.lhs,
+                lhs_n_samples=0,
+            )
+
     def test_optimize_experiments_invalid_lhs_n_samples(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
@@ -864,7 +888,189 @@ class TestDoEErrors(unittest.TestCase):
             NotImplementedError,
             r"Parameter scenarios for multi-experiment optimization not yet supported.",
         ):
-            doe_obj.optimize_experiments(parameter_scenarios={"dummy": 1})
+            doe_obj.optimize_experiments(_parameter_scenarios={"dummy": 1})
+
+    def test_optimize_experiments_lhs_seed_requires_integer(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"``lhs_seed`` must be None or an integer"
+        ):
+            doe_obj.optimize_experiments(
+                n_exp=2, initialization_method="lhs", lhs_n_samples=2, lhs_seed=1.5
+            )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_sym_break_var_must_be_input(self):
+        class _BadSymBreakExperiment:
+            def __init__(self, base_exp):
+                self._base_exp = base_exp
+
+            def get_labeled_model(self, **kwargs):
+                m = self._base_exp.get_labeled_model(**kwargs)
+                m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.sym_break_cons[next(iter(m.unknown_parameters.keys()))] = None
+                return m
+
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+
+        exp = _BadSymBreakExperiment(RooneyBieglerMultiExperiment(hour=2.0, y=10.0))
+        doe_obj = DesignOfExperiments(
+            experiment_list=[exp],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=solver,
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "sym_break_cons.*must also be an experiment input variable"
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_symmetry_mapping_failure_raises(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+        )
+        probe_model = doe_obj.experiment_list[0].get_labeled_model(
+            **doe_obj.get_labeled_model_args
+        )
+        sym_var_name = next(iter(probe_model.experiment_inputs.keys())).local_name
+        original_find = pyo.ComponentUID.find_component_on
+
+        def _fail_only_symmetry_mapping(cuid, block):
+            if (
+                cuid._cids[0][0] == sym_var_name
+                and hasattr(block, "experiment_inputs")
+                and block.index() == 0
+            ):
+                return None
+            return original_find(cuid, block)
+
+        with patch(
+            "pyomo.contrib.doe.doe.pyo.ComponentUID.find_component_on",
+            autospec=True,
+            side_effect=_fail_only_symmetry_mapping,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError, "Failed to map symmetry breaking variable"
+            ):
+                doe_obj.optimize_experiments(n_exp=2)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_symmetry_breaking_default_variable_warning(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[
+                RooneyBieglerMultiInputExperimentFlag(hour=2.0, sym_break_flag=0),
+                RooneyBieglerMultiInputExperimentFlag(hour=4.0, sym_break_flag=0),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
+            doe_obj.optimize_experiments()
+        self.assertTrue(
+            any("No symmetry breaking variable specified" in msg for msg in cm.output)
+        )
+        self.assertTrue(
+            hasattr(doe_obj.model.param_scenario_blocks[0], "symmetry_breaking_s0_exp1")
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_symmetry_breaking_multiple_markers_warning(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[
+                RooneyBieglerMultiInputExperimentFlag(hour=2.0, sym_break_flag=2),
+                RooneyBieglerMultiInputExperimentFlag(hour=4.0, sym_break_flag=2),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
+            doe_obj.optimize_experiments()
+        self.assertTrue(
+            any("Multiple variables marked in sym_break_cons" in msg for msg in cm.output)
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_lhs_initialization_large_space_emits_warnings(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        doe_obj.model.param_scenario_blocks = pyo.Block(range(1))
+        doe_obj.model.param_scenario_blocks[0].exp_blocks = pyo.Block(range(2))
+        for k in range(2):
+            doe_obj.create_doe_model(
+                model=doe_obj.model.param_scenario_blocks[0].exp_blocks[k],
+                experiment_index=0,
+                _for_multi_experiment=True,
+            )
+
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+            with warnings.catch_warnings(record=True) as warn_cm:
+                warnings.simplefilter("always")
+                with patch(
+                    "pyomo.contrib.doe.doe._combinations", return_value=iter([(0, 1)])
+                ):
+                    with patch.object(
+                        doe_obj, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
+                    ):
+                        best_points, _ = doe_obj._lhs_initialize_experiments(
+                            lhs_n_samples=10001, lhs_seed=11, n_exp=2
+                        )
+
+        self.assertEqual(len(best_points), 2)
+        self.assertTrue(
+            any("candidate experiment designs" in str(w.message) for w in warn_cm)
+        )
+        self.assertTrue(any("combinations to evaluate" in msg for msg in log_cm.output))
+
+    def test_lhs_combo_parallel_requested_but_not_used_warns(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+        )
+        doe_obj.model.param_scenario_blocks = pyo.Block(range(1))
+        doe_obj.model.param_scenario_blocks[0].exp_blocks = pyo.Block(range(2))
+        for k in range(2):
+            doe_obj.create_doe_model(
+                model=doe_obj.model.param_scenario_blocks[0].exp_blocks[k],
+                experiment_index=0,
+                _for_multi_experiment=True,
+            )
+
+        with patch.object(
+            doe_obj, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
+        ):
+            with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
+                doe_obj._lhs_initialize_experiments(
+                    lhs_n_samples=2,
+                    lhs_seed=11,
+                    n_exp=2,
+                    lhs_combo_parallel=True,
+                    lhs_n_workers=2,
+                    lhs_combo_parallel_threshold=10_000,
+                )
+
+        self.assertTrue(
+            any(
+                "lhs_combo_parallel=True" in msg and "running serially" in msg
+                for msg in cm.output
+            )
+        )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_lhs_missing_bounds_error_message(self):

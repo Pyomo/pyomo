@@ -7,7 +7,10 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 import json
+import os
 import os.path
+import tempfile
+from pathlib import Path
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -19,6 +22,7 @@ from pyomo.common.dependencies import (
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
+from pyomo.contrib.doe.doe import ObjectiveLib
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
@@ -30,7 +34,6 @@ if scipy_available:
     )
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
         RooneyBieglerMultiExperiment,
-        RooneyBieglerMultiInputExperimentFlag,
     )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
@@ -733,6 +736,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertEqual(
             doe_obj.results["settings"]["modeling"]["n_experiments_per_scenario"], 2
         )
+        self.assertFalse(doe_obj.results["settings"]["modeling"]["template_mode"])
         self.assertEqual(len(doe_obj.results["scenarios"]), 1)
         self.assertEqual(doe_obj.results["scenarios"][0]["id"], 0)
         self.assertEqual(len(doe_obj.results["scenarios"][0]["experiments"]), 2)
@@ -744,42 +748,144 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertLessEqual(h0, h1)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_symmetry_breaking_default_variable_warning(self):
+    def test_optimize_experiments_writes_results_file(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[
-                RooneyBieglerMultiInputExperimentFlag(hour=2.0, sym_break_flag=0),
-                RooneyBieglerMultiInputExperimentFlag(hour=4.0, sym_break_flag=0),
-            ],
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
         )
-        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
-            doe_obj.optimize_experiments()
-        self.assertTrue(
-            any("No symmetry breaking variable specified" in msg for msg in cm.output)
+        fd, results_path = tempfile.mkstemp(suffix=".json")
+        os.close(fd)
+        self.addCleanup(
+            lambda: os.path.exists(results_path) and os.remove(results_path)
         )
-        self.assertTrue(
-            hasattr(doe_obj.model.param_scenario_blocks[0], "symmetry_breaking_s0_exp1")
+
+        doe_obj.optimize_experiments(n_exp=1, results_file=results_path)
+
+        with open(results_path) as f:
+            payload = json.load(f)
+        self.assertEqual(payload["Initialization Method"], "none")
+        self.assertTrue(payload["settings"]["modeling"]["template_mode"])
+        self.assertIn("Scenarios", payload)
+        self.assertIn("run_info", payload)
+        self.assertIn("settings", payload)
+        self.assertIn("timing", payload)
+        self.assertIn("names", payload)
+        self.assertIn("scenarios", payload)
+
+        path_payload = Path(results_path)
+        doe_obj.optimize_experiments(n_exp=1, results_file=path_payload)
+        with open(results_path) as f:
+            payload_path = json.load(f)
+        self.assertEqual(payload_path["Initialization Method"], "none")
+        self.assertTrue(payload_path["settings"]["modeling"]["template_mode"])
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_single_experiment_defaults_to_template_mode(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        doe_obj.optimize_experiments()
+        self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 1)
+        self.assertTrue(doe_obj.results["settings"]["modeling"]["template_mode"])
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_timing_includes_lhs_phase_separately(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        doe_obj.optimize_experiments(
+            n_exp=2, initialization_method="lhs", lhs_n_samples=2, lhs_seed=11
+        )
+
+        timing = doe_obj.results["timing"]
+        self.assertIn("lhs_initialization_s", timing)
+        self.assertGreaterEqual(timing["lhs_initialization_s"], 0.0)
+        self.assertAlmostEqual(
+            timing["total_s"],
+            timing["build_s"]
+            + timing["lhs_initialization_s"]
+            + timing["initialization_s"]
+            + timing["solve_s"],
+            places=8,
         )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_symmetry_breaking_multiple_markers_warning(self):
+    def test_optimize_experiments_symmetry_log_once_per_scenario(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[
-                RooneyBieglerMultiInputExperimentFlag(hour=2.0, sym_break_flag=2),
-                RooneyBieglerMultiInputExperimentFlag(hour=4.0, sym_break_flag=2),
-            ],
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
         )
-        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
-            doe_obj.optimize_experiments()
-        self.assertTrue(
-            any("Multiple variables marked in sym_break_cons" in msg for msg in cm.output)
+        with self.assertLogs("pyomo.contrib.doe.doe", level="INFO") as log_cm:
+            doe_obj.optimize_experiments(n_exp=3)
+
+        matching = [
+            m
+            for m in log_cm.output
+            if "Added 2 symmetry breaking constraints for scenario 0" in m
+        ]
+        self.assertEqual(len(matching), 1)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_lhs_diagnostics_populated(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        doe_obj.optimize_experiments(
+            n_exp=2,
+            initialization_method="lhs",
+            lhs_n_samples=2,
+            lhs_seed=11,
+            lhs_parallel=True,
+            lhs_combo_parallel=True,
+            lhs_n_workers=2,
+            lhs_combo_chunk_size=2,
+            lhs_combo_parallel_threshold=1,
+            lhs_max_wall_clock_time=60.0,
+        )
+        lhs_diag = doe_obj.results["diagnostics"]["lhs_initialization"]
+        self.assertIsNotNone(lhs_diag)
+        self.assertEqual(lhs_diag["candidate_fim_mode"], "thread")
+        self.assertEqual(lhs_diag["combo_mode"], "thread")
+        self.assertEqual(lhs_diag["n_workers"], 2)
+        self.assertFalse(lhs_diag["timed_out"])
+        self.assertGreater(lhs_diag["elapsed_total_s"], 0.0)
+        self.assertIn("best_obj", lhs_diag)
+        self.assertIsInstance(lhs_diag["best_obj"], float)
+        self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
+        self.assertGreater(lhs_diag["best_obj"], 0.0)
+        self.assertIn("best_obj_log10", lhs_diag)
+        self.assertIsInstance(lhs_diag["best_obj_log10"], float)
+        self.assertAlmostEqual(
+            lhs_diag["best_obj_log10"], np.log10(lhs_diag["best_obj"]), places=12
         )
 
+    def test_maximize_objective_set_contents(self):
+        maximize = DesignOfExperiments._MAXIMIZE_OBJECTIVES
+        self.assertIn(ObjectiveLib.determinant, maximize)
+        self.assertIn(ObjectiveLib.pseudo_trace, maximize)
+        self.assertIn(ObjectiveLib.minimum_eigenvalue, maximize)
+        self.assertNotIn(ObjectiveLib.trace, maximize)
+        self.assertNotIn(ObjectiveLib.condition_number, maximize)
+        self.assertNotIn(ObjectiveLib.zero, maximize)
+
+    def test_symmetrize_lower_tri_helper(self):
+        m = np.array([[1.0, 0.0, 0.0], [2.0, 3.0, 0.0], [4.0, 5.0, 6.0]])
+        got = DesignOfExperiments._symmetrize_lower_tri(m)
+        expected = np.array([[1.0, 2.0, 4.0], [2.0, 3.0, 5.0], [4.0, 5.0, 6.0]])
+        self.assertTrue(np.allclose(got, expected, atol=1e-12))
 
 if __name__ == "__main__":
     unittest.main()
