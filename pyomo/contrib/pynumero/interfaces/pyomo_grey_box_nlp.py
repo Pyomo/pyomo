@@ -95,7 +95,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             self._pyomo_model_constraint_names_to_datas = {
                 c.getname(fully_qualified=True): c
                 for c in pyomo_model.component_data_objects(
-                    ctype=pyo.Constraint, descend_into=True
+                    ctype=pyo.Constraint, descend_into=True, active=True
                 )
             }
             # Check for ExternalGreyBoxConstraint objects and add
