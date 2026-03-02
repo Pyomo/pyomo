@@ -1428,6 +1428,40 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
         self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
 
+    def test_optimize_experiments_trace_expected_values(self):
+        # Match the multi-experiment example style (explicit experiment list)
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
+            RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
+        ]
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+        # prior_FIM from data `hour = 1, y = 8.3` with default value of parameters, which
+        # is theta = {'asymptote': 15, 'rate_constant': 0.5}
+        prior_FIM = np.array(
+            [[15.48181217, 357.97684273], [357.97684273, 8277.28811613]]
+        )
+
+        doe = DesignOfExperiments(
+            experiment_list=exp_list,
+            objective_option="trace",
+            step=1e-2,
+            solver=solver,
+            prior_FIM=prior_FIM,
+        )
+        doe.optimize_experiments()
+
+        scenario = doe.results["Scenarios"][0]
+        got_hours = sorted(
+            exp["Experiment Design"][0] for exp in scenario["Experiments"]
+        )
+        expected_hours = [10.0, 10.0]
+
+        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
+        self.assertAlmostEqual(scenario["log10 A-opt"], -2.2347, places=3)
+
 
 if __name__ == "__main__":
     unittest.main()
