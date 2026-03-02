@@ -554,7 +554,12 @@ jobs:
             fi
         fi
         cd "$IPOPT_DIR"
-        tar -xzf "$IPOPT_TAR"
+        if test "${{matrix.TARGET}}" == win; then
+            # tar on Windows apparently can't open "drive:\path" file names
+            tar -xzi < "$IPOPT_TAR"
+        else
+            tar -xzf "$IPOPT_TAR"
+        fi
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
