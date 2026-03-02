@@ -612,6 +612,20 @@ class DesignOfExperiments:
                 json.dump(self.results, file)
 
     def _solver_options_container(self, solver):
+        """
+        Return the mutable solver options container.
+
+        Parameters
+        ----------
+        solver: solver interface object
+            Solver used by DoE. Must expose either ``options`` or
+            ``config.options``.
+
+        Returns
+        -------
+        dict-like
+            Mutable solver options object.
+        """
         if hasattr(solver, "options"):
             return solver.options
         if hasattr(solver, "config") and hasattr(solver.config, "options"):
@@ -623,6 +637,21 @@ class DesignOfExperiments:
 
     @contextmanager
     def _temporary_solver_options(self, solver, new_options):
+        """
+        Temporarily apply solver options for a scoped solve call.
+
+        Parameters
+        ----------
+        solver: solver interface object
+            Solver whose options will be temporarily overridden.
+        new_options: dict-like or None
+            Option values to apply while inside the context manager.
+
+        Yields
+        ------
+        None
+            Context with temporary options applied.
+        """
         if new_options is None:
             yield
             return
@@ -646,10 +675,37 @@ class DesignOfExperiments:
                 options[key] = val
 
     def _compute_cholesky_jitter(self, min_eig):
-        """Compute diagonal shift to guarantee minimum eigenvalue tolerance."""
+        """
+        Compute diagonal regularization for Cholesky initialization.
+
+        Parameters
+        ----------
+        min_eig: float
+            Minimum eigenvalue of the current FIM estimate.
+
+        Returns
+        -------
+        float
+            Nonnegative diagonal shift needed so the minimum eigenvalue
+            is at least ``_SMALL_TOLERANCE_DEFINITENESS``.
+        """
         return max(0.0, _SMALL_TOLERANCE_DEFINITENESS - float(min_eig))
 
     def _get_fim_numpy(self, model):
+        """
+        Assemble the current FIM variable values into a NumPy array.
+
+        Parameters
+        ----------
+        model: ConcreteModel
+            DoE model containing variable ``fim``.
+
+        Returns
+        -------
+        ndarray
+            Dense FIM array. If ``only_compute_fim_lower`` is True, the
+            returned array is symmetrized from the lower triangle.
+        """
         fim_vals = [
             pyo.value(model.fim[i, j])
             for i in model.parameter_names
@@ -663,6 +719,20 @@ class DesignOfExperiments:
         return fim_np
 
     def _initialize_cholesky_from_fim(self, model=None):
+        """
+        Synchronize Cholesky-related variables using the current FIM.
+
+        Parameters
+        ----------
+        model: ConcreteModel, optional
+            DoE model to update. Defaults to ``self.model``.
+
+        Returns
+        -------
+        None
+            Updates model values in place for available variables:
+            ``L``, ``L_inv``, ``fim_inv``, and ``cov_trace``.
+        """
         if model is None:
             model = self.model
         if not hasattr(model, "L"):
