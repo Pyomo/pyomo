@@ -37,6 +37,24 @@ class _RecordingSolver:
         return _FakeResult()
 
 
+class _MutatingRecordingSolver(_RecordingSolver):
+    def solve(self, model, tee=False):
+        super().solve(model, tee=tee)
+        if (
+            hasattr(model, "dummy_obj")
+            and model.dummy_obj.active
+            and hasattr(model, "fim")
+            and len(list(model.parameter_names)) == 2
+        ):
+            p1, p2 = list(model.parameter_names)
+            model.fim[p1, p1].set_value(16.0)
+            model.fim[p2, p1].set_value(4.0)
+            if (p1, p2) in model.fim:
+                model.fim[p1, p2].set_value(0.0)
+            model.fim[p2, p2].set_value(9.0)
+        return _FakeResult()
+
+
 class _SimpleExperiment:
     def get_labeled_model(self):
         m = pyo.ConcreteModel()
@@ -56,6 +74,33 @@ class _SimpleExperiment:
         return m
 
 
+class _TwoParamExperiment:
+    def get_labeled_model(self):
+        m = pyo.ConcreteModel()
+        m.x1 = pyo.Var(initialize=1.0)
+        m.x2 = pyo.Var(initialize=1.0)
+        m.theta1 = pyo.Var(initialize=2.0)
+        m.theta2 = pyo.Var(initialize=3.0)
+        m.y1 = pyo.Var(initialize=2.0)
+        m.y2 = pyo.Var(initialize=3.0)
+        m.eq1 = pyo.Constraint(expr=m.y1 == m.theta1 * m.x1)
+        m.eq2 = pyo.Constraint(expr=m.y2 == m.theta2 * m.x2)
+
+        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_inputs[m.x1] = 1.0
+        m.experiment_inputs[m.x2] = 1.0
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters[m.theta1] = 2.0
+        m.unknown_parameters[m.theta2] = 3.0
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs[m.y1] = 2.0
+        m.experiment_outputs[m.y2] = 3.0
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error[m.y1] = 1.0
+        m.measurement_error[m.y2] = 1.0
+        return m
+
+
 def _make_doe_object():
     solver = _RecordingSolver()
     solver.options["max_iter"] = 3000
@@ -64,6 +109,19 @@ def _make_doe_object():
         fd_formula="central",
         step=1e-3,
         objective_option="zero",
+        solver=solver,
+        tee=False,
+    )
+
+
+def _make_trace_doe_object():
+    solver = _MutatingRecordingSolver()
+    solver.options["max_iter"] = 3000
+    return DesignOfExperiments(
+        experiment=_TwoParamExperiment(),
+        fd_formula="central",
+        step=1e-3,
+        objective_option="trace",
         solver=solver,
         tee=False,
     )
@@ -165,3 +223,29 @@ class TestCholeskyInitialization(unittest.TestCase):
         min_eig = 1.0e-2
         jitter = doe_obj._compute_cholesky_jitter(min_eig)
         self.assertEqual(jitter, 0.0)
+
+    def test_trace_initialization_resynchronizes_fim_inverse_variables(self):
+        doe_obj = _make_trace_doe_object()
+        doe_obj.run_doe(
+            solve_final_model=False,
+            inspect_constraints=True,
+            inspect_top_constraints=200,
+        )
+        residuals = doe_obj.results["Constraint Residuals"]["post_initialization"]
+        by_name = {entry["constraint_name"]: entry["violation"] for entry in residuals}
+
+        cholesky_inv = [
+            violation
+            for name, violation in by_name.items()
+            if name.startswith("obj_cons.cholesky_inv_cons[")
+        ]
+        llinv = [
+            violation
+            for name, violation in by_name.items()
+            if name.startswith("obj_cons.cholesky_LLinv_cons[")
+        ]
+        self.assertGreater(len(cholesky_inv), 0)
+        self.assertGreater(len(llinv), 0)
+        self.assertLess(max(cholesky_inv), 1e-8)
+        self.assertLess(max(llinv), 1e-8)
+        self.assertLess(by_name["obj_cons.cov_trace_rule"], 1e-8)

@@ -397,13 +397,6 @@ class DesignOfExperiments:
         model.objective.activate()
         model.obj_cons.activate()
 
-        constraint_residuals = {}
-        if inspect_constraints:
-            constraint_residuals["post_initialization"] = self.get_constraint_residuals(
-                model=model,
-                top_n=inspect_top_constraints,
-            )
-
         if self.use_grey_box:
             # Initialize grey box inputs to be fim values currently
             for i in model.parameter_names:
@@ -431,51 +424,15 @@ class DesignOfExperiments:
                 cond_number = np.log(np.abs(np.max(eig) / np.min(eig)))
                 model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
 
-        # If the model has L, initialize it with the solved FIM
-        if hasattr(model, "L"):
-            # Get the FIM values
-            fim_vals = [
-                pyo.value(model.fim[i, j])
-                for i in model.parameter_names
-                for j in model.parameter_names
-            ]
-            fim_np = np.array(fim_vals).reshape(
-                (len(model.parameter_names), len(model.parameter_names))
+        # Keep Cholesky-related variables synchronized with current FIM values
+        self._initialize_cholesky_from_fim(model=model)
+
+        constraint_residuals = {}
+        if inspect_constraints:
+            constraint_residuals["post_initialization"] = self.get_constraint_residuals(
+                model=model,
+                top_n=inspect_top_constraints,
             )
-
-            # Need to compute the full FIM before
-            # initializing the Cholesky factorization
-            if self.only_compute_fim_lower:
-                fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
-
-            # Check if the FIM is positive definite
-            # If not, add jitter to the diagonal
-            # to ensure positive definiteness
-            min_eig = float(np.min(np.linalg.eigvalsh(fim_np)))
-            jitter = self._compute_cholesky_jitter(min_eig)
-
-            # Add jitter to the diagonal to ensure positive definiteness
-            L_vals_sq = np.linalg.cholesky(
-                fim_np + jitter * np.eye(len(model.parameter_names))
-            )
-            for i, c in enumerate(model.parameter_names):
-                for j, d in enumerate(model.parameter_names):
-                    model.L[c, d].value = L_vals_sq[i, j]
-
-            # Initialize the inverse of L if it exists
-            if hasattr(model, "L_inv"):
-                L_inv_vals = np.linalg.inv(L_vals_sq)
-
-                for i, c in enumerate(model.parameter_names):
-                    for j, d in enumerate(model.parameter_names):
-                        if i >= j:
-                            model.L_inv[c, d].value = L_inv_vals[i, j]
-                        else:
-                            model.L_inv[c, d].value = 0.0
-                # Initialize the cov_trace if it exists
-                if hasattr(model, "cov_trace"):
-                    initial_cov_trace = np.sum(L_inv_vals**2)
-                    model.cov_trace.value = initial_cov_trace
 
         if hasattr(model, "determinant"):
             model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
@@ -627,6 +584,60 @@ class DesignOfExperiments:
     def _compute_cholesky_jitter(self, min_eig):
         """Compute diagonal shift to guarantee minimum eigenvalue tolerance."""
         return max(0.0, _SMALL_TOLERANCE_DEFINITENESS - float(min_eig))
+
+    def _get_fim_numpy(self, model):
+        fim_vals = [
+            pyo.value(model.fim[i, j])
+            for i in model.parameter_names
+            for j in model.parameter_names
+        ]
+        fim_np = np.array(fim_vals, dtype=float).reshape(
+            (len(model.parameter_names), len(model.parameter_names))
+        )
+        if self.only_compute_fim_lower:
+            fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
+        return fim_np
+
+    def _initialize_cholesky_from_fim(self, model=None):
+        if model is None:
+            model = self.model
+        if not hasattr(model, "L"):
+            return
+
+        fim_np = self._get_fim_numpy(model)
+        min_eig = float(np.min(np.linalg.eigvalsh(fim_np)))
+        jitter = self._compute_cholesky_jitter(min_eig)
+        fim_pd = fim_np + jitter * np.eye(len(model.parameter_names))
+
+        L_vals = np.linalg.cholesky(fim_pd)
+        for i, c in enumerate(model.parameter_names):
+            for j, d in enumerate(model.parameter_names):
+                if i >= j:
+                    model.L[c, d].value = L_vals[i, j]
+                else:
+                    model.L[c, d].value = 0.0
+
+        if hasattr(model, "L_inv"):
+            L_inv_vals = np.linalg.inv(L_vals)
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
+                    if i >= j:
+                        model.L_inv[c, d].value = L_inv_vals[i, j]
+                    else:
+                        model.L_inv[c, d].value = 0.0
+
+        if hasattr(model, "fim_inv"):
+            fim_inv_vals = np.linalg.inv(fim_pd)
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
+                    if self.only_compute_fim_lower and i < j:
+                        model.fim_inv[c, d].value = 0.0
+                    else:
+                        model.fim_inv[c, d].value = fim_inv_vals[i, j]
+
+        if hasattr(model, "cov_trace"):
+            fim_inv_np = np.linalg.inv(fim_pd)
+            model.cov_trace.value = np.trace(fim_inv_np)
 
     def get_constraint_residuals(self, model=None, top_n=20):
         """Return sorted residual diagnostics for active constraints."""
