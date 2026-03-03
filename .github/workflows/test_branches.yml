@@ -481,6 +481,7 @@ jobs:
         echo "PYOMO_PATH=$IPOPT_DIR:$PYOMO_PATH" >> $GITHUB_ENV
         mkdir -p "$IPOPT_DIR"
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
+        rm -rf $IPOPT_TAR
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
             URL=https://github.com/IDAES/idaes-ext
