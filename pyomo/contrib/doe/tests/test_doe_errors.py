@@ -821,32 +821,16 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_objective_function()
 
-    def test_optimize_experiments_invalid_initialization_method(self):
+    def test_optimize_experiments_invalid_init_method(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
-            ValueError,
-            r"``initialization_method`` must be one of \[None, 'lhs'\], got 'bad'.",
+            ValueError, r"``init_method`` must be one of \[None, 'lhs'\], got 'bad'."
         ):
-            doe_obj.optimize_experiments(initialization_method="bad")
+            doe_obj.optimize_experiments(init_method="bad")
 
-    def test_optimize_experiments_initialization_method_enum_accepted(self):
-        doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
-        )
-        with self.assertRaisesRegex(
-            NotImplementedError,
-            r"Parameter scenarios for multi-experiment optimization not yet supported.",
-        ):
-            doe_obj.optimize_experiments(
-                initialization_method=InitializationMethod.lhs,
-                _parameter_scenarios={"dummy": 1},
-            )
-
-    def test_optimize_experiments_initialization_method_enum_invalid_init_n_samples(
-        self,
-    ):
+    def test_optimize_experiments_init_method_enum_accepted(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
@@ -854,7 +838,18 @@ class TestDoEErrors(unittest.TestCase):
             ValueError, r"``init_n_samples`` must be a positive integer, got 0."
         ):
             doe_obj.optimize_experiments(
-                initialization_method=InitializationMethod.lhs, init_n_samples=0
+                init_method=InitializationMethod.lhs, init_n_samples=0
+            )
+
+    def test_optimize_experiments_init_method_enum_invalid_init_n_samples(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"``init_n_samples`` must be a positive integer, got 0."
+        ):
+            doe_obj.optimize_experiments(
+                init_method=InitializationMethod.lhs, init_n_samples=0
             )
 
     def test_optimize_experiments_invalid_init_n_samples(self):
@@ -864,7 +859,7 @@ class TestDoEErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, r"``init_n_samples`` must be a positive integer, got 0."
         ):
-            doe_obj.optimize_experiments(initialization_method="lhs", init_n_samples=0)
+            doe_obj.optimize_experiments(init_method="lhs", init_n_samples=0)
 
     def test_optimize_experiments_invalid_init_n_samples_float(self):
         doe_obj = DesignOfExperiments(
@@ -873,9 +868,7 @@ class TestDoEErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, r"``init_n_samples`` must be a positive integer, got 2.5."
         ):
-            doe_obj.optimize_experiments(
-                initialization_method="lhs", init_n_samples=2.5
-            )
+            doe_obj.optimize_experiments(init_method="lhs", init_n_samples=2.5)
 
     def test_optimize_experiments_lhs_requires_template_mode(self):
         doe_obj = DesignOfExperiments(
@@ -884,9 +877,9 @@ class TestDoEErrors(unittest.TestCase):
         )
         with self.assertRaisesRegex(
             ValueError,
-            r"``initialization_method='lhs'`` is currently supported only in template mode",
+            r"``init_method='lhs'`` is currently supported only in template mode",
         ):
-            doe_obj.optimize_experiments(initialization_method="lhs")
+            doe_obj.optimize_experiments(init_method="lhs")
 
     def test_optimize_experiments_lhs_requires_scipy(self):
         doe_obj = DesignOfExperiments(
@@ -896,7 +889,7 @@ class TestDoEErrors(unittest.TestCase):
             with self.assertRaisesRegex(
                 ImportError, r"LHS initialization requires scipy"
             ):
-                doe_obj.optimize_experiments(initialization_method="lhs")
+                doe_obj.optimize_experiments(init_method="lhs")
 
     def test_optimize_experiments_init_parallel_requires_bool(self):
         doe_obj = DesignOfExperiments(
@@ -905,7 +898,7 @@ class TestDoEErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, r"``init_parallel`` must be a bool, got 1."
         ):
-            doe_obj.optimize_experiments(initialization_method="lhs", init_parallel=1)
+            doe_obj.optimize_experiments(init_method="lhs", init_parallel=1)
 
     def test_optimize_experiments_init_combo_parallel_requires_bool(self):
         doe_obj = DesignOfExperiments(
@@ -914,9 +907,7 @@ class TestDoEErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, r"``init_combo_parallel`` must be a bool"
         ):
-            doe_obj.optimize_experiments(
-                initialization_method="lhs", init_combo_parallel="yes"
-            )
+            doe_obj.optimize_experiments(init_method="lhs", init_combo_parallel="yes")
 
     def test_optimize_experiments_init_n_workers_must_be_positive_integer(self):
         doe_obj = DesignOfExperiments(
@@ -925,7 +916,7 @@ class TestDoEErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, r"``init_n_workers`` must be None or a positive integer"
         ):
-            doe_obj.optimize_experiments(initialization_method="lhs", init_n_workers=0)
+            doe_obj.optimize_experiments(init_method="lhs", init_n_workers=0)
 
     def test_optimize_experiments_init_combo_chunk_size_must_be_positive_integer(self):
         doe_obj = DesignOfExperiments(
@@ -934,9 +925,7 @@ class TestDoEErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, r"``init_combo_chunk_size`` must be a positive integer"
         ):
-            doe_obj.optimize_experiments(
-                initialization_method="lhs", init_combo_chunk_size=0
-            )
+            doe_obj.optimize_experiments(init_method="lhs", init_combo_chunk_size=0)
 
     def test_optimize_experiments_init_combo_parallel_threshold_positive_integer(self):
         doe_obj = DesignOfExperiments(
@@ -946,7 +935,7 @@ class TestDoEErrors(unittest.TestCase):
             ValueError, r"``init_combo_parallel_threshold`` must be a positive integer"
         ):
             doe_obj.optimize_experiments(
-                initialization_method="lhs", init_combo_parallel_threshold=0
+                init_method="lhs", init_combo_parallel_threshold=0
             )
 
     def test_optimize_experiments_init_max_wall_clock_time_must_be_positive(self):
@@ -957,8 +946,30 @@ class TestDoEErrors(unittest.TestCase):
             ValueError,
             r"``init_max_wall_clock_time`` must be None or a positive number",
         ):
+            doe_obj.optimize_experiments(init_method="lhs", init_max_wall_clock_time=0)
+
+    def test_optimize_experiments_init_max_wall_clock_time_rejects_nan(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``init_max_wall_clock_time`` must be None or a positive number",
+        ):
             doe_obj.optimize_experiments(
-                initialization_method="lhs", init_max_wall_clock_time=0
+                init_method="lhs", init_max_wall_clock_time=float("nan")
+            )
+
+    def test_optimize_experiments_init_max_wall_clock_time_rejects_inf(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``init_max_wall_clock_time`` must be None or a positive number",
+        ):
+            doe_obj.optimize_experiments(
+                init_method="lhs", init_max_wall_clock_time=float("inf")
             )
 
     def test_optimize_experiments_n_exp_with_multi_list(self):
@@ -990,14 +1001,11 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(results_file=5)
 
-    def test_optimize_experiments_parameter_scenarios_not_implemented(self):
+    def test_optimize_experiments_parameter_scenarios_argument_removed(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
-        with self.assertRaisesRegex(
-            NotImplementedError,
-            r"Parameter scenarios for multi-experiment optimization not yet supported.",
-        ):
+        with self.assertRaisesRegex(TypeError, r"unexpected keyword argument"):
             doe_obj.optimize_experiments(_parameter_scenarios={"dummy": 1})
 
     def test_optimize_experiments_init_seed_requires_integer(self):
@@ -1008,7 +1016,7 @@ class TestDoEErrors(unittest.TestCase):
             ValueError, r"``init_seed`` must be None or an integer"
         ):
             doe_obj.optimize_experiments(
-                n_exp=2, initialization_method="lhs", init_n_samples=2, init_seed=1.5
+                n_exp=2, init_method="lhs", init_n_samples=2, init_seed=1.5
             )
 
 
@@ -1133,7 +1141,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
                     ):
                         doe_obj.optimize_experiments(
                             n_exp=2,
-                            initialization_method="lhs",
+                            init_method="lhs",
                             init_n_samples=10001,
                             init_seed=11,
                         )
@@ -1156,7 +1164,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
                 doe_obj.optimize_experiments(
                     n_exp=2,
-                    initialization_method="lhs",
+                    init_method="lhs",
                     init_n_samples=2,
                     init_seed=11,
                     init_combo_parallel=True,
@@ -1182,7 +1190,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             ValueError,
             r"LHS initialization requires explicit lower and upper bounds on all experiment input variables",
         ):
-            doe_obj.optimize_experiments(initialization_method="lhs", init_n_samples=2)
+            doe_obj.optimize_experiments(init_method="lhs", init_n_samples=2)
 
 
 if __name__ == "__main__":

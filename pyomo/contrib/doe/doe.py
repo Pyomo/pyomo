@@ -114,6 +114,11 @@ class DesignOfExperiments:
         }
     )
 
+    @staticmethod
+    def _enum_label(value):
+        """Return a stable short label for enum-like values."""
+        return str(value).split(".")[-1]
+
     def __init__(
         self,
         experiment=None,
@@ -551,10 +556,14 @@ class DesignOfExperiments:
 
         self.results["Solver Status"] = res.solver.status
         self.results["Termination Condition"] = res.solver.termination_condition
-        if type(res.solver.message) is str:
+        if isinstance(res.solver.message, str):
             results_message = res.solver.message
-        elif type(res.solver.message) is bytes:
+        elif isinstance(res.solver.message, bytes):
             results_message = res.solver.message.decode("utf-8")
+        else:
+            results_message = (
+                str(res.solver.message) if res.solver.message is not None else ""
+            )
         self.results["Termination Message"] = results_message
 
         # Important quantities for optimal design
@@ -581,10 +590,10 @@ class DesignOfExperiments:
             for k in model.fd_scenario_blocks[0].measurement_error
         ]
 
-        self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
+        self.results["Prior FIM"] = self.prior_FIM.tolist()
 
         # Saving some stats on the FIM for convenience
-        self.results["Objective expression"] = str(self.objective_option).split(".")[-1]
+        self.results["Objective expression"] = self._enum_label(self.objective_option)
         self.results["log10 A-opt"] = np.log10(np.trace(np.linalg.inv(fim_local)))
         self.results["log10 pseudo A-opt"] = np.log10(np.trace(fim_local))
         self.results["log10 D-opt"] = np.log10(np.linalg.det(fim_local))
@@ -598,7 +607,7 @@ class DesignOfExperiments:
         self.results["Wall-clock Time"] = build_time + initialization_time + solve_time
 
         # Settings used to generate the optimal DoE
-        self.results["Finite Difference Scheme"] = str(self.fd_formula).split(".")[-1]
+        self.results["Finite Difference Scheme"] = self._enum_label(self.fd_formula)
         self.results["Finite Difference Step"] = self.step
         self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
 
@@ -612,10 +621,9 @@ class DesignOfExperiments:
 
     def optimize_experiments(
         self,
-        _parameter_scenarios=None,
         results_file=None,
         n_exp: int = None,
-        initialization_method=None,
+        init_method=None,
         init_n_samples: int = 5,
         init_seed: int = None,
         init_parallel: bool = False,
@@ -634,18 +642,11 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        _parameter_scenarios:
-            `dataclass` of parameter scenarios to consider for the multi-experiment
-            optimization. This is currently unsupported; passing anything other
-            than ``None`` raises ``NotImplementedError``. It is a placeholder
-            for future functionality to incorporate parametric uncertainty.
-            Default: None
-
         results_file:
             string name of the file path to save the results to in the form
             of a .json file
 
-        initialization_method:
+        init_method:
             Method used to initialize the experiment design variables before
             optimization. Options are:
 
@@ -663,23 +664,23 @@ class DesignOfExperiments:
 
         init_n_samples:
             Number of LHS samples per experiment-input dimension when
-            ``initialization_method="lhs"``. The total number of candidate
+            ``init_method="lhs"``. The total number of candidate
             designs is ``init_n_samples ** n_exp_inputs``. A warning is issued
             when this exceeds 10,000. Default: 5.
 
         init_seed:
             Integer seed for the LHS random-number generator (for
-            reproducibility). Used only when ``initialization_method="lhs"``.
+            reproducibility). Used only when ``init_method="lhs"``.
             Default: ``None`` (non-deterministic).
         init_parallel:
             If True, evaluate candidate-point FIMs in parallel during LHS
             initialization. Default: False.
         init_combo_parallel:
             If True, the scoring of Latin hypercube candidate combinations
-            (``C(n_candidates, n_exp)`` during ``initialization_method="lhs"``)
+            (``C(n_candidates, n_exp)`` during ``init_method="lhs"``)
             is split across a thread pool.  Each worker computes the scalar
             objective derived from the FIM for its chunk of combinations.  The
-            flag has no effect unless ``initialization_method="lhs"`` and the
+            flag has no effect unless ``init_method="lhs"`` and the
             total number of combinations exceeds ``init_combo_parallel_threshold``.
             Default: False.
         init_n_workers:
@@ -717,7 +718,7 @@ class DesignOfExperiments:
             for k = 1, ..., n_exp-1, which breaks permutation symmetry and can
             significantly reduce solve times.
 
-        LHS Initialization (initialization_method="lhs"):
+        LHS Initialization (init_method="lhs"):
             Each dimension of the experiment inputs is sampled independently
             using a 1-D Latin Hypercube, giving ``init_n_samples`` evenly-spaced
             stratified samples across the variable bounds. The joint candidate
@@ -742,7 +743,6 @@ class DesignOfExperiments:
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
-        parameter_scenarios = _parameter_scenarios
 
         # --- Resolve n_exp and determine operating mode ---
         n_list = len(self.experiment_list)
@@ -770,31 +770,29 @@ class DesignOfExperiments:
         # ---------------------------------------------------
 
         # --- Validate initialization arguments ---
-        if initialization_method is None:
-            resolved_initialization_method = None
+        if init_method is None:
+            resolved_init_method = None
         else:
             try:
-                resolved_initialization_method = InitializationMethod(
-                    initialization_method
-                )
+                resolved_init_method = InitializationMethod(init_method)
             except ValueError:
                 valid = ", ".join(f"'{m.value}'" for m in InitializationMethod)
                 raise ValueError(
-                    "``initialization_method`` must be one of [None, "
+                    "``init_method`` must be one of [None, "
                     + valid
-                    + f"], got {initialization_method!r}."
+                    + f"], got {init_method!r}."
                 )
 
-        if resolved_initialization_method == InitializationMethod.lhs:
+        if resolved_init_method == InitializationMethod.lhs:
             if not _template_mode:
                 raise ValueError(
-                    "``initialization_method='lhs'`` is currently supported only in "
+                    "``init_method='lhs'`` is currently supported only in "
                     "template mode (``len(experiment_list) == 1``)."
                 )
             if not scipy_available:
                 raise ImportError(
                     "LHS initialization requires scipy. "
-                    "Please install scipy to use initialization_method='lhs'."
+                    "Please install scipy to use init_method='lhs'."
                 )
             if not isinstance(init_n_samples, int) or init_n_samples < 1:
                 raise ValueError(
@@ -836,6 +834,7 @@ class DesignOfExperiments:
                 )
             if init_max_wall_clock_time is not None and (
                 not isinstance(init_max_wall_clock_time, (int, float))
+                or not math.isfinite(init_max_wall_clock_time)
                 or init_max_wall_clock_time <= 0
             ):
                 raise ValueError(
@@ -852,16 +851,9 @@ class DesignOfExperiments:
         # Rebuild the multi-experiment model from a clean base each call.
         self.model = pyo.ConcreteModel()
 
-        if parameter_scenarios is None:
-            n_param_scenarios = 1  # number of parameter scenarios
-            # Use an immutable tuple since weights are not intended to be modified
-            self.scenario_weights = (1.0,)  # Single scenario, weight = 1
-        else:
-            # TODO: Add parameter scenarios when incorporating parametric uncertainty
-            raise NotImplementedError(
-                "Parameter scenarios for multi-experiment optimization "
-                "not yet supported."
-            )
+        n_param_scenarios = 1  # currently single-scenario optimization
+        # Use an immutable tuple since weights are not intended to be modified
+        self.scenario_weights = (1.0,)  # Single scenario, weight = 1
         # Add parameter scenario blocks to the model
         self.model.param_scenario_blocks = pyo.Block(range(n_param_scenarios))
         symmetry_breaking_info = {
@@ -999,7 +991,7 @@ class DesignOfExperiments:
         # so that the solver uses the correct starting design.
         lhs_init_diagnostics = None
         lhs_initialization_time = 0.0
-        if resolved_initialization_method == InitializationMethod.lhs:
+        if resolved_init_method == InitializationMethod.lhs:
             lhs_timer = TicTocTimer()
             lhs_timer.tic(msg=None)
             self.logger.info(
@@ -1044,15 +1036,9 @@ class DesignOfExperiments:
                 self.model.param_scenario_blocks[s].obj_cons.deactivate()
 
         # Fix the design variables across all scenarios and experiments
-        for s in range(n_param_scenarios):
-            for k in range(n_exp):
-                for comp in (
-                    self.model.param_scenario_blocks[s]
-                    .exp_blocks[k]
-                    .fd_scenario_blocks[0]
-                    .experiment_inputs
-                ):
-                    comp.fix()
+        self._set_experiment_inputs_fixed(
+            n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=True
+        )
 
         # Create and solve dummy objective for initialization
         self.model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
@@ -1072,15 +1058,9 @@ class DesignOfExperiments:
         self.model.del_component("dummy_obj")
 
         # Reactivate objective, obj_cons, and unfix experimental design decisions
-        for s in range(n_param_scenarios):
-            for k in range(n_exp):
-                for comp in (
-                    self.model.param_scenario_blocks[s]
-                    .exp_blocks[k]
-                    .fd_scenario_blocks[0]
-                    .experiment_inputs
-                ):
-                    comp.unfix()
+        self._set_experiment_inputs_fixed(
+            n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=False
+        )
         self.model.objective.activate()
         for s in range(n_param_scenarios):
             if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
@@ -1110,22 +1090,21 @@ class DesignOfExperiments:
                     )
                     scenario.total_fim[p, q].set_value(fim_sum + self.prior_FIM[i, j])
 
+            # Build scenario total FIM once and reuse for all objective initializations.
+            total_fim_vals = [
+                pyo.value(scenario.total_fim[p, q])
+                for p in parameter_names
+                for q in parameter_names
+            ]
+            total_fim_np = np.array(total_fim_vals).reshape(
+                (len(parameter_names), len(parameter_names))
+            )
+            if self.only_compute_fim_lower:
+                total_fim_np = self._symmetrize_lower_tri(total_fim_np)
+
             # Initialize scenario-level variables based on total_fim
             if hasattr(scenario.obj_cons, "L"):
                 # Compute Cholesky factorization
-                total_fim_vals = [
-                    pyo.value(scenario.total_fim[p, q])
-                    for p in parameter_names
-                    for q in parameter_names
-                ]
-                total_fim_np = np.array(total_fim_vals).reshape(
-                    (len(parameter_names), len(parameter_names))
-                )
-
-                # Complete FIM if only computing lower triangle
-                if self.only_compute_fim_lower:
-                    total_fim_np = self._symmetrize_lower_tri(total_fim_np)
-
                 # Check positive definiteness and add jitter if needed
                 min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
                 if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
@@ -1138,10 +1117,10 @@ class DesignOfExperiments:
                 else:
                     jitter = 0
 
+                fim_jittered = total_fim_np + jitter * np.eye(len(parameter_names))
+
                 # Compute Cholesky decomposition
-                L_vals = np.linalg.cholesky(
-                    total_fim_np + jitter * np.eye(len(parameter_names))
-                )
+                L_vals = np.linalg.cholesky(fim_jittered)
 
                 # Initialize L values
                 for i, p in enumerate(parameter_names):
@@ -1163,9 +1142,7 @@ class DesignOfExperiments:
 
                     # Initialize fim_inv
                     if hasattr(scenario.obj_cons, "fim_inv"):
-                        fim_inv_np = np.linalg.inv(
-                            total_fim_np + jitter * np.eye(len(parameter_names))
-                        )
+                        fim_inv_np = np.linalg.inv(fim_jittered)
                         for i, p in enumerate(parameter_names):
                             for j, q in enumerate(parameter_names):
                                 scenario.obj_cons.fim_inv[p, q].set_value(
@@ -1179,21 +1156,11 @@ class DesignOfExperiments:
 
             if hasattr(scenario.obj_cons, "determinant"):
                 # Initialize determinant
-                total_fim_vals = [
-                    pyo.value(scenario.total_fim[p, q])
-                    for p in parameter_names
-                    for q in parameter_names
-                ]
-                total_fim_np = np.array(total_fim_vals).reshape(
-                    (len(parameter_names), len(parameter_names))
-                )
                 scenario.obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
 
             if hasattr(scenario.obj_cons, "pseudo_trace"):
                 # Initialize pseudo_trace
-                pseudo_trace_val = sum(
-                    pyo.value(scenario.total_fim[j, j]) for j in parameter_names
-                )
+                pseudo_trace_val = float(np.trace(total_fim_np))
                 scenario.obj_cons.pseudo_trace.set_value(pseudo_trace_val)
 
         # Solve the full model
@@ -1217,9 +1184,9 @@ class DesignOfExperiments:
         self.results = {}
         self.results["Solver Status"] = res.solver.status
         self.results["Termination Condition"] = res.solver.termination_condition
-        if type(res.solver.message) is str:
+        if isinstance(res.solver.message, str):
             results_message = res.solver.message
-        elif type(res.solver.message) is bytes:
+        elif isinstance(res.solver.message, bytes):
             results_message = res.solver.message.decode("utf-8")
         else:
             results_message = (
@@ -1266,22 +1233,26 @@ class DesignOfExperiments:
             # against singular/indefinite matrices and numerical failures.
             scenario_results["log10 A-opt"] = _safe_metric(
                 "log10 A-opt",
-                lambda: np.log10(np.trace(np.linalg.inv(total_fim_np))),
+                lambda fim=total_fim_np: np.log10(np.trace(np.linalg.inv(fim))),
                 s,
             )
             scenario_results["log10 pseudo A-opt"] = _safe_metric(
-                "log10 pseudo A-opt", lambda: np.log10(np.trace(total_fim_np)), s
+                "log10 pseudo A-opt",
+                lambda fim=total_fim_np: np.log10(np.trace(fim)),
+                s,
             )
             scenario_results["log10 D-opt"] = _safe_metric(
-                "log10 D-opt", lambda: np.log10(np.linalg.det(total_fim_np)), s
+                "log10 D-opt", lambda fim=total_fim_np: np.log10(np.linalg.det(fim)), s
             )
             scenario_results["log10 E-opt"] = _safe_metric(
                 "log10 E-opt",
-                lambda: np.log10(min(np.linalg.eigvalsh(total_fim_np))),
+                lambda fim=total_fim_np: np.log10(min(np.linalg.eigvalsh(fim))),
                 s,
             )
             scenario_results["log10 ME-opt"] = _safe_metric(
-                "log10 ME-opt", lambda: np.log10(np.linalg.cond(total_fim_np)), s
+                "log10 ME-opt",
+                lambda fim=total_fim_np: np.log10(np.linalg.cond(fim)),
+                s,
             )
 
             # Store unknown parameter values at scenario level (same for all experiments)
@@ -1375,19 +1346,17 @@ class DesignOfExperiments:
         # Store general settings and info
         self.results["Number of Scenarios"] = n_param_scenarios
         self.results["Number of Experiments per Scenario"] = n_exp
-        self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
-        self.results["Objective expression"] = str(self.objective_option).split(".")[-1]
-        self.results["Finite Difference Scheme"] = str(self.fd_formula).split(".")[-1]
+        self.results["Prior FIM"] = self.prior_FIM.tolist()
+        self.results["Objective expression"] = self._enum_label(self.objective_option)
+        self.results["Finite Difference Scheme"] = self._enum_label(self.fd_formula)
         self.results["Finite Difference Step"] = self.step
         self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
 
         # Initialization info
         self.results["Initialization Method"] = (
-            resolved_initialization_method.value
-            if resolved_initialization_method is not None
-            else "none"
+            resolved_init_method.value if resolved_init_method is not None else "none"
         )
-        if resolved_initialization_method == InitializationMethod.lhs:
+        if resolved_init_method == InitializationMethod.lhs:
             self.results["LHS Samples Per Dimension"] = init_n_samples
             self.results["LHS Seed"] = init_seed
             self.results["LHS Best Initial Points"] = best_initial_points
@@ -1436,32 +1405,32 @@ class DesignOfExperiments:
                 "best_points": self.results.get("LHS Best Initial Points"),
                 "lhs_parallel": (
                     init_parallel
-                    if resolved_initialization_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_combo_parallel": (
                     init_combo_parallel
-                    if resolved_initialization_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_n_workers": (
                     init_n_workers
-                    if resolved_initialization_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_combo_chunk_size": (
                     init_combo_chunk_size
-                    if resolved_initialization_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_combo_parallel_threshold": (
                     init_combo_parallel_threshold
-                    if resolved_initialization_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
                 "lhs_max_wall_clock_time": (
                     init_max_wall_clock_time
-                    if resolved_initialization_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
             },
@@ -1525,6 +1494,21 @@ class DesignOfExperiments:
             return list(exp_block.experiment_inputs.keys())
         # FD structure: inputs live on the base finite-difference scenario block
         return list(exp_block.fd_scenario_blocks[0].experiment_inputs.keys())
+
+    def _set_experiment_inputs_fixed(self, n_param_scenarios, n_exp, fixed):
+        """Fix or unfix experiment inputs across all scenarios and experiments."""
+        for s in range(n_param_scenarios):
+            for k in range(n_exp):
+                for comp in (
+                    self.model.param_scenario_blocks[s]
+                    .exp_blocks[k]
+                    .fd_scenario_blocks[0]
+                    .experiment_inputs
+                ):
+                    if fixed:
+                        comp.fix()
+                    else:
+                        comp.unfix()
 
     @staticmethod
     def _evaluate_objective_for_option(fim_matrix, objective_option):
@@ -1736,7 +1720,7 @@ class DesignOfExperiments:
                 f"missing bounds: {missing}. "
                 "Set bounds in your experiment input variables before "
                 "calling ``optimize_experiments`` with "
-                "``initialization_method='lhs'``."
+                "``init_method='lhs'``."
             )
 
         lb_vals = np.array([v.lb for v in exp_input_vars])
@@ -1955,6 +1939,13 @@ class DesignOfExperiments:
             for pt, fim in zip(candidate_points, candidate_fims)
             if fim is not None
         ]
+
+        # If no candidates were successfully evaluated, use the first candidate with
+        # a zero FIM to allow downstream code to run without missing data.
+        # This is an extreme fallback that should only occur if every candidate
+        # evaluation failed or if the time budget was too small to evaluate
+        # any candidates; in either case we want to avoid crashing and allow
+        # the user to get something back (with warnings) rather than nothing.
         if not computed_pairs:
             timed_out = True
             computed_pairs = [(candidate_points[0], np.zeros((n_params, n_params)))]
@@ -1973,8 +1964,9 @@ class DesignOfExperiments:
                     (first_pt, first_fim.copy())
                     for _ in range(n_exp - len(computed_pairs))
                 )
-            candidate_points = tuple(pt for pt, _ in computed_pairs)
-            candidate_fims = [fim for _, fim in computed_pairs]
+            _pts, _fims = zip(*computed_pairs)
+            candidate_points = tuple(_pts)
+            candidate_fims = tuple(_fims)
             n_candidates = len(candidate_points)
 
         t_after_fim = time.perf_counter()

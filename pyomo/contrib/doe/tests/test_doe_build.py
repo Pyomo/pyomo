@@ -804,7 +804,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=self._make_solver(),
         )
         doe_obj.optimize_experiments(
-            n_exp=2, initialization_method="lhs", init_n_samples=2, init_seed=11
+            n_exp=2, init_method="lhs", init_n_samples=2, init_seed=11
         )
 
         timing = doe_obj.results["timing"]
@@ -847,7 +847,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         )
         doe_obj.optimize_experiments(
             n_exp=2,
-            initialization_method="lhs",
+            init_method="lhs",
             init_n_samples=2,
             init_seed=11,
             init_parallel=True,

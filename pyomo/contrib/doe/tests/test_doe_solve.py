@@ -986,22 +986,23 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
     def test_evaluate_objective_from_fim_numerical_values(self):
         fim = np.array([[4.0, 1.0], [1.0, 3.0]])
+        expected_det = 11.0
+        expected_pseudo_trace = 7.0
+        expected_trace = 7.0 / 11.0
 
         doe_det = self._make_template_doe("determinant")
         self.assertAlmostEqual(
-            doe_det._evaluate_objective_from_fim(fim), np.linalg.det(fim), places=10
+            doe_det._evaluate_objective_from_fim(fim), expected_det, places=10
         )
 
         doe_ptr = self._make_template_doe("pseudo_trace")
         self.assertAlmostEqual(
-            doe_ptr._evaluate_objective_from_fim(fim), np.trace(fim), places=10
+            doe_ptr._evaluate_objective_from_fim(fim), expected_pseudo_trace, places=10
         )
 
         doe_tr = self._make_template_doe("trace")
         self.assertAlmostEqual(
-            doe_tr._evaluate_objective_from_fim(fim),
-            np.trace(np.linalg.inv(fim)),
-            places=10,
+            doe_tr._evaluate_objective_from_fim(fim), expected_trace, places=10
         )
 
     def test_evaluate_objective_from_fim_fallback_paths(self):
@@ -1122,7 +1123,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(
             n_exp=n_exp,
-            initialization_method="lhs",
+            init_method="lhs",
             init_n_samples=lhs_n_samples,
             init_seed=lhs_seed,
         )
@@ -2087,7 +2088,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         doe.prior_FIM = prior_fim.copy()
 
-        doe.optimize_experiments(n_exp=2, initialization_method=None)
+        doe.optimize_experiments(n_exp=2, init_method=None)
 
         scenario = doe.results["Scenarios"][0]
         total_fim = np.array(scenario["Total FIM"])
@@ -2120,7 +2121,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             solver=solver,
             prior_FIM=prior_fim,
         )
-        doe.optimize_experiments(initialization_method=None)
+        doe.optimize_experiments(init_method=None)
 
         scenario = doe.results["Scenarios"][0]
         total_fim = np.array(scenario["Total FIM"])
