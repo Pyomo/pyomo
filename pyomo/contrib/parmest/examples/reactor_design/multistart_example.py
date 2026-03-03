@@ -27,12 +27,11 @@ def main():
     exp_list = [ReactorDesignExperiment(data, i) for i in range(data.shape[0])]
 
     # Solver options belong here (Ipopt options shown as example)
-    solver_options = {
-        "max_iter": 1000,
-        "tol": 1e-6,
-    }
+    solver_options = {"max_iter": 1000, "tol": 1e-6}
 
-    pest = parmest.Estimator(exp_list, obj_function="SSE", solver_options=solver_options)
+    pest = parmest.Estimator(
+        exp_list, obj_function="SSE", solver_options=solver_options
+    )
 
     # Single-start estimation
     obj, theta = pest.theta_est()

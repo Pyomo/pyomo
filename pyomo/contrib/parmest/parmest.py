@@ -1087,7 +1087,7 @@ class Estimator:
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
 
         return model
-    
+
     # TODO: Make so this generates the initial DATAFRAME, not the entire list of values.
     # Make new private method, _generate_initial_theta:
     # This method will be used to generate the initial theta values for multistart
@@ -2028,25 +2028,28 @@ class Estimator:
 
         return results
 
-
     def theta_est_multistart(
         self,
         n_restarts=20,
         multistart_sampling_method="uniform_random",
         user_provided_df=None,
         seed=None,
-        theta_values=None,          # optional override: DataFrame of initial thetas
+        theta_values=None,  # optional override: DataFrame of initial thetas
         solver="ef_ipopt",
         save_results=False,
         file_name="multistart_results.csv",
     ):
         if self.pest_deprecated is not None:
-            raise RuntimeError("Multistart is not supported in the deprecated parmest interface.")
+            raise RuntimeError(
+                "Multistart is not supported in the deprecated parmest interface."
+            )
 
         # ---- Build results_df in the canonical schema (theta cols + output cols) ----
         if theta_values is not None:
             if not isinstance(theta_values, pd.DataFrame):
-                raise TypeError("theta_values must be a pandas DataFrame (columns = theta names).")
+                raise TypeError(
+                    "theta_values must be a pandas DataFrame (columns = theta names)."
+                )
 
             init_df = theta_values.copy()
 
@@ -2100,12 +2103,11 @@ class Estimator:
         local_results = []
         for i, Theta in local_tasks:
             import time
+
             t0 = time.time()
             try:
                 final_obj, theta_hat, worst = self._Q_opt(
-                    theta_vals=Theta,
-                    solver=solver,
-                    multistart=True,
+                    theta_vals=Theta, solver=solver, multistart=True
                 )
                 solve_time = time.time() - t0
                 local_results.append((i, final_obj, str(worst), solve_time, theta_hat))
@@ -2127,7 +2129,9 @@ class Estimator:
                         results_df.at[i, f"converged_{name}"] = float(theta_hat[name])
 
         # Best solution (ignore NaNs)
-        feasible = results_df["final objective"].replace([np.inf, -np.inf], np.nan).dropna()
+        feasible = (
+            results_df["final objective"].replace([np.inf, -np.inf], np.nan).dropna()
+        )
         if len(feasible) == 0:
             best_theta = None
             best_obj = np.nan

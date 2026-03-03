@@ -23,11 +23,6 @@ def main():
         columns=['hour', 'y'],
     )
 
-    # Sum of squared error function
-    def SSE(model):
-        expr = (model.experiment_outputs[model.y] - model.y) ** 2
-        return expr
-
     # Create an experiment list
     exp_list = []
     for i in range(data.shape[0]):
@@ -37,20 +32,30 @@ def main():
     # exp0_model = exp_list[0].get_labeled_model()
     # exp0_model.pprint()
 
-    # Create an instance of the parmest estimator
-    pest = parmest.Estimator(exp_list, obj_function=SSE, tee=True)
+    # Solver options belong here (Ipopt options shown as example)
+    solver_options = {"max_iter": 1000, "tol": 1e-6}
 
-    # Parameter estimation
-    obj, theta = pest.theta_est()
-
-    # Find the objective value at each theta estimate
-    asym = np.arange(10, 30, 2)
-    rate = np.arange(0, 1.5, 0.1)
-    theta_vals = pd.DataFrame(
-        list(product(asym, rate)), columns=['asymptote', 'rate_constant']
+    pest = parmest.Estimator(
+        exp_list, obj_function="SSE", solver_options=solver_options
     )
-    multistart_results = pest.theta_est_multistart(theta_vals)
-    print(multistart_results)
+
+    # Single-start estimation
+    obj, theta = pest.theta_est()
+    print("Single-start objective:", obj)
+    print("Single-start theta:\n", theta)
+
+    # Multistart estimation
+    results_df, best_theta, best_obj = pest.theta_est_multistart(
+        n_restarts=10,
+        multistart_sampling_method="uniform_random",
+        seed=42,
+        save_results=False,  # True if you want CSV via file_name=
+    )
+
+    print("\nMultistart best objective:", best_obj)
+    print("Multistart best theta:", best_theta)
+    print("\nAll multistart results:")
+    print(results_df)
 
 
 if __name__ == "__main__":
