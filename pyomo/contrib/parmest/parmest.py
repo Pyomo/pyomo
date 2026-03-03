@@ -1087,6 +1087,141 @@ class Estimator:
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
 
         return model
+    
+    # TODO: Make so this generates the initial DATAFRAME, not the entire list of values.
+    # Make new private method, _generate_initial_theta:
+    # This method will be used to generate the initial theta values for multistart
+    # optimization. It will take the theta names and the initial theta values
+    # and return a dictionary of theta names and their corresponding values.
+    def _generate_initial_theta(
+        self,
+        parmest_model=None,
+        seed=None,
+        n_restarts=None,
+        multistart_sampling_method=None,
+        user_provided_df=None,
+    ):
+        """
+        Generate initial theta values for multistart optimization using selected sampling method.
+        """
+        # Locate the unknown parameters in the model from the suffix
+        suffix_params = parmest_model.unknown_parameters
+
+        # Get the VarData objects from the suffix
+        theta_vars = list(suffix_params.keys())
+
+        # Extract names, starting values, and bounds for the theta variables
+        theta_names = [v.name for v in theta_vars]
+        initial_theta = np.array([v.value for v in theta_vars])
+        lower_bound = np.array([v.lb for v in theta_vars])
+        upper_bound = np.array([v.ub for v in theta_vars])
+
+        # Check if the lower and upper bounds are defined
+        if any(bound is None for bound in lower_bound) or any(
+            bound is None for bound in upper_bound
+        ):
+            raise ValueError(
+                "The lower and upper bounds for the theta values must be defined."
+            )
+
+        if multistart_sampling_method == "uniform_random":
+            # Generate random theta values using uniform distribution, with set seed for reproducibility
+            np.random.seed(seed)
+            # Generate random theta values for each restart (n_restarts x len(theta_names))
+            theta_vals_multistart = np.random.uniform(
+                low=lower_bound, high=upper_bound, size=(n_restarts, len(theta_names))
+            )
+
+        elif multistart_sampling_method == "latin_hypercube":
+            # Generate theta values using Latin hypercube sampling or Sobol sampling
+            # Generate theta values using Latin hypercube sampling
+            # Create a Latin Hypercube sampler that uses the dimensions of the theta names
+            sampler = scipy.stats.qmc.LatinHypercube(d=len(theta_names), seed=seed)
+            # Generate random samples in the range of [0, 1] for number of restarts
+            samples = sampler.random(n=n_restarts)
+            # Resulting samples should be size (n_restarts, len(theta_names))
+
+        elif multistart_sampling_method == "sobol_sampling":
+            sampler = scipy.stats.qmc.Sobol(d=len(theta_names), seed=seed)
+            # Generate theta values using Sobol sampling
+            # The first value of the Sobol sequence is 0, so we skip it
+            samples = sampler.random(n=n_restarts + 1)[1:]
+
+        elif multistart_sampling_method == "user_provided_values":
+            # Add user provided dataframe option
+            if user_provided_df is not None:
+
+                if isinstance(user_provided_df, pd.DataFrame):
+                    # Check if the user provided dataframe has the same number of rows as the number of restarts
+                    if user_provided_df.shape[0] != n_restarts:
+                        raise ValueError(
+                            "The user provided dataframe must have the same number of rows as the number of restarts."
+                        )
+                    # Check if the user provided dataframe has the same number of columns as the number of theta names
+                    if user_provided_df.shape[1] != len(theta_names):
+                        raise ValueError(
+                            "The user provided dataframe must have the same number of columns as the number of theta names."
+                        )
+                        # Check if the user provided dataframe has the same theta names as the model
+                        # if not, raise an error
+                    if not all(
+                        theta in theta_names for theta in user_provided_df.columns
+                    ):
+                        raise ValueError(
+                            "The user provided dataframe must have the same theta names as the model."
+                        )
+                # If all checks pass, return the user provided dataframe
+                theta_vals_multistart = user_provided_df.iloc[
+                    0 : len(initial_theta)
+                ].values
+            else:
+                raise ValueError(
+                    "The user must provide a pandas dataframe to use the 'user_provided_values' method."
+                )
+
+        else:
+            raise ValueError(
+                "Invalid sampling method. Choose 'uniform_random', 'latin_hypercube', 'sobol_sampling'  or 'user_provided_values'."
+            )
+
+        if (
+            multistart_sampling_method == "sobol_sampling"
+            or multistart_sampling_method == "latin_hypercube"
+        ):
+            # Scale the samples to the range of the lower and upper bounds for each theta in theta_names
+            # The samples are in the range [0, 1], so we scale them to the range of the lower and upper bounds
+            theta_vals_multistart = np.array(
+                [lower_bound + (upper_bound - lower_bound) * theta for theta in samples]
+            )
+
+        # Create a DataFrame where each row is an initial theta vector for a restart,
+        # columns are theta_names, and values are the initial theta values for each restart
+        if multistart_sampling_method == "user_provided_values":
+            # If user_provided_values is a DataFrame, use its columns and values directly
+            if isinstance(user_provided_df, pd.DataFrame):
+                df_multistart = user_provided_df.copy()
+                df_multistart.columns = theta_names
+            else:
+                df_multistart = pd.DataFrame(theta_vals_multistart, columns=theta_names)
+        else:
+            # Ensure theta_vals_multistart is 2D (n_restarts, len(theta_names))
+            arr = np.atleast_2d(theta_vals_multistart)
+            if arr.shape[0] == 1 and n_restarts > 1:
+                arr = np.tile(arr, (n_restarts, 1))
+            df_multistart = pd.DataFrame(arr, columns=theta_names)
+
+        # Add columns for output info, initialized as nan
+        for name in theta_names:
+            df_multistart[f'converged_{name}'] = np.nan
+        df_multistart["initial objective"] = np.nan
+        df_multistart["final objective"] = np.nan
+        df_multistart["solver termination"] = np.nan
+        df_multistart["solve_time"] = np.nan
+
+        # Debugging output
+        # print(df_multistart)
+
+        return df_multistart
 
     # Redesigned _Q_opt method using scenario blocks, and combined with
     # _Q_at_theta structure.
@@ -1893,6 +2028,225 @@ class Estimator:
             results.append((sample, test, training))
 
         return results
+
+    '''
+    # TODO: Make the user provide a list of values, not the whole data frame
+    # TODO: Add a way to print the empty data_frame before solve so it can be previewed beforehand
+    # TODO: Fix so the theta values are generated at each iteration, not all beforehand in _generate_initial_theta
+    # Fix _generate_initial_theta to return an empty DataFrame first
+    # TODO: Add save model option to save the model after each iteration or at the end of the multistart
+    def theta_est_multistart(
+        self,
+        n_restarts=20,
+        multistart_sampling_method="uniform_random",
+        user_provided_list=None,
+        seed=None,
+        save_results=False,
+        theta_vals=None,
+        solver="ef_ipopt",
+        file_name="multistart_results.csv",
+        return_values=[],
+    ):
+        """
+        Parameter estimation using multistart optimization
+
+        Parameters
+        ----------
+        n_restarts: int, optional
+            Number of restarts for multistart. Default is 1.
+        multistart_sampling_method: string, optional
+            Method used to sample theta values. Options are "uniform_random", "latin_hypercube", "sobol_sampling", or "user_provided_values".
+            Default is "uniform_random".
+        buffer: int, optional
+            Number of iterations to save results dynamically if save_results=True. Default is 10.
+        user_provided_df: pd.DataFrame, optional
+            User provided array or dataframe of theta values for multistart optimization.
+        seed: int, optional
+            Random seed for reproducibility.
+        save_results: bool, optional
+            If True, intermediate and final results are saved to file_name.
+        theta_vals: pd.DataFrame, optional
+            Initial theta values for restarts (overrides sampling).
+        solver: string, optional
+            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
+        file_name: str, optional
+            File name for saving results if save_results is True.
+        return_values: list, optional
+            List of Variable names, used to return values from the model for data reconciliation.
+
+        Returns
+        -------
+        results_df: pd.DataFrame
+            DataFrame containing initial and converged theta values, objectives, and solver info for each restart.
+        best_theta: dict
+            Dictionary of theta values corresponding to the best (lowest) objective value found.
+        best_objectiveval: float
+            The best (lowest) objective function value found across all restarts.
+        """
+
+        # check if we are using deprecated parmest
+        if self.pest_deprecated is not None:
+            return print(
+                "Multistart is not supported in the deprecated parmest interface"
+            )
+
+        # Validate input types
+        if not isinstance(n_restarts, int):
+            raise TypeError("n_restarts must be an integer")
+        if not isinstance(multistart_sampling_method, str):
+            raise TypeError("multistart_sampling_method must be a string")
+        if not isinstance(solver, str):
+            raise TypeError("solver must be a string")
+        if not isinstance(return_values, list):
+            raise TypeError("return_values must be a list")
+
+        if n_restarts <= 1:
+            # If n_restarts is 1 or less, no multistart optimization is needed
+            logger.warning(
+                "No multistart optimization needed. Please use normal theta_est()."
+            )
+            return self.theta_est(
+                solver=solver, return_values=return_values, calc_cov=False, cov_n=None
+            )
+
+        if n_restarts > 1 and multistart_sampling_method is not None:
+
+            # Find the initialized values of theta from the labeled parmest model
+            # and the theta names from the estimator object
+
+            # logger statement to indicate multistart optimization is starting
+            logger.info(
+                f"Starting multistart optimization with {n_restarts} restarts using {multistart_sampling_method} sampling method."
+            )
+
+            # @Reviewers, pyomo team: Use this or use instance creation callback?
+            theta_names = self._return_theta_names()
+            # Generate theta values using the sampling method
+            parmest_model_for_bounds = self._create_parmest_model(experiment_number=0)
+            results_df = self._generate_initial_theta(
+                parmest_model_for_bounds,
+                seed=seed,
+                n_restarts=n_restarts,
+                multistart_sampling_method=multistart_sampling_method,
+                user_provided_df=user_provided_df,
+            )
+            results_df = pd.DataFrame(results_df)
+            # Extract theta_vals from the dataframe
+            theta_vals = results_df.iloc[:, : len(theta_names)]
+            converged_theta_vals = np.zeros((n_restarts, len(theta_names)))
+
+            timer = TicTocTimer()
+
+            # Each restart uses a fresh model instance
+            for i in range(n_restarts):
+
+                # Add a timer for each restart
+                timer.tic(f"Restart {i+1}/{n_restarts}")
+
+                # No longer needed, keeping until confirming update works as expected
+                # # Create a fresh model for each restart
+                # parmest_model = self._create_parmest_model(experiment_number=0)
+                theta_vals_current = theta_vals.iloc[i, :].to_dict()
+                # If theta_vals is provided, use it to set the current theta values
+                # # Convert values to a list
+                # theta_vals_current = list(theta_vals.iloc[i, :])
+
+                # # Update the model with the current theta values
+                # update_model_from_suffix(parmest_model, 'experiment_inputs', theta_vals_current)
+
+                # # Set current theta values in the model
+                # for name, value in theta_vals_current.items():
+                #     parmest_model.find_component(name).set_value(value)
+
+                # # Optional: Print the current theta values being set
+                # print(f"Setting {name} to {value}")
+                # for name in theta_names:
+                #     current_value = parmest_model.find_component(name)()
+                #     print(f"Current value of {name} is {current_value}")
+
+                # Call the _Q_opt method with the generated theta values
+                qopt_result = self._Q_opt(
+                    ThetaVals=theta_vals_current,
+                    bootlist=None,
+                    solver=solver,
+                    return_values=return_values,
+                    multistart=True,
+                )
+
+                # Unpack results
+                objectiveval, converged_theta, solver_info = qopt_result
+
+                # Added an extra option to Q_opt to return the full solver result if multistart=True
+                solver_termination = solver_info.solver.termination_condition
+                if solver_termination != pyo.TerminationCondition.optimal:
+                    # If the solver did not converge, set the converged theta to NaN
+                    solve_time = np.nan
+                    final_objectiveval = np.nan
+                    init_objectiveval = np.nan
+                else:
+                    converged_theta_vals[i, :] = converged_theta.values
+                    # Calculate the initial objective value using the current theta values
+                    # Use the _Q_at_theta method to evaluate the objective at these theta values
+                    init_objectiveval, _, _ = self._Q_at_theta(theta_vals_current)
+                    final_objectiveval = objectiveval
+
+                # # Check if the objective value is better than the best objective value
+                # # Set a very high initial best objective value
+                if i == 0:
+                    # Initialize best objective value and theta
+                    best_objectiveval = np.inf
+                    best_theta = np.inf
+                # Check if the final objective value is better than the best found so far
+                if final_objectiveval < best_objectiveval:
+                    best_objectiveval = objectiveval
+                    best_theta = converged_theta.values
+
+                logger.info(
+                    f"Restart {i+1}/{n_restarts}: Objective Value = {final_objectiveval}, Theta = {converged_theta}"
+                )
+
+                # Stop the timer for this restart
+                solve_time = timer.toc(f"Restart {i+1}/{n_restarts}")
+
+                # Store the results in the DataFrame for this restart
+                # Fill converged theta values
+                for j, name in enumerate(theta_names):
+                    results_df.at[i, f'converged_{name}'] = (
+                        converged_theta.iloc[j]
+                        if not np.isnan(converged_theta_vals[i, j])
+                        else np.nan
+                    )
+                # Fill initial and final objective values, solver termination, and solve time
+                results_df.at[i, "initial objective"] = (
+                    init_objectiveval if 'init_objectiveval' in locals() else np.nan
+                )
+                results_df.at[i, "final objective"] = (
+                    objectiveval if 'objectiveval' in locals() else np.nan
+                )
+                results_df.at[i, "solver termination"] = (
+                    solver_termination if 'solver_termination' in locals() else np.nan
+                )
+                results_df.at[i, "solve_time"] = (
+                    solve_time if 'solve_time' in locals() else np.nan
+                )
+
+                # Diagnostic: print the table after each restart
+                logger.debug(results_df)
+
+                # Add buffer to save the dataframe dynamically, if save_results is True
+                if save_results and (i + 1) % buffer == 0:
+                    mode = 'w' if i + 1 == buffer else 'a'
+                    header = i + 1 == buffer
+                    results_df.to_csv(file_name, mode=mode, header=header, index=False)
+                    logger.info(f"Intermediate results saved after {i + 1} iterations.")
+
+            # Final save after all iterations
+            if save_results:
+                results_df.to_csv(file_name, mode='a', header=False, index=False)
+                logger.info("Final results saved.")
+
+            return results_df, best_theta, best_objectiveval
+    '''
 
     # Updated version that uses _Q_opt
     def theta_est_multistart(self, theta_values=None):
