@@ -23,7 +23,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v260303.0
+  CACHE_VER: v260303.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: branch
@@ -95,13 +95,13 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
-          python: 3.12
+          python: 3.13
           test_docs: 1
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.13
+          python: 3.14
           test_docs: 1
           TARGET: win
           PYENV: conda
@@ -217,7 +217,6 @@ jobs:
         # Notes:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
-        sudo apt-get update ca-certificates
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils \
             libginac-dev
@@ -487,10 +486,6 @@ jobs:
             RELEASE=$(curl --max-time 150 --retry 8 \
                 -L -s -H 'Accept: application/json' ${URL}/releases/latest)
             VER=$(echo $RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
-            if test -z "$VER"; then
-                echo "FAILED identifying IPOPT release"
-                exit 1
-            fi
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
@@ -515,15 +510,11 @@ jobs:
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
-        $IPOPT_DIR/ipopt -v
 
     - name: Install GAMS
-      if: ${{ ! matrix.slim && matrix.TARGET != 'osx' }}
+      if: ${{ ! matrix.slim }}
       # - We install using Powershell because the GAMS installer hangs
       #   when launched from bash on Windows
-      # - We no longer install on OSX because GAMS no longer distributes
-      #   self extracting ZIP for OSX and the package is difficult [for JDS]
-      #   to install in GHA
       shell: pwsh
       run: |
         $GAMS_DIR = "${env:TPL_DIR}/gams"
@@ -651,10 +642,6 @@ jobs:
             cd $INSTALL_DIR
             unzip -q $INSTALLER
             cd gjh_asl_json-master/Thirdparty
-            # Patch get.ASL to use curl
-            URL="http://www.ampl.com/netlib/ampl/solvers.tgz"
-            sed -i "s|wget |curl -o solvers.tgz |" get.ASL
-            cat get.ASL
             ./get.ASL
             cd ..
             make
@@ -714,13 +701,7 @@ jobs:
         echo ""
         echo "Pyomo download-extensions"
         echo ""
-        #
-        # [26 Feb 26] For unknown reasons, SSL verification has stopped
-        # working on GHA (even though everything is fine when run
-        # locally).  Giving up and just turning off SSL verification.
-        # Someone should revisit this in the future.
-        #
-        pyomo download-extensions --retry 3 --insecure || exit 1
+        pyomo download-extensions --retry 3 || exit 1
         echo ""
         echo "Pyomo build-extensions"
         echo ""
