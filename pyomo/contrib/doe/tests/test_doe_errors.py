@@ -23,6 +23,20 @@ from unittest.mock import patch
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
+from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.doe import (
+    InitializationMethod,
+    _DoEResultsJSONEncoder,
+)
+from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+    BadExperiment,
+    RooneyBieglerExperimentFlag,
+    RooneyBieglerMultiExperiment,
+    RooneyBieglerMultiInputExperimentFlag,
+)
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
     from pyomo.contrib.doe.doe import InitializationMethod, _DoEResultsJSONEncoder

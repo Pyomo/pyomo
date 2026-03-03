@@ -153,7 +153,7 @@ class DesignOfExperiments:
             For single experiments, you can pass the object directly: experiment_list=experiment
             or as a list: experiment_list=[experiment].
             Each object should have a ``get_labeled_model`` method that returns a model with
-            the following labeled sets:
+            the following labeled Pyomo Suffixes:
 
               - ``unknown_parameters``,
               - ``experimental_inputs``,
@@ -664,7 +664,7 @@ class DesignOfExperiments:
         init_n_samples:
             Number of LHS samples per experiment-input dimension when
             ``initialization_method="lhs"``. The total number of candidate
-            designs is ``init_n_samples ** n_inputs``. A warning is issued
+            designs is ``init_n_samples ** n_exp_inputs``. A warning is issued
             when this exceeds 10,000. Default: 5.
 
         init_seed:
