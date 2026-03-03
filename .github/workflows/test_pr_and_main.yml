@@ -694,6 +694,10 @@ jobs:
             cd $INSTALL_DIR
             unzip -q $INSTALLER
             cd gjh_asl_json-master/Thirdparty
+            # Patch get.ASL to use curl
+            URL="http://www.ampl.com/netlib/ampl/solvers.tgz"
+            sed -i "s|wget |curl -o solvers.tgz |" get.ASL
+            cat get.ASL
             ./get.ASL
             cd ..
             make
