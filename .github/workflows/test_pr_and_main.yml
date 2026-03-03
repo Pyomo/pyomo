@@ -686,6 +686,7 @@ jobs:
         echo "${GJH_DIR}" >> $GITHUB_PATH
         echo "PYOMO_PATH=$GJH_DIR:$PYOMO_PATH" >> $GITHUB_ENV
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
+        rm -rf $INSTALL_DIR
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir -p "$INSTALL_DIR"
             INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
