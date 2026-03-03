@@ -188,7 +188,6 @@ jobs:
         CURLRC="$(cat <<EOF
            retry = 8
            max-time = 150
-           location
         EOF
         )"
         echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
