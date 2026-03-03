@@ -803,8 +803,7 @@ class DesignOfExperiments:
                 )
             if init_seed is not None and not isinstance(init_seed, int):
                 raise ValueError(
-                    "``init_seed`` must be None or an integer, "
-                    f"got {init_seed!r}."
+                    "``init_seed`` must be None or an integer, " f"got {init_seed!r}."
                 )
             if not isinstance(init_parallel, bool):
                 raise ValueError(
@@ -822,10 +821,7 @@ class DesignOfExperiments:
                     "``init_n_workers`` must be None or a positive integer, "
                     f"got {init_n_workers!r}."
                 )
-            if (
-                not isinstance(init_combo_chunk_size, int)
-                or init_combo_chunk_size < 1
-            ):
+            if not isinstance(init_combo_chunk_size, int) or init_combo_chunk_size < 1:
                 raise ValueError(
                     "``init_combo_chunk_size`` must be a positive integer, "
                     f"got {init_combo_chunk_size!r}."
@@ -2043,7 +2039,9 @@ class DesignOfExperiments:
                 )
             if resolved_workers <= 1:
                 reasons.append(f"resolved_workers={resolved_workers} <= 1")
-            reason_txt = "; ".join(reasons) if reasons else "parallel preconditions not met"
+            reason_txt = (
+                "; ".join(reasons) if reasons else "parallel preconditions not met"
+            )
             self.logger.warning(
                 "LHS combination scoring requested with "
                 "``lhs_combo_parallel=True``, but running serially: "

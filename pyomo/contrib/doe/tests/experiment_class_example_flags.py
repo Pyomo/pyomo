@@ -81,7 +81,9 @@ class RooneyBieglerMultiExperiment(RooneyBieglerExperiment):
     while allowing test-time control over initial hour and bounds.
     """
 
-    def __init__(self, hour=2.0, y=10.0, theta=None, measure_error=0.1, hour_bounds=(1.0, 10.0)):
+    def __init__(
+        self, hour=2.0, y=10.0, theta=None, measure_error=0.1, hour_bounds=(1.0, 10.0)
+    ):
         data = {'hour': hour, 'y': y}
         super().__init__(data=data, measure_error=measure_error, theta=theta)
         self.hour_bounds = hour_bounds
@@ -111,7 +113,9 @@ class RooneyBieglerMultiInputExperimentFlag(RooneyBieglerExperiment):
 
     def __init__(self, hour=2.0, temp=300.0, y=10.0, sym_break_flag=1):
         data = {'hour': hour, 'y': y}
-        super().__init__(data=data, measure_error=0.1, theta={'asymptote': 15, 'rate_constant': 0.5})
+        super().__init__(
+            data=data, measure_error=0.1, theta={'asymptote': 15, 'rate_constant': 0.5}
+        )
         self.hour = hour
         self.temp = temp
         self.sym_break_flag = sym_break_flag

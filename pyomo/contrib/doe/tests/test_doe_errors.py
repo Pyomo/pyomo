@@ -25,10 +25,7 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.doe import (
-        InitializationMethod,
-        _DoEResultsJSONEncoder,
-    )
+    from pyomo.contrib.doe.doe import InitializationMethod, _DoEResultsJSONEncoder
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
         BadExperiment,
         RooneyBieglerExperimentFlag,
@@ -814,8 +811,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_invalid_initialization_method(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             ValueError,
@@ -825,8 +821,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_initialization_method_enum_accepted(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             NotImplementedError,
@@ -837,45 +832,37 @@ class TestDoEErrors(unittest.TestCase):
                 _parameter_scenarios={"dummy": 1},
             )
 
-    def test_optimize_experiments_initialization_method_enum_invalid_init_n_samples(self):
+    def test_optimize_experiments_initialization_method_enum_invalid_init_n_samples(
+        self,
+    ):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             ValueError, r"``init_n_samples`` must be a positive integer, got 0."
         ):
             doe_obj.optimize_experiments(
-                initialization_method=InitializationMethod.lhs,
-                init_n_samples=0,
+                initialization_method=InitializationMethod.lhs, init_n_samples=0
             )
 
     def test_optimize_experiments_invalid_init_n_samples(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
-            ValueError,
-            r"``init_n_samples`` must be a positive integer, got 0.",
+            ValueError, r"``init_n_samples`` must be a positive integer, got 0."
         ):
-            doe_obj.optimize_experiments(
-                initialization_method="lhs",
-                init_n_samples=0,
-            )
+            doe_obj.optimize_experiments(initialization_method="lhs", init_n_samples=0)
 
     def test_optimize_experiments_invalid_init_n_samples_float(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
-            ValueError,
-            r"``init_n_samples`` must be a positive integer, got 2.5.",
+            ValueError, r"``init_n_samples`` must be a positive integer, got 2.5."
         ):
             doe_obj.optimize_experiments(
-                initialization_method="lhs",
-                init_n_samples=2.5,
+                initialization_method="lhs", init_n_samples=2.5
             )
 
     def test_optimize_experiments_lhs_requires_template_mode(self):
@@ -891,8 +878,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_lhs_requires_scipy(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with patch("pyomo.contrib.doe.doe.scipy_available", False):
             with self.assertRaisesRegex(
@@ -902,8 +888,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_parallel_requires_bool(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             ValueError, r"``init_parallel`` must be a bool, got 1."
@@ -912,8 +897,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_combo_parallel_requires_bool(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             ValueError, r"``init_combo_parallel`` must be a bool"
@@ -924,8 +908,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_n_workers_must_be_positive_integer(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             ValueError, r"``init_n_workers`` must be None or a positive integer"
@@ -934,12 +917,10 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_combo_chunk_size_must_be_positive_integer(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
-            ValueError,
-            r"``init_combo_chunk_size`` must be a positive integer",
+            ValueError, r"``init_combo_chunk_size`` must be a positive integer"
         ):
             doe_obj.optimize_experiments(
                 initialization_method="lhs", init_combo_chunk_size=0
@@ -947,12 +928,10 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_combo_parallel_threshold_positive_integer(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
-            ValueError,
-            r"``init_combo_parallel_threshold`` must be a positive integer",
+            ValueError, r"``init_combo_parallel_threshold`` must be a positive integer"
         ):
             doe_obj.optimize_experiments(
                 initialization_method="lhs", init_combo_parallel_threshold=0
@@ -960,8 +939,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_max_wall_clock_time_must_be_positive(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             ValueError,
@@ -984,19 +962,16 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_n_exp_not_positive(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
-            ValueError,
-            r"``n_exp`` must be a positive integer, got 0.",
+            ValueError, r"``n_exp`` must be a positive integer, got 0."
         ):
             doe_obj.optimize_experiments(n_exp=0)
 
     def test_optimize_experiments_results_file_bad_type(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             ValueError, r"``results_file`` must be either a Path object or a string."
@@ -1005,8 +980,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_parameter_scenarios_not_implemented(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             NotImplementedError,
@@ -1016,8 +990,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_seed_requires_integer(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[_DummyExperiment()],
-            objective_option="pseudo_trace",
+            experiment_list=[_DummyExperiment()], objective_option="pseudo_trace"
         )
         with self.assertRaisesRegex(
             ValueError, r"``init_seed`` must be None or an integer"
@@ -1025,6 +998,7 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.optimize_experiments(
                 n_exp=2, initialization_method="lhs", init_n_samples=2, init_seed=1.5
             )
+
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -1121,7 +1095,10 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
         with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
             doe_obj.optimize_experiments()
         self.assertTrue(
-            any("Multiple variables marked in sym_break_cons" in msg for msg in cm.output)
+            any(
+                "Multiple variables marked in sym_break_cons" in msg
+                for msg in cm.output
+            )
         )
 
     def test_lhs_initialization_large_space_emits_warnings(self):
@@ -1138,7 +1115,9 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
                     "pyomo.contrib.doe.doe._combinations", return_value=iter([(0, 1)])
                 ):
                     with patch.object(
-                        doe_obj, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
+                        doe_obj,
+                        "_compute_fim_at_point_no_prior",
+                        return_value=np.eye(2),
                     ):
                         doe_obj.optimize_experiments(
                             n_exp=2,
@@ -1191,10 +1170,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             ValueError,
             r"LHS initialization requires explicit lower and upper bounds on all experiment input variables",
         ):
-            doe_obj.optimize_experiments(
-                initialization_method="lhs",
-                init_n_samples=2,
-            )
+            doe_obj.optimize_experiments(initialization_method="lhs", init_n_samples=2)
 
 
 if __name__ == "__main__":

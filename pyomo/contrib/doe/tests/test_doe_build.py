@@ -732,7 +732,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertIn("names", doe_obj.results)
         self.assertIn("scenarios", doe_obj.results)
         self.assertEqual(
-            doe_obj.results["run_info"]["solver"]["status"], doe_obj.results["Solver Status"]
+            doe_obj.results["run_info"]["solver"]["status"],
+            doe_obj.results["Solver Status"],
         )
         self.assertEqual(
             doe_obj.results["settings"]["modeling"]["n_experiments_per_scenario"], 2
@@ -948,6 +949,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         got = DesignOfExperiments._symmetrize_lower_tri(m)
         expected = np.array([[1.0, 2.0, 4.0], [2.0, 3.0, 5.0], [4.0, 5.0, 6.0]])
         self.assertTrue(np.allclose(got, expected, atol=1e-12))
+
 
 if __name__ == "__main__":
     unittest.main()
