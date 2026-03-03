@@ -209,11 +209,5 @@ class ReactorExperiment(Experiment):
         # Add labels to all unknown parameters with nominal value as the value
         m.unknown_parameters.update((k, pyo.value(k)) for k in [m.A1, m.A2, m.E1, m.E2])
 
-        # Add symmetry breaking constraint suffix for multi-experiment optimization
-        # Mark the primary design variable for ordering experiments
-        m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        # Use initial concentration CA[0] as the primary variable for symmetry breaking
-        m.sym_break_cons[m.CA[m.t.first()]] = None
-
         #########################
         # End model labeling
