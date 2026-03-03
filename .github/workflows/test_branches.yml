@@ -485,7 +485,7 @@ jobs:
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
             URL=https://github.com/IDAES/idaes-ext
-            RELEASE=$(curl -s -H 'Accept: application/json' ${URL}/releases/latest)
+            RELEASE=$(curl -L -s -H 'Accept: application/json' ${URL}/releases/latest)
             VER=$(echo $RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
             if test -z "$VER"; then
                 echo "FAILED identifying IPOPT release"
