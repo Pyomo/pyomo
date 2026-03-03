@@ -46,6 +46,11 @@ from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory("ipopt").available()
 
 
+class _DummyExperiment:
+    def get_labeled_model(self, **kwargs):
+        raise RuntimeError("Should not be called in argument-validation tests")
+
+
 def get_rooney_biegler_experiment_flag():
     """Get a fresh RooneyBieglerExperimentFlag instance for testing.
 
@@ -62,9 +67,17 @@ def get_rooney_biegler_experiment_flag():
     )
 
 
+def _make_ipopt_solver():
+    solver = SolverFactory("ipopt")
+    solver.options["linear_solver"] = "ma57"
+    solver.options["halt_on_ampl_error"] = "yes"
+    solver.options["max_iter"] = 3000
+    return solver
+
+
 def get_standard_args(experiment, fd_method, obj_used, flag):
     args = {}
-    args['experiment'] = experiment
+    args['experiment_list'] = None if experiment is None else [experiment]
     args['fd_formula'] = fd_method
     args['step'] = 1e-3
     args['objective_option'] = obj_used
@@ -93,13 +106,6 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEErrors(unittest.TestCase):
-    def _make_solver(self):
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
-        return solver
-
     def test_experiment_none_error(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -808,7 +814,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_invalid_initialization_method(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -817,9 +823,23 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(initialization_method="bad")
 
-    def test_optimize_experiments_initialization_method_enum(self):
+    def test_optimize_experiments_initialization_method_enum_accepted(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            r"Parameter scenarios for multi-experiment optimization not yet supported.",
+        ):
+            doe_obj.optimize_experiments(
+                initialization_method=InitializationMethod.lhs,
+                _parameter_scenarios={"dummy": 1},
+            )
+
+    def test_optimize_experiments_initialization_method_enum_invalid_init_n_samples(self):
+        doe_obj = DesignOfExperiments(
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -832,7 +852,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_invalid_init_n_samples(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -846,7 +866,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_invalid_init_n_samples_float(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -860,10 +880,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_lhs_requires_template_mode(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[
-                RooneyBieglerMultiExperiment(hour=2.0),
-                RooneyBieglerMultiExperiment(hour=3.0),
-            ],
+            experiment_list=[_DummyExperiment(), _DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -874,7 +891,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_lhs_requires_scipy(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with patch("pyomo.contrib.doe.doe.scipy_available", False):
@@ -885,7 +902,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_parallel_requires_bool(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -895,7 +912,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_combo_parallel_requires_bool(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -907,7 +924,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_n_workers_must_be_positive_integer(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -917,7 +934,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_combo_chunk_size_must_be_positive_integer(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -930,7 +947,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_combo_parallel_threshold_positive_integer(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -943,7 +960,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_max_wall_clock_time_must_be_positive(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -956,10 +973,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_n_exp_with_multi_list(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[
-                RooneyBieglerMultiExperiment(hour=2.0),
-                RooneyBieglerMultiExperiment(hour=3.0),
-            ],
+            experiment_list=[_DummyExperiment(), _DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -970,7 +984,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_n_exp_not_positive(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -981,7 +995,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_results_file_bad_type(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -991,7 +1005,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_parameter_scenarios_not_implemented(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -1002,7 +1016,7 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_optimize_experiments_init_seed_requires_integer(self):
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment_list=[_DummyExperiment()],
             objective_option="pseudo_trace",
         )
         with self.assertRaisesRegex(
@@ -1012,7 +1026,14 @@ class TestDoEErrors(unittest.TestCase):
                 n_exp=2, initialization_method="lhs", init_n_samples=2, init_seed=1.5
             )
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestDoEErrorsRequiringSolver(unittest.TestCase):
+    def _make_solver(self):
+        return _make_ipopt_solver()
+
     def test_optimize_experiments_sym_break_var_must_be_input(self):
         class _BadSymBreakExperiment:
             def __init__(self, base_exp):
@@ -1024,17 +1045,12 @@ class TestDoEErrors(unittest.TestCase):
                 m.sym_break_cons[next(iter(m.unknown_parameters.keys()))] = None
                 return m
 
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
-
         exp = _BadSymBreakExperiment(RooneyBieglerMultiExperiment(hour=2.0, y=10.0))
         doe_obj = DesignOfExperiments(
             experiment_list=[exp],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=solver,
+            solver=self._make_solver(),
         )
 
         with self.assertRaisesRegex(
@@ -1042,7 +1058,6 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(n_exp=2)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_symmetry_mapping_failure_raises(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
@@ -1057,7 +1072,7 @@ class TestDoEErrors(unittest.TestCase):
 
         def _fail_only_symmetry_mapping(cuid, block):
             if (
-                cuid._cids[0][0] == sym_var_name
+                sym_var_name in str(cuid)
                 and hasattr(block, "experiment_inputs")
                 and block.index() == 0
             ):
@@ -1074,7 +1089,6 @@ class TestDoEErrors(unittest.TestCase):
             ):
                 doe_obj.optimize_experiments(n_exp=2)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_symmetry_breaking_default_variable_warning(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[
@@ -1094,7 +1108,6 @@ class TestDoEErrors(unittest.TestCase):
             hasattr(doe_obj.model.param_scenario_blocks[0], "symmetry_breaking_s0_exp1")
         )
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_symmetry_breaking_multiple_markers_warning(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[
@@ -1111,7 +1124,6 @@ class TestDoEErrors(unittest.TestCase):
             any("Multiple variables marked in sym_break_cons" in msg for msg in cm.output)
         )
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_lhs_initialization_large_space_emits_warnings(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
@@ -1119,15 +1131,6 @@ class TestDoEErrors(unittest.TestCase):
             step=1e-2,
             solver=self._make_solver(),
         )
-        doe_obj.model.param_scenario_blocks = pyo.Block(range(1))
-        doe_obj.model.param_scenario_blocks[0].exp_blocks = pyo.Block(range(2))
-        for k in range(2):
-            doe_obj.create_doe_model(
-                model=doe_obj.model.param_scenario_blocks[0].exp_blocks[k],
-                experiment_index=0,
-                _for_multi_experiment=True,
-            )
-
         with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
             with warnings.catch_warnings(record=True) as warn_cm:
                 warnings.simplefilter("always")
@@ -1137,11 +1140,13 @@ class TestDoEErrors(unittest.TestCase):
                     with patch.object(
                         doe_obj, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
                     ):
-                        best_points, _ = doe_obj._lhs_initialize_experiments(
-                            lhs_n_samples=10001, lhs_seed=11, n_exp=2
+                        doe_obj.optimize_experiments(
+                            n_exp=2,
+                            initialization_method="lhs",
+                            init_n_samples=10001,
+                            init_seed=11,
                         )
 
-        self.assertEqual(len(best_points), 2)
         self.assertTrue(
             any("candidate experiment designs" in str(w.message) for w in warn_cm)
         )
@@ -1152,27 +1157,20 @@ class TestDoEErrors(unittest.TestCase):
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
             objective_option="pseudo_trace",
             step=1e-2,
+            solver=self._make_solver(),
         )
-        doe_obj.model.param_scenario_blocks = pyo.Block(range(1))
-        doe_obj.model.param_scenario_blocks[0].exp_blocks = pyo.Block(range(2))
-        for k in range(2):
-            doe_obj.create_doe_model(
-                model=doe_obj.model.param_scenario_blocks[0].exp_blocks[k],
-                experiment_index=0,
-                _for_multi_experiment=True,
-            )
-
         with patch.object(
             doe_obj, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
         ):
             with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
-                doe_obj._lhs_initialize_experiments(
-                    lhs_n_samples=2,
-                    lhs_seed=11,
+                doe_obj.optimize_experiments(
                     n_exp=2,
-                    lhs_combo_parallel=True,
-                    lhs_n_workers=2,
-                    lhs_combo_parallel_threshold=10_000,
+                    initialization_method="lhs",
+                    init_n_samples=2,
+                    init_seed=11,
+                    init_combo_parallel=True,
+                    init_n_workers=2,
+                    init_combo_parallel_threshold=10_000,
                 )
 
         self.assertTrue(
@@ -1182,7 +1180,6 @@ class TestDoEErrors(unittest.TestCase):
             )
         )
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_lhs_missing_bounds_error_message(self):
         doe_obj = DesignOfExperiments(
             experiment_list=[

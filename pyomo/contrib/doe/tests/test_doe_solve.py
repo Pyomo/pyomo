@@ -176,7 +176,7 @@ def get_FIM_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args['experiment'] = experiment
+    args['experiment_list'] = None if experiment is None else [experiment]
     args['fd_formula'] = fd_method
     args['step'] = 1e-3
     args['objective_option'] = obj_used
@@ -1027,6 +1027,55 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertIs(doe.prior_FIM, saved_prior)
         self.assertTrue(np.allclose(doe.prior_FIM, saved_prior, atol=1e-12))
 
+    def test_compute_fim_at_point_no_prior_exception_fallback_zero(self):
+        doe = self._make_template_doe("pseudo_trace")
+        saved_prior = np.array([[3.0, 0.0], [0.0, 4.0]])
+        doe.prior_FIM = saved_prior
+
+        with patch.object(doe, "_sequential_FIM", side_effect=RuntimeError("boom")):
+            with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+                got = doe._compute_fim_at_point_no_prior(
+                    experiment_index=0, input_values=[2.0]
+                )
+
+        self.assertTrue(np.allclose(got, np.zeros((2, 2))))
+        self.assertIs(doe.prior_FIM, saved_prior)
+        self.assertTrue(
+            any("Using zero matrix as fallback" in msg for msg in log_cm.output)
+        )
+
+    def test_optimize_experiments_cholesky_jitter_branch(self):
+        doe = self._make_template_doe("determinant")
+
+        original_solve = doe.solver.solve
+        solve_count = {"n": 0}
+
+        class _MockSolverInfo:
+            status = "ok"
+            termination_condition = "optimal"
+            message = "mock-solve"
+
+        class _MockResults:
+            solver = _MockSolverInfo()
+
+        def _solve_first_real_then_mock(*args, **kwargs):
+            solve_count["n"] += 1
+            if solve_count["n"] == 1:
+                return original_solve(*args, **kwargs)
+            return _MockResults()
+
+        with patch(
+            "pyomo.contrib.doe.doe.np.linalg.eigvals",
+            return_value=np.array([-1.0, 1.0]),
+        ) as eigvals_mock:
+            with patch.object(
+                doe.solver, "solve", side_effect=_solve_first_real_then_mock
+            ):
+                doe.optimize_experiments(n_exp=1)
+
+        self.assertEqual(doe.results["Solver Status"], "ok")
+        self.assertGreaterEqual(eigvals_mock.call_count, 1)
+
     def test_optimize_experiments_lhs_matches_bruteforce_combo(self):
         n_exp = 2
         lhs_n_samples = 3
@@ -1100,6 +1149,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         first_design = doe.results["Scenarios"][0]["Experiments"][0][
             "Experiment Design"
         ]
+        first_build_time = doe.results["timing"]["build_s"]
 
         doe.optimize_experiments(n_exp=1)
         second_design = doe.results["Scenarios"][0]["Experiments"][0][
@@ -1108,6 +1158,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         self.assertEqual(len(first_design), len(second_design))
         self.assertIn("timing", doe.results)
+        self.assertGreater(doe.results["timing"]["build_s"], 0.0)
+        self.assertGreaterEqual(first_build_time, 0.0)
+        self.assertEqual(len(list(doe.model.param_scenario_blocks.keys())), 1)
 
     def test_lhs_combo_parallel_matches_serial(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -1196,6 +1249,175 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
         self.assertEqual(serial_norm, parallel_norm)
 
+    def test_lhs_parallel_solver_without_name_uses_default_worker_solver(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+        doe.solver = object()
+
+        def _fake_fim(self_obj, experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 0.5, 0.0], [0.0, x + 1.0]])
+
+        with patch.object(
+            DesignOfExperiments,
+            "_compute_fim_at_point_no_prior",
+            autospec=True,
+            side_effect=_fake_fim,
+        ):
+            with self.assertLogs("pyomo.contrib.doe.doe", level="DEBUG") as log_cm:
+                points, _ = doe._lhs_initialize_experiments(
+                    lhs_n_samples=4,
+                    lhs_seed=14,
+                    n_exp=2,
+                    lhs_parallel=True,
+                    lhs_n_workers=2,
+                    lhs_combo_parallel=False,
+                )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(
+            any("solver has no 'name' attribute" in msg for msg in log_cm.output)
+        )
+
+    def test_lhs_parallel_solver_factory_failure_uses_default_worker_solver(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        class _NamedSolver:
+            name = "definitely_missing_solver"
+            options = {}
+
+        doe.solver = _NamedSolver()
+
+        def _fake_fim(self_obj, experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 0.5, 0.0], [0.0, x + 1.0]])
+
+        with patch("pyomo.contrib.doe.doe.pyo.SolverFactory", return_value=None):
+            with patch.object(
+                DesignOfExperiments,
+                "_compute_fim_at_point_no_prior",
+                autospec=True,
+                side_effect=_fake_fim,
+            ):
+                with self.assertLogs("pyomo.contrib.doe.doe", level="DEBUG") as log_cm:
+                    points, _ = doe._lhs_initialize_experiments(
+                        lhs_n_samples=4,
+                        lhs_seed=18,
+                        n_exp=2,
+                        lhs_parallel=True,
+                        lhs_n_workers=2,
+                        lhs_combo_parallel=False,
+                    )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(
+            any(
+                "could not construct solver 'definitely_missing_solver'" in msg
+                for msg in log_cm.output
+            )
+        )
+
+    def test_lhs_parallel_worker_exception_uses_zero_fim_fallback(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        with patch.object(
+            DesignOfExperiments,
+            "_compute_fim_at_point_no_prior",
+            side_effect=RuntimeError("worker boom"),
+        ):
+            with self.assertLogs("pyomo.contrib.doe.doe", level="ERROR") as log_cm:
+                points, diag = doe._lhs_initialize_experiments(
+                    lhs_n_samples=4,
+                    lhs_seed=22,
+                    n_exp=2,
+                    lhs_parallel=True,
+                    lhs_n_workers=2,
+                    lhs_combo_parallel=False,
+                )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(diag["timed_out"] is False)
+        self.assertTrue(
+            any(
+                "Using zero FIM for this candidate and continuing." in msg
+                for msg in log_cm.output
+            )
+        )
+
+    def test_lhs_parallel_candidate_timeout_cancels_pending(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _slow_fim(self_obj, experiment_index, input_values):
+            time.sleep(0.05)
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 2.0]])
+
+        with patch.object(
+            DesignOfExperiments,
+            "_compute_fim_at_point_no_prior",
+            autospec=True,
+            side_effect=_slow_fim,
+        ):
+            points, diag = doe._lhs_initialize_experiments(
+                lhs_n_samples=8,
+                lhs_seed=5,
+                n_exp=2,
+                lhs_parallel=True,
+                lhs_n_workers=2,
+                lhs_combo_parallel=False,
+                lhs_max_wall_clock_time=0.001,
+            )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(diag["timed_out"])
+
+    def test_lhs_no_candidate_fim_scored_uses_zero_fallback(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=1)
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", return_value=None):
+            points, diag = doe._lhs_initialize_experiments(
+                lhs_n_samples=3,
+                lhs_seed=8,
+                n_exp=1,
+                lhs_parallel=False,
+                lhs_combo_parallel=False,
+            )
+
+        self.assertEqual(len(points), 1)
+        self.assertTrue(diag["timed_out"])
+
+    def test_lhs_candidate_subset_padding_to_n_exp(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=3)
+        call_state = {"n": 0}
+
+        def _fim_with_one_slow_call(experiment_index, input_values):
+            call_state["n"] += 1
+            x = float(input_values[0])
+            if call_state["n"] == 2:
+                time.sleep(0.1)
+            return np.array([[x + 1.0, 0.0], [0.0, x + 2.0]])
+
+        with patch.object(
+            doe, "_compute_fim_at_point_no_prior", side_effect=_fim_with_one_slow_call
+        ):
+            points, diag = doe._lhs_initialize_experiments(
+                lhs_n_samples=5,
+                lhs_seed=16,
+                n_exp=3,
+                lhs_parallel=False,
+                lhs_combo_parallel=False,
+                lhs_max_wall_clock_time=0.05,
+            )
+
+        self.assertEqual(len(points), 3)
+        self.assertTrue(diag["timed_out"])
+        self.assertLess(diag["n_candidates"], 5)
+
     def test_lhs_combo_parallel_chunk_boundary_matches_serial(self):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=2)
@@ -1223,6 +1445,54 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
         parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
         self.assertEqual(serial_norm, parallel_norm)
+
+    def test_lhs_combo_parallel_warning_reports_single_worker_reason(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+                points, _ = doe._lhs_initialize_experiments(
+                    lhs_n_samples=4,
+                    lhs_seed=27,
+                    n_exp=2,
+                    lhs_combo_parallel=True,
+                    lhs_n_workers=1,
+                    lhs_combo_parallel_threshold=1,
+                )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(any("resolved_workers=1 <= 1" in msg for msg in log_cm.output))
+
+    def test_lhs_combo_parallel_skips_empty_local_combo(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            with patch.object(
+                DesignOfExperiments,
+                "_evaluate_objective_for_option",
+                return_value=float("nan"),
+            ):
+                points, _ = doe._lhs_initialize_experiments(
+                    lhs_n_samples=4,
+                    lhs_seed=33,
+                    n_exp=2,
+                    lhs_combo_parallel=True,
+                    lhs_n_workers=2,
+                    lhs_combo_chunk_size=2,
+                    lhs_combo_parallel_threshold=1,
+                )
+
+        self.assertEqual(len(points), 2)
 
     def test_lhs_combo_scoring_timeout_returns_best_so_far(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -1292,6 +1562,302 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertEqual(len(points), 2)
         self.assertTrue(any("time budget" in msg for msg in log_cm.output))
         self.assertTrue(diag["timed_out"])
+
+    def test_lhs_combo_parallel_timeout_cancels_pending(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+
+        def _slow_obj(fim, objective_option):
+            time.sleep(0.01)
+            return float(np.trace(fim))
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            with patch.object(
+                DesignOfExperiments,
+                "_evaluate_objective_for_option",
+                side_effect=_slow_obj,
+            ):
+                with self.assertLogs(
+                    "pyomo.contrib.doe.doe", level="WARNING"
+                ) as log_cm:
+                    points, diag = doe._lhs_initialize_experiments(
+                        lhs_n_samples=9,
+                        lhs_seed=4,
+                        n_exp=2,
+                        lhs_combo_parallel=True,
+                        lhs_n_workers=2,
+                        lhs_combo_chunk_size=1,
+                        lhs_combo_parallel_threshold=1,
+                        lhs_max_wall_clock_time=0.02,
+                    )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(diag["timed_out"])
+        self.assertTrue(any("time budget" in msg for msg in log_cm.output))
+
+    def test_lhs_combo_parallel_submit_loop_timeout_sets_timed_out(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=1)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+
+        times = iter([0.0, 0.0, 0.0, 0.0, 0.01, 0.01, 0.01])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            with patch(
+                "pyomo.contrib.doe.doe.time.perf_counter",
+                side_effect=lambda: next(times),
+            ):
+                points, diag = doe._lhs_initialize_experiments(
+                    lhs_n_samples=1,
+                    lhs_seed=19,
+                    n_exp=1,
+                    lhs_combo_parallel=True,
+                    lhs_n_workers=2,
+                    lhs_combo_chunk_size=1,
+                    lhs_combo_parallel_threshold=1,
+                    lhs_max_wall_clock_time=0.001,
+                )
+
+        self.assertEqual(len(points), 1)
+        self.assertTrue(diag["timed_out"])
+
+    def test_lhs_combo_parallel_deadline_cancels_pending_futures(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+
+        stage = {"timeout": False}
+
+        class _FakeFuture:
+            def __init__(self, payload):
+                self._payload = payload
+                self.cancelled = False
+
+            def result(self):
+                return self._payload
+
+            def cancel(self):
+                self.cancelled = True
+                return True
+
+        class _FakeExecutor:
+            def __init__(self, max_workers=None):
+                self.created = []
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def submit(self, fn, *args, **kwargs):
+                # Return deterministic chunk scores; first future will be "done".
+                idx = len(self.created)
+                payload = (
+                    (10.0 - idx, (0, 1), False)
+                    if idx == 0
+                    else (9.0 - idx, (0, 2), False)
+                )
+                fut = _FakeFuture(payload)
+                self.created.append(fut)
+                return fut
+
+        def _fake_wait(pending, return_when=None):
+            pending_list = list(pending)
+            done = {pending_list[0]}
+            still_pending = set(pending_list[1:])
+            stage["timeout"] = True
+            return done, still_pending
+
+        def _fake_perf_counter():
+            return 1.0 if stage["timeout"] else 0.0
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            with patch("pyomo.contrib.doe.doe._cf.ThreadPoolExecutor", _FakeExecutor):
+                with patch("pyomo.contrib.doe.doe._cf.wait", side_effect=_fake_wait):
+                    with patch(
+                        "pyomo.contrib.doe.doe.time.perf_counter",
+                        side_effect=_fake_perf_counter,
+                    ):
+                        points, diag = doe._lhs_initialize_experiments(
+                            lhs_n_samples=3,
+                            lhs_seed=23,
+                            n_exp=2,
+                            lhs_combo_parallel=True,
+                            lhs_n_workers=2,
+                            lhs_combo_chunk_size=1,
+                            lhs_combo_parallel_threshold=1,
+                            lhs_max_wall_clock_time=0.5,
+                        )
+
+        self.assertEqual(len(points), 2)
+        self.assertTrue(diag["timed_out"])
+
+    def test_lhs_combo_parallel_minimize_objective_update(self):
+        doe = self._make_template_doe("trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, 3.0 * x + 1.0]])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_serial, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=5, lhs_seed=52, n_exp=2, lhs_combo_parallel=False
+            )
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_parallel, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=5,
+                lhs_seed=52,
+                n_exp=2,
+                lhs_combo_parallel=True,
+                lhs_n_workers=2,
+                lhs_combo_chunk_size=2,
+                lhs_combo_parallel_threshold=1,
+            )
+
+        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
+        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
+        self.assertEqual(serial_norm, parallel_norm)
+
+    def test_lhs_combo_serial_minimize_objective_update(self):
+        doe = self._make_template_doe("trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+        lhs_n_samples = 4
+        lhs_seed = 61
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 0.25, 0.0], [0.0, 2.5 * x + 0.25]])
+
+        first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
+        exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
+        lb_vals = np.array([v.lb for v in exp_input_vars])
+        ub_vals = np.array([v.ub for v in exp_input_vars])
+
+        rng = np.random.default_rng(lhs_seed)
+        from scipy.stats.qmc import LatinHypercube
+
+        per_dim_samples = []
+        for i in range(len(exp_input_vars)):
+            dim_seed = int(rng.integers(0, 2**31))
+            sampler = LatinHypercube(d=1, seed=dim_seed)
+            s_unit = sampler.random(n=lhs_n_samples).flatten()
+            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
+            per_dim_samples.append(s_scaled.tolist())
+        candidate_points = list(product(*per_dim_samples))
+        candidate_fims = [_fake_fim(0, pt) for pt in candidate_points]
+
+        best_combo = None
+        best_obj = np.inf
+        for combo in combinations(range(len(candidate_points)), 2):
+            fim_total = sum((candidate_fims[idx] for idx in combo), np.zeros((2, 2)))
+            obj_val = doe._evaluate_objective_from_fim(fim_total)
+            if obj_val < best_obj:
+                best_obj = obj_val
+                best_combo = combo
+        expected_points = [list(candidate_points[i]) for i in best_combo]
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            got_points, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=lhs_n_samples,
+                lhs_seed=lhs_seed,
+                n_exp=2,
+                lhs_combo_parallel=False,
+            )
+
+        got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
+        exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(got_norm, exp_norm)
+
+    def test_lhs_score_chunk_minimize_branch(self):
+        doe = self._make_template_doe("trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=3)
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 0.75, 0.0], [0.0, 2.0 * x + 0.75]])
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_serial, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=5, lhs_seed=77, n_exp=3, lhs_combo_parallel=False
+            )
+
+        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
+            points_parallel, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=5,
+                lhs_seed=77,
+                n_exp=3,
+                lhs_combo_parallel=True,
+                lhs_n_workers=2,
+                lhs_combo_chunk_size=2,
+                lhs_combo_parallel_threshold=1,
+            )
+
+        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
+        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
+        self.assertEqual(serial_norm, parallel_norm)
+
+    def test_lhs_combo_no_scored_combo_falls_back_to_first_n_exp(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=3)
+        lhs_n_samples = 3
+        unit_samples = np.array([0.2, 0.5, 0.8])
+
+        class _FakeLHS:
+            def __init__(self, d, seed=None):
+                self.d = d
+
+            def random(self, n):
+                assert self.d == 1
+                assert n == lhs_n_samples
+                return unit_samples.reshape((n, 1))
+
+        first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
+        exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
+        lb = float(exp_input_vars[0].lb)
+        ub = float(exp_input_vars[0].ub)
+        expected_points = [[float(lb + s * (ub - lb))] for s in unit_samples]
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+
+        with patch("pyomo.contrib.doe.doe.LatinHypercube", _FakeLHS):
+            with patch("pyomo.contrib.doe.doe._combinations", return_value=iter(())):
+                with patch.object(
+                    doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim
+                ):
+                    with self.assertLogs(
+                        "pyomo.contrib.doe.doe", level="WARNING"
+                    ) as log_cm:
+                        got_points, _ = doe._lhs_initialize_experiments(
+                            lhs_n_samples=lhs_n_samples,
+                            lhs_seed=13,
+                            n_exp=3,
+                            lhs_combo_parallel=False,
+                        )
+
+        got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
+        exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(got_norm, exp_norm)
+        self.assertTrue(
+            any(
+                "Falling back to the first n_exp candidate points." in msg
+                for msg in log_cm.output
+            )
+        )
 
     def test_lhs_fim_evaluation_timeout_stops_early(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -1400,6 +1966,60 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
         self.assertEqual(got_norm, exp_norm)
 
+    def test_lhs_matches_independent_oracle_with_fixed_samples(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+        lhs_n_samples = 3
+
+        first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
+        exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
+        self.assertEqual(len(exp_input_vars), 1)
+        lb = float(exp_input_vars[0].lb)
+        ub = float(exp_input_vars[0].ub)
+
+        unit_samples = np.array([0.1, 0.4, 0.9])
+        scaled_points = [float(lb + s * (ub - lb)) for s in unit_samples]
+
+        class _FakeLHS:
+            def __init__(self, d, seed=None):
+                self.d = d
+
+            def random(self, n):
+                assert self.d == 1
+                assert n == lhs_n_samples
+                return unit_samples.reshape((n, 1))
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, 2.0 * x + 1.0]])
+
+        with patch("pyomo.contrib.doe.doe.LatinHypercube", _FakeLHS):
+            with patch.object(
+                doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim
+            ):
+                got_points, _ = doe._lhs_initialize_experiments(
+                    lhs_n_samples=lhs_n_samples,
+                    lhs_seed=123,
+                    n_exp=2,
+                    lhs_combo_parallel=False,
+                )
+
+        # Independent brute-force oracle over explicit candidate points
+        best_obj = -np.inf
+        best_combo = None
+        for combo in combinations(range(len(scaled_points)), 2):
+            f1 = _fake_fim(0, [scaled_points[combo[0]]])
+            f2 = _fake_fim(0, [scaled_points[combo[1]]])
+            obj_val = float(np.trace(f1 + f2))
+            if obj_val > best_obj:
+                best_obj = obj_val
+                best_combo = combo
+        expected_points = [[scaled_points[i]] for i in best_combo]
+
+        got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
+        exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(got_norm, exp_norm)
+
     def test_optimize_experiments_determinant_expected_values(self):
         # Match the multi-experiment example style (explicit experiment list)
         exp_list = [
@@ -1462,9 +2082,62 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
         self.assertAlmostEqual(scenario["log10 A-opt"], -2.2347, places=3)
 
+    def test_optimize_experiments_prior_fim_aggregation_non_lhs_template_mode(self):
+        prior_fim = np.array([[2.0, 0.1], [0.1, 1.5]])
+        doe = self._make_template_doe("pseudo_trace")
+        doe.prior_FIM = prior_fim.copy()
+
+        doe.optimize_experiments(n_exp=2, initialization_method=None)
+
+        scenario = doe.results["Scenarios"][0]
+        total_fim = np.array(scenario["Total FIM"])
+        exp_fim_sum = sum(
+            (np.array(exp_data["FIM"]) for exp_data in scenario["Experiments"]),
+            np.zeros_like(total_fim),
+        )
+        stored_prior = np.array(doe.results["Prior FIM"])
+
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior_fim, atol=1e-6))
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + stored_prior, atol=1e-6))
+
+    def test_optimize_experiments_prior_fim_aggregation_non_lhs_user_initialized_mode(
+        self,
+    ):
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.5, y=9.0),
+            RooneyBieglerMultiExperiment(hour=3.5, y=12.0),
+        ]
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+        prior_fim = np.array([[1.25, 0.05], [0.05, 0.9]])
+
+        doe = DesignOfExperiments(
+            experiment_list=exp_list,
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=solver,
+            prior_FIM=prior_fim,
+        )
+        doe.optimize_experiments(initialization_method=None)
+
+        scenario = doe.results["Scenarios"][0]
+        total_fim = np.array(scenario["Total FIM"])
+        exp_fim_sum = sum(
+            (np.array(exp_data["FIM"]) for exp_data in scenario["Experiments"]),
+            np.zeros_like(total_fim),
+        )
+        stored_prior = np.array(doe.results["Prior FIM"])
+
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior_fim, atol=1e-6))
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + stored_prior, atol=1e-6))
+
     def test_optimize_experiments_safe_metric_failure_sets_nan(self):
         doe = self._make_template_doe("pseudo_trace")
-        with patch("pyomo.contrib.doe.doe.np.linalg.inv", side_effect=RuntimeError("boom")):
+        with patch(
+            "pyomo.contrib.doe.doe.np.linalg.inv", side_effect=RuntimeError("boom")
+        ):
             with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
                 doe.optimize_experiments(n_exp=1)
 
@@ -1489,7 +2162,6 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             _only_compute_fim_lower=False,
         )
         original_solve = doe.solver.solve
-        solve_count = {"n": 0}
 
         class _MockSolverInfo:
             status = "ok"
@@ -1499,13 +2171,16 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         class _MockResults:
             solver = _MockSolverInfo()
 
-        def _solve_first_real_then_mock(*args, **kwargs):
-            solve_count["n"] += 1
-            if solve_count["n"] == 1:
+        def _solve_real_for_square_then_mock(*args, **kwargs):
+            model = args[0] if args else kwargs.get("model", None)
+            if model is not None and hasattr(model, "dummy_obj"):
+                # Keep square-solve path real so model state initializes correctly.
                 return original_solve(*args, **kwargs)
             return _MockResults()
 
-        with patch.object(doe.solver, "solve", side_effect=_solve_first_real_then_mock):
+        with patch.object(
+            doe.solver, "solve", side_effect=_solve_real_for_square_then_mock
+        ):
             doe.optimize_experiments(n_exp=1)
 
         scenario_block = doe.model.param_scenario_blocks[0]

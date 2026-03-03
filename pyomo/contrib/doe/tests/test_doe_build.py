@@ -133,7 +133,7 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args['experiment'] = experiment
+    args['experiment_list'] = None if experiment is None else [experiment]
     args['fd_formula'] = fd_method
     args['step'] = 1e-3
     args['objective_option'] = obj_used
