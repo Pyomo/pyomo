@@ -524,7 +524,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         return self._pyomo_model_var_datas
     
     def get_pyomo_constraints(self):
-        return self._pyomo_model_constraint_names_to_datas.values()
+        return list(self._pyomo_model_constraint_names_to_datas.values())
 
     def get_pyomo_equality_constraints(self):
         return [c for c in self.get_pyomo_constraints() if c.equality]
