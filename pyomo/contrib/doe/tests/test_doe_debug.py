@@ -20,7 +20,11 @@ if not (numpy_available and scipy_available):
 
 
 class _FakeResult:
+    """Minimal fake solver result object matching attributes used by DoE."""
+
     class _SolverData:
+        """Container for solver status fields expected by DoE result parsing."""
+
         status = "ok"
         termination_condition = "optimal"
         message = "fake solve"
@@ -29,17 +33,31 @@ class _FakeResult:
 
 
 class _RecordingSolver:
+    """Fake solver that records options seen at each solve call."""
+
     def __init__(self):
+        """Initialize mutable options and per-call option snapshots."""
         self.options = {}
         self.solve_call_options = []
 
     def solve(self, model, tee=False):
+        """Record current options and return a fake optimal solve result."""
         self.solve_call_options.append(dict(self.options))
         return _FakeResult()
 
 
 class _MutatingRecordingSolver(_RecordingSolver):
+    """
+    Fake solver that perturbs FIM during dummy-objective initialization solve.
+
+    This emulates a realistic DoE square-initialization behavior where the
+    solve updates FIM values. It is used to verify that post-solve
+    re-synchronization of ``L``, ``L_inv``, ``fim_inv``, and ``cov_trace``
+    is performed correctly.
+    """
+
     def solve(self, model, tee=False):
+        """Record options, then mutate 2x2 FIM values during init-stage solve."""
         super().solve(model, tee=tee)
         if (
             hasattr(model, "dummy_obj")
@@ -57,7 +75,45 @@ class _MutatingRecordingSolver(_RecordingSolver):
 
 
 class _SimpleExperiment:
+    """
+    Minimal one-parameter experiment fixture for DoE unit tests.
+
+    Mathematical model
+    ------------------
+    The fixture builds a tiny algebraic model with one input, one unknown
+    parameter, and one measured output:
+
+        y = theta + x
+
+    where:
+    - ``x`` is labeled as an experimental input,
+    - ``theta`` is labeled as an unknown parameter,
+    - ``y`` is labeled as an experimental output with unit measurement error.
+
+    Why this model is used
+    ----------------------
+    This model is intentionally simple so tests can isolate DoE framework
+    behavior (solver option routing, inspection output schema, and result
+    bookkeeping) without confounding numerical complexity from the underlying
+    process model.
+
+    What this fixture tests
+    -----------------------
+    This fixture is used by tests that check:
+    - default `run_doe()` behavior remains stable,
+    - split scenario/final solver option handling, and
+    - inspection report schema generation.
+
+    Why this does not inherit from Parmest ``Experiment``
+    ------------------------------------------------------
+    ``DesignOfExperiments`` only requires an object exposing
+    ``get_labeled_model()`` that returns a model with expected suffix labels.
+    For unit testing, a lightweight class keeps dependencies minimal and avoids
+    unrelated Parmest behaviors.
+    """
+
     def get_labeled_model(self):
+        """Return a labeled Pyomo model for the test fixture."""
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=1.0)
         m.theta = pyo.Var(initialize=2.0)
@@ -76,7 +132,43 @@ class _SimpleExperiment:
 
 
 class _TwoParamExperiment:
+    """
+    Minimal two-parameter experiment fixture for trace/Cholesky tests.
+
+    Mathematical model
+    ------------------
+    The fixture builds a separable two-output model:
+
+        y1 = theta1 * x1
+        y2 = theta2 * x2
+
+    with two experimental inputs ``(x1, x2)``, two unknown parameters
+    ``(theta1, theta2)``, and two outputs ``(y1, y2)`` (unit measurement
+    errors).
+
+    Why this model is used
+    ----------------------
+    Two parameters are the smallest case that exercises matrix-valued
+    quantities central to trace/A-opt with Cholesky structures
+    (``fim``, ``L``, ``L_inv``, ``fim_inv``, ``cov_trace``). This fixture is
+    used to test post-initialization consistency constraints for those
+    variables.
+
+    What this fixture tests
+    -----------------------
+    This fixture supports trace/A-opt initialization tests, specifically that
+    Cholesky- and inverse-related consistency constraints are satisfied after
+    initialization when FIM values have changed.
+
+    Why this does not inherit from Parmest ``Experiment``
+    ------------------------------------------------------
+    As with ``_SimpleExperiment``, inheriting Parmest ``Experiment`` is not
+    needed for these unit tests. The DoE interface contract is satisfied by
+    providing ``get_labeled_model()`` plus the required suffix labels.
+    """
+
     def get_labeled_model(self):
+        """Return a labeled two-parameter Pyomo model for testing."""
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(initialize=1.0)
         m.x2 = pyo.Var(initialize=1.0)
@@ -103,6 +195,7 @@ class _TwoParamExperiment:
 
 
 def _make_doe_object():
+    """Build a DoE object with the one-parameter fixture and recording solver."""
     solver = _RecordingSolver()
     solver.options["max_iter"] = 3000
     return DesignOfExperiments(
@@ -116,6 +209,7 @@ def _make_doe_object():
 
 
 def _make_trace_doe_object():
+    """Build a trace-objective DoE object with FIM-mutating fake solver."""
     solver = _MutatingRecordingSolver()
     solver.options["max_iter"] = 3000
     return DesignOfExperiments(
@@ -129,7 +223,10 @@ def _make_trace_doe_object():
 
 
 class TestDoeDebugOptions(unittest.TestCase):
+    """Tests for advanced run_doe configuration and debug-facing behavior."""
+
     def test_run_doe_default_behavior_unchanged(self):
+        """Verify default run_doe path still performs normal solve workflow."""
         doe_obj = _make_doe_object()
         doe_obj.run_doe()
 
@@ -142,6 +239,7 @@ class TestDoeDebugOptions(unittest.TestCase):
         )
 
     def test_split_scenario_and_final_solver_options(self):
+        """Verify scenario and final solves receive distinct solver options."""
         doe_obj = _make_doe_object()
         doe_obj.run_doe(
             run_config={
@@ -158,6 +256,7 @@ class TestDoeDebugOptions(unittest.TestCase):
         self.assertEqual(doe_obj.solver.options["max_iter"], 3000)
 
     def test_inspection_mode_generates_expected_schema(self):
+        """Verify inspection mode returns residual entries with expected keys."""
         doe_obj = _make_doe_object()
         doe_obj.run_doe(
             run_config={
@@ -186,6 +285,7 @@ class TestDoeDebugOptions(unittest.TestCase):
         )
 
     def test_max_iter_zero_final_does_not_block_scenario_solves(self):
+        """Verify final max_iter=0 does not affect prerequisite scenario solves."""
         doe_obj = _make_doe_object()
         doe_obj.run_doe(
             run_config={
@@ -199,7 +299,10 @@ class TestDoeDebugOptions(unittest.TestCase):
 
 
 class TestConstraintResidualUtility(unittest.TestCase):
+    """Unit tests for structured constraint residual reporting helper."""
+
     def test_residual_report_orders_by_violation(self):
+        """Residual report should be sorted descending by violation magnitude."""
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=0.0)
         m.c1 = pyo.Constraint(expr=m.x >= 1.0)
@@ -216,7 +319,10 @@ class TestConstraintResidualUtility(unittest.TestCase):
 
 
 class TestCholeskyInitialization(unittest.TestCase):
+    """Tests for Cholesky/FIM initialization helper behavior."""
+
     def test_compute_cholesky_jitter_raises_negative_eigenvalue(self):
+        """Negative minimum eigenvalue should produce positive corrective jitter."""
         doe_obj = _make_doe_object()
         min_eig = -1.0e-3
         jitter = doe_obj._compute_cholesky_jitter(min_eig)
@@ -225,12 +331,23 @@ class TestCholeskyInitialization(unittest.TestCase):
         )
 
     def test_compute_cholesky_jitter_zero_when_not_needed(self):
+        """Positive minimum eigenvalue above tolerance should yield zero jitter."""
         doe_obj = _make_doe_object()
         min_eig = 1.0e-2
         jitter = doe_obj._compute_cholesky_jitter(min_eig)
         self.assertEqual(jitter, 0.0)
 
     def test_trace_initialization_resynchronizes_fim_inverse_variables(self):
+        """
+        Verify trace-mode initialization re-synchronizes inverse-related variables.
+
+        The fake solver mutates FIM during initialization solve. The test then
+        checks that post-initialization residuals for:
+        - ``obj_cons.cholesky_inv_cons``,
+        - ``obj_cons.cholesky_LLinv_cons``, and
+        - ``obj_cons.cov_trace_rule``
+        are all near zero.
+        """
         doe_obj = _make_trace_doe_object()
         run_config = ConfigBlock()
         run_config.declare("final_solve", ConfigValue(default=False))
