@@ -22,7 +22,7 @@ from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 
 
 def run_reactor_trace_debug_example(
-    nfe=10, ncp=3, top_constraints=20, solve_final_model=False
+    nfe=10, ncp=3, top_constraints=20, solve_final_model=False, solver=None
 ):
     """
     Run trace-objective DoE with advanced inspection-oriented ``run_config``.
@@ -38,6 +38,9 @@ def run_reactor_trace_debug_example(
     solve_final_model : bool, optional
         If False, assemble and initialize only (debug mode). If True, run the
         final optimization solve after inspection.
+    solver : SolverFactory object, optional
+        Pyomo solver used by DesignOfExperiments. If None, DoE constructs its
+        default solver configuration.
 
     Returns
     -------
@@ -74,7 +77,7 @@ def run_reactor_trace_debug_example(
         jac_initial=None,
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
-        solver=None,
+        solver=solver,
         tee=False,
         get_labeled_model_args=None,
         _Cholesky_option=True,

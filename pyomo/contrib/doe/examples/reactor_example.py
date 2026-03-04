@@ -25,6 +25,7 @@ def run_reactor_doe(
     figure_file_name="example_reactor_compute_FIM",
     log_scale=False,
     run_optimal_doe=True,
+    solver=None,
 ):
     """
     This function demonstrates how to perform sensitivity analysis on the reactor
@@ -41,6 +42,9 @@ def run_reactor_doe(
         file name to save the factorial figure, by default "example_reactor_compute_FIM"
     run_optimal_doe : bool, optional
         whether to run the optimal DoE, by default True
+    solver : SolverFactory object, optional
+        Pyomo solver used by DesignOfExperiments. If None, DoE constructs its
+        default solver configuration.
     """
     # Read in file
     DATA_DIR = pathlib.Path(__file__).parent
@@ -81,7 +85,7 @@ def run_reactor_doe(
         jac_initial=None,
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
-        solver=None,
+        solver=solver,
         tee=False,
         get_labeled_model_args=None,
         _Cholesky_option=True,
