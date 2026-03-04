@@ -8,6 +8,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________
 """
 This module implements the ExternalGreyBoxConstraint class, which is used to
 represent implicit constraints defined by external grey-box models within Pyomo.

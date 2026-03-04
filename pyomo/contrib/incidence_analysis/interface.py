@@ -8,6 +8,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________
 """Utility functions and a utility class for interfacing Pyomo components with
 useful graph algorithms.
 

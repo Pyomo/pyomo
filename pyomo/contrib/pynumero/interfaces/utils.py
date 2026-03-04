@@ -8,6 +8,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________
 import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix

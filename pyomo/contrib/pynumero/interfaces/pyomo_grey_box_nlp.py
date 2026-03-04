@@ -8,6 +8,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________
 """
 This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
