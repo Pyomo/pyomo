@@ -245,7 +245,7 @@ class TestDoeDebugOptions(unittest.TestCase):
             run_config={
                 "scenario_solver_options": {"max_iter": 25},
                 "final_solver_options": {"max_iter": 0},
-            },
+            }
         )
 
         self.assertEqual(
@@ -262,7 +262,7 @@ class TestDoeDebugOptions(unittest.TestCase):
             run_config={
                 "final_solve": False,
                 "inspection": {"enabled": True, "top_constraints": 3},
-            },
+            }
         )
 
         self.assertEqual(doe_obj.results["Solver Status"], "not_run")
@@ -291,7 +291,7 @@ class TestDoeDebugOptions(unittest.TestCase):
             run_config={
                 "scenario_solver_options": {"max_iter": 100},
                 "final_solver_options": {"max_iter": 0},
-            },
+            }
         )
 
         self.assertEqual(doe_obj.solver.solve_call_options[0]["max_iter"], 100)
@@ -354,9 +354,7 @@ class TestCholeskyInitialization(unittest.TestCase):
         run_config.declare("inspection", ConfigBlock())
         run_config.inspection.declare("enabled", ConfigValue(default=True))
         run_config.inspection.declare("top_constraints", ConfigValue(default=200))
-        doe_obj.run_doe(
-            run_config=run_config,
-        )
+        doe_obj.run_doe(run_config=run_config)
         residuals = doe_obj.results["Constraint Residuals"]["post_initialization"]
         by_name = {entry["constraint_name"]: entry["violation"] for entry in residuals}
 

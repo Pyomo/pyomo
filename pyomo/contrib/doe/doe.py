@@ -324,12 +324,7 @@ class DesignOfExperiments:
         self._built_scenarios = False
 
     # Perform doe
-    def run_doe(
-        self,
-        model=None,
-        results_file=None,
-        run_config=None,
-    ):
+    def run_doe(self, model=None, results_file=None, run_config=None):
         """
         Runs DoE for a single experiment estimation. Can save results in
         a file based on the flag.
@@ -494,8 +489,7 @@ class DesignOfExperiments:
         constraint_residuals = {}
         if inspect_constraints:
             constraint_residuals["post_initialization"] = self.get_constraint_residuals(
-                model=model,
-                top_n=inspect_top_constraints,
+                model=model, top_n=inspect_top_constraints
             )
 
         if hasattr(model, "determinant"):
@@ -524,15 +518,16 @@ class DesignOfExperiments:
                 )
             )
         else:
-            self.logger.info("Skipped final optimization solve (solve_final_model=False).")
+            self.logger.info(
+                "Skipped final optimization solve (solve_final_model=False)."
+            )
         self.logger.info(
             "Total time for build, initialization, and solve: %0.1f seconds"
             % (build_time + initialization_time + solve_time)
         )
         if inspect_constraints:
             constraint_residuals["post_final_stage"] = self.get_constraint_residuals(
-                model=model,
-                top_n=inspect_top_constraints,
+                model=model, top_n=inspect_top_constraints
             )
 
         # Avoid accidental carry-over of FIM information

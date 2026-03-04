@@ -22,10 +22,7 @@ from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 
 
 def run_reactor_trace_debug_example(
-    nfe=10,
-    ncp=3,
-    top_constraints=20,
-    solve_final_model=False,
+    nfe=10, ncp=3, top_constraints=20, solve_final_model=False
 ):
     """
     Run trace-objective DoE with advanced inspection-oriented ``run_config``.
