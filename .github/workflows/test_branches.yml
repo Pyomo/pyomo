@@ -193,7 +193,11 @@ jobs:
         )"
         echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
         echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
-        echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        if ${{matrix.TARGET}} == win; then
+            echo "CURL_HOME=$GITHUB_WORKSPACE" | sed 's|/|\\|g' >> $GITHUB_ENV
+        else
+            echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        fi
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
@@ -497,8 +501,7 @@ jobs:
             elif test "${{matrix.TARGET}}" == osx; then
                 curl $URL/idaes-solvers-darwin-aarch64.tar.gz -o "$IPOPT_TAR"
             else
-                curl  --retry 8 --max-time 150 -L \
-                    $URL/idaes-solvers-windows-x86_64.tar.gz -o "$IPOPT_TAR"
+                curl $URL/idaes-solvers-windows-x86_64.tar.gz -o "$IPOPT_TAR"
             fi
         fi
         cd "$IPOPT_DIR"
