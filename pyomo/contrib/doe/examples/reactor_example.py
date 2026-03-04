@@ -131,13 +131,23 @@ def run_reactor_doe(
     ####################
     if run_optimal_doe:
         if use_advanced_run_config:
+            # Advanced/debug usage of run_doe(run_config=...):
+            # - scenario_solver_options: options used only for finite-difference
+            #   scenario generation and square-model initialization solves.
+            # - final_solver_options: options used only for the final DoE NLP.
+            # - inspection: captures top residuals at key points for diagnostics.
+            #
+            # This path is optional and intended for power users. Leaving
+            # use_advanced_run_config=False preserves standard run_doe behavior.
             advanced_run_config = {
                 "scenario_solver_options": {"max_iter": 200},
                 "final_solver_options": {"max_iter": 2000},
                 "inspection": {"enabled": True, "top_constraints": 25},
             }
+            # Example invocation with advanced controls grouped in one config.
             doe_obj.run_doe(run_config=advanced_run_config)
         else:
+            # Default call path used by most users.
             doe_obj.run_doe()
 
         # Print out a results summary

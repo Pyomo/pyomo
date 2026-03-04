@@ -70,6 +70,7 @@ if numpy_available:
 
 def get_numerical_derivative(grey_box_object=None):
     # Internal import to avoid circular imports
+    """Compute finite-difference first derivatives for grey-box checks."""
     from pyomo.contrib.doe import ObjectiveLib
 
     # Grab current FIM value
@@ -121,6 +122,7 @@ def get_numerical_derivative(grey_box_object=None):
 
 def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
     # Internal import to avoid circular imports
+    """Compute finite-difference second derivatives for grey-box Hessian checks."""
     from pyomo.contrib.doe import ObjectiveLib
 
     # Grab current FIM value
@@ -243,6 +245,7 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
 
 
 def get_standard_args(experiment, fd_method, obj_used):
+    """Build standard DesignOfExperiments keyword arguments for tests."""
     args = {}
     args['experiment'] = experiment
     args['fd_formula'] = fd_method
@@ -279,6 +282,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 
 
 def make_greybox_and_doe_objects(objective_option):
+    """Create baseline DoE and grey-box objects for objective-specific tests."""
     fd_method = "central"
     obj_used = objective_option
 
@@ -299,6 +303,7 @@ def make_greybox_and_doe_objects(objective_option):
 
 
 def make_greybox_and_doe_objects_rooney_biegler(objective_option):
+    """Create Rooney-Biegler DoE and grey-box objects for objective-specific tests."""
     fd_method = "central"
     obj_used = objective_option
 
@@ -389,6 +394,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # set the inputs for the
     # Grey Box object
     def test_set_inputs(self):
+        """Test set inputs."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -405,6 +411,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # Testing that getting the
     # input names works properly
     def test_input_names(self):
+        """Test input names."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -434,6 +441,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     def test_output_names(self):
         # Need to test for each objective type
         # A-opt
+        """Test output names."""
         objective_option = "trace"
         doe_obj_A, grey_box_object_A = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -473,6 +481,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Testing output computation
     def test_outputs_A_opt(self):
+        """Test outputs A opt."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -488,6 +497,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.isclose(grey_box_A_opt, A_opt))
 
     def test_outputs_D_opt(self):
+        """Test outputs D opt."""
         objective_option = "determinant"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -503,6 +513,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.isclose(grey_box_D_opt, D_opt))
 
     def test_outputs_E_opt(self):
+        """Test outputs E opt."""
         objective_option = "minimum_eigenvalue"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -519,6 +530,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.isclose(grey_box_E_opt, E_opt))
 
     def test_outputs_ME_opt(self):
+        """Test outputs ME opt."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -536,6 +548,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Testing Jacobian computation
     def test_jacobian_A_opt(self):
+        """Test jacobian A opt."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -560,6 +573,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     def test_jacobian_D_opt(self):
+        """Test jacobian D opt."""
         objective_option = "determinant"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -584,6 +598,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     def test_jacobian_E_opt(self):
+        """Test jacobian E opt."""
         objective_option = "minimum_eigenvalue"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -608,6 +623,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     def test_jacobian_ME_opt(self):
+        """Test jacobian ME opt."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -633,6 +649,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Testing Hessian Computation
     def test_hessian_A_opt(self):
+        """Test hessian A opt."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -655,6 +672,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_hessian_D_opt(self):
+        """Test hessian D opt."""
         objective_option = "determinant"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -677,6 +695,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_hessian_E_opt(self):
+        """Test hessian E opt."""
         objective_option = "minimum_eigenvalue"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -699,6 +718,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_hessian_ME_opt(self):
+        """Test hessian ME opt."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -721,6 +741,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_equality_constraint_names(self):
+        """Test equality constraint names."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -734,6 +755,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertListEqual(eq_con_names_gb, [])
 
     def test_evaluate_equality_constraints(self):
+        """Test evaluate equality constraints."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -747,6 +769,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertIsNone(eq_con_vals_gb)
 
     def test_evaluate_jacobian_equality_constraints(self):
+        """Test evaluate jacobian equality constraints."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -761,6 +784,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertIsNone(jac_eq_con_vals_gb)
 
     def test_evaluate_hessian_equality_constraints(self):
+        """Test evaluate hessian equality constraints."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -778,6 +802,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # the DoE problem with grey box is built
     # properly.
     def test_A_opt_greybox_build(self):
+        """Test A opt greybox build."""
         objective_option = "trace"
         doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
 
@@ -823,6 +848,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
 
     def test_D_opt_greybox_build(self):
+        """Test D opt greybox build."""
         objective_option = "determinant"
         doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
 
@@ -870,6 +896,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
 
     def test_E_opt_greybox_build(self):
+        """Test E opt greybox build."""
         objective_option = "minimum_eigenvalue"
         doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
 
@@ -916,6 +943,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
 
     def test_ME_opt_greybox_build(self):
+        """Test ME opt greybox build."""
         objective_option = "condition_number"
         doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
 
@@ -963,6 +991,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Testing all the error messages
     def test_constructor_doe_object_error(self):
+        """Test constructor doe object error."""
         with self.assertRaisesRegex(
             ValueError,
             "DoE Object must be provided to build external grey box of the FIM.",
@@ -970,6 +999,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             grey_box_object = FIMExternalGreyBox(doe_object=None)
 
     def test_constructor_objective_lib_error(self):
+        """Test constructor objective lib error."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -982,6 +1012,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             )
 
     def test_output_names_obj_lib_error(self):
+        """Test output names obj lib error."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -995,6 +1026,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             grey_box_object.output_names()
 
     def test_evaluate_outputs_obj_lib_error(self):
+        """Test evaluate outputs obj lib error."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -1008,6 +1040,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             grey_box_object.evaluate_outputs()
 
     def test_evaluate_jacobian_outputs_obj_lib_error(self):
+        """Test evaluate jacobian outputs obj lib error."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -1021,6 +1054,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             grey_box_object.evaluate_jacobian_outputs()
 
     def test_evaluate_hessian_outputs_obj_lib_error(self):
+        """Test evaluate hessian outputs obj lib error."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -1043,6 +1077,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # (time, optimal objective value)
         # Here, the objective value is
         # log-10(determinant) of the FIM
+        """Test solve D optimality log determinant."""
         optimal_experimental_designs = [
             np.array([1.782, 4.34]),
             np.array([10.00, 4.35]),
@@ -1084,6 +1119,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # (time, optimal objective value)
         # Here, the objective value is
         # trace(inverse(FIM))
+        """Test solve A optimality trace of inverse."""
         optimal_experimental_designs = [
             np.array([1.33, 0.0277]),
             np.array([9.9, 0.0366]),
@@ -1126,6 +1162,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # (time, optimal objective value)
         # Here, the objective value is
         # minimum eigenvalue of the FIM
+        """Test solve E optimality minimum eigenvalue."""
         optimal_experimental_designs = [
             np.array([1.30, 38.70]),
             np.array([10.00, 28.349]),
@@ -1168,6 +1205,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # (time, optimal objective value)
         # Here, the objective value is
         # condition number of the FIM
+        """Test solve ME optimality condition number."""
         optimal_experimental_designs = [
             np.array([0.943, np.log(13.524)]),
             np.array([10.00, np.log(27.675)]),

@@ -60,8 +60,6 @@ class TestUtilsFIM(unittest.TestCase):
         ):
             check_FIM(FIM)
 
-    """Test the compute_FIM_metrics() from utils.py."""
-
     ### Helper methods for test cases
     # Sample FIM for testing
     def _get_test_fim(self):
@@ -85,6 +83,7 @@ class TestUtilsFIM(unittest.TestCase):
         }
 
     def test_compute_FIM_metrics(self):
+        """Verify `compute_FIM_metrics` returns expected metrics for a known FIM."""
         # Create a sample Fisher Information Matrix (FIM)
         FIM = self._get_test_fim()
         # expected results
@@ -116,6 +115,7 @@ class TestUtilsFIM(unittest.TestCase):
         self.assertAlmostEqual(ME_opt, expected['ME_opt'])
 
     def test_FIM_eigenvalue_warning(self):
+        """Verify warning is logged when eigenvalues have non-negligible imaginary part."""
         # Create a matrix with an imaginary component large enough
         # to trigger the warning
         FIM = np.array([[6, 5j], [5j, 7]])
@@ -128,9 +128,8 @@ class TestUtilsFIM(unittest.TestCase):
             )
             self.assertIn(expected_warning, cm.output[0])
 
-    """Test the get_FIM_metrics() from utils.py."""
-
     def test_get_FIM_metrics(self):
+        """Verify `get_FIM_metrics` dictionary entries match expected values."""
         # Create a sample Fisher Information Matrix (FIM)
         FIM = self._get_test_fim()
         # expected results
