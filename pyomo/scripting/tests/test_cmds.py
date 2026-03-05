@@ -160,6 +160,21 @@ class Test(unittest.TestCase):
             'ok': ok,
             'raise exit': raise_exit,
         }
+
+        try:
+            DownloadFactory._cls = testers
+            with (
+                capture_output() as OUT,
+                LoggingIntercept(module='pyomo', level=logging.INFO) as LOG,
+            ):
+                with self.assertRaisesRegex(ValueError, r"--retry must be >= 1"):
+                    main(args=['download-extensions', '--retry', '0'])
+        finally:
+            DownloadFactory._cls = _orig
+
+        self.assertEqual("", OUT.getvalue())
+        self.assertEqual("", LOG.getvalue())
+
         try:
             DownloadFactory._cls = testers
             with (
