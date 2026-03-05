@@ -31,6 +31,8 @@ class GroupDownloader:
             logger.setLevel(original_level)
 
     def _call_impl(self, args, unparsed, logger):
+        if args.retry < 1:
+            raise ValueError("--retry must be >= 1")
         results = []
         result_fmt = "[%s]  %s"
 
@@ -123,7 +125,7 @@ _parser.add_argument(
     type=int,
     dest='retry',
     default=1,
-    help="Number of times to attempt each download",
+    help="Total number of attempts for each download (must be >= 1)",
 )
 
 _parser.add_argument(
