@@ -154,18 +154,19 @@ class Test(unittest.TestCase):
 
     def test_downloader(self):
         _orig = DownloadFactory._cls
-        DownloadFactory._cls = {
+        testers = {
             'skipper': skipper,
             'raise exception': raise_exception,
             'ok': ok,
             'raise exit': raise_exit,
         }
         try:
+            DownloadFactory._cls = testers
             with (
                 capture_output() as OUT,
                 LoggingIntercept(module='pyomo', level=logging.INFO) as LOG,
             ):
-                main(args=['download-extensions'])
+                self.assertEqual(3, main(args=['download-extensions']))
         finally:
             DownloadFactory._cls = _orig
 
@@ -176,6 +177,49 @@ As of February 9, 2023, AMPL GSL can no longer be downloaded through \
 download-extensions. Visit https://portal.ampl.com/ to download the \
 AMPL GSL binaries.
 RuntimeError: downloader raised RuntimeError
+SystemExit: 1
+Finished downloading Pyomo extensions.
+The following extensions were downloaded:
+    [SKIP]  skipper
+    [FAIL]  raise exception
+    [ OK ]  ok
+    [FAIL]  raise exit
+""",
+            LOG.getvalue(),
+        )
+
+        try:
+            DownloadFactory._cls = testers
+            with (
+                capture_output() as OUT,
+                LoggingIntercept(module='pyomo', level=logging.INFO) as LOG,
+            ):
+                self.assertEqual(
+                    3,
+                    main(
+                        args=[
+                            'download-extensions',
+                            '--retry',
+                            '2',
+                            '--retry-sleep',
+                            '0',
+                        ]
+                    ),
+                )
+        finally:
+            DownloadFactory._cls = _orig
+
+        self.assertEqual("", OUT.getvalue())
+        self.assertEqual(
+            """\
+As of February 9, 2023, AMPL GSL can no longer be downloaded through \
+download-extensions. Visit https://portal.ampl.com/ to download the \
+AMPL GSL binaries.
+RuntimeError: downloader raised RuntimeError
+Retrying download of 'raise exception' (attempt 2 of 2) in 0 seconds
+RuntimeError: downloader raised RuntimeError
+SystemExit: 1
+Retrying download of 'raise exit' (attempt 2 of 2) in 0 seconds
 SystemExit: 1
 Finished downloading Pyomo extensions.
 The following extensions were downloaded:
