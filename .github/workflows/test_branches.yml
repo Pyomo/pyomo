@@ -302,7 +302,7 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            python -m pip install --cache-dir cache/pip cplex docplex \
+            python -m pip install --cache-dir cache/pip 'cplex!=22.1.2.1' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
