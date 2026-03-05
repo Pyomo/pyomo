@@ -501,6 +501,7 @@ jobs:
             elif test "${{matrix.TARGET}}" == osx; then
                 curl $URL/idaes-solvers-darwin-aarch64.tar.gz -o "$IPOPT_TAR"
             else
+                IPOPT_TAR=$(echo "$IPOPT_TAR" | sed 's|/|\\|g')
                 curl $URL/idaes-solvers-windows-x86_64.tar.gz -o "$IPOPT_TAR"
             fi
         fi
