@@ -243,9 +243,9 @@ jobs:
            location
         EOF
         )"
-        echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
-        echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
-        if ${{matrix.TARGET}} == win; then
+        echo "$CURLRC" | sed 's/^ +//' > ${GITHUB_WORKSPACE}/.curlrc
+        echo "$CURLRC" | sed 's/^ +//' > ${GITHUB_WORKSPACE}/_curlrc
+        if test "${{matrix.TARGET}}" == win; then
             echo "CURL_HOME=$GITHUB_WORKSPACE" | sed 's|/|\\|g' >> $GITHUB_ENV
         else
             echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
@@ -428,7 +428,7 @@ jobs:
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
             # release on that platform.
-            if [[ ${{matrix.TARGET}} == win && ${{matrix.python}} =~ 3.1[01] ]]; then
+            if [[ "${{matrix.TARGET}}" == win && ${{matrix.python}} =~ 3.1[01] ]]; then
                 # We would like to just use something like:
                 #  - "!=9.5.1" (conda errors)
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
