@@ -55,7 +55,7 @@ class GroupDownloader:
                         # skipped download and move on.
                         result = "SKIP"
                     else:
-                        # If the extension has a __cell__(), then call
+                        # If the extension has a __call__(), then call
                         # it.  Otherwise, assume all went well (e.g.,
                         # the registered extension was actually a
                         # function not a type -- and it was called when
