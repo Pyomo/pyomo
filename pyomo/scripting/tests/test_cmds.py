@@ -6,15 +6,41 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-#
+
+import logging
 import re
+import sys
 import pyomo.common.unittest as unittest
+from pyomo.common.download import DownloadFactory
 from pyomo.common.tee import capture_output
 from pyomo.common.log import LoggingIntercept
 
 from pyomo.environ import SolverFactory
 from pyomo.scripting.driver_help import help_solvers, help_transformations
 from pyomo.scripting.pyomo_main import main
+
+
+class skipper:
+    def __init__(self, downloader):
+        pass
+
+    def __call__(self):
+        pass
+
+    def skip(self):
+        return True
+
+
+def ok(downloader):
+    pass
+
+
+def raise_exception(downloader):
+    raise RuntimeError("downloader raised RuntimeError")
+
+
+def raise_exit(downloader):
+    sys.exit(1)
 
 
 def _mock_kestrel(solvers, err=None):
@@ -125,6 +151,41 @@ class Test(unittest.TestCase):
         self.assertTrue(re.search('core.relax_integer_vars', OUT))
         # test a transformation that we know is deprecated
         self.assertTrue(re.search(r'duality.linear_dual\s+\[DEPRECATED\]', OUT))
+
+    def test_downloader(self):
+        _orig = DownloadFactory._cls
+        DownloadFactory._cls = {
+            'skipper': skipper,
+            'raise exception': raise_exception,
+            'ok': ok,
+            'raise exit': raise_exit,
+        }
+        try:
+            with (
+                capture_output() as OUT,
+                LoggingIntercept(module='pyomo', level=logging.INFO) as LOG,
+            ):
+                main(args=['download-extensions'])
+        finally:
+            DownloadFactory._cls = _orig
+
+        self.assertEqual("", OUT.getvalue())
+        self.assertEqual(
+            """\
+As of February 9, 2023, AMPL GSL can no longer be downloaded through \
+download-extensions. Visit https://portal.ampl.com/ to download the \
+AMPL GSL binaries.
+RuntimeError: downloader raised RuntimeError
+SystemExit: 1
+Finished downloading Pyomo extensions.
+The following extensions were downloaded:
+    [SKIP]  skipper
+    [FAIL]  raise exception
+    [ OK ]  ok
+    [FAIL]  raise exit
+""",
+            LOG.getvalue(),
+        )
 
 
 if __name__ == "__main__":
