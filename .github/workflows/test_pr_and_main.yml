@@ -243,8 +243,8 @@ jobs:
            location
         EOF
         )"
-        echo "$CURLRC" | sed 's/^ +//' > ${GITHUB_WORKSPACE}/.curlrc
-        echo "$CURLRC" | sed 's/^ +//' > ${GITHUB_WORKSPACE}/_curlrc
+        echo "$CURLRC" | sed -r 's/^ +//' > ${GITHUB_WORKSPACE}/.curlrc
+        echo "$CURLRC" | sed -r 's/^ +//' > ${GITHUB_WORKSPACE}/_curlrc
         if test "${{matrix.TARGET}}" == win; then
             echo "CURL_HOME=$GITHUB_WORKSPACE" | sed 's|/|\\|g' >> $GITHUB_ENV
         else
