@@ -9,7 +9,7 @@ Pyomo.DoE was originally created by **Jialu Wang** and **Alexander W. Dowling** 
 University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact 
 (CCSI2) <https://github.com/CCSI-Toolset/>`_
 project, funded through the U.S. Department Of Energy Office of Fossil Energy with 
-assistance from **John Siirola**, **Bethany Nicholson**, **Miranda Mundt**,and **Hailey Lynch**.
+assistance from **John Siirola**, **Bethany Nicholson**, **Miranda Mundt**, and **Hailey Lynch**.
 Significant improvements and extensions were contributed by **Dan Laky**, and 
 **Shuvashish Mondal** with funding from the 
 `Process Optimization & Modeling for Minerals Sustainability (PrOMMiS) <https://www.netl.doe.gov/prommis>`_ project
@@ -98,7 +98,7 @@ Based on the above notation, the form of the MBDoE problem addressed in Pyomo.Do
     \begin{equation}
     \begin{aligned}
         \underset{\boldsymbol{\varphi}}{\max} \quad & \Psi (\mathbf{M}(\boldsymbol{\hat{\theta}}, \boldsymbol{\varphi})) \\
-        \text{s.t.} \quad & \mathbf{M}(\boldsymbol{\hat{\theta}}, \boldsymbol{\varphi}) = \sum_r^{N_r} \sum_{r'}^{N_r} \tilde{\sigma}_{(r,r')}\mathbf{Q}_r^\mathbf{T} \mathbf{Q}_{r'} + \mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1} \\
+        \text{s.t.} \quad & \mathbf{M}(\boldsymbol{\hat{\theta}}, \boldsymbol{\varphi}) = \sum_r^{N_r} \sum_{r'}^{N_r} \tilde{\sigma}_{(r,r')}\mathbf{Q}_r^\mathbf{T} \mathbf{Q}_{r'} + \mathbf{M}_0 \\
         & \dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}}, \boldsymbol{\hat{\theta}}) \\
         & \mathbf{g}(\mathbf{x}(t),  \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\hat{\theta}})=\mathbf{0} \\
         & \mathbf{y} =\mathbf{h}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\hat{\theta}}) \\
@@ -111,12 +111,15 @@ Based on the above notation, the form of the MBDoE problem addressed in Pyomo.Do
 where:
 
 *  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. It should consist of one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}`. With a proper model formulation, the timepoints for control or measurements :math:`\mathbf{t}` can also be degrees of freedom.
-*  :math:`\mathbf{M}` is the Fisher information matrix (FIM), estimated as the inverse of the covariance matrix of parameter estimates  :math:`\boldsymbol{\hat{\theta}}`. A large FIM indicates more information contained in the experiment for parameter estimation.
+*  :math:`\mathbf{M}` is the Fisher information matrix (FIM), approximated as the inverse of the covariance matrix of parameter estimates  :math:`\boldsymbol{\hat{\theta}}`. A large FIM indicates more information contained in the experiment for parameter estimation.
 *  :math:`\mathbf{Q}` is the dynamic sensitivity matrix, containing the partial derivatives of  :math:`\mathbf{y}` with respect to  :math:`\boldsymbol{\theta}`.
 *  :math:`\Psi` is the scalar design criteria to measure the information content in the FIM.
-*  :math:`\mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1}` is the FIM of previous experiments.
+*  :math:`\mathbf{M}_0` is the sum of all the FIMs from previous experiments.
 
-Pyomo.DoE provides five design criteria  :math:`\Psi` to measure the information in the FIM:
+Pyomo.DoE provides five design criteria  :math:`\Psi` to measure the information in the FIM. 
+The covariance matrix of parameter estimates is approximated as the inverse of the FIM, 
+i.e., :math:`\mathbf{V} \approx \mathbf{M}^{-1}`. 
+We can use the FIM or the covariance matrix to define the design criteria.
 
 .. list-table:: Pyomo.DoE design criteria
     :header-rows: 1
@@ -126,27 +129,24 @@ Pyomo.DoE provides five design criteria  :math:`\Psi` to measure the information
       - Computation
       - Geometrical meaning
     * - A-optimality
-      -   :math:`\text{trace}({\mathbf{M}}^{-1})`
-      - Dimensions of the enclosing box of the confidence ellipse (derived from the covariance matrix)
+      -   :math:`\text{trace}(\mathbf{V}) = \text{trace}(\mathbf{M}^{-1})`
+      - Minimizing this is equivalent to minimizing enclosing box of the confidence ellipse
     * - Pseudo A-optimality
-      -   :math:`\text{trace}({\mathbf{M}})`
-      - Dimensions of the enclosing box of the confidence ellipse (derived from the Fisher Information Matrix)
+      -   :math:`\text{trace}(\mathbf{M})`
+      - Maximizing this is equivalent to maximizing total information in principal directions of the FIM
     * - D-optimality
-      -   :math:`\text{det}({\mathbf{M}})`
-      - Volume of the confidence ellipse (derived from the Fisher Information Matrix)
+      -   :math:`\det(\mathbf{M}) = 1/\det(\mathbf{V})`
+      - Maximizing this is equivalent to minimizing confidence-ellipsoid volume
     * - E-optimality
-      -   :math:`\text{min eig}({\mathbf{M}})`
-      - Size of the longest axis of the confidence ellipse (derived from the Fisher Information Matrix)
+      -   :math:`\lambda_{\min}(\mathbf{M}) = 1/\lambda_{\max}(\mathbf{V})`
+      - Maximizing this is equivalent to minimizing the longest axis of the confidence ellipse
     * - Modified E-optimality
-      -   :math:`\text{cond}({\mathbf{M}})`
-      - Ratio of the longest axis to the shortest axis of the confidence ellipse (derived from the Fisher Information Matrix)
+      -   :math:`\text{cond}(\mathbf{M}) = \text{cond}(\mathbf{V})`
+      - Minimizing this is equivalent to minimizing the ratio of the longest axis to the shortest axis of the confidence ellipse
 
 .. note::
     A confidence ellipse is a geometric representation of the uncertainty in parameter 
-    estimates. It is derived from the covariance matrix or the Fisher Information 
-    Matrix (FIM), depending on the design criterion. The ellipse illustrates the 
-    spread and correlation of parameter estimates, with its axes corresponding to 
-    the eigenvalues and eigenvectors of the respective matrix.
+    estimates. It is derived from the covariance matrix :math:`\mathbf{V}`. 
 
 In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
 
@@ -385,5 +385,4 @@ After applying ``run_doe`` on the ``DesignOfExperiments`` object,
 the optimal design is an initial concentration of 5.0 mol/L and 
 an initial temperature of 494 K with all other temperatures being 300 K. 
 The corresponding :math:`\log_{10}` determinant of the FIM is 19.32.
-
 
