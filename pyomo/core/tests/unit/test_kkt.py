@@ -383,7 +383,7 @@ class TestKKT(unittest.TestCase):
 
         self.check_primal_kkt_transformation_solns(m, m_reform)
 
-    def test_multipe_obj_error(self):
+    def test_multiple_obj_error(self):
         m = self.get_bilevel_model()
         m.obj.deactivate()
         kkt = TransformationFactory('core.kkt')

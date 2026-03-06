@@ -335,7 +335,7 @@ class NonLinearProgrammingKKT:
             return info.equality_con_from_multiplier[multiplier_var]
         if multiplier_var in info.inequality_con_from_multiplier.keys():
             # if this multiplier var maps to a ranged constraint, we will return a tuple
-            # so that we can indicate which bound the multplier var maps to
+            # so that we can indicate which bound the multiplier var maps to
             return info.inequality_con_from_multiplier[multiplier_var]
         raise ValueError(
             f"The KKT multiplier: {multiplier_var.name}, does not exist on {model.name}."
