@@ -28,6 +28,7 @@ from pyomo.core.base import ComponentUID
 from pyomo.common.deprecation import deprecation_warning
 
 import logging
+
 logger = logging.getLogger('pyomo.core')
 
 
@@ -77,7 +78,7 @@ class _AddSlackVariablesData(AutoSlots.Mixin):
     def __init__(self):
         self.slack_variables = defaultdict(list)
         self.relaxed_constraint = ComponentMap()
-        
+
 
 Block.register_private_data_initializer(_AddSlackVariablesData)
 
@@ -116,8 +117,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
             and the transformation adds an objective to minimize the sum of the added
             (non-negative) slack variables. If False, the transformation does not
             change the model objective.
-            """
-        )
+            """,
+        ),
     )
 
     def __init__(self, **kwds):

@@ -106,7 +106,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(len(slacks), 1)
         slack = slacks[0]
         self.assertIs(m.rule3, trans.get_relaxed_constraint(m, slack))
-        
+
     # wrapping this as a method because I use it again later when I test
     # targets
     def checkRule1(self, m):
@@ -379,14 +379,12 @@ class TestAddSlacks(unittest.TestCase):
     def test_error_for_mapping_untransformed_constraint(self):
         m = self.makeModel()
         trans = TransformationFactory('core.add_slack_variables')
-        trans.apply_to(
-            m, targets=[m.rule1]
-        )
+        trans.apply_to(m, targets=[m.rule1])
         with self.assertRaisesRegex(
             ValueError,
             f"It does not appear that {m.rule2.name} is a constraint "
             f"on model {m.name} that was relaxed by the "
-            f"'core.add_slack_variables' transformation."
+            f"'core.add_slack_variables' transformation.",
         ):
             cons = trans.get_slack_variables(m, m.rule2)
 
@@ -398,8 +396,7 @@ class TestAddSlacks(unittest.TestCase):
             ValueError,
             f"It does not appear that {m.x} is a slack variable "
             f"created by applying the 'core.add_slack_variables' transformation "
-            f"to model {m.name}."
-
+            f"to model {m.name}.",
         ):
             cons = trans.get_relaxed_constraint(m, m.x)
 
