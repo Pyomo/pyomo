@@ -1093,31 +1093,36 @@ class Estimator:
         """
         Generate initial theta values for multistart optimization using selected sampling method.
         """
-        # Locate the unknown parameters in the model from the suffix
-        suffix_params = parmest_model.unknown_parameters
+        if parmest_model is None:
+            raise ValueError("A labeled parmest model must be provided.")
+        if not isinstance(n_restarts, int):
+            raise TypeError("n_restarts must be an integer.")
+        if n_restarts <= 0:
+            raise ValueError("n_restarts must be greater than zero.")
 
-        # Get the VarData objects from the suffix
-        theta_vars = list(suffix_params.keys())
+        theta_names = self._expand_indexed_unknowns(parmest_model)
+        theta_vars = [parmest_model.find_component(name) for name in theta_names]
+        if any(v is None for v in theta_vars):
+            raise RuntimeError(
+                "Failed to locate one or more theta components on model."
+            )
 
-        # Extract names, starting values, and bounds for the theta variables
-        theta_names = [v.name for v in theta_vars]
-        initial_theta = np.array([v.value for v in theta_vars])
-        lower_bound = np.array([v.lb for v in theta_vars])
-        upper_bound = np.array([v.ub for v in theta_vars])
+        lower_bound = np.array([v.lb for v in theta_vars], dtype=float)
+        upper_bound = np.array([v.ub for v in theta_vars], dtype=float)
 
-        # Check if the lower and upper bounds are defined
-        if any(bound is None for bound in lower_bound) or any(
-            bound is None for bound in upper_bound
-        ):
+        if np.any(np.isnan(lower_bound)) or np.any(np.isnan(upper_bound)):
             raise ValueError(
                 "The lower and upper bounds for the theta values must be defined."
             )
+        if np.any(lower_bound > upper_bound):
+            raise ValueError(
+                "Each lower bound must be less than or equal to the corresponding upper bound."
+            )
 
         if multistart_sampling_method == "uniform_random":
-            # Generate random theta values using uniform distribution, with set seed for reproducibility
-            np.random.seed(seed)
-            # Generate random theta values for each restart (n_restarts x len(theta_names))
-            theta_vals_multistart = np.random.uniform(
+            # Use a local RNG to avoid mutating global random state.
+            rng = np.random.default_rng(seed)
+            theta_vals_multistart = rng.uniform(
                 low=lower_bound, high=upper_bound, size=(n_restarts, len(theta_names))
             )
 
@@ -1137,36 +1142,33 @@ class Estimator:
             samples = sampler.random(n=n_restarts + 1)[1:]
 
         elif multistart_sampling_method == "user_provided_values":
-            # Add user provided dataframe option
-            if user_provided_df is not None:
-
-                if isinstance(user_provided_df, pd.DataFrame):
-                    # Check if the user provided dataframe has the same number of rows as the number of restarts
-                    if user_provided_df.shape[0] != n_restarts:
-                        raise ValueError(
-                            "The user provided dataframe must have the same number of rows as the number of restarts."
-                        )
-                    # Check if the user provided dataframe has the same number of columns as the number of theta names
-                    if user_provided_df.shape[1] != len(theta_names):
-                        raise ValueError(
-                            "The user provided dataframe must have the same number of columns as the number of theta names."
-                        )
-                        # Check if the user provided dataframe has the same theta names as the model
-                        # if not, raise an error
-                    if not all(
-                        theta in theta_names for theta in user_provided_df.columns
-                    ):
-                        raise ValueError(
-                            "The user provided dataframe must have the same theta names as the model."
-                        )
-                # If all checks pass, return the user provided dataframe
-                theta_vals_multistart = user_provided_df.iloc[
-                    0 : len(initial_theta)
-                ].values
-            else:
+            if user_provided_df is None:
                 raise ValueError(
                     "The user must provide a pandas dataframe to use the 'user_provided_values' method."
                 )
+            if not isinstance(user_provided_df, pd.DataFrame):
+                raise TypeError("user_provided_df must be a pandas DataFrame.")
+            if user_provided_df.shape[0] != n_restarts:
+                raise ValueError(
+                    "The user provided dataframe must have the same number of rows as the number of restarts."
+                )
+            if user_provided_df.shape[1] != len(theta_names):
+                raise ValueError(
+                    "The user provided dataframe must have the same number of columns as the number of theta names."
+                )
+            clean_cols = [str(c).replace("'", "") for c in user_provided_df.columns]
+            if len(clean_cols) != len(set(clean_cols)):
+                raise ValueError("Duplicate theta columns are not allowed.")
+            expected_clean = [t.replace("'", "") for t in theta_names]
+            if set(clean_cols) != set(expected_clean):
+                raise ValueError(
+                    "The user provided dataframe must have the same theta names as the model."
+                )
+            df_clean = user_provided_df.copy()
+            df_clean.columns = clean_cols
+            # Reindex by name to avoid column-order based value remapping.
+            df_clean = df_clean.reindex(columns=expected_clean)
+            theta_vals_multistart = df_clean.values
 
         else:
             raise ValueError(
@@ -1186,12 +1188,7 @@ class Estimator:
         # Create a DataFrame where each row is an initial theta vector for a restart,
         # columns are theta_names, and values are the initial theta values for each restart
         if multistart_sampling_method == "user_provided_values":
-            # If user_provided_values is a DataFrame, use its columns and values directly
-            if isinstance(user_provided_df, pd.DataFrame):
-                df_multistart = user_provided_df.copy()
-                df_multistart.columns = theta_names
-            else:
-                df_multistart = pd.DataFrame(theta_vals_multistart, columns=theta_names)
+            df_multistart = pd.DataFrame(theta_vals_multistart, columns=theta_names)
         else:
             # Ensure theta_vals_multistart is 2D (n_restarts, len(theta_names))
             arr = np.atleast_2d(theta_vals_multistart)
@@ -1199,11 +1196,17 @@ class Estimator:
                 arr = np.tile(arr, (n_restarts, 1))
             df_multistart = pd.DataFrame(arr, columns=theta_names)
 
+        theta_arr = df_multistart[theta_names].to_numpy(dtype=float)
+        if not np.isfinite(theta_arr).all():
+            raise ValueError("Initial theta values must be finite.")
+        if np.any(theta_arr < lower_bound) or np.any(theta_arr > upper_bound):
+            raise ValueError("Initial theta values must be within model bounds.")
+
         # Add columns for output info, initialized as nan
         for name in theta_names:
             df_multistart[f'converged_{name}'] = np.nan
         df_multistart["final objective"] = np.nan
-        df_multistart["solver termination"] = np.nan
+        df_multistart["solver termination"] = ""
         df_multistart["solve_time"] = np.nan
 
         # Debugging output
@@ -2032,6 +2035,10 @@ class Estimator:
             raise RuntimeError(
                 "Multistart is not supported in the deprecated parmest interface."
             )
+        if not isinstance(n_restarts, int):
+            raise TypeError("n_restarts must be an integer.")
+        if n_restarts <= 0:
+            raise ValueError("n_restarts must be greater than zero.")
 
         # ---- Build results_df in the canonical schema (theta cols + output cols) ----
         if theta_values is not None:
@@ -2048,18 +2055,26 @@ class Estimator:
                 t.replace("'", "")
                 for t in self._expand_indexed_unknowns(self._create_parmest_model(0))
             ]
+            if len(clean_provided) != len(set(clean_provided)):
+                raise ValueError("Duplicate theta names are not allowed.")
             if set(clean_provided) != set(expected):
                 raise ValueError(
                     f"Provided theta_values columns {clean_provided} do not match expected {expected}."
                 )
             init_df.columns = clean_provided
-            theta_names = list(init_df.columns)
+            theta_names = list(expected)
+            init_df = init_df.reindex(columns=theta_names)
+            if init_df.shape[0] == 0:
+                raise ValueError("theta_values must contain at least one row.")
+            n_restarts = init_df.shape[0]
+            if not np.isfinite(init_df.to_numpy(dtype=float)).all():
+                raise ValueError("theta_values must contain only finite values.")
 
             results_df = init_df.copy()
             for name in theta_names:
                 results_df[f"converged_{name}"] = np.nan
             results_df["final objective"] = np.nan
-            results_df["solver termination"] = np.nan
+            results_df["solver termination"] = ""
             results_df["solve_time"] = np.nan
 
         else:
@@ -2102,7 +2117,15 @@ class Estimator:
                 local_results.append((i, final_obj, str(worst), solve_time, theta_hat))
             except Exception as exc:
                 solve_time = time.time() - t0
-                local_results.append((i, np.nan, f"exception: {exc}", solve_time, None))
+                local_results.append(
+                    (
+                        i,
+                        np.nan,
+                        f"exception(start={i}, sampler={multistart_sampling_method}): {exc}",
+                        solve_time,
+                        None,
+                    )
+                )
 
         global_results = task_mgr.allgather_global_data(local_results)
 
@@ -2117,15 +2140,26 @@ class Estimator:
                     if name in theta_hat:
                         results_df.at[i, f"converged_{name}"] = float(theta_hat[name])
 
-        # Best solution (ignore NaNs)
-        feasible = (
-            results_df["final objective"].replace([np.inf, -np.inf], np.nan).dropna()
+        # Best solution:
+        # prioritize starts with acceptable solver terminations, then minimum objective.
+        acceptable_terms = {
+            str(pyo.TerminationCondition.optimal),
+            str(pyo.TerminationCondition.locallyOptimal),
+            str(pyo.TerminationCondition.globallyOptimal),
+        }
+        finite_obj_mask = np.isfinite(
+            results_df["final objective"].to_numpy(dtype=float)
         )
-        if len(feasible) == 0:
+        acceptable_mask = results_df["solver termination"].isin(acceptable_terms)
+        ranked = results_df[finite_obj_mask & acceptable_mask]
+        if ranked.empty:
+            ranked = results_df[finite_obj_mask]
+
+        if ranked.empty:
             best_theta = None
             best_obj = np.nan
         else:
-            best_idx = feasible.idxmin()
+            best_idx = ranked["final objective"].astype(float).idxmin()
             best_obj = float(results_df.loc[best_idx, "final objective"])
             best_theta = {
                 name: float(results_df.loc[best_idx, f"converged_{name}"])
