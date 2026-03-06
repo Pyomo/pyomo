@@ -98,10 +98,8 @@ class NonLinearProgrammingKKT:
         config.set_value(kwds)
 
         if hasattr(model, config.kkt_block_name):
-            raise ValueError(
-                f"""model already has an attribute with the 
-                specified kkt_block_name: '{config.kkt_block_name}'"""
-            )
+            raise ValueError(f"""model already has an attribute with the 
+                specified kkt_block_name: '{config.kkt_block_name}'""")
 
         # we should check that all vars the user fixed are included
         # in parametrize_wrt
@@ -275,7 +273,7 @@ class NonLinearProgrammingKKT:
         for i in kkt_block.var_bound_set:
             lagrangean += kkt_block.var_bound_expr[i] * kkt_block.alpha_var_bound[i]
             # mappings for ranged constraints built from variable bounds
-            (var, bound) = info.var_bound_multiplier_index_to_con[i]
+            var, bound = info.var_bound_multiplier_index_to_con[i]
             info.inequality_con_from_multiplier[kkt_block.alpha_var_bound[i]] = (
                 var,
                 bound,
