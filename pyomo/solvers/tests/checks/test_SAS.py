@@ -294,6 +294,7 @@ class SASTestLP(SASTestAbc):
 
 
 @unittest.skipIf(not sas94_available, "The SAS94 solver interface is not available")
+@unittest.pytest.mark.solver("sas")
 class SASTestLP94(SASTestLP, unittest.TestCase):
     @mock.patch(
         "pyomo.solvers.plugins.solvers.SAS.SAS94.sas_version",
@@ -328,6 +329,7 @@ class SASTestLP94(SASTestLP, unittest.TestCase):
 
 # @unittest.skipIf(not sascas_available, "The SAS solver is not available")
 @unittest.skip("Tests not yet configured for SAS Viya interface.")
+@unittest.pytest.mark.solver("sas")
 class SASTestLPCAS(SASTestLP, unittest.TestCase):
     solver_io = "_sascas"
     session_options = CAS_OPTIONS
@@ -339,6 +341,7 @@ class SASTestLPCAS(SASTestLP, unittest.TestCase):
         self.checkSolution()
 
 
+@unittest.pytest.mark.solver("sas")
 class SASTestMILP(SASTestAbc):
     def setX(self):
         self.instance.X = Var([1, 2, 3], within=NonNegativeIntegers)
@@ -529,12 +532,14 @@ class SASTestMILP(SASTestAbc):
 
 # @unittest.skipIf(not sas94_available, "The SAS solver is not available")
 @unittest.skip("MILP94 tests disabled.")
+@unittest.pytest.mark.solver("sas")
 class SASTestMILP94(SASTestMILP, unittest.TestCase):
     pass
 
 
 # @unittest.skipIf(not sascas_available, "The SAS solver is not available")
 @unittest.skip("Tests not yet configured for SAS Viya interface.")
+@unittest.pytest.mark.solver("sas")
 class SASTestMILPCAS(SASTestMILP, unittest.TestCase):
     solver_io = "_sascas"
     session_options = CAS_OPTIONS

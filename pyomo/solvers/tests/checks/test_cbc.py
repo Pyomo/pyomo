@@ -27,6 +27,7 @@ opt_cbc = SolverFactory('cbc')
 cbc_available = opt_cbc.available(exception_flag=False)
 
 
+@unittest.pytest.mark.solver("cbc")
 class CBCTests(unittest.TestCase):
     @unittest.skipIf(not cbc_available, "The CBC solver is not available")
     def test_warm_start(self):

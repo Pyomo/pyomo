@@ -24,6 +24,7 @@ baron_available = _test_solver_cases('baron', 'bar').available
 
 
 @unittest.skipIf(not baron_available, "The 'BARON' solver is not available")
+@unittest.pytest.mark.solver("baron")
 class BaronTest(unittest.TestCase):
     """Test the BARON interface."""
 

@@ -138,7 +138,7 @@ def create_method(model, solver, io, test_case, symbolic_labels):
                 def return_test(self):
                     return pickle_test(self)
 
-    unittest.pytest.mark.solver(solver)(return_test)
+    unittest.pytest.mark.solver(solver)(unittest.pytest.mark.writer(io)(return_test))
     return return_test
 
 

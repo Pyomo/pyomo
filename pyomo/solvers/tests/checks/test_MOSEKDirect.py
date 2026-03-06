@@ -20,6 +20,7 @@ mosek_available = check_available_solvers('mosek_direct')
 
 
 @unittest.skipIf(not mosek_available, "MOSEK's python bindings are not available")
+@unittest.pytest.mark.solver("mosek_direct")
 class MOSEKDirectTests(unittest.TestCase):
     def setUp(self):
         self.stderr = sys.stderr

@@ -28,6 +28,7 @@ if mosek_available:
 
 
 @unittest.skipIf(not mosek_available, "MOSEK's python bindings are missing.")
+@unittest.pytest.mark.solver("mosek_persistent")
 class MOSEKPersistentTests(unittest.TestCase):
     def setUp(self):
         self.stderr = sys.stderr

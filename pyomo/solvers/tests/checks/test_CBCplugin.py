@@ -35,6 +35,8 @@ cbc_available = SolverFactory('cbc', solver_io='lp').available(exception_flag=Fa
 data_dir = '{}/data'.format(dirname(abspath(__file__)))
 
 
+@unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
+@unittest.pytest.mark.solver("cbc")
 class TestCBC(unittest.TestCase):
     """
     These tests are here to test the general functionality of the cbc solver when using the lp solverio, which will
@@ -51,7 +53,6 @@ class TestCBC(unittest.TestCase):
     def tearDown(self):
         sys.stderr = self.stderr
 
-    @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
     def test_infeasible_lp(self):
         self.model.X = Var(within=Reals)
         self.model.C1 = Constraint(expr=self.model.X <= 1)
@@ -69,7 +70,6 @@ class TestCBC(unittest.TestCase):
         )
         self.assertEqual(SolverStatus.warning, results.solver.status)
 
-    @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
     def test_unbounded_lp(self):
         self.model.Idx = RangeSet(2)
         self.model.X = Var(self.model.Idx, within=Reals)
@@ -88,7 +88,6 @@ class TestCBC(unittest.TestCase):
         )
         self.assertEqual(SolverStatus.warning, results.solver.status)
 
-    @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
     def test_optimal_lp(self):
         self.model.X = Var(within=NonNegativeReals)
         self.model.Obj = Objective(expr=self.model.X, sense=minimize)
@@ -107,7 +106,6 @@ class TestCBC(unittest.TestCase):
         )
         self.assertEqual(SolverStatus.ok, results.solver.status)
 
-    @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
     def test_infeasible_mip(self):
         self.model.X = Var(within=NonNegativeIntegers)
         self.model.C1 = Constraint(expr=self.model.X <= 1)
@@ -125,7 +123,6 @@ class TestCBC(unittest.TestCase):
         )
         self.assertEqual(SolverStatus.warning, results.solver.status)
 
-    @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
     def test_unbounded_mip(self):
         self.model.X = Var(within=Integers)
         self.model.Obj = Objective(expr=self.model.X, sense=minimize)
@@ -141,7 +138,6 @@ class TestCBC(unittest.TestCase):
         )
         self.assertEqual(SolverStatus.warning, results.solver.status)
 
-    @unittest.skipIf(not cbc_available, "The 'cbc' solver is not available")
     def test_optimal_mip(self):
         self.model.Idx = RangeSet(2)
         self.model.X = Var(self.model.Idx, within=NonNegativeIntegers)

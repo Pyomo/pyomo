@@ -23,6 +23,7 @@ avail = KnitroDirectSolver().available()
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroDirectSolverConfig(unittest.TestCase):
     def test_default_instantiation(self):
         config = KnitroConfig()
@@ -45,6 +46,7 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
     def test_results_extra_info_mip(self):
         """Test that MIP-specific extra info is populated for MIP problems."""
@@ -98,6 +100,7 @@ class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroSolverObjectiveBound(unittest.TestCase):
     def test_objective_bound_mip(self):
         """Test that objective bound is retrieved for MIP problems."""
@@ -135,6 +138,7 @@ class TestKnitroSolverObjectiveBound(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroSolverIncumbentObjective(unittest.TestCase):
     def test_none_without_objective(self):
         """Test that incumbent objective is None when no objective is present."""
@@ -192,6 +196,7 @@ class TestKnitroSolverIncumbentObjective(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroSolverSolutionStatus(unittest.TestCase):
     def test_solution_status_mapping(self):
         """Test that solution status is correctly mapped from KNITRO status."""
@@ -246,6 +251,7 @@ class TestKnitroSolverSolutionStatus(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroSolverTerminationCondition(unittest.TestCase):
     def test_termination_condition_mapping(self):
         """Test that termination condition is correctly mapped from KNITRO status."""
@@ -337,6 +343,7 @@ class TestKnitroSolverTerminationCondition(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroDirectSolverInterface(unittest.TestCase):
     def test_class_member_list(self):
         opt = KnitroDirectSolver()
@@ -379,6 +386,7 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroDirectSolver(unittest.TestCase):
     def setUp(self):
         self.opt = KnitroDirectSolver()

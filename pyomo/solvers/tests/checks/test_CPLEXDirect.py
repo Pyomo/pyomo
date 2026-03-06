@@ -43,6 +43,8 @@ except ImportError:
 diff_tol = 1e-4
 
 
+@unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
+@unittest.pytest.mark.solver("cplex_direct")
 class CPLEXDirectTests(unittest.TestCase):
     def setUp(self):
         self.stderr = sys.stderr
@@ -51,9 +53,6 @@ class CPLEXDirectTests(unittest.TestCase):
     def tearDown(self):
         sys.stderr = self.stderr
 
-    @unittest.skipIf(
-        not cplexpy_available, "The 'cplex' python bindings are not available"
-    )
     def test_infeasible_lp(self):
         with SolverFactory("cplex", solver_io="python") as opt:
             model = ConcreteModel()
@@ -68,9 +67,6 @@ class CPLEXDirectTests(unittest.TestCase):
                 results.solver.termination_condition, TerminationCondition.infeasible
             )
 
-    @unittest.skipIf(
-        not cplexpy_available, "The 'cplex' python bindings are not available"
-    )
     def test_unbounded_lp(self):
         with SolverFactory("cplex", solver_io="python") as opt:
             model = ConcreteModel()
@@ -87,9 +83,6 @@ class CPLEXDirectTests(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipIf(
-        not cplexpy_available, "The 'cplex' python bindings are not available"
-    )
     def test_optimal_lp(self):
         with SolverFactory("cplex", solver_io="python") as opt:
             model = ConcreteModel()
@@ -100,9 +93,6 @@ class CPLEXDirectTests(unittest.TestCase):
 
             self.assertEqual(results.solution.status, SolutionStatus.optimal)
 
-    @unittest.skipIf(
-        not cplexpy_available, "The 'cplex' python bindings are not available"
-    )
     def test_get_duals_lp(self):
         with SolverFactory("cplex", solver_io="python") as opt:
             model = ConcreteModel()
@@ -122,9 +112,6 @@ class CPLEXDirectTests(unittest.TestCase):
             self.assertAlmostEqual(model.dual[model.C1], 0.4)
             self.assertAlmostEqual(model.dual[model.C2], 0.2)
 
-    @unittest.skipIf(
-        not cplexpy_available, "The 'cplex' python bindings are not available"
-    )
     def test_infeasible_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
             model = ConcreteModel()
@@ -139,9 +126,6 @@ class CPLEXDirectTests(unittest.TestCase):
                 results.solver.termination_condition, TerminationCondition.infeasible
             )
 
-    @unittest.skipIf(
-        not cplexpy_available, "The 'cplex' python bindings are not available"
-    )
     def test_unbounded_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
             model = AbstractModel()
@@ -159,9 +143,6 @@ class CPLEXDirectTests(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipIf(
-        not cplexpy_available, "The 'cplex' python bindings are not available"
-    )
     def test_optimal_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
             model = ConcreteModel()
@@ -174,6 +155,7 @@ class CPLEXDirectTests(unittest.TestCase):
 
 
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
+@unittest.pytest.mark.solver("cplex_persistent")
 class TestIsFixedCallCount(unittest.TestCase):
     """Tests for PR#1402 (669e7b2b)"""
 
@@ -430,6 +412,7 @@ class TestAddVar(unittest.TestCase):
 
 
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
+@unittest.pytest.mark.solver("cplex_direct")
 class TestAddCon(unittest.TestCase):
     def test_add_single_constraint(self):
         model = ConcreteModel()
@@ -536,6 +519,7 @@ class TestAddCon(unittest.TestCase):
 
 
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
+@unittest.pytest.mark.solver("cplex_direct")
 class TestLoadVars(unittest.TestCase):
     def setUp(self):
         opt = SolverFactory("cplex", solver_io="python")

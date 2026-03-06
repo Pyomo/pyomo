@@ -22,6 +22,7 @@ except ImportError:
 
 
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
+@unittest.pytest.mark.solver("cplex_persistent")
 class TestQuadraticObjective(unittest.TestCase):
     def test_quadratic_objective_is_set(self):
         model = ConcreteModel()

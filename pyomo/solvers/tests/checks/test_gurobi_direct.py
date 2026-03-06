@@ -79,6 +79,7 @@ class GurobiBase(unittest.TestCase):
 
 
 @unittest.skipIf(gurobipy_available, "gurobipy is installed, skip import test")
+@unittest.pytest.mark.solver("gurobi_direct")
 class GurobiImportFailedTests(unittest.TestCase):
     def test_gurobipy_not_installed(self):
         # ApplicationError should be thrown if gurobipy is not available
@@ -90,6 +91,7 @@ class GurobiImportFailedTests(unittest.TestCase):
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
 @unittest.skipIf(not gurobi_available, "gurobi license is not valid")
+@unittest.pytest.mark.solver("gurobi_direct")
 class GurobiParameterTests(GurobiBase):
     # Test parameter handling at the model and environment level
 
@@ -170,6 +172,7 @@ class GurobiParameterTests(GurobiBase):
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
 @unittest.skipIf(not gurobi_available, "gurobi license is not valid")
+@unittest.pytest.mark.solver("gurobi_direct")
 class GurobiEnvironmentTests(GurobiBase):
     # Test handling of gurobi environments
 
@@ -337,6 +340,7 @@ class GurobiEnvironmentTests(GurobiBase):
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
 @unittest.skipIf(not gurobi_available, "gurobi license is not valid")
 @unittest.skipIf(not single_use_license(), reason="test needs a single use license")
+@unittest.pytest.mark.solver("gurobi_direct")
 class GurobiSingleUseTests(GurobiBase):
     # Integration tests for Gurobi single-use licenses (useful for checking all Gurobi
     # environments were correctly freed). These tests are not run in pyomo's CI. Each
