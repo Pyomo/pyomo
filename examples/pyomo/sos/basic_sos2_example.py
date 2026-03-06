@@ -10,7 +10,7 @@
 import pyomo.environ as pyo
 
 # Problem borrowed from the lpsolve project documentation
-# http://lpsolve.sourceforge.net/5.0/SOS.htm
+# https://lpsolve.sourceforge.net/5.0/SOS.htm
 
 # Don't forget that you can see that actual input to the solver if you use
 # the -k command line flag:
