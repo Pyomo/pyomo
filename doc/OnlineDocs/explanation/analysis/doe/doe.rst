@@ -133,7 +133,7 @@ We can use the FIM or the covariance matrix to define the design criteria.
       - Minimizing this is equivalent to minimizing enclosing box of the confidence ellipse
     * - Pseudo A-optimality
       -   :math:`\text{trace}(\mathbf{M})`
-      - Maximizing this is equivalent to maximizing total information in principal directions of the FIM
+      - Maximizing this is equivalent to maximizing the dimensions of the enclosing box of the Fisher Information Matrix
     * - D-optimality
       -   :math:`\det(\mathbf{M}) = 1/\det(\mathbf{V})`
       - Maximizing this is equivalent to minimizing confidence-ellipsoid volume
