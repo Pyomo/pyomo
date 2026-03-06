@@ -7,6 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+from collections import defaultdict
+
 from pyomo.core import (
     TransformationFactory,
     Var,
@@ -17,11 +19,16 @@ from pyomo.core import (
     value,
 )
 
+from pyomo.common.autoslots import Autoslots
+from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base import ComponentUID
 from pyomo.common.deprecation import deprecation_warning
+
+import logging
+logger = logging.getLogger('pyomo.core')
 
 
 def target_list(x):
@@ -64,9 +71,15 @@ def target_list(x):
         )
 
 
-import logging
+class _AddSlackVariablesData(AutoSlots.Mixin):
+    __slots__ = ('slack_vars', 'relaxed_constraint')
 
-logger = logging.getLogger('pyomo.core')
+    def __init__(self):
+        self.slack_vars = defaultdict(list)
+        self.relaxed_constraint = ComponentMap()
+        
+
+Block.register_private_data_initializer(_AddSlackVariablesData)
 
 
 @TransformationFactory.register(
@@ -90,6 +103,22 @@ class AddSlackVariables(NonIsomorphicTransformation):
             doc="This specifies the list of Constraints to add slack variables to.",
         ),
     )
+    CONFIG.declare(
+        'add_slack_objective',
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="Whether or not to change the model objective to minimizing "
+            "the added slack variables.",
+            doc="""
+            Whether or not to change the problem objective to minimize the added slack
+            variables. If True (the default), the original objective is deactivated
+            and the transformation adds an objective to minimize the sum of the added
+            (non-negative) slack variables. If False, the transformation does not
+            change the model objective.
+            """
+        )
+    )
 
     def __init__(self, **kwds):
         kwds['name'] = "add_slack_vars"
@@ -102,6 +131,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         targets = config.targets
+
+        trans_info = intance.private_data()
 
         if targets is None:
             constraintDatas = instance.component_data_objects(
@@ -125,10 +156,6 @@ class AddSlackVariables(NonIsomorphicTransformation):
                             constraintDatas.append(t[i])
                     else:
                         constraintDatas.append(t)
-
-        # deactivate the objective
-        for o in instance.component_data_objects(Objective):
-            o.deactivate()
 
         # create block where we can add slack variables safely
         xblockname = unique_component_name(instance, "_core_add_slack_variables")
@@ -161,6 +188,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 body += posSlack
                 # penalize slack in objective
                 obj_expr += posSlack
+                trans_info.slack_variables[cons].append(posSlack)
+                trans_info.relaxed_constraint[posSlack] = cons
             if upper is not None:
                 # we subtract a positive slack variable from the body:
                 # declare slack
@@ -171,6 +200,70 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 body -= negSlack
                 # add slack to objective
                 obj_expr += negSlack
+                trans_info.slack_variables[cons].append(negSlack)
+                trans_info.relaxed_constraint[negSlack] = cons
+
             cons.set_value((lower, body, upper))
-        # make a new objective that minimizes sum of slack variables
-        xblock._slack_objective = Objective(expr=obj_expr)
+
+        if config.add_slack_objective:
+            # deactivate the objective
+            for o in instance.component_data_objects(Objective):
+                o.deactivate()
+
+            # make a new objective that minimizes sum of slack variables
+            xblock._slack_objective = Objective(expr=obj_expr)
+
+    def get_slack_variables(model, constraint):
+        """Return the list of slack variables used to relax 'constraint.' Note
+        that if 'constraint' is one-sided, there will be a single variable in
+        the list, but if it is a ranged constraint (l <= expr <= u) or an
+        equality, there will be two variables.
+
+        Returns
+        -------
+        List of slack variables
+
+        Parameters
+        ----------
+        model: ConcreteModel
+            A model, having had the 'core.add_slack_variables' transformation
+            applied to it
+        constraint: Constraint
+            A constraint that was relaxed by the transformation (either
+            because no targets were specified or because it was a target)
+        """
+        slack_variables = model.private_data().slack_variables
+        if constraint in slack_variables:
+            return slack_variables[constraint]
+        else:
+            raise ValueError(
+                f"It does not appear that {constraint.name} is a constraint "
+                f"on model {model.name} that was relaxed by the "
+                f"'core.add_slack_variables' transformation."
+            )
+
+    def get_relaxed_constraint(model, slack_var):
+        """Return the constraint that 'slack_var' is used to relax.
+
+        Returns
+        -------
+        Constraint
+
+        Parameters
+        -----------
+        model: ConcreteModel
+            A model, having had the 'core.add_slack_variables' transformation
+            applied to it
+        slack_var: Var
+            A variable created by the 'core.add_slack_variables' transformation to
+            relax a constraint.
+        """
+        relaxed_constraints = model.private_data().relaxed_constraints
+        if slack_var in relaxed_constraints:
+            return relaxed_constraints[slack_var]
+        else:
+            raise ValueError(
+                f"It does not appear that {slack_var.name} is a slack variable "
+                f"created by applying the 'core.add_slack_variables' transformation "
+                f"to model {model.name}."
+            )
