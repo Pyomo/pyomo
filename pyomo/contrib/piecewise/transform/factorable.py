@@ -135,7 +135,7 @@ def _handle_sum(node, data, visitor):
 def _handle_division(node, data, visitor):
     """
     This one is a bit tricky. If we encounter both x/z and y/z
-    at different places in the model, we only want one auxilliary
+    at different places in the model, we only want one auxiliary
     variable for 1/z.
     """
     arg1, arg2 = data
