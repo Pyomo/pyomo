@@ -118,8 +118,9 @@ def _finalize_docplex(module, available):
     _time_point_dispatchers[_END_TIME] = module.end_of
 
 
-cp, docplex_available = attempt_import('docplex.cp.model', callback=_finalize_docplex)
-cp_solver, docplex_available = attempt_import('docplex.cp.solver')
+cp, _cp_model = attempt_import('docplex.cp.model', callback=_finalize_docplex)
+cp_solver, _cp_solver = attempt_import('docplex.cp.solver')
+docplex_available = _cp_model & _cp_solver
 
 logger = logging.getLogger('pyomo.contrib.cp')
 
@@ -1305,7 +1306,7 @@ class CPOptimizerSolver:
         pass
 
     def available(self, exception_flag=True):
-        return Executable('cpoptimizer').available() and docplex_available
+        return Executable('cpoptimizer') and bool(docplex_available)
 
     def license_is_valid(self):
         if CPOptimizerSolver._unrestricted_license is None:

@@ -38,7 +38,7 @@ moved_module(
 moved_module(
     'pyomo.contrib.solver.solvers.sol_reader',
     'pyomo.contrib.solver.solvers.asl_sol_reader',
-    version='6.10.0.dev0',
+    version='6.10.0',
 )
 
 del _module, moved_module
