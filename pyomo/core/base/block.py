@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from __future__ import annotations
 import copy
@@ -1836,7 +1834,7 @@ component, use the block del_component() and add_component() methods.
                 return False
         return True
 
-    def _pprint_blockdata_components(self, ostream):
+    def _pprint_blockdata_components(self, ostream, sort):
         #
         # We hard-code the order of the core Pyomo modeling
         # components, to ensure that the output follows the logical order
@@ -1862,7 +1860,10 @@ component, use the block del_component() and add_component() methods.
 
         indented_ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
         for item in items:
-            keys = sorted(self.component_map(item))
+            if SortComponents.ALPHABETICAL in sort:
+                keys = sorted(self.component_map(item))
+            else:
+                keys = list(self.component_map(item))
             if not keys:
                 continue
             #
@@ -1870,7 +1871,7 @@ component, use the block del_component() and add_component() methods.
             #
             ostream.write("%d %s Declarations\n" % (len(keys), item.__name__))
             for key in keys:
-                self.component(key).pprint(ostream=indented_ostream)
+                self.component(key).pprint(ostream=indented_ostream, sort=sort)
             ostream.write("\n")
         #
         # Model Order
@@ -2071,15 +2072,15 @@ class Block(ActiveIndexedComponent):
     _private_data_initializers = defaultdict(lambda: dict)
 
     @overload
-    def __new__(
-        cls: Type[Block], *args, **kwds
-    ) -> Union[ScalarBlock, IndexedBlock]: ...
-
-    @overload
     def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock: ...
 
     @overload
     def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock: ...
+
+    @overload
+    def __new__(
+        cls: Type[Block], *args, **kwds
+    ) -> Union[ScalarBlock, IndexedBlock]: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Block:
@@ -2237,25 +2238,26 @@ class Block(ActiveIndexedComponent):
                 _BlockConstruction.data.pop(id(self), None)
             timer.report()
 
-    def _pprint_callback(self, ostream, idx, data):
+    def _pprint_callback(self, ostream, sort, idx, data):
         if not self.is_indexed():
-            data._pprint_blockdata_components(ostream)
+            data._pprint_blockdata_components(ostream, sort)
         else:
             ostream.write("%s : Active=%s\n" % (data.name, data.active))
             ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
-            data._pprint_blockdata_components(ostream)
+            data._pprint_blockdata_components(ostream, sort)
 
     def _pprint(self):
-        _attrs = [
-            ("Size", len(self)),
-            ("Index", self._index_set if self.is_indexed() else None),
-            ('Active', self.active),
-        ]
         # HACK: suppress the top-level block header (for historical reasons)
         if self.parent_block() is None and not self.is_indexed():
-            return None, self._data.items(), None, self._pprint_callback
+            _attrs = None
         else:
-            return _attrs, self._data.items(), None, self._pprint_callback
+            _attrs = [
+                ("Size", len(self)),
+                ("Index", self._index_set if self.is_indexed() else None),
+                ('Active', self.active),
+            ]
+
+        return _attrs, self.items, None, self._pprint_callback
 
     def display(self, filename=None, ostream=None, prefix=""):
         """

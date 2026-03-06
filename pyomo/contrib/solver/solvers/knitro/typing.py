@@ -1,16 +1,14 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections.abc import Callable
-from typing import Any, NamedTuple, Protocol, TypeVar, Union
+from typing import Any, NamedTuple, Protocol, TypeVar
 
 from pyomo.common.enums import Enum
 from pyomo.core.base.constraint import ConstraintData
@@ -38,7 +36,7 @@ class ValueType(Enum):
         return -1.0 if self == ValueType.DUAL else 1.0
 
 
-ItemData = Union[VarData, ConstraintData]
+ItemData = VarData | ConstraintData
 ItemType = TypeVar("ItemType", bound=ItemData)
 
 

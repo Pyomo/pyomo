@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 """This module provides general utilities for producing formatted I/O
 
 .. autosummary::
@@ -154,8 +152,11 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
             _rows[_key] = None
             continue
 
+        # Include the key for only the first line in a rowset, and only
+        # if we printed out a header (if there is no header, then the
+        # key is not included)
         _rows[_key] = [
-            ((tostr("" if i else _key),) if header else ())
+            (("" if i else tostr(_key),) if header else ())
             + tuple(tostr(x) for x in _r)
             for i, _r in enumerate(_rowSet)
         ]
@@ -190,7 +191,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
 
     if any(' ' in r[-1] for x in _rows.values() if x is not None for r in x):
         _width[-1] = '%s'
-    for _key in sorted_robust(_rows):
+    for _key in _rows:
         _rowSet = _rows[_key]
         if not _rowSet:
             _rowSet = [[_key] + [None] * (len(_width) - 1)]
