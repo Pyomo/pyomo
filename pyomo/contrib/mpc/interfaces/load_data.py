@@ -7,6 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+from pyomo.environ import Expression
 from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
@@ -32,6 +33,8 @@ def load_data_from_scalar(data, model, time):
     t_iter = time if _is_iterable(time) else (time,)
     for cuid, val in data.items():
         var = model.find_component(cuid)
+        if var.ctype == Expression:
+            continue
         if var is None:
             _raise_invalid_cuid(cuid, model)
         # TODO: Time points should probably use find_nearest_index
@@ -70,6 +73,8 @@ def load_data_from_series(data, model, time, tolerance=0.0):
     data = data.get_data()
     for cuid, vals in data.items():
         var = model.find_component(cuid)
+        if var.ctype == Expression:
+            continue
         if var is None:
             _raise_invalid_cuid(cuid, model)
         for idx, val in zip(time_indices, vals):
@@ -167,6 +172,8 @@ def load_data_from_interval(
     data = data.get_data()
     for cuid, vals in data.items():
         var = model.find_component(cuid)
+        if var.ctype == Expression:
+            continue
         if var is None:
             _raise_invalid_cuid(cuid, model)
         for i, t in zip(idx_list, time):
