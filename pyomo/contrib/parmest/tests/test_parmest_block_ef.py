@@ -104,6 +104,54 @@ class TestParmestBlockEF(unittest.TestCase):
             self.assertTrue(block.theta.fixed)
             self.assertAlmostEqual(pyo.value(block.theta), 1.0, places=10)
 
+    def test_partial_fix_theta_only_fixed_subset(self):
+        class TwoThetaExperiment(Experiment):
+            def __init__(self, x, y):
+                self.x_data = x
+                self.y_data = y
+                self.model = None
+
+            def create_model(self):
+                m = pyo.ConcreteModel()
+                m.theta_a = pyo.Var(initialize=1.0, bounds=(0.0, 4.0))
+                m.theta_b = pyo.Var(initialize=0.0, bounds=(-3.0, 3.0))
+                m.x = pyo.Param(initialize=float(self.x_data), mutable=False)
+                m.y = pyo.Var(initialize=float(self.y_data))
+                m.eq = pyo.Constraint(expr=m.y == m.theta_a * m.x + m.theta_b)
+                self.model = m
+
+            def label_model(self):
+                m = self.model
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update([(m.y, float(self.y_data))])
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    [
+                        (m.theta_a, pyo.ComponentUID(m.theta_a)),
+                        (m.theta_b, pyo.ComponentUID(m.theta_b)),
+                    ]
+                )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
+
+            def get_labeled_model(self):
+                self.create_model()
+                self.label_model()
+                return self.model
+
+        pest = parmest.Estimator(
+            [TwoThetaExperiment(1.0, 3.0), TwoThetaExperiment(2.0, 5.0)],
+            obj_function="SSE",
+        )
+        model = pest._create_scenario_blocks(fixed_theta_values={"theta_a": 2.0})
+        self.assertTrue(model.parmest_theta["theta_a"].fixed)
+        self.assertFalse(model.parmest_theta["theta_b"].fixed)
+        self.assertAlmostEqual(
+            pyo.value(model.parmest_theta["theta_a"]), 2.0, places=10
+        )
+        # only theta_b should be linked across two scenarios
+        self.assertEqual(len(list(model.theta_link_constraints.values())), 2)
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_objective_at_theta_fixed_value(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])

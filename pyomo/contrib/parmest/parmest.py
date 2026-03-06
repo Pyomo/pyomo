@@ -42,6 +42,7 @@ import importlib as im
 import logging
 import types
 import json
+import time
 from collections.abc import Callable
 from itertools import combinations
 from functools import singledispatchmethod
@@ -983,7 +984,12 @@ class Estimator:
         return model
 
     def _create_scenario_blocks(
-        self, bootlist=None, theta_vals=None, fix_theta=False, multistart=False
+        self,
+        bootlist=None,
+        theta_vals=None,
+        fix_theta=False,
+        multistart=False,
+        fixed_theta_values=None,
     ):
         # Create scenario block structure
         """
@@ -1013,13 +1019,25 @@ class Estimator:
         model._parmest_theta_names = tuple(expanded_theta_names)
         model.parmest_theta = pyo.Var(model._parmest_theta_names)
 
+        fixed_theta_values = fixed_theta_values or {}
+        invalid_fixed_theta = set(fixed_theta_values).difference(expanded_theta_names)
+        if invalid_fixed_theta:
+            raise ValueError(
+                f"Unknown theta name(s) in fixed_theta_values: {sorted(invalid_fixed_theta)}"
+            )
+        fixed_theta_names = set(fixed_theta_values.keys())
+
         for name in expanded_theta_names:
             template_theta_var = template_model.find_component(name)
             parent_theta_var = model.parmest_theta[name]
             parent_theta_var.set_value(pyo.value(template_theta_var))
             if theta_vals is not None and name in theta_vals:
                 parent_theta_var.set_value(theta_vals[name])
+            if name in fixed_theta_values:
+                parent_theta_var.set_value(fixed_theta_values[name])
             if fix_theta:
+                parent_theta_var.fix()
+            elif name in fixed_theta_names:
                 parent_theta_var.fix()
             else:
                 parent_theta_var.unfix()
@@ -1043,7 +1061,11 @@ class Estimator:
                     child_theta_var.set_value(theta_vals[name])
                 else:
                     child_theta_var.set_value(pyo.value(parent_theta_var))
+                if name in fixed_theta_values:
+                    child_theta_var.set_value(fixed_theta_values[name])
                 if fix_theta:
+                    child_theta_var.fix()
+                elif name in fixed_theta_names:
                     child_theta_var.fix()
                 else:
                     child_theta_var.unfix()
@@ -1052,6 +1074,8 @@ class Estimator:
         model.theta_link_constraints = pyo.ConstraintList()
         if not fix_theta:
             for name in expanded_theta_names:
+                if name in fixed_theta_names:
+                    continue
                 parent_theta_var = model.parmest_theta[name]
                 for i in range(self.obj_probability_constant):
                     child_theta_var = model.exp_scenarios[i].find_component(name)
@@ -1226,6 +1250,7 @@ class Estimator:
         cov_n=NOTSET,
         fix_theta=False,
         multistart=False,
+        fixed_theta_values=None,
     ):
         '''
         Making new version of _Q_opt that uses scenario blocks, similar to DoE.
@@ -1274,7 +1299,10 @@ class Estimator:
         '''
         # Create extended form model with scenario blocks
         model = self._create_scenario_blocks(
-            bootlist=bootlist, theta_vals=theta_vals, fix_theta=fix_theta
+            bootlist=bootlist,
+            theta_vals=theta_vals,
+            fix_theta=fix_theta,
+            fixed_theta_values=fixed_theta_values,
         )
         expanded_theta_names = list(model._parmest_theta_names)
 
@@ -1300,10 +1328,11 @@ class Estimator:
 
         # Solve model
         solve_result = sol.solve(model, tee=self.tee)
+        partial_fix_mode = bool(fixed_theta_values)
 
         # Separate handling of termination conditions for _Q_at_theta vs _Q_opt
         # If not fixing theta, ensure optimal termination of the solve to return result
-        if not fix_theta and not multistart:
+        if not fix_theta and not multistart and not partial_fix_mode:
             # Ensure optimal termination
             assert_optimal_termination(solve_result)
         # If fixing theta, capture termination condition if not optimal unless infeasible
@@ -1335,7 +1364,7 @@ class Estimator:
         self.estimated_theta = theta_estimates
 
         # If fixing theta, return objective value, theta estimates, and worst status
-        if fix_theta or multistart:
+        if fix_theta or multistart or partial_fix_mode:
             return obj_value, theta_estimates, worst_status
 
         # Return theta estimates as a pandas Series
@@ -2170,6 +2199,242 @@ class Estimator:
             results_df.to_csv(file_name, index=False)
 
         return results_df, best_theta, best_obj
+
+    def _build_profile_grid(self, profiled_theta, grid, n_grid, theta_hat):
+        """Build sorted profile grid for a single profiled parameter."""
+        if not isinstance(profiled_theta, str):
+            raise TypeError("profiled_theta must be a string.")
+        if grid is not None and not isinstance(
+            grid, (list, tuple, np.ndarray, pd.Series)
+        ):
+            raise TypeError("grid must be a sequence of numeric values or None.")
+        if not isinstance(n_grid, int):
+            raise TypeError("n_grid must be an integer.")
+        if n_grid < 2:
+            raise ValueError("n_grid must be at least 2.")
+        if not isinstance(theta_hat, dict):
+            raise TypeError("theta_hat must be a dictionary.")
+        if profiled_theta not in theta_hat:
+            raise ValueError(f"theta_hat does not include '{profiled_theta}'.")
+
+        template_model = self._create_parmest_model(0)
+        theta_var = template_model.find_component(profiled_theta)
+        if theta_var is None:
+            raise ValueError(f"Unknown theta name '{profiled_theta}'.")
+
+        theta_hat_val = float(theta_hat[profiled_theta])
+        if grid is None:
+            if theta_var.lb is None or theta_var.ub is None:
+                raise ValueError(
+                    f"Cannot auto-build grid for '{profiled_theta}' without lower and upper bounds."
+                )
+            values = np.linspace(float(theta_var.lb), float(theta_var.ub), n_grid)
+        else:
+            values = np.asarray(list(grid), dtype=float)
+            if values.size == 0:
+                raise ValueError("Provided grid must contain at least one value.")
+
+        values = np.append(values, theta_hat_val)
+        values = np.unique(np.round(values.astype(float), decimals=14))
+        values.sort()
+        return values
+
+    def _order_grid_for_continuation(self, grid_values, center):
+        """Return center-out ordering for continuation warm starts."""
+        ordered = sorted(
+            [float(v) for v in grid_values], key=lambda v: (abs(v - center), v)
+        )
+        return ordered
+
+    def profile_likelihood(
+        self,
+        profiled_theta,
+        grid=None,
+        n_grid=21,
+        theta_hat=None,
+        obj_hat=None,
+        use_multistart_for_baseline=False,
+        baseline_multistart_kwargs=None,
+        solver="ef_ipopt",
+        warmstart="neighbor",
+        max_consecutive_failures=None,
+        return_theta_paths=True,
+        seed=None,
+    ):
+        """
+        Compute one-dimensional profile likelihood curves by fixing one parameter
+        at grid values and re-optimizing all other parameters.
+        """
+        if self.pest_deprecated is not None:
+            raise RuntimeError(
+                "Profile likelihood is not supported in the deprecated parmest interface."
+            )
+        if isinstance(profiled_theta, str):
+            profiled_theta_list = [profiled_theta]
+        elif isinstance(profiled_theta, (list, tuple)):
+            profiled_theta_list = list(profiled_theta)
+        else:
+            raise TypeError(
+                "profiled_theta must be a string or a list/tuple of strings."
+            )
+        if len(profiled_theta_list) == 0:
+            raise ValueError("At least one profiled theta must be provided.")
+        if not all(isinstance(p, str) for p in profiled_theta_list):
+            raise TypeError("Each profiled theta name must be a string.")
+        if warmstart not in ("neighbor", "none"):
+            raise ValueError("warmstart must be either 'neighbor' or 'none'.")
+        if max_consecutive_failures is not None:
+            if not isinstance(max_consecutive_failures, int):
+                raise TypeError("max_consecutive_failures must be an integer or None.")
+            if max_consecutive_failures <= 0:
+                raise ValueError("max_consecutive_failures must be greater than zero.")
+        if not isinstance(return_theta_paths, bool):
+            raise TypeError("return_theta_paths must be a bool.")
+        if seed is not None and not isinstance(seed, int):
+            raise TypeError("seed must be an integer or None.")
+
+        theta_names = self._expand_indexed_unknowns(self._create_parmest_model(0))
+        unknown_requested = set(profiled_theta_list).difference(theta_names)
+        if unknown_requested:
+            raise ValueError(
+                f"Unknown profile theta name(s): {sorted(unknown_requested)}. "
+                f"Known names: {theta_names}."
+            )
+
+        if seed is not None:
+            np.random.seed(seed)
+
+        if theta_hat is None or obj_hat is None:
+            if use_multistart_for_baseline:
+                ms_kwargs = dict(baseline_multistart_kwargs or {})
+                ms_kwargs.setdefault("solver", solver)
+                _, best_theta, best_obj = self.theta_est_multistart(**ms_kwargs)
+                if best_theta is None or not np.isfinite(best_obj):
+                    raise RuntimeError(
+                        "Failed to compute baseline from multistart: no feasible solution found."
+                    )
+                theta_hat = best_theta
+                obj_hat = best_obj
+            else:
+                obj_hat, theta_hat_series = self.theta_est(solver=solver)
+                theta_hat = theta_hat_series.to_dict()
+
+        theta_hat = {k: float(v) for k, v in theta_hat.items()}
+        obj_hat = float(obj_hat)
+
+        rows = []
+        acceptable_terms = {
+            str(pyo.TerminationCondition.optimal),
+            str(pyo.TerminationCondition.locallyOptimal),
+            str(pyo.TerminationCondition.globallyOptimal),
+        }
+        started_at = time.time()
+
+        for pname in profiled_theta_list:
+            if isinstance(grid, dict):
+                grid_spec = grid.get(pname, None)
+            else:
+                grid_spec = grid
+            grid_values = self._build_profile_grid(
+                profiled_theta=pname, grid=grid_spec, n_grid=n_grid, theta_hat=theta_hat
+            )
+
+            if warmstart == "neighbor":
+                ordered_grid = self._order_grid_for_continuation(
+                    grid_values, center=theta_hat[pname]
+                )
+            else:
+                ordered_grid = [float(v) for v in grid_values]
+
+            previous_theta = dict(theta_hat)
+            consecutive_failures = 0
+
+            for g in ordered_grid:
+                init_theta = dict(theta_hat)
+                if warmstart == "neighbor":
+                    init_theta.update(previous_theta)
+                init_theta[pname] = float(g)
+
+                t0 = time.time()
+                status = ""
+                success = False
+                obj_val = np.nan
+                theta_conv = None
+                try:
+                    obj_val, theta_conv, term = self._Q_opt(
+                        theta_vals=init_theta,
+                        fixed_theta_values={pname: float(g)},
+                        solver=solver,
+                    )
+                    status = str(term)
+                    success = status in acceptable_terms and np.isfinite(obj_val)
+                    if success:
+                        consecutive_failures = 0
+                        if warmstart == "neighbor":
+                            previous_theta = dict(theta_conv)
+                    else:
+                        consecutive_failures += 1
+                except Exception as exc:
+                    status = f"exception: {exc}"
+                    consecutive_failures += 1
+
+                row = {
+                    "profiled_theta": pname,
+                    "theta_value": float(g),
+                    "obj": float(obj_val) if np.isfinite(obj_val) else np.nan,
+                    "status": status,
+                    "success": bool(success),
+                    "solve_time": float(time.time() - t0),
+                }
+                if return_theta_paths and isinstance(theta_conv, dict):
+                    for tname, tval in theta_conv.items():
+                        row[f"theta__{tname}"] = float(tval)
+                rows.append(row)
+
+                if (
+                    max_consecutive_failures is not None
+                    and consecutive_failures >= max_consecutive_failures
+                ):
+                    break
+
+        profiles = pd.DataFrame(rows)
+        if profiles.empty:
+            profiles = pd.DataFrame(
+                columns=[
+                    "profiled_theta",
+                    "theta_value",
+                    "obj",
+                    "status",
+                    "success",
+                    "solve_time",
+                    "delta_obj",
+                    "lr_stat",
+                ]
+            )
+        else:
+            profiles = profiles.sort_values(
+                by=["profiled_theta", "theta_value"], kind="stable"
+            ).reset_index(drop=True)
+            profiles["delta_obj"] = profiles["obj"] - obj_hat
+            profiles["lr_stat"] = 2.0 * profiles["delta_obj"]
+
+        return {
+            "profiles": profiles,
+            "baseline": {
+                "theta_hat": theta_hat,
+                "obj_hat": obj_hat,
+                "solver": solver,
+                "used_multistart": bool(use_multistart_for_baseline),
+            },
+            "metadata": {
+                "grid_strategy": "user_provided" if grid is not None else "auto_bounds",
+                "warmstart": warmstart,
+                "seed": seed,
+                "profiled_theta": list(profiled_theta_list),
+                "started_at_epoch": float(started_at),
+                "finished_at_epoch": float(time.time()),
+            },
+        }
 
     # Updated version that uses _Q_opt
     def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
