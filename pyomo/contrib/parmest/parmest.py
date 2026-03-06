@@ -361,22 +361,18 @@ def _count_total_experiments(experiment_list):
         The total number of data points in the list of experiments
     """
     total_data_points = 0
-
     for experiment in experiment_list:
+        # 1. Identify the first parent component of the experiment outputs
         output_vars = experiment.get_labeled_model().experiment_outputs
 
         # 1. Identify the first parent component
-        # (e.g., the 'ca' Var container itself)
         first_var_key = list(output_vars.keys())[0]
         first_parent = first_var_key.parent_component()
-
         # 2. Count only the keys that belong to this specific parent
-        # This filters out 'cb', 'cc', etc.
-        first_param_indices = [
+        first_parent_indices = [
             v for v in output_vars.keys() if v.parent_component() is first_parent
         ]
-
-        total_data_points += len(first_param_indices)
+        total_data_points += len(first_parent_indices)
 
     return total_data_points
 
@@ -1008,82 +1004,75 @@ class Estimator:
             each experiment in exp_list or bootlist.
 
         """
-        # Utility function for updated _Q_opt
-        # Make an indexed block of model scenarios, one for each experiment in exp_list
+        # Build a clean parent EF container and attach one scenario model per block.
+        model = pyo.ConcreteModel()
+        template_model = self._create_parmest_model(0)
+        expanded_theta_names = self._expand_indexed_unknowns(template_model)
+        model._parmest_theta_names = tuple(expanded_theta_names)
+        model.parmest_theta = pyo.Var(model._parmest_theta_names)
 
-        # Create a parent model to hold scenario blocks
-        model = self.ef_instance = self._create_parmest_model(0)
-        expanded_theta_names = self._expand_indexed_unknowns(model)
-        if fix_theta:
-            for name in expanded_theta_names:
-                theta_var = model.find_component(name)
-                theta_var.fix()
+        for name in expanded_theta_names:
+            template_theta_var = template_model.find_component(name)
+            parent_theta_var = model.parmest_theta[name]
+            parent_theta_var.set_value(pyo.value(template_theta_var))
+            if theta_vals is not None and name in theta_vals:
+                parent_theta_var.set_value(theta_vals[name])
+            if fix_theta:
+                parent_theta_var.fix()
+            else:
+                parent_theta_var.unfix()
 
         # Set the number of experiments to use, either from bootlist or all experiments
-        self.obj_probability_constant = (
-            len(bootlist) if bootlist is not None else len(self.exp_list)
+        scenario_numbers = (
+            list(bootlist) if bootlist is not None else list(range(len(self.exp_list)))
         )
+        self.obj_probability_constant = len(scenario_numbers)
+        if self.obj_probability_constant <= 0:
+            raise ValueError("At least one scenario is required to build the EF model.")
 
         # Create indexed block for holding scenario models
         model.exp_scenarios = pyo.Block(range(self.obj_probability_constant))
+        for i, experiment_number in enumerate(scenario_numbers):
+            parmest_model = self._create_parmest_model(experiment_number)
+            for name in expanded_theta_names:
+                child_theta_var = parmest_model.find_component(name)
+                parent_theta_var = model.parmest_theta[name]
+                if theta_vals is not None and name in theta_vals:
+                    child_theta_var.set_value(theta_vals[name])
+                else:
+                    child_theta_var.set_value(pyo.value(parent_theta_var))
+                if fix_theta:
+                    child_theta_var.fix()
+                else:
+                    child_theta_var.unfix()
+            model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
-        # Otherwise, use all experiments in exp_list
-        for i in range(self.obj_probability_constant):
-            # If bootlist is provided, use it to create scenario blocks for specified experiments
-            if bootlist is not None:
-                # Create parmest model for experiment i
-                parmest_model = self._create_parmest_model(bootlist[i])
-
-                # Assign parmest model to block
-                model.exp_scenarios[i].transfer_attributes_from(parmest_model)
-
-            # Otherwise, use all experiments in exp_list
-            else:
-                # Create parmest model for experiment i
-                parmest_model = self._create_parmest_model(i)
-                if theta_vals is not None:
-                    # Set theta values in the block model
-                    for name in expanded_theta_names:
-                        # Check the name is in the parmest model
-                        if name in theta_vals:
-                            theta_var = parmest_model.find_component(name)
-                            theta_var.set_value(theta_vals[name])
-                            if fix_theta:
-                                theta_var.fix()
-                            else:
-                                theta_var.unfix()
-
-                # parmest_model.pprint()
-                # Assign parmest model to block
-                model.exp_scenarios[i].transfer_attributes_from(parmest_model)
-                # model.exp_scenarios[i].pprint()
-
-        # Add linking constraints for theta variables between blocks and parent model
-        for name in expanded_theta_names:
-            # Constrain the variable in the first block to equal the parent variable
-            # If fixing theta, do not add linking constraints
-            parent_theta_var = model.find_component(name)
-            if not fix_theta:
+        model.theta_link_constraints = pyo.ConstraintList()
+        if not fix_theta:
+            for name in expanded_theta_names:
+                parent_theta_var = model.parmest_theta[name]
                 for i in range(self.obj_probability_constant):
                     child_theta_var = model.exp_scenarios[i].find_component(name)
-                    model.add_component(
-                        f"Link_{name}_Block{i}_Parent",
-                        pyo.Constraint(expr=child_theta_var == parent_theta_var),
+                    model.theta_link_constraints.add(
+                        child_theta_var == parent_theta_var
                     )
 
-        # Deactivate existing objectives in the parent model and indexed scenarios
-        for obj in model.component_objects(pyo.Objective):
-            obj.deactivate()
+        for block in model.exp_scenarios.values():
+            for obj in block.component_objects(pyo.Objective):
+                obj.deactivate()
 
         # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
             return (
-                sum(block.Total_Cost_Objective for block in m.exp_scenarios.values())
+                sum(
+                    block.Total_Cost_Objective.expr
+                    for block in m.exp_scenarios.values()
+                )
                 / self.obj_probability_constant
             )
 
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
-
+        self.ef_instance = model
         return model
 
     # Redesigned _Q_opt method using scenario blocks, and combined with
@@ -1147,7 +1136,7 @@ class Estimator:
         model = self._create_scenario_blocks(
             bootlist=bootlist, theta_vals=theta_vals, fix_theta=fix_theta
         )
-        expanded_theta_names = self._expand_indexed_unknowns(model)
+        expanded_theta_names = list(model._parmest_theta_names)
 
         # Print model if in diagnostic mode
         if self.diagnostic_mode:
@@ -1159,13 +1148,11 @@ class Estimator:
             raise RuntimeError("k_aug no longer supported.")
         if solver == "ef_ipopt":
             sol = SolverFactory('ipopt')
+        else:
+            raise RuntimeError("Unknown solver in Q_Opt=" + solver)
         # Currently, parmest is only tested with ipopt via ef_ipopt
         # No other pyomo solvers have been verified to work with parmest from current release
         # to my knowledge.
-
-        # Seeing if other solvers work here.
-        # else:
-        #     raise RuntimeError("Unknown solver in Q_Opt=" + solver)
 
         if self.solver_options is not None:
             for key in self.solver_options:
@@ -1202,9 +1189,7 @@ class Estimator:
         theta_estimates = {}
         # Extract theta estimates from parent model
         for name in expanded_theta_names:
-            # Value returns value in suffix, which does not change after estimation
-            # Need to use pyo.value to get variable value
-            theta_estimates[name] = pyo.value(model.find_component(name))
+            theta_estimates[name] = pyo.value(model.parmest_theta[name])
 
         self.obj_value = obj_value
         self.estimated_theta = theta_estimates
@@ -1309,14 +1294,18 @@ class Estimator:
         cov : pd.DataFrame
             Covariance matrix of the estimated parameters
         """
+        if hasattr(self.ef_instance, "exp_scenarios"):
+            ref_model = self.ef_instance.exp_scenarios[0]
+        else:
+            ref_model = self.ef_instance
+
         if method == CovarianceMethod.reduced_hessian.value:
             # compute the inverse reduced hessian to be used
             # in the "reduced_hessian" method
             # retrieve the independent variables (i.e., estimated parameters)
             ind_vars = []
-            for key, _ in self.ef_instance.unknown_parameters.items():
-                name = key.name
-                var = self.ef_instance.find_component(name)
+            for name in self.ef_instance._parmest_theta_names:
+                var = self.ef_instance.parmest_theta[name]
                 ind_vars.append(var)
 
             solve_result, inv_red_hes = (
@@ -1395,11 +1384,11 @@ class Estimator:
         # check if the user specified 'SSE' or 'SSE_weighted' as the objective function
         if self.obj_function == ObjectiveType.SSE:
             # check if the user defined the 'measurement_error' attribute
-            if hasattr(self.ef_instance, "measurement_error"):
+            if hasattr(ref_model, "measurement_error"):
                 # get the measurement errors
                 meas_error = [
-                    self.ef_instance.measurement_error[y_hat]
-                    for y_hat, y in self.ef_instance.experiment_outputs.items()
+                    ref_model.measurement_error[y_hat]
+                    for y_hat, y in ref_model.experiment_outputs.items()
                 ]
 
                 # check if the user supplied the values of the measurement errors
@@ -1471,10 +1460,10 @@ class Estimator:
                 )
         elif self.obj_function == ObjectiveType.SSE_weighted:
             # check if the user defined the 'measurement_error' attribute
-            if hasattr(self.ef_instance, "measurement_error"):
+            if hasattr(ref_model, "measurement_error"):
                 meas_error = [
-                    self.ef_instance.measurement_error[y_hat]
-                    for y_hat, y in self.ef_instance.experiment_outputs.items()
+                    ref_model.measurement_error[y_hat]
+                    for y_hat, y in ref_model.experiment_outputs.items()
                 ]
 
                 # check if the user supplied the values for the measurement errors
@@ -1944,17 +1933,24 @@ class Estimator:
             # # check if theta_names are in model
             # Clean names, ignore quotes, and compare sets
             clean_provided = [t.replace("'", "") for t in theta_names]
+            if len(clean_provided) != len(set(clean_provided)):
+                raise ValueError(
+                    f"Duplicate theta names are not allowed: {clean_provided}"
+                )
             clean_expected = [
                 t.replace("'", "")
                 for t in self._expand_indexed_unknowns(self._create_parmest_model(0))
             ]
             # If they do not match, raise error
-            if set(clean_provided) != set(clean_expected):
+            if (len(clean_provided) != len(clean_expected)) or (
+                set(clean_provided) != set(clean_expected)
+            ):
                 raise ValueError(
                     f"Provided theta values {clean_provided} do not match expected theta names {clean_expected}."
                 )
             # Rename columns using cleaned names
-            if set(clean_provided) != set(theta_names):
+            if list(clean_provided) != list(theta_names):
+                theta_values = theta_values.copy()
                 theta_values.columns = clean_provided
 
             # Convert to list of dicts for parallel processing
