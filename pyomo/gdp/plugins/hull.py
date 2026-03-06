@@ -7,9 +7,28 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+"""Hull reformulation for Generalized Disjunctive Programming.
+
+This module implements the hull reformulation (also known as the convex hull
+relaxation) for disjunctive models in Pyomo's GDP framework. It transforms
+disjunctive constraints into algebraic form using variable disaggregation and
+perspective functions.
+
+When the ``exact_hull_quadratic`` configuration option is enabled, quadratic
+constraints receive an exact hull treatment:
+
+* **Conic exact hull** -- for convex quadratics, an auxiliary variable and a
+  rotated second-order cone constraint replace the standard perspective
+  function, yielding a tighter relaxation without a Cholesky factorisation.
+* **General exact hull** -- for non-convex (or equality) quadratics, the
+  disaggregated quadratic form ``v'Qv + c'v y + d y**2`` is used directly.
+"""
+
 import logging
 
 from collections import defaultdict
+
+import numpy as np
 
 from pyomo.common.autoslots import AutoSlots
 import pyomo.common.config as cfg
@@ -19,6 +38,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr as EXPR
 from pyomo.core.base import TransformationFactory
+from pyomo.repn import generate_standard_repn
 from pyomo.core import (
     Block,
     BooleanVar,
@@ -35,6 +55,7 @@ from pyomo.core import (
     Any,
     RangeSet,
     Reals,
+    NonNegativeReals,
     value,
     NonNegativeIntegers,
     Binary,
@@ -194,6 +215,39 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         the transformed model is no longer valid. By default, the transformation
         will disagregate fixed variables so that any later fixing and unfixing
         will be valid in the transformed model.
+        """,
+        ),
+    )
+    CONFIG.declare(
+        'exact_hull_quadratic',
+        cfg.ConfigValue(
+            default=False,
+            domain=bool,
+            description="Use exact hull reformulation for quadratic constraints.",
+            doc="""
+        If True, quadratic constraints (polynomial degree 2) are reformulated
+        using the exact hull instead of the standard perspective function.
+
+        For a quadratic constraint of the form
+
+            x'Qx + c'x + d <= 0
+
+        the reformulation depends on convexity:
+
+        **Conic exact hull** (convex quadratics): An auxiliary variable *t*
+        and a rotated second-order cone constraint ``v'Qv <= t * y`` are
+        introduced, and the original bound becomes ``t + c'v + d*y <= 0``.
+        Convexity is determined via eigenvalue decomposition of the Hessian
+        matrix *Q*: the quadratic is convex for an upper-bound constraint
+        when *Q* is positive semi-definite, and for a lower-bound constraint
+        when *Q* is negative semi-definite.
+
+        **General exact hull** (non-convex quadratics and equalities): The
+        constraint is reformulated as ``v'Qv + c'v*y + d*y**2``, where *v*
+        are the disaggregated variables and *y* is the binary indicator.
+
+        Default is False, which uses the standard perspective function for
+        all nonlinear constraints.
         """,
         ),
     )
@@ -658,6 +712,25 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     def _transform_constraint(
         self, obj, disjunct, var_substitute_map, zero_substitute_map
     ):
+        """Transform a single Constraint on a Disjunct.
+
+        Applies the appropriate hull reformulation to each
+        ``ConstraintData`` in *obj*. When ``exact_hull_quadratic`` is
+        enabled and the constraint body has polynomial degree 2, an exact
+        hull formulation is used instead of the perspective function.
+
+        Parameters
+        ----------
+        obj : Constraint
+            The Constraint component to transform.
+        disjunct : Disjunct
+            The Disjunct that owns *obj*.
+        var_substitute_map : dict
+            Mapping from ``id(original_var)`` to its disaggregated
+            counterpart.
+        zero_substitute_map : dict
+            Mapping from ``id(original_var)`` to ``ZeroConstant``.
+        """
         # we will put a new transformed constraint on the relaxation block.
         relaxationBlock = disjunct._transformation_block()
         constraint_map = relaxationBlock.private_data('pyomo.gdp')
@@ -676,9 +749,17 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             unique = len(newConstraint)
             name = c.local_name + "_%s" % unique
 
-            NL = c.body.polynomial_degree() not in (0, 1)
+            polynomial_degree = c.body.polynomial_degree()
             EPS = self._config.EPS
             mode = self._config.perspective_function
+            exact_quad = self._config.exact_hull_quadratic
+
+            use_exact_quad = (
+                exact_quad and polynomial_degree == 2
+            )
+
+            NL = polynomial_degree not in (0, 1)
+            general_NL = NL and not use_exact_quad
 
             # We need to evaluate the expression at the origin *before*
             # we substitute the expression variables with the
@@ -689,12 +770,21 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
 
             y = disjunct.binary_indicator_var
-            if NL:
+
+            if use_exact_quad:
+                self._build_exact_quadratic_hull(
+                    c, y, disjunct, relaxationBlock, constraint_map,
+                    var_substitute_map, newConstraint, name, i, obj,
+                )
+                continue
+
+            if general_NL:
                 if mode == "LeeGrossmann":
                     sub_expr = clone_without_expression_components(
                         c.body,
                         substitute=dict(
-                            (var, subs / y) for var, subs in var_substitute_map.items()
+                            (var, subs / y)
+                            for var, subs in var_substitute_map.items()
                         ),
                     )
                     expr = sub_expr * y
@@ -724,7 +814,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
 
             if c.equality:
-                if NL:
+                if general_NL:
                     # ESJ TODO: This can't happen right? This is the only
                     # obvious case where someone has messed up, but this has to
                     # be nonconvex, right? Shouldn't we tell them?
@@ -775,7 +865,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 if self._generate_debug_messages:
                     _name = c.getname(fully_qualified=True)
                     logger.debug("GDP(Hull): Transforming constraint " + "'%s'", _name)
-                if NL:
+                if general_NL:
                     newConsExpr = expr >= c.lower * y
                 else:
                     newConsExpr = expr - (1 - y) * h_0 >= c.lower * y
@@ -797,7 +887,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 if self._generate_debug_messages:
                     _name = c.getname(fully_qualified=True)
                     logger.debug("GDP(Hull): Transforming constraint " + "'%s'", _name)
-                if NL:
+                if general_NL:
                     newConsExpr = expr <= c.upper * y
                 else:
                     newConsExpr = expr - (1 - y) * h_0 <= c.upper * y
@@ -819,6 +909,334 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # deactivate now that we have transformed
         obj.deactivate()
+
+    def _build_exact_quadratic_hull(
+        self, c, y, disjunct, relaxationBlock, constraint_map,
+        var_substitute_map, newConstraint, name, i, obj,
+    ):
+        """Build the exact hull reformulation for a single quadratic constraint.
+
+        For a constraint whose body is a quadratic of the form
+        ``x'Qx + c'x + d``, this method constructs either the *conic exact
+        hull* (when the quadratic is convex with respect to the bound
+        direction) or the *general exact hull* (otherwise).
+
+        **Conic exact hull** (convex case): introduces an auxiliary variable
+        *t >= 0* and a rotated second-order cone constraint
+        ``v'Q_psd v <= t * y``, then replaces the original bound with a
+        linear constraint on ``t + c'v + d*y``.
+
+        **General exact hull** (non-convex / equality case): directly
+        substitutes the quadratic form to ``v'Qv + c'v*y + d*y**2``.
+
+        Parameters
+        ----------
+        c : ConstraintData
+            The individual constraint data object being transformed.
+        y : Var
+            The binary indicator variable for the parent disjunct.
+        disjunct : Disjunct
+            The Disjunct that owns the constraint.
+        relaxationBlock : Block
+            The transformation block for this disjunct.
+        constraint_map : object
+            Private data object tracking constraint mappings.
+        var_substitute_map : dict
+            Mapping from ``id(original_var)`` to disaggregated variable.
+        newConstraint : Constraint
+            The indexed Constraint container for transformed constraints.
+        name : str
+            Base name for the transformed constraint indices.
+        i : object
+            The index of the constraint in its parent component.
+        obj : Constraint
+            The parent Constraint component (needed for ``is_indexed``).
+        """
+        repn = generate_standard_repn(c.body)
+
+        if not repn.is_quadratic():
+            raise RuntimeError(
+                "Constraint '%s' has polynomial degree 2 but its standard "
+                "representation is not quadratic." % c.getname(fully_qualified=True)
+            )
+
+        const_term = repn.constant if repn.constant is not None else 0
+
+        # --- Build the symmetric Q matrix and determine convexity ---
+        all_vars = []
+        var_ids_seen = set()
+        for var_i, var_j in repn.quadratic_vars:
+            if id(var_i) not in var_ids_seen:
+                all_vars.append(var_i)
+                var_ids_seen.add(id(var_i))
+            if id(var_j) not in var_ids_seen:
+                all_vars.append(var_j)
+                var_ids_seen.add(id(var_j))
+
+        n_vars = len(all_vars)
+        var_to_idx = {id(var): idx for idx, var in enumerate(all_vars)}
+        Q = np.zeros((n_vars, n_vars))
+
+        for coef, (var_i, var_j) in zip(
+            repn.quadratic_coefs, repn.quadratic_vars
+        ):
+            idx_i = var_to_idx[id(var_i)]
+            idx_j = var_to_idx[id(var_j)]
+            if var_i is var_j:
+                Q[idx_i, idx_i] += coef
+            else:
+                Q[idx_i, idx_j] += 0.5 * coef
+                Q[idx_j, idx_i] += 0.5 * coef
+
+        numerical_tolerance = 1e-10
+        eigenvalues, _ = np.linalg.eigh(Q)
+        Q_is_psd = not np.any(eigenvalues < -numerical_tolerance)
+        Q_is_nsd = not np.any(eigenvalues > numerical_tolerance)
+
+        # Determine which bounds can use the conic formulation
+        use_conic_upper = False
+        use_conic_lower = False
+        negate_for_conic = False
+
+        if c.upper is not None and not c.equality:
+            if Q_is_psd:
+                use_conic_upper = True
+        if c.lower is not None and not c.equality:
+            if Q_is_nsd:
+                use_conic_lower = True
+                negate_for_conic = True
+
+        if negate_for_conic:
+            Q_for_conic = -Q
+        else:
+            Q_for_conic = Q
+
+        # --- Decide which expression forms are needed ---
+        need_non_convex = False
+        if c.equality:
+            need_non_convex = True
+        if c.upper is not None and not use_conic_upper:
+            need_non_convex = True
+        if c.lower is not None and not use_conic_lower:
+            need_non_convex = True
+
+        non_conv_expr = None
+        conic_expr_linear = None
+
+        if need_non_convex:
+            non_conv_expr = self._build_general_exact_hull_expr(
+                repn, var_substitute_map, y, const_term,
+            )
+
+        if use_conic_upper or use_conic_lower:
+            conic_expr_linear = self._build_conic_exact_hull_expr(
+                c, y, disjunct, relaxationBlock, constraint_map,
+                repn, var_substitute_map, const_term,
+                negate_for_conic,
+            )
+
+        # --- Equality constraints always use general exact hull ---
+        if c.equality:
+            newConsExpr = non_conv_expr == c.lower * y**2
+
+            if obj.is_indexed():
+                newConstraint.add((name, i, 'eq'), newConsExpr)
+                constraint_map.transformed_constraints[c].append(
+                    newConstraint[name, i, 'eq']
+                )
+                constraint_map.src_constraint[newConstraint[name, i, 'eq']] = c
+            else:
+                newConstraint.add((name, 'eq'), newConsExpr)
+                constraint_map.transformed_constraints[c].append(
+                    newConstraint[name, 'eq']
+                )
+                constraint_map.src_constraint[newConstraint[name, 'eq']] = c
+            return
+
+        # --- Lower bound ---
+        if c.lower is not None:
+            if self._generate_debug_messages:
+                _name = c.getname(fully_qualified=True)
+                logger.debug("GDP(Hull): Transforming constraint '%s'", _name)
+
+            if use_conic_lower:
+                newConsExpr = conic_expr_linear <= -c.lower * y
+            else:
+                newConsExpr = non_conv_expr >= c.lower * y**2
+
+            if obj.is_indexed():
+                newConstraint.add((name, i, 'lb'), newConsExpr)
+                constraint_map.transformed_constraints[c].append(
+                    newConstraint[name, i, 'lb']
+                )
+                constraint_map.src_constraint[newConstraint[name, i, 'lb']] = c
+            else:
+                newConstraint.add((name, 'lb'), newConsExpr)
+                constraint_map.transformed_constraints[c].append(
+                    newConstraint[name, 'lb']
+                )
+                constraint_map.src_constraint[newConstraint[name, 'lb']] = c
+
+        # --- Upper bound ---
+        if c.upper is not None:
+            if self._generate_debug_messages:
+                _name = c.getname(fully_qualified=True)
+                logger.debug("GDP(Hull): Transforming constraint '%s'", _name)
+
+            if use_conic_upper:
+                newConsExpr = conic_expr_linear <= c.upper * y
+            else:
+                newConsExpr = non_conv_expr <= c.upper * y**2
+
+            if obj.is_indexed():
+                newConstraint.add((name, i, 'ub'), newConsExpr)
+                constraint_map.transformed_constraints[c].append(
+                    newConstraint[name, i, 'ub']
+                )
+                constraint_map.src_constraint[newConstraint[name, i, 'ub']] = c
+            else:
+                newConstraint.add((name, 'ub'), newConsExpr)
+                constraint_map.transformed_constraints[c].append(
+                    newConstraint[name, 'ub']
+                )
+                constraint_map.src_constraint[newConstraint[name, 'ub']] = c
+
+    def _build_general_exact_hull_expr(
+        self, repn, var_substitute_map, y, const_term
+    ):
+        """Build the general exact hull expression for a quadratic constraint.
+
+        Constructs the expression ``v'Qv + c'v*y + d*y**2`` where *v* are
+        disaggregated variables, *y* is the indicator, *c* are linear
+        coefficients, and *d* is the constant term.
+
+        Parameters
+        ----------
+        repn : StandardRepn
+            The standard representation of the constraint body.
+        var_substitute_map : dict
+            Mapping from ``id(original_var)`` to disaggregated variable.
+        y : Var
+            The binary indicator variable.
+        const_term : float
+            The constant term from the standard representation.
+
+        Returns
+        -------
+        expression
+            The general exact hull Pyomo expression.
+        """
+        expr = 0
+
+        for coef, (var_i, var_j) in zip(
+            repn.quadratic_coefs, repn.quadratic_vars
+        ):
+            v_i = var_substitute_map.get(id(var_i), var_i)
+            v_j = var_substitute_map.get(id(var_j), var_j)
+            if var_i is var_j:
+                expr += coef * v_i**2
+            else:
+                expr += coef * v_i * v_j
+
+        lin_coefs = repn.linear_coefs or []
+        lin_vars = repn.linear_vars or []
+        for coef, var in zip(lin_coefs, lin_vars):
+            v = var_substitute_map.get(id(var), var)
+            expr += coef * v * y
+
+        if const_term:
+            expr += const_term * y**2
+
+        return expr
+
+    def _build_conic_exact_hull_expr(
+        self, c, y, disjunct, relaxationBlock, constraint_map,
+        repn, var_substitute_map, const_term, negate_for_conic,
+    ):
+        """Build the conic exact hull expression for a convex quadratic.
+
+        Creates an auxiliary variable ``t >= 0`` and a rotated second-order
+        cone constraint ``v'Q_psd v <= t * y``, then returns the linear
+        expression ``t + c'v + d*y`` (with signs adjusted for lower-bound
+        constraints that required negation).
+
+        Parameters
+        ----------
+        c : ConstraintData
+            The constraint data being transformed.
+        y : Var
+            The binary indicator variable.
+        disjunct : Disjunct
+            The parent Disjunct.
+        relaxationBlock : Block
+            The transformation block for the disjunct.
+        constraint_map : object
+            Private data tracking constraint mappings.
+        repn : StandardRepn
+            The standard representation of the constraint body.
+        var_substitute_map : dict
+            Mapping from ``id(original_var)`` to disaggregated variable.
+        const_term : float
+            The constant term from the standard representation.
+        negate_for_conic : bool
+            If ``True``, coefficients are negated (used when the
+            lower-bound constraint is reformulated by negation to obtain a
+            PSD form).
+
+        Returns
+        -------
+        expression
+            The linear Pyomo expression ``t + c'v + d*y`` (or its negated
+            variant) to be bounded by the constraint's RHS.
+        """
+        t = Var(domain=NonNegativeReals)
+        t_name = unique_component_name(
+            relaxationBlock,
+            '_conic_aux_t_%s' % c.getname(
+                fully_qualified=True, relative_to=disjunct
+            ),
+        )
+        relaxationBlock.add_component(t_name, t)
+
+        linear_expr = t
+
+        lin_coefs = repn.linear_coefs or []
+        lin_vars = repn.linear_vars or []
+        for coef, var in zip(lin_coefs, lin_vars):
+            v = var_substitute_map.get(id(var), var)
+            actual_coef = -coef if negate_for_conic else coef
+            linear_expr += actual_coef * v
+
+        if const_term:
+            actual_const = -const_term if negate_for_conic else const_term
+            linear_expr += actual_const * y
+
+        # Build rotated SOC: v'Q_psd v <= t * y
+        quadratic_form = 0
+        for coef, (var_i, var_j) in zip(
+            repn.quadratic_coefs, repn.quadratic_vars
+        ):
+            v_i = var_substitute_map.get(id(var_i), var_i)
+            v_j = var_substitute_map.get(id(var_j), var_j)
+            actual_coef = -coef if negate_for_conic else coef
+            if var_i is var_j:
+                quadratic_form += actual_coef * v_i**2
+            else:
+                quadratic_form += actual_coef * v_i * v_j
+
+        conic_constraint_name = unique_component_name(
+            relaxationBlock,
+            '_conic_constraint_%s' % c.getname(
+                fully_qualified=True, relative_to=disjunct
+            ),
+        )
+        conic_constraint = Constraint(expr=quadratic_form <= t * y)
+        relaxationBlock.add_component(conic_constraint_name, conic_constraint)
+
+        constraint_map.transformed_constraints[c].append(conic_constraint)
+        constraint_map.src_constraint[conic_constraint] = c
+
+        return linear_expr
 
     def _get_local_var_suffix(self, disjunct):
         # If the Suffix is there, we will borrow it. If not, we make it. If it's
