@@ -19,7 +19,7 @@ from pyomo.core import (
     value,
 )
 
-from pyomo.common.autoslots import Autoslots
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
@@ -72,10 +72,10 @@ def target_list(x):
 
 
 class _AddSlackVariablesData(AutoSlots.Mixin):
-    __slots__ = ('slack_vars', 'relaxed_constraint')
+    __slots__ = ('slack_variables', 'relaxed_constraint')
 
     def __init__(self):
-        self.slack_vars = defaultdict(list)
+        self.slack_variables = defaultdict(list)
         self.relaxed_constraint = ComponentMap()
         
 
@@ -132,7 +132,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
         config.set_value(kwds)
         targets = config.targets
 
-        trans_info = intance.private_data()
+        trans_info = instance.private_data()
 
         if targets is None:
             constraintDatas = instance.component_data_objects(
@@ -213,7 +213,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
             # make a new objective that minimizes sum of slack variables
             xblock._slack_objective = Objective(expr=obj_expr)
 
-    def get_slack_variables(model, constraint):
+    def get_slack_variables(self, model, constraint):
         """Return the list of slack variables used to relax 'constraint.' Note
         that if 'constraint' is one-sided, there will be a single variable in
         the list, but if it is a ranged constraint (l <= expr <= u) or an
@@ -242,7 +242,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 f"'core.add_slack_variables' transformation."
             )
 
-    def get_relaxed_constraint(model, slack_var):
+    def get_relaxed_constraint(self, model, slack_var):
         """Return the constraint that 'slack_var' is used to relax.
 
         Returns
@@ -258,7 +258,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
             A variable created by the 'core.add_slack_variables' transformation to
             relax a constraint.
         """
-        relaxed_constraints = model.private_data().relaxed_constraints
+        relaxed_constraints = model.private_data().relaxed_constraint
         if slack_var in relaxed_constraints:
             return relaxed_constraints[slack_var]
         else:

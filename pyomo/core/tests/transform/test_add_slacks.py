@@ -87,6 +87,26 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(xblock._slack_plus_rule2.bounds, (0, None))
         self.assertEqual(xblock._slack_plus_rule3.bounds, (0, None))
 
+    def test_mapping_api(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m)
+
+        slacks = trans.get_slack_variables(m, m.rule1)
+        self.assertEqual(len(slacks), 1)
+        slack = slacks[0]
+        self.assertIs(m.rule1, trans.get_relaxed_constraint(m, slack))
+
+        slacks = trans.get_slack_variables(m, m.rule2)
+        self.assertEqual(len(slacks), 2)
+        self.assertIs(m.rule2, trans.get_relaxed_constraint(m, slacks[0]))
+        self.assertIs(m.rule2, trans.get_relaxed_constraint(m, slacks[1]))
+
+        slacks = trans.get_slack_variables(m, m.rule3)
+        self.assertEqual(len(slacks), 1)
+        slack = slacks[0]
+        self.assertIs(m.rule3, trans.get_relaxed_constraint(m, slack))
+        
     # wrapping this as a method because I use it again later when I test
     # targets
     def checkRule1(self, m):
@@ -179,6 +199,17 @@ class TestAddSlacks(unittest.TestCase):
                 ]
             ),
         )
+
+    def test_no_objective_change(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m, add_slack_objective=False
+        )
+
+        self.assertTrue(m.obj.active)
+        transBlock = m.component("_core_add_slack_variables")
+        obj = transBlock.component("_slack_objective")
+        self.assertIsNone(obj)
 
     def test_badModel_err(self):
         model = ConcreteModel()
@@ -345,6 +376,33 @@ class TestAddSlacks(unittest.TestCase):
             targets=[m.rule1, m.x],
         )
 
+    def test_error_for_mapping_untransformed_constraint(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(
+            m, targets=[m.rule1]
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            f"It does not appear that {m.rule2.name} is a constraint "
+            f"on model {m.name} that was relaxed by the "
+            f"'core.add_slack_variables' transformation."
+        ):
+            cons = trans.get_slack_variables(m, m.rule2)
+
+    def test_error_for_mapping_non_slack_variables(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m)
+        with self.assertRaisesRegex(
+            ValueError,
+            f"It does not appear that {m.x} is a slack variable "
+            f"created by applying the 'core.add_slack_variables' transformation "
+            f"to model {m.name}."
+
+        ):
+            cons = trans.get_relaxed_constraint(m, m.x)
+
     def test_deprecation_warning_for_cuid_target(self):
         m = self.makeModel()
         out = StringIO()
@@ -448,6 +506,21 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m.rule2 = Constraint(expr=m.y <= 6)
         m.obj = Objective(expr=sum(m.x[s] for s in m.S) - m.y)
         return m
+
+    def test_mapping_api(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m)
+
+        for i in m.S:
+            slacks = trans.get_slack_variables(m, m.rule1[i])
+            self.assertEqual(len(slacks), 1)
+            slack = slacks[0]
+            self.assertIs(m.rule1[i], trans.get_relaxed_constraint(m, slack))
+
+        slacks = trans.get_slack_variables(m, m.rule2)
+        self.assertEqual(len(slacks), 1)
+        self.assertIs(m.rule2, trans.get_relaxed_constraint(m, slacks[0]))
 
     def checkSlackVars_indexedtarget(self, transBlock):
         self.assertIsInstance(transBlock.component("_slack_plus_rule1[1]"), Var)
