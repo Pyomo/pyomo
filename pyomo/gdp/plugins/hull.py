@@ -200,7 +200,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         'eigenvalue_tolerance',
         cfg.ConfigValue(
             default=1e-10,
-            domain=cfg.PositiveFloat,
+            domain=cfg.NonNegativeFloat,
             description="Numerical tolerance for eigenvalue-based PSD/NSD checks "
             "in exact hull quadratic reformulations",
             doc="""
