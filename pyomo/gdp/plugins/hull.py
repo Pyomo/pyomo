@@ -988,11 +988,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 use_conic_lower = True
                 negate_for_conic = True
 
-        if negate_for_conic:
-            Q_for_conic = -Q
-        else:
-            Q_for_conic = Q
-
         # --- Decide which expression forms are needed ---
         need_non_convex = False
         if c.equality:
