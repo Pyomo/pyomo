@@ -209,10 +209,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         An eigenvalue ``lam`` is treated as non-negative if
         ``lam >= -eigenvalue_tolerance``, and non-positive if
         ``lam <= eigenvalue_tolerance``. Increasing this value makes the
-        convexity classification more conservative (i.e., Q must have
-        eigenvalues further from zero to be considered PSD/NSD); decreasing
-        it makes the check more permissive. For ill-conditioned Q matrices a
-        larger tolerance may be appropriate.
+        convexity classification more permissive (i.e., a wider band around
+        zero is treated as numerically zero, so more eigenvalues are accepted
+        as PSD/NSD); decreasing it makes the check more conservative (i.e.,
+        eigenvalues must be further from zero). For ill-conditioned Q matrices
+        a larger tolerance may be appropriate.
         """,
         ),
     )
