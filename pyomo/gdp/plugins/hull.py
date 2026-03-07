@@ -7,23 +7,6 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-"""Hull reformulation for Generalized Disjunctive Programming.
-
-This module implements the hull reformulation (also known as the convex hull
-relaxation) for disjunctive models in Pyomo's GDP framework. It transforms
-disjunctive constraints into algebraic form using variable disaggregation and
-perspective functions.
-
-When the ``exact_hull_quadratic`` configuration option is enabled, quadratic
-constraints receive an exact hull treatment:
-
-* **Conic exact hull** -- for convex quadratics, an auxiliary variable and a
-  rotated second-order cone constraint replace the standard perspective
-  function, yielding a tighter relaxation without a Cholesky factorisation.
-* **General exact hull** -- for non-convex (or equality) quadratics, the
-  disaggregated quadratic form ``v'Qv + c'v y + d y**2`` is used directly.
-"""
-
 import logging
 
 from collections import defaultdict
@@ -783,8 +766,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     sub_expr = clone_without_expression_components(
                         c.body,
                         substitute=dict(
-                            (var, subs / y)
-                            for var, subs in var_substitute_map.items()
+                            (var, subs / y) for var, subs in var_substitute_map.items()
                         ),
                     )
                     expr = sub_expr * y
