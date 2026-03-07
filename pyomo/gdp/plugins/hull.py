@@ -11,7 +11,7 @@ import logging
 
 from collections import defaultdict
 
-import numpy as np
+from pyomo.common.dependencies import numpy as np, numpy_available
 
 from pyomo.common.autoslots import AutoSlots
 import pyomo.common.config as cfg
