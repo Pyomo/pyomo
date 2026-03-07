@@ -105,6 +105,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         'LeeGrossmann', or 'GrossmannLee'
     EPS : float
         The value to use for epsilon [default: 1e-4]
+    eigenvalue_tolerance : float
+        Numerical tolerance for eigenvalue-based positive/negative
+        semi-definite checks when using the exact hull reformulation for
+        quadratic constraints (``exact_hull_quadratic=True``). An
+        eigenvalue is considered non-negative (non-positive) if it is
+        greater than (less than) ``-eigenvalue_tolerance``
+        (``eigenvalue_tolerance``). Increasing this value makes the
+        convexity check more conservative; decreasing it makes it more
+        permissive. [default: 1e-10]
     targets : block, disjunction, or list of those types
         The targets to transform. This can be a block, disjunction, or a
         list of blocks and Disjunctions [default: the instance]
@@ -182,6 +191,29 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             default=1e-4,
             domain=cfg.PositiveFloat,
             description="Epsilon value to use in perspective function",
+        ),
+    )
+    CONFIG.declare(
+        'eigenvalue_tolerance',
+        cfg.ConfigValue(
+            default=1e-10,
+            domain=cfg.PositiveFloat,
+            description="Numerical tolerance for eigenvalue-based PSD/NSD checks "
+            "in exact hull quadratic reformulations",
+            doc="""
+        Numerical tolerance used when determining positive semi-definiteness
+        (PSD) or negative semi-definiteness (NSD) of the Hessian matrix Q in
+        the exact hull reformulation for quadratic constraints
+        (``exact_hull_quadratic=True``).
+
+        An eigenvalue ``lam`` is treated as non-negative if
+        ``lam >= -eigenvalue_tolerance``, and non-positive if
+        ``lam <= eigenvalue_tolerance``. Increasing this value makes the
+        convexity classification more conservative (i.e., Q must have
+        eigenvalues further from zero to be considered PSD/NSD); decreasing
+        it makes the check more permissive. For ill-conditioned Q matrices a
+        larger tolerance may be appropriate.
+        """,
         ),
     )
     CONFIG.declare(
@@ -976,7 +1008,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 Q[idx_i, idx_j] += 0.5 * coef
                 Q[idx_j, idx_i] += 0.5 * coef
 
-        numerical_tolerance = 1e-10
+        numerical_tolerance = self._config.eigenvalue_tolerance
         eigenvalues, _ = np.linalg.eigh(Q)
         Q_is_psd = not np.any(eigenvalues < -numerical_tolerance)
         Q_is_nsd = not np.any(eigenvalues > numerical_tolerance)
