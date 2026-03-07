@@ -944,6 +944,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         const_term = repn.constant if repn.constant is not None else 0
 
+        if not numpy_available:
+            raise GDP_Error(
+                "exact_hull_quadratic requires NumPy for convexity checks. "
+                "NumPy is not available in this environment."
+            )
+
         # --- Build the symmetric Q matrix and determine convexity ---
         all_vars = []
         var_ids_seen = set()
