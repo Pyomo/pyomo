@@ -3385,7 +3385,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertAlmostEqual(quad_pairs.get((id(y_ind), id(y_ind)), 0), -2)
 
     # ------------------------------------------------------------------
-    # 12. All-zero eigenvalues: warning issued, treated as linear
+    # 12. All-zero eigenvalues: warning issued, falls back to general hull
     # ------------------------------------------------------------------
     @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_all_zero_eigenvalues_issues_warning(self):
@@ -3395,9 +3395,9 @@ class TestExactHullQuadratic(unittest.TestCase):
         For ``1e-11*x**2 + 1e-11*y**2 <= 4`` with the default tolerance of
         1e-10, every eigenvalue of Q = diag(1e-11, 1e-11) lies in the band
         [-1e-10, 1e-10].  The transformation must:
-        - Emit a warning mentioning the constraint name, that it is treated
-          as linear, the largest eigenvalue by modulus, and the suggestion
-          to use a tighter tolerance.
+        - Emit a warning mentioning the constraint name, that the conic
+          reformulation cannot be applied, the largest eigenvalue by modulus,
+          and the suggestion to use a tighter tolerance.
         - Fall back to the general exact hull (no conic auxiliary variable).
         """
         from pyomo.common.log import LoggingIntercept
