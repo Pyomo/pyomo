@@ -205,6 +205,39 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         ),
     )
     CONFIG.declare(
+        'exact_hull_quadratic',
+        cfg.ConfigValue(
+            default=False,
+            domain=bool,
+            description="Use exact hull reformulation for quadratic constraints.",
+            doc="""
+        If True, quadratic constraints (polynomial degree 2) are reformulated
+        using the exact hull instead of the standard perspective function.
+
+        For a quadratic constraint of the form
+
+            x'Qx + c'x + d <= 0
+
+        the reformulation depends on convexity:
+
+        **Conic exact hull** (convex quadratics): An auxiliary variable *t*
+        and a rotated second-order cone constraint ``v'Qv <= t * y`` are
+        introduced, and the original bound becomes ``t + c'v + d*y <= 0``.
+        Convexity is determined via eigenvalue decomposition of the Hessian
+        matrix *Q*: the quadratic is convex for an upper-bound constraint
+        when *Q* is positive semi-definite, and for a lower-bound constraint
+        when *Q* is negative semi-definite.
+
+        **General exact hull** (non-convex quadratics and equalities): The
+        constraint is reformulated as ``v'Qv + c'v*y + d*y**2``, where *v*
+        are the disaggregated variables and *y* is the binary indicator.
+
+        Default is False, which uses the standard perspective function for
+        all nonlinear constraints.
+        """,
+        ),
+    )
+    CONFIG.declare(
         'eigenvalue_tolerance',
         cfg.ConfigValue(
             default=1e-10,
@@ -242,39 +275,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         the transformed model is no longer valid. By default, the transformation
         will disagregate fixed variables so that any later fixing and unfixing
         will be valid in the transformed model.
-        """,
-        ),
-    )
-    CONFIG.declare(
-        'exact_hull_quadratic',
-        cfg.ConfigValue(
-            default=False,
-            domain=bool,
-            description="Use exact hull reformulation for quadratic constraints.",
-            doc="""
-        If True, quadratic constraints (polynomial degree 2) are reformulated
-        using the exact hull instead of the standard perspective function.
-
-        For a quadratic constraint of the form
-
-            x'Qx + c'x + d <= 0
-
-        the reformulation depends on convexity:
-
-        **Conic exact hull** (convex quadratics): An auxiliary variable *t*
-        and a rotated second-order cone constraint ``v'Qv <= t * y`` are
-        introduced, and the original bound becomes ``t + c'v + d*y <= 0``.
-        Convexity is determined via eigenvalue decomposition of the Hessian
-        matrix *Q*: the quadratic is convex for an upper-bound constraint
-        when *Q* is positive semi-definite, and for a lower-bound constraint
-        when *Q* is negative semi-definite.
-
-        **General exact hull** (non-convex quadratics and equalities): The
-        constraint is reformulated as ``v'Qv + c'v*y + d*y**2``, where *v*
-        are the disaggregated variables and *y* is the binary indicator.
-
-        Default is False, which uses the standard perspective function for
-        all nonlinear constraints.
         """,
         ),
     )
