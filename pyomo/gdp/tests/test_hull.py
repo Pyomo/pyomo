@@ -2895,7 +2895,6 @@ class NestedDisjunctsInFlatGDP(unittest.TestCase):
         ct.check_nested_disjuncts_in_flat_gdp(self, 'hull')
 
 
-@unittest.skipUnless(numpy_available, "NumPy is not available")
 class TestExactHullQuadratic(unittest.TestCase):
     """Tests for the ``exact_hull_quadratic`` option of the hull transformation.
 
@@ -2917,6 +2916,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 1. Convex quadratic upper-bound → conic reformulation
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_convex_quadratic_upper_bound_conic_reformulation(self):
         """PSD Q with upper bound should produce a conic reformulation.
 
@@ -2978,6 +2978,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 2. Convex quadratic lower-bound → conic reformulation with negation
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_convex_quadratic_lower_bound_conic_reformulation(self):
         """NSD Q with lower bound should produce a conic reformulation via negation.
 
@@ -3031,6 +3032,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 3. Non-convex quadratic → general exact hull
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_nonconvex_quadratic_general_exact_hull(self):
         """Mixed-eigenvalue Q should produce the general exact hull expression.
 
@@ -3079,6 +3081,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 4. Equality constraint → always uses general exact hull
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_equality_constraint_general_exact_hull(self):
         """Equality constraints should always use the general exact hull.
 
@@ -3125,6 +3128,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 5. Range constraint with both bounds → mixed reformulations
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_range_constraint_mixed_reformulations(self):
         """Range constraint with PSD Q uses conic for upper, general for lower.
 
@@ -3218,18 +3222,19 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 7. eigenvalue_tolerance: larger tolerance accepts a near-PSD matrix
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_eigenvalue_tolerance_permissive(self):
         """A larger ``eigenvalue_tolerance`` should accept a near-PSD Q.
 
         The matrix Q = diag(1, -1e-11) has a very small negative eigenvalue
-        (-1e-11).  With the default tolerance of 1e-10 the eigenvalue is
+        (-1e-11).  With a permissive tolerance of 1e-9 the eigenvalue is
         within the tolerance band and Q is treated as PSD → conic
         reformulation.
         """
         m = models.makeTwoTermDisj_NearPSDQuad()
 
         m_perm = self.hull.create_using(
-            m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-10
+            m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-9
         )
         relaxBlock = m_perm._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
         # Conic path should have been taken → t variable present.
@@ -3241,6 +3246,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 8. eigenvalue_tolerance: strict tolerance rejects a near-PSD matrix
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_eigenvalue_tolerance_strict(self):
         """A strict ``eigenvalue_tolerance`` should reject a near-PSD Q.
 
@@ -3263,6 +3269,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 9. Constraint mapping: get_transformed_constraints
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_constraint_mappings_preserved(self):
         """``get_transformed_constraints`` must return all constraints for a
         conic-reformulated quadratic constraint.
@@ -3284,6 +3291,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 10. Linear and constant terms in conic reformulation
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_conic_reformulation_with_linear_and_constant_terms(self):
         """Conic reformulation correctly incorporates linear/constant terms.
 
@@ -3324,6 +3332,7 @@ class TestExactHullQuadratic(unittest.TestCase):
     # ------------------------------------------------------------------
     # 11. Linear and constant terms in general exact hull
     # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_general_exact_hull_with_linear_and_constant_terms(self):
         """General exact hull correctly incorporates linear/constant terms.
 
