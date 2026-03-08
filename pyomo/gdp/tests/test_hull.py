@@ -3405,7 +3405,9 @@ class TestExactHullQuadratic(unittest.TestCase):
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.gdp.hull', logging.WARNING):
-            self.hull.apply_to(m, exact_hull_quadratic=True)
+            self.hull.apply_to(
+                m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-10
+            )
 
         warning_text = output.getvalue()
         self.assertIn("quadratic terms", warning_text)
