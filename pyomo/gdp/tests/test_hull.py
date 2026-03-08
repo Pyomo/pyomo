@@ -3412,7 +3412,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         warning_text = output.getvalue()
         self.assertIn("quadratic terms", warning_text)
         self.assertIn("eigenvalues", warning_text)
-        self.assertIn("treated as linear", warning_text)
+        self.assertIn("general exact hull", warning_text)
         self.assertIn("eigenvalue_tolerance", warning_text)
         # The largest eigenvalue by modulus (1e-11) should appear in the message.
         # Accept any floating-point rendering of 1e-11 (e.g. '1e-11', '1.0e-11').
@@ -3460,7 +3460,7 @@ class TestExactHullQuadratic(unittest.TestCase):
             self.hull.apply_to(m, exact_hull_quadratic=True)
 
         # Warning must be issued.
-        self.assertIn("treated as linear", output.getvalue())
+        self.assertIn("general exact hull", output.getvalue())
 
         relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
         v_x = relaxBlock.disaggregatedVars.x

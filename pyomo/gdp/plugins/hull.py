@@ -1031,17 +1031,20 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         negate_for_conic = False
 
         if Q_is_psd and Q_is_nsd:
-            # All eigenvalues lie within the tolerance band [-tol, tol],
-            # so the quadratic part is numerically zero and the constraint
-            # is treated as linear. Warn the user in case this is unexpected.
+            # All eigenvalues lie within the tolerance band [-tol, tol].
+            # The conic path cannot be used for either bound because PSD and
+            # NSD simultaneously would require a single negated expression to
+            # serve both bounds (causing sign-flip bugs).  Fall back to the
+            # general exact hull reformulation instead.
             max_abs_eigenvalue = float(np.max(np.abs(eigenvalues)))
             logger.warning(
                 "GDP(Hull): Constraint '%s' has quadratic terms, but all "
                 "eigenvalues of the Q matrix are within the "
                 "eigenvalue_tolerance band (largest eigenvalue by modulus: "
-                "%g). The constraint will be treated as linear. If this is "
-                "not the expected behavior, consider using a tighter (smaller) "
-                "eigenvalue_tolerance.",
+                "%g). The conic reformulation cannot be applied; the "
+                "constraint will be handled by the general exact hull "
+                "reformulation instead. If this is not the expected behavior, "
+                "consider using a tighter (smaller) eigenvalue_tolerance.",
                 c.getname(fully_qualified=True),
                 max_abs_eigenvalue,
             )
