@@ -2926,14 +2926,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         - Replace the original bound with the linear constraint
           ``t - 4*y_ind <= 0``.
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 + m.y**2 <= 4)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_ConvexQuadUB()
 
         self.hull.apply_to(m, exact_hull_quadratic=True)
 
@@ -2993,14 +2986,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         - Rotated SOC constraint  ``v_x**2 + v_y**2 - t*y_ind <= 0``.
         - Linear bound constraint ``t - 4*y_ind <= 0``.
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=-m.x**2 - m.y**2 >= -4)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_ConvexQuadLB()
 
         self.hull.apply_to(m, exact_hull_quadratic=True)
 
@@ -3053,14 +3039,7 @@ class TestExactHullQuadratic(unittest.TestCase):
             ``v_x**2 - v_y**2 - y_ind**2 <= 0``
         with no auxiliary variable or extra conic constraint.
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 - m.y**2 <= 1)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_NonconvexQuad()
 
         self.hull.apply_to(m, exact_hull_quadratic=True)
 
@@ -3107,14 +3086,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         use the general formulation:
             ``v_x**2 + v_y**2 - 4*y_ind**2 == 0``
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 + m.y**2 == 4)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_QuadEquality()
 
         self.hull.apply_to(m, exact_hull_quadratic=True)
 
@@ -3160,14 +3132,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         - Upper bound uses the conic reformulation (``t - 4*y_ind <= 0``).
         - Lower bound uses the general exact hull (``y_ind**2 - v_x**2 - v_y**2 <= 0``).
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=(1, m.x**2 + m.y**2, 4))
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_QuadRange()
 
         self.hull.apply_to(m, exact_hull_quadratic=True)
 
@@ -3239,14 +3204,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         The transformation should raise a ``GDP_Error`` mentioning NumPy
         before attempting any eigenvalue computation.
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 + m.y**2 <= 4)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_ConvexQuadUB()
 
         with mock.patch.object(hull_module, 'numpy_available', False):
             self.assertRaisesRegex(
@@ -3268,14 +3226,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         within the tolerance band and Q is treated as PSD → conic
         reformulation.
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 - 1e-11 * m.y**2 <= 4)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_NearPSDQuad()
 
         m_perm = self.hull.create_using(
             m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-10
@@ -3297,14 +3248,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         eigenvalue -1e-11 is outside the tolerance band → Q is not treated
         as PSD → general exact hull (no t variable).
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 - 1e-11 * m.y**2 <= 4)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_NearPSDQuad()
 
         m_strict = self.hull.create_using(
             m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-12
@@ -3327,14 +3271,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         the conic SOC constraint and the linear bound constraint.
         ``get_src_constraint`` must map back to the original constraint.
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 + m.y**2 <= 4)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_ConvexQuadUB()
 
         self.hull.apply_to(m, exact_hull_quadratic=True)
 
@@ -3355,14 +3292,7 @@ class TestExactHullQuadratic(unittest.TestCase):
             ``t + 3*v_x + 2*y_ind <= 0``
         (where the RHS of 0 is absorbed because upper=0).
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 + 3 * m.x + 2 <= 0)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_ConvexQuad_LinearTerms()
 
         self.hull.apply_to(m, exact_hull_quadratic=True)
 
@@ -3401,14 +3331,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         terms) the single transformed constraint should be:
             ``v_x**2 - v_y**2 + 3*v_x*y_ind - 2*y_ind**2 <= 0``
         """
-        m = ConcreteModel()
-        m.x = Var(bounds=(-2, 2))
-        m.y = Var(bounds=(-2, 2))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x**2 - m.y**2 + 3 * m.x - 2 <= 0)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x + m.y <= 1)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m = models.makeTwoTermDisj_NonconvexQuad_LinearTerms()
 
         self.hull.apply_to(m, exact_hull_quadratic=True)
 

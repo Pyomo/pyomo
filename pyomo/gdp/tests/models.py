@@ -1262,3 +1262,151 @@ def make_indexed_equality_model():
     m.obj = Objective(expr=m.x[1] + m.x[2], sense=minimize)
 
     return m
+
+
+# ---------------------------------------------------------------------------
+# Models for exact hull quadratic tests
+# ---------------------------------------------------------------------------
+
+
+def makeTwoTermDisj_ConvexQuadUB():
+    """Two-term disjunction with a convex quadratic upper-bound constraint.
+
+    Disjunct d1 has ``x**2 + y**2 <= 4`` (Q = I, positive semi-definite),
+    which should be handled by the conic exact hull reformulation.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x**2 + m.y**2 <= 4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_ConvexQuadLB():
+    """Two-term disjunction with a convex quadratic lower-bound constraint.
+
+    Disjunct d1 has ``-x**2 - y**2 >= -4`` (Q = -I, negative semi-definite),
+    which should be handled by the conic exact hull reformulation via negation.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=-m.x**2 - m.y**2 >= -4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_NonconvexQuad():
+    """Two-term disjunction with a non-convex (indefinite) quadratic constraint.
+
+    Disjunct d1 has ``x**2 - y**2 <= 1`` (Q = diag(1, -1), indefinite),
+    which should be handled by the general exact hull reformulation.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x**2 - m.y**2 <= 1)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_QuadEquality():
+    """Two-term disjunction with a quadratic equality constraint.
+
+    Disjunct d1 has ``x**2 + y**2 == 4`` (Q = I, PSD), which should always
+    be handled by the general exact hull because it is an equality.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x**2 + m.y**2 == 4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_QuadRange():
+    """Two-term disjunction with a quadratic range (double-bounded) constraint.
+
+    Disjunct d1 has ``1 <= x**2 + y**2 <= 4`` (Q = I, PSD but not NSD).
+    The upper bound should use the conic reformulation and the lower bound
+    should use the general exact hull.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=(1, m.x**2 + m.y**2, 4))
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_NearPSDQuad():
+    """Two-term disjunction with a near-PSD quadratic upper-bound constraint.
+
+    Disjunct d1 has ``x**2 - 1e-11*y**2 <= 4``.  The Q matrix
+    ``diag(1, -1e-11)`` has a very small negative eigenvalue (-1e-11), so
+    its classification as PSD or indefinite depends on the
+    ``eigenvalue_tolerance`` setting.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x**2 - 1e-11 * m.y**2 <= 4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_ConvexQuad_LinearTerms():
+    """Two-term disjunction with a convex quadratic constraint that has linear
+    and constant terms.
+
+    Disjunct d1 has ``x**2 + 3*x + 2 <= 0`` (Q = [[1]], PSD).  Tests that
+    linear coefficients and the constant term are correctly incorporated into
+    the conic exact hull reformulation.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x**2 + 3 * m.x + 2 <= 0)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_NonconvexQuad_LinearTerms():
+    """Two-term disjunction with an indefinite quadratic constraint that has
+    linear and constant terms.
+
+    Disjunct d1 has ``x**2 - y**2 + 3*x - 2 <= 0`` (Q = diag(1, -1),
+    indefinite).  Tests that linear and constant terms are correctly
+    incorporated into the general exact hull reformulation.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x**2 - m.y**2 + 3 * m.x - 2 <= 0)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
