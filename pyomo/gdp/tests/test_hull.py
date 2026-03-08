@@ -13,8 +13,9 @@ import random
 from io import StringIO
 
 import pyomo.common.unittest as unittest
+import unittest.mock as mock
 
-from pyomo.common.dependencies import dill_available
+from pyomo.common.dependencies import dill_available, numpy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import this_file_dir
 
@@ -36,6 +37,7 @@ from pyomo.environ import (
     Param,
     Objective,
     TerminationCondition,
+    NonNegativeReals,
 )
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
@@ -47,6 +49,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.repn.linear import LinearRepnVisitor
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+import pyomo.gdp.plugins.hull as hull_module
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
@@ -2890,3 +2893,561 @@ class NestedDisjunctsInFlatGDP(unittest.TestCase):
 
     def test_declare_disjuncts_in_disjunction_rule(self):
         ct.check_nested_disjuncts_in_flat_gdp(self, 'hull')
+
+
+@unittest.skipUnless(numpy_available, "NumPy is not available")
+class TestExactHullQuadratic(unittest.TestCase):
+    """Tests for the ``exact_hull_quadratic`` option of the hull transformation.
+
+    Covers:
+    - Convex quadratic upper-bound (conic reformulation, PSD Q)
+    - Convex quadratic lower-bound (conic reformulation with negation, NSD Q)
+    - Non-convex quadratic (general exact hull, mixed eigenvalues)
+    - Equality constraint (always general exact hull)
+    - Range constraint with both bounds (mixed conic + general)
+    - ``numpy_available`` guard
+    - ``eigenvalue_tolerance`` configuration
+    - ``get_transformed_constraints`` mapping
+    - Linear and constant terms in both conic and general reformulations
+    """
+
+    def setUp(self):
+        self.hull = TransformationFactory('gdp.hull')
+
+    # ------------------------------------------------------------------
+    # 1. Convex quadratic upper-bound → conic reformulation
+    # ------------------------------------------------------------------
+    def test_convex_quadratic_upper_bound_conic_reformulation(self):
+        """PSD Q with upper bound should produce a conic reformulation.
+
+        For ``x**2 + y**2 <= 4`` (Q = I, PSD), the exact hull should:
+        - Introduce an auxiliary variable ``t >= 0``.
+        - Add a rotated SOC constraint  ``v_x**2 + v_y**2 - t*y_ind <= 0``.
+        - Replace the original bound with the linear constraint
+          ``t - 4*y_ind <= 0``.
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 + m.y**2 <= 4)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        # An auxiliary t variable should have been created.
+        t_var = relaxBlock.component('_conic_aux_t_c')
+        self.assertIsNotNone(t_var, "Expected auxiliary variable '_conic_aux_t_c'")
+        self.assertIs(t_var.domain, NonNegativeReals)
+
+        # Two transformed constraints: conic SOC + linear bound.
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 2)
+
+        conic_cons, linear_cons = trans_cons
+
+        # --- Conic constraint: v_x**2 + v_y**2 - t*y_ind <= 0 ---
+        self.assertIsNone(conic_cons.lower)
+        self.assertEqual(value(conic_cons.upper), 0)
+        repn = generate_standard_repn(conic_cons.body, compute_values=False)
+        self.assertTrue(repn.is_quadratic())
+        quad_pairs = dict(
+            zip(
+                [(id(a), id(b)) for a, b in repn.quadratic_vars],
+                repn.quadratic_coefs,
+            )
+        )
+        self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
+        self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], 1)
+        self.assertAlmostEqual(
+            quad_pairs.get((id(t_var), id(y_ind)), quad_pairs.get((id(y_ind), id(t_var)), None)),
+            -1,
+        )
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+
+        # --- Linear bound constraint: t - 4*y_ind <= 0 ---
+        self.assertIsNone(linear_cons.lower)
+        self.assertEqual(value(linear_cons.upper), 0)
+        repn2 = generate_standard_repn(linear_cons.body, compute_values=False)
+        self.assertTrue(repn2.is_linear())
+        linear_map = dict(zip([id(v) for v in repn2.linear_vars], repn2.linear_coefs))
+        self.assertAlmostEqual(linear_map[id(t_var)], 1)
+        self.assertAlmostEqual(linear_map[id(y_ind)], -4)
+
+    # ------------------------------------------------------------------
+    # 2. Convex quadratic lower-bound → conic reformulation with negation
+    # ------------------------------------------------------------------
+    def test_convex_quadratic_lower_bound_conic_reformulation(self):
+        """NSD Q with lower bound should produce a conic reformulation via negation.
+
+        For ``-x**2 - y**2 >= -4`` (Q = -I, NSD), the exact hull negates Q
+        to obtain a PSD form and produces:
+        - Rotated SOC constraint  ``v_x**2 + v_y**2 - t*y_ind <= 0``.
+        - Linear bound constraint ``t - 4*y_ind <= 0``.
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=-m.x**2 - m.y**2 >= -4)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        # Auxiliary t variable must exist.
+        t_var = relaxBlock.component('_conic_aux_t_c')
+        self.assertIsNotNone(t_var, "Expected auxiliary variable '_conic_aux_t_c'")
+        self.assertIs(t_var.domain, NonNegativeReals)
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 2)
+
+        conic_cons, linear_cons = trans_cons
+
+        # --- Conic constraint (uses negated Q, i.e. +I): v_x**2 + v_y**2 - t*y_ind <= 0 ---
+        self.assertIsNone(conic_cons.lower)
+        self.assertEqual(value(conic_cons.upper), 0)
+        repn = generate_standard_repn(conic_cons.body, compute_values=False)
+        self.assertTrue(repn.is_quadratic())
+        quad_pairs = dict(
+            zip(
+                [(id(a), id(b)) for a, b in repn.quadratic_vars],
+                repn.quadratic_coefs,
+            )
+        )
+        self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
+        self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], 1)
+
+        # --- Linear bound constraint: t - 4*y_ind <= 0 (from t <= -c.lower*y = 4y) ---
+        self.assertIsNone(linear_cons.lower)
+        self.assertEqual(value(linear_cons.upper), 0)
+        repn2 = generate_standard_repn(linear_cons.body, compute_values=False)
+        self.assertTrue(repn2.is_linear())
+        linear_map = dict(zip([id(v) for v in repn2.linear_vars], repn2.linear_coefs))
+        self.assertAlmostEqual(linear_map[id(t_var)], 1)
+        self.assertAlmostEqual(linear_map[id(y_ind)], -4)
+
+    # ------------------------------------------------------------------
+    # 3. Non-convex quadratic → general exact hull
+    # ------------------------------------------------------------------
+    def test_nonconvex_quadratic_general_exact_hull(self):
+        """Mixed-eigenvalue Q should produce the general exact hull expression.
+
+        For ``x**2 - y**2 <= 1`` (Q = diag(1,-1), indefinite), the exact
+        hull should produce a single constraint:
+            ``v_x**2 - v_y**2 - y_ind**2 <= 0``
+        with no auxiliary variable or extra conic constraint.
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 - m.y**2 <= 1)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        # No auxiliary t variable should exist.
+        self.assertIsNone(relaxBlock.component('_conic_aux_t_c'))
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 1)
+        ub_cons = trans_cons[0]
+
+        self.assertIsNone(ub_cons.lower)
+        self.assertEqual(value(ub_cons.upper), 0)
+
+        repn = generate_standard_repn(ub_cons.body, compute_values=False)
+        self.assertTrue(repn.is_quadratic())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+
+        quad_pairs = dict(
+            zip(
+                [(id(a), id(b)) for a, b in repn.quadratic_vars],
+                repn.quadratic_coefs,
+            )
+        )
+        # v_x**2 coefficient: +1
+        self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
+        # v_y**2 coefficient: -1
+        self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], -1)
+        # y_ind**2 coefficient: -1  (from rhs: 1 * y_ind**2 moved to LHS)
+        self.assertAlmostEqual(quad_pairs[(id(y_ind), id(y_ind))], -1)
+
+    # ------------------------------------------------------------------
+    # 4. Equality constraint → always uses general exact hull
+    # ------------------------------------------------------------------
+    def test_equality_constraint_general_exact_hull(self):
+        """Equality constraints should always use the general exact hull.
+
+        Even with a PSD Q (``x**2 + y**2 == 4``), the exact hull must
+        use the general formulation:
+            ``v_x**2 + v_y**2 - 4*y_ind**2 == 0``
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 + m.y**2 == 4)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        # No auxiliary t variable should exist (no conic path for equality).
+        self.assertIsNone(relaxBlock.component('_conic_aux_t_c'))
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 1)
+        eq_cons = trans_cons[0]
+
+        # The constraint is an equality.
+        self.assertEqual(value(eq_cons.lower), 0)
+        self.assertEqual(value(eq_cons.upper), 0)
+
+        repn = generate_standard_repn(eq_cons.body, compute_values=False)
+        self.assertTrue(repn.is_quadratic())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+
+        quad_pairs = dict(
+            zip(
+                [(id(a), id(b)) for a, b in repn.quadratic_vars],
+                repn.quadratic_coefs,
+            )
+        )
+        self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
+        self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], 1)
+        # rhs 4*y_ind**2 moves to LHS as -4*y_ind**2
+        self.assertAlmostEqual(quad_pairs[(id(y_ind), id(y_ind))], -4)
+
+    # ------------------------------------------------------------------
+    # 5. Range constraint with both bounds → mixed reformulations
+    # ------------------------------------------------------------------
+    def test_range_constraint_mixed_reformulations(self):
+        """Range constraint with PSD Q uses conic for upper, general for lower.
+
+        For ``1 <= x**2 + y**2 <= 4`` (Q = I, PSD but not NSD):
+        - Upper bound uses the conic reformulation (``t - 4*y_ind <= 0``).
+        - Lower bound uses the general exact hull (``y_ind**2 - v_x**2 - v_y**2 <= 0``).
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=(1, m.x**2 + m.y**2, 4))
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        # Auxiliary t should exist (conic upper bound).
+        t_var = relaxBlock.component('_conic_aux_t_c')
+        self.assertIsNotNone(t_var)
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        # The mapping returns: [conic_SOC, lb_general, ub_linear]
+        # (conic constraint first, then the bound constraints in order lb, ub).
+        self.assertEqual(len(trans_cons), 3)
+
+        # Pre-compute all repns to avoid duplicate calls in the search loops.
+        repns = {id(c): generate_standard_repn(c.body, compute_values=False)
+                 for c in trans_cons}
+
+        # Identify each constraint by its standard representation.
+        # The linear one (involving t) is the conic upper bound.
+        # The quadratic one without t_var quad terms is the general lower bound.
+        ub_cons = next(
+            c for c in trans_cons
+            if repns[id(c)].is_linear()
+        )
+        lb_cons = next(
+            c for c in trans_cons
+            if repns[id(c)].is_quadratic()
+            and id(t_var) not in {
+                id(v)
+                for pair in repns[id(c)].quadratic_vars
+                for v in pair
+            }
+        )
+
+        # --- Upper bound: linear conic bound ``t - 4*y_ind <= 0`` ---
+        self.assertIsNone(ub_cons.lower)
+        self.assertEqual(value(ub_cons.upper), 0)
+        repn_ub = repns[id(ub_cons)]
+        self.assertTrue(repn_ub.is_linear())
+        linear_map = dict(zip([id(v) for v in repn_ub.linear_vars], repn_ub.linear_coefs))
+        self.assertAlmostEqual(linear_map[id(t_var)], 1)
+        self.assertAlmostEqual(linear_map[id(y_ind)], -4)
+
+        # --- Lower bound: general exact hull ``y_ind**2 - v_x**2 - v_y**2 <= 0`` ---
+        self.assertIsNone(lb_cons.lower)
+        self.assertEqual(value(lb_cons.upper), 0)
+        repn_lb = repns[id(lb_cons)]
+        self.assertTrue(repn_lb.is_quadratic())
+        quad_map = dict(
+            zip(
+                [(id(a), id(b)) for a, b in repn_lb.quadratic_vars],
+                repn_lb.quadratic_coefs,
+            )
+        )
+        self.assertAlmostEqual(quad_map.get((id(v_x), id(v_x)), 0), -1)
+        self.assertAlmostEqual(quad_map.get((id(v_y), id(v_y)), 0), -1)
+        self.assertAlmostEqual(quad_map.get((id(y_ind), id(y_ind)), 0), 1)
+
+    # ------------------------------------------------------------------
+    # 6. numpy_available guard
+    # ------------------------------------------------------------------
+    def test_numpy_unavailable_raises_error(self):
+        """When NumPy is unavailable, ``exact_hull_quadratic=True`` must raise.
+
+        The transformation should raise a ``GDP_Error`` mentioning NumPy
+        before attempting any eigenvalue computation.
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 + m.y**2 <= 4)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        with mock.patch.object(hull_module, 'numpy_available', False):
+            self.assertRaisesRegex(
+                GDP_Error,
+                "exact_hull_quadratic requires NumPy",
+                TransformationFactory('gdp.hull').apply_to,
+                m,
+                exact_hull_quadratic=True,
+            )
+
+    # ------------------------------------------------------------------
+    # 7. eigenvalue_tolerance: larger tolerance accepts a near-PSD matrix
+    # ------------------------------------------------------------------
+    def test_eigenvalue_tolerance_permissive(self):
+        """A larger ``eigenvalue_tolerance`` should accept a near-PSD Q.
+
+        The matrix Q = diag(1, -1e-11) has a very small negative eigenvalue
+        (-1e-11).  With the default tolerance of 1e-10 the eigenvalue is
+        within the tolerance band and Q is treated as PSD → conic
+        reformulation.
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 - 1e-11 * m.y**2 <= 4)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        m_perm = self.hull.create_using(
+            m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-10
+        )
+        relaxBlock = m_perm._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        # Conic path should have been taken → t variable present.
+        self.assertIsNotNone(
+            relaxBlock.component('_conic_aux_t_c'),
+            "Expected conic aux variable with permissive eigenvalue_tolerance",
+        )
+
+    # ------------------------------------------------------------------
+    # 8. eigenvalue_tolerance: strict tolerance rejects a near-PSD matrix
+    # ------------------------------------------------------------------
+    def test_eigenvalue_tolerance_strict(self):
+        """A strict ``eigenvalue_tolerance`` should reject a near-PSD Q.
+
+        Same Q = diag(1, -1e-11) as above.  With a tolerance of 1e-12 the
+        eigenvalue -1e-11 is outside the tolerance band → Q is not treated
+        as PSD → general exact hull (no t variable).
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 - 1e-11 * m.y**2 <= 4)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        m_strict = self.hull.create_using(
+            m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-12
+        )
+        relaxBlock = m_strict._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        # General path should have been taken → no t variable.
+        self.assertIsNone(
+            relaxBlock.component('_conic_aux_t_c'),
+            "Expected no conic aux variable with strict eigenvalue_tolerance",
+        )
+
+    # ------------------------------------------------------------------
+    # 9. Constraint mapping: get_transformed_constraints
+    # ------------------------------------------------------------------
+    def test_constraint_mappings_preserved(self):
+        """``get_transformed_constraints`` must return all constraints for a
+        conic-reformulated quadratic constraint.
+
+        For a PSD upper-bound constraint the return list should contain both
+        the conic SOC constraint and the linear bound constraint.
+        ``get_src_constraint`` must map back to the original constraint.
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 + m.y**2 <= 4)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 2)
+
+        for tc in trans_cons:
+            self.assertIs(self.hull.get_src_constraint(tc), m.d1.c)
+
+    # ------------------------------------------------------------------
+    # 10. Linear and constant terms in conic reformulation
+    # ------------------------------------------------------------------
+    def test_conic_reformulation_with_linear_and_constant_terms(self):
+        """Conic reformulation correctly incorporates linear/constant terms.
+
+        For ``x**2 + 3*x + 2 <= 0`` (PSD, with a linear and a constant term)
+        the linear bound constraint must be:
+            ``t + 3*v_x + 2*y_ind <= 0``
+        (where the RHS of 0 is absorbed because upper=0).
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 + 3 * m.x + 2 <= 0)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        y_ind = m.d1.binary_indicator_var
+        t_var = relaxBlock.component('_conic_aux_t_c')
+        self.assertIsNotNone(t_var)
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 2)
+
+        # The linear bound constraint is the one involving t.
+        linear_cons = next(
+            c for c in trans_cons
+            if generate_standard_repn(c.body, compute_values=False).is_linear()
+        )
+        repn = generate_standard_repn(linear_cons.body, compute_values=False)
+        self.assertTrue(repn.is_linear())
+        linear_map = dict(zip([id(v) for v in repn.linear_vars], repn.linear_coefs))
+
+        # t coefficient: 1
+        self.assertAlmostEqual(linear_map[id(t_var)], 1)
+        # 3*v_x term
+        self.assertAlmostEqual(linear_map[id(v_x)], 3)
+        # 2*y_ind constant term (constant=2 * y)
+        self.assertAlmostEqual(linear_map[id(y_ind)], 2)
+
+    # ------------------------------------------------------------------
+    # 11. Linear and constant terms in general exact hull
+    # ------------------------------------------------------------------
+    def test_general_exact_hull_with_linear_and_constant_terms(self):
+        """General exact hull correctly incorporates linear/constant terms.
+
+        For ``x**2 - y**2 + 3*x - 2 <= 0`` (indefinite Q, with linear/const
+        terms) the single transformed constraint should be:
+            ``v_x**2 - v_y**2 + 3*v_x*y_ind - 2*y_ind**2 <= 0``
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 - m.y**2 + 3 * m.x - 2 <= 0)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x + m.y <= 1)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        # No conic aux variable (indefinite Q → general path).
+        self.assertIsNone(relaxBlock.component('_conic_aux_t_c'))
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 1)
+        ub_cons = trans_cons[0]
+
+        self.assertIsNone(ub_cons.lower)
+        self.assertEqual(value(ub_cons.upper), 0)
+
+        repn = generate_standard_repn(ub_cons.body, compute_values=False)
+        self.assertTrue(repn.is_quadratic())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+
+        quad_pairs = dict(
+            zip(
+                [(id(a), id(b)) for a, b in repn.quadratic_vars],
+                repn.quadratic_coefs,
+            )
+        )
+        # v_x**2: +1
+        self.assertAlmostEqual(quad_pairs.get((id(v_x), id(v_x)), 0), 1)
+        # v_y**2: -1
+        self.assertAlmostEqual(quad_pairs.get((id(v_y), id(v_y)), 0), -1)
+        # 3*v_x*y_ind cross term
+        cross_coef = quad_pairs.get(
+            (id(v_x), id(y_ind)),
+            quad_pairs.get((id(y_ind), id(v_x)), None),
+        )
+        self.assertIsNotNone(cross_coef, "Missing cross term v_x*y_ind")
+        self.assertAlmostEqual(cross_coef, 3)
+        # -2*y_ind**2 (constant term * y^2)
+        self.assertAlmostEqual(quad_pairs.get((id(y_ind), id(y_ind)), 0), -2)
