@@ -1032,10 +1032,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         if Q_is_psd and Q_is_nsd:
             # All eigenvalues lie within the tolerance band [-tol, tol].
-            # The conic path cannot be used for either bound because PSD and
-            # NSD simultaneously would require a single negated expression to
-            # serve both bounds (causing sign-flip bugs).  Fall back to the
-            # general exact hull reformulation instead.
+            # In this numerically ambiguous case, we conservatively avoid the
+            # conic reformulation and fall back to the general exact hull
+            # reformulation.  The underlying sign-flip bug motivating this
+            # choice occurs for two-sided (range) constraints, where a single
+            # conic expression would otherwise be reused (possibly negated)
+            # for both bounds.
             # Only warn for inequality constraints; equality constraints always
             # use the general exact hull path, so no fallback warning is needed.
             if not c.equality:
