@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 import logging
+import re
 import sys
 import random
 from io import StringIO
@@ -3400,9 +3401,6 @@ class TestExactHullQuadratic(unittest.TestCase):
           and the suggestion to use a tighter tolerance.
         - Fall back to the general exact hull (no conic auxiliary variable).
         """
-        from pyomo.common.log import LoggingIntercept
-        from io import StringIO
-
         m = models.makeTwoTermDisj_AllZeroEigenvalueQuad()
 
         output = StringIO()
@@ -3416,7 +3414,6 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertIn("eigenvalue_tolerance", warning_text)
         # The largest eigenvalue by modulus (1e-11) should appear in the message.
         # Accept any floating-point rendering of 1e-11 (e.g. '1e-11', '1.0e-11').
-        import re
         self.assertTrue(
             re.search(r'1[.,]?0*e-0*11', warning_text),
             f"Expected the largest eigenvalue (1e-11) in the warning message, "
@@ -3450,9 +3447,6 @@ class TestExactHullQuadratic(unittest.TestCase):
         After the fix the general exact hull path is taken for both bounds,
         resulting in two quadratic transformed constraints with correct signs.
         """
-        from pyomo.common.log import LoggingIntercept
-        from io import StringIO
-
         m = models.makeTwoTermDisj_AllZeroEigenvalueQuadRange()
 
         output = StringIO()
