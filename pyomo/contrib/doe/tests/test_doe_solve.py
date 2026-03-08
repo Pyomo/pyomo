@@ -420,6 +420,51 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         doe_obj.compute_FIM(method="sequential")
 
+    def test_compute_FIM_multi_experiment_is_sum_of_experiment_fims(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        fim_exp1 = np.array([[12.0, 3.0], [3.0, 8.0]])
+        fim_exp2 = np.array([[5.0, 2.0], [2.0, 4.0]])
+        prior_fim = np.array([[1.5, 0.1], [0.1, 0.5]])
+
+        multi_args = get_standard_args(
+            RooneyBieglerMultiExperiment(hour=1.5, y=9.0), fd_method, obj_used
+        )
+        multi_args["experiment_list"] = [
+            RooneyBieglerMultiExperiment(hour=1.5, y=9.0),
+            RooneyBieglerMultiExperiment(hour=3.5, y=12.0),
+        ]
+        multi_args["prior_FIM"] = prior_fim
+        doe_multi = DesignOfExperiments(**multi_args)
+
+        def _fake_sequential_fim(*args, **kwargs):
+            # Return deterministic per-experiment FIMs keyed by the fixed
+            # experiment input so the aggregation can be asserted exactly.
+            model = kwargs.get("model")
+            hour = float(pyo.value(model.hour))
+            if np.isclose(hour, 1.5):
+                doe_multi.seq_FIM = fim_exp1.copy()
+            elif np.isclose(hour, 3.5):
+                doe_multi.seq_FIM = fim_exp2.copy()
+            else:
+                raise RuntimeError(f"Unexpected hour value in mocked test: {hour}")
+
+        with patch.object(
+            doe_multi, "_sequential_FIM", side_effect=_fake_sequential_fim
+        ):
+            fim_total = doe_multi.compute_FIM(method="sequential")
+
+        fim_expected = fim_exp1 + fim_exp2 + prior_fim
+        self.assertTrue(np.allclose(fim_total, fim_expected, atol=1e-12))
+        self.assertEqual(len(doe_multi._computed_FIM_by_experiment), 2)
+        self.assertTrue(
+            np.allclose(doe_multi._computed_FIM_by_experiment[0], fim_exp1, atol=1e-12)
+        )
+        self.assertTrue(
+            np.allclose(doe_multi._computed_FIM_by_experiment[1], fim_exp2, atol=1e-12)
+        )
+
     # This test ensure that compute FIM runs without error using the
     # `kaug` option. kaug computes the FIM directly so no finite difference
     # scheme is needed.

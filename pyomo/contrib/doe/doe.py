@@ -2181,10 +2181,22 @@ class DesignOfExperiments:
         method: string to specify which method should be used
                 options are ``kaug`` and ``sequential``
 
+        Notes
+        -----
+        When ``model is None`` and ``experiment_list`` contains multiple
+        experiments, this method computes each experiment FIM and returns
+        the aggregate:
+
+        ``total_fim = sum(fim_i for each experiment i) + prior_FIM``
+
+        where each ``fim_i`` excludes the prior contribution.
+
         Returns
         -------
         computed FIM: 2D numpy array of the FIM
         """
+        aggregate_all_experiments = model is None and len(self.experiment_list) > 1
+
         if model is None:
             self.compute_FIM_model = (
                 self.experiment_list[0]
@@ -2220,19 +2232,86 @@ class DesignOfExperiments:
         # TODO: Add a check to see if the model has an objective and deactivate it.
         #       This solve should only be a square solve without any obj function.
 
-        if method == "sequential":
-            self._sequential_FIM(model=model)
-            self._computed_FIM = self.seq_FIM
-        elif method == "kaug":
-            self._kaug_FIM(model=model)
-            self._computed_FIM = self.kaug_FIM
-        else:
-            raise ValueError(
-                (
-                    "The method provided, {}, must be either `sequential` "
-                    "or `kaug`".format(method)
+        def _compute_fim_for_model(eval_model):
+            if method == "sequential":
+                self._sequential_FIM(model=eval_model)
+                return np.array(self.seq_FIM, copy=True)
+            elif method == "kaug":
+                self._kaug_FIM(model=eval_model)
+                return np.array(self.kaug_FIM, copy=True)
+            else:
+                raise ValueError(
+                    (
+                        "The method provided, {}, must be either `sequential` "
+                        "or `kaug`".format(method)
+                    )
                 )
+
+        def _unknown_parameter_signature(eval_model):
+            # Use stable model-local component identifiers and values so we can
+            # verify all experiments are consistent before aggregating FIMs.
+            names = [
+                str(pyo.ComponentUID(param, context=eval_model))
+                for param in eval_model.unknown_parameters
+            ]
+            values = np.array(
+                [float(pyo.value(val)) for val in eval_model.unknown_parameters.values()]
             )
+            return names, values
+
+        if aggregate_all_experiments:
+            saved_prior = self.prior_FIM
+            self._computed_FIM_by_experiment = []
+            # Capture the baseline parameter labels/values from experiment 0.
+            reference_param_names, reference_param_values = _unknown_parameter_signature(
+                model
+            )
+
+            try:
+                # Compute each experiment FIM without prior so the aggregate adds
+                # prior exactly once at the end.
+                self.prior_FIM = np.zeros(saved_prior.shape)
+                for idx, exp in enumerate(self.experiment_list):
+                    if idx == 0:
+                        # Reuse the already-built model for experiment 0.
+                        exp_model = model
+                    else:
+                        exp_model = (
+                            exp.get_labeled_model(**self.get_labeled_model_args).clone()
+                        )
+                        self.check_model_labels(model=exp_model)
+
+                    param_names, param_values = _unknown_parameter_signature(exp_model)
+                    # Reject heterogeneous parameter spaces before solving so
+                    # summed FIMs remain well-defined.
+                    if param_names != reference_param_names:
+                        raise ValueError(
+                            "All experiments in 'experiment_list' must share the same "
+                            "unknown parameter labels and order for compute_FIM "
+                            f"aggregation. Mismatch detected at experiment index {idx}."
+                        )
+                    if not np.allclose(
+                        param_values, reference_param_values, atol=1e-12, rtol=1e-12
+                    ):
+                        raise ValueError(
+                            "All experiments in 'experiment_list' must share the same "
+                            "unknown parameter values for compute_FIM aggregation. "
+                            f"Mismatch detected at experiment index {idx}."
+                        )
+
+                    fim_i = _compute_fim_for_model(exp_model)
+                    self._computed_FIM_by_experiment.append(fim_i)
+            finally:
+                self.prior_FIM = saved_prior
+
+            # Aggregate all experiment FIMs and add the saved prior once.
+            total_fim = np.zeros(saved_prior.shape)
+            for fim_i in self._computed_FIM_by_experiment:
+                total_fim = total_fim + fim_i
+            self._computed_FIM = total_fim + saved_prior
+        else:
+            self._computed_FIM = _compute_fim_for_model(model)
+            self._computed_FIM_by_experiment = [np.array(self._computed_FIM, copy=True)]
 
         return self._computed_FIM
 

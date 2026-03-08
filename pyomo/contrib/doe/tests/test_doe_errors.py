@@ -803,6 +803,41 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.compute_FIM(method="Bad Method")
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_compute_FIM_multi_experiment_parameter_value_mismatch(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        DoE_args = get_standard_args(
+            RooneyBieglerMultiExperiment(hour=1.5, y=9.0), fd_method, obj_used, None
+        )
+        DoE_args["experiment_list"] = [
+            RooneyBieglerMultiExperiment(
+                hour=1.5,
+                y=9.0,
+                theta={'asymptote': 15, 'rate_constant': 0.5},
+            ),
+            RooneyBieglerMultiExperiment(
+                hour=3.5,
+                y=12.0,
+                theta={'asymptote': 16, 'rate_constant': 0.5},
+            ),
+        ]
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        def _fake_sequential(*args, **kwargs):
+            # This is only used if execution reaches the FIM solve call.
+            doe_obj.seq_FIM = np.eye(2)
+
+        with patch.object(doe_obj, "_sequential_FIM", side_effect=_fake_sequential):
+            # The mismatch is detected before the second experiment solve,
+            # when compute_FIM validates unknown parameter values.
+            with self.assertRaisesRegex(
+                ValueError,
+                "must share the same unknown parameter values",
+            ):
+                doe_obj.compute_FIM(method="sequential")
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_invalid_trace_without_cholesky(self):
         fd_method = "central"
         obj_used = "trace"
