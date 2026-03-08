@@ -105,6 +105,14 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         'LeeGrossmann', or 'GrossmannLee'
     EPS : float
         The value to use for epsilon [default: 1e-4]
+    exact_hull_quadratic : bool
+        If ``True``, quadratic constraints (polynomial degree 2) are
+        reformulated using the exact hull instead of the standard
+        perspective function. Convex quadratics are handled with a conic
+        reformulation (rotated second-order cone), while non-convex
+        quadratics and equalities use the general exact hull
+        reformulation. Convexity is determined via eigenvalue
+        decomposition of the Hessian matrix. [default: False]
     eigenvalue_tolerance : float
         Numerical tolerance for eigenvalue-based positive/negative
         semi-definite checks when using the exact hull reformulation for
