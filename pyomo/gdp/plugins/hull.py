@@ -1036,18 +1036,21 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # NSD simultaneously would require a single negated expression to
             # serve both bounds (causing sign-flip bugs).  Fall back to the
             # general exact hull reformulation instead.
-            max_abs_eigenvalue = float(np.max(np.abs(eigenvalues)))
-            logger.warning(
-                "GDP(Hull): Constraint '%s' has quadratic terms, but all "
-                "eigenvalues of the Q matrix are within the "
-                "eigenvalue_tolerance band (largest eigenvalue by modulus: "
-                "%g). The conic reformulation cannot be applied; the "
-                "constraint will be handled by the general exact hull "
-                "reformulation instead. If this is not the expected behavior, "
-                "consider using a tighter (smaller) eigenvalue_tolerance.",
-                c.getname(fully_qualified=True),
-                max_abs_eigenvalue,
-            )
+            # Only warn for inequality constraints; equality constraints always
+            # use the general exact hull path, so no fallback warning is needed.
+            if not c.equality:
+                max_abs_eigenvalue = float(np.max(np.abs(eigenvalues)))
+                logger.warning(
+                    "GDP(Hull): Constraint '%s' has quadratic terms, but all "
+                    "eigenvalues of the Q matrix are within the "
+                    "eigenvalue_tolerance band (largest eigenvalue by modulus: "
+                    "%g). The conic reformulation cannot be applied; the "
+                    "constraint will be handled by the general exact hull "
+                    "reformulation instead. If this is not the expected behavior, "
+                    "consider using a tighter (smaller) eigenvalue_tolerance.",
+                    c.getname(fully_qualified=True),
+                    max_abs_eigenvalue,
+                )
         else:
             if c.upper is not None and not c.equality:
                 if Q_is_psd:
