@@ -1410,3 +1410,45 @@ def makeTwoTermDisj_NonconvexQuad_LinearTerms():
     m.d2.c = Constraint(expr=m.x + m.y <= 1)
     m.disj = Disjunction(expr=[m.d1, m.d2])
     return m
+
+
+def makeTwoTermDisj_AllZeroEigenvalueQuad():
+    """Two-term disjunction with a quadratic constraint whose Q matrix has
+    all eigenvalues within the default eigenvalue_tolerance band.
+
+    Disjunct d1 has ``1e-11*x**2 + 1e-11*y**2 <= 4``.  The Q matrix
+    ``diag(1e-11, 1e-11)`` has all eigenvalues equal to 1e-11, which is
+    within the default tolerance of 1e-10, so Q is both PSD and NSD.
+    The transformation should issue a warning and use the general exact hull
+    (no conic path) for this constraint.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=1e-11 * m.x**2 + 1e-11 * m.y**2 <= 4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_AllZeroEigenvalueQuadRange():
+    """Two-term disjunction with a quadratic range constraint whose Q matrix
+    has all eigenvalues within the default eigenvalue_tolerance band.
+
+    Disjunct d1 has ``(1, 1e-11*x**2 + 1e-11*y**2, 4)``.  The Q matrix
+    ``diag(1e-11, 1e-11)`` is both PSD and NSD under the default tolerance.
+    This exercises the two-sided bound bug: without the fix, a single
+    ``conic_expr_linear`` would be built with ``negate_for_conic=True``
+    and then incorrectly reused for the upper bound.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=(1, 1e-11 * m.x**2 + 1e-11 * m.y**2, 4))
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m

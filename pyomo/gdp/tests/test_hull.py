@@ -3383,3 +3383,134 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertAlmostEqual(cross_coef, 3)
         # -2*y_ind**2 (constant term * y^2)
         self.assertAlmostEqual(quad_pairs.get((id(y_ind), id(y_ind)), 0), -2)
+
+    # ------------------------------------------------------------------
+    # 12. All-zero eigenvalues: warning issued, treated as linear
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_all_zero_eigenvalues_issues_warning(self):
+        """When all Q eigenvalues are within the tolerance band, a warning
+        should be issued and the general exact hull path should be taken.
+
+        For ``1e-11*x**2 + 1e-11*y**2 <= 4`` with the default tolerance of
+        1e-10, every eigenvalue of Q = diag(1e-11, 1e-11) lies in the band
+        [-1e-10, 1e-10].  The transformation must:
+        - Emit a warning mentioning the constraint name, that it is treated
+          as linear, the largest eigenvalue by modulus, and the suggestion
+          to use a tighter tolerance.
+        - Fall back to the general exact hull (no conic auxiliary variable).
+        """
+        from pyomo.common.log import LoggingIntercept
+        from io import StringIO
+
+        m = models.makeTwoTermDisj_AllZeroEigenvalueQuad()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.gdp.hull', logging.WARNING):
+            self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        warning_text = output.getvalue()
+        self.assertIn("quadratic terms", warning_text)
+        self.assertIn("eigenvalues", warning_text)
+        self.assertIn("treated as linear", warning_text)
+        self.assertIn("eigenvalue_tolerance", warning_text)
+        # The largest eigenvalue by modulus (1e-11) should appear in the message.
+        # Accept any floating-point rendering of 1e-11 (e.g. '1e-11', '1.0e-11').
+        import re
+        self.assertTrue(
+            re.search(r'1[.,]?0*e-0*11', warning_text),
+            f"Expected the largest eigenvalue (1e-11) in the warning message, "
+            f"got: {warning_text!r}",
+        )
+
+        # General path should have been taken: no conic auxiliary variable.
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        self.assertIsNone(
+            relaxBlock.component('_conic_aux_t_c'),
+            "Expected no conic aux variable when all eigenvalues are near zero",
+        )
+
+        # There should be exactly one transformed constraint (general hull).
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 1)
+
+    # ------------------------------------------------------------------
+    # 13. All-zero eigenvalues with range constraint: no incorrect negation
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_all_zero_eigenvalues_range_constraint_no_negation_bug(self):
+        """Range constraint with all-zero Q eigenvalues must not produce
+        an incorrectly negated upper-bound reformulation.
+
+        Without the fix, when Q is both PSD and NSD a single
+        ``conic_expr_linear`` is built with ``negate_for_conic=True``
+        (from the lower-bound branch) and then reused for the upper bound,
+        producing sign-flipped coefficients.
+
+        After the fix the general exact hull path is taken for both bounds,
+        resulting in two quadratic transformed constraints with correct signs.
+        """
+        from pyomo.common.log import LoggingIntercept
+        from io import StringIO
+
+        m = models.makeTwoTermDisj_AllZeroEigenvalueQuadRange()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.gdp.hull', logging.WARNING):
+            self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        # Warning must be issued.
+        self.assertIn("treated as linear", output.getvalue())
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        # No conic auxiliary variable.
+        self.assertIsNone(relaxBlock.component('_conic_aux_t_c'))
+
+        # Both bounds should produce general hull constraints.
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 2)
+
+        repns = [
+            generate_standard_repn(tc.body, compute_values=False)
+            for tc in trans_cons
+        ]
+
+        # Both should be quadratic (general hull includes the tiny quad terms).
+        for repn in repns:
+            self.assertTrue(repn.is_quadratic())
+
+        # Collect all v_x**2 coefficients across both transformed constraints.
+        # The upper-bound constraint body is
+        #   ``1e-11*v_x**2 + 1e-11*v_y**2 - 4*y_ind**2 <= 0``
+        # (coefficient of v_x**2 is +1e-11), while the lower-bound body is
+        #   ``1*y_ind**2 - 1e-11*v_x**2 - 1e-11*v_y**2 <= 0``
+        # (coefficient of v_x**2 is -1e-11).
+        # Without the fix, only a single conic expression with
+        # ``negate_for_conic=True`` would be built and reused, producing two
+        # negated constraints instead of one positive and one negative.
+        # We therefore assert that at least one constraint has a positive
+        # v_x**2 coefficient and at least one has a negative v_x**2 coefficient.
+        coefs_vx = []
+        for repn in repns:
+            quad_map = dict(
+                zip(
+                    [(id(a), id(b)) for a, b in repn.quadratic_vars],
+                    repn.quadratic_coefs,
+                )
+            )
+            coefs_vx.append(quad_map.get((id(v_x), id(v_x)), 0))
+
+        self.assertTrue(
+            any(c > 0 for c in coefs_vx),
+            f"Expected at least one constraint with positive v_x**2 coefficient "
+            f"(upper-bound general hull), got: {coefs_vx}",
+        )
+        self.assertTrue(
+            any(c < 0 for c in coefs_vx),
+            f"Expected at least one constraint with negative v_x**2 coefficient "
+            f"(lower-bound general hull), got: {coefs_vx}",
+        )

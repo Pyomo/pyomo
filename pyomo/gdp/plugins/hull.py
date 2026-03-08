@@ -1030,13 +1030,29 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         use_conic_lower = False
         negate_for_conic = False
 
-        if c.upper is not None and not c.equality:
-            if Q_is_psd:
-                use_conic_upper = True
-        if c.lower is not None and not c.equality:
-            if Q_is_nsd:
-                use_conic_lower = True
-                negate_for_conic = True
+        if Q_is_psd and Q_is_nsd:
+            # All eigenvalues lie within the tolerance band [-tol, tol],
+            # so the quadratic part is numerically zero and the constraint
+            # is treated as linear. Warn the user in case this is unexpected.
+            max_abs_eigenvalue = float(np.max(np.abs(eigenvalues)))
+            logger.warning(
+                "GDP(Hull): Constraint '%s' has quadratic terms, but all "
+                "eigenvalues of the Q matrix are within the "
+                "eigenvalue_tolerance band (largest eigenvalue by modulus: "
+                "%g). The constraint will be treated as linear. If this is "
+                "not the expected behavior, consider using a tighter (smaller) "
+                "eigenvalue_tolerance.",
+                c.getname(fully_qualified=True),
+                max_abs_eigenvalue,
+            )
+        else:
+            if c.upper is not None and not c.equality:
+                if Q_is_psd:
+                    use_conic_upper = True
+            if c.lower is not None and not c.equality:
+                if Q_is_nsd:
+                    use_conic_lower = True
+                    negate_for_conic = True
 
         # --- Decide which expression forms are needed ---
         need_non_convex = False
