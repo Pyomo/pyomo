@@ -558,9 +558,24 @@ def _calculate_L1_smooth_penalty(
     l1_term = 0.0
     for p in common_params:
         weight = float(sub_FIM.loc[p, p])
+        var = param_map[p]
+        has_finite_lb = True
+        has_finite_ub = True
+        if hasattr(var, "lb") and hasattr(var, "ub"):
+            lb = pyo.value(var.lb, exception=False) if var.lb is not None else None
+            ub = pyo.value(var.ub, exception=False) if var.ub is not None else None
+            has_finite_lb = lb is not None and np.isfinite(lb)
+            has_finite_ub = ub is not None and np.isfinite(ub)
         if weight == 0.0:
+            if not has_finite_lb and not has_finite_ub:
+                logger.warning(
+                    "L1 regularization weight is zero for parameter '%s' and the "
+                    "parameter has no finite bounds. This can create a weakly "
+                    "identified flat direction.",
+                    p,
+                )
             continue
-        delta = param_map[p] - sub_theta.loc[p]
+        delta = var - sub_theta.loc[p]
         l1_term += weight * pyo.sqrt(delta * delta + regularization_epsilon)
 
     return l1_term
@@ -1484,7 +1499,7 @@ class Estimator:
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
 
-            if self.obj_function in ObjectiveType:
+            if isinstance(self.obj_function, ObjectiveType):
 
                 if self.obj_function == ObjectiveType.SSE:
                     self.covariance_objective = SSE

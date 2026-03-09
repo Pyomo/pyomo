@@ -15,14 +15,33 @@ from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
 
 
 def main():
+    """
+    Compare L2 and smooth-L1 regularization on the Rooney-Biegler example.
+
+    Notes
+    -----
+    The model response saturates for large positive ``rate_constant`` values:
+    ``y = asymptote * (1 - exp(-rate_constant * hour))``.
+    If ``rate_constant`` is both unpenalized and unbounded, the objective can be
+    nearly flat in that direction, which can lead to extreme fitted values.
+    To keep the smooth-L1 fit numerically stable and interpretable, this example:
+    1) includes a nonzero L1 weight on ``rate_constant`` via ``prior_FIM_l1``, and
+    2) applies finite bounds ``rate_constant in [0, 5]`` on each experiment model.
+    """
 
     # Rooney & Biegler Reference Values
     # a = 19.14, b = 0.53
     theta_ref = pd.Series({'asymptote': 20.0, 'rate_constant': 0.8})
 
-    # Create a 'Stiff' Prior for 'asymptote' but leave 'rate_constant' flexible
-    prior_FIM = pd.DataFrame(
+    # L2 setup: create a 'Stiff' Prior for 'asymptote' but leave 'rate_constant' flexible.
+    prior_FIM_l2 = pd.DataFrame(
         [[1000.0, 0.0], [0.0, 0.0]],
+        index=['asymptote', 'rate_constant'],
+        columns=['asymptote', 'rate_constant'],
+    )
+    # L1 setup: penalize both parameters to avoid an unregularized flat direction.
+    prior_FIM_l1 = pd.DataFrame(
+        [[1000.0, 0.0], [0.0, 1.0]],
         index=['asymptote', 'rate_constant'],
         columns=['asymptote', 'rate_constant'],
     )
@@ -36,14 +55,19 @@ def main():
     # Create an experiment list
     exp_list = []
     for i in range(data.shape[0]):
-        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
+        exp = RooneyBieglerExperiment(data.loc[i, :])
+        # Example-scoped stabilization: keep rate_constant in a practical range.
+        m = exp.get_labeled_model()
+        m.rate_constant.setlb(0.0)
+        m.rate_constant.setub(5.0)
+        exp_list.append(exp)
 
     # Create an instance of the parmest estimator (L2)
     pest_l2 = parmest.Estimator(
         exp_list,
         obj_function="SSE",
         regularization='L2',
-        prior_FIM=prior_FIM,
+        prior_FIM=prior_FIM_l2,
         theta_ref=theta_ref,
     )
 
@@ -56,7 +80,7 @@ def main():
         exp_list,
         obj_function="SSE",
         regularization='L1',
-        prior_FIM=prior_FIM,
+        prior_FIM=prior_FIM_l1,
         theta_ref=theta_ref,
         regularization_weight=1.0,
         regularization_epsilon=1e-6,
