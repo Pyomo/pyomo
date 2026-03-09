@@ -924,7 +924,32 @@ class Estimator:
 
     def _create_parmest_model(self, experiment_number):
         """
-        Modify the Pyomo model for parameter estimation
+        Build a parmest-ready model for a single experiment.
+
+        This helper retrieves the labeled experiment model, prepares objective
+        components needed by parmest, and converts unknown parameters to
+        decision variables. The returned model is the one used to populate EF
+        scenario blocks.
+
+        Parameters
+        ----------
+        experiment_number : int
+            Index into ``self.exp_list`` selecting which experiment model to
+            load.
+
+        Returns
+        -------
+        ConcreteModel
+            A model configured for parmest optimization, including:
+            1. a ``Total_Cost_Objective`` (if ``self.obj_function`` is set)
+            2. converted unknown-parameter variables (unfixed)
+
+        Notes
+        -----
+        - Existing user objectives are deactivated before parmest objective
+          components are attached.
+        - Reserved component names are checked to avoid overriding user model
+          components.
         """
 
         model = _get_labeled_model(self.exp_list[experiment_number])
@@ -985,29 +1010,53 @@ class Estimator:
     def _create_scenario_blocks(
         self, bootlist=None, theta_vals=None, fix_theta=False, multistart=False
     ):
-        # Create scenario block structure
         """
-        Create scenario blocks for parameter estimation
+        Build the block-based extensive form (EF) model for estimation.
+
+        The EF includes:
+        1. a master theta variable container (``model.parmest_theta``),
+        2. one child block per selected experiment (``model.exp_scenarios``),
+        3. optional theta-linking constraints between master and child blocks,
+        4. a single aggregate objective over all child blocks.
+
+        In multistart mode, this method also refreshes experiment-level cached
+        model state before rebuilding each scenario so per-start initializations
+        are applied to the model that is actually solved.
+
         Parameters
         ----------
         bootlist : list, optional
-            List of bootstrap experiment numbers to use. If None, use all experiments in exp_list.
-            Default is None.
+            Experiment indices to include. If ``None``, all experiments in
+            ``self.exp_list`` are used.
         theta_vals : dict, optional
-            Dictionary of theta values to set in the model. If None, use default values from experiment class.
-            Default is None.
+            Theta values to apply as initial values to parent and child theta
+            variables. When ``multistart=True``, these values are also pushed to
+            experiment ``theta_initial`` (if present) before rebuilding.
         fix_theta : bool, optional
-            If True, fix the theta values in the model. If False, leave them free.
-            Default is False.
+            If ``True``, theta variables are fixed in each scenario and no
+            linking constraints are created.
+        multistart : bool, optional
+            If ``True``, force experiment model refresh between starts to avoid
+            stale cached model reuse.
+
         Returns
         -------
-        model : ConcreteModel
-            Pyomo model with scenario blocks for parameter estimation. Contains indexed block for
-            each experiment in exp_list or bootlist.
+        ConcreteModel
+            EF model used by parmest solve routines.
 
+        Raises
+        ------
+        ValueError
+            If the selected scenario set is empty.
         """
         # Build a clean parent EF container and attach one scenario model per block.
         model = pyo.ConcreteModel()
+        if multistart:
+            template_experiment = self.exp_list[0]
+            if theta_vals is not None and hasattr(template_experiment, "theta_initial"):
+                template_experiment.theta_initial = dict(theta_vals)
+            if hasattr(template_experiment, "model"):
+                template_experiment.model = None
         template_model = self._create_parmest_model(0)
         expanded_theta_names = self._expand_indexed_unknowns(template_model)
         model._parmest_theta_names = tuple(expanded_theta_names)
@@ -1035,6 +1084,12 @@ class Estimator:
         # Create indexed block for holding scenario models
         model.exp_scenarios = pyo.Block(range(self.obj_probability_constant))
         for i, experiment_number in enumerate(scenario_numbers):
+            if multistart:
+                experiment = self.exp_list[experiment_number]
+                if theta_vals is not None and hasattr(experiment, "theta_initial"):
+                    experiment.theta_initial = dict(theta_vals)
+                if hasattr(experiment, "model"):
+                    experiment.model = None
             parmest_model = self._create_parmest_model(experiment_number)
             for name in expanded_theta_names:
                 child_theta_var = parmest_model.find_component(name)
@@ -1077,31 +1132,66 @@ class Estimator:
         self.ef_instance = model
         return model
 
-    # TODO: Make so this generates the initial DATAFRAME, not the entire list of values.
-    # Make new private method, _generate_initial_theta:
-    # This method will be used to generate the initial theta values for multistart
-    # optimization. It will take the theta names and the initial theta values
-    # and return a dictionary of theta names and their corresponding values.
     def _generate_initial_theta(
         self,
-        parmest_model=None,
         seed=None,
         n_restarts=None,
         multistart_sampling_method=None,
         user_provided_df=None,
+        experiment_number=0,
     ):
         """
-        Generate initial theta values for multistart optimization using selected sampling method.
-        """
-        if parmest_model is None:
-            raise ValueError("A labeled parmest model must be provided.")
-        if not isinstance(n_restarts, int):
-            raise TypeError("n_restarts must be an integer.")
-        if n_restarts <= 0:
-            raise ValueError("n_restarts must be greater than zero.")
+        Create the canonical multistart initialization/results DataFrame.
 
-        theta_names = self._expand_indexed_unknowns(parmest_model)
-        theta_vars = [parmest_model.find_component(name) for name in theta_names]
+        Output schema is:
+        1. theta columns (canonical order, quote-normalized names),
+        2. ``converged_<theta>`` columns,
+        3. ``final objective``, ``solver termination``, ``solve_time``.
+
+        Initial theta rows are either sampled from bounds or taken from a
+        user-provided DataFrame.
+
+        Parameters
+        ----------
+        seed : int, optional
+            Random seed used by stochastic samplers.
+        n_restarts : int, optional
+            Number of starts to generate for sampled methods. Ignored when
+            ``user_provided_df`` is provided.
+        multistart_sampling_method : str, optional
+            Sampling method. Supported values:
+            ``uniform_random``, ``latin_hypercube``, ``sobol_sampling``.
+        user_provided_df : DataFrame, optional
+            Explicit initialization table. Must contain exactly the theta
+            columns (order may vary). Values must be finite and within bounds.
+        experiment_number : int, optional
+            Experiment index used to discover canonical theta names and bounds.
+
+        Returns
+        -------
+        DataFrame
+            Canonical initialization/results table ready for multistart solve
+            bookkeeping.
+
+        Raises
+        ------
+        ValueError
+            For missing/invalid bounds, invalid sampling method, malformed
+            user-provided starts, non-finite values, or out-of-bound starts.
+        TypeError
+            For invalid input types (for example, non-DataFrame
+            ``user_provided_df`` or non-integer ``n_restarts`` when required).
+        RuntimeError
+            If expected theta components cannot be located on the model.
+        """
+        parmest_model = self._create_parmest_model(experiment_number)
+
+        raw_theta_names = self._expand_indexed_unknowns(parmest_model)
+        theta_names = [n.replace("'", "") for n in raw_theta_names]
+        if len(theta_names) != len(set(theta_names)):
+            raise ValueError(f"Duplicate theta names are not allowed: {theta_names}")
+
+        theta_vars = [parmest_model.find_component(name) for name in raw_theta_names]
         if any(v is None for v in theta_vars):
             raise RuntimeError(
                 "Failed to locate one or more theta components on model."
@@ -1119,7 +1209,36 @@ class Estimator:
                 "Each lower bound must be less than or equal to the corresponding upper bound."
             )
 
-        if multistart_sampling_method == "uniform_random":
+        if user_provided_df is not None:
+            if not isinstance(user_provided_df, pd.DataFrame):
+                raise TypeError("user_provided_df must be a pandas DataFrame.")
+            if user_provided_df.shape[1] != len(theta_names):
+                raise ValueError(
+                    "user_provided_df must have exactly one column per theta name."
+                )
+            clean_cols = [str(c).replace("'", "") for c in user_provided_df.columns]
+            if len(clean_cols) != len(set(clean_cols)):
+                raise ValueError("Duplicate theta columns are not allowed.")
+            if set(clean_cols) != set(theta_names):
+                raise ValueError(
+                    f"Provided columns {clean_cols} do not match expected theta names {theta_names}."
+                )
+            df_multistart = user_provided_df.copy()
+            df_multistart.columns = clean_cols
+            df_multistart = df_multistart.reindex(columns=theta_names)
+            if df_multistart.shape[0] == 0:
+                raise ValueError("user_provided_df must contain at least one row.")
+            if n_restarts is not None and n_restarts != df_multistart.shape[0]:
+                raise ValueError(
+                    "n_restarts must match the number of rows in user_provided_df."
+                )
+            theta_vals_multistart = df_multistart.to_numpy(dtype=float)
+            n_restarts = df_multistart.shape[0]
+        elif multistart_sampling_method == "uniform_random":
+            if not isinstance(n_restarts, int):
+                raise TypeError("n_restarts must be an integer.")
+            if n_restarts <= 0:
+                raise ValueError("n_restarts must be greater than zero.")
             # Use a local RNG to avoid mutating global random state.
             rng = np.random.default_rng(seed)
             theta_vals_multistart = rng.uniform(
@@ -1127,6 +1246,10 @@ class Estimator:
             )
 
         elif multistart_sampling_method == "latin_hypercube":
+            if not isinstance(n_restarts, int):
+                raise TypeError("n_restarts must be an integer.")
+            if n_restarts <= 0:
+                raise ValueError("n_restarts must be greater than zero.")
             # Generate theta values using Latin hypercube sampling or Sobol sampling
             # Generate theta values using Latin hypercube sampling
             # Create a Latin Hypercube sampler that uses the dimensions of the theta names
@@ -1136,39 +1259,19 @@ class Estimator:
             # Resulting samples should be size (n_restarts, len(theta_names))
 
         elif multistart_sampling_method == "sobol_sampling":
+            if not isinstance(n_restarts, int):
+                raise TypeError("n_restarts must be an integer.")
+            if n_restarts <= 0:
+                raise ValueError("n_restarts must be greater than zero.")
             sampler = scipy.stats.qmc.Sobol(d=len(theta_names), seed=seed)
             # Generate theta values using Sobol sampling
             # The first value of the Sobol sequence is 0, so we skip it
             samples = sampler.random(n=n_restarts + 1)[1:]
 
         elif multistart_sampling_method == "user_provided_values":
-            if user_provided_df is None:
-                raise ValueError(
-                    "The user must provide a pandas dataframe to use the 'user_provided_values' method."
-                )
-            if not isinstance(user_provided_df, pd.DataFrame):
-                raise TypeError("user_provided_df must be a pandas DataFrame.")
-            if user_provided_df.shape[0] != n_restarts:
-                raise ValueError(
-                    "The user provided dataframe must have the same number of rows as the number of restarts."
-                )
-            if user_provided_df.shape[1] != len(theta_names):
-                raise ValueError(
-                    "The user provided dataframe must have the same number of columns as the number of theta names."
-                )
-            clean_cols = [str(c).replace("'", "") for c in user_provided_df.columns]
-            if len(clean_cols) != len(set(clean_cols)):
-                raise ValueError("Duplicate theta columns are not allowed.")
-            expected_clean = [t.replace("'", "") for t in theta_names]
-            if set(clean_cols) != set(expected_clean):
-                raise ValueError(
-                    "The user provided dataframe must have the same theta names as the model."
-                )
-            df_clean = user_provided_df.copy()
-            df_clean.columns = clean_cols
-            # Reindex by name to avoid column-order based value remapping.
-            df_clean = df_clean.reindex(columns=expected_clean)
-            theta_vals_multistart = df_clean.values
+            raise ValueError(
+                "multistart_sampling_method='user_provided_values' requires user_provided_df."
+            )
 
         else:
             raise ValueError(
@@ -1185,11 +1288,8 @@ class Estimator:
                 [lower_bound + (upper_bound - lower_bound) * theta for theta in samples]
             )
 
-        # Create a DataFrame where each row is an initial theta vector for a restart,
-        # columns are theta_names, and values are the initial theta values for each restart
-        if multistart_sampling_method == "user_provided_values":
-            df_multistart = pd.DataFrame(theta_vals_multistart, columns=theta_names)
-        else:
+        # Create a DataFrame where each row is an initial theta vector for a restart
+        if user_provided_df is None:
             # Ensure theta_vals_multistart is 2D (n_restarts, len(theta_names))
             arr = np.atleast_2d(theta_vals_multistart)
             if arr.shape[0] == 1 and n_restarts > 1:
@@ -1227,15 +1327,13 @@ class Estimator:
         fix_theta=False,
         multistart=False,
     ):
-        '''
-        Making new version of _Q_opt that uses scenario blocks, similar to DoE.
+        """
+        Solve the EF parameter-estimation problem and return objective/theta data.
 
-        Steps:
-        1. Load model - parmest model should be labeled
-        2. Create scenario blocks (biggest redesign) - clone model to have one per experiment
-        3. Define objective and constraints for the block
-        4. Solve the block as a single problem
-        5. Analyze results and extract parameter estimates
+        This routine creates the EF model via ``_create_scenario_blocks``,
+        solves it with the requested solver, and returns objective value plus
+        theta estimates. Depending on mode, it can also return variable values
+        and covariance estimates.
 
         Parameters
         ----------
@@ -1256,25 +1354,26 @@ class Estimator:
         fix_theta : bool, optional
             If True, fix the theta values in the model. If False, leave them free.
             Default is False.
+        multistart : bool, optional
+            If True, run in multistart mode. Non-optimal termination is
+            returned instead of raising assertion failure.
+
         Returns
         -------
-        If fix_theta is False:
-            obj_value : float
-                Objective value at optimal parameter estimates.
-            theta_estimates : pd.Series
-                Series of estimated parameter values.
-        If fix_theta is True:
-            obj_value : float
-                Objective value at fixed parameter values.
-            theta_estimates : dict
-                Dictionary of fixed parameter values.
-            WorstStatus : TerminationCondition
-                Solver termination condition.
-
-        '''
+        tuple
+            Return shape depends on mode:
+            1. Standard solve: ``(obj_value, theta_series)``
+            2. Standard + return values: ``(obj_value, theta_series, var_values)``
+            3. Standard + covariance: ``(obj_value, theta_series, cov)`` or
+               ``(obj_value, theta_series, var_values, cov)``
+            4. Fixed-theta or multistart: ``(obj_value, theta_dict, worst_status)``
+        """
         # Create extended form model with scenario blocks
         model = self._create_scenario_blocks(
-            bootlist=bootlist, theta_vals=theta_vals, fix_theta=fix_theta
+            bootlist=bootlist,
+            theta_vals=theta_vals,
+            fix_theta=fix_theta,
+            multistart=multistart,
         )
         expanded_theta_names = list(model._parmest_theta_names)
 
@@ -2026,78 +2125,79 @@ class Estimator:
         multistart_sampling_method="uniform_random",
         user_provided_df=None,
         seed=None,
-        theta_values=None,  # optional override: DataFrame of initial thetas
-        solver="ef_ipopt",
         save_results=False,
         file_name="multistart_results.csv",
     ):
+        """
+        Run multistart parameter estimation and aggregate per-start results.
+
+        A canonical starts/results table is created first, then each start is
+        solved (potentially in parallel with ``ParallelTaskManager``), and the
+        output table is populated with objective values, solver terminations,
+        solve times, and converged theta values.
+
+        Parameters
+        ----------
+        n_restarts : int, optional
+            Number of starts for sampled methods. Ignored when
+            ``user_provided_df`` is provided.
+        multistart_sampling_method : str, optional
+            Sampling method for generated starts.
+        user_provided_df : DataFrame, optional
+            User-provided starts. If provided, these rows define the restart
+            set directly.
+        seed : int, optional
+            Seed used by sampling methods.
+        save_results : bool, optional
+            If True, write the full results DataFrame to ``file_name``.
+        file_name : str, optional
+            Output CSV path used when ``save_results`` is True.
+
+        Returns
+        -------
+        tuple
+            ``(results_df, best_theta, best_obj)``, where:
+            - ``results_df`` contains one row per start plus converged metadata
+            - ``best_theta`` is the selected best feasible theta dictionary or
+              ``None`` if no finite objective exists
+            - ``best_obj`` is the selected objective value or ``np.nan``
+
+        Notes
+        -----
+        Best-run selection prioritizes acceptable solver terminations
+        (optimal/locallyOptimal/globallyOptimal) and then minimizes objective.
+        If no acceptable statuses exist, finite-objective rows are considered.
+        """
         if self.pest_deprecated is not None:
             raise RuntimeError(
                 "Multistart is not supported in the deprecated parmest interface."
             )
-        if not isinstance(n_restarts, int):
-            raise TypeError("n_restarts must be an integer.")
-        if n_restarts <= 0:
-            raise ValueError("n_restarts must be greater than zero.")
+        if user_provided_df is None:
+            if not isinstance(n_restarts, int):
+                raise TypeError("n_restarts must be an integer.")
+            if n_restarts <= 0:
+                raise ValueError("n_restarts must be greater than zero.")
 
-        # ---- Build results_df in the canonical schema (theta cols + output cols) ----
-        if theta_values is not None:
-            if not isinstance(theta_values, pd.DataFrame):
-                raise TypeError(
-                    "theta_values must be a pandas DataFrame (columns = theta names)."
-                )
-
-            init_df = theta_values.copy()
-
-            # Normalize/validate names (same idea as your existing code)
-            clean_provided = [c.replace("'", "") for c in init_df.columns]
-            expected = [
-                t.replace("'", "")
-                for t in self._expand_indexed_unknowns(self._create_parmest_model(0))
-            ]
-            if len(clean_provided) != len(set(clean_provided)):
-                raise ValueError("Duplicate theta names are not allowed.")
-            if set(clean_provided) != set(expected):
-                raise ValueError(
-                    f"Provided theta_values columns {clean_provided} do not match expected {expected}."
-                )
-            init_df.columns = clean_provided
-            theta_names = list(expected)
-            init_df = init_df.reindex(columns=theta_names)
-            if init_df.shape[0] == 0:
-                raise ValueError("theta_values must contain at least one row.")
-            n_restarts = init_df.shape[0]
-            if not np.isfinite(init_df.to_numpy(dtype=float)).all():
-                raise ValueError("theta_values must contain only finite values.")
-
-            results_df = init_df.copy()
-            for name in theta_names:
-                results_df[f"converged_{name}"] = np.nan
-            results_df["final objective"] = np.nan
-            results_df["solver termination"] = ""
-            results_df["solve_time"] = np.nan
-
-        else:
-            # Use your canonical initializer
-            parmest_model_for_bounds = self._create_parmest_model(experiment_number=0)
-            results_df = self._generate_initial_theta(
-                parmest_model=parmest_model_for_bounds,
-                seed=seed,
-                n_restarts=n_restarts,
-                multistart_sampling_method=multistart_sampling_method,
-                user_provided_df=user_provided_df,
-            )
-
-            # theta columns are the first |theta_names| columns (by construction)
-            # safest: infer from expected model names
-            theta_names = self._expand_indexed_unknowns(self._create_parmest_model(0))
-            # also normalize in case of quotes:
-            theta_names = [t.replace("'", "") for t in theta_names]
+        n_restarts_for_generation = None if user_provided_df is not None else n_restarts
+        results_df = self._generate_initial_theta(
+            seed=seed,
+            n_restarts=n_restarts_for_generation,
+            multistart_sampling_method=multistart_sampling_method,
+            user_provided_df=user_provided_df,
+            experiment_number=0,
+        )
+        theta_names = [
+            c
+            for c in results_df.columns
+            if not c.startswith("converged_")
+            and c not in {"final objective", "solver termination", "solve_time"}
+        ]
+        n_restarts = results_df.shape[0]
 
         # Convert each row to (row_index, theta_dict)
         tasks = []
         for i in range(results_df.shape[0]):
-            Theta = {name: float(results_df.loc[i, name]) for name in theta_names}
+            Theta = {name: float(results_df.iloc[i][name]) for name in theta_names}
             tasks.append((i, Theta))
 
         task_mgr = utils.ParallelTaskManager(len(tasks))
@@ -2111,7 +2211,7 @@ class Estimator:
             t0 = time.time()
             try:
                 final_obj, theta_hat, worst = self._Q_opt(
-                    theta_vals=Theta, solver=solver, multistart=True
+                    theta_vals=Theta, multistart=True
                 )
                 solve_time = time.time() - t0
                 local_results.append((i, final_obj, str(worst), solve_time, theta_hat))
