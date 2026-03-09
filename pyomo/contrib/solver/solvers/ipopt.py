@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import os
@@ -17,24 +15,27 @@ import time
 import io
 import re
 import sys
+import time
 import threading
 from typing import Optional, Tuple, Union, Mapping, List, Dict, Any, Sequence
 
 from pyomo.common import Executable
 from pyomo.common.config import (
-    ConfigValue,
-    document_class_CONFIG,
     ConfigDict,
+    ConfigList,
+    ConfigValue,
+    document_configdict,
+    document_class_CONFIG,
     ADVANCED_OPTION,
 )
 from pyomo.common.errors import (
     ApplicationError,
-    DeveloperError,
     InfeasibleConstraintException,
+    MouseTrap,
 )
 from pyomo.common.fileutils import to_legal_filename
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.timing import HierarchicalTimer, default_timer
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
@@ -46,12 +47,13 @@ from pyomo.contrib.solver.common.results import (
     TerminationCondition,
     SolutionStatus,
 )
-from pyomo.contrib.solver.solvers.sol_reader import parse_sol_file, SolSolutionLoader
-from pyomo.contrib.solver.common.util import (
-    NoFeasibleSolutionError,
-    NoOptimalSolutionError,
-    NoSolutionError,
+from pyomo.contrib.solver.solvers.asl_sol_reader import (
+    asl_solve_code_to_solution_status,
+    parse_asl_sol_file,
+    ASLSolFileData,
+    ASLSolFileSolutionLoader,
 )
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError, NoSolutionError
 from pyomo.common.tee import TeeStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
@@ -66,6 +68,24 @@ logger = logging.getLogger(__name__)
 _ALPHA_PR_CHARS = set("fFhHkKnNRwSstTr")
 
 
+def _option_to_cmd(opt: str, val: str | int | float):
+    """Convert a option / value pair into a valid command line argument."""
+    if isinstance(val, str):
+        if '"' not in val:
+            return f'{opt}="{val}"'
+        elif "'" not in val:
+            return f"{opt}='{val}'"
+        else:
+            raise ValueError(
+                f"solver_option '{opt}' contained value {val!r} with "
+                "both single and double quotes.  Ipopt cannot parse "
+                "command line options with escaped quote characters."
+            )
+    else:
+        return f'{opt}={val}'
+
+
+@document_configdict()
 class IpoptConfig(SolverConfig):
     def __init__(
         self,
@@ -88,8 +108,8 @@ class IpoptConfig(SolverConfig):
             ConfigValue(
                 domain=Executable,
                 default='ipopt',
-                description="Preferred executable for ipopt. Defaults to searching the "
-                "``PATH`` for the first available ``ipopt``.",
+                description="Preferred executable for ipopt. Defaults to searching "
+                "the ``PATH`` for the first available ``ipopt``.",
             ),
         )
         self.writer_config: ConfigDict = self.declare(
@@ -97,67 +117,53 @@ class IpoptConfig(SolverConfig):
         )
 
 
-class IpoptSolutionLoader(SolSolutionLoader):
-    def _error_check(self):
-        if self._nl_info is None:
-            raise NoSolutionError()
-        if len(self._nl_info.eliminated_vars) > 0:
-            raise NotImplementedError(
-                'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
-                'to get dual variable values.'
-            )
-        if self._sol_data is None:
-            raise DeveloperError(
-                "Solution data is empty. This should not "
-                "have happened. Report this error to the Pyomo Developers."
-            )
-
+class IpoptSolutionLoader(ASLSolFileSolutionLoader):
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        self._error_check()
-        # If the NL instance has no objectives, report zeros
-        if not len(self._nl_info.objectives):
-            return ComponentMap()
-        if self._nl_info.scaling is None:
-            scale_list = [1] * len(self._nl_info.variables)
-            obj_scale = 1
-        else:
-            scale_list = self._nl_info.scaling.variables
-            obj_scale = self._nl_info.scaling.objectives[0]
-        sol_data = self._sol_data
-        nl_info = self._nl_info
-        zl_map = sol_data.var_suffixes['ipopt_zL_out']
-        zu_map = sol_data.var_suffixes['ipopt_zU_out']
-        rc = {}
-        for ndx, v in enumerate(nl_info.variables):
-            scale = scale_list[ndx]
-            v_id = id(v)
-            rc[v_id] = (v, 0)
+        if self._nl_info.eliminated_vars:
+            raise MouseTrap(
+                'Complete reduced costs are not available when variables have '
+                'been presolved from the model.  Turn presolve off '
+                '(solver.config.writer_config.linear_presolve=False) to get '
+                'reduced costs.'
+            )
+
+        zl_map = self._sol_data.var_suffixes.get('ipopt_zL_out', {})
+        zu_map = self._sol_data.var_suffixes.get('ipopt_zU_out', {})
+        # TBD: is it an error if Ipopt fails to return RC info?
+        # if not (zl_map or zu_map):
+        #     raise?
+        if self._nl_info.scaling:
+            # Unscale the zl and zu maps:
+            inv_obj_scale = 1.0
+            if self._nl_info.scaling.objectives:
+                inv_obj_scale /= self._nl_info.scaling.objectives[self._sol_data.objno]
+            var_scale = self._nl_info.scaling.variables
+            zl_map = {k: v * var_scale[k] * inv_obj_scale for k, v in zl_map.items()}
+            zu_map = {k: v * var_scale[k] * inv_obj_scale for k, v in zu_map.items()}
+
+        rc = ComponentMap()
+        for ndx, v in enumerate(self._nl_info.variables):
+            _rc = 0.0
             if ndx in zl_map:
-                zl = zl_map[ndx] * scale / obj_scale
-                if abs(zl) > abs(rc[v_id][1]):
-                    rc[v_id] = (v, zl)
+                # Note *any* value in zl has an absolute value at least
+                # as big as 0.  No need to test and just overwrite _rc:
+                _rc = zl_map[ndx]
             if ndx in zu_map:
-                zu = zu_map[ndx] * scale / obj_scale
-                if abs(zu) > abs(rc[v_id][1]):
-                    rc[v_id] = (v, zu)
+                zu = zu_map[ndx]
+                if abs(zu) > abs(_rc):
+                    _rc = zu
+            rc[v] = _rc
 
-        if vars_to_load is None:
-            res = ComponentMap(rc.values())
-            for v, _ in nl_info.eliminated_vars:
-                res[v] = 0
-        else:
-            res = ComponentMap()
-            for v in vars_to_load:
-                if id(v) in rc:
-                    res[v] = rc[id(v)][1]
-                else:
-                    # eliminated vars
-                    res[v] = 0
-        return res
+        if vars_to_load is not None:
+            # Note vars_to_load could contain variables that were
+            # eliminated (so use get()):
+            rc = ComponentMap((v, rc.get(v, 0)) for v in vars_to_load)
+        return rc
 
 
+#: The set of all ipopt options that can be passed to Ipopt on the command line
 ipopt_command_line_options = {
     'acceptable_compl_inf_tol',
     'acceptable_constr_viol_tol',
@@ -217,11 +223,12 @@ ipopt_command_line_options = {
     'watchdog_shortened_iter_trigger',
 }
 
+#: The set of options we forbid the user from setting (with reasons)
 unallowed_ipopt_options = {
     'wantsol': 'The solver interface requires the sol file to be created',
     'option_file_name': (
         'Pyomo generates the ipopt options file as part of the `solve` '
-        'method.  Add all options to ipopt.config.solver_options instead.'
+        'method.  Add all options to config.solver_options instead.'
     ),
 }
 
@@ -234,53 +241,83 @@ class Ipopt(SolverBase):
     #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
     CONFIG = IpoptConfig()
 
+    #: cache of availability / version information
+    _exe_cache: dict[str : tuple[int] | None] = {}
+
+    #: default timeout to use when attempting to get the ipopt version number
+    _version_timeout = 2
+
     def __init__(self, **kwds: Any) -> None:
         super().__init__(**kwds)
-        self._writer = NLWriter()
-        self._available_cache = None
-        self._version_cache = None
-        self._version_timeout = 2
 
         #: Instance configuration;
         #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
         self.config = self.config
 
-    def available(self, config: Optional[IpoptConfig] = None) -> Availability:
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-        if self._available_cache is None or self._available_cache[0] != pth:
-            if pth is None:
-                self._available_cache = (None, Availability.NotFound)
-            else:
-                self._available_cache = (pth, Availability.FullLicense)
-        return self._available_cache[1]
+    def available(self) -> Availability:
+        return (
+            Availability.NotFound
+            if self.version() is None
+            else Availability.FullLicense
+        )
 
-    def version(
-        self, config: Optional[IpoptConfig] = None
-    ) -> Optional[Tuple[int, int, int]]:
-        if config is None:
-            config = self.config
-        pth = config.executable.path()
-        if self._version_cache is None or self._version_cache[0] != pth:
-            if pth is None:
-                self._version_cache = (None, None)
-            else:
-                results = subprocess.run(
-                    [str(pth), '--version'],
-                    timeout=self._version_timeout,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True,
-                    check=False,
-                )
-                version = results.stdout.splitlines()[0]
-                version = version.split(' ')[1].strip()
-                version = tuple(int(i) for i in version.split('.'))
-                self._version_cache = (pth, version)
-        return self._version_cache[1]
+    def version(self) -> tuple[int, int, int] | None:
+        return self._get_version(self.config.executable.path())
+
+    def _get_version(self, exe):
+        try:
+            return self._exe_cache[exe]
+        except KeyError:
+            pass
+        if exe is None:
+            # No executable (either we couldn't find a matching file, or
+            # the file is not executable)
+            self._exe_cache[None] = None
+            return None
+        # Run the executable and look for the version
+        results = subprocess.run(
+            [str(exe), '--version'],
+            timeout=self._version_timeout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            check=False,
+        )
+        # Note that we expect the command to run without error, AND that
+        # it returns a string starting "ipopt <version>".  That prevents
+        # us from trying to use other (even ASL) executables as if they
+        # were ipopt
+        fields = results.stdout.split(maxsplit=2)
+        if results.returncode:
+            ver = None
+        elif len(fields) != 3 or fields[0].lower() != 'ipopt':
+            ver = None
+        else:
+            try:
+                ver = tuple(int(i) for i in fields[1].split('.'))
+            except (ValueError, TypeError):
+                ver = None
+        if ver is None:
+            logger.warning(
+                f"Failed parsing Ipopt version: '{exe} --version':\n\n{results.stdout}"
+            )
+        self._exe_cache[exe] = ver
+        return ver
 
     def has_linear_solver(self, linear_solver: str) -> bool:
+        """Determine if Ipopt has access to the specified linear solver
+
+        This solves a small problem to detect if the Ipopt executable
+        has access to the specified linear solver.
+
+        Parameters
+        ----------
+        linear_solver : str
+
+            The linear solver to test.  Accepts any string that is valid
+            for the ``linear_solver`` Ipopt option.
+
+        """
         import pyomo.core as AML
 
         m = AML.ConcreteModel()
@@ -295,76 +332,27 @@ class Ipopt(SolverBase):
         )
         return 'running with linear solver' in results.solver_log
 
-    def _verify_ipopt_options(self, config: IpoptConfig) -> None:
-        for key, msg in unallowed_ipopt_options.items():
-            if key in config.solver_options:
-                raise ValueError(f"unallowed Ipopt option '{key}': {msg}")
-        # Map standard Pyomo solver options to Ipopt options: standard
-        # options override ipopt-specific options.
-        if config.time_limit is not None:
-            config.solver_options['max_cpu_time'] = config.time_limit
-
-    def _write_options_file(
-        self, filename: str, options: Mapping[str, Union[str, int, float]]
-    ) -> None:
-        # Look through the solver options and write them to a file.
-        # If they are command line options, ignore them; they will be
-        # added to the command line.
-        options_file_options = [
-            opt for opt in options if opt not in ipopt_command_line_options
-        ]
-        if not options_file_options:
-            return
-        with open(filename, 'w', encoding='utf-8') as OPT_FILE:
-            OPT_FILE.writelines(
-                f"{opt} {options[opt]}\n" for opt in options_file_options
-            )
-        options['option_file_name'] = filename
-
-    def _create_command_line(self, basename: str, config: IpoptConfig) -> List[str]:
-        cmd = [str(config.executable), basename + '.nl', '-AMPL']
-        for opt, val in config.solver_options.items():
-            if opt not in ipopt_command_line_options:
-                continue
-            if isinstance(val, str):
-                if '"' not in val:
-                    cmd.append(f'{opt}="{val}"')
-                elif "'" not in val:
-                    cmd.append(f"{opt}='{val}'")
-                else:
-                    raise ValueError(
-                        f"solver_option '{opt}' contained value {val!r} with "
-                        "both single and double quotes.  Ipopt cannot parse "
-                        "command line options with escaped quote characters."
-                    )
-            else:
-                cmd.append(f'{opt}={val}')
-        return cmd
-
     def solve(self, model, **kwds) -> Results:
         "Solve a model using Ipopt"
         # Begin time tracking
-        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        tick = time.perf_counter()
+        start_time = default_timer()
+        # Allocate the results object so we can populate it as we go
+        results = Results()
+        results.timing_info.start_timestamp = datetime.datetime.now(
+            datetime.timezone.utc
+        )
+        results.solver_name = self.name
+
         # Update configuration options, based on keywords passed to solve
         config: IpoptConfig = self.config(value=kwds, preserve_implicit=True)
-        # Check if solver is available
-        avail = self.available(config)
-        if not avail:
-            raise ApplicationError(
-                f'Solver {self.__class__} is not available ({avail}).'
-            )
-        if config.threads:
-            logger.log(
-                logging.WARNING,
-                msg="The `threads` option was specified, "
-                f"but this is not used by {self.__class__}.",
-            )
-        if config.timer is None:
-            timer = HierarchicalTimer()
-        else:
-            timer = config.timer
+
+        timer = config.timer
+        if timer is None:
+            timer = config.timer = HierarchicalTimer()
+
+        # As we are about to run a solver, update the stale flag
         StaleFlagManager.mark_all_as_stale()
+
         with TempfileManager.new_context() as tempfile:
             if config.working_dir is None:
                 dname = tempfile.mkdtemp()
@@ -380,19 +368,11 @@ class Ipopt(SolverBase):
             # generate a legal base name (unless, of course, the user
             # put double quotes somewhere else in the path)
             basename = to_legal_filename(model.name, universal=True)
-            # Strip off quotes - the command line parser will re-add them
-            if basename[0] in "'\"" and basename[0] == basename[-1]:
-                basename = basename[1:-1]
-            # The base file name for this interface is "model_name + PID
-            # + thread id", so that this is reasonably unique in both
-            # parallel and threaded environments (even when working_dir
-            # is set to a persistent directory).  Note that the Pyomo
-            # solver interfaces are not formally thread-safe (yet), so
-            # this is a bit of future-proofing.
-            basename = os.path.join(
-                dname, f"{basename}.{os.getpid()}.{threading.get_ident()}"
+            nlfd, nl_fname = tempfile.mkstemp(
+                suffix='.nl', prefix=basename, dir=dname, text=True, delete=False
             )
-            for ext in ('.nl', '.row', '.col', '.sol', '.opt'):
+            results.extra_info.base_file_name = basename = nl_fname[:-3]
+            for ext in ('.row', '.col', '.sol', '.opt'):
                 if os.path.exists(basename + ext):
                     raise RuntimeError(
                         f"Solver interface file {basename + ext} already exists!"
@@ -403,137 +383,59 @@ class Ipopt(SolverBase):
             # disable universal newlines in the NL file to prevent
             # Python from mapping those '\n' to '\r\n' on Windows.
             with (
-                open(basename + '.nl', 'w', newline='\n', encoding='utf-8') as nl_file,
+                os.fdopen(nlfd, 'w', newline='\n', encoding='utf-8') as nl_file,
                 open(basename + '.row', 'w', encoding='utf-8') as row_file,
                 open(basename + '.col', 'w', encoding='utf-8') as col_file,
             ):
                 timer.start('write_nl_file')
-                self._writer.config.set_value(config.writer_config)
                 try:
-                    nl_info = self._writer.write(
+                    # Note: this is mapping the top-level
+                    # symbolic_solver_labels onto the solver's writer
+                    # config, and then that config is being used (in
+                    # it's entirety) to set the NLWriter's CONFIG.
+                    nl_info = NLWriter().write(
                         model,
                         nl_file,
                         row_file,
                         col_file,
+                        config=config.writer_config,
                         symbolic_solver_labels=config.symbolic_solver_labels,
                     )
                     proven_infeasible = False
                 except InfeasibleConstraintException:
                     proven_infeasible = True
+                    nl_info = NLWriterInfo()
                 timer.stop('write_nl_file')
-            if not proven_infeasible and len(nl_info.variables) > 0:
-                # Get a copy of the environment to pass to the subprocess
-                env = os.environ.copy()
-                if nl_info.external_function_libraries:
-                    env['AMPLFUNC'] = amplfunc_merge(
-                        env, *nl_info.external_function_libraries
-                    )
-                self._verify_ipopt_options(config)
-                # Write the options file, if there should be one.  If
-                # the file was written, then 'options_file_name' was
-                # added to config.options (so we can correctly build the
-                # command line)
-                self._write_options_file(
-                    filename=basename + '.opt', options=config.solver_options
-                )
-                # Call ipopt - passing the files via the subprocess
-                cmd = self._create_command_line(basename=basename, config=config)
-                # this seems silly, but we have to give the subprocess slightly
-                # longer to finish than ipopt
-                if config.time_limit is not None:
-                    timeout = config.time_limit + min(
-                        max(1.0, 0.01 * config.time_limit), 100
-                    )
-                else:
-                    timeout = None
-
-                ostreams = [io.StringIO()] + config.tee
-                timer.start('subprocess')
-                try:
-                    with TeeStream(*ostreams) as t:
-                        process = subprocess.run(
-                            cmd,
-                            timeout=timeout,
-                            env=env,
-                            universal_newlines=True,
-                            stdout=t.STDOUT,
-                            stderr=t.STDERR,
-                            check=False,
-                        )
-                except OSError:
-                    err = sys.exc_info()[1]
-                    msg = 'Could not execute the command: %s\tError message: %s'
-                    raise ApplicationError(msg % (cmd, err))
-                finally:
-                    timer.stop('subprocess')
-
-                # This is the data we need to parse to get the iterations
-                # and time
-                parsed_output_data = self._parse_ipopt_output(ostreams[0])
 
             if proven_infeasible:
-                results = Results()
                 results.termination_condition = TerminationCondition.provenInfeasible
-                results.solution_loader = SolSolutionLoader(None, None)
+                results.solution_status = SolutionStatus.noSolution
                 results.extra_info.iteration_count = 0
-                results.timing_info.total_seconds = 0
-            elif len(nl_info.variables) == 0:
-                if len(nl_info.eliminated_vars) == 0:
-                    results = Results()
-                    results.termination_condition = TerminationCondition.emptyModel
-                    results.solution_loader = SolSolutionLoader(None, None)
-                else:
-                    results = Results()
+            elif not nl_info.variables:
+                if nl_info.eliminated_vars:
                     results.termination_condition = (
                         TerminationCondition.convergenceCriteriaSatisfied
                     )
                     results.solution_status = SolutionStatus.optimal
-                    results.solution_loader = SolSolutionLoader(None, nl_info=nl_info)
-                    results.extra_info.iteration_count = 0
-                    results.timing_info.total_seconds = 0
+                    results.solution_loader = IpoptSolutionLoader(
+                        sol_data=ASLSolFileData(), nl_info=nl_info
+                    )
+                else:
+                    results.termination_condition = TerminationCondition.emptyModel
+                    results.solution_status = SolutionStatus.noSolution
+                results.extra_info.iteration_count = 0
             else:
-                if os.path.isfile(basename + '.sol'):
-                    with open(basename + '.sol', 'r', encoding='utf-8') as sol_file:
-                        timer.start('parse_sol')
-                        results = self._parse_solution(sol_file, nl_info)
-                        timer.stop('parse_sol')
-                else:
-                    results = Results()
-                if process.returncode != 0:
-                    results.extra_info.return_code = process.returncode
-                    results.termination_condition = TerminationCondition.error
-                    results.solution_loader = SolSolutionLoader(None, None)
-                else:
-                    try:
-                        results.extra_info.iteration_count = parsed_output_data.pop(
-                            'iters'
-                        )
-                        cpu_seconds = parsed_output_data.pop('cpu_seconds')
-                        for k, v in cpu_seconds.items():
-                            results.timing_info[k] = v
-                        results.extra_info = parsed_output_data
-                        iter_log = results.extra_info.get("iteration_log", None)
-                        if iter_log is not None:
-                            iter_log._visibility = ADVANCED_OPTION
-                    except Exception as e:
-                        logger.log(
-                            logging.WARNING,
-                            "The solver output data is empty or incomplete.\n"
-                            f"Full error message: {e}\n"
-                            f"Parsed solver data: {parsed_output_data}\n",
-                        )
+                self._run_ipopt(results, config, nl_info, basename, timer)
+
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
         ):
             raise NoOptimalSolutionError()
 
-        results.solver_name = self.name
-        results.solver_version = self.version(config)
-
         if config.load_solutions:
             if results.solution_status == SolutionStatus.noSolution:
-                raise NoFeasibleSolutionError()
+                raise NoSolutionError()
             results.solution_loader.load_vars()
             if (
                 hasattr(model, 'dual')
@@ -568,22 +470,136 @@ class Ipopt(SolverBase):
                 )
 
         results.solver_config = config
-        if not proven_infeasible and len(nl_info.variables) > 0:
-            results.solver_log = ostreams[0].getvalue()
 
         # Capture/record end-time / wall-time
-        tock = time.perf_counter()
-        results.timing_info.start_timestamp = start_timestamp
-        results.timing_info.wall_time = tock - tick
         results.timing_info.timer = timer
+        results.timing_info.wall_time = default_timer() - start_time
         return results
 
-    def _parse_ipopt_output(self, output: Union[str, io.StringIO]) -> Dict[str, Any]:
-        parsed_data = {}
+    def _process_options(
+        self, option_fname: str, options: dict[str, str | int | float]
+    ) -> list[str]:
+        # Look through the solver options and separate the command line
+        # options from the options that must be sent via an options
+        # file.  Raise an exception for any unallowable options.
+        options_file_options = []
+        cmd_line_options = []
+        for key, val in options.items():
+            if key in unallowed_ipopt_options:
+                msg = unallowed_ipopt_options[key]
+                raise ValueError(f"unallowed Ipopt option '{key}': {msg}")
+            elif key in ipopt_command_line_options:
+                cmd_line_options.append(_option_to_cmd(key, val))
+            else:
+                options_file_options.append(f"{key} {val}\n")
+        # create the options file (if we need it)
+        if options_file_options:
+            with open(option_fname, 'w', encoding='utf-8') as OPT_FILE:
+                OPT_FILE.writelines(options_file_options)
+            cmd_line_options.append(_option_to_cmd('option_file_name', option_fname))
+        # Return the (formatted) command line options
+        return cmd_line_options
 
-        # Convert output to a string so we can parse it
-        if isinstance(output, io.StringIO):
-            output = output.getvalue()
+    def _run_ipopt(self, results, config, nl_info, basename, timer):
+        # Get a copy of the environment to pass to the subprocess
+        env = os.environ.copy()
+        if nl_info.external_function_libraries:
+            env['AMPLFUNC'] = amplfunc_merge(env, *nl_info.external_function_libraries)
+
+        # Get the Ipopt executable and start building the command line
+        exe = config.executable.path()
+        if not exe:
+            raise ApplicationError('ipopt executable not found')
+        cmd = [exe, basename + '.nl', '-AMPL']
+
+        # Process ipopt options (splitting them between command line
+        # options and those that must be passed through the opt file)
+        options = config.solver_options.value()
+        # Map standard Pyomo solver options to Ipopt options: standard
+        # options override ipopt-specific options.
+        if config.threads and config.threads != 1:
+            logger.log(
+                logging.WARNING,
+                msg=f"The `threads={config.threads}` option was specified, "
+                f"but this is not used by {self.__class__.__name__}.",
+            )
+        if config.time_limit is not None:
+            options['max_cpu_time'] = config.time_limit
+        cmd.extend(self._process_options(basename + '.opt', options))
+
+        results.solver_version = self._get_version(exe)
+        results.extra_info.add(
+            'command_line', ConfigValue(cmd, visibility=ADVANCED_OPTION)
+        )
+
+        # This seems silly, but we have to give the subprocess slightly
+        # longer to finish than ipopt, otherwise we may kill the
+        # subprocess before ipopt has a chance to write the SOL file.
+        # We will add 1% (with a min of 1 second and max of 100 seconds).
+        timeout = config.time_limit
+        if timeout is not None:
+            timeout = timeout + min(max(1.0, 0.01 * timeout), 100.0)
+
+        # Call ipopt - passing the files via the subprocess
+        ostreams = [io.StringIO()] + config.tee
+        timer.start('subprocess')
+        try:
+            with TeeStream(*ostreams) as t:
+                process = subprocess.run(
+                    cmd,
+                    timeout=timeout,
+                    env=env,
+                    universal_newlines=True,
+                    stdout=t.STDOUT,
+                    stderr=t.STDERR,
+                    check=False,
+                )
+        except OSError:
+            err = sys.exc_info()[1]
+            msg = 'Could not execute the command: %s\tError message: %s'
+            raise ApplicationError(msg % (cmd, err))
+        finally:
+            timer.stop('subprocess')
+
+        results.solver_log = ostreams[0].getvalue()
+        results.extra_info.return_code = process.returncode
+        if process.returncode:
+            results.termination_condition = TerminationCondition.error
+
+        # This is the data we need to parse to get the iterations
+        # and time
+        timer.start('parse_log')
+        parsed_output_data = self._parse_ipopt_output(results.solver_log)
+        results.extra_info.iteration_count = parsed_output_data.pop('iters', None)
+        _timing = parsed_output_data.pop('cpu_seconds', None)
+        if _timing:
+            results.timing_info.update(_timing)
+        # Save the iteration log, but mark it as an "advanced" result
+        iter_log = parsed_output_data.pop('iteration_log', None)
+        if iter_log is not None:
+            results.extra_info.add(
+                'iteration_log', ConfigList(iter_log, visibility=ADVANCED_OPTION)
+            )
+        results.extra_info.update(parsed_output_data)
+        timer.stop('parse_log')
+
+        timer.start('parse_sol')
+        if os.path.isfile(basename + '.sol'):
+            with open(basename + '.sol', 'r', encoding='utf-8') as sol_file:
+                sol_data = parse_asl_sol_file(sol_file)
+        else:
+            sol_data = ASLSolFileData()
+        results.solution_loader = IpoptSolutionLoader(
+            sol_data=sol_data, nl_info=nl_info
+        )
+        timer.stop('parse_sol')
+
+        # Initialize the solver message, solution loader solution
+        # status and termination condition:
+        asl_solve_code_to_solution_status(sol_data, results)
+
+    def _parse_ipopt_output(self, output: str) -> Dict[str, Any]:
+        parsed_data = {}
 
         # Stop parsing if there is nothing to parse
         if not output:
@@ -601,85 +617,90 @@ class Ipopt(SolverBase):
         iter_table = re.findall(r'^(?:\s*\d+.*?)$', output, re.MULTILINE)
         if iter_table:
             columns = [
-                "iter",
-                "objective",
-                "inf_pr",
-                "inf_du",
-                "lg_mu",
-                "d_norm",
-                "lg_rg",
-                "alpha_du",
-                "alpha_pr",
-                "ls",
+                ("iter", int),
+                ("objective", float),
+                ("inf_pr", float),
+                ("inf_du", float),
+                ("lg_mu", float),
+                ("d_norm", float),
+                ("lg_rg", float),
+                ("alpha_du", float),
+                ("alpha_pr", float),
+                ("ls", int),
             ]
             iterations = []
             n_expected_columns = len(columns)
+            iter_idx = columns.index(('iter', int))
+            alpha_pr_idx = columns.index(('alpha_pr', float))
 
             for line in iter_table:
                 tokens = line.strip().split()
                 # IPOPT sometimes mashes the first two column values together
                 # (e.g., "2r-4.93e-03"). We need to split them.
-                try:
-                    idx = tokens[0].index('-')
-                    head = tokens[0][:idx]
-                    if head and head.rstrip('r').isdigit():
-                        tokens[:1] = (head, tokens[0][idx:])
-                except ValueError:
-                    pass
-
-                iter_data = dict(zip(columns, tokens))
-                extra_tokens = tokens[n_expected_columns:]
+                if '-' in tokens[iter_idx]:
+                    # This happens rarely, so we are OK with this
+                    # portion of the parser being a little less
+                    # efficient (e.g., reallocating the tokens list, and
+                    # performing index math)
+                    tkn = tokens[iter_idx]
+                    idx = tkn.index('-')
+                    tokens[iter_idx : iter_idx + 1] = tkn[:idx], tkn[idx:]
 
                 # Extract restoration flag from 'iter'
-                iter_num = iter_data.pop("iter")
-                restoration = iter_num.endswith("r")
+                restoration = tokens[iter_idx].endswith("r")
                 if restoration:
-                    iter_num = iter_num[:-1]
-
-                try:
-                    iter_num = int(iter_num)
-                except ValueError:
-                    logger.warning(
-                        f"Could not parse Ipopt iteration number: {iter_num}"
-                    )
-
-                iter_data["restoration"] = restoration
-                iter_data["iter"] = iter_num
+                    tokens[iter_idx] = tokens[iter_idx][:-1]
 
                 # Separate alpha_pr into numeric part and optional tag (f, D, R, etc.)
-                step_acceptance_tag = iter_data['alpha_pr'][-1]
-                if step_acceptance_tag in _ALPHA_PR_CHARS:
-                    iter_data['step_acceptance'] = step_acceptance_tag
-                    iter_data['alpha_pr'] = iter_data['alpha_pr'][:-1]
+                step_acceptance = tokens[alpha_pr_idx][-1]
+                if step_acceptance in _ALPHA_PR_CHARS:
+                    tokens[alpha_pr_idx] = tokens[alpha_pr_idx][:-1]
                 else:
-                    iter_data['step_acceptance'] = None
+                    step_acceptance = None
+
+                try:
+                    iter_data = {
+                        key: None if t == '-' else cast(t)
+                        for (key, cast), t in zip(columns, tokens)
+                    }
+                except (ValueError, TypeError):
+                    logger.error(
+                        "Error parsing Ipopt log entry:\n"
+                        f"\t{sys.exc_info()[1]}\n\t{line}"
+                    )
+                    # Fall-back on a simpler (but slower) parse: extract
+                    # the fields, and cast to float what we can.  The
+                    # point here is the parser should never fail with an
+                    # exception (even if it fails to parse some of the
+                    # log)
+                    iter_data = {}
+                    for (key, cast), t in zip(columns, tokens):
+                        if t == '-':
+                            t = None
+                        else:
+                            try:
+                                t = cast(t)
+                            except:
+                                pass
+                        iter_data[key] = t
+
+                iter_data["restoration"] = restoration
+                iter_data["step_acceptance"] = step_acceptance
 
                 # Capture optional IPOPT diagnostic tags if present
-                if extra_tokens:
-                    iter_data['diagnostic_tags'] = " ".join(extra_tokens)
+                if len(tokens) > n_expected_columns:
+                    iter_data['diagnostic_tags'] = " ".join(tokens[n_expected_columns:])
 
-                # Attempt to cast all values to float where possible
-                for key in columns[1:]:
-                    val = iter_data[key]
-                    if val == '-':
-                        iter_data[key] = None
-                    else:
-                        try:
-                            iter_data[key] = float(val)
-                        except (ValueError, TypeError):
-                            logger.warning(
-                                "Error converting Ipopt log entry to "
-                                f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
-                            )
-
-                if len(iterations) != iter_num:
-                    logger.warning(
-                        f"Total number of iterations parsed {len(iterations)} "
-                        f"does not match the expected iteration number ({iter_num})."
-                    )
                 iterations.append(iter_data)
 
             parsed_data['iteration_log'] = iterations
+
+            if len(iterations) != parsed_data.get('iters', 0) + 1:
+                n_iter = parsed_data.get('iters', 0)
+                logger.warning(
+                    f"Total number of iteration records parsed {len(iterations)} does "
+                    f"not match the number of iterations ({n_iter}) plus one."
+                )
 
         # Extract scaled and unscaled table
         scaled_unscaled_match = re.search(
@@ -731,31 +752,15 @@ class Ipopt(SolverBase):
 
         return parsed_data
 
-    def _parse_solution(
-        self, instream: io.TextIOBase, nl_info: NLWriterInfo
-    ) -> Results:
-        results = Results()
-        res, sol_data = parse_sol_file(
-            sol_file=instream, nl_info=nl_info, result=results
-        )
-
-        if res.solution_status == SolutionStatus.noSolution:
-            res.solution_loader = SolSolutionLoader(None, None)
-        else:
-            res.solution_loader = IpoptSolutionLoader(
-                sol_data=sol_data, nl_info=nl_info
-            )
-
-        return res
-
 
 class LegacyIpoptSolver(LegacySolverWrapper, Ipopt):
-    def _verify_ipopt_options(self, config: IpoptConfig) -> None:
+    def _process_options(
+        self, option_fname: str, options: dict[str, str | int | float]
+    ) -> list[str]:
         # The old Ipopt solver would map solver_options starting with
         # "OF_" to the options file.  That is no longer needed, so we
         # will strip off any "OF_" that we find
-        for opt, val in list(config.solver_options.items()):
+        for opt in list(options):
             if opt.startswith('OF_'):
-                config.solver_options[opt[3:]] = val
-                del config.solver_options[opt]
-        return super()._verify_ipopt_options(config)
+                options[opt[3:]] = options.pop(opt)
+        return super()._process_options(option_fname, options)

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from io import StringIO
 from typing import Sequence, Dict, Optional, Mapping, MutableMapping
@@ -141,7 +139,7 @@ class TestTerminationCondition(unittest.TestCase):
 class TestSolutionStatus(unittest.TestCase):
     def test_member_list(self):
         member_list = results.SolutionStatus._member_names_
-        expected_list = ['noSolution', 'infeasible', 'feasible', 'optimal']
+        expected_list = ['noSolution', 'unknown', 'infeasible', 'feasible', 'optimal']
         self.assertEqual(member_list, expected_list)
 
     def test_codes(self):

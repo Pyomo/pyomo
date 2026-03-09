@@ -1,20 +1,21 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr import ProductExpression, SumExpression
 from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
-from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiMINLPVisitor
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
+    GurobiMINLPVisitor,
+    GurobiDirectMINLP,
+)
 from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
 )
@@ -40,6 +41,9 @@ gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.
 if gurobipy_available:
     from gurobipy import GRB
 
+    if not GurobiDirectMINLP().available():
+        gurobipy_available = False
+
 
 class CommonTest(unittest.TestCase):
     def get_model(self):
@@ -60,6 +64,7 @@ class CommonTest(unittest.TestCase):
 
 
 @unittest.skipUnless(gurobipy_available, "gurobipy is not available")
+@unittest.pytest.mark.solver("gurobi_direct_minlp")
 class TestGurobiMINLPWalker(CommonTest):
     def _get_nl_expr_tree(self, visitor, expr):
         # This is a bit hacky, but the only way that I know to get the expression tree

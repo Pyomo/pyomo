@@ -1,24 +1,19 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import bisect
-import sys
-import logging
-import os
-import os.path
-import ply.lex as lex
-import ply.yacc as yacc
-from inspect import getfile, currentframe
+import importlib
+import pyomo.tpl.ply.lex as lex
+import pyomo.tpl.ply.yacc as yacc
 
-from pyomo.common.fileutils import this_file
+from pyomo.common.errors import DeveloperError
+from pyomo.common.fileutils import this_file, this_file_dir
 from pyomo.core.base.util import flatten_tuple
 
 _re_number = r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?'
@@ -505,100 +500,52 @@ def p_error(p):
 # accessible at module scope.
 # --------------------------------------------------------------
 
-tabmodule = 'parse_table_datacmds'
+
+tabmodule = '_parse_table_datacmds'
 
 dat_lexer = None
 dat_yaccer = None
-dat_yaccer_tabfile = None
+
+
+def _get_this_file_signature():
+    """Compute the SHA-256 signature for this module.
+
+    We store the signature in the auto-generated parse table module so
+    that we can robustly detect when the parse tables must be
+    regenerated.
+
+    """
+    import hashlib
+
+    sha = hashlib.sha256()
+    with open(this_file(), 'r') as FILE:
+        sha.update(FILE.read().encode())
+    return sha.hexdigest()
 
 
 #
 # The function that performs the parsing
 #
-def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
+def parse_data_commands(data=None, filename=None, debug=0):
     global dat_lexer
     global dat_yaccer
-    global dat_yaccer_tabfile
-
-    if outputdir is None:
-        # Try and write this into the module source...
-        outputdir = os.path.dirname(getfile(currentframe()))
-        _tabfile = os.path.join(outputdir, tabmodule + ".py")
-        # Ideally, we would pollute a per-user configuration directory
-        # first -- something like ~/.pyomo.
-        if not os.access(outputdir, os.W_OK):
-            _file = this_file()
-            logger = logging.getLogger('pyomo.dataportal')
-
-            if os.path.exists(_tabfile) and os.path.getmtime(_file) >= os.path.getmtime(
-                _tabfile
-            ):
-                logger.warning(
-                    "Potentially outdated DAT Parse Table found in source "
-                    "tree (%s), but you do not have write access to that "
-                    "directory, so we cannot update it.  Please notify "
-                    "you system administrator to remove that file" % (_tabfile,)
-                )
-            if os.path.exists(_tabfile + 'c') and os.path.getmtime(
-                _file
-            ) >= os.path.getmtime(_tabfile + 'c'):
-                logger.warning(
-                    "Potentially outdated DAT Parse Table found in source "
-                    "tree (%s), but you do not have write access to that "
-                    "directory, so we cannot update it.  Please notify "
-                    "you system administrator to remove that file" % (_tabfile + 'c',)
-                )
-
-            # Switch the directory for the tabmodule to the current directory
-            outputdir = os.getcwd()
 
     # if the lexer/yaccer haven't been initialized, do so.
-    if dat_lexer is None:
-        #
-        # Always remove the parser.out file, which is generated to
-        # create debugging
-        #
-        _parser_out = os.path.join(outputdir, "parser.out")
-        if os.path.exists(_parser_out):
-            os.remove(_parser_out)
-
-        _tabfile = dat_yaccer_tabfile = os.path.join(outputdir, tabmodule + ".py")
-        if debug > 0 or (
-            os.path.exists(_tabfile)
-            and os.path.getmtime(__file__) >= os.path.getmtime(_tabfile)
-        ):
-            #
-            # Remove the parsetab.py* files.  These apparently need to
-            # be removed to ensure the creation of a parser.out file.
-            #
-            if os.path.exists(_tabfile):
-                os.remove(_tabfile)
-            if os.path.exists(_tabfile + "c"):
-                os.remove(_tabfile + "c")
-
-            for _mod in list(sys.modules.keys()):
-                if _mod == tabmodule or _mod.endswith('.' + tabmodule):
-                    del sys.modules[_mod]
+    if dat_lexer is None or dat_yaccer is None:
+        # Import the parse table, and check that it is valid for this module
+        pkg = __name__.rsplit('.', maxsplit=1)[0]
+        dat_tabmodule = importlib.import_module('.' + tabmodule, pkg)
+        if _get_this_file_signature() != dat_tabmodule._lr_module_signature:
+            raise DeveloperError(
+                f"DAT parse tables ({pkg}.{tabmodule}) out of sync with "
+                f"parser definition; regenerate by running {__file__}"
+            )
 
         dat_lexer = lex.lex()
-        #
-        tmpsyspath = sys.path
-        sys.path.append(outputdir)
-        dat_yaccer = yacc.yacc(
-            debug=debug, tabmodule=tabmodule, outputdir=outputdir, optimize=True
-        )
-        sys.path = tmpsyspath
+        dat_yaccer = yacc.yacc(tabmodule=dat_tabmodule, debug=debug)
 
     #
-    # Initialize parse object
-    #
-    dat_lexer.linepos = []
-    global _parse_info
-    _parse_info = {}
-    _parse_info[None] = []
-
-    #
-    # Parse the file
+    # Load the text to parse
     #
     if filename is not None:
         if data is not None:
@@ -612,9 +559,30 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
     if data is None:
         return None
 
+    #
+    # Initialize the lexer / parser objects
+    #
+    global _parse_info
+    _parse_info = {None: []}
+    dat_lexer.linepos = []
+    #
+    # Parse
+    #
     dat_yaccer.parse(data, lexer=dat_lexer, debug=debug)
-    return _parse_info
+    #
+    # Reset parse data and return the result
+    #
+    result = _parse_info
+    _parse_info = None
+    dat_lexer.linepos = []
+    return result
 
 
-if __name__ == '__main__':
-    parse_data_commands(filename=sys.argv[1], debug=100)
+if __name__ == '__main__':  # pragma:nocover
+    print(f"Regenerating {tabmodule}")
+    yacc.yacc(
+        tabmodule=tabmodule,
+        outputdir=this_file_dir(),
+        debug=100,
+        module_signature=_get_this_file_signature(),
+    )
