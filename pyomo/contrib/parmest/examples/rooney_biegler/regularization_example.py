@@ -38,8 +38,8 @@ def main():
     for i in range(data.shape[0]):
         exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
-    # Create an instance of the parmest estimator
-    pest = parmest.Estimator(
+    # Create an instance of the parmest estimator (L2)
+    pest_l2 = parmest.Estimator(
         exp_list,
         obj_function="SSE",
         regularization='L2',
@@ -47,17 +47,30 @@ def main():
         theta_ref=theta_ref,
     )
 
-    # Parameter estimation and covariance
-    obj, theta = pest.theta_est()
-    cov = pest.cov_est()
+    # Parameter estimation and covariance for L2
+    obj_l2, theta_l2 = pest_l2.theta_est()
+    cov_l2 = pest_l2.cov_est()
+
+    # L1 smooth regularization uses sqrt((theta - theta_ref)^2 + epsilon)
+    pest_l1 = parmest.Estimator(
+        exp_list,
+        obj_function="SSE",
+        regularization='L1',
+        prior_FIM=prior_FIM,
+        theta_ref=theta_ref,
+        regularization_weight=1.0,
+        regularization_epsilon=1e-6,
+    )
+    obj_l1, theta_l1 = pest_l1.theta_est()
+    cov_l1 = pest_l1.cov_est()
 
     if parmest.graphics.seaborn_available:
         parmest.graphics.pairwise_plot(
-            (theta, cov, 100),
-            theta_star=theta,
+            (theta_l2, cov_l2, 100),
+            theta_star=theta_l2,
             alpha=0.8,
             distributions=['MVN'],
-            title='Theta estimates within 80% confidence region',
+            title='L2 regularized theta estimates within 80% confidence region',
         )
 
     # Assert statements compare parameter estimation (theta) to an expected value
@@ -66,11 +79,12 @@ def main():
     # relative_error = abs(theta['rate_constant'] - 0.5311) / 0.5311
     # assert relative_error < 0.01
 
-    return obj, theta, cov
+    return {"L2": (obj_l2, theta_l2, cov_l2), "L1": (obj_l1, theta_l1, cov_l1)}
 
 
 if __name__ == "__main__":
-    obj, theta, cov = main()
-    print("Estimated parameters (theta):", theta)
-    print("Objective function value at theta:", obj)
-    print("Covariance of parameter estimates:", cov)
+    results = main()
+    for reg_name, (obj, theta, cov) in results.items():
+        print(f"{reg_name} estimated parameters (theta):", theta)
+        print(f"{reg_name} objective function value at theta:", obj)
+        print(f"{reg_name} covariance of parameter estimates:", cov)

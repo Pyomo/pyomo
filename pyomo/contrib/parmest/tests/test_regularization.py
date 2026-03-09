@@ -207,9 +207,7 @@ def test_l2_regularization_requires_prior_fim():
 def test_user_specified_unsupported_regularization_raises():
     exp_list = [LinearExperiment(1.0, 1.0)]
 
-    with pytest.raises(
-        TypeError, match="regularization must be None or one of \\['L2'\\]"
-    ):
+    with pytest.raises(TypeError, match="regularization must be None or one of"):
         parmest.Estimator(
             exp_list, obj_function="SSE", regularization=lambda m: m.theta0**2
         )
@@ -416,3 +414,150 @@ def test_compute_covariance_matrix_adds_prior_fim_weighted(monkeypatch):
     assert cov.loc["theta1", "theta1"] == pytest.approx(0.125)
     assert cov.loc["theta0", "theta1"] == pytest.approx(0.0)
     assert cov.loc["theta1", "theta0"] == pytest.approx(0.0)
+
+
+def test_l1_smooth_objective_value_matches_manual_expression():
+    m = _make_var_labeled_model(y_obs=5.0)
+    m.theta0.set_value(4.0)
+    m.theta1.set_value(-1.0)
+
+    prior_fim = pd.DataFrame(
+        [[2.0, 0.0], [0.0, 4.0]],
+        index=["theta0", "theta1"],
+        columns=["theta0", "theta1"],
+    )
+    theta_ref = pd.Series({"theta0": 1.0, "theta1": 2.0})
+    weight = 3.0
+    eps = 1e-6
+
+    expr = parmest.L1_regularized_objective(
+        m,
+        prior_FIM=prior_fim,
+        theta_ref=theta_ref,
+        regularization_weight=weight,
+        regularization_epsilon=eps,
+        obj_function=parmest.SSE,
+    )
+
+    # SSE = (5 - (4 + 2*(-1)))^2 = 9
+    sse_expected = 9.0
+    # weighted smooth-L1 = 2*sqrt(3^2 + eps) + 4*sqrt((-3)^2 + eps)
+    l1_expected = 2.0 * np.sqrt(9.0 + eps) + 4.0 * np.sqrt(9.0 + eps)
+    expected = sse_expected + weight * l1_expected
+
+    assert pyo.value(expr) == pytest.approx(expected)
+
+
+def test_l1_penalty_not_double_counted_across_scenarios():
+    exp_list = [LinearExperiment(1.0, 1.0), LinearExperiment(2.0, 2.0)]
+    prior_fim = pd.DataFrame(
+        [[0.0, 0.0], [0.0, 2.0]],
+        index=["theta0", "theta1"],
+        columns=["theta0", "theta1"],
+    )
+    theta_ref = pd.Series({"theta0": 0.0, "theta1": 0.0})
+    eps = 1e-6
+
+    pest = parmest.Estimator(
+        exp_list,
+        obj_function="SSE",
+        regularization="L1",
+        prior_FIM=prior_fim,
+        theta_ref=theta_ref,
+        regularization_weight=1.0,
+        regularization_epsilon=eps,
+    )
+
+    theta0 = 0.0
+    theta1 = 1.0
+    obj_val = _obj_at_theta(pest, theta0, theta1)
+
+    # Average SSE: ((1 - 1)^2 + (2 - 2)^2) / 2 = 0
+    sse_avg = 0.0
+    # Only theta1 is selected by prior_fim labels
+    penalty = 2.0 * np.sqrt(theta1**2 + eps)
+    assert obj_val == pytest.approx(sse_avg + penalty)
+
+
+def test_l1_lambda_zero_matches_unregularized_objective():
+    exp_list = [LinearExperiment(1.0, 1.0), LinearExperiment(2.0, 2.0)]
+    prior_fim = pd.DataFrame(
+        [[2.0, 0.0], [0.0, 1.0]],
+        index=["theta0", "theta1"],
+        columns=["theta0", "theta1"],
+    )
+    theta_ref = pd.Series({"theta0": 0.0, "theta1": 0.0})
+
+    pest_base = parmest.Estimator(exp_list, obj_function="SSE")
+    pest_l1_zero = parmest.Estimator(
+        exp_list,
+        obj_function="SSE",
+        regularization="L1",
+        prior_FIM=prior_fim,
+        theta_ref=theta_ref,
+        regularization_weight=0.0,
+        regularization_epsilon=1e-6,
+    )
+
+    for theta0, theta1 in [(0.0, 0.0), (0.5, 1.5), (-1.0, 2.0)]:
+        obj_base = _obj_at_theta(pest_base, theta0, theta1)
+        obj_l1_zero = _obj_at_theta(pest_l1_zero, theta0, theta1)
+        assert obj_l1_zero == pytest.approx(obj_base)
+
+
+def test_l1_nonpositive_epsilon_raises():
+    exp_list = [LinearExperiment(1.0, 1.0)]
+    prior_fim = pd.DataFrame(
+        [[1.0, 0.0], [0.0, 1.0]],
+        index=["theta0", "theta1"],
+        columns=["theta0", "theta1"],
+    )
+
+    with pytest.raises(ValueError, match="regularization_epsilon must be positive"):
+        parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L1",
+            prior_FIM=prior_fim,
+            regularization_weight=1.0,
+            regularization_epsilon=0.0,
+        )
+
+    with pytest.raises(ValueError, match="regularization_epsilon must be positive"):
+        parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L1",
+            prior_FIM=prior_fim,
+            regularization_weight=1.0,
+            regularization_epsilon=-1e-6,
+        )
+
+
+def test_l1_large_lambda_drives_theta_small_not_exact_sparsity():
+    exp_list = [
+        LinearExperiment(1.0, 2.0),
+        LinearExperiment(2.0, 4.0),
+        LinearExperiment(3.0, 6.0),
+    ]
+    prior_fim = pd.DataFrame(
+        [[0.0, 0.0], [0.0, 1.0]],
+        index=["theta0", "theta1"],
+        columns=["theta0", "theta1"],
+    )
+    theta_ref = pd.Series({"theta0": 0.0, "theta1": 0.0})
+    theta1_grid = np.linspace(0.0, 2.5, 1001)
+
+    pest = parmest.Estimator(
+        exp_list,
+        obj_function="SSE",
+        regularization="L1",
+        prior_FIM=prior_fim,
+        theta_ref=theta_ref,
+        regularization_weight=1e3,
+        regularization_epsilon=1e-6,
+    )
+    theta1_hat = _argmin_on_grid(pest, theta1_grid, theta0=0.0)
+
+    # Smooth-L1 should strongly shrink but does not guarantee an exact zero.
+    assert abs(theta1_hat) <= 0.02
