@@ -30,7 +30,6 @@ from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.disable_methods import disable_methods
 
-
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
 

@@ -43,7 +43,6 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
     ExternalGreyBoxConstraint,
 )
 
-
 pyomo_nlp, pyomo_nlp_available = attempt_import(
     "pyomo.contrib.pynumero.interfaces.pyomo_nlp"
 )

@@ -26,7 +26,6 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
     ExternalGreyBoxConstraint,
 )
 
-
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
 """
