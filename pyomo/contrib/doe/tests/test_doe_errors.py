@@ -812,14 +812,10 @@ class TestDoEErrors(unittest.TestCase):
         )
         DoE_args["experiment_list"] = [
             RooneyBieglerMultiExperiment(
-                hour=1.5,
-                y=9.0,
-                theta={'asymptote': 15, 'rate_constant': 0.5},
+                hour=1.5, y=9.0, theta={'asymptote': 15, 'rate_constant': 0.5}
             ),
             RooneyBieglerMultiExperiment(
-                hour=3.5,
-                y=12.0,
-                theta={'asymptote': 16, 'rate_constant': 0.5},
+                hour=3.5, y=12.0, theta={'asymptote': 16, 'rate_constant': 0.5}
             ),
         ]
         doe_obj = DesignOfExperiments(**DoE_args)
@@ -832,8 +828,7 @@ class TestDoEErrors(unittest.TestCase):
             # The mismatch is detected before the second experiment solve,
             # when compute_FIM validates unknown parameter values.
             with self.assertRaisesRegex(
-                ValueError,
-                "must share the same unknown parameter values",
+                ValueError, "must share the same unknown parameter values"
             ):
                 doe_obj.compute_FIM(method="sequential")
 

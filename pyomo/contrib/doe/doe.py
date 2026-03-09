@@ -2255,7 +2255,10 @@ class DesignOfExperiments:
                 for param in eval_model.unknown_parameters
             ]
             values = np.array(
-                [float(pyo.value(val)) for val in eval_model.unknown_parameters.values()]
+                [
+                    float(pyo.value(val))
+                    for val in eval_model.unknown_parameters.values()
+                ]
             )
             return names, values
 
@@ -2263,8 +2266,8 @@ class DesignOfExperiments:
             saved_prior = self.prior_FIM
             self._computed_FIM_by_experiment = []
             # Capture the baseline parameter labels/values from experiment 0.
-            reference_param_names, reference_param_values = _unknown_parameter_signature(
-                model
+            reference_param_names, reference_param_values = (
+                _unknown_parameter_signature(model)
             )
 
             try:
@@ -2276,9 +2279,9 @@ class DesignOfExperiments:
                         # Reuse the already-built model for experiment 0.
                         exp_model = model
                     else:
-                        exp_model = (
-                            exp.get_labeled_model(**self.get_labeled_model_args).clone()
-                        )
+                        exp_model = exp.get_labeled_model(
+                            **self.get_labeled_model_args
+                        ).clone()
                         self.check_model_labels(model=exp_model)
 
                     param_names, param_values = _unknown_parameter_signature(exp_model)
