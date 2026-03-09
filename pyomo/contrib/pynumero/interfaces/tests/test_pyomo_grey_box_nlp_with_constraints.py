@@ -387,10 +387,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
             'egb.outputs[Pout]',
         ]
         x_order = egb_nlp.primals_names()
-        comparison_c_order = [
-            'egb.P2_constraint',
-            'egb.Pout_constraint',
-        ]
+        comparison_c_order = ['egb.P2_constraint', 'egb.Pout_constraint']
         c_order = egb_nlp.constraint_names()
 
         xlb = egb_nlp.primals_lb()
@@ -983,8 +980,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
-            ex_models.PressureDropSingleOutput(),
-            build_implicit_constraint_objects=True,
+            ex_models.PressureDropSingleOutput(), build_implicit_constraint_objects=True
         )
         m.obj = pyo.Objective(expr=1)
         with self.assertRaises(ValueError):
@@ -994,8 +990,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
-            ex_models.PressureDropSingleOutput(),
-            build_implicit_constraint_objects=True,
+            ex_models.PressureDropSingleOutput(), build_implicit_constraint_objects=True
         )
         m.egb.inputs['Pin'].fix(100)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
@@ -1005,8 +1000,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
-            ex_models.PressureDropTwoOutputs(),
-            build_implicit_constraint_objects=True,
+            ex_models.PressureDropTwoOutputs(), build_implicit_constraint_objects=True
         )
         m.egb.outputs['P2'].fix(50)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
@@ -1379,10 +1373,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
             'egb.outputs[Pout]',
         ]
         x_order = pyomo_nlp.primals_names()
-        comparison_c_order = [
-            'egb.P2_constraint',
-            'egb.Pout_constraint',
-        ]
+        comparison_c_order = ['egb.P2_constraint', 'egb.Pout_constraint']
         c_order = pyomo_nlp.constraint_names()
 
         xlb = pyomo_nlp.primals_lb()
@@ -2533,7 +2524,9 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.p = pyo.Var(initialize=1)
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(ex_models.OneOutput(), build_implicit_constraint_objects=True)
+        m.egb.set_external_model(
+            ex_models.OneOutput(), build_implicit_constraint_objects=True
+        )
         m.con = pyo.Constraint(expr=4 * m.p - 2 * m.egb.outputs['o'] == 0)
         m.obj = pyo.Objective(expr=10 * m.p**2)
 
@@ -2549,9 +2542,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 4.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 20.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), 50.0, places=3)
-        self.assertAlmostEqual(
-            m.dual[m.egb.o_constraint], -100.0, places=3
-        )
+        self.assertAlmostEqual(m.dual[m.egb.o_constraint], -100.0, places=3)
         self.assertAlmostEqual(
             pyo.value(m.ipopt_zL_out[m.egb.inputs['u']]), 500.0, places=3
         )
@@ -2567,9 +2558,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 10.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 50.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), -125.0, places=3)
-        self.assertAlmostEqual(
-            m.dual[m.egb.o_constraint], 250.0, places=3
-        )
+        self.assertAlmostEqual(m.dual[m.egb.o_constraint], 250.0, places=3)
         self.assertAlmostEqual(
             pyo.value(m.ipopt_zL_out[m.egb.inputs['u']]), 0.0, places=3
         )
@@ -2580,7 +2569,9 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.p = pyo.Var(initialize=1)
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(ex_models.OneOutputOneEquality(), build_implicit_constraint_objects=True)
+        m.egb.set_external_model(
+            ex_models.OneOutputOneEquality(), build_implicit_constraint_objects=True
+        )
         m.con = pyo.Constraint(expr=4 * m.p - 2 * m.egb.outputs['o'] == 0)
         m.obj = pyo.Objective(expr=10 * m.p**2)
 
@@ -2594,9 +2585,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 1.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 5.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), 12.5, places=3)
-        self.assertAlmostEqual(
-            m.dual[m.egb.o_constraint], -25.0, places=3
-        )
+        self.assertAlmostEqual(m.dual[m.egb.o_constraint], -25.0, places=3)
         self.assertAlmostEqual(m.dual[m.egb.u2_con], 62.5, places=3)
 
 
@@ -2626,16 +2615,13 @@ class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
         m.b = pyo.Block()
         m.b.y = pyo.Var(initialize=2)
 
-        m.b.cons1 = pyo.Constraint(expr=m.x + 2*m.b.y == 5)
-        m.b.cons2 = pyo.Constraint(expr=3*m.x - 4*m.b.y == -5)
+        m.b.cons1 = pyo.Constraint(expr=m.x + 2 * m.b.y == 5)
+        m.b.cons2 = pyo.Constraint(expr=3 * m.x - 4 * m.b.y == -5)
 
         # Create  NLP from m.b - should contain m.v even though it is external to the block
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
 
-        assert pyomo_nlp._pyomo_model_var_names_to_datas == {
-            'x': m.x,
-            'b.y': m.b.y,
-        }
+        assert pyomo_nlp._pyomo_model_var_names_to_datas == {'x': m.x, 'b.y': m.b.y}
 
         jac = pyomo_nlp.evaluate_jacobian().tocsr()
 
@@ -2706,8 +2692,7 @@ class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
         m.b = pyo.Block()
         m.b.egb = ExternalGreyBoxBlock()
         m.b.egb.set_external_model(
-            ex_models.PressureDropSingleOutput(),
-            build_implicit_constraint_objects=True,
+            ex_models.PressureDropSingleOutput(), build_implicit_constraint_objects=True
         )
 
         # Set egb variable values

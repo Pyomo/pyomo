@@ -25,10 +25,9 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
-            ex_models.PressureDropSingleOutput(),
-            build_implicit_constraint_objects=True,
+            ex_models.PressureDropSingleOutput(), build_implicit_constraint_objects=True
         )
-    
+
         igraph = IncidenceGraphInterface(m, include_inequality=False)
         var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
 
@@ -43,7 +42,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
                 "egb.inputs[Pin]",
                 "egb.inputs[c]",
                 "egb.inputs[F]",
-                "egb.outputs[Pout]"
+                "egb.outputs[Pout]",
             ]
         assert len(uc_con) == 1
         assert uc_con[0].name == "egb.Pout_constraint"
@@ -52,7 +51,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
 
         max_matching = igraph.maximum_matching()
         assert len(max_matching) == 1
-        for k,v in max_matching.items():
+        for k, v in max_matching.items():
             assert k.name == "egb.Pout_constraint"
             assert v.name == "egb.outputs[Pout]"
 
@@ -65,13 +64,11 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
                 "egb.inputs[Pin]",
                 "egb.inputs[c]",
                 "egb.inputs[F]",
-                "egb.outputs[Pout]"
+                "egb.outputs[Pout]",
             ]
         assert len(con_cons[0]) == 1
         for j in con_cons[0]:
-            assert j.name in [
-                "egb.Pout_constraint"
-            ]
+            assert j.name in ["egb.Pout_constraint"]
 
         # Add constraints to make model square, then rebuild graph to test block triangularization
         m.con1 = pyo.Constraint(expr=m.egb.inputs["Pin"] == 1)
@@ -94,7 +91,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         for i in range(len(bt_vars)):
             assert len(bt_vars[i]) == 1
             assert len(bt_cons[i]) == 1
-            
+
             match_var = bt_vars[i][0].name
             match_con = bt_cons[i][0].name
 
@@ -107,7 +104,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
             ex_models.PressureDropTwoEqualitiesTwoOutputs(),
             build_implicit_constraint_objects=True,
         )
-    
+
         igraph = IncidenceGraphInterface(m, include_inequality=False)
         var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
 
@@ -125,7 +122,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
                 "egb.inputs[Pin]",
                 "egb.inputs[c]",
                 "egb.outputs[P2]",
-                "egb.outputs[Pout]"
+                "egb.outputs[Pout]",
             ]
         assert len(uc_con) == 4
         for i in uc_con:
@@ -144,7 +141,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
             "egb.pdrop1": "egb.inputs[Pin]",
             "egb.pdrop3": "egb.inputs[c]",
             "egb.P2_constraint": "egb.outputs[P2]",
-            "egb.Pout_constraint": "egb.outputs[Pout]"
+            "egb.Pout_constraint": "egb.outputs[Pout]",
         }
         for k, v in max_matching.items():
             assert v.name == expected_matches[k.name]
@@ -162,7 +159,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
                 "egb.inputs[Pin]",
                 "egb.inputs[c]",
                 "egb.outputs[P2]",
-                "egb.outputs[Pout]"
+                "egb.outputs[Pout]",
             ]
         assert len(con_cons[0]) == 4
         for j in con_cons[0]:
@@ -195,7 +192,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
 
         for i in range(len(bt_vars)):
             assert len(bt_vars[i]) == len(bt_cons[i])
-        
+
         # Block 0
         assert len(bt_vars[0]) == 1
         assert len(bt_cons[0]) == 1
@@ -219,16 +216,10 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         assert len(bt_cons[3]) == 2
 
         for i in bt_vars[3]:
-            assert i.name in [
-                "egb.inputs[P1]",
-                "egb.inputs[P3]",
-            ]
+            assert i.name in ["egb.inputs[P1]", "egb.inputs[P3]"]
         for i in bt_cons[3]:
-            assert i.name in [
-                "egb.pdrop1",
-                "egb.pdrop3",
-            ]
-        
+            assert i.name in ["egb.pdrop1", "egb.pdrop3"]
+
         # Block 4
         assert len(bt_vars[4]) == 1
         assert len(bt_cons[4]) == 1

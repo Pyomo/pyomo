@@ -98,7 +98,6 @@ class EGBConstraintBody:
         var_value = value(self._parent_model.outputs[self._implicit_constraint_id])
         return var_value - evaluated_value
 
-
     def get_incident_variables(
         self, use_jacobian=False, jac_tolerance=JAC_ZERO_TOLERANCE
     ):

@@ -482,7 +482,7 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Test with another non-matching value
         m.egb.outputs['Pout'].set_value(20.0)
-        
+
         # Residual should be: var_value - evaluated_value = 20 - 28 = -8
         residual = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(residual, -8.0, places=6)
@@ -499,21 +499,21 @@ class TestEGBConstraintBody(unittest.TestCase):
         # Initial inputs: Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*9 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
         m.egb.outputs['Pout'].set_value(30.0)
-        
+
         # Residual should be: 30 - 28 = 2
         residual = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(residual, 2.0, places=6)
 
         # Change inputs: Pin=100, c=2, F=2 => Pout_evaluated = 100 - 4*2*4 = 68
         external_model.set_input_values(np.asarray([100, 2, 2], dtype=np.float64))
-        
+
         # Residual should be: 30 - 68 = -38
         residual = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(residual, -38.0, places=6)
 
         # Now set variable to match the new evaluated value
         m.egb.outputs['Pout'].set_value(68.0)
-        
+
         # Residual should be: 68 - 68 = 0
         residual = pyo.value(m.egb.c.body)
         self.assertAlmostEqual(residual, 0.0, places=6)

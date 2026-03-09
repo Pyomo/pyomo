@@ -32,7 +32,9 @@ from pyomo.contrib.pynumero.interfaces.utils import (
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.nlp_projections import ProjectedNLP
 from pyomo.core.base.suffix import SuffixFinder
-from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import ExternalGreyBoxConstraint
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    ExternalGreyBoxConstraint,
+)
 
 
 # Todo: make some of the numpy arrays not writable from __init__
@@ -90,8 +92,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             }
             # Next, check the PyomoNLP for any Vars that are missing
             for v in self._pyomo_nlp.get_pyomo_variables():
-                self._pyomo_model_var_names_to_datas[v.getname(fully_qualified=True)] = v
-
+                self._pyomo_model_var_names_to_datas[
+                    v.getname(fully_qualified=True)
+                ] = v
 
             self._pyomo_model_constraint_names_to_datas = {
                 c.getname(fully_qualified=True): c
@@ -105,7 +108,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                 for c in b.component_data_objects(
                     ctype=ExternalGreyBoxConstraint, active=True, descend_into=False
                 ):
-                    self._pyomo_model_constraint_names_to_datas[c.getname(fully_qualified=True)] = c
+                    self._pyomo_model_constraint_names_to_datas[
+                        c.getname(fully_qualified=True)
+                    ] = c
 
         finally:
             # Restore the ctypes of the ExternalGreyBoxBlock components
@@ -174,9 +179,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         ]
         for gbnlp in greybox_nlps:
             self._constraint_names.extend(gbnlp.constraint_names())
-            self._constraint_datas.extend(
-                gbnlp.constraint_datas()
-            )
+            self._constraint_datas.extend(gbnlp.constraint_datas())
         self._n_constraints = len(self._constraint_names)
 
         self._has_hessian_support = True
@@ -523,13 +526,13 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     # Compatibility API for PyomoNLP - this is only a partial implementation
     def get_pyomo_variables(self):
         return self._pyomo_model_var_datas
-    
+
     def get_pyomo_constraints(self):
         return list(self._pyomo_model_constraint_names_to_datas.values())
 
     def get_pyomo_equality_constraints(self):
         return [c for c in self.get_pyomo_constraints() if c.equality]
-    
+
     def get_pyomo_inequality_constraints(self):
         return [c for c in self.get_pyomo_constraints() if not c.equality]
 
@@ -600,12 +603,16 @@ class _ExternalGreyBoxAsNLP(NLP):
                 ]
             )
             # In place of actual constraint data objects, we just store the block and the name of the constraint
-            self._constraint_datas = [(self._block, nm) for nm in self._constraint_names]
+            self._constraint_datas = [
+                (self._block, nm) for nm in self._constraint_names
+            ]
 
         else:
             self._constraint_names = []
             self._constraint_datas = []
-            for c in self._block.component_data_objects(ExternalGreyBoxConstraint, active=True, descend_into=False):
+            for c in self._block.component_data_objects(
+                ExternalGreyBoxConstraint, active=True, descend_into=False
+            ):
                 self._constraint_names.append(c.getname(fully_qualified=True))
                 self._constraint_datas.append(c)
 
@@ -690,7 +697,7 @@ class _ExternalGreyBoxAsNLP(NLP):
 
     def constraint_names(self):
         return list(self._constraint_names)
-    
+
     def constraint_datas(self):
         return list(self._constraint_datas)
 

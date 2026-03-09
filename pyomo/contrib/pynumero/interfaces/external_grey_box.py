@@ -442,7 +442,7 @@ class ExternalGreyBoxBlockData(BlockData):
 
     def get_external_model(self):
         return self._ex_model
-    
+
     @property
     def has_implicit_constraint_objects(self):
         return self._has_implicit_constraint_objects
