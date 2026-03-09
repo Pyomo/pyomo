@@ -2405,7 +2405,6 @@ class Estimator:
         if theta_hat is None or obj_hat is None:
             if use_multistart_for_baseline:
                 ms_kwargs = dict(baseline_multistart_kwargs or {})
-                ms_kwargs.setdefault("solver", solver)
                 _, best_theta, best_obj = self.theta_est_multistart(**ms_kwargs)
                 if best_theta is None or not np.isfinite(best_obj):
                     raise RuntimeError(

@@ -250,6 +250,24 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             ).issubset(prof.columns)
         )
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_profile_baseline_from_multistart(self):
+        pest = _build_two_theta_estimator()
+        res = pest.profile_likelihood(
+            profiled_theta="theta_a",
+            n_grid=5,
+            use_multistart_for_baseline=True,
+            baseline_multistart_kwargs={
+                "n_restarts": 3,
+                "multistart_sampling_method": "uniform_random",
+                "seed": 7,
+            },
+        )
+        self.assertIn("baseline", res)
+        self.assertIn("profiles", res)
+        self.assertTrue(np.isfinite(res["baseline"]["obj_hat"]))
+        self.assertGreaterEqual(res["profiles"].shape[0], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
