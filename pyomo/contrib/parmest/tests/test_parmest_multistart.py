@@ -109,6 +109,44 @@ class NoBoundsExperiment(Experiment):
         return self.model
 
 
+class StartCoupledExperiment(Experiment):
+    """
+    Model intentionally couples a fixed term ("bias") to theta_initial at
+    build time. This exposes stale-model bugs in multistart paths.
+    """
+
+    def __init__(self, theta_initial=None):
+        self.theta_initial = (
+            theta_initial if theta_initial is not None else {"theta": 0.0}
+        )
+        self.model = None
+
+    def create_model(self):
+        m = pyo.ConcreteModel()
+        m.theta = pyo.Var(
+            initialize=float(self.theta_initial["theta"]), bounds=(-10.0, 10.0)
+        )
+        m.bias = pyo.Param(initialize=float(self.theta_initial["theta"]), mutable=False)
+        m.y = pyo.Var(initialize=0.0)
+        m.eq = pyo.Constraint(expr=m.y == m.theta + m.bias)
+        self.model = m
+
+    def label_model(self):
+        m = self.model
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.y, 0.0)])
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, None)])
+
+    def get_labeled_model(self):
+        if self.model is None:
+            self.create_model()
+            self.label_model()
+        return self.model
+
+
 def _build_linear_estimator():
     exp_list = [LinearThetaExperiment(1.0, 2.0), LinearThetaExperiment(2.0, 3.0)]
     return parmest.Estimator(exp_list, obj_function="SSE")
@@ -131,116 +169,99 @@ class TestParmestMultistart(unittest.TestCase):
 
     def test_uniform_sampling_is_deterministic_with_seed(self):
         pest = _build_linear_estimator()
-        model = pest._create_parmest_model(0)
         df1 = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=4,
-            n_restarts=5,
-            multistart_sampling_method="uniform_random",
+            seed=4, n_restarts=5, multistart_sampling_method="uniform_random"
         )
         df2 = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=4,
-            n_restarts=5,
-            multistart_sampling_method="uniform_random",
+            seed=4, n_restarts=5, multistart_sampling_method="uniform_random"
         )
         self.assertTrue(df1[["theta"]].equals(df2[["theta"]]))
 
     def test_uniform_sampling_changes_with_different_seed(self):
         pest = _build_linear_estimator()
-        model = pest._create_parmest_model(0)
         df1 = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=4,
-            n_restarts=5,
-            multistart_sampling_method="uniform_random",
+            seed=4, n_restarts=5, multistart_sampling_method="uniform_random"
         )
         df2 = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=5,
-            n_restarts=5,
-            multistart_sampling_method="uniform_random",
+            seed=5, n_restarts=5, multistart_sampling_method="uniform_random"
         )
         self.assertFalse(df1[["theta"]].equals(df2[["theta"]]))
 
     def test_latin_hypercube_sampling_is_deterministic(self):
         pest = _build_linear_estimator()
-        model = pest._create_parmest_model(0)
         df1 = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=11,
-            n_restarts=4,
-            multistart_sampling_method="latin_hypercube",
+            seed=11, n_restarts=4, multistart_sampling_method="latin_hypercube"
         )
         df2 = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=11,
-            n_restarts=4,
-            multistart_sampling_method="latin_hypercube",
+            seed=11, n_restarts=4, multistart_sampling_method="latin_hypercube"
         )
         self.assertTrue(df1[["theta"]].equals(df2[["theta"]]))
 
     def test_sobol_sampling_is_deterministic(self):
         pest = _build_linear_estimator()
-        model = pest._create_parmest_model(0)
         df1 = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=12,
-            n_restarts=4,
-            multistart_sampling_method="sobol_sampling",
+            seed=12, n_restarts=4, multistart_sampling_method="sobol_sampling"
         )
         df2 = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=12,
-            n_restarts=4,
-            multistart_sampling_method="sobol_sampling",
+            seed=12, n_restarts=4, multistart_sampling_method="sobol_sampling"
         )
         self.assertTrue(df1[["theta"]].equals(df2[["theta"]]))
 
     def test_generated_starts_are_within_bounds(self):
         pest = _build_linear_estimator()
-        model = pest._create_parmest_model(0)
         for method in ("uniform_random", "latin_hypercube", "sobol_sampling"):
             df = pest._generate_initial_theta(
-                parmest_model=model,
-                seed=1,
-                n_restarts=8,
-                multistart_sampling_method=method,
+                seed=1, n_restarts=8, multistart_sampling_method=method
             )
             self.assertTrue(((df["theta"] >= -10.0) & (df["theta"] <= 10.0)).all())
 
     def test_missing_bounds_raise_error(self):
         pest = parmest.Estimator([NoBoundsExperiment()], obj_function="SSE")
-        model = pest._create_parmest_model(0)
         with self.assertRaisesRegex(
             ValueError, "lower and upper bounds for the theta values must be defined"
         ):
             pest._generate_initial_theta(
-                parmest_model=model,
-                seed=1,
-                n_restarts=2,
-                multistart_sampling_method="uniform_random",
+                seed=1, n_restarts=2, multistart_sampling_method="uniform_random"
             )
 
     def test_invalid_bounds_raise_error(self):
-        pest = _build_linear_estimator()
-        model = pest._create_parmest_model(0)
-        model.theta.setlb(2.0)
-        model.theta.setub(1.0)
+        class InvalidBoundsExperiment(Experiment):
+            def __init__(self):
+                self.model = None
+
+            def create_model(self):
+                m = pyo.ConcreteModel()
+                m.theta = pyo.Var(initialize=1.0)
+                m.theta.setlb(2.0)
+                m.theta.setub(1.0)
+                m.y = pyo.Var(initialize=2.0)
+                m.eq = pyo.Constraint(expr=m.y == m.theta + 1.0)
+                self.model = m
+
+            def label_model(self):
+                m = self.model
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update([(m.y, 2.0)])
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
+
+            def get_labeled_model(self):
+                self.create_model()
+                self.label_model()
+                return self.model
+
+        pest = parmest.Estimator([InvalidBoundsExperiment()], obj_function="SSE")
         with self.assertRaisesRegex(ValueError, "lower bound must be less than"):
             pest._generate_initial_theta(
-                parmest_model=model,
-                seed=1,
-                n_restarts=2,
-                multistart_sampling_method="uniform_random",
+                seed=1, n_restarts=2, multistart_sampling_method="uniform_random"
             )
 
     def test_user_provided_values_dimension_mismatch_raises(self):
         pest = _build_linear_estimator()
         user_df = pd.DataFrame([[1.0, 2.0]], columns=["theta", "extra"])
-        with self.assertRaisesRegex(
-            ValueError, "same number of columns as the number of theta names"
-        ):
+        with self.assertRaisesRegex(ValueError, "exactly one column per theta name"):
             pest.theta_est_multistart(
                 n_restarts=1,
                 multistart_sampling_method="user_provided_values",
@@ -265,7 +286,7 @@ class TestParmestMultistart(unittest.TestCase):
         pest = _build_linear_estimator()
         init = pd.DataFrame([[-9.0], [9.0]], columns=["theta"])
         results_df, _, _ = pest.theta_est_multistart(
-            theta_values=init, save_results=False
+            user_provided_df=init, save_results=False
         )
         # Initial starts should remain exactly as supplied.
         self.assertAlmostEqual(results_df.loc[0, "theta"], -9.0, places=12)
@@ -289,7 +310,7 @@ class TestParmestMultistart(unittest.TestCase):
 
         with patch.object(pest, "_Q_opt", side_effect=fake_q_opt):
             results_df, best_theta, best_obj = pest.theta_est_multistart(
-                theta_values=theta_values, save_results=False
+                user_provided_df=theta_values, save_results=False
             )
 
         self.assertTrue(
@@ -307,7 +328,7 @@ class TestParmestMultistart(unittest.TestCase):
 
         with patch.object(pest, "_Q_opt", side_effect=fake_q_opt):
             results_df, best_theta, best_obj = pest.theta_est_multistart(
-                theta_values=theta_values, save_results=False
+                user_provided_df=theta_values, save_results=False
             )
 
         self.assertIsNone(best_theta)
@@ -331,7 +352,7 @@ class TestParmestMultistart(unittest.TestCase):
 
         with patch.object(pest, "_Q_opt", side_effect=fake_q_opt):
             _, best_theta, best_obj = pest.theta_est_multistart(
-                theta_values=theta_values, save_results=False
+                user_provided_df=theta_values, save_results=False
             )
 
         self.assertAlmostEqual(best_obj, 0.2, places=12)
@@ -347,7 +368,7 @@ class TestParmestMultistart(unittest.TestCase):
 
         with patch.object(pest, "_Q_opt", side_effect=fake_q_opt):
             _, best_theta, best_obj = pest.theta_est_multistart(
-                theta_values=theta_values, save_results=False
+                user_provided_df=theta_values, save_results=False
             )
 
         self.assertAlmostEqual(best_obj, 1.0, places=12)
@@ -355,12 +376,8 @@ class TestParmestMultistart(unittest.TestCase):
 
     def test_indexed_unknown_parameters_supported_in_sampling(self):
         pest = parmest.Estimator([IndexedThetaExperiment()], obj_function="SSE")
-        model = pest._create_parmest_model(0)
         df = pest._generate_initial_theta(
-            parmest_model=model,
-            seed=10,
-            n_restarts=3,
-            multistart_sampling_method="uniform_random",
+            seed=10, n_restarts=3, multistart_sampling_method="uniform_random"
         )
         self.assertTrue({"theta[a]", "theta[b]"}.issubset(set(df.columns)))
 
@@ -393,3 +410,24 @@ class TestParmestMultistart(unittest.TestCase):
             [MultiOutputExperiment(), MultiOutputExperiment()]
         )
         self.assertEqual(total_points, 2)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_multistart_results_reproducible_when_rerun_from_recorded_init(self):
+        pest = parmest.Estimator([StartCoupledExperiment()], obj_function="SSE")
+        init_df = pd.DataFrame([[-2.0], [1.5], [3.0]], columns=["theta"])
+        results_df, _, _ = pest.theta_est_multistart(
+            user_provided_df=init_df, save_results=False
+        )
+
+        for _, row in results_df.iterrows():
+            theta_init = {"theta": float(row["theta"])}
+            exp = StartCoupledExperiment(theta_initial=theta_init)
+            rerun = parmest.Estimator([exp], obj_function="SSE")
+            obj, theta = rerun.theta_est()
+
+            self.assertTrue(
+                np.isclose(obj, row["final objective"], rtol=1e-6, atol=1e-8)
+            )
+            self.assertTrue(
+                np.isclose(theta["theta"], row["converged_theta"], rtol=1e-6, atol=1e-8)
+            )
