@@ -138,9 +138,11 @@ class TestDynamicModelInterface(unittest.TestCase):
             pyo.ComponentUID(m.scalar): 6.0,
             pyo.ComponentUID(m.scalar_squared): 6.0,
         }
-        interface.load_data(data)
+        interface.load_data(data, ignore_named_expressions=True)
         self.assertEqual(m.scalar.value, 6.0)
         self.assertEqual(pyo.value(m.scalar_squared), 36.0)
+        with self.assertRaises(TypeError):
+            interface.load_data(data)
 
     def test_load_data_at_time_all(self):
         # NOTE: load_data_at_time has been deprecated
@@ -218,11 +220,13 @@ class TestDynamicModelInterface(unittest.TestCase):
         }
         # Need to provide data to load_data that can be interpreted
         # as a TimeSeriesData
-        interface.load_data((data, m.time))
+        interface.load_data((data, m.time), ignore_named_expressions=True)
         for i, t in enumerate(m.time):
             self.assertEqual(m.input[t].value, data_list[i])
         for i in m.var.index_set():
             self.assertEqual(pyo.value(m.var_squared[i]), pyo.value(m.var[i] ** 2))
+        with self.assertRaises(TypeError):
+            interface.load_data((data, m.time))
 
     def test_load_data_from_ScalarData_to_point(self):
         m = self._make_model()
