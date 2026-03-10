@@ -51,11 +51,7 @@ def load_data_from_scalar(data, model, time, ignore_named_expressions=False):
 
 
 def load_data_from_series(
-    data, 
-    model, 
-    time, 
-    tolerance=0.0, 
-    ignore_named_expressions=False,
+    data, model, time, tolerance=0.0, ignore_named_expressions=False
 ):
     """A function to load TimeSeriesData into a model
 
