@@ -114,11 +114,6 @@ class DesignOfExperiments:
         }
     )
 
-    @staticmethod
-    def _enum_label(value):
-        """Return a stable short label for enum-like values."""
-        return str(value).split(".")[-1]
-
     def __init__(
         self,
         experiment=None,
@@ -347,6 +342,11 @@ class DesignOfExperiments:
         # May need this attribute for more complicated structures?
         # (i.e., no model rebuilding for large models with sequential)
         self._built_scenarios = False
+
+    @staticmethod
+    def _enum_label(value):
+        """Return a stable short label for enum-like values."""
+        return str(value).split(".")[-1]
 
     # Perform doe
     def run_doe(self, model=None, results_file=None):
