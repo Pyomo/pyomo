@@ -2915,7 +2915,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.hull = TransformationFactory('gdp.hull')
 
     # ------------------------------------------------------------------
-    # 1. Convex quadratic upper-bound → conic reformulation
+    # 1. Convex quadratic upper-bound -> conic reformulation
     # ------------------------------------------------------------------
     @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_convex_quadratic_upper_bound_conic_reformulation(self):
@@ -2976,7 +2976,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertAlmostEqual(linear_map[id(y_ind)], -4)
 
     # ------------------------------------------------------------------
-    # 2. Convex quadratic lower-bound → conic reformulation with negation
+    # 2. Convex quadratic lower-bound -> conic reformulation with negation
     # ------------------------------------------------------------------
     @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_convex_quadratic_lower_bound_conic_reformulation(self):
@@ -3027,7 +3027,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertAlmostEqual(linear_map[id(y_ind)], -4)
 
     # ------------------------------------------------------------------
-    # 3. Non-convex quadratic → general exact hull
+    # 3. Non-convex quadratic -> general exact hull
     # ------------------------------------------------------------------
     @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_nonconvex_quadratic_general_exact_hull(self):
@@ -3073,7 +3073,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertAlmostEqual(quad_pairs[(id(y_ind), id(y_ind))], -1)
 
     # ------------------------------------------------------------------
-    # 4. Equality constraint → always uses general exact hull
+    # 4. Equality constraint -> always uses general exact hull
     # ------------------------------------------------------------------
     @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_equality_constraint_general_exact_hull(self):
@@ -3117,7 +3117,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertAlmostEqual(quad_pairs[(id(y_ind), id(y_ind))], -4)
 
     # ------------------------------------------------------------------
-    # 5. Range constraint with both bounds → mixed reformulations
+    # 5. Range constraint with both bounds -> mixed reformulations
     # ------------------------------------------------------------------
     @unittest.skipUnless(numpy_available, "NumPy is not available")
     def test_range_constraint_mixed_reformulations(self):
@@ -3218,7 +3218,7 @@ class TestExactHullQuadratic(unittest.TestCase):
 
         The matrix Q = diag(1, -1e-11) has a very small negative eigenvalue
         (-1e-11).  With a permissive tolerance of 1e-9 the eigenvalue is
-        within the tolerance band and Q is treated as PSD → conic
+        within the tolerance band and Q is treated as PSD -> conic
         reformulation.
         """
         m = models.makeTwoTermDisj_NearPSDQuad()
@@ -3227,7 +3227,7 @@ class TestExactHullQuadratic(unittest.TestCase):
             m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-9
         )
         relaxBlock = m_perm._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
-        # Conic path should have been taken → t variable present.
+        # Conic path should have been taken -> t variable present.
         self.assertIsNotNone(
             relaxBlock.component('_conic_aux_t_c'),
             "Expected conic aux variable with permissive eigenvalue_tolerance",
@@ -3241,8 +3241,8 @@ class TestExactHullQuadratic(unittest.TestCase):
         """A strict ``eigenvalue_tolerance`` should reject a near-PSD Q.
 
         Same Q = diag(1, -1e-11) as above.  With a tolerance of 1e-12 the
-        eigenvalue -1e-11 is outside the tolerance band → Q is not treated
-        as PSD → general exact hull (no t variable).
+        eigenvalue -1e-11 is outside the tolerance band -> Q is not treated
+        as PSD -> general exact hull (no t variable).
         """
         m = models.makeTwoTermDisj_NearPSDQuad()
 
@@ -3250,7 +3250,7 @@ class TestExactHullQuadratic(unittest.TestCase):
             m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-12
         )
         relaxBlock = m_strict._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
-        # General path should have been taken → no t variable.
+        # General path should have been taken -> no t variable.
         self.assertIsNone(
             relaxBlock.component('_conic_aux_t_c'),
             "Expected no conic aux variable with strict eigenvalue_tolerance",
@@ -3340,7 +3340,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         v_y = relaxBlock.disaggregatedVars.y
         y_ind = m.d1.binary_indicator_var
 
-        # No conic aux variable (indefinite Q → general path).
+        # No conic aux variable (indefinite Q -> general path).
         self.assertIsNone(relaxBlock.component('_conic_aux_t_c'))
 
         trans_cons = self.hull.get_transformed_constraints(m.d1.c)

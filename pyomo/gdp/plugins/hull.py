@@ -1047,10 +1047,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # All eigenvalues lie within the tolerance band [-tol, tol].
             # In this numerically ambiguous case, we conservatively avoid the
             # conic reformulation and fall back to the general exact hull
-            # reformulation.  The underlying sign-flip bug motivating this
-            # choice occurs for two-sided (range) constraints, where a single
-            # conic expression would otherwise be reused (possibly negated)
-            # for both bounds.
+            # reformulation.  When Q is simultaneously PSD and NSD (within
+            # tolerance), both use_conic_upper and use_conic_lower would be
+            # set for two-sided (range) constraints, but a single conic
+            # expression built with negate_for_conic=True cannot correctly
+            # serve both bounds.  Falling back to the general path avoids
+            # this issue entirely.
             # Only warn for inequality constraints; equality constraints always
             # use the general exact hull path, so no fallback warning is needed.
             if not c.equality:
