@@ -781,9 +781,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             mode = self._config.perspective_function
             exact_quad = self._config.exact_hull_quadratic
 
-            use_exact_quad = (
-                exact_quad and polynomial_degree == 2
-            )
+            use_exact_quad = exact_quad and polynomial_degree == 2
 
             NL = polynomial_degree not in (0, 1)
             general_NL = NL and not use_exact_quad
@@ -800,8 +798,16 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
             if use_exact_quad:
                 self._build_exact_quadratic_hull(
-                    c, y, disjunct, relaxationBlock, constraint_map,
-                    var_substitute_map, newConstraint, name, i, obj,
+                    c,
+                    y,
+                    disjunct,
+                    relaxationBlock,
+                    constraint_map,
+                    var_substitute_map,
+                    newConstraint,
+                    name,
+                    i,
+                    obj,
                 )
                 continue
 
@@ -937,8 +943,17 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         obj.deactivate()
 
     def _build_exact_quadratic_hull(
-        self, c, y, disjunct, relaxationBlock, constraint_map,
-        var_substitute_map, newConstraint, name, i, obj,
+        self,
+        c,
+        y,
+        disjunct,
+        relaxationBlock,
+        constraint_map,
+        var_substitute_map,
+        newConstraint,
+        name,
+        i,
+        obj,
     ):
         """Build the exact hull reformulation for a single quadratic constraint.
 
@@ -1009,9 +1024,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         var_to_idx = {id(var): idx for idx, var in enumerate(all_vars)}
         Q = np.zeros((n_vars, n_vars))
 
-        for coef, (var_i, var_j) in zip(
-            repn.quadratic_coefs, repn.quadratic_vars
-        ):
+        for coef, (var_i, var_j) in zip(repn.quadratic_coefs, repn.quadratic_vars):
             idx_i = var_to_idx[id(var_i)]
             idx_j = var_to_idx[id(var_j)]
             if var_i is var_j:
@@ -1076,13 +1089,19 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         if need_non_convex:
             non_conv_expr = self._build_general_exact_hull_expr(
-                repn, var_substitute_map, y, const_term,
+                repn, var_substitute_map, y, const_term
             )
 
         if use_conic_upper or use_conic_lower:
             conic_expr_linear = self._build_conic_exact_hull_expr(
-                c, y, disjunct, relaxationBlock, constraint_map,
-                repn, var_substitute_map, const_term,
+                c,
+                y,
+                disjunct,
+                relaxationBlock,
+                constraint_map,
+                repn,
+                var_substitute_map,
+                const_term,
                 negate_for_conic,
             )
 
@@ -1152,9 +1171,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
                 constraint_map.src_constraint[newConstraint[name, 'ub']] = c
 
-    def _build_general_exact_hull_expr(
-        self, repn, var_substitute_map, y, const_term
-    ):
+    def _build_general_exact_hull_expr(self, repn, var_substitute_map, y, const_term):
         """Build the general exact hull expression for a quadratic constraint.
 
         Constructs the expression ``v'Qv + c'v*y + d*y**2`` where *v* are
@@ -1179,9 +1196,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         """
         expr = 0
 
-        for coef, (var_i, var_j) in zip(
-            repn.quadratic_coefs, repn.quadratic_vars
-        ):
+        for coef, (var_i, var_j) in zip(repn.quadratic_coefs, repn.quadratic_vars):
             v_i = var_substitute_map.get(id(var_i), var_i)
             v_j = var_substitute_map.get(id(var_j), var_j)
             if var_i is var_j:
@@ -1201,8 +1216,16 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         return expr
 
     def _build_conic_exact_hull_expr(
-        self, c, y, disjunct, relaxationBlock, constraint_map,
-        repn, var_substitute_map, const_term, negate_for_conic,
+        self,
+        c,
+        y,
+        disjunct,
+        relaxationBlock,
+        constraint_map,
+        repn,
+        var_substitute_map,
+        const_term,
+        negate_for_conic,
     ):
         """Build the conic exact hull expression for a convex quadratic.
 
@@ -1243,9 +1266,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         t = Var(domain=NonNegativeReals)
         t_name = unique_component_name(
             relaxationBlock,
-            '_conic_aux_t_%s' % c.getname(
-                fully_qualified=True, relative_to=disjunct
-            ),
+            '_conic_aux_t_%s' % c.getname(fully_qualified=True, relative_to=disjunct),
         )
         relaxationBlock.add_component(t_name, t)
 
@@ -1264,9 +1285,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # Build rotated SOC: v'Q_psd v <= t * y
         quadratic_form = 0
-        for coef, (var_i, var_j) in zip(
-            repn.quadratic_coefs, repn.quadratic_vars
-        ):
+        for coef, (var_i, var_j) in zip(repn.quadratic_coefs, repn.quadratic_vars):
             v_i = var_substitute_map.get(id(var_i), var_i)
             v_j = var_substitute_map.get(id(var_j), var_j)
             actual_coef = -coef if negate_for_conic else coef
@@ -1277,9 +1296,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         conic_constraint_name = unique_component_name(
             relaxationBlock,
-            '_conic_constraint_%s' % c.getname(
-                fully_qualified=True, relative_to=disjunct
-            ),
+            '_conic_constraint_%s'
+            % c.getname(fully_qualified=True, relative_to=disjunct),
         )
         conic_constraint = Constraint(expr=quadratic_form <= t * y)
         relaxationBlock.add_component(conic_constraint_name, conic_constraint)

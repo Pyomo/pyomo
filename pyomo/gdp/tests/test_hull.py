@@ -2953,15 +2953,14 @@ class TestExactHullQuadratic(unittest.TestCase):
         repn = generate_standard_repn(conic_cons.body, compute_values=False)
         self.assertTrue(repn.is_quadratic())
         quad_pairs = dict(
-            zip(
-                [(id(a), id(b)) for a, b in repn.quadratic_vars],
-                repn.quadratic_coefs,
-            )
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
         )
         self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
         self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], 1)
         self.assertAlmostEqual(
-            quad_pairs.get((id(t_var), id(y_ind)), quad_pairs.get((id(y_ind), id(t_var)), None)),
+            quad_pairs.get(
+                (id(t_var), id(y_ind)), quad_pairs.get((id(y_ind), id(t_var)), None)
+            ),
             -1,
         )
         self.assertEqual(repn.constant, 0)
@@ -3013,10 +3012,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         repn = generate_standard_repn(conic_cons.body, compute_values=False)
         self.assertTrue(repn.is_quadratic())
         quad_pairs = dict(
-            zip(
-                [(id(a), id(b)) for a, b in repn.quadratic_vars],
-                repn.quadratic_coefs,
-            )
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
         )
         self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
         self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], 1)
@@ -3067,10 +3063,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 0)
 
         quad_pairs = dict(
-            zip(
-                [(id(a), id(b)) for a, b in repn.quadratic_vars],
-                repn.quadratic_coefs,
-            )
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
         )
         # v_x**2 coefficient: +1
         self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
@@ -3116,10 +3109,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 0)
 
         quad_pairs = dict(
-            zip(
-                [(id(a), id(b)) for a, b in repn.quadratic_vars],
-                repn.quadratic_coefs,
-            )
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
         )
         self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
         self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], 1)
@@ -3156,24 +3146,21 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertEqual(len(trans_cons), 3)
 
         # Pre-compute all repns to avoid duplicate calls in the search loops.
-        repns = {id(c): generate_standard_repn(c.body, compute_values=False)
-                 for c in trans_cons}
+        repns = {
+            id(c): generate_standard_repn(c.body, compute_values=False)
+            for c in trans_cons
+        }
 
         # Identify each constraint by its standard representation.
         # The linear one (involving t) is the conic upper bound.
         # The quadratic one without t_var quad terms is the general lower bound.
-        ub_cons = next(
-            c for c in trans_cons
-            if repns[id(c)].is_linear()
-        )
+        ub_cons = next(c for c in trans_cons if repns[id(c)].is_linear())
         lb_cons = next(
-            c for c in trans_cons
+            c
+            for c in trans_cons
             if repns[id(c)].is_quadratic()
-            and id(t_var) not in {
-                id(v)
-                for pair in repns[id(c)].quadratic_vars
-                for v in pair
-            }
+            and id(t_var)
+            not in {id(v) for pair in repns[id(c)].quadratic_vars for v in pair}
         )
 
         # --- Upper bound: linear conic bound ``t - 4*y_ind <= 0`` ---
@@ -3181,7 +3168,9 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertEqual(value(ub_cons.upper), 0)
         repn_ub = repns[id(ub_cons)]
         self.assertTrue(repn_ub.is_linear())
-        linear_map = dict(zip([id(v) for v in repn_ub.linear_vars], repn_ub.linear_coefs))
+        linear_map = dict(
+            zip([id(v) for v in repn_ub.linear_vars], repn_ub.linear_coefs)
+        )
         self.assertAlmostEqual(linear_map[id(t_var)], 1)
         self.assertAlmostEqual(linear_map[id(y_ind)], -4)
 
@@ -3316,7 +3305,8 @@ class TestExactHullQuadratic(unittest.TestCase):
 
         # The linear bound constraint is the one involving t.
         linear_cons = next(
-            c for c in trans_cons
+            c
+            for c in trans_cons
             if generate_standard_repn(c.body, compute_values=False).is_linear()
         )
         repn = generate_standard_repn(linear_cons.body, compute_values=False)
@@ -3366,10 +3356,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 0)
 
         quad_pairs = dict(
-            zip(
-                [(id(a), id(b)) for a, b in repn.quadratic_vars],
-                repn.quadratic_coefs,
-            )
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
         )
         # v_x**2: +1
         self.assertAlmostEqual(quad_pairs.get((id(v_x), id(v_x)), 0), 1)
@@ -3377,8 +3364,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertAlmostEqual(quad_pairs.get((id(v_y), id(v_y)), 0), -1)
         # 3*v_x*y_ind cross term
         cross_coef = quad_pairs.get(
-            (id(v_x), id(y_ind)),
-            quad_pairs.get((id(y_ind), id(v_x)), None),
+            (id(v_x), id(y_ind)), quad_pairs.get((id(y_ind), id(v_x)), None)
         )
         self.assertIsNotNone(cross_coef, "Missing cross term v_x*y_ind")
         self.assertAlmostEqual(cross_coef, 3)
@@ -3405,9 +3391,7 @@ class TestExactHullQuadratic(unittest.TestCase):
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.gdp.hull', logging.WARNING):
-            self.hull.apply_to(
-                m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-10
-            )
+            self.hull.apply_to(m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-10)
 
         warning_text = output.getvalue()
         self.assertIn("quadratic terms", warning_text)
@@ -3453,9 +3437,7 @@ class TestExactHullQuadratic(unittest.TestCase):
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.gdp.hull', logging.WARNING):
-            self.hull.apply_to(
-                m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-10
-            )
+            self.hull.apply_to(m, exact_hull_quadratic=True, eigenvalue_tolerance=1e-10)
 
         # Warning must be issued.
         self.assertIn("general exact hull", output.getvalue())
@@ -3473,8 +3455,7 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertEqual(len(trans_cons), 2)
 
         repns = [
-            generate_standard_repn(tc.body, compute_values=False)
-            for tc in trans_cons
+            generate_standard_repn(tc.body, compute_values=False) for tc in trans_cons
         ]
 
         # Both should be quadratic (general hull includes the tiny quad terms).
