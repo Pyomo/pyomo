@@ -220,17 +220,17 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         the reformulation depends on convexity:
 
-        **Conic exact hull** (convex quadratics): An auxiliary variable *t*
+        Conic exact hull (convex quadratics): An auxiliary variable ``t``
         and a rotated second-order cone constraint ``v'Qv <= t * y`` are
         introduced, and the original bound becomes ``t + c'v + d*y <= 0``.
         Convexity is determined via eigenvalue decomposition of the Hessian
-        matrix *Q*: the quadratic is convex for an upper-bound constraint
-        when *Q* is positive semi-definite, and for a lower-bound constraint
-        when *Q* is negative semi-definite.
+        matrix ``Q``: the quadratic is convex for an upper-bound constraint
+        when ``Q`` is positive semi-definite, and for a lower-bound constraint
+        when ``Q`` is negative semi-definite.
 
-        **General exact hull** (non-convex quadratics and equalities): The
-        constraint is reformulated as ``v'Qv + c'v*y + d*y**2``, where *v*
-        are the disaggregated variables and *y* is the binary indicator.
+        General exact hull (non-convex quadratics and equalities): The
+        constraint is reformulated as ``v'Qv + c'v*y + d*y**2``, where ``v``
+        are the disaggregated variables and ``y`` is the binary indicator.
 
         Default is False, which uses the standard perspective function for
         all nonlinear constraints.
@@ -742,7 +742,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         """Transform a single Constraint on a Disjunct.
 
         Applies the appropriate hull reformulation to each
-        ``ConstraintData`` in *obj*. When ``exact_hull_quadratic`` is
+        ``ConstraintData`` in ``obj``. When ``exact_hull_quadratic`` is
         enabled and the constraint body has polynomial degree 2, an exact
         hull formulation is used instead of the perspective function.
 
@@ -751,7 +751,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         obj : Constraint
             The Constraint component to transform.
         disjunct : Disjunct
-            The Disjunct that owns *obj*.
+            The Disjunct that owns ``obj``.
         var_substitute_map : dict
             Mapping from ``id(original_var)`` to its disaggregated
             counterpart.
@@ -789,7 +789,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # We need to evaluate the expression at the origin *before*
             # we substitute the expression variables with the
             # disaggregated variables
-            if not NL or mode == "FurmanSawayaGrossmann":
+            if not use_exact_quad and (not NL or mode == "FurmanSawayaGrossmann"):
                 h_0 = clone_without_expression_components(
                     c.body, substitute=zero_substitute_map
                 )
@@ -958,16 +958,16 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         """Build the exact hull reformulation for a single quadratic constraint.
 
         For a constraint whose body is a quadratic of the form
-        ``x'Qx + c'x + d``, this method constructs either the *conic exact
-        hull* (when the quadratic is convex with respect to the bound
-        direction) or the *general exact hull* (otherwise).
+        ``x'Qx + c'x + d``, this method constructs either the conic exact
+        hull (when the quadratic is convex with respect to the bound
+        direction) or the general exact hull (otherwise).
 
-        **Conic exact hull** (convex case): introduces an auxiliary variable
-        *t >= 0* and a rotated second-order cone constraint
+        Conic exact hull (convex case): introduces an auxiliary variable
+        ``t >= 0`` and a rotated second-order cone constraint
         ``v'Q_psd v <= t * y``, then replaces the original bound with a
         linear constraint on ``t + c'v + d*y``.
 
-        **General exact hull** (non-convex / equality case): directly
+        General exact hull (non-convex / equality case): directly
         substitutes the quadratic form to ``v'Qv + c'v*y + d*y**2``.
 
         Parameters
@@ -1176,9 +1176,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     def _build_general_exact_hull_expr(self, repn, var_substitute_map, y, const_term):
         """Build the general exact hull expression for a quadratic constraint.
 
-        Constructs the expression ``v'Qv + c'v*y + d*y**2`` where *v* are
-        disaggregated variables, *y* is the indicator, *c* are linear
-        coefficients, and *d* is the constant term.
+        Constructs the expression ``v'Qv + c'v*y + d*y**2`` where ``v`` are
+        disaggregated variables, ``y`` is the indicator, ``c`` are linear
+        coefficients, and ``d`` is the constant term.
 
         Parameters
         ----------
