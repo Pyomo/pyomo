@@ -108,11 +108,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     exact_hull_quadratic : bool
         If ``True``, quadratic constraints (polynomial degree 2) are
         reformulated using the exact hull instead of the standard
-        perspective function. Convex quadratics are handled with a conic
-        reformulation (rotated second-order cone), while non-convex
-        quadratics and equalities use the general exact hull
-        reformulation. Convexity is determined via eigenvalue
-        decomposition of the Hessian matrix. [default: False]
+        perspective function, following Gusev & Bernal Neira (2025) [4]_.
+        Convex quadratics are handled with a conic reformulation
+        (rotated second-order cone), while non-convex quadratics and
+        equalities use the general exact hull reformulation. Convexity
+        is determined via eigenvalue decomposition of the Hessian matrix.
+        [default: False]
     eigenvalue_tolerance : float
         Numerical tolerance for eigenvalue-based positive/negative
         semi-definite checks when using the exact hull reformulation for
@@ -193,6 +194,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
            useful algebraic representation of nonlinear disjunctive convex
            sets using the perspective function.  Optimization Online
            (2016). http://www.optimization-online.org/DB_HTML/2016/07/5544.html.
+
+        .. [4] Gusev, S., & Bernal Neira, D. E. (2025). Exact Hull
+           Reformulation for Quadratically Constrained Generalized
+           Disjunctive Programs. arXiv preprint arXiv:2508.16093.
+           https://arxiv.org/abs/2508.16093
         """,
         ),
     )
@@ -212,7 +218,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             description="Use exact hull reformulation for quadratic constraints.",
             doc="""
         If True, quadratic constraints (polynomial degree 2) are reformulated
-        using the exact hull instead of the standard perspective function.
+        using the exact hull instead of the standard perspective function,
+        following Gusev & Bernal Neira (2025), arXiv:2508.16093.
 
         For a quadratic constraint of the form
 
@@ -957,8 +964,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     ):
         """Build the exact hull reformulation for a single quadratic constraint.
 
-        For a constraint whose body is a quadratic of the form
-        ``x'Qx + c'x + d``, this method constructs either the conic exact
+        Implements the reformulation from Gusev & Bernal Neira (2025),
+        arXiv:2508.16093.  For a constraint whose body is a quadratic of the
+        form ``x'Qx + c'x + d``, this method constructs either the conic exact
         hull (when the quadratic is convex with respect to the bound
         direction) or the general exact hull (otherwise).
 
@@ -1022,6 +1030,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         n_vars = len(all_vars)
         var_to_idx = {id(var): idx for idx, var in enumerate(all_vars)}
+        # Q is built symmetric (off-diagonal coefs split equally between
+        # Q[i,j] and Q[j,i]) because np.linalg.eigh assumes symmetry and
+        # x'Qx depends only on the symmetric part of Q.
         Q = np.zeros((n_vars, n_vars))
 
         for coef, (var_i, var_j) in zip(repn.quadratic_coefs, repn.quadratic_vars):
