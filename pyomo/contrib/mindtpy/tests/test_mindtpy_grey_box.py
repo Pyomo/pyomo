@@ -30,6 +30,9 @@ if all(SolverFactory(s).available(exception_flag=False) for s in required_solver
 else:
     subsolvers_available = False
 
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+
 
 @unittest.skipIf(model_list[0] is None, 'Unable to generate the Grey Box model.')
 @unittest.skipIf(
