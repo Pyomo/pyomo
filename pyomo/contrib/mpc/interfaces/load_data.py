@@ -184,9 +184,9 @@ def load_data_from_interval(
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
-        elif var.ctype == Expression and ignore_named_expressions:
-            continue
         elif var.ctype == Expression:
+            if ignore_named_expressions:
+                continue
             raise TypeError("Cannot load data for named Expression")
         for i, t in zip(idx_list, time):
             if i is None:
