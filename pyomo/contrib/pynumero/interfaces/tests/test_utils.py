@@ -28,6 +28,7 @@ from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
 )
 
 from pyomo.contrib.pynumero.asl import AmplInterface
+
 if not AmplInterface.available():
     raise unittest.SkipTest("Pynumero ASL interface is not available")
 
