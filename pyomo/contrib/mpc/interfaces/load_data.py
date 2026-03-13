@@ -81,9 +81,9 @@ def load_data_from_series(
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
-        elif var.ctype == Expression and ignore_named_expressions:
-            continue
         elif var.ctype == Expression:
+            if ignore_named_expressions:
+                continue
             raise TypeError("Cannot load data for named Expression")
         for idx, val in zip(time_indices, vals):
             t = time_list[idx]
