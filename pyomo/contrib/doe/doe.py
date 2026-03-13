@@ -1756,10 +1756,6 @@ class DesignOfExperiments:
             n_scenarios_per_candidate = len(list(first_exp_block.fd_scenario_blocks))
         else:
             n_scenarios_per_candidate = 1
-        self.logger.info(
-            f"LHS: evaluating FIM at {n_candidates} candidate designs "
-            f"({n_candidates * n_scenarios_per_candidate} sequential solver calls expected)."
-        )
         # Change the following block if we add support for LHS initialization with
         # non-FD structures (e.g. AD)
         if (
@@ -1776,6 +1772,13 @@ class DesignOfExperiments:
             lhs_n_workers
             if lhs_n_workers is not None
             else max(1, min(os.cpu_count() or 1, 8))
+        )
+        use_parallel_fim = lhs_parallel and resolved_workers > 1
+        fim_eval_mode = "parallel" if use_parallel_fim else "serial"
+        self.logger.info(
+            f"LHS: evaluating FIM at {n_candidates} candidate designs "
+            f"({n_candidates * n_scenarios_per_candidate} solver calls expected; "
+            f"{fim_eval_mode} candidate FIM mode)."
         )
 
         # Track worker DoE construction failures to avoid repeated logging of the same issue
@@ -1866,7 +1869,12 @@ class DesignOfExperiments:
 
         # 3.  Evaluate FIM at every candidate design
         candidate_fims = [None] * n_candidates
-        use_parallel_fim = lhs_parallel and resolved_workers > 1
+        if lhs_parallel and not use_parallel_fim:
+            self.logger.warning(
+                "LHS candidate FIM parallel evaluation requested with "
+                "``lhs_parallel=True``, but running serially: "
+                f"resolved_workers={resolved_workers} <= 1."
+            )
         timed_out = False
         deadline = (
             None
