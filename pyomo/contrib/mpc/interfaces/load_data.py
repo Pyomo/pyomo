@@ -7,7 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.environ import Expression
+from pyomo.core.base import Expression
 from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
