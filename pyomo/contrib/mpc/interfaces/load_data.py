@@ -36,9 +36,9 @@ def load_data_from_scalar(data, model, time, ignore_named_expressions=False):
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
-        elif var.ctype == Expression and ignore_named_expressions:
-            continue
         elif var.ctype == Expression:
+            if ignore_named_expressions:
+                continue
             raise TypeError("Cannot load data for named Expression")
         # TODO: Time points should probably use find_nearest_index
         # This will have to happen in the calling function, as data
