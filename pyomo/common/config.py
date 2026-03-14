@@ -448,7 +448,7 @@ class SetOf(_Container):
     Note that :py:class:`SetOf` can be used (in conjunction with
     :py:class:`In`) to implement a "SubsetOf" domain.  For example, you
     can define a domain validator that admits values that are
-    convertable to :py:`int` as long as they are in the set ``{1, 3, 5}``
+    convertible to :py:`int` as long as they are in the set ``{1, 3, 5}``
     with:
 
     ..doctest::
