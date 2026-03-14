@@ -376,50 +376,74 @@ class IsInstance:
         return f"IsInstance[{', '.join(class_names)}]"
 
 
-class ListOf:
-    """Domain validator for lists of a specified type
+class _Container:
+    """Domain validator for containers of a specified type
+
+    Incoming values are converted using the ``domain`` callable (if not
+    set / ``None``, then the ``itemtype`` is used as the ``domain``).
+    If the incoming value is iterable and *not* an instance of
+    ``itemtype``, then the incoming value is iterated over to generate
+    individual entries in the container.
 
     Parameters
     ----------
     itemtype: type
-        The type for each element in the list
+        The type for each element in the container
 
     domain: Callable
         A domain validator (callable that takes the incoming value,
         validates it, and returns the appropriate domain type) for each
-        element in the list.  If not specified, defaults to the
-        `itemtype`.
+        element in the container.  If not specified, defaults to the
+        ``itemtype``.
 
     string_lexer: Callable
         A preprocessor (lexer) called for all string values.  If
-        NOTSET, then strings are split on whitespace and/or commas
+        ``NOTSET``, then strings are split on whitespace and/or commas
         (honoring simple use of single or double quotes).  If None, then
         no tokenization is performed.
 
     """
 
-    def __init__(self, itemtype, domain=None, string_lexer=NOTSET):
+    def __init__(self, itemtype=None, domain=None, string_lexer=NOTSET):
         self.itemtype = itemtype
         if domain is None:
-            self.domain = self.itemtype
-        else:
-            self.domain = domain
+            domain = self.itemtype
         if string_lexer is NOTSET:
-            self.string_lexer = _default_string_list_lexer
-        else:
-            self.string_lexer = string_lexer
-        self.__name__ = 'ListOf(%s)' % (getattr(self.domain, '__name__', self.domain),)
+            string_lexer = _default_string_list_lexer
+
+        if domain is None:
+            raise ValueError(
+                f"{self.__class__.__name__}: either itemtype or domain must be non-None"
+            )
+        self.domain = domain
+        self.string_lexer = string_lexer
+        self.__name__ = '%s(%s)' % (
+            self.__class__.__name__,
+            getattr(self.domain, '__name__', self.domain),
+        )
 
     def __call__(self, value):
         if isinstance(value, str) and self.string_lexer is not None:
-            return [self.domain(v) for v in self.string_lexer(value)]
-        if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
-            return [self.domain(v) for v in value]
-        return [self.domain(value)]
+            return self.ReturnType(self.domain(v) for v in self.string_lexer(value))
+        if hasattr(value, '__iter__') and (
+            self.itemtype is None or not isinstance(value, self.itemtype)
+        ):
+            return self.ReturnType(self.domain(v) for v in value)
+        return self.ReturnType([self.domain(value)])
 
     def domain_name(self):
         _dn = _domain_name(self.domain) or ""
-        return f'ListOf[{_dn}]'
+        return f'{self.__class__.__name__}[{_dn}]'
+
+
+class ListOf(_Container):
+    __doc__ = _Container.__doc__.replace('container', 'list')
+    ReturnType = list
+
+
+class SetOf(_Container):
+    __doc__ = _Container.__doc__.replace('container', 'set')
+    ReturnType = set
 
 
 class Module:

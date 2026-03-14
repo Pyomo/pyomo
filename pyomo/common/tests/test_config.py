@@ -61,6 +61,7 @@ from pyomo.common.config import (
     In,
     IsInstance,
     ListOf,
+    SetOf,
     Module,
     Path,
     PathList,
@@ -788,6 +789,11 @@ class TestConfigDomains(unittest.TestCase):
             c.a = ["/a/b/c", 2]
 
     def test_ListOf(self):
+        with self.assertRaisesRegex(
+            ValueError, "ListOf: either itemtype or domain must be non-None"
+        ):
+            ListOf()
+
         c = ConfigDict()
         c.declare('a', ConfigValue(domain=ListOf(int), default=None))
         self.assertEqual(c.get('a').domain_name(), 'ListOf[int]')
@@ -849,6 +855,72 @@ class TestConfigDomains(unittest.TestCase):
             c.c = [0]
         c.c = [3, 6, 9]
         self.assertEqual(c.c, [3, 6, 9])
+
+    def test_SetOf(self):
+        with self.assertRaisesRegex(
+            ValueError, "SetOf: either itemtype or domain must be non-None"
+        ):
+            SetOf()
+
+        c = ConfigDict()
+        c.declare('a', ConfigValue(domain=SetOf(int), default=None))
+        self.assertEqual(c.get('a').domain_name(), 'SetOf[int]')
+
+        self.assertEqual(c.a, None)
+        c.a = 5
+        self.assertEqual(c.a, {5})
+        c.a = (5, 6.6)
+        self.assertEqual(c.a, {5, 6})
+        c.a = '7,8'
+        self.assertEqual(c.a, {7, 8})
+
+        ref = (
+            r"(?m)Failed casting a\s+to SetOf\(int\)\s+"
+            r"Error: invalid literal for int\(\) with base 10: 'a'"
+        )
+        with self.assertRaisesRegex(ValueError, ref):
+            c.a = 'a'
+
+        c.declare('b', ConfigValue(domain=SetOf(str), default=None))
+        self.assertEqual(c.get('b').domain_name(), 'SetOf[str]')
+        self.assertEqual(c.b, None)
+        c.b = "'Hello, World'"
+        self.assertEqual(c.b, {"Hello, World"})
+        c.b = "Hello, World"
+        self.assertEqual(c.b, {"Hello", "World"})
+        c.b = ("A", 6)
+        self.assertEqual(c.b, {"A", "6"})
+        with self.assertRaises(ValueError):
+            c.b = "'Hello, World"
+
+        c.declare('b1', ConfigValue(domain=SetOf(str, string_lexer=None), default=None))
+        self.assertEqual(c.get('b1').domain_name(), 'SetOf[str]')
+        self.assertEqual(c.b1, None)
+        c.b1 = "'Hello, World'"
+        self.assertEqual(c.b1, {"'Hello, World'"})
+        c.b1 = "Hello, World"
+        self.assertEqual(c.b1, {"Hello, World"})
+        c.b1 = ("A", 6)
+        self.assertEqual(c.b1, {"A", "6"})
+        c.b1 = "'Hello, World"
+        self.assertEqual(c.b1, {"'Hello, World"})
+
+        c.declare('c', ConfigValue(domain=SetOf(int, PositiveInt)))
+        self.assertEqual(c.get('c').domain_name(), 'SetOf[PositiveInt]')
+        self.assertEqual(c.c, None)
+        c.c = 6
+        self.assertEqual(c.c, {6})
+
+        ref = (
+            r"(?m)Failed casting %s\s+to SetOf\(PositiveInt\)\s+"
+            r"Error: Expected positive int, but received %s"
+        )
+        with self.assertRaisesRegex(ValueError, ref % (6.5, 6.5)):
+            c.c = 6.5
+        with self.assertRaisesRegex(ValueError, ref % (r"\[0\]", "0")):
+            c.c = [0]
+        c.c = [3, 6, 9]
+        self.assertEqual(c.c, {3, 6, 9})
 
     def test_Module(self):
         c = ConfigDict()
