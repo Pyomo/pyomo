@@ -442,7 +442,29 @@ class ListOf(_Container):
 
 
 class SetOf(_Container):
-    __doc__ = _Container.__doc__.replace('container', 'set')
+    __doc__ = _Container.__doc__.replace('container', 'set').replace(
+        "\n    Parameters",
+        """
+    Note that :py:class:`SetOf` can be used (in conjunction with
+    :py:class:`In`) to implement a "SubsetOf" domain.  For example, you
+    can define a domain validator that admits values that are
+    convertable to :py:`int` as long as they are in the set ``{1, 3, 5}``
+    with:
+
+    ..doctest::
+
+        >>> d = SetOf(domain=In({1, 3, 5}, int))
+        >>> d([1, 5.2, 1])
+        {1, 5}
+        >>> d([1, 5, 2])
+        Traceback (most recent call last):
+          ...
+        ValueError: value 2 not in domain {1, 3, 5}
+
+    Parameters
+    """,
+    )
+
     ReturnType = set
 
 
