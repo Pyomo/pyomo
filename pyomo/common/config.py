@@ -724,10 +724,7 @@ class ConfigEnum(enum.Enum):
             return cls(arg)
 
 
-def _dump(*args, **kwds):
-    # TODO: Change the default behavior to no longer be YAML.
-    # This was a legacy decision that may no longer be the best
-    # decision, given changes to technology over the years.
+def _get_dump():
     try:
         from yaml import safe_dump as dump
     except ImportError:
@@ -737,7 +734,7 @@ def _dump(*args, **kwds):
             if type(x) is bool:
                 return str(x).lower()
             if type(x) is type:
-                return str(type(x))
+                return str(x)
             if isinstance(x, str):
                 # If the str is a number, then we need to quote it.
                 try:
@@ -747,8 +744,15 @@ def _dump(*args, **kwds):
                     return str(x)
             return str(x)
 
+    return dump
+
+
+def _dump(*args, **kwds):
+    # TODO: Change the default behavior to no longer be YAML.
+    # This was a legacy decision that may no longer be the best
+    # decision, given changes to technology over the years.
     assert '_dump' in globals()
-    globals()['_dump'] = dump
+    globals()['_dump'] = _get_dump()
     return dump(*args, **kwds)
 
 
@@ -814,7 +818,7 @@ def _value2string(prefix, value, obj):
     if value is not None:
         try:
             data = value.value(False) if value is obj else value
-            if getattr(builtins, data.__class__.__name__, None) is not None:
+            if data.__class__.__module__ == 'builtins':
                 _str += _dump(
                     data, default_flow_style=True, allow_unicode=True
                 ).rstrip()
@@ -823,7 +827,7 @@ def _value2string(prefix, value, obj):
             else:
                 _str += str(data)
         except:
-            _str += str(type(data))
+            _str += str(data)
     return _str.rstrip()
 
 
@@ -836,7 +840,7 @@ def _value2yaml(prefix, value, obj):
             if _str.endswith("..."):
                 _str = _str[:-3].rstrip()
         except:
-            _str += str(type(data))
+            _str += str(data)
     return _str.rstrip()
 
 

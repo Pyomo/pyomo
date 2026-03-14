@@ -42,6 +42,7 @@ def yaml_load(arg):
     return yaml.load(arg, **yaml_load_args)
 
 
+import pyomo.common.config as _config
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -77,8 +78,10 @@ from pyomo.common.config import (
     DEVELOPER_OPTION,
     _UnpickleableDomain,
     _picklable,
+    _value2string,
 )
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.modeling import NOTSET
 
 
 # Utility to redirect display() to a string
@@ -100,6 +103,14 @@ class GlobalClass:
     "test class for test_known_types"
 
     pass
+
+
+class NOOP:
+    def __getattr__(self, attr):
+        def noop(*args, **kwargs):
+            pass
+
+        return noop
 
 
 def ExampleConfig():
@@ -1575,16 +1586,11 @@ bar:
         )
 
     def test_display_nondata_type(self):
-        class NOOP:
-            def __getattr__(self, attr):
-                def noop(*args, **kwargs):
-                    pass
-
-                return noop
-
         cfg = ConfigDict()
         cfg.declare('callback', ConfigValue(default=NOOP))
-        self.assertEqual(_display(cfg), "callback: <class 'type'>\n")
+        self.assertEqual(
+            _display(cfg), "callback: <class 'pyomo.common.tests.test_config.NOOP'>\n"
+        )
 
     def test_display_userdata_declare_block(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
@@ -3151,17 +3157,11 @@ c: 1.0
         self.assertEqual(mod_copy._description, "new description")
         self.assertEqual(mod_copy._visibility, 0)
 
-    def test_template_nondata(self):
-        class NOOP:
-            def __getattr__(self, attr):
-                def noop(*args, **kwargs):
-                    pass
-
-                return noop
-
         cfg = ConfigDict()
         cfg.declare('callback', ConfigValue(default=NOOP, description="docstr"))
-        self._validateTemplate(cfg, "callback: <class 'type'>  # docstr\n")
+        self._validateTemplate(
+            cfg, "callback: <class 'pyomo.common.tests.test_config.NOOP'>  # docstr\n"
+        )
 
     def test_pickle(self):
         def anon_domain(domain):
@@ -3905,6 +3905,32 @@ dict1:
         self.assertEqual(dkfc._ensure_blank_line(""), "")
         self.assertEqual(dkfc._ensure_blank_line("a"), "a\n\n")
         self.assertEqual(dkfc._ensure_blank_line("b\n"), "b\n\n")
+
+    def test_value2str(self):
+        def d(val):
+            return _value2string("", val, NOTSET)
+
+        self.assertEqual("", d(None))
+        self.assertEqual("true", d(True))
+        self.assertEqual("<class 'int'>", d(int))
+        self.assertEqual("<class 'pyomo.common.config.ConfigDict'>", d(ConfigDict))
+        self.assertEqual("1", d(1))
+        self.assertEqual("a", d('a'))
+        self.assertEqual("'1'", d('1'))
+
+        orig = _config._dump, sys.modules['yaml']
+        try:
+            sys.modules['yaml'] = sys.modules[__name__]
+            _config._dump = _config._get_dump()
+            self.assertEqual("", d(None))
+            self.assertEqual("true", d(True))
+            self.assertEqual("<class 'int'>", d(int))
+            self.assertEqual("<class 'pyomo.common.config.ConfigDict'>", d(ConfigDict))
+            self.assertEqual("1", d(1))
+            self.assertEqual("a", d('a'))
+            self.assertEqual("'1'", d('1'))
+        finally:
+            _config._dump, sys.modules['yaml'] = orig
 
 
 if __name__ == "__main__":
