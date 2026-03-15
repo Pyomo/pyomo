@@ -118,9 +118,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         Numerical tolerance for eigenvalue-based positive/negative
         semi-definite checks when using the exact hull reformulation for
         quadratic constraints (``exact_hull_quadratic=True``). An
-        eigenvalue :math:`\lambda` is treated as non-negative if
-        :math:`\lambda >= -\text{eigenvalue_tolerance}` and as
-        non-positive if :math:`\lambda <= \text{eigenvalue_tolerance}`
+        eigenvalue :math:`\\lambda` is treated as non-negative if
+        :math:`\\lambda >= -\\text{eigenvalue_tolerance}` and as
+        non-positive if :math:`\\lambda <= \\text{eigenvalue_tolerance}`
         (i.e., eigenvalues in
         ``[-eigenvalue_tolerance, eigenvalue_tolerance]`` are treated as
         zero). Increasing this value makes the convexity check more
