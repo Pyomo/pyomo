@@ -350,6 +350,14 @@ class PyomoCyIpoptSolver:
             intermediate_callback=config.intermediate_callback,
             halt_on_evaluation_error=config.halt_on_evaluation_error,
         )
+
+        if (
+            grey_box_blocks
+            and hasattr(nlp, "has_hessian_support")
+            and not nlp.has_hessian_support()
+            and "hessian_approximation" not in config.options
+        ):
+            config.options["hessian_approximation"] = "limited-memory"
         ng = len(problem.g_lb())
         nx = len(problem.x_lb())
         cyipopt_solver = problem
