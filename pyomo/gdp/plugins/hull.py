@@ -1001,6 +1001,24 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         obj : Constraint
             The parent Constraint component (needed for ``is_indexed``).
         """
+        # generate_standard_repn below uses compute_values=True by default,
+        # which evaluates mutable Params to numeric constants.  The transformed
+        # expressions therefore won't track later Param updates.  This is
+        # acceptable because the eigenvalue-based convexity check requires
+        # numeric coefficients, and a Param change could invalidate the
+        # PSD/NSD classification anyway.
+        mutable_params = list(EXPR.identify_mutable_parameters(c.body))
+        if mutable_params:
+            logger.warning(
+                "GDP(Hull): Constraint '%s' contains mutable parameters %s. "
+                "The exact hull reformulation evaluates these to their current "
+                "numeric values for the eigenvalue-based convexity check; the "
+                "transformed constraint will not update if these parameters "
+                "change later.",
+                c.getname(fully_qualified=True),
+                [p.name for p in mutable_params],
+            )
+
         repn = generate_standard_repn(c.body)
 
         if not repn.is_quadratic():
