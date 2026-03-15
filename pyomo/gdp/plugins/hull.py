@@ -1022,7 +1022,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         repn = generate_standard_repn(c.body)
 
         if not repn.is_quadratic():
-            raise RuntimeError(
+            raise GDP_Error(
                 "Constraint '%s' has polynomial degree 2 but its standard "
                 "representation is not quadratic." % c.getname(fully_qualified=True)
             )
