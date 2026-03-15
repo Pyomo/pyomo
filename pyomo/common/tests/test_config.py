@@ -3511,10 +3511,9 @@ option_2: int, default=5
         cfg = CustomConfig()
         OUT = StringIO()
         cfg.display(ostream=OUT)
-        # Note: pypy outputs "None" as "null"
         self.assertEqual(
-            "time_limit: None\nstream_solver: None\n",
-            OUT.getvalue().replace('null', 'None'),
+            "time_limit: null\nstream_solver: null\n",
+            OUT.getvalue(),
         )
 
         # Test that creating a copy of a ConfigDict with declared fields
@@ -3525,7 +3524,7 @@ option_2: int, default=5
         cfg2.display(ostream=OUT)
         self.assertEqual(
             "time_limit: 10.0\nstream_solver: false\n",
-            OUT.getvalue().replace('null', 'None'),
+            OUT.getvalue(),
         )
 
     def test_domain_name(self):
@@ -3907,8 +3906,8 @@ dict1:
         self.assertEqual(dkfc._ensure_blank_line("b\n"), "b\n\n")
 
     def test_value2str(self):
-        def d(val):
-            return _value2string("", val, NOTSET)
+        def d(val, obj=NOTSET):
+            return _value2string("", val, obj)
 
         self.assertEqual("", d(None))
         self.assertEqual("true", d(True))
@@ -3917,6 +3916,8 @@ dict1:
         self.assertEqual("1", d(1))
         self.assertEqual("a", d('a'))
         self.assertEqual("'1'", d('1'))
+        cv = ConfigValue(None)
+        self.assertEqual("null", d(cv, cv))
 
         orig = _config._dump, sys.modules['yaml']
         try:
@@ -3929,6 +3930,8 @@ dict1:
             self.assertEqual("1", d(1))
             self.assertEqual("a", d('a'))
             self.assertEqual("'1'", d('1'))
+            cv = ConfigValue(None)
+            self.assertEqual("null", d(cv, cv))
         finally:
             _config._dump, sys.modules['yaml'] = orig
 

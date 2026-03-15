@@ -753,6 +753,8 @@ def _get_dump():
         # dump = lambda x,**y: str(x)
         # YAML uses lowercase True/False
         def dump(x, **args):
+            if x is None:
+                return "null"
             if type(x) is bool:
                 return str(x).lower()
             if type(x) is type:
