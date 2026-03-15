@@ -3913,7 +3913,7 @@ dict1:
         cv = ConfigValue(None)
         self.assertEqual("null", d(cv, cv))
 
-        orig = _config._dump, sys.modules['yaml']
+        orig = _config._dump, sys.modules.get('yaml', None)
         try:
             sys.modules['yaml'] = sys.modules[__name__]
             _config._dump = _config._get_dump()
@@ -3928,6 +3928,8 @@ dict1:
             self.assertEqual("null", d(cv, cv))
         finally:
             _config._dump, sys.modules['yaml'] = orig
+            if sys.modules['yaml'] is None:
+                del sys.modules['yaml']
 
 
 if __name__ == "__main__":
