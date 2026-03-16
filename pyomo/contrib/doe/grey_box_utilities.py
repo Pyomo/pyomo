@@ -108,9 +108,10 @@ class FIMExternalGreyBox(
     def _get_FIM(self):
         # Grabs the current FIM subject
         # to the input values.
-        # This function currently assumes
-        # that we use a lower triangular
-        # FIM.
+        # Inputs store one triangular half
+        # of a symmetric FIM. Reconstruct
+        # the full symmetric matrix here,
+        # consistent with manuscript S5.
         upt_FIM = self._input_values
 
         # Create FIM in the correct way

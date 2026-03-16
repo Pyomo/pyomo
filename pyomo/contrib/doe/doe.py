@@ -1181,6 +1181,7 @@ class DesignOfExperiments:
             self.only_compute_fim_lower
             and self.objective_option == ObjectiveLib.determinant
             and not self.Cholesky_option
+            and not self.use_grey_box
         ):
             raise ValueError(
                 "Cannot compute determinant with explicit formula "
