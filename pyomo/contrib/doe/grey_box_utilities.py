@@ -164,6 +164,8 @@ class FIMExternalGreyBox(
 
         if self.objective_option == ObjectiveLib.trace:
             obj_name = "A-opt"
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            obj_name = "pseudo-A-opt"
         elif self.objective_option == ObjectiveLib.determinant:
             obj_name = "log-D-opt"
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -196,6 +198,8 @@ class FIMExternalGreyBox(
 
         if self.objective_option == ObjectiveLib.trace:
             obj_value = np.trace(np.linalg.pinv(M))
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            obj_value = np.trace(M)
         elif self.objective_option == ObjectiveLib.determinant:
             sign, logdet = np.linalg.slogdet(M)
             obj_value = logdet
@@ -231,6 +235,8 @@ class FIMExternalGreyBox(
         # objective function.
         if self.objective_option == ObjectiveLib.trace:
             pyomo_block.outputs["A-opt"] = output_value
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            pyomo_block.outputs["pseudo-A-opt"] = output_value
         elif self.objective_option == ObjectiveLib.determinant:
             pyomo_block.outputs["log-D-opt"] = output_value
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -268,6 +274,8 @@ class FIMExternalGreyBox(
             # is -inv(FIM) @ inv(FIM). Add reference to
             # pyomo.DoE 2.0 manuscript S.I.
             jac_M = -Minv @ Minv
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            jac_M = np.eye(self._n_params, dtype=np.float64)
         elif self.objective_option == ObjectiveLib.determinant:
             Minv = np.linalg.pinv(M)
             # Derivative formula derived using tensor

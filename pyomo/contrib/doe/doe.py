@@ -470,6 +470,11 @@ class DesignOfExperiments:
             if self.objective_option == ObjectiveLib.trace:
                 trace_val = np.trace(np.linalg.pinv(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
+            elif self.objective_option == ObjectiveLib.pseudo_trace:
+                pseudo_trace_val = np.trace(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["pseudo-A-opt"].set_value(
+                    pseudo_trace_val
+                )
             elif self.objective_option == ObjectiveLib.determinant:
                 det_val = np.linalg.det(np.array(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
@@ -1940,6 +1945,11 @@ class DesignOfExperiments:
         if self.objective_option == ObjectiveLib.trace:
             model.objective = pyo.Objective(
                 expr=model.obj_cons.egb_fim_block.outputs["A-opt"], sense=pyo.minimize
+            )
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["pseudo-A-opt"],
+                sense=pyo.maximize,
             )
         elif self.objective_option == ObjectiveLib.determinant:
             model.objective = pyo.Objective(
