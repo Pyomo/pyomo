@@ -1321,7 +1321,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # right-hand side as a generic nonconvex product rather than
         # recognizing a rotated quadratic cone.  This formulation was chosen
         # deliberately based on computational testing with Gurobi and SCIP,
-        # where the generic quadratic form overall performed better than 
+        # where the generic quadratic form overall performed better than
         # other formulations tested.
         quadratic_form = 0
         for coef, (var_i, var_j) in zip(repn.quadratic_coefs, repn.quadratic_vars):
