@@ -98,8 +98,10 @@ class NonLinearProgrammingKKT:
         config.set_value(kwds)
 
         if hasattr(model, config.kkt_block_name):
-            raise ValueError(f"""model already has an attribute with the 
-                specified kkt_block_name: '{config.kkt_block_name}'""")
+            raise ValueError(
+                f"""model already has an attribute with the 
+                specified kkt_block_name: '{config.kkt_block_name}'"""
+            )
 
         # we should check that all vars the user fixed are included
         # in parametrize_wrt
@@ -158,25 +160,24 @@ class NonLinearProgrammingKKT:
         for con in model.component_data_objects(
             Constraint, descend_into=True, active=True
         ):
-            if con.has_lb() and con.has_ub() and (con.lower == con.upper):
+            lower, body, upper = con.to_bounded_expression()
+            if con.equality:
                 equality_cons.append(con)
-                info.equality_con_to_expr[con] = con.upper - con.body
+                info.equality_con_to_expr[con] = upper - body
             else:
-                if con.has_lb():
+                if lower is not None:
                     inequality_cons.append((con, "lb"))
-                    info.inequality_con_to_expr.setdefault(con, {})["lb"] = (
-                        con.lower - con.body
-                    )
-                if con.has_ub():
+                    info.inequality_con_to_expr.setdefault(con, {})["lb"] = lower - body
+                if upper is not None:
                     inequality_cons.append((con, "ub"))
-                    info.inequality_con_to_expr.setdefault(con, {})["ub"] = (
-                        con.body - con.upper
-                    )
-                # we want to keep track of the ranged constraints because the mapping between
-                # multipliers and ranged constraints will be a tuple (to indicate bound as well)
-                # instead of simply the model object
-                if con.has_lb() and con.has_ub() and (con.lower != con.upper):
-                    info.ranged_constraints.add(con)
+                    info.inequality_con_to_expr.setdefault(con, {})["ub"] = body - upper
+
+                    # lower is not None and upper is not None -> ranged constraint
+                    if lower is not None:
+                        # we want to keep track of the ranged constraints because the mapping between
+                        # multipliers and ranged constraints will be a tuple (to indicate bound as well)
+                        # instead of simply the model object
+                        info.ranged_constraints.add(con)
 
         kkt_block.equality_cons_set = Set(initialize=equality_cons, ordered=True)
         kkt_block.gamma_set = RangeSet(0, len(equality_cons) - 1)
