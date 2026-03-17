@@ -586,9 +586,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
-        nl_info = NLWriterInfo(
-            var=[m.x], con=[m.c], obj=[m.obj],
-        )
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
 
         sol_data = ASLSolFileData()
         sol_data.var_suffixes = {'test_var_suffix': {0: 1.1}}
@@ -599,10 +597,18 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
         loader.load_import_suffixes()
 
-        self.assertEqual(ComponentMap(m.test_var_suffix.items()), ComponentMap([(m.x, 1.1)]))
-        self.assertEqual(ComponentMap(m.test_con_suffix.items()), ComponentMap([(m.c, 2.2)]))
-        self.assertEqual(ComponentMap(m.test_obj_suffix.items()), ComponentMap([(m.obj, 3.3)]))
-        self.assertEqual(ComponentMap(m.test_problem_suffix.items()), ComponentMap([(None, 4.4)]))
+        self.assertEqual(
+            ComponentMap(m.test_var_suffix.items()), ComponentMap([(m.x, 1.1)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_con_suffix.items()), ComponentMap([(m.c, 2.2)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_obj_suffix.items()), ComponentMap([(m.obj, 3.3)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_problem_suffix.items()), ComponentMap([(None, 4.4)])
+        )
 
     def test_suffixes_scaling_error(self):
         m = pyo.ConcreteModel()
@@ -614,9 +620,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
-        nl_info = NLWriterInfo(
-            var=[m.x], con=[m.c], obj=[m.obj],
-        )
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
         nl_info.scaling = ScalingFactors([2], [3], [4])
 
         sol_data = ASLSolFileData()
@@ -627,10 +631,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
-        pattern = re.compile(
-            r".*General suffixes .*Turn scaling off.*",
-            re.DOTALL,
-        )
+        pattern = re.compile(r".*General suffixes .*Turn scaling off.*", re.DOTALL)
         with self.assertRaisesRegex(MouseTrap, pattern):
             loader.load_import_suffixes()
 
@@ -645,10 +646,8 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
-        nl_info = NLWriterInfo(
-            var=[m.x], con=[m.c], obj=[m.obj],
-        )
-        nl_info.eliminated_vars = [(m.y, 2*m.x)]
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
+        nl_info.eliminated_vars = [(m.y, 2 * m.x)]
 
         sol_data = ASLSolFileData()
         sol_data.var_suffixes = {'test_var_suffix': {0: 1.1}}
@@ -659,8 +658,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
         pattern = re.compile(
-            r".*Suffixes are not available.* Turn presolve off.*",
-            re.DOTALL,
+            r".*Suffixes are not available.* Turn presolve off.*", re.DOTALL
         )
         with self.assertRaisesRegex(MouseTrap, pattern):
             loader.load_import_suffixes()

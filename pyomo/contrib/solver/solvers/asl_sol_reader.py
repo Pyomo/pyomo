@@ -80,7 +80,9 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
 
         # the above only handles duals and reduced costs
         suffixes_to_load = {}
-        for suffix in self._pyomo_model.component_objects(Suffix, descend_into=True, active=True):
+        for suffix in self._pyomo_model.component_objects(
+            Suffix, descend_into=True, active=True
+        ):
             if not suffix.import_enabled():
                 continue
             suffixes_to_load[suffix.local_name] = suffix
