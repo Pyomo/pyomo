@@ -665,7 +665,10 @@ class TestDoEObjectiveOptions(unittest.TestCase):
 
 
 class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
+    """Coverage for optimize_experiments() build, output, and diagnostics behavior."""
+
     def _make_solver(self):
+        # Make solver object with options for DoE runs.
         solver = SolverFactory("ipopt")
         solver.options["linear_solver"] = "ma57"
         solver.options["halt_on_ampl_error"] = "yes"
@@ -673,6 +676,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         return solver
 
     def test_get_experiment_input_vars_direct_and_fd_fallback(self):
+        # Test the helper used by optimize_experiments() finds input vars for both
+        # direct models and finite-difference scenario-block models.
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -701,6 +706,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_multi_experiment_structure_and_results(self):
+        # Test that the multi-experiment optimize_experiments() run builds the expected
+        # scenario/experiment structure and structured results.
         solver = self._make_solver()
 
         doe_obj = DesignOfExperiments(
@@ -751,6 +758,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_writes_results_file(self):
+        # Tests that optimize_experiments() writes JSON results when given either
+        # a string path or a pathlib.Path for results_file.
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -785,6 +794,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_single_experiment_defaults_to_template_mode(self):
+        # Tests that optimize_experiments() uses template mode by default when
+        # n_exp=1.
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -797,6 +808,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_timing_includes_lhs_phase_separately(self):
+        # Tests that LHS initialization timing is tracked separately and
+        # contributes additively to total runtime accounting.
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -821,6 +834,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_symmetry_log_once_per_scenario(self):
+        # Tests that symmetry-breaking constraint logging is emitted once per
+        # scenario (not once per generated constraint).
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -839,6 +854,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_lhs_diagnostics_populated(self):
+        # Tests that threaded LHS initialization records diagnostics needed for
+        # debugging and performance visibility.
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -876,6 +893,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_termination_message_bytes(self):
+        # Tests that solver termination messages returned as bytes are decoded
+        # and persisted as plain strings in results.
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -898,6 +917,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_termination_message_fallback_to_str(self):
+        # Tests that non-string termination messages fall back to str(message) so
+        # results always store a serializable user-facing value.
         doe_obj = DesignOfExperiments(
             experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
