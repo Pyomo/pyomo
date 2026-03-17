@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.environ as pyo
 from pyomo.environ import (
@@ -40,6 +38,7 @@ opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
 
 
+@unittest.pytest.mark.solver("gams")
 class GAMSTests(unittest.TestCase):
     @unittest.skipIf(
         not gamspy_available, "The 'gams' python bindings are not available"
@@ -389,6 +388,7 @@ class GAMSLogfileTestBase(unittest.TestCase):
 
 
 @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
+@unittest.pytest.mark.solver("gams")
 class GAMSLogfileGmsTests(GAMSLogfileTestBase):
     """Test class for testing permultations of tee and logfile options.
 
@@ -452,6 +452,7 @@ class GAMSLogfileGmsTests(GAMSLogfileTestBase):
 
 
 @unittest.skipIf(not gamspy_available, "The 'gams' python bindings are not available")
+@unittest.pytest.mark.solver("gams")
 class GAMSLogfilePyTests(GAMSLogfileTestBase):
     """Test class for testing permultations of tee and logfile options.
 

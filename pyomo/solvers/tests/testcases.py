@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import sys
 import logging
@@ -108,24 +106,24 @@ SkipTests['cplex', 'nl', 'QCP_simple'] = (
 
 # 12.0.3 (for AMPL only) returns all zeros for suffixes
 MissingSuffixFailures['gurobi', 'nl', 'LP_duals_maximize'] = (
-    lambda v: v[:3] == (12, 0, 3),
+    lambda v: v[:3] >= (12, 0, 3),
     {'dual': (False, {})},
-    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+    "AMPL Gurobi>=12.0.3 fails to report duals for problems solved in presolve",
 )
 MissingSuffixFailures['gurobi', 'nl', 'LP_duals_minimize'] = (
-    lambda v: v[:3] == (12, 0, 3),
+    lambda v: v[:3] >= (12, 0, 3),
     {'dual': (False, {})},
-    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+    "AMPL Gurobi>=12.0.3 fails to report duals for problems solved in presolve",
 )
 MissingSuffixFailures['gurobi', 'nl', 'LP_inactive_index'] = (
-    lambda v: v[:3] == (12, 0, 3),
+    lambda v: v[:3] >= (12, 0, 3),
     {'dual': (False, {})},
-    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+    "AMPL Gurobi>=12.0.3 fails to report duals for problems solved in presolve",
 )
 MissingSuffixFailures['gurobi', 'nl', 'QP_simple'] = (
-    lambda v: v[:3] == (12, 0, 3),
+    lambda v: v[:3] >= (12, 0, 3),
     {'dual': (False, {})},
-    "AMPL Gurobi 12.0.3 fails to report duals for problems solved in presolve",
+    "AMPL Gurobi>=12.0.3 fails to report duals for problems solved in presolve",
 )
 
 #
@@ -141,6 +139,26 @@ ExpectedFailures['gams', 'gms', 'MILP_unbounded'] = (
 )
 
 ExpectedFailures['gams', 'python', 'MILP_unbounded'] = (
+    lambda v: v <= _trunk_version,
+    "GAMS requires finite bounds for integer variables. 1.0E100 is as extreme"
+    "as GAMS will define, and should be enough to appear unbounded. If the"
+    "solver cannot handle this bound, explicitly set a smaller bound on"
+    "the pyomo model, or try a different GAMS solver.",
+)
+
+#
+# GAMS V2
+#
+
+ExpectedFailures['gams_v2', 'gms', 'MILP_unbounded'] = (
+    lambda v: v <= _trunk_version,
+    "GAMS requires finite bounds for integer variables. 1.0E100 is as extreme"
+    "as GAMS will define, and should be enough to appear unbounded. If the"
+    "solver cannot handle this bound, explicitly set a smaller bound on"
+    "the pyomo model, or try a different GAMS solver.",
+)
+
+ExpectedFailures['gams_v2', 'python', 'MILP_unbounded'] = (
     lambda v: v <= _trunk_version,
     "GAMS requires finite bounds for integer variables. 1.0E100 is as extreme"
     "as GAMS will define, and should be enough to appear unbounded. If the"

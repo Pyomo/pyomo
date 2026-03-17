@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 Script to generate the installer for pyomo.
@@ -25,19 +23,6 @@ try:
 except ImportError:
     # Needed for setuptools prior to 40.7.0
     from distutils.errors import DistutilsOptionError
-
-
-def read(*rnames):
-    with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
-        # Strip all leading badges up to, but not including the COIN-OR
-        # badge so that they do not appear in the PyPI description
-        while True:
-            line = README.readline()
-            if 'COIN-OR' in line:
-                break
-            if line.strip() and '[![' not in line:
-                break
-        return line + README.read()
 
 
 def import_pyomo_module(*path):

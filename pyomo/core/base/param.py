@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from __future__ import annotations
 import sys
@@ -473,7 +471,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     @deprecated(
         "The sparse_iterkeys method is deprecated.  Use sparse_keys()",
         # This should have been deprecated when we dropped Python 2.7
-        version='6.10.0.dev0',
+        version='6.10.0',
     )
     def sparse_iterkeys(self):
         """Return an iterator for the keys in the defined parameters"""
@@ -482,7 +480,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     @deprecated(
         "The sparse_itervalues method is deprecated.  Use sparse_values()",
         # This should have been deprecated when we dropped Python 2.7
-        version='6.10.0.dev0',
+        version='6.10.0',
     )
     def sparse_itervalues(self):
         """Return an iterator for the defined param data objects"""
@@ -491,7 +489,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     @deprecated(
         "The sparse_iteritems method is deprecated.  Use sparse_items()",
         # This should have been deprecated when we dropped Python 2.7
-        version='6.10.0.dev0',
+        version='6.10.0',
     )
     def sparse_iteritems(self):
         """Return an iterator of (index,data) tuples for defined parameters"""

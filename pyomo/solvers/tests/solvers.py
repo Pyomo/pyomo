@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 
@@ -189,6 +187,26 @@ def test_solver_cases(*args):
             name='gams',
             io='python',
             capabilities=_gams_capabilities,
+            import_suffixes=['dual', 'rc'],
+        )
+
+        #
+        # GAMS V2
+        #
+
+        _gams_v2_capabilities = set(['linear', 'integer'])
+
+        _test_solver_cases['gams_v2', 'gms'] = initialize(
+            name='gams_v2',
+            io='gms',
+            capabilities=_gams_v2_capabilities,
+            import_suffixes=['dual', 'rc'],
+        )
+
+        _test_solver_cases['gams_v2', 'python'] = initialize(
+            name='gams_v2',
+            io='python',
+            capabilities=_gams_v2_capabilities,
             import_suffixes=['dual', 'rc'],
         )
 
