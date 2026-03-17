@@ -26,6 +26,8 @@ from pyomo.core import (
     maximize,
     minimize,
 )
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.var import VarData
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 from pyomo.mpec import ComplementarityList, complements
 from pyomo.util.vars_from_expressions import get_vars_from_components
@@ -325,92 +327,48 @@ class NonLinearProgrammingKKT:
             f"The KKT multiplier: {multiplier_var.name}, does not exist on {model.name}."
         )
 
-    def get_multiplier_from_constraint(self, model, constraint=None, variable=None):
+    def get_multiplier_from_constraint(self, model, component):
         """
-        Return the multiplier variable corresponding to a constraint or variable bound.
+        Return the multiplier for the constraint.
 
         Parameters
         ----------
         model: ConcreteModel
             The model on which the kkt transformation was applied to
-        constraint: Constraint or Tuple, optional
-            - A primal Constraint object for simple constraints, OR
-            - A tuple (constraint, 'lb'|'ub') for ranged constraints
-            Mutually exclusive with variables.
-        Variable: Tuple, optional
-            A tuple (Var, 'lb'|'ub') for variable bounds.
-            Mutually exclusive with constraint.
+        component: Constraint or Variable
 
         Returns
         -------
-        Var
-            The KKT multiplier variable corresponding to the constraint or variable bound.
+        VarData | tuple[VarData | None, VarData | None]
+            The KKT multiplier(s) corresponding to the component.
+            For ranged constraints/variables, returns (lb_mult, ub_mult),
+            where an entry is None if that bound doesn't exist.
         """
-
-        if (constraint is None) and (variable is None):
-            raise ValueError("Must provide 'constraint' or 'variable'.")
-        if (constraint is not None) and (variable is not None):
-            raise ValueError(
-                "Cannot provide both 'constraint' and 'variable'. " "Provide only one."
-            )
-
         info = model.private_data()
-        if constraint is not None:
-            if isinstance(constraint, tuple):
-                if len(constraint) != 2:
-                    raise ValueError(
-                        f"constraint tuple must be (Constraint, bound), "
-                        f"got tuple of length {len(constraint)}"
-                    )
-                con_obj, bound = constraint
-                if bound not in ['lb', 'ub']:
-                    raise ValueError(f"Bound must be 'lb' or 'ub', got: '{bound}'")
-                key = (con_obj, bound)
-                if key in info.inequality_multiplier_from_con:
-                    return info.inequality_multiplier_from_con[key]
-                raise ValueError(
-                    f"Ranged constraint '{con_obj.name}' with bound='{bound}' "
-                    f"does not exist on {model.name}."
-                )
-
-            # simple constraints are much easier to deal with
+        if isinstance(component, ConstraintData):
+            con = component
+            if con in info.equality_multiplier_from_con:
+                return info.equality_multiplier_from_con[con]
+            elif con in info.inequality_multiplier_from_con:
+                return info.inequality_multiplier_from_con[con]
+            elif con in info.ranged_constraints:
+                lb_mult = info.inequality_multiplier_from_con.get((con, 'lb'))
+                ub_mult = info.inequality_multiplier_from_con.get((con, 'ub'))
+                return (lb_mult, ub_mult)
             else:
-                if constraint in info.equality_multiplier_from_con:
-                    return info.equality_multiplier_from_con[constraint]
-                if constraint in info.inequality_multiplier_from_con:
-                    return info.inequality_multiplier_from_con[constraint]
-                # may be a ranged constraint
-                is_ranged = constraint in info.ranged_constraints
-                if is_ranged:
-                    raise ValueError(
-                        f"Constraint '{constraint.name}' is a ranged constraint. "
-                        "Provide as tuple: constraint=(constraint_obj, 'lb'|'ub')."
-                    )
                 raise ValueError(
-                    f"Constraint '{constraint.name}' does not exist on {model.name}."
+                    f"Constraint '{con.name}' does not exist on {model.name}."
                 )
-
-        # we need to deal with the case that the user wants multipliers associated with variable bounds
-        if variable is not None:
-            # variable bounds must be provided as tuple
-            if not isinstance(variable, tuple):
+        elif isinstance(component, VarData):
+            var = component
+            lb_mult = info.inequality_multiplier_from_con.get((var, 'lb'))
+            ub_mult = info.inequality_multiplier_from_con.get((var, 'ub'))
+            if lb_mult is None and ub_mult is None:
                 raise ValueError(
-                    "variable must be a tuple (Var, 'lb'|'ub'), "
-                    f"got: {type(variable).__name__}"
+                    f"No multipliers exist for variable '{var.name}' on {model.name}."
                 )
-            if len(variable) != 2:
-                raise ValueError(
-                    f"variable tuple must be (Var, bound), "
-                    f"got tuple of length {len(variable)}"
-                )
-            var_obj, bound = variable
-            if bound not in ['lb', 'ub']:
-                raise ValueError(f"Bound must be 'lb' or 'ub', got: '{bound}'")
-            key = (var_obj, bound)
-            if key in info.inequality_multiplier_from_con:
-                return info.inequality_multiplier_from_con[key]
+            return (lb_mult, ub_mult)
+        else:
             raise ValueError(
-                f"Variable bound {var_obj.name} (bound='{bound}') "
-                f"does not exist on {model.name}. "
-                f"The variable may not have a {bound} bound defined."
+                f"Component '{component.name}' does not exist on {model.name}."
             )

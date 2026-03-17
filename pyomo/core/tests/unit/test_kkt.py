@@ -454,61 +454,16 @@ class TestKKT(unittest.TestCase):
         kkt = TransformationFactory('core.kkt')
         kkt.apply_to(m)
 
-        with self.assertRaisesRegex(
-            ValueError, "Must provide 'constraint' or 'variable'."
-        ):
-            kkt.get_multiplier_from_constraint(m, constraint=None, variable=None)
+        m2 = ConcreteModel()
+        m2.z = Var(bounds=(1, 10))
+        m2.new_con = Constraint(expr=m.x <= 5)
 
         with self.assertRaisesRegex(
-            ValueError,
-            "Cannot provide both 'constraint' and 'variable'. " "Provide only one",
+            ValueError, "Constraint 'new_con' does not exist on model."
         ):
-            kkt.get_multiplier_from_constraint(m, constraint=m.c1, variable=(m.x, "ub"))
+            kkt.get_multiplier_from_constraint(m, component=m2.new_con)
 
         with self.assertRaisesRegex(
-            ValueError,
-            r"constraint tuple must be \(Constraint, bound\), " "got tuple of length 1",
+            ValueError, "No multipliers exist for variable 'z' on model."
         ):
-            kkt.get_multiplier_from_constraint(m, constraint=(m.c2,))
-
-        with self.assertRaisesRegex(
-            ValueError, "Bound must be 'lb' or 'ub', got: 'no bound'"
-        ):
-            kkt.get_multiplier_from_constraint(m, constraint=(m.c2, 'no bound'))
-
-        with self.assertRaisesRegex(
-            ValueError,
-            "Ranged constraint 'c1' with bound='ub' " "does not exist on model.",
-        ):
-            kkt.get_multiplier_from_constraint(m, constraint=(m.c1, 'ub'))
-
-        with self.assertRaisesRegex(
-            ValueError,
-            "Constraint 'c2' is a ranged constraint. "
-            r"Provide as tuple: constraint=\(constraint_obj, 'lb'|'ub'\).",
-        ):
-            kkt.get_multiplier_from_constraint(m, constraint=m.c2)
-
-        with self.assertRaisesRegex(
-            ValueError, r"variable must be a tuple \(Var, 'lb'|'ub'\), " f"got: x"
-        ):
-            kkt.get_multiplier_from_constraint(m, variable=m.x)
-
-        with self.assertRaisesRegex(
-            ValueError,
-            r"variable tuple must be \(Var, bound\), " "got tuple of length 1",
-        ):
-            kkt.get_multiplier_from_constraint(m, variable=(m.x,))
-
-        with self.assertRaisesRegex(
-            ValueError, f"Bound must be 'lb' or 'ub', got: 'no bound'"
-        ):
-            kkt.get_multiplier_from_constraint(m, variable=(m.x, 'no bound'))
-
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Variable bound y \(bound='ub'\) "
-            "does not exist on model. "
-            "The variable may not have a ub bound defined.",
-        ):
-            kkt.get_multiplier_from_constraint(m, variable=(m.y, 'ub'))
+            kkt.get_multiplier_from_constraint(m, component=m2.z)
