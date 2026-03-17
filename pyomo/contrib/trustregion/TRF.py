@@ -471,7 +471,9 @@ def _trf_config():
         ConfigValue(
             default=0,
             domain=In([0, 1]),
-            description='0 = Filter, 1 = Funnel, Default = Filter',
+            description="Globalization strategy selection. "
+            "``0`` = Filter (default), ``1`` = Funnel. "
+            "Default = 0.",
         ),
     )
 
@@ -509,7 +511,11 @@ def _trf_config():
     CONFIG.declare(
         'funnel_param_phi_min',
         ConfigValue(
-            default=1e-8, domain=PositiveFloat, description='Hard floor on funnel width'
+            default=1e-8, 
+            domain=PositiveFloat, 
+            description="Hard floor on funnel width ``phi_min``. "
+            "Must satisfy: ``phi_min > 0``. "
+            "Default = 1e-8.",
         ),
     )
 
@@ -518,7 +524,9 @@ def _trf_config():
         ConfigValue(
             default=0.25,
             domain=PositiveFloat,
-            description='Funnel‑shrink factor after f‑type',
+            description="Funnel shrink factor ``kappa_f`` applied after a theta-type step. "
+            "Must satisfy: ``0 < kappa_f < 1``. "
+            "Default = 0.25.",
         ),
     )
 
@@ -527,7 +535,9 @@ def _trf_config():
         ConfigValue(
             default=1.05,
             domain=PositiveFloat,
-            description='Funnel expand factor for relax theta step',
+            description="Funnel relaxation factor ``kappa_r`` for theta-type step. "
+            "Must satisfy: ``kappa_r > 1``. "
+            "Default = 1.05.",
         ),
     )
 
@@ -536,7 +546,9 @@ def _trf_config():
         ConfigValue(
             default=0.0001,
             domain=PositiveFloat,
-            description='Armijo coefficient for f‑type',
+            description="Armijo coefficient ``eta`` for f-type step sufficient decrease condition. "
+            "Must satisfy: ``0 < eta < 1``. "
+            "Default = 1e-4.",
         ),
     )
 
@@ -545,7 +557,9 @@ def _trf_config():
         ConfigValue(
             default=0.5,
             domain=PositiveFloat,
-            description='Curvature exponent ( (theta)^alpha )',
+            description="Curvature exponent ``alpha`` in funnel boundary condition ``phi^alpha``. "
+            "Must satisfy: ``0 < alpha < 1``. "
+            "Default = 0.5.",
         ),
     )
 
@@ -554,14 +568,20 @@ def _trf_config():
         ConfigValue(
             default=0.8,
             domain=PositiveFloat,
-            description='Extra shrink required for theta‑type',
+            description="Theta-type shrink factor ``beta``. "
+           "Must satisfy: ``0 < beta < 1``. "
+           "Default = 0.8.",
         ),
     )
 
     CONFIG.declare(
         'funnel_param_mu_s',
         ConfigValue(
-            default=0.01, domain=PositiveFloat, description='Switching coefficient δ'
+            default=0.01, 
+            domain=PositiveFloat, 
+            description="Switching parameter ``mu_s``. "
+           "Must satisfy: ``mu_s > 0`` (small value, e.g. 1e-2). "
+           "Default = 0.01.",
         ),
     )
 
