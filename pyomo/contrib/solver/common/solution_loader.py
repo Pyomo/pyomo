@@ -30,11 +30,11 @@ def load_import_suffixes(
         elif suffix.local_name == 'rc':
             rc_suffix = suffix
     if dual_suffix is not None:
-        for k, v in solution_loader.get_duals(solution_id=solution_id).items():
-            dual_suffix[k] = v
+        dual_suffix.clear()
+        dual_suffix.update(solution_loader.get_duals(solution_id=solution_id))
     if rc_suffix is not None:
-        for k, v in solution_loader.get_reduced_costs(solution_id=solution_id).items():
-            rc_suffix[k] = v
+        rc_suffix.clear()
+        rc_suffix.update(solution_loader.get_reduced_costs(solution_id=solution_id))
 
 
 class SolutionLoaderBase:
@@ -74,7 +74,7 @@ class SolutionLoaderBase:
 
         Parameters
         ----------
-        solution_id: Optional[Any]
+        solution_id: Any
             If there are multiple solutions, this specifies which solution
             should be loaded. If None, the default solution will be used.
         """
