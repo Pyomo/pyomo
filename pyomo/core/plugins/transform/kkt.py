@@ -112,7 +112,7 @@ class NonLinearProgrammingKKT:
         )
         vars_in_model = vars_in_cons | vars_in_obj
         fixed_vars_in_model = ComponentSet(v for v in vars_in_model if v.is_fixed())
-        missing = [v for v in fixed_vars_in_model if v not in params]
+        missing = fixed_vars_in_model - params
         if missing:
             raise ValueError("All fixed variables must be included in parametrize_wrt.")
 
@@ -204,14 +204,12 @@ class NonLinearProgrammingKKT:
                 kkt_block, Constraint, active=True, descend_into=True
             )
         )
-        vars_in_cons = ComponentSet(vars_in_cons_all - vars_in_kkt_cons)
+        vars_in_cons = vars_in_cons_all - vars_in_kkt_cons
         vars_in_obj = ComponentSet(
             get_vars_from_components(model, Objective, active=True, descend_into=True)
         )
-        kkt_block.var_set = ComponentSet(vars_in_cons | vars_in_obj)
-        kkt_block.var_set = ComponentSet(
-            v for v in kkt_block.var_set if v not in kkt_block.parametrize_wrt
-        )
+        kkt_block.var_set = vars_in_cons | vars_in_obj
+        kkt_block.var_set = kkt_block.var_set - kkt_block.parametrize_wrt
         for var in kkt_block.var_set:
             if var.has_lb():
                 var_bound_sides.append((var, "lb"))
