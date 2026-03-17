@@ -285,7 +285,9 @@ class TestUtilsFIM(unittest.TestCase):
         var_name = ["X1", "X2"]
 
         # Compute the correlation matrix
-        correlation_matrix = compcorr(covariance_matrix, var_name)
+        correlation_matrix = compcorr(
+            covariance_matrix, var_name, significant_digits=3
+        )
 
         # Expected correlation matrix
         expected_correlation_matrix = pd.DataFrame(

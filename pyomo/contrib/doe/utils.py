@@ -26,7 +26,12 @@
 
 import pyomo.environ as pyo
 
-from pyomo.common.dependencies import numpy as np, numpy_available, pandas as pd
+from pyomo.common.dependencies import (
+    numpy as np,
+    numpy_available,
+    pandas as pd,
+    pandas_available,
+)
 
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
@@ -322,51 +327,103 @@ def snake_traversal_grid_sampling(*array_like_args):
 
 
 def compute_correlation_matrix(
-    covariance_matrix, var_name: list = None, significant_digits=3
+    covariance_matrix, var_name: list = None, significant_digits=None
 ):
     """
     Computes the correlation matrix from a covariance matrix.
 
     Parameters
     ----------
-    covariance_matrix : numpy.ndarray
-        2D array representing the covariance matrix.
+    covariance_matrix : numpy.ndarray or pandas.DataFrame
+        2D square covariance matrix. If a DataFrame is provided and ``var_name``
+        is not given, DataFrame column names are used for both rows and columns
+        in the output. Column names must be unique.
     var_name : list, optional
-        List of variable names corresponding to the rows/columns of the covariance matrix.
+        Variable names used for both rows and columns in the output correlation
+        matrix. Length must match matrix dimension and names must be unique.
+        If omitted and ``covariance_matrix`` is a DataFrame, DataFrame column names
+        are used. If omitted and ``covariance_matrix`` is a NumPy array, an unlabeled
+        NumPy array is returned.
     significant_digits : int, optional
-        Number of significant digits to round the correlation matrix to. Default: 3.
+        Number of significant digits for rounding entries of the correlation matrix.
+        Default: None (no rounding).
 
     Returns
     -------
     pandas.DataFrame/numpy.ndarray
         If `var_name` is provided, returns a pandas DataFrame with the correlation matrix
         and the specified variable names as both index and columns. If `var_name` is not
-        provided, returns a numpy array representing the correlation matrix in the same
-        order as the covariance matrix.
+        provided, returns:
+        - a pandas DataFrame when the covariance input is a DataFrame,
+        - a numpy array when the covariance input is a NumPy array.
     """
-    # Check if covariance matrix is symmetric and square
-    check_matrix(covariance_matrix)
-
-    if var_name:
-        assert len(var_name) == covariance_matrix.shape[0], (
-            "Length of var_name must match the number of rows/columns in the "
-            "covariance matrix."
-        )
-
-    if not np.all(np.isfinite(covariance_matrix)):
-        raise ValueError("Covariance matrix contains non-finite values.")
-
-    std_dev = np.sqrt(np.diag(covariance_matrix))
-
-    std_dev_matrix = np.outer(std_dev, std_dev)
-
-    correlation_matrix = covariance_matrix / std_dev_matrix
-
-    # Set the index to the variable names if provided,
-    corr_df = (
-        pd.DataFrame(correlation_matrix, index=var_name, columns=var_name)
-        if var_name
-        else correlation_matrix
+    # Support square pandas.DataFrame input while preserving label information.
+    # Use duck typing to avoid hard dependency on pandas type checks here.
+    is_dataframe_like = (
+        hasattr(covariance_matrix, "to_numpy")
+        and hasattr(covariance_matrix, "index")
+        and hasattr(covariance_matrix, "columns")
     )
 
-    return corr_df.round(significant_digits) if significant_digits else corr_df
+    if is_dataframe_like:
+        cov_columns = list(covariance_matrix.columns)
+        if len(set(cov_columns)) != len(cov_columns):
+            raise ValueError(
+                "For DataFrame covariance_matrix input, column labels must be unique."
+            )
+        covariance_matrix_np = covariance_matrix.to_numpy()
+    else:
+        covariance_matrix_np = np.asarray(covariance_matrix)
+        cov_columns = None
+
+    # Check if covariance matrix is symmetric and square
+    check_matrix(covariance_matrix_np)
+
+    if var_name is not None:
+        if isinstance(var_name, str):
+            raise ValueError(
+                "`var_name` must be a list-like collection of names, not a string."
+            )
+        var_name = list(var_name)
+        if len(var_name) != covariance_matrix_np.shape[0]:
+            raise ValueError(
+                "Length of var_name must match the number of rows/columns in the "
+                "covariance matrix."
+            )
+        if len(set(var_name)) != len(var_name):
+            raise ValueError("Entries in `var_name` must be unique.")
+    elif is_dataframe_like:
+        var_name = cov_columns
+
+    if not np.all(np.isfinite(covariance_matrix_np)):
+        raise ValueError("Covariance matrix contains non-finite values.")
+
+    std_dev = np.sqrt(np.diag(covariance_matrix_np))
+    if np.any(std_dev == 0):
+        raise ValueError(
+            "Covariance matrix contains one or more zero variances; correlation "
+            "entries are undefined."
+        )
+
+    std_dev_matrix = np.outer(std_dev, std_dev)
+    correlation_matrix = covariance_matrix_np / std_dev_matrix
+
+    # Build labeled DataFrame output only when names are available.
+    if var_name is not None:
+        if not pandas_available:
+            raise RuntimeError(
+                "pandas is required to return labeled correlation matrices."
+            )
+        corr_output = pd.DataFrame(
+            correlation_matrix, index=var_name, columns=var_name
+        )
+    else:
+        corr_output = correlation_matrix
+
+    if significant_digits is None:
+        return corr_output
+
+    if not isinstance(significant_digits, int) or significant_digits < 0:
+        raise ValueError("`significant_digits` must be a non-negative integer or None.")
+
+    return corr_output.round(significant_digits)
