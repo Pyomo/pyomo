@@ -2340,9 +2340,7 @@ class DesignOfExperiments:
                 pseudo_A_opt,
                 E_opt,
                 ME_opt,
-            ) = (
-                compute_FIM_metrics(FIM)
-            )
+            ) = compute_FIM_metrics(FIM)
 
             for k in model.experiment_inputs.keys():
                 factorial_results[k.name].append(pyo.value(k))

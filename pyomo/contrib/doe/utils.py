@@ -414,9 +414,7 @@ def compute_correlation_matrix(
             raise RuntimeError(
                 "pandas is required to return labeled correlation matrices."
             )
-        corr_output = pd.DataFrame(
-            correlation_matrix, index=var_name, columns=var_name
-        )
+        corr_output = pd.DataFrame(correlation_matrix, index=var_name, columns=var_name)
     else:
         corr_output = correlation_matrix
 
