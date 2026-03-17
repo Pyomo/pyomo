@@ -81,7 +81,7 @@ class NonLinearProgrammingKKT:
     CONFIG.declare(
         'parametrize_wrt',
         ConfigValue(
-            default=None,
+            default=[],
             domain=ComponentDataSet(Var),
             description='Vars to treat as data for the purposes of generating KKT reformulation',
             doc="""
