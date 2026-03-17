@@ -125,11 +125,11 @@ class NonLinearProgrammingKKT:
                 "active constraint or objective within the model."
             )
 
-        kkt_block = Block()
-        model.add_component(config.kkt_block_name, kkt_block)
+        kkt_block = Block(concrete=True)
         kkt_block.parametrize_wrt = params
-
-        return self._reformulate(model, kkt_block)
+        self._reformulate(model, kkt_block)
+        model.add_component(config.kkt_block_name, kkt_block)
+        return model
 
     def _reformulate(self, model, kkt_block):
         active_objs = list(
