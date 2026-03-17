@@ -104,8 +104,9 @@ The proposed multi-experiment interface follows a simultaneous design formulatio
 Let:
 
 - $E = \{1, 2, ..., N_{exp}\}$ be the experiment index set,
-- $phi_k$ be the design variables for experiment `k`,
-- $M_0$ be the prior FIM,
+- $\phi_k$ be the design variables for experiment `k`,
+- $\theta$ be the model parameters
+- $M_0$ be the prior Fisher Information Matrix (FIM),
 - $M_k(\hat{\theta}, \phi_k)$ be the FIM contribution from experiment `k`,
 - $\Psi(M)$ be the chosen FIM metric (D-, A-, pseudo-A-, etc.).
 
@@ -142,6 +143,7 @@ To avoid permutation-equivalent solutions in simultaneous design:
 ```math
 \varphi_{\text{primary},1} \le \varphi_{\text{primary},2} \le \cdots \le \varphi_{\text{primary},N_{exp}}
 ```
+Here, $\varphi_{\text{primary},\cdot}$ is the primary variable which is considered for symmetry breaking.
 
 This is implemented in `optimize_experiments()` by using a user-marked primary design 
 variable passed in a `Pyomo.Suffix` (or a default selection (first variable from 
