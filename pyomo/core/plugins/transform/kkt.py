@@ -118,7 +118,7 @@ class NonLinearProgrammingKKT:
 
         # we should also check that all vars the user passes in parametrize_wrt
         # exist on an active constraint or objective within the model
-        unknown = [v for v in params if v not in vars_in_model]
+        unknown = params - vars_in_model
         if unknown:
             raise ValueError(
                 "A variable passed in parametrize_wrt does not exist on an "
