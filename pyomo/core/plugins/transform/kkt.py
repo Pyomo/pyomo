@@ -231,12 +231,8 @@ class NonLinearProgrammingKKT:
         obj = list(
             model.component_data_objects(Objective, active=True, descend_into=True)
         )
-        # maximize is -1 and minimize is +1
-        sense = obj[0].sense
-        if sense == maximize:
-            lagrangean = -obj[0].expr
-        elif sense == minimize:
-            lagrangean = obj[0].expr
+        # Note: maximize is -1 and minimize is +1
+        lagrangean = obj[0].sense * obj[0].expr
 
         for index, con in enumerate(kkt_block.equality_cons_list):
             lagrangean += info.equality_con_to_expr[con] * kkt_block.gamma[index]
