@@ -608,7 +608,7 @@ class DesignOfExperiments:
         self,
         results_file=None,
         n_exp: int = None,
-        init_method=None,
+        init_method: InitializationMethod = None,
         init_n_samples: int = 5,
         init_seed: int = None,
         init_parallel: bool = False,
