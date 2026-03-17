@@ -110,7 +110,7 @@ class NonLinearProgrammingKKT:
         vars_in_obj = ComponentSet(
             get_vars_from_components(model, Objective, active=True, descend_into=True)
         )
-        vars_in_model = ComponentSet(vars_in_cons | vars_in_obj)
+        vars_in_model = vars_in_cons | vars_in_obj
         fixed_vars_in_model = ComponentSet(v for v in vars_in_model if v.is_fixed())
         missing = [v for v in fixed_vars_in_model if v not in params]
         if missing:
