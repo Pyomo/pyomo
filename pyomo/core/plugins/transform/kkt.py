@@ -329,7 +329,7 @@ class NonLinearProgrammingKKT:
         """
 
         info = model.private_data()
-        if multiplier_var in info.equality_con_from_multiplier.keys():
+        if multiplier_var in info.equality_con_from_multiplier:
             return info.equality_con_from_multiplier[multiplier_var]
         if multiplier_var in info.inequality_con_from_multiplier.keys():
             # if this multiplier var maps to a ranged constraint, we will return a tuple
