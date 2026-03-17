@@ -3493,3 +3493,155 @@ class TestExactHullQuadratic(unittest.TestCase):
             f"Expected at least one constraint with negative v_x**2 coefficient "
             f"(lower-bound general hull), got: {coefs_vx}",
         )
+
+    # ------------------------------------------------------------------
+    # 14. Cross-product terms in conic reformulation (PSD Q with off-diagonal)
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_conic_reformulation_with_cross_product_terms(self):
+        """PSD Q with off-diagonal terms should produce a conic reformulation
+        that includes cross-product terms in the rotated SOC constraint.
+
+        For ``x**2 + x*y + y**2 <= 4`` the Q matrix is
+        ``[[1, 0.5], [0.5, 1]]`` (eigenvalues 0.5 and 1.5, PSD).
+        The conic constraint should contain the cross-product ``v_x * v_y``
+        with coefficient 1 (the original x*y coefficient).
+        """
+        m = models.makeTwoTermDisj_ConvexQuadCrossProduct()
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        t_var = relaxBlock.component('_conic_aux_t_c')
+        self.assertIsNotNone(
+            t_var, "Expected conic auxiliary variable '_conic_aux_t_c'"
+        )
+        self.assertIs(t_var.domain, NonNegativeReals)
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 2)
+
+        conic_cons = next(
+            c
+            for c in trans_cons
+            if generate_standard_repn(c.body, compute_values=False).is_quadratic()
+        )
+        linear_cons = next(
+            c
+            for c in trans_cons
+            if generate_standard_repn(c.body, compute_values=False).is_linear()
+        )
+
+        # --- Conic constraint: v_x**2 + v_x*v_y + v_y**2 - t*y_ind <= 0 ---
+        self.assertIsNone(conic_cons.lower)
+        self.assertEqual(value(conic_cons.upper), 0)
+        repn = generate_standard_repn(conic_cons.body, compute_values=False)
+        self.assertTrue(repn.is_quadratic())
+        quad_pairs = dict(
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
+        )
+        self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
+        self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], 1)
+        cross_coef = quad_pairs.get(
+            (id(v_x), id(v_y)), quad_pairs.get((id(v_y), id(v_x)), None)
+        )
+        self.assertIsNotNone(cross_coef, "Missing cross-product term v_x*v_y")
+        self.assertAlmostEqual(cross_coef, 1)
+
+        # --- Linear bound constraint: t - 4*y_ind <= 0 ---
+        self.assertIsNone(linear_cons.lower)
+        self.assertEqual(value(linear_cons.upper), 0)
+        repn2 = generate_standard_repn(linear_cons.body, compute_values=False)
+        self.assertTrue(repn2.is_linear())
+        linear_map = dict(zip([id(v) for v in repn2.linear_vars], repn2.linear_coefs))
+        self.assertAlmostEqual(linear_map[id(t_var)], 1)
+        self.assertAlmostEqual(linear_map[id(y_ind)], -4)
+
+    # ------------------------------------------------------------------
+    # 15. Cross-product terms in general exact hull (indefinite Q with off-diagonal)
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_general_exact_hull_with_cross_product_terms(self):
+        """Indefinite Q with off-diagonal terms should produce a general exact
+        hull expression that includes cross-product terms.
+
+        For ``x**2 + 3*x*y - y**2 <= 1`` the Q matrix is
+        ``[[1, 1.5], [1.5, -1]]`` (indefinite).  The general exact hull
+        constraint should be:
+            ``v_x**2 + 3*v_x*v_y - v_y**2 - y_ind**2 <= 0``
+        """
+        m = models.makeTwoTermDisj_NonconvexQuadCrossProduct()
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        self.assertIsNone(relaxBlock.component('_conic_aux_t_c'))
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 1)
+        ub_cons = trans_cons[0]
+
+        self.assertIsNone(ub_cons.lower)
+        self.assertEqual(value(ub_cons.upper), 0)
+
+        repn = generate_standard_repn(ub_cons.body, compute_values=False)
+        self.assertTrue(repn.is_quadratic())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+
+        quad_pairs = dict(
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
+        )
+        # v_x**2: +1
+        self.assertAlmostEqual(quad_pairs.get((id(v_x), id(v_x)), 0), 1)
+        # v_y**2: -1
+        self.assertAlmostEqual(quad_pairs.get((id(v_y), id(v_y)), 0), -1)
+        # 3*v_x*v_y cross-product term
+        cross_coef = quad_pairs.get(
+            (id(v_x), id(v_y)), quad_pairs.get((id(v_y), id(v_x)), None)
+        )
+        self.assertIsNotNone(cross_coef, "Missing cross-product term v_x*v_y")
+        self.assertAlmostEqual(cross_coef, 3)
+        # -1*y_ind**2 (from rhs: 1 * y_ind**2 moved to LHS)
+        self.assertAlmostEqual(quad_pairs.get((id(y_ind), id(y_ind)), 0), -1)
+
+    # ------------------------------------------------------------------
+    # 16. Mutable parameter warning in exact hull quadratic
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_mutable_param_warning(self):
+        """A quadratic constraint with a mutable Param should trigger a warning.
+
+        For ``p*x**2 + y**2 <= 4`` where ``p`` is a mutable Param, the exact
+        hull reformulation evaluates ``p`` to its current numeric value for the
+        eigenvalue-based convexity check.  A warning must be emitted mentioning
+        the constraint name and the mutable parameter name.  The transformation
+        should still succeed (using the evaluated value).
+        """
+        m = models.makeTwoTermDisj_QuadMutableParam()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.gdp.hull', logging.WARNING):
+            self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        warning_text = output.getvalue()
+        self.assertIn("mutable parameters", warning_text)
+        self.assertIn("d1.c", warning_text)
+        self.assertIn("p", warning_text)
+        self.assertIn("will not update", warning_text)
+
+        # The transformation should still produce a valid result.
+        # With p=1, Q = I (PSD), so the conic path should be taken.
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        t_var = relaxBlock.component('_conic_aux_t_c')
+        self.assertIsNotNone(
+            t_var, "Expected conic auxiliary variable (p=1 makes Q=I, PSD)"
+        )

@@ -1452,3 +1452,61 @@ def makeTwoTermDisj_AllZeroEigenvalueQuadRange():
     m.d2.c = Constraint(expr=m.x + m.y <= 1)
     m.disj = Disjunction(expr=[m.d1, m.d2])
     return m
+
+
+def makeTwoTermDisj_ConvexQuadCrossProduct():
+    """Two-term disjunction with a convex quadratic constraint containing
+    cross-product (off-diagonal) terms.
+
+    Disjunct d1 has ``x**2 + x*y + y**2 <= 4``.  The Q matrix is
+    ``[[1, 0.5], [0.5, 1]]`` (eigenvalues 0.5 and 1.5, both positive),
+    so Q is PSD and the conic exact hull reformulation should be used.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x**2 + m.x * m.y + m.y**2 <= 4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_NonconvexQuadCrossProduct():
+    """Two-term disjunction with a non-convex quadratic constraint containing
+    cross-product (off-diagonal) terms.
+
+    Disjunct d1 has ``x**2 + 3*x*y - y**2 <= 1``.  The Q matrix is
+    ``[[1, 1.5], [1.5, -1]]`` (eigenvalues approximately -1.803 and 1.803),
+    so Q is indefinite and the general exact hull reformulation should be used.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x**2 + 3 * m.x * m.y - m.y**2 <= 1)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_QuadMutableParam():
+    """Two-term disjunction with a quadratic constraint containing a mutable
+    Param as a coefficient.
+
+    Disjunct d1 has ``p*x**2 + y**2 <= 4`` where ``p`` is a mutable Param
+    (default value 1).  The exact hull reformulation should issue a warning
+    about the mutable parameter being evaluated to its current numeric value.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.p = Param(initialize=1, mutable=True)
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.p * m.x**2 + m.y**2 <= 4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
