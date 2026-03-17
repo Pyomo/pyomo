@@ -179,33 +179,25 @@ class NonLinearProgrammingKKT:
                         # instead of simply the model object
                         info.ranged_constraints.add(con)
 
-        kkt_block.equality_cons_set = Set(initialize=equality_cons, ordered=True)
+        kkt_block.equality_cons_list = list(equality_cons)
         kkt_block.gamma_set = RangeSet(0, len(equality_cons) - 1)
         kkt_block.gamma = Var(kkt_block.gamma_set, domain=Reals)
         info.equality_multiplier_index_to_con = dict(
-            enumerate(kkt_block.equality_cons_set.ordered_data())
+            enumerate(kkt_block.equality_cons_list)
         )
-        kkt_block.inequality_cons_set = Set(
-            dimen=2, initialize=inequality_cons, ordered=True
-        )
+        kkt_block.inequality_cons_list = list(inequality_cons)
         kkt_block.alpha_con_set = RangeSet(0, len(inequality_cons) - 1)
         kkt_block.alpha_con = Var(kkt_block.alpha_con_set, domain=NonNegativeReals)
         info.inequality_multiplier_index_to_con = dict(
-            enumerate(kkt_block.inequality_cons_set.ordered_data())
+            enumerate(kkt_block.inequality_cons_list)
         )
 
         # we also need to consider inequality constraints
         # formed by the user specifying variable bounds
         var_bound_sides = []
-        vars_in_cons_all = ComponentSet(
+        vars_in_cons = ComponentSet(
             get_vars_from_components(model, Constraint, active=True, descend_into=True)
         )
-        vars_in_kkt_cons = ComponentSet(
-            get_vars_from_components(
-                kkt_block, Constraint, active=True, descend_into=True
-            )
-        )
-        vars_in_cons = vars_in_cons_all - vars_in_kkt_cons
         vars_in_obj = ComponentSet(
             get_vars_from_components(model, Objective, active=True, descend_into=True)
         )
@@ -220,6 +212,7 @@ class NonLinearProgrammingKKT:
         kkt_block.alpha_var_bound = Var(
             kkt_block.var_bound_set, domain=NonNegativeReals
         )
+
         info.var_bound_multiplier_index_to_con = dict(enumerate(var_bound_sides))
 
         # indexing the inequality constraint expressions will help
@@ -245,14 +238,12 @@ class NonLinearProgrammingKKT:
         elif sense == minimize:
             lagrangean = obj[0].expr
 
-        for index, con in enumerate(kkt_block.equality_cons_set.ordered_data()):
+        for index, con in enumerate(kkt_block.equality_cons_list):
             lagrangean += info.equality_con_to_expr[con] * kkt_block.gamma[index]
             info.equality_con_from_multiplier[kkt_block.gamma[index]] = con
             info.equality_multiplier_from_con[con] = kkt_block.gamma[index]
 
-        for index, (con, bound) in enumerate(
-            kkt_block.inequality_cons_set.ordered_data()
-        ):
+        for index, (con, bound) in enumerate(kkt_block.inequality_cons_list):
             lagrangean += (
                 info.inequality_con_to_expr[con][bound] * kkt_block.alpha_con[index]
             )
@@ -292,9 +283,7 @@ class NonLinearProgrammingKKT:
     def _enforce_complementarity_conditions(self, model, kkt_block):
         info = model.private_data()
         kkt_block.complements = ComplementarityList()
-        for index, (con, bound) in enumerate(
-            kkt_block.inequality_cons_set.ordered_data()
-        ):
+        for index, (con, bound) in enumerate(kkt_block.inequality_cons_list):
             kkt_block.complements.add(
                 complements(
                     kkt_block.alpha_con[index] >= 0,
