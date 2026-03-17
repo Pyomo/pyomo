@@ -116,8 +116,7 @@ class DesignOfExperiments:
 
     def __init__(
         self,
-        experiment=None,
-        experiment_list=None,
+        experiment: list = None,
         fd_formula="central",
         step=1e-3,
         objective_option="determinant",
@@ -147,11 +146,11 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        experiment_list:
+        experiment:
             Experiment object(s) that hold the model and labels all the components.
             Can be a single Experiment object or a list of Experiment objects.
-            For single experiments, you can pass the object directly: experiment_list=experiment
-            or as a list: experiment_list=[experiment].
+            For single experiments, you can pass the object directly:
+            ``experiment=exp`` or as a list: ``experiment=[exp]``.
             Each object should have a ``get_labeled_model`` method that returns a model with
             the following labeled Pyomo Suffixes:
 
@@ -159,10 +158,6 @@ class DesignOfExperiments:
               - ``experimental_inputs``,
               - ``experimental_outputs``
               - ``measurement_error``.
-
-        experiment:
-            **DEPRECATED** - Use 'experiment_list' instead. This parameter will be removed
-            in a future version. When provided, a DeprecationWarning is issued.
 
         fd_formula:
             Finite difference formula for computing the sensitivity matrix. Must be
@@ -234,38 +229,28 @@ class DesignOfExperiments:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
 
         """
-        # Handle backward compatibility - experiment -> experiment_list
-        if experiment is not None:
-            warnings.warn(
-                "The 'experiment' parameter in DesignOfExperiments is deprecated and "
-                "will be removed in a future version. "
-                "Please use 'experiment_list' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if experiment_list is None:
-                experiment_list = experiment
-
-        # Validate experiment_list is provided
-        if experiment_list is None:
+        # Validate experiment(s) are provided
+        if experiment is None:
             raise ValueError(
-                "The 'experiment_list' parameter is required. "
+                "The 'experiment' parameter is required. "
                 "Pass a single Experiment object or a list of Experiment objects."
             )
 
         # Auto-convert single experiment to list
-        if not isinstance(experiment_list, list):
-            experiment_list = [experiment_list]
+        if not isinstance(experiment, list):
+            experiment_list = [experiment]
+        else:
+            experiment_list = experiment
 
         # Validate list is not empty
         if len(experiment_list) == 0:
-            raise ValueError("The 'experiment_list' cannot be empty.")
+            raise ValueError("The 'experiment' list cannot be empty.")
 
         # Check each experiment has get_labeled_model method
         for idx, exp in enumerate(experiment_list):
             if not hasattr(exp, "get_labeled_model"):
                 raise ValueError(
-                    f"Experiment at index {idx} in 'experiment_list' must have a "
+                    f"Experiment at index {idx} in 'experiment' must have a "
                     f"'get_labeled_model' method"
                 )
 
@@ -632,13 +617,14 @@ class DesignOfExperiments:
         init_combo_chunk_size: int = 5000,
         init_combo_parallel_threshold: int = 20000,
         init_max_wall_clock_time: float = None,
+        init_solver=None,
     ):
         """
         Optimize single experiment or multiple experiments simultaneously for
         Design of Experiments.
 
         The number of experiments is determined by the length of the
-        experiment_list provided when creating the DesignOfExperiments object.
+        experiment list provided through the ``experiment`` argument.
 
         Parameters
         ----------
@@ -653,7 +639,7 @@ class DesignOfExperiments:
             - ``None`` (default): No special initialization; use the initial
               values from ``get_labeled_model()``. To provide a custom starting
               point, initialize the ``Experiment`` objects with the desired
-              design values before passing them in ``experiment_list``.
+              design values before passing them in ``experiment``.
             - ``"lhs"`` (or ``InitializationMethod.lhs``): Use Latin Hypercube Sampling (LHS) to find a good
               initial design. For each experiment-input dimension, ``init_n_samples``
               points are sampled independently using 1-D LHS, and their Cartesian
@@ -694,13 +680,17 @@ class DesignOfExperiments:
         init_max_wall_clock_time:
             Optional time budget (seconds) for LHS initialization. If exceeded
             during combination scoring, best-so-far is returned.
+        init_solver:
+            Optional solver object used only for initialization phases
+            (LHS candidate-FIM evaluations and square initialization solve).
+            If ``None``, the default DoE solver (``self.solver``) is used.
 
         Notes
         -----
         Number of Experiments:
-            When ``len(experiment_list) == 1`` (template mode), pass ``n_exp``
+            When ``len(experiment) == 1`` (template mode), pass ``n_exp``
             to specify how many experiments to optimize.  When
-            ``len(experiment_list) > 1`` (user-initialized mode), the list
+            ``len(experiment) > 1`` (user-initialized mode), the list
             length determines the number of experiments and ``n_exp`` must
             not be set.
 
@@ -747,11 +737,11 @@ class DesignOfExperiments:
         # --- Resolve n_exp and determine operating mode ---
         n_list = len(self.experiment_list)
         if n_list > 1:
-            # User-initialized mode: experiment_list already contains all
+            # User-initialized mode: experiment list already contains all
             # pre-initialized experiment objects.
             if n_exp is not None:
                 raise ValueError(
-                    "``n_exp`` must not be set when ``experiment_list`` contains "
+                    "``n_exp`` must not be set when the experiment list contains "
                     f"more than one experiment (got {n_list} experiments in the "
                     "list).  Either pass a single template experiment and set "
                     "``n_exp``, or pass a fully-initialized list and omit ``n_exp``."
@@ -787,7 +777,7 @@ class DesignOfExperiments:
             if not _template_mode:
                 raise ValueError(
                     "``init_method='lhs'`` is currently supported only in "
-                    "template mode (``len(experiment_list) == 1``)."
+                    "template mode (``len(experiment) == 1``)."
                 )
             if not scipy_available:
                 raise ImportError(
@@ -841,6 +831,10 @@ class DesignOfExperiments:
                     "``init_max_wall_clock_time`` must be None or a positive number, "
                     f"got {init_max_wall_clock_time!r}."
                 )
+        if init_solver is not None and not hasattr(init_solver, "solve"):
+            raise ValueError(
+                "``init_solver`` must be None or a solver object with a 'solve' method."
+            )
         # -----------------------------------------
         # Start timer
         sp_timer = TicTocTimer()
@@ -989,179 +983,192 @@ class DesignOfExperiments:
         # --- Apply experiment initialization (if requested) ---
         # This must be done AFTER the model is built but BEFORE the square solve
         # so that the solver uses the correct starting design.
+        primary_solver = self.solver
+        resolved_init_solver = primary_solver if init_solver is None else init_solver
+        init_solver_name = getattr(
+            resolved_init_solver, "name", str(resolved_init_solver)
+        )
         lhs_init_diagnostics = None
         lhs_initialization_time = 0.0
-        if resolved_init_method == InitializationMethod.lhs:
-            lhs_timer = TicTocTimer()
-            lhs_timer.tic(msg=None)
-            self.logger.info(
-                f"Applying LHS initialization with {init_n_samples} samples per "
-                f"experiment-input dimension..."
+
+        # Temporarily route all initialization-related solves through init_solver.
+        self.solver = resolved_init_solver
+        try:
+            if resolved_init_method == InitializationMethod.lhs:
+                lhs_timer = TicTocTimer()
+                lhs_timer.tic(msg=None)
+                self.logger.info(
+                    f"Applying LHS initialization with {init_n_samples} samples per "
+                    f"experiment-input dimension..."
+                )
+                best_initial_points, lhs_init_diagnostics = (
+                    self._lhs_initialize_experiments(
+                        lhs_n_samples=init_n_samples,
+                        lhs_seed=init_seed,
+                        n_exp=n_exp,
+                        lhs_parallel=init_parallel,
+                        lhs_combo_parallel=init_combo_parallel,
+                        lhs_n_workers=init_n_workers,
+                        lhs_combo_chunk_size=init_combo_chunk_size,
+                        lhs_combo_parallel_threshold=init_combo_parallel_threshold,
+                        lhs_max_wall_clock_time=init_max_wall_clock_time,
+                    )
+                )
+                self.logger.info(
+                    "Setting LHS best-found initial design in the optimization model..."
+                )
+                for s in range(n_param_scenarios):
+                    for k in range(n_exp):
+                        exp_input_vars = self._get_experiment_input_vars(
+                            self.model.param_scenario_blocks[s].exp_blocks[k]
+                        )
+                        for var, val in zip(exp_input_vars, best_initial_points[k]):
+                            var.set_value(val)
+                lhs_initialization_time = lhs_timer.toc(msg=None)
+
+            # ------------------------------------------------------
+            # Reset delta timing so initialization_time measures only square solve.
+            sp_timer.tic(msg=None)
+
+            # Solve the square problem first to initialize the FIM and sensitivity constraints
+            # Deactivate objective expression and objective constraints
+            self.model.objective.deactivate()
+            # Deactivate obj_cons for each scenario (holds Cholesky/determinant/trace constraints)
+            for s in range(n_param_scenarios):
+                if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
+                    self.model.param_scenario_blocks[s].obj_cons.deactivate()
+
+            # Fix the design variables across all scenarios and experiments
+            self._set_experiment_inputs_fixed(
+                n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=True
             )
-            best_initial_points, lhs_init_diagnostics = (
-                self._lhs_initialize_experiments(
-                    lhs_n_samples=init_n_samples,
-                    lhs_seed=init_seed,
-                    n_exp=n_exp,
-                    lhs_parallel=init_parallel,
-                    lhs_combo_parallel=init_combo_parallel,
-                    lhs_n_workers=init_n_workers,
-                    lhs_combo_chunk_size=init_combo_chunk_size,
-                    lhs_combo_parallel_threshold=init_combo_parallel_threshold,
-                    lhs_max_wall_clock_time=init_max_wall_clock_time,
+
+            # Create and solve dummy objective for initialization
+            self.model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
+            self.solver.solve(self.model, tee=self.tee)
+
+            # Track time to initialize the DoE model
+            initialization_time = sp_timer.toc(msg=None)
+            self.logger.info(
+                (
+                    "Successfully initialized the multi-experiment DoE model."
+                    "\nInitialization time: %0.1f seconds" % initialization_time
                 )
             )
-            self.logger.info(
-                "Setting LHS best-found initial design in the optimization model..."
+
+            # Deactivate dummy objective
+            self.model.dummy_obj.deactivate()
+            self.model.del_component("dummy_obj")
+
+            # Reactivate objective, obj_cons, and unfix experimental design decisions
+            self._set_experiment_inputs_fixed(
+                n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=False
             )
+            self.model.objective.activate()
             for s in range(n_param_scenarios):
-                for k in range(n_exp):
-                    exp_input_vars = self._get_experiment_input_vars(
-                        self.model.param_scenario_blocks[s].exp_blocks[k]
-                    )
-                    for var, val in zip(exp_input_vars, best_initial_points[k]):
-                        var.set_value(val)
-            lhs_initialization_time = lhs_timer.toc(msg=None)
+                if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
+                    self.model.param_scenario_blocks[s].obj_cons.activate()
 
-        # ------------------------------------------------------
-        # Reset delta timing so initialization_time measures only square solve.
-        sp_timer.tic(msg=None)
-
-        # Solve the square problem first to initialize the FIM and sensitivity constraints
-        # Deactivate objective expression and objective constraints
-        self.model.objective.deactivate()
-        # Deactivate obj_cons for each scenario (holds Cholesky/determinant/trace constraints)
-        for s in range(n_param_scenarios):
-            if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
-                self.model.param_scenario_blocks[s].obj_cons.deactivate()
-
-        # Fix the design variables across all scenarios and experiments
-        self._set_experiment_inputs_fixed(
-            n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=True
-        )
-
-        # Create and solve dummy objective for initialization
-        self.model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
-        self.solver.solve(self.model, tee=self.tee)
-
-        # Track time to initialize the DoE model
-        initialization_time = sp_timer.toc(msg=None)
-        self.logger.info(
-            (
-                "Successfully initialized the multi-experiment DoE model."
-                "\nInitialization time: %0.1f seconds" % initialization_time
+            # Initialize scenario-level variables (L, determinant, pseudo_trace) based on
+            # the solved FIM values from the square solve
+            parameter_names = (
+                self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
             )
-        )
 
-        # Deactivate dummy objective
-        self.model.dummy_obj.deactivate()
-        self.model.del_component("dummy_obj")
-
-        # Reactivate objective, obj_cons, and unfix experimental design decisions
-        self._set_experiment_inputs_fixed(
-            n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=False
-        )
-        self.model.objective.activate()
-        for s in range(n_param_scenarios):
-            if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
-                self.model.param_scenario_blocks[s].obj_cons.activate()
-
-        # Initialize scenario-level variables (L, determinant, pseudo_trace) based on
-        # the solved FIM values from the square solve
-        parameter_names = (
-            self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
-        )
-
-        for s in range(n_param_scenarios):
-            scenario = self.model.param_scenario_blocks[s]
-            # Update total_fim values from solved individual experiment FIMs
-            # Individual experiment FIMs don't include prior_FIM in multi-experiment mode,
-            # so we add it once here to the aggregated total
-            for i, p in enumerate(parameter_names):
-                for j, q in enumerate(parameter_names):
-                    # When only_compute_fim_lower=True, only the lower triangle is computed
-                    # Upper triangle elements are fixed to 0, so only aggregate lower triangle
-                    if self.only_compute_fim_lower and i < j:
-                        continue
-
-                    fim_sum = sum(
-                        pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
-                        for k in range(n_exp)
-                    )
-                    scenario.total_fim[p, q].set_value(fim_sum + self.prior_FIM[i, j])
-
-            # Build scenario total FIM once and reuse for all objective initializations.
-            total_fim_vals = [
-                pyo.value(scenario.total_fim[p, q])
-                for p in parameter_names
-                for q in parameter_names
-            ]
-            total_fim_np = np.array(total_fim_vals).reshape(
-                (len(parameter_names), len(parameter_names))
-            )
-            if self.only_compute_fim_lower:
-                total_fim_np = self._symmetrize_lower_tri(total_fim_np)
-
-            # Initialize scenario-level variables based on total_fim
-            if hasattr(scenario.obj_cons, "L"):
-                # Compute Cholesky factorization
-                # Check positive definiteness and add jitter if needed
-                min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
-                if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-                    jitter = np.min(
-                        [
-                            -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
-                            _SMALL_TOLERANCE_DEFINITENESS,
-                        ]
-                    )
-                else:
-                    jitter = 0
-
-                fim_jittered = total_fim_np + jitter * np.eye(len(parameter_names))
-
-                # Compute Cholesky decomposition
-                L_vals = np.linalg.cholesky(fim_jittered)
-
-                # Initialize L values
+            for s in range(n_param_scenarios):
+                scenario = self.model.param_scenario_blocks[s]
+                # Update total_fim values from solved individual experiment FIMs
+                # Individual experiment FIMs don't include prior_FIM in multi-experiment mode,
+                # so we add it once here to the aggregated total
                 for i, p in enumerate(parameter_names):
                     for j, q in enumerate(parameter_names):
-                        scenario.obj_cons.L[p, q].set_value(L_vals[i, j])
+                        # When only_compute_fim_lower=True, only the lower triangle is computed
+                        # Upper triangle elements are fixed to 0, so only aggregate lower triangle
+                        if self.only_compute_fim_lower and i < j:
+                            continue
 
-                # If trace objective, also initialize L_inv, fim_inv, and cov_trace
-                if hasattr(scenario.obj_cons, "L_inv"):
-                    L_inv_vals = np.linalg.inv(L_vals)
+                        fim_sum = sum(
+                            pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
+                            for k in range(n_exp)
+                        )
+                        scenario.total_fim[p, q].set_value(
+                            fim_sum + self.prior_FIM[i, j]
+                        )
 
+                # Build scenario total FIM once and reuse for all objective initializations.
+                total_fim_vals = [
+                    pyo.value(scenario.total_fim[p, q])
+                    for p in parameter_names
+                    for q in parameter_names
+                ]
+                total_fim_np = np.array(total_fim_vals).reshape(
+                    (len(parameter_names), len(parameter_names))
+                )
+                if self.only_compute_fim_lower:
+                    total_fim_np = self._symmetrize_lower_tri(total_fim_np)
+
+                # Initialize scenario-level variables based on total_fim
+                if hasattr(scenario.obj_cons, "L"):
+                    # Compute Cholesky factorization
+                    # Check positive definiteness and add jitter if needed
+                    min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
+                    if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
+                        jitter = np.min(
+                            [
+                                -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
+                                _SMALL_TOLERANCE_DEFINITENESS,
+                            ]
+                        )
+                    else:
+                        jitter = 0
+
+                    fim_jittered = total_fim_np + jitter * np.eye(len(parameter_names))
+
+                    # Compute Cholesky decomposition
+                    L_vals = np.linalg.cholesky(fim_jittered)
+
+                    # Initialize L values
                     for i, p in enumerate(parameter_names):
                         for j, q in enumerate(parameter_names):
-                            if i >= j:
-                                scenario.obj_cons.L_inv[p, q].set_value(
-                                    L_inv_vals[i, j]
-                                )
-                            else:
-                                scenario.obj_cons.L_inv[p, q].set_value(0.0)
+                            scenario.obj_cons.L[p, q].set_value(L_vals[i, j])
 
-                    # Initialize fim_inv
-                    if hasattr(scenario.obj_cons, "fim_inv"):
-                        fim_inv_np = np.linalg.inv(fim_jittered)
+                    # If trace objective, also initialize L_inv, fim_inv, and cov_trace
+                    if hasattr(scenario.obj_cons, "L_inv"):
+                        L_inv_vals = np.linalg.inv(L_vals)
+
                         for i, p in enumerate(parameter_names):
                             for j, q in enumerate(parameter_names):
-                                scenario.obj_cons.fim_inv[p, q].set_value(
-                                    fim_inv_np[i, j]
-                                )
+                                if i >= j:
+                                    scenario.obj_cons.L_inv[p, q].set_value(
+                                        L_inv_vals[i, j]
+                                    )
+                                else:
+                                    scenario.obj_cons.L_inv[p, q].set_value(0.0)
 
-                    # Initialize cov_trace
-                    if hasattr(scenario.obj_cons, "cov_trace"):
-                        initial_cov_trace = np.sum(L_inv_vals**2)
-                        scenario.obj_cons.cov_trace.set_value(initial_cov_trace)
+                        # Initialize fim_inv
+                        if hasattr(scenario.obj_cons, "fim_inv"):
+                            fim_inv_np = np.linalg.inv(fim_jittered)
+                            for i, p in enumerate(parameter_names):
+                                for j, q in enumerate(parameter_names):
+                                    scenario.obj_cons.fim_inv[p, q].set_value(
+                                        fim_inv_np[i, j]
+                                    )
 
-            if hasattr(scenario.obj_cons, "determinant"):
-                # Initialize determinant
-                scenario.obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
+                        # Initialize cov_trace
+                        if hasattr(scenario.obj_cons, "cov_trace"):
+                            initial_cov_trace = np.sum(L_inv_vals**2)
+                            scenario.obj_cons.cov_trace.set_value(initial_cov_trace)
 
-            if hasattr(scenario.obj_cons, "pseudo_trace"):
-                # Initialize pseudo_trace
-                pseudo_trace_val = float(np.trace(total_fim_np))
-                scenario.obj_cons.pseudo_trace.set_value(pseudo_trace_val)
+                if hasattr(scenario.obj_cons, "determinant"):
+                    # Initialize determinant
+                    scenario.obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
+
+                if hasattr(scenario.obj_cons, "pseudo_trace"):
+                    # Initialize pseudo_trace
+                    pseudo_trace_val = float(np.trace(total_fim_np))
+                    scenario.obj_cons.pseudo_trace.set_value(pseudo_trace_val)
+        finally:
+            self.solver = primary_solver
 
         # Solve the full model
         res = self.solver.solve(self.model, tee=self.tee)
@@ -1400,6 +1407,7 @@ class DesignOfExperiments:
             },
             "initialization": {
                 "method": self.results["Initialization Method"],
+                "solver_name": init_solver_name,
                 "lhs_n_samples": self.results.get("LHS Samples Per Dimension"),
                 "lhs_seed": self.results.get("LHS Seed"),
                 "best_points": self.results.get("LHS Best Initial Points"),
@@ -1829,7 +1837,7 @@ class DesignOfExperiments:
                     # the rest of this thread's candidate evaluations.
                     worker_solver = _make_worker_solver()
                     worker_doe = DesignOfExperiments(
-                        experiment_list=self.experiment_list,
+                        experiment=self.experiment_list,
                         fd_formula=self.fd_formula.value,
                         step=self.step,
                         objective_option=self.objective_option.value,

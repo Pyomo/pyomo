@@ -176,7 +176,7 @@ def get_FIM_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args['experiment_list'] = None if experiment is None else [experiment]
+    args['experiment'] = None if experiment is None else [experiment]
     args['fd_formula'] = fd_method
     args['step'] = 1e-3
     args['objective_option'] = obj_used
@@ -431,7 +431,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         multi_args = get_standard_args(
             RooneyBieglerMultiExperiment(hour=1.5, y=9.0), fd_method, obj_used
         )
-        multi_args["experiment_list"] = [
+        multi_args["experiment"] = [
             RooneyBieglerMultiExperiment(hour=1.5, y=9.0),
             RooneyBieglerMultiExperiment(hour=3.5, y=12.0),
         ]
@@ -1013,7 +1013,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         solver.options["halt_on_ampl_error"] = "yes"
         solver.options["max_iter"] = 3000
         return DesignOfExperiments(
-            experiment_list=[exp],
+            experiment=[exp],
             objective_option=objective_option,
             step=1e-2,
             solver=solver,
@@ -1091,6 +1091,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
 
     def test_optimize_experiments_cholesky_jitter_branch(self):
+        # Tests that optimization proceeds through the Cholesky jitter branch when needed.
         doe = self._make_template_doe("determinant")
 
         original_solve = doe.solver.solve
@@ -1123,6 +1124,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertGreaterEqual(eigvals_mock.call_count, 1)
 
     def test_optimize_experiments_lhs_matches_bruteforce_combo(self):
+        # Tests that LHS-selected initial points match an independent brute-force oracle.
         n_exp = 2
         lhs_n_samples = 3
         lhs_seed = 17
@@ -1190,6 +1192,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior, atol=1e-6))
 
     def test_optimize_experiments_is_reentrant_on_same_object(self):
+        # Tests that optimize_experiments() can be run repeatedly on one DoE object.
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(n_exp=1)
         first_design = doe.results["Scenarios"][0]["Experiments"][0][
@@ -2067,6 +2070,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertEqual(got_norm, exp_norm)
 
     def test_optimize_experiments_determinant_expected_values(self):
+        # Tests determinant-objective optimization against known expected design/metric values.
         # Match the multi-experiment example style (explicit experiment list)
         exp_list = [
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
@@ -2078,7 +2082,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         solver.options["max_iter"] = 3000
 
         doe = DesignOfExperiments(
-            experiment_list=exp_list,
+            experiment=exp_list,
             objective_option="determinant",
             step=1e-2,
             solver=solver,
@@ -2095,6 +2099,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
 
     def test_optimize_experiments_trace_expected_values(self):
+        # Tests trace-objective optimization against known expected design/metric values.
         # Match the multi-experiment example style (explicit experiment list)
         exp_list = [
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
@@ -2111,7 +2116,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
 
         doe = DesignOfExperiments(
-            experiment_list=exp_list,
+            experiment=exp_list,
             objective_option="trace",
             step=1e-2,
             solver=solver,
@@ -2129,6 +2134,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertAlmostEqual(scenario["log10 A-opt"], -2.2347, places=3)
 
     def test_optimize_experiments_prior_fim_aggregation_non_lhs_template_mode(self):
+        # Tests that total FIM equals sum(experiment FIMs) + prior in template mode.
         prior_fim = np.array([[2.0, 0.1], [0.1, 1.5]])
         doe = self._make_template_doe("pseudo_trace")
         doe.prior_FIM = prior_fim.copy()
@@ -2149,6 +2155,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
     def test_optimize_experiments_prior_fim_aggregation_non_lhs_user_initialized_mode(
         self,
     ):
+        # Tests that total FIM aggregation with prior is correct in user-initialized mode.
         exp_list = [
             RooneyBieglerMultiExperiment(hour=1.5, y=9.0),
             RooneyBieglerMultiExperiment(hour=3.5, y=12.0),
@@ -2160,7 +2167,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         prior_fim = np.array([[1.25, 0.05], [0.05, 0.9]])
 
         doe = DesignOfExperiments(
-            experiment_list=exp_list,
+            experiment=exp_list,
             objective_option="pseudo_trace",
             step=1e-2,
             solver=solver,
@@ -2180,6 +2187,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertTrue(np.allclose(total_fim, exp_fim_sum + stored_prior, atol=1e-6))
 
     def test_optimize_experiments_safe_metric_failure_sets_nan(self):
+        # Tests that metric-computation failures are captured as NaN with a warning.
         doe = self._make_template_doe("pseudo_trace")
         with patch(
             "pyomo.contrib.doe.doe.np.linalg.inv", side_effect=RuntimeError("boom")
@@ -2194,13 +2202,14 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
 
     def test_optimize_experiments_non_cholesky_determinant_initialization(self):
+        # Tests determinant initialization correctness when Cholesky formulation is disabled.
         exp = RooneyBieglerMultiExperiment(hour=2.0, y=10.0)
         solver = SolverFactory("ipopt")
         solver.options["linear_solver"] = "ma57"
         solver.options["halt_on_ampl_error"] = "yes"
         solver.options["max_iter"] = 3000
         doe = DesignOfExperiments(
-            experiment_list=[exp],
+            experiment=[exp],
             objective_option="determinant",
             step=1e-2,
             solver=solver,

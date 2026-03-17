@@ -133,7 +133,7 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args['experiment_list'] = None if experiment is None else [experiment]
+    args['experiment'] = None if experiment is None else [experiment]
     args['fd_formula'] = fd_method
     args['step'] = 1e-3
     args['objective_option'] = obj_used
@@ -675,11 +675,81 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         solver.options["max_iter"] = 3000
         return solver
 
+    def test_constructor_accepts_single_experiment_or_list(self):
+        # Tests that the public ``experiment`` argument accepts either one
+        # experiment object or a list of experiment objects.
+        single = DesignOfExperiments(
+            experiment=RooneyBieglerMultiExperiment(hour=2.0),
+            objective_option="pseudo_trace",
+        )
+        as_list = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        self.assertEqual(len(single.experiment_list), 1)
+        self.assertEqual(len(as_list.experiment_list), 1)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_init_solver_used_for_initialization_only(self):
+        # Tests that init_solver is used for initialization phases while the
+        # final optimization solve still uses the primary solver.
+        main_solver = self._make_solver()
+        init_solver = self._make_solver()
+        # Use distinct option values so each solver path can be identified.
+        main_solver.options["max_iter"] = 321
+        init_solver.options["max_iter"] = 123
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=main_solver,
+        )
+
+        main_calls = 0
+        init_calls = 0
+        call_order = []
+        option_markers = []
+        original_main_solve = main_solver.solve
+        original_init_solve = init_solver.solve
+
+        def _main_solve(*args, **kwargs):
+            nonlocal main_calls
+            main_calls += 1
+            call_order.append("main")
+            option_markers.append(main_solver.options.get("max_iter"))
+            return original_main_solve(*args, **kwargs)
+
+        def _init_solve(*args, **kwargs):
+            nonlocal init_calls
+            init_calls += 1
+            call_order.append("init")
+            option_markers.append(init_solver.options.get("max_iter"))
+            return original_init_solve(*args, **kwargs)
+
+        with (
+            patch.object(main_solver, "solve", side_effect=_main_solve),
+            patch.object(init_solver, "solve", side_effect=_init_solve),
+        ):
+            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+
+        self.assertEqual(init_calls, 1)
+        self.assertEqual(main_calls, 1)
+        self.assertEqual(call_order, ["init", "main"])
+        self.assertEqual(option_markers, [123, 321])
+        self.assertEqual(
+            doe_obj.results["settings"]["initialization"]["solver_name"],
+            getattr(init_solver, "name", str(init_solver)),
+        )
+        self.assertEqual(
+            doe_obj.results["run_info"]["solver"]["name"],
+            getattr(main_solver, "name", str(main_solver)),
+        )
+
     def test_get_experiment_input_vars_direct_and_fd_fallback(self):
         # Test the helper used by optimize_experiments() finds input vars for both
         # direct models and finite-difference scenario-block models.
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
         )
 
@@ -711,7 +781,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         solver = self._make_solver()
 
         doe_obj = DesignOfExperiments(
-            experiment_list=[
+            experiment=[
                 RooneyBieglerMultiExperiment(hour=2.0),
                 RooneyBieglerMultiExperiment(hour=4.0),
             ],
@@ -761,7 +831,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # Tests that optimize_experiments() writes JSON results when given either
         # a string path or a pathlib.Path for results_file.
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
@@ -797,7 +867,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # Tests that optimize_experiments() uses template mode by default when
         # n_exp=1.
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
@@ -811,7 +881,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # Tests that LHS initialization timing is tracked separately and
         # contributes additively to total runtime accounting.
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
@@ -837,7 +907,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # Tests that symmetry-breaking constraint logging is emitted once per
         # scenario (not once per generated constraint).
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
@@ -857,7 +927,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # Tests that threaded LHS initialization records diagnostics needed for
         # debugging and performance visibility.
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
@@ -896,7 +966,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # Tests that solver termination messages returned as bytes are decoded
         # and persisted as plain strings in results.
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
@@ -920,7 +990,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # Tests that non-string termination messages fall back to str(message) so
         # results always store a serializable user-facing value.
         doe_obj = DesignOfExperiments(
-            experiment_list=[RooneyBieglerMultiExperiment(hour=2.0)],
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
