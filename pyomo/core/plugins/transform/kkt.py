@@ -103,7 +103,7 @@ class NonLinearProgrammingKKT:
 
         # we should check that all vars the user fixed are included
         # in parametrize_wrt
-        params = config.parametrize_wrt or ComponentSet()
+        params = config.parametrize_wrt
         vars_in_cons = ComponentSet(
             get_vars_from_components(model, Constraint, active=True, descend_into=True)
         )
