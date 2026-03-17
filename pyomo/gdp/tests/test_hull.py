@@ -3645,3 +3645,94 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertIsNotNone(
             t_var, "Expected conic auxiliary variable (p=1 makes Q=I, PSD)"
         )
+
+    # ------------------------------------------------------------------
+    # 17. Indexed quadratic equality -> is_indexed() branch
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_indexed_quadratic_equality(self):
+        """An IndexedConstraint with quadratic equalities should use the
+        ``obj.is_indexed()`` branch in the exact hull equality path.
+
+        For ``x[s]**2 + y[s]**2 == 4`` (s in {1,2}), each ConstraintData
+        should produce one general exact hull equality constraint indexed
+        with the ``(name, i, 'eq')`` tuple key.
+        """
+        m = models.makeTwoTermDisj_IndexedQuadEq()
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        for s in m.s:
+            trans_cons = self.hull.get_transformed_constraints(m.d1.c[s])
+            self.assertEqual(len(trans_cons), 1)
+            eq_cons = trans_cons[0]
+            self.assertEqual(value(eq_cons.lower), 0)
+            self.assertEqual(value(eq_cons.upper), 0)
+            self.assertIs(self.hull.get_src_constraint(eq_cons), m.d1.c[s])
+
+    # ------------------------------------------------------------------
+    # 18. Indexed quadratic upper-bound -> is_indexed() branch
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_indexed_quadratic_upper_bound(self):
+        """An IndexedConstraint with convex quadratic upper bounds should use
+        the ``obj.is_indexed()`` branch in the conic upper-bound path.
+
+        For ``x[s]**2 + y[s]**2 <= 4`` (s in {1,2}, Q = I, PSD), each
+        ConstraintData should produce a conic SOC constraint and a linear
+        bound constraint, both indexed with ``(name, i, ...)`` tuple keys.
+        """
+        m = models.makeTwoTermDisj_IndexedQuadUB()
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        for s in m.s:
+            trans_cons = self.hull.get_transformed_constraints(m.d1.c[s])
+            self.assertEqual(len(trans_cons), 2)
+            for tc in trans_cons:
+                self.assertIs(self.hull.get_src_constraint(tc), m.d1.c[s])
+
+    # ------------------------------------------------------------------
+    # 19. Indexed quadratic lower-bound -> is_indexed() branch
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_indexed_quadratic_lower_bound(self):
+        """An IndexedConstraint with convex quadratic lower bounds should use
+        the ``obj.is_indexed()`` branch in the conic lower-bound path.
+
+        For ``-x[s]**2 - y[s]**2 >= -4`` (s in {1,2}, Q = -I, NSD), each
+        ConstraintData should produce a conic SOC constraint and a linear
+        bound constraint via negation, both indexed with ``(name, i, ...)``
+        tuple keys.
+        """
+        m = models.makeTwoTermDisj_IndexedQuadLB()
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        for s in m.s:
+            trans_cons = self.hull.get_transformed_constraints(m.d1.c[s])
+            self.assertEqual(len(trans_cons), 2)
+            for tc in trans_cons:
+                self.assertIs(self.hull.get_src_constraint(tc), m.d1.c[s])
+
+    # ------------------------------------------------------------------
+    # 20. Debug logging for exact hull quadratic bounds
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_debug_logging_exact_hull_quadratic(self):
+        """When the logger is at DEBUG level, the exact hull reformulation
+        should emit debug messages for lower-bound and upper-bound quadratic
+        constraints.
+
+        Uses a range constraint ``1 <= x**2 + y**2 <= 4`` so that both the
+        lower-bound and upper-bound debug paths are exercised.
+        """
+        m = models.makeTwoTermDisj_QuadRange()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.gdp.hull', logging.DEBUG):
+            self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        debug_text = output.getvalue()
+        self.assertIn("GDP(Hull): Transforming constraint", debug_text)
+        self.assertIn("d1.c", debug_text)

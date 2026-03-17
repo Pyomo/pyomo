@@ -1510,3 +1510,63 @@ def makeTwoTermDisj_QuadMutableParam():
     m.d2.c = Constraint(expr=m.x + m.y <= 1)
     m.disj = Disjunction(expr=[m.d1, m.d2])
     return m
+
+
+def makeTwoTermDisj_IndexedQuadEq():
+    """Two-term disjunction with an IndexedConstraint containing quadratic
+    equality constraints.
+
+    Disjunct d1 has ``x[s]**2 + y[s]**2 == 4`` for s in {1, 2}.
+    Used to test the ``obj.is_indexed()`` branch for equality constraints
+    in the exact hull reformulation.
+    """
+    m = ConcreteModel()
+    m.s = Set(initialize=[1, 2])
+    m.x = Var(m.s, bounds=(-2, 2))
+    m.y = Var(m.s, bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(m.s, rule=lambda _, s: m.x[s] ** 2 + m.y[s] ** 2 == 4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(m.s, rule=lambda _, s: m.x[s] + m.y[s] <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_IndexedQuadUB():
+    """Two-term disjunction with an IndexedConstraint containing convex
+    quadratic upper-bound constraints.
+
+    Disjunct d1 has ``x[s]**2 + y[s]**2 <= 4`` for s in {1, 2}.
+    Used to test the ``obj.is_indexed()`` branch for upper-bound constraints
+    in the exact hull reformulation.
+    """
+    m = ConcreteModel()
+    m.s = Set(initialize=[1, 2])
+    m.x = Var(m.s, bounds=(-2, 2))
+    m.y = Var(m.s, bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(m.s, rule=lambda _, s: m.x[s] ** 2 + m.y[s] ** 2 <= 4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(m.s, rule=lambda _, s: m.x[s] + m.y[s] <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
+def makeTwoTermDisj_IndexedQuadLB():
+    """Two-term disjunction with an IndexedConstraint containing convex
+    quadratic lower-bound constraints.
+
+    Disjunct d1 has ``-x[s]**2 - y[s]**2 >= -4`` for s in {1, 2}.
+    Used to test the ``obj.is_indexed()`` branch for lower-bound constraints
+    in the exact hull reformulation.
+    """
+    m = ConcreteModel()
+    m.s = Set(initialize=[1, 2])
+    m.x = Var(m.s, bounds=(-2, 2))
+    m.y = Var(m.s, bounds=(-2, 2))
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(m.s, rule=lambda _, s: -m.x[s] ** 2 - m.y[s] ** 2 >= -4)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(m.s, rule=lambda _, s: m.x[s] + m.y[s] <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
