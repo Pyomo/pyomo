@@ -33,10 +33,10 @@ quantification workflow shown below:
   :align: center
   :scale: 90 %
 
-   The parameter estimation, uncertainty analysis, and MBDoE are 
-   combined into an iterative framework to select, refine, and calibrate science-based 
-   mathematical models with quantified uncertainty. Currently, Pyomo.DoE focuses on 
-   increasing parameter precision.
+The parameter estimation, uncertainty analysis, and MBDoE are 
+combined into an iterative framework to select, refine, and calibrate science-based 
+mathematical models with quantified uncertainty. Currently, Pyomo.DoE focuses on 
+increasing parameter precision.
 
 Pyomo.DoE provides the exploratory analysis and MBDoE capabilities to the 
 Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
@@ -87,9 +87,9 @@ where:
 *  :math:`\mathbf{t} \in \mathbb{R}^{N_t \times 1}` is a union of all time sets.
 
 .. note::
-    * Parameters and design variables should be defined as Pyomo ``Var`` components 
-      when building the model using the ``Experiment`` class so that users can use both 
-      ``Parmest`` and ``Pyomo.DoE`` seamlessly.
+    Parameters and design variables should be defined as Pyomo ``Var`` components 
+    when building the model using the ``Experiment`` class so that users can use both 
+    ``Parmest`` and ``Pyomo.DoE`` seamlessly.
 Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
 .. math::
@@ -130,7 +130,7 @@ We can use the FIM or the covariance matrix to define the design criteria.
       - Geometrical meaning
     * - A-optimality
       -   :math:`\text{trace}(\mathbf{V}) = \text{trace}(\mathbf{M}^{-1})`
-      - Minimizing this is equivalent to minimizing enclosing box of the confidence ellipse
+      - Minimizing this is equivalent to minimizing the enclosing box of the confidence ellipse
     * - Pseudo A-optimality
       -   :math:`\text{trace}(\mathbf{M})`
       - Maximizing this is equivalent to maximizing the dimensions of the enclosing box of the Fisher Information Matrix
@@ -151,8 +151,8 @@ We can use the FIM or the covariance matrix to define the design criteria.
 In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
 
 Pyomo.DoE Required Inputs
---------------------------------
-The required input to the Pyomo.DoE is a subclass of the :ref:`Parmest <parmest>` ``Experiment`` class. 
+-------------------------
+To use Pyomo.DoE, a user must implement a subclass of the :ref:`Parmest <parmest>` ``Experiment`` class. 
 The subclass must have a ``get_labeled_model`` method which returns a Pyomo `ConcreteModel` 
 containing four Pyomo ``Suffix`` components identifying the parts of the model used in 
 MBDoE analysis. This is in line with the convention used in the parameter estimation tool, 
@@ -178,7 +178,7 @@ We illustrate the use of Pyomo.DoE using a reaction kinetics example (Wang and D
    \end{equation}
 
 
-The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only species A is fed to the reactor.
+The Arrhenius equations model the temperature dependence of the reaction rate coefficients  :math:`k_1` and :math:`k_2`. Assuming a first-order reaction mechanism gives the reaction rate model shown below. Further, we assume only species A is fed to the reactor.
 
 .. math::
    :nowrap:
@@ -280,9 +280,9 @@ Additionally, it helps to initialize the model for the optimal experimental desi
 
 Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` method.
 The ``compute_FIM_full_factorial`` method generates a grid over the design space as specified by the user. 
-Each grid point represents an MBDoE problem solved using ``compute_FIM`` method. 
+Each grid point represents an MBDoE problem solved using the ``compute_FIM`` method. 
 In this way, sensitivity of the FIM over the design space can be evaluated. 
-Pyomo.DoE supports plotting the results from ``compute_FIM_full_factorial`` method 
+Pyomo.DoE supports plotting the results from the ``compute_FIM_full_factorial`` method 
 with the ``draw_factorial_figure`` method.
 
 The following code defines the ``run_reactor_doe`` function. This function encapsulates 
@@ -304,7 +304,7 @@ the optimal experimental design.
 
 A design exploration for the initial concentration and temperature as experimental 
 design variables with 9 values for each, produces the the five figures for 
-five optimality criteria using  ``compute_FIM_full_factorial`` and 
+five optimality criteria using  the ``compute_FIM_full_factorial`` and 
 ``draw_factorial_figure`` methods as shown below: 
 
 |plot1| |plot2|
@@ -340,7 +340,7 @@ with a :math:`\log_{10}` determinant of FIM being around -5. For D-, Pseudo A-, 
 E-optimality we want to maximize the objective function, while for A- and Modified 
 E-optimality we want to minimize the objective function.
 
-However, in this sensitivity analysis plot (heatmap), we only varied the initial 
+In this sensitivity analysis plot (heatmap), we only varied the initial 
 concentration and the initial temperature, while the temperature at other time 
 points is fixed at 300 K.
 
@@ -371,7 +371,7 @@ yielding a well-conditioned FIM and identifiable parameters.
 
 
 Step 6: Performing an optimal experimental design
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In Step 5, we defined the ``run_reactor_doe`` function. This function constructs 
 the DoE object and performs the exploratory sensitivity analysis. The way the function
