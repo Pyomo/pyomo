@@ -90,6 +90,7 @@ where:
     Parameters and design variables should be defined as Pyomo ``Var`` components 
     when building the model using the ``Experiment`` class so that users can use both 
     ``Parmest`` and ``Pyomo.DoE`` seamlessly.
+
 Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
 .. math::
@@ -211,16 +212,10 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
     ``pyomo/contrib/doe/examples/result.json``, which contains the nominal parameter 
     values, and measurements for the reaction kinetics experiment.
 
-.. doctest::
 
-    # === Required import ===
-    >>> import pyomo.environ as pyo
-    >>> from pyomo.dae import ContinuousSet, DerivativeVar
-    >>> from pyomo.contrib.doe import DesignOfExperiments
-    >>> from pyomo.contrib.parmest.experiment import Experiment
-    >>> import pathlib
-    >>> import numpy as np
-    >>> import json
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
+    :start-after: # === Required imports ===
+    :end-before: # ========================
 
 Subclass the :ref:`Parmest <parmest>` ``Experiment`` class to define the reaction 
 kinetics experiment and build the Pyomo ConcreteModel.
@@ -253,7 +248,9 @@ Step 3: Label the information needed for DoE analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We label the four important groups as Pyomo Suffix components as mentioned before by 
-adding a ``label_experiment`` method.
+adding a ``label_experiment`` method. This method is required by Pyomo.DoE to identify 
+the design variables (experimental inputs), measurements, measurement errors, and 
+unknown parameters in the model.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End model finalization
@@ -290,9 +287,8 @@ the workflow for both sensitivity analysis (Step 5) and optimal design (Step 6).
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
    :language: python
-   :start-after: #  This software is distributed under the 3-clause BSD License.
+   :start-after: # === Required imports ===
    :end-before: if __name__ == "__main__":
-   :linenos:
 
 After defining the function, we will call it to perform the exploratory analysis and 
 the optimal experimental design.
@@ -385,4 +381,3 @@ After applying ``run_doe`` on the ``DesignOfExperiments`` object,
 the optimal design is an initial concentration of 5.0 mol/L and 
 an initial temperature of 494 K with all other temperatures being 300 K. 
 The corresponding :math:`\log_{10}` determinant of the FIM is 19.32.
-
