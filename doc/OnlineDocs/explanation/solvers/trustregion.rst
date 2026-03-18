@@ -188,7 +188,7 @@ Step 2: Create the model
    >>> model = create_model()
 
 Step 3: Solve with TRF (Filter, default)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. note::
     Reminder from earlier that the ``solve`` method requires the user pass the model and a list of variables
