@@ -206,7 +206,7 @@ Step 3: Solve with TRF (Filter, default)
    EXIT: Optimal solution found.
    ...
 
-Step 4: Solve with TRF (Funnel)
+Step 3 (alternative): Solve with TRF (Funnel)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To use the funnel globalization strategy instead of the filter, set
