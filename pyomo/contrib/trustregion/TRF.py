@@ -511,8 +511,8 @@ def _trf_config():
     CONFIG.declare(
         'funnel_param_phi_min',
         ConfigValue(
-            default=1e-8, 
-            domain=PositiveFloat, 
+            default=1e-8,
+            domain=PositiveFloat,
             description="Hard floor on funnel width ``phi_min``. "
             "Must satisfy: ``phi_min > 0``. "
             "Default = 1e-8.",
@@ -569,19 +569,19 @@ def _trf_config():
             default=0.8,
             domain=PositiveFloat,
             description="Theta-type shrink factor ``beta``. "
-           "Must satisfy: ``0 < beta < 1``. "
-           "Default = 0.8.",
+            "Must satisfy: ``0 < beta < 1``. "
+            "Default = 0.8.",
         ),
     )
 
     CONFIG.declare(
         'funnel_param_mu_s',
         ConfigValue(
-            default=0.01, 
-            domain=PositiveFloat, 
+            default=0.01,
+            domain=PositiveFloat,
             description="Switching parameter ``mu_s``. "
-           "Must satisfy: ``mu_s > 0`` (small value, e.g. 1e-2). "
-           "Default = 0.01.",
+            "Must satisfy: ``mu_s > 0`` (small value, e.g. 1e-2). "
+            "Default = 0.01.",
         ),
     )
 
