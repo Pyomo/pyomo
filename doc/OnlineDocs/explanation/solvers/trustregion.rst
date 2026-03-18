@@ -27,7 +27,7 @@ Department of Energy's Office of Fossil Energy and Carbon Management.
 .. _Hameed et al., 2026: https://doi.org/10.1002/aic.70258
 
 Methodology Overview
----------------------
+--------------------
 
 The formulation of the original hybrid problem is:
 
@@ -80,7 +80,7 @@ the step is rejected. If true, the step is accepted and the surrogate
 model is updated for the next iteration.
 
 Globalization Strategies
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 The TRF solver supports two globalization strategies to control step acceptance
 and trust region updates: the **filter** method (default) and the **funnel** method.
@@ -107,7 +107,7 @@ step classification, and acceptance conditions, please refer to
 When using TRF, please consider citing the above papers.
 
 TRF Inputs
------------
+----------
 
 The required inputs to the TRF
 :py:meth:`solve <pyomo.contrib.trustregion.TRF.TrustRegionSolver.solve>`
@@ -124,7 +124,7 @@ method is the following:
 
 
 TRF Solver Interface
----------------------
+--------------------
 
 .. note::
     The keyword arguments can be updated at solver instantiation or later when the ``solve`` method is called.
@@ -134,14 +134,14 @@ TRF Solver Interface
     :members: solve
 
 TRF Usage Example
-------------------
+-----------------
 Two examples can be found in the examples_ subdirectory. One of them is
 implemented below.
 
 .. _examples: https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/trustregion/examples
 
 Step 0: Import Pyomo
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
@@ -149,7 +149,7 @@ Step 0: Import Pyomo
    >>> import pyomo.environ as pyo
 
 Step 1: Define the external function and its gradient
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
@@ -161,7 +161,7 @@ Step 1: Define the external function and its gradient
    ...     return [ pyo.cos(a - b), -pyo.cos(a - b) ]
 
 Step 2: Create the model
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
@@ -207,7 +207,7 @@ Step 3: Solve with TRF (Filter, default)
    ...
 
 Step 3 (alternative): Solve with TRF (Funnel)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To use the funnel globalization strategy instead of the filter, set
 ``globalization_strategy=1``. The funnel-specific parameters can also be
