@@ -691,8 +691,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_init_solver_used_for_initialization_only(self):
-        # Tests that init_solver is used for initialization phases while the
-        # final optimization solve still uses the primary solver.
+        # Tests that all pre-final solves use init_solver while the final
+        # optimization solve still uses the primary solver.
         main_solver = self._make_solver()
         init_solver = self._make_solver()
         # Use distinct option values so each solver path can be identified.
@@ -705,9 +705,16 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=main_solver,
         )
 
+        # Track both how many times each solver is called and the chronological
+        # order of those calls. The optimize_experiments() contract is that all
+        # setup solves run first on init_solver and the final NLP solve runs last
+        # on the primary solver.
         main_calls = 0
         init_calls = 0
         call_order = []
+        # Record an option value on each solve so the test can verify that the
+        # call really went through the expected solver object, not just the
+        # expected phase label.
         option_markers = []
         original_main_solve = main_solver.solve
         original_init_solve = init_solver.solve
@@ -726,16 +733,26 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             option_markers.append(init_solver.options.get("max_iter"))
             return original_init_solve(*args, **kwargs)
 
+        # Patch both solver objects in place so the real solves still run while
+        # we collect lightweight diagnostics about solver routing.
         with (
             patch.object(main_solver, "solve", side_effect=_main_solve),
             patch.object(init_solver, "solve", side_effect=_init_solve),
         ):
             doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
-        self.assertEqual(init_calls, 1)
-        self.assertEqual(main_calls, 1)
-        self.assertEqual(call_order, ["init", "main"])
-        self.assertEqual(option_markers, [123, 321])
+        # The exact number of initialization solves is implementation-dependent,
+        # but they must all occur before the one final main-solver call.
+        self.assertGreaterEqual(init_calls, 1)  # At least one initialization solve
+        self.assertEqual(main_calls, 1)  # Exactly one main optimization solve
+        self.assertEqual(call_order[-1], "main")
+        self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
+        # Distinct option markers provide a second check that solver routing
+        # matches the expected init-versus-final phase split.
+        self.assertTrue(all(marker == 123 for marker in option_markers[:-1]))
+        self.assertEqual(option_markers[-1], 321)
+        # Result payloads should report the same phase-specific solver names that
+        # were observed through the patched solve() calls above.
         self.assertEqual(
             doe_obj.results["settings"]["initialization"]["solver_name"],
             getattr(init_solver, "name", str(init_solver)),

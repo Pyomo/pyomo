@@ -90,7 +90,8 @@ optimize_experiments(
 ### `init_solver` (new)
 
 - If provided, `init_solver` is used for:
-  - initialization-phase solves (including LHS candidate FIM evaluation path),
+  - initialization-phase solves (including multi-experiment block-construction
+    solves and the LHS candidate FIM evaluation path),
   - the square initialization solve before final optimization.
 - Final optimization solve still uses the main DoE solver (`self.solver`).
 - If `init_solver` is `None`, initialization also uses `self.solver`.
@@ -182,4 +183,3 @@ Notably, initialization settings now include:
 - `settings["initialization"]["solver_name"]`
 
 to make it explicit which solver was used during initialization.
-

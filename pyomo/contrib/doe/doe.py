@@ -682,8 +682,11 @@ class DesignOfExperiments:
             during combination scoring, best-so-far is returned.
         init_solver:
             Optional solver object used only for initialization phases
-            (LHS candidate-FIM evaluations and square initialization solve).
-            If ``None``, the default DoE solver (``self.solver``) is used.
+            (including multi-experiment block-construction solves, LHS
+            candidate-FIM evaluations, and the square initialization solve).
+            The final optimization solve always uses the primary DoE solver
+            (``self.solver``). If ``init_solver = None``, initialization also uses
+            ``self.solver``.
 
         Notes
         -----
@@ -836,6 +839,14 @@ class DesignOfExperiments:
                 "``init_solver`` must be None or a solver object with a 'solve' method."
             )
         # -----------------------------------------
+        primary_solver = self.solver
+        resolved_init_solver = primary_solver if init_solver is None else init_solver
+        init_solver_name = getattr(
+            resolved_init_solver, "name", str(resolved_init_solver)
+        )
+        lhs_init_diagnostics = None
+        lhs_initialization_time = 0.0
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -856,144 +867,138 @@ class DesignOfExperiments:
             "source": None,
         }
         diagnostics_warnings = []
-
-        # Add experiment(s) for each scenario
-        # TODO: Add s_prev = 0 to handle parameter scenarios
-        for s in range(n_param_scenarios):
-            self.model.param_scenario_blocks[s].exp_blocks = pyo.Block(range(n_exp))
-            for k in range(n_exp):
-                # Generate FIM and Sensitivity expressions for each experiment.
-                # In template mode all experiments share the single template
-                # (experiment_index=0); in user-initialized mode each experiment
-                # maps to its own entry in experiment_list (experiment_index=k).
-                self.create_doe_model(
-                    model=self.model.param_scenario_blocks[s].exp_blocks[k],
-                    experiment_index=0 if _template_mode else k,
-                    _for_multi_experiment=True,  # Skip creating L matrix per experiment
-                )
-                # TODO: Update the parameter scenarios for each experiment block
-                # when using parametric uncertainty
-
-        # Add symmetry breaking constraints to prevent equivalent permutations for
-        # multiple experiments
-        if n_exp > 1:
-            # Check if user provided a symmetry breaking variable via Suffix
-            # Use first scenario since variable names are the same across all scenarios
-            first_exp_block = (
-                self.model.param_scenario_blocks[0].exp_blocks[0].fd_scenario_blocks[0]
-            )
-
-            # Determine symmetry breaking variable
-            if (
-                hasattr(first_exp_block, 'sym_break_cons')
-                and len(first_exp_block.sym_break_cons) > 0
-            ):
-                # User provided symmetry breaking variable(s)
-                sym_break_var_list = list(first_exp_block.sym_break_cons.keys())
-
-                if len(sym_break_var_list) > 1:
-                    warning_msg = (
-                        f"Multiple variables marked in sym_break_cons. "
-                        f"Using {sym_break_var_list[0].local_name} for symmetry breaking."
-                    )
-                    self.logger.warning(warning_msg)
-                    diagnostics_warnings.append(warning_msg)
-
-                sym_break_var = sym_break_var_list[0]
-                if not any(
-                    sym_break_var is inp
-                    for inp in first_exp_block.experiment_inputs.keys()
-                ):
-                    raise ValueError(
-                        "Variable selected in ``sym_break_cons`` must also be an "
-                        "experiment input variable. "
-                        f"Got non-input variable '{sym_break_var.local_name}'."
-                    )
-                symmetry_breaking_info["variable"] = sym_break_var.local_name
-                symmetry_breaking_info["source"] = "user"
-                self.logger.info(
-                    f"Using user-specified variable '{sym_break_var.local_name}' for symmetry breaking."
-                )
-            else:
-                # Use first experiment input as default symmetry breaking variable
-                sym_break_var = next(iter(first_exp_block.experiment_inputs))
-                symmetry_breaking_info["variable"] = sym_break_var.local_name
-                symmetry_breaking_info["source"] = "auto"
-                self.logger.warning(
-                    "No symmetry breaking variable specified. Automatically using the first "
-                    f"experiment input '{sym_break_var.local_name}' for ordering constraints. "
-                    "To specify a different variable, add: "
-                    "m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
-                    "m.sym_break_cons[m.your_variable] = None"
-                )
-                diagnostics_warnings.append(
-                    f"No symmetry breaking variable specified. Automatically using "
-                    f"'{sym_break_var.local_name}'."
-                )
-
-            # Add constraints for each scenario
-            for s in range(n_param_scenarios):
-                for k in range(1, n_exp):
-                    # Get the variable from experiment k-1
-                    var_prev = pyo.ComponentUID(
-                        sym_break_var, context=first_exp_block
-                    ).find_component_on(
-                        self.model.param_scenario_blocks[s]
-                        .exp_blocks[k - 1]
-                        .fd_scenario_blocks[0]
-                    )
-
-                    # Get the variable from experiment k
-                    var_curr = pyo.ComponentUID(
-                        sym_break_var, context=first_exp_block
-                    ).find_component_on(
-                        self.model.param_scenario_blocks[s]
-                        .exp_blocks[k]
-                        .fd_scenario_blocks[0]
-                    )
-                    if var_prev is None or var_curr is None:
-                        raise RuntimeError(
-                            "Failed to map symmetry breaking variable "
-                            f"'{sym_break_var.local_name}' onto scenario {s}, "
-                            f"experiment pair ({k - 1}, {k}). Ensure the variable "
-                            "exists on all experiment blocks with compatible labels."
-                        )
-
-                    # Add symmetry breaking constraint
-                    con_name = f"symmetry_breaking_s{s}_exp{k}"
-                    self.model.param_scenario_blocks[s].add_component(
-                        con_name, pyo.Constraint(expr=var_prev <= var_curr)
-                    )
-
-                self.logger.info(
-                    f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
-                    f"using variable: {sym_break_var.local_name}"
-                )
-
-        # Create aggregated objective for multi-experiment optimization
-        self.create_multi_experiment_objective_function(self.model)
-
-        # Track time required to build the DoE model
-        build_time = sp_timer.toc(msg=None)
-        self.logger.info(
-            "Successfully built the multi-experiment DoE model.\nBuild time: %0.1f seconds"
-            % build_time
-        )
-
-        # --- Apply experiment initialization (if requested) ---
-        # This must be done AFTER the model is built but BEFORE the square solve
-        # so that the solver uses the correct starting design.
-        primary_solver = self.solver
-        resolved_init_solver = primary_solver if init_solver is None else init_solver
-        init_solver_name = getattr(
-            resolved_init_solver, "name", str(resolved_init_solver)
-        )
-        lhs_init_diagnostics = None
-        lhs_initialization_time = 0.0
-
-        # Temporarily route all initialization-related solves through init_solver.
+        # Route all pre-final solves through the initialization solver, then
+        # restore the primary solver for the final optimization solve.
         self.solver = resolved_init_solver
         try:
+            # Add experiment(s) for each scenario
+            # TODO: Add s_prev = 0 to handle parameter scenarios
+            for s in range(n_param_scenarios):
+                self.model.param_scenario_blocks[s].exp_blocks = pyo.Block(range(n_exp))
+                for k in range(n_exp):
+                    # Generate FIM and Sensitivity expressions for each experiment.
+                    # In template mode all experiments share the single template
+                    # (experiment_index=0); in user-initialized mode each experiment
+                    # maps to its own entry in experiment_list (experiment_index=k).
+                    self.create_doe_model(
+                        model=self.model.param_scenario_blocks[s].exp_blocks[k],
+                        experiment_index=0 if _template_mode else k,
+                        _for_multi_experiment=True,  # Skip creating L matrix per experiment
+                    )
+                    # TODO: Update the parameter scenarios for each experiment block
+                    # when using parametric uncertainty
+
+            # Add symmetry breaking constraints to prevent equivalent permutations for
+            # multiple experiments
+            if n_exp > 1:
+                # Check if user provided a symmetry breaking variable via Suffix
+                # Use first scenario since variable names are the same across all scenarios
+                first_exp_block = (
+                    self.model.param_scenario_blocks[0]
+                    .exp_blocks[0]
+                    .fd_scenario_blocks[0]
+                )
+
+                # Determine symmetry breaking variable
+                if (
+                    hasattr(first_exp_block, 'sym_break_cons')
+                    and len(first_exp_block.sym_break_cons) > 0
+                ):
+                    # User provided symmetry breaking variable(s)
+                    sym_break_var_list = list(first_exp_block.sym_break_cons.keys())
+
+                    if len(sym_break_var_list) > 1:
+                        warning_msg = (
+                            f"Multiple variables marked in sym_break_cons. "
+                            f"Using {sym_break_var_list[0].local_name} for symmetry breaking."
+                        )
+                        self.logger.warning(warning_msg)
+                        diagnostics_warnings.append(warning_msg)
+
+                    sym_break_var = sym_break_var_list[0]
+                    if not any(
+                        sym_break_var is inp
+                        for inp in first_exp_block.experiment_inputs.keys()
+                    ):
+                        raise ValueError(
+                            "Variable selected in ``sym_break_cons`` must also be an "
+                            "experiment input variable. "
+                            f"Got non-input variable '{sym_break_var.local_name}'."
+                        )
+                    symmetry_breaking_info["variable"] = sym_break_var.local_name
+                    symmetry_breaking_info["source"] = "user"
+                    self.logger.info(
+                        f"Using user-specified variable '{sym_break_var.local_name}' for symmetry breaking."
+                    )
+                else:
+                    # Use first experiment input as default symmetry breaking variable
+                    sym_break_var = next(iter(first_exp_block.experiment_inputs))
+                    symmetry_breaking_info["variable"] = sym_break_var.local_name
+                    symmetry_breaking_info["source"] = "auto"
+                    self.logger.warning(
+                        "No symmetry breaking variable specified. Automatically using the first "
+                        f"experiment input '{sym_break_var.local_name}' for ordering constraints. "
+                        "To specify a different variable, add: "
+                        "m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
+                        "m.sym_break_cons[m.your_variable] = None"
+                    )
+                    diagnostics_warnings.append(
+                        f"No symmetry breaking variable specified. Automatically using "
+                        f"'{sym_break_var.local_name}'."
+                    )
+
+                # Add constraints for each scenario
+                for s in range(n_param_scenarios):
+                    for k in range(1, n_exp):
+                        # Get the variable from experiment k-1
+                        var_prev = pyo.ComponentUID(
+                            sym_break_var, context=first_exp_block
+                        ).find_component_on(
+                            self.model.param_scenario_blocks[s]
+                            .exp_blocks[k - 1]
+                            .fd_scenario_blocks[0]
+                        )
+
+                        # Get the variable from experiment k
+                        var_curr = pyo.ComponentUID(
+                            sym_break_var, context=first_exp_block
+                        ).find_component_on(
+                            self.model.param_scenario_blocks[s]
+                            .exp_blocks[k]
+                            .fd_scenario_blocks[0]
+                        )
+                        if var_prev is None or var_curr is None:
+                            raise RuntimeError(
+                                "Failed to map symmetry breaking variable "
+                                f"'{sym_break_var.local_name}' onto scenario {s}, "
+                                f"experiment pair ({k - 1}, {k}). Ensure the variable "
+                                "exists on all experiment blocks with compatible labels."
+                            )
+
+                        # Add symmetry breaking constraint
+                        con_name = f"symmetry_breaking_s{s}_exp{k}"
+                        self.model.param_scenario_blocks[s].add_component(
+                            con_name, pyo.Constraint(expr=var_prev <= var_curr)
+                        )
+
+                    self.logger.info(
+                        f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
+                        f"using variable: {sym_break_var.local_name}"
+                    )
+
+            # Create aggregated objective for multi-experiment optimization
+            self.create_multi_experiment_objective_function(self.model)
+
+            # Track time required to build the DoE model
+            build_time = sp_timer.toc(msg=None)
+            self.logger.info(
+                "Successfully built the multi-experiment DoE model.\nBuild time: %0.1f seconds"
+                % build_time
+            )
+
+            # --- Apply experiment initialization (if requested) ---
+            # This must be done AFTER the model is built but BEFORE the square solve
+            # so that the solver uses the correct starting design.
             if resolved_init_method == InitializationMethod.lhs:
                 lhs_timer = TicTocTimer()
                 lhs_timer.tic(msg=None)
