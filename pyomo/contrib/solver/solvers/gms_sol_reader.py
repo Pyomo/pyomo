@@ -152,4 +152,4 @@ class GMSSolutionLoader(SolutionLoaderBase):
     def load_import_suffixes(self, solution_id=None):
         if solution_id is not None:
             raise ValueError(f'{self.__class__.__name__} does not support solution_id')
-        self.load_import_suffixes(self._pyomo_model, self, solution_id)
+        load_import_suffixes(self._pyomo_model, self, solution_id)
