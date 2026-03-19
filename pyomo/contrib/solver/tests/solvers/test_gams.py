@@ -78,7 +78,7 @@ class TestGAMSSolverConfig(unittest.TestCase):
 @unittest.pytest.mark.solver("gams")
 class TestGAMSSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
-        loader = gams.GMSSolutionLoader(None, None)
+        loader = gams.GMSSolutionLoader(None, None, None)
         with self.assertRaises(NoSolutionError):
             loader.get_primals()
         with self.assertRaises(NoDualsError):
