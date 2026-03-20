@@ -13,7 +13,7 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.numvalue import value, is_fixed
 import pyomo.core.expr as EXPR
 from pyomo.opt.base import SolverFactory
-import collections
+import bisect
 
 
 @SolverFactory.register(
@@ -50,7 +50,14 @@ class XpressPersistent(PersistentSolver, XpressDirect):
             self.set_instance(self._pyomo_model, **kwds)
 
     def _remove_constraint(self, solver_con):
-        self._solver_model.delConstraint(solver_con)
+        # solver_con is the constraint name string.  Use the insertion-counter
+        # cache to compute the current Xpress row index in O(log M) — avoiding
+        # an O(N) getIndexFromName scan — then delete the row and record the
+        # deletion so future index lookups stay accurate.
+        counter = self._con_name_to_counter.pop(solver_con)
+        current_idx = counter - bisect.bisect_left(self._deleted_counters, counter)
+        self._solver_model.delConstraint(current_idx)
+        bisect.insort(self._deleted_counters, counter)
 
     def _remove_sos_constraint(self, solver_sos_con):
         self._solver_model.delSOS(solver_sos_con)
