@@ -670,7 +670,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         # clear any cached exact parameter bounds
         self._solve_bounds_optimization.cache_clear()
-        
+
         # perform validation checks
         if not self.is_nonempty(config=config):
             raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
@@ -800,10 +800,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 if not index[idx][i]:
                     bounds.append(None)
                     continue
-                bounds.append(
-                    self._solve_bounds_optimization(solver, idx, sense)
-                    )
-            
+                bounds.append(self._solve_bounds_optimization(solver, idx, sense))
+
             # add parameter bounds for current dimension
             param_bounds.append(tuple(bounds))
 
@@ -864,7 +862,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         obj.deactivate()
 
         bound = value(obj)
-        
+
         return bound
 
     def _fbbt_parameter_bounds(self, config):
@@ -898,7 +896,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             )
 
         param_bounds = [
-            (value(var.lower), value(var.upper)) for var in bounding_model.param_vars.values()
+            (value(var.lower), value(var.upper))
+            for var in bounding_model.param_vars.values()
         ]
 
         return param_bounds

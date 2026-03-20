@@ -3261,18 +3261,10 @@ class TestCustomUncertaintySet(unittest.TestCase):
         # check clearing cache
         custom_set._solve_bounds_optimization.cache_clear()
         info = custom_set._solve_bounds_optimization.cache_info()
-        self.assertEqual(
-            info.hits, 0
-        )
-        self.assertEqual(
-            info.misses, 0
-        )
-        self.assertEqual(
-            info.maxsize, None
-        )
-        self.assertEqual(
-            info.currsize, 0
-        )
+        self.assertEqual(info.hits, 0)
+        self.assertEqual(info.misses, 0)
+        self.assertEqual(info.maxsize, None)
+        self.assertEqual(info.currsize, 0)
 
         # check cache info
         # Expecting 4 misses and 4 cached values for each lower/upper bound
@@ -3281,18 +3273,10 @@ class TestCustomUncertaintySet(unittest.TestCase):
         )
 
         info = custom_set._solve_bounds_optimization.cache_info()
-        self.assertEqual(
-            info.hits, 0
-        )
-        self.assertEqual(
-            info.misses, 4
-        )
-        self.assertEqual(
-            info.maxsize, None
-        )
-        self.assertEqual(
-            info.currsize, 4
-        )
+        self.assertEqual(info.hits, 0)
+        self.assertEqual(info.misses, 4)
+        self.assertEqual(info.maxsize, None)
+        self.assertEqual(info.currsize, 4)
 
         # run again and check caching
         # Expecting additional 4 hits from accessing cached values
@@ -3301,20 +3285,11 @@ class TestCustomUncertaintySet(unittest.TestCase):
         )
 
         info = custom_set._solve_bounds_optimization.cache_info()
-        self.assertEqual(
-            info.hits, 4
-        )
-        self.assertEqual(
-            info.misses, 4
-        )
-        self.assertEqual(
-            info.maxsize, None
-        )
-        self.assertEqual(
-            info.currsize, 4
-        )
+        self.assertEqual(info.hits, 4)
+        self.assertEqual(info.misses, 4)
+        self.assertEqual(info.maxsize, None)
+        self.assertEqual(info.currsize, 4)
         custom_set._solve_bounds_optimization.cache_clear()
- 
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_solve_feasibility(self):
