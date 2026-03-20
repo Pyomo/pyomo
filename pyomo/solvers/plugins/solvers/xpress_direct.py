@@ -927,6 +927,7 @@ class XpressDirect(DirectSolver):
 
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
+        linear_only = kwds.pop('linear_only', False)
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         self._pyomo_con_to_solver_con_map = dict()
         self._solver_con_to_pyomo_con_map = ComponentMap()
@@ -953,10 +954,213 @@ class XpressDirect(DirectSolver):
                 "bindings for Xpress?\n\n\t" + "Error message: {0}".format(e)
             )
             raise Exception(msg)
-        self._add_block(model)
+        if linear_only:
+            self._load_linear_problem(model)
+        else:
+            self._add_block(model)
 
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
+
+    def _load_linear_problem(self, model):
+        """Fast path for purely linear/MIP models.
+
+        Uses :class:`~pyomo.repn.plugins.standard_form.LinearStandardFormCompiler`
+        to build the full coefficient matrix and then loads the entire problem
+        into Xpress in a single ``loadproblem()`` call, bypassing the
+        per-constraint Python overhead of ``_add_block``.
+
+        All solver maps are populated from the compiled representation so that
+        the persistent interface (``add_constraint``, ``remove_constraint``,
+        ``add_var``, etc.) continues to work normally after this fast path.
+
+        Parameters
+        ----------
+        model : Pyomo ConcreteModel
+            Must contain only linear constraints and objectives.  Nonlinear
+            expressions will raise an error inside the compiler.
+        """
+        from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
+        from pyomo.common.dependencies import numpy as np
+        import pyomo.core.base.sos
+
+        # Compile: mixed_form preserves <=, >=, == direction;
+        # keep_range_constraints emits range rows as a single 'R' entry.
+        # set_sense=None keeps objective coefficients as-is so we can set
+        # the sense ourselves via chgobjsense after loadproblem.
+        repn = LinearStandardFormCompiler().write(
+            model,
+            mixed_form=True,
+            keep_range_constraints=True,
+            set_sense=None,
+        )
+
+        if len(repn.objectives) > 1:
+            raise ValueError(
+                "Solver interface does not support multiple objectives."
+            )
+
+        xprob = self._solver_model
+        n_cols = len(repn.columns)
+
+        # ------------------------------------------------------------------
+        # Objective
+        # ------------------------------------------------------------------
+        if repn.objectives:
+            obj = repn.objectives[0]
+            if obj.sense == minimize:
+                obj_sense = xpress.minimize
+            elif obj.sense == maximize:
+                obj_sense = xpress.maximize
+            else:
+                raise ValueError(
+                    'Objective sense is not recognized: {0}'.format(obj.sense)
+                )
+            # c is (n_objectives x n_cols) CSC; convert to CSR for row slicing.
+            c_csr = repn.c.tocsr()
+            c_dense = np.asarray(c_csr[0, :].todense()).flatten()
+            c_offset = float(repn.c_offset[0])
+        else:
+            obj = None
+            obj_sense = xpress.minimize
+            c_csr = None
+            c_dense = np.zeros(n_cols)
+            c_offset = 0.0
+
+        # ------------------------------------------------------------------
+        # Variable arrays
+        # ------------------------------------------------------------------
+        lb = []
+        ub = []
+        colnames = []
+        entind = []
+        coltype_chars = []
+        for i, var in enumerate(repn.columns):
+            bnd_lb, bnd_ub = var.bounds
+            lb.append(-xpress.infinity if bnd_lb is None else float(bnd_lb))
+            ub.append(xpress.infinity if bnd_ub is None else float(bnd_ub))
+            colnames.append(self._symbol_map.getSymbol(var, self._labeler))
+            if var.is_binary():
+                entind.append(i)
+                coltype_chars.append('B')
+            elif var.is_integer():
+                entind.append(i)
+                coltype_chars.append('I')
+
+        # ------------------------------------------------------------------
+        # Constraint arrays
+        # ------------------------------------------------------------------
+        _rowtype_map = {0: 'E', 1: 'L', -1: 'G', 2: 'R'}
+        rowtype = []
+        rownames = []
+        for row_entry in repn.rows:
+            rowtype.append(_rowtype_map[row_entry.bound_type])
+            rownames.append(
+                self._symbol_map.getSymbol(row_entry.constraint, self._labeler)
+            )
+
+        rhs = repn.rhs
+        # rhs_range is all-zeros when keep_range_constraints produced no range
+        # rows; pass None in that case (loadproblem ignores non-'R' rng values
+        # but we avoid passing a useless array).
+        rng = repn.rhs_range if np.any(repn.rhs_range != 0) else None
+
+        # ------------------------------------------------------------------
+        # CSC coefficient matrix
+        # repn.A is already CSC; pass the numpy arrays directly — loadproblem
+        # accepts them without requiring a Python-list copy.
+        # ------------------------------------------------------------------
+        A = repn.A.asformat('csc')
+
+        # ------------------------------------------------------------------
+        # Load the full LP/MIP in one call
+        # ------------------------------------------------------------------
+        xprob.loadproblem(
+            model.name or '',
+            rowtype,
+            rhs,
+            rng,
+            c_dense,
+            A.indptr,
+            None,           # collen — use indptr[ncol] convention
+            A.indices,
+            A.data,
+            lb,
+            ub,
+            colnames=colnames,
+            rownames=rownames,
+            coltype=coltype_chars if coltype_chars else None,
+            entind=entind if entind else None,
+        )
+
+        # Objective sense and constant term (OBJRHS).
+        # chgobj([-1], [-k]) sets OBJRHS = k so the solver adds +k to c^T x.
+        self._chgObjSense(xprob, obj_sense)
+        if c_offset != 0.0:
+            self._chgObj(xprob, [-1], [-c_offset])
+        self._obj_is_quadratic = False
+
+        # ------------------------------------------------------------------
+        # Retrieve linked xpress.var objects (in column index order)
+        # ------------------------------------------------------------------
+        xpress_vars = xprob.getVariable()
+
+        # ------------------------------------------------------------------
+        # Populate variable maps
+        # ------------------------------------------------------------------
+        for var, xv in zip(repn.columns, xpress_vars):
+            self._pyomo_var_to_solver_var_map[var] = xv
+            self._solver_var_to_pyomo_var_map[xv] = var
+            self._referenced_variables[var] = 0
+
+        # ------------------------------------------------------------------
+        # Populate constraint maps and O(log M) row-index counters
+        # ------------------------------------------------------------------
+        for i, (row_entry, conname) in enumerate(zip(repn.rows, rownames)):
+            con = row_entry.constraint
+            self._pyomo_con_to_solver_con_map[con] = conname
+            self._solver_con_to_pyomo_con_map[conname] = con
+            self._con_name_to_counter[conname] = i
+            if row_entry.bound_type == 2:
+                self._range_constraints.add(con)
+        self._con_insertion_counter = len(repn.rows)
+
+        # ------------------------------------------------------------------
+        # Populate _vars_referenced_by_con and _referenced_variables
+        # ------------------------------------------------------------------
+        # Convert A to CSR for efficient per-row nonzero-column access.
+        A_csr = A.tocsr()
+        for i, row_entry in enumerate(repn.rows):
+            con = row_entry.constraint
+            j0, j1 = int(A_csr.indptr[i]), int(A_csr.indptr[i + 1])
+            vars_in_con = ComponentSet(repn.columns[j] for j in A_csr.indices[j0:j1])
+            self._vars_referenced_by_con[con] = vars_in_con
+            for var in vars_in_con:
+                self._referenced_variables[var] += 1
+
+        # ------------------------------------------------------------------
+        # Populate objective reference state
+        # ------------------------------------------------------------------
+        if obj is not None:
+            j0, j1 = int(c_csr.indptr[0]), int(c_csr.indptr[1])
+            obj_vars = ComponentSet(repn.columns[j] for j in c_csr.indices[j0:j1])
+            for var in obj_vars:
+                self._referenced_variables[var] += 1
+            self._objective = obj
+            self._vars_referenced_by_obj = obj_vars
+
+        # ------------------------------------------------------------------
+        # Add SOS constraints (variable maps must be populated first)
+        # ------------------------------------------------------------------
+        for sub_block in model.block_data_objects(descend_into=True, active=True):
+            for sos_con in sub_block.component_data_objects(
+                ctype=pyomo.core.base.sos.SOSConstraint,
+                descend_into=False,
+                active=True,
+                sort=True,
+            ):
+                self._add_sos_constraint(sos_con)
+
 
     def _add_constraint(self, con):
         if not con.active:
