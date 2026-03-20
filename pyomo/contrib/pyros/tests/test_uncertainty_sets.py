@@ -3259,6 +3259,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
 
         # check clearing cache
+        # Expecting 0 hits, misses, size
         custom_set._solve_bounds_optimization.cache_clear()
         info = custom_set._solve_bounds_optimization.cache_info()
         self.assertEqual(info.hits, 0)
@@ -3267,7 +3268,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         self.assertEqual(info.currsize, 0)
 
         # check cache info
-        # Expecting 4 misses and 4 cached values for each lower/upper bound
+        # Expecting 4 misses and size 4
         self.assertEqual(
             custom_set._compute_exact_parameter_bounds(baron), [(-1, 1)] * 2
         )
