@@ -351,6 +351,63 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.c == ref))
         self._verify_solution(soln, repn, True)
 
+    def test_keep_range_constraints(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var([0, 1, 3], bounds=lambda m, i: (0, 10))
+        # Pure lower-bound constraint
+        m.c = pyo.Constraint(expr=m.x + 2 * m.y[1] >= 3)
+        # Pure upper-bound constraint
+        m.d = pyo.Constraint(expr=m.y[1] + 4 * m.y[3] <= 5)
+        # Range constraint: -2 <= y[0] + 1 + 6*y[1] <= 7  →  -3 <= y[0] + 6*y[1] <= 6
+        m.e = pyo.Constraint(expr=pyo.inequality(-2, m.y[0] + 1 + 6 * m.y[1], 7))
+        # Equality
+        m.f = pyo.Constraint(expr=m.x + m.y[0] == 8)
+        m.o = pyo.Objective(expr=5 * m.x)
+
+        col_order = [m.x, m.y[0], m.y[1], m.y[3]]
+
+        # --- mixed_form + keep_range_constraints ---
+        repn = LinearStandardFormCompiler().write(
+            m, mixed_form=True, keep_range_constraints=True, column_order=col_order
+        )
+        # m.e: single range row (bound_type=2); all others are normal mixed rows
+        self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1), (m.e, 2), (m.f, 0)])
+        ref_A = np.array(
+            [[1, 0, 2, 0], [0, 0, 1, 4], [0, 1, 6, 0], [1, 1, 0, 0]]
+        )
+        self.assertTrue(np.all(repn.A.toarray() == ref_A))
+        # m.e: rhs = ub - offset = 7 - 1 = 6
+        self.assertTrue(np.all(repn.rhs == np.array([3, 5, 6, 8])))
+        # rhs_range: only m.e is nonzero; range = 7 - (-2) = 9
+        self.assertTrue(np.all(repn.rhs_range == np.array([0.0, 0.0, 9.0, 0.0])))
+
+        # --- default form + keep_range_constraints ---
+        repn2 = LinearStandardFormCompiler().write(
+            m, keep_range_constraints=True, column_order=col_order
+        )
+        # lb-only (m.c) → negated ≤ row; ub-only (m.d) → ≤ row;
+        # range (m.e) → single row; equality (m.f) → two rows (ub + negated lb)
+        self.assertEqual(
+            repn2.rows, [(m.c, -1), (m.d, 1), (m.e, 2), (m.f, 1), (m.f, -1)]
+        )
+        self.assertTrue(np.all(repn2.rhs_range == np.array([0.0, 0.0, 9.0, 0.0, 0.0])))
+
+        # --- without keep_range_constraints m.e still splits into two rows ---
+        repn3 = LinearStandardFormCompiler().write(
+            m, mixed_form=True, column_order=col_order
+        )
+        e_rows = [(r.constraint, r.bound_type) for r in repn3.rows if r.constraint is m.e]
+        self.assertEqual(e_rows, [(m.e, 1), (m.e, -1)])
+        # rhs_range is all-zeros when keep_range_constraints=False
+        self.assertTrue(np.all(repn3.rhs_range == 0.0))
+
+        # --- slack_form + keep_range_constraints must raise ---
+        with self.assertRaises(ValueError):
+            LinearStandardFormCompiler().write(
+                m, slack_form=True, keep_range_constraints=True
+            )
+
 
 class TestTemplatedLinearStandardFormCompiler(TestLinearStandardFormCompiler):
     def setUp(self):
