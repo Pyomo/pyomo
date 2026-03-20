@@ -788,44 +788,79 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         if index is None:
             index = [(True, True)] * self.dim
 
-        # create bounding model and get all objectives
-        bounding_model = self._create_bounding_model()
-        objs_to_optimize = bounding_model.param_var_objectives.items()
-
         param_bounds = []
-        for idx, obj in objs_to_optimize:
-            # activate objective for corresponding dimension
-            obj.activate()
+        for idx in range(self.dim):
             bounds = []
-
-            # solve for lower bound, then upper bound
-            # solve should be successful
             for i, sense in enumerate((minimize, maximize)):
-                # check if the LB or UB should be solved
                 if not index[idx][i]:
                     bounds.append(None)
                     continue
-                obj.sense = sense
-                res = solver.solve(bounding_model, load_solutions=False)
-                if check_optimal_termination(res):
-                    bounding_model.solutions.load_from(res)
-                else:
-                    raise ValueError(
-                        "Could not compute "
-                        f"{'lower' if sense == minimize else 'upper'} "
-                        f"bound in dimension {idx + 1} of {self.dim}. "
-                        f"Solver status summary:\n {res.solver}."
+                bounds.append(
+                    self._solve_bounds_optimization(solver, idx, sense)
                     )
-                bounds.append(value(obj))
-
+            
             # add parameter bounds for current dimension
             param_bounds.append(tuple(bounds))
 
-            # ensure sense is minimize when done, deactivate
-            obj.sense = minimize
-            obj.deactivate()
-
         return param_bounds
+
+    @functools.cache
+    def _solve_bounds_optimization(self, solver, index, sense):
+        """
+        Compute value of bounds for a single parameter
+        of `self` at a specified index by solving a bounding model.
+        Results are cached as efficiency for large uncertainty sets.
+
+        Parameters
+        ----------
+        solver : Pyomo solver type
+            Optimizer to invoke on the bounding problems.
+        index : int
+            The index of the parameter to solve for bounds.
+        sense : Pyomo objective sense
+            A Pyomo objective sense to optimize for the bounding model.
+            `maximize` solves for an upper bound and
+            `minimize` solves for a lower bound.
+
+        Returns
+        -------
+        bound : float
+            A value of the lower or upper bound for
+            the corresponding dimension at the specified index.
+
+        Raises
+        ------
+        ValueError
+            If solver failed to compute a bound for a
+            coordinate.
+        """
+        # create bounding model and get all objectives
+        bounding_model = self._create_bounding_model()
+
+        # select objective corresponding to specified index
+        obj = bounding_model.param_var_objectives[index]
+        obj.activate()
+
+        # optimize with specified sense
+        obj.sense = sense
+        res = solver.solve(bounding_model, load_solutions=False)
+        if check_optimal_termination(res):
+            bounding_model.solutions.load_from(res)
+        else:
+            raise ValueError(
+                "Could not compute "
+                f"{'lower' if sense == minimize else 'upper'} "
+                f"bound in dimension {index + 1} of {self.dim}. "
+                f"Solver status summary:\n {res.solver}."
+            )
+
+        # ensure sense is minimize when done, deactivate
+        obj.sense = minimize
+        obj.deactivate()
+
+        bound = value(obj)
+        
+        return bound
 
     def _fbbt_parameter_bounds(self, config):
         """
