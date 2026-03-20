@@ -898,7 +898,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             )
 
         param_bounds = [
-            (var.lower, var.upper) for var in bounding_model.param_vars.values()
+            (value(var.lower), value(var.upper)) for var in bounding_model.param_vars.values()
         ]
 
         return param_bounds
