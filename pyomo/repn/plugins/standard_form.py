@@ -80,15 +80,30 @@ class LinearStandardFormInfo:
 
     rhs : numpy.ndarray
 
-        The constraint right-hand sides.
+        The constraint right-hand sides.  For range rows (``bound_type
+        == 2``, only produced when ``keep_range_constraints=True``),
+        this holds the adjusted *upper* bound ``ub - offset``.
+
+    rhs_range : numpy.ndarray
+
+        Range widths for range rows: ``rhs_range[i] = ub - lb``.  For
+        all other row types the value is ``0.0``.  When
+        ``keep_range_constraints=False`` (the default) this array
+        contains only zeros.  The adjusted lower bound for a range row
+        can be recovered as ``rhs[i] - rhs_range[i]``.
 
     rows : List[Tuple[ConstraintData, int]]
 
         The list of Pyomo constraint objects corresponding to the rows
         in `A`.  Each element in the list is a 2-tuple of
-        (ConstraintData, row_multiplier).  The `row_multiplier` will be
-        +/- 1 indicating if the row was multiplied by -1 (corresponding
-        to a constraint lower bound) or +1 (upper bound).
+        (ConstraintData, bound_type).  ``bound_type`` values:
+
+        * ``+1`` – upper-bound row (``Ax ≤ rhs``);
+        * ``-1`` – lower-bound row (see mode-dependent sign conventions);
+        * ``0``  – equality row (``mixed_form`` only);
+        * ``+2`` – range row (``lb - offset ≤ Ax ≤ ub - offset``,
+          coefficients in the upper-bound sense; only produced when
+          ``keep_range_constraints=True``).
 
     columns : List[VarData]
 
@@ -111,11 +126,12 @@ class LinearStandardFormInfo:
 
     """
 
-    def __init__(self, c, c_offset, A, rhs, rows, columns, objectives, eliminated_vars):
+    def __init__(self, c, c_offset, A, rhs, rhs_range, rows, columns, objectives, eliminated_vars):
         self.c = c
         self.c_offset = c_offset
         self.A = A
         self.rhs = rhs
+        self.rhs_range = rhs_range
         self.rows = rows
         self.columns = columns
         self.objectives = objectives
@@ -176,6 +192,19 @@ class LinearStandardFormCompiler:
             domain=bool,
             description='Return A in mixed form (the comparison operator is a '
             'mix of <=, ==, and >=)',
+        ),
+    )
+    CONFIG.declare(
+        'keep_range_constraints',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description='Emit range constraints (finite lb ≠ ub) as a single '
+            'row with bound_type=2 rather than splitting them into separate '
+            'upper- and lower-bound rows.  The rhs entry for such a row is the '
+            'adjusted upper bound (ub - offset); the range width (ub - lb) is '
+            'stored in the rhs_range array of the returned '
+            'LinearStandardFormInfo.  Cannot be combined with slack_form.',
         ),
     )
     CONFIG.declare(
@@ -409,10 +438,16 @@ class _LinearStandardFormCompiler_impl:
         #
         slack_form = self.config.slack_form
         mixed_form = self.config.mixed_form
+        keep_range_constraints = self.config.keep_range_constraints
         if slack_form and mixed_form:
             raise ValueError("cannot specify both slack_form and mixed_form")
+        if slack_form and keep_range_constraints:
+            raise ValueError(
+                "cannot specify both slack_form and keep_range_constraints"
+            )
         rows = []
         rhs = []
+        rhs_range = []
         con_nnz = 0
         con_data = []
         con_index = []
@@ -469,6 +504,17 @@ class _LinearStandardFormCompiler_impl:
                     con_nnz += N
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
+                    rhs_range.append(0.0)
+                    con_data.append(linear_data)
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
+                elif lb is not None and ub is not None and keep_range_constraints:
+                    # Range constraint: single row, coefficients in the upper-
+                    # bound sense (not negated), bound_type=2.
+                    con_nnz += N
+                    rows.append(RowEntry(con, 2))
+                    rhs.append(ub - offset)
+                    rhs_range.append(ub - lb)
                     con_data.append(linear_data)
                     con_index.append(linear_index)
                     con_index_ptr.append(con_nnz)
@@ -479,6 +525,7 @@ class _LinearStandardFormCompiler_impl:
                         con_nnz += N
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
+                        rhs_range.append(0.0)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
@@ -486,6 +533,7 @@ class _LinearStandardFormCompiler_impl:
                         con_nnz += N
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
+                        rhs_range.append(0.0)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
@@ -516,26 +564,40 @@ class _LinearStandardFormCompiler_impl:
                     linear_index.append(slack_col)
                 con_nnz += N
                 rows.append(RowEntry(con, 1))
+                rhs_range.append(0.0)
                 con_data.append(linear_data)
                 con_index.append(linear_index)
                 con_index_ptr.append(con_nnz)
             else:
-                if ub is not None:
-                    if lb is not None:
-                        linear_index = list(linear_index)
+                is_range = lb is not None and ub is not None and lb != ub
+                if is_range and keep_range_constraints:
+                    # Range constraint: single row, bound_type=2.
                     con_nnz += N
-                    rows.append(RowEntry(con, 1))
+                    rows.append(RowEntry(con, 2))
                     rhs.append(ub - offset)
+                    rhs_range.append(ub - lb)
                     con_data.append(linear_data)
                     con_index.append(linear_index)
                     con_index_ptr.append(con_nnz)
-                if lb is not None:
-                    con_nnz += N
-                    rows.append(RowEntry(con, -1))
-                    rhs.append(offset - lb)
-                    con_data.append(-np.array(list(linear_data)))
-                    con_index.append(linear_index)
-                    con_index_ptr.append(con_nnz)
+                else:
+                    if ub is not None:
+                        if lb is not None:
+                            linear_index = list(linear_index)
+                        con_nnz += N
+                        rows.append(RowEntry(con, 1))
+                        rhs.append(ub - offset)
+                        rhs_range.append(0.0)
+                        con_data.append(linear_data)
+                        con_index.append(linear_index)
+                        con_index_ptr.append(con_nnz)
+                    if lb is not None:
+                        con_nnz += N
+                        rows.append(RowEntry(con, -1))
+                        rhs.append(offset - lb)
+                        rhs_range.append(0.0)
+                        con_data.append(-np.array(list(linear_data)))
+                        con_index.append(linear_index)
+                        con_index_ptr.append(con_nnz)
 
         if with_debug_timing:
             # report the last constraint
@@ -609,7 +671,7 @@ class _LinearStandardFormCompiler_impl:
             eliminated_vars = []
 
         info = LinearStandardFormInfo(
-            c, obj_offset, A, rhs, rows, columns, objectives, eliminated_vars
+            c, obj_offset, A, rhs, np.array(rhs_range), rows, columns, objectives, eliminated_vars
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
