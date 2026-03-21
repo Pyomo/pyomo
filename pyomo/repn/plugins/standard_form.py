@@ -126,7 +126,9 @@ class LinearStandardFormInfo:
 
     """
 
-    def __init__(self, c, c_offset, A, rhs, rhs_range, rows, columns, objectives, eliminated_vars):
+    def __init__(
+        self, c, c_offset, A, rhs, rhs_range, rows, columns, objectives, eliminated_vars
+    ):
         self.c = c
         self.c_offset = c_offset
         self.A = A
@@ -671,7 +673,15 @@ class _LinearStandardFormCompiler_impl:
             eliminated_vars = []
 
         info = LinearStandardFormInfo(
-            c, obj_offset, A, rhs, np.array(rhs_range), rows, columns, objectives, eliminated_vars
+            c,
+            obj_offset,
+            A,
+            rhs,
+            np.array(rhs_range),
+            rows,
+            columns,
+            objectives,
+            eliminated_vars,
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info

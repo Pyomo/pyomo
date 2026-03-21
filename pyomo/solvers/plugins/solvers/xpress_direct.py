@@ -232,16 +232,14 @@ def _finalize_xpress_import(xpress, avail):
             lambda self, prob, *args, **kwargs: prob.getIndexFromName(*args, **kwargs)
         )
         XpressDirect._getObjIndex = lambda self, prob, obj: prob.getIndex(obj)
-        XpressDirect._addRows = (
-            lambda self, prob, rowtype, rhs, start, colind, rowcoef, rhsrange=None, names=None: prob.addrows(
-                rowtype, rhs, start, colind, rowcoef, range=rhsrange, names=names
-            )
+        XpressDirect._addRows = lambda self, prob, rowtype, rhs, start, colind, rowcoef, rhsrange=None, names=None: prob.addrows(
+            rowtype, rhs, start, colind, rowcoef, range=rhsrange, names=names
         )
         XpressDirect._chgObj = lambda self, prob, *args, **kwargs: prob.chgobj(
             *args, **kwargs
         )
-        XpressDirect._chgObjSense = lambda self, prob, *args, **kwargs: prob.chgobjsense(
-            *args, **kwargs
+        XpressDirect._chgObjSense = (
+            lambda self, prob, *args, **kwargs: prob.chgobjsense(*args, **kwargs)
         )
 
         def _getLB(self, prob, *args, **kwargs):
@@ -295,8 +293,8 @@ def _finalize_xpress_import(xpress, avail):
         XpressDirect._chgObj = lambda self, prob, *args, **kwargs: prob.chgObj(
             *args, **kwargs
         )
-        XpressDirect._chgObjSense = lambda self, prob, *args, **kwargs: prob.chgObjSense(
-            *args, **kwargs
+        XpressDirect._chgObjSense = (
+            lambda self, prob, *args, **kwargs: prob.chgObjSense(*args, **kwargs)
         )
 
         def _addCols(self, prob, objx, mstart, mrwind, dmatval, bdl, bdu, names, types):
@@ -989,16 +987,11 @@ class XpressDirect(DirectSolver):
         # set_sense=None keeps objective coefficients as-is so we can set
         # the sense ourselves via chgobjsense after loadproblem.
         repn = LinearStandardFormCompiler().write(
-            model,
-            mixed_form=True,
-            keep_range_constraints=True,
-            set_sense=None,
+            model, mixed_form=True, keep_range_constraints=True, set_sense=None
         )
 
         if len(repn.objectives) > 1:
-            raise ValueError(
-                "Solver interface does not support multiple objectives."
-            )
+            raise ValueError("Solver interface does not support multiple objectives.")
 
         xprob = self._solver_model
         n_cols = len(repn.columns)
@@ -1082,7 +1075,7 @@ class XpressDirect(DirectSolver):
             rng,
             c_dense,
             A.indptr,
-            None,           # collen — use indptr[ncol] convention
+            None,  # collen — use indptr[ncol] convention
             A.indices,
             A.data,
             lb,
@@ -1160,7 +1153,6 @@ class XpressDirect(DirectSolver):
                 sort=True,
             ):
                 self._add_sos_constraint(sos_con)
-
 
     def _add_constraint(self, con):
         if not con.active:
@@ -1250,7 +1242,9 @@ class XpressDirect(DirectSolver):
             # the row directly using _addRows, which is significantly faster
             # for large models.
             referenced_vars = ComponentSet(repn.linear_vars)
-            xpress_vars = [self._pyomo_var_to_solver_var_map[v] for v in repn.linear_vars]
+            xpress_vars = [
+                self._pyomo_var_to_solver_var_map[v] for v in repn.linear_vars
+            ]
             coeffs = [float(c) for c in repn.linear_coefs]
             const = float(repn.constant)
             n = len(xpress_vars)
@@ -1375,7 +1369,9 @@ class XpressDirect(DirectSolver):
         degree = repn.polynomial_degree()
         if (degree is None) or (degree > self._max_obj_degree):
             raise DegreeError(
-                'XpressDirect does not support expressions of degree {0}.'.format(degree)
+                'XpressDirect does not support expressions of degree {0}.'.format(
+                    degree
+                )
             )
 
         if repn.quadratic_vars or self._obj_is_quadratic:
@@ -1433,9 +1429,7 @@ class XpressDirect(DirectSolver):
             # chgobj([-1], [k]) sets OBJRHS = -k, so the objective constant
             # becomes +k. Pass -const so that OBJRHS = const.
             self._chgObj(
-                self._solver_model,
-                new_xpress_vars + [-1],
-                new_coeffs + [-const],
+                self._solver_model, new_xpress_vars + [-1], new_coeffs + [-const]
             )
             self._chgObjSense(self._solver_model, sense)
             self._obj_is_quadratic = False

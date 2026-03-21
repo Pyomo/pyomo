@@ -373,9 +373,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         )
         # m.e: single range row (bound_type=2); all others are normal mixed rows
         self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1), (m.e, 2), (m.f, 0)])
-        ref_A = np.array(
-            [[1, 0, 2, 0], [0, 0, 1, 4], [0, 1, 6, 0], [1, 1, 0, 0]]
-        )
+        ref_A = np.array([[1, 0, 2, 0], [0, 0, 1, 4], [0, 1, 6, 0], [1, 1, 0, 0]])
         self.assertTrue(np.all(repn.A.toarray() == ref_A))
         # m.e: rhs = ub - offset = 7 - 1 = 6
         self.assertTrue(np.all(repn.rhs == np.array([3, 5, 6, 8])))
@@ -397,7 +395,9 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         repn3 = LinearStandardFormCompiler().write(
             m, mixed_form=True, column_order=col_order
         )
-        e_rows = [(r.constraint, r.bound_type) for r in repn3.rows if r.constraint is m.e]
+        e_rows = [
+            (r.constraint, r.bound_type) for r in repn3.rows if r.constraint is m.e
+        ]
         self.assertEqual(e_rows, [(m.e, 1), (m.e, -1)])
         # rhs_range is all-zeros when keep_range_constraints=False
         self.assertTrue(np.all(repn3.rhs_range == 0.0))
