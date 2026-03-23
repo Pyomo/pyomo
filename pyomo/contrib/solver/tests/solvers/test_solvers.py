@@ -639,6 +639,8 @@ class TestSolvers(unittest.TestCase):
 
         # Should have a solution loader available
         self.assertTrue(hasattr(res, "solution_loader"))
+        self.assertGreaterEqual(res.solution_loader.get_number_of_solutions(), 1)
+        self.assertGreaterEqual(len(res.solution_loader.get_solution_ids()), 1)
 
         # Should have a copy of the config used
         self.assertIsInstance(res.solver_config, SolverConfig)

@@ -73,8 +73,7 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
         return [None]
 
     def load_import_suffixes(self, solution_id=None):
-        if solution_id is not None:
-            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
+        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
 
         load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
 
@@ -125,8 +124,7 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     def load_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> None:
-        if solution_id is not None:
-            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
+        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
         if vars_to_load is not None:
             # If we are given a list of variables to load, it is easiest
             # to use the filtering in get_vars and then just set
@@ -162,8 +160,7 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
-        if solution_id is not None:
-            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
+        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
         result = ComponentMap()
         if not self._sol_data.primals:
             # SOL file contained no primal values
@@ -210,8 +207,7 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> dict[ConstraintData, float]:
-        if solution_id is not None:
-            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
+        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
         if len(self._nl_info.eliminated_vars) > 0:
             raise MouseTrap(
                 'Complete duals are not available when variables have '
