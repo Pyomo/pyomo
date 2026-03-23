@@ -216,7 +216,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         assert len(bt_cons[3]) == 1
         assert bt_vars[3][0].name == "egb.inputs[P1]"
         assert bt_cons[3][0].name == "egb.pdrop1"
-        
+
         # Block 4
         assert len(bt_vars[4]) == 1
         assert len(bt_cons[4]) == 1
