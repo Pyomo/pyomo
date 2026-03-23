@@ -1,20 +1,3 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and Engineering
-#  Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
-#  software.  This software is distributed under the 3-clause BSD License.
-#
-#  Development of this module was conducted as part of the Institute for
-#  the Design of Advanced Energy Systems (IDAES) with support through the
-#  Simulation-Based Engineering, Crosscutting Research Program within the
-#  U.S. Department of Energy’s Office of Fossil Energy and Carbon Management.
-#
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
-
 # funnel.py – scalar funnel helper (no Filter list)
 # --------------------------------------------------------
 # Implements Hameed et al. (https://doi.org/10.1002/aic.70258) funnel logic
@@ -89,12 +72,8 @@ class Funnel:
     def _inside_funnel(self, theta_new: float) -> bool:
         return theta_new <= self.phi
 
-    def _switching(
-        self, f_old: float, f_new: float, theta_old: float, theta_new: float
-    ) -> bool:
-        # Δf ≥ μ_s · Δθ
+    def _switching(self, f_old: float, f_new: float, theta_old: float) -> bool:
         return (f_old - f_new) >= self.mu_s * ((theta_old) ** 2)
-        # return (f_old - f_new) >= self.mu_s * (theta_old - theta_new)
 
     def _armijo(self, f_old: float, f_new: float, delta: float) -> bool:
         # actual reduction ≥ η₁ Δ (trust‑region radius used as scale)
@@ -118,14 +97,14 @@ class Funnel:
         # theta, f and reject steps
         if self._inside_funnel(theta_new):
             # candidate f‑step → need Armijo
-            if self._switching(f_old, f_new, theta_old, theta_new):
+            if self._switching(f_old, f_new, theta_old):
                 return 'f' if self._armijo(f_old, f_new, delta) else 'reject'
             # else candidate θ‑step → need θ‑shrink
             return 'theta' if self._theta_shrink(theta_new) else 'reject'
 
         # Outside funnel: allow relaxed theta step
         if (
-            self._switching(f_old, f_new, theta_old, theta_new)
+            self._switching(f_old, f_new, theta_old)
             and theta_new <= self.kappa_r * self.phi
         ):
             return 'theta-relax'
