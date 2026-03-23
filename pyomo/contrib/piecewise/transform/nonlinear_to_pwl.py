@@ -660,7 +660,9 @@ class NonlinearToPWL(Transformation):
                 return ExprType.QUADRATIC, True
         return ExprType.GENERAL, True
 
-    def _separate_linear_parts(self, repn: QuadraticRepn, visitor: QuadraticRepnVisitor):
+    def _separate_linear_parts(
+        self, repn: QuadraticRepn, visitor: QuadraticRepnVisitor
+    ):
         """
         The idea here is to ensure that linear parts of constraints
         always get separated from the nonlinear parts, even if
@@ -699,12 +701,16 @@ class NonlinearToPWL(Transformation):
         if not needs_approximating:
             return None, expr_type
 
-        linear_part, nonlinear_part = self._separate_linear_parts(repn, self._quadratic_repn_visitor)
+        linear_part, nonlinear_part = self._separate_linear_parts(
+            repn, self._quadratic_repn_visitor
+        )
 
         # Additively decompose expr and work on the pieces
         pwl_summands = [linear_part]
         if config.additively_decompose:
-            subexpr_list = _additively_decompose_expr(nonlinear_part, config.min_dimension_to_additively_decompose)
+            subexpr_list = _additively_decompose_expr(
+                nonlinear_part, config.min_dimension_to_additively_decompose
+            )
         else:
             subexpr_list = [nonlinear_part]
         for k, subexpr in enumerate(subexpr_list):
