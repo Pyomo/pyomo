@@ -65,7 +65,9 @@ class GMSSolutionLoader(SolutionLoaderBase):
     def load_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> None:
-        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
         if self._gms_info is None:
             raise NoSolutionError()
         if self._gdx_data is None:
@@ -80,7 +82,9 @@ class GMSSolutionLoader(SolutionLoaderBase):
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
-        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
         if self._gms_info is None:
             raise NoSolutionError()
         val_map = {}
@@ -102,7 +106,9 @@ class GMSSolutionLoader(SolutionLoaderBase):
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> Dict[ConstraintData, float]:
-        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
         if self._gms_info is None:
             raise NoDualsError()
         if self._gdx_data is None:
@@ -126,7 +132,9 @@ class GMSSolutionLoader(SolutionLoaderBase):
         return res
 
     def get_reduced_costs(self, vars_to_load=None, solution_id=None):
-        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
         if self._gms_info is None:
             raise NoReducedCostsError()
         if self._gdx_data is None:
@@ -146,5 +154,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
         return res
 
     def load_import_suffixes(self, solution_id=None):
-        assert solution_id is None, f"{self.__class__.__name__} does not support solution_id"
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
         load_import_suffixes(self._pyomo_model, self, solution_id)
