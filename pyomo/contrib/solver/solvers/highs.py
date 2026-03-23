@@ -233,6 +233,20 @@ class _MutableConstraintBounds:
         self.highs.changeRowBounds(row_ndx, lb, ub)
 
 
+class HighsSolutionLoader(PersistentSolutionLoader):
+    def get_number_of_solutions(self) -> int:
+        self._assert_solution_still_valid()
+        if self._solver._solver_model.getSolution().value_valid:
+            return 1
+        return 0
+    
+    def get_solution_ids(self):
+        self._assert_solution_still_valid()
+        if self._solver._solver_model.getSolution().value_valid:
+            return [None]
+        return []
+
+
 class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
     """
     Interface to HiGHS
@@ -671,7 +685,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         status = highs.getModelStatus()
 
         results = Results()
-        results.solution_loader = PersistentSolutionLoader(self, self._model)
+        results.solution_loader = HighsSolutionLoader(self, self._model)
         results.solver_name = self.name
         results.solver_version = self.version()
         results.solver_config = config
