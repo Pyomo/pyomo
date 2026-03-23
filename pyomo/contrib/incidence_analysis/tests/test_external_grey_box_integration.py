@@ -187,8 +187,8 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         # Get 6 decomposable sub-sets
         # 3 linking constraints give 3 sub-sets
         # Grey box gets broken into 3 parts for some reason
-        assert len(bt_vars) == 6
-        assert len(bt_cons) == 6
+        assert len(bt_vars) == 7
+        assert len(bt_cons) == 7
 
         for i in range(len(bt_vars)):
             assert len(bt_vars[i]) == len(bt_cons[i])
@@ -212,22 +212,25 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         assert bt_cons[2][0].name == "con3"
 
         # Block 3
-        assert len(bt_vars[3]) == 2
-        assert len(bt_cons[3]) == 2
-
-        for i in bt_vars[3]:
-            assert i.name in ["egb.inputs[P1]", "egb.inputs[P3]"]
-        for i in bt_cons[3]:
-            assert i.name in ["egb.pdrop1", "egb.pdrop3"]
-
+        assert len(bt_vars[3]) == 1
+        assert len(bt_cons[3]) == 1
+        assert bt_vars[3][0].name == "egb.inputs[P1]"
+        assert bt_cons[3][0].name == "egb.pdrop1"
+        
         # Block 4
         assert len(bt_vars[4]) == 1
         assert len(bt_cons[4]) == 1
-        assert bt_vars[4][0].name == "egb.outputs[P2]"
-        assert bt_cons[4][0].name == "egb.P2_constraint"
+        assert bt_vars[4][0].name == "egb.inputs[P3]"
+        assert bt_cons[4][0].name == "egb.pdrop3"
 
         # Block 5
         assert len(bt_vars[5]) == 1
         assert len(bt_cons[5]) == 1
-        assert bt_vars[5][0].name == "egb.outputs[Pout]"
-        assert bt_cons[5][0].name == "egb.Pout_constraint"
+        assert bt_vars[5][0].name == "egb.outputs[P2]"
+        assert bt_cons[5][0].name == "egb.P2_constraint"
+
+        # Block 6
+        assert len(bt_vars[6]) == 1
+        assert len(bt_cons[6]) == 1
+        assert bt_vars[6][0].name == "egb.outputs[Pout]"
+        assert bt_cons[6][0].name == "egb.Pout_constraint"
