@@ -370,7 +370,7 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
             return _handle_float(node, data, self)
         else:
             raise NotImplementedError(f'unrecognized expression type: {nt}')
-        
+
     def _is_leaf(self, x):
         if type(x) in self._leaf_types or type(x) in native_numeric_types:
             return True
@@ -432,8 +432,8 @@ class UnivariateNonlinearDecompositionTransformation(Transformation):
 
             even though this does not reduce the dimensionality of the PWL approximation.
             The reason to do this is to be able to bound z1 and z2.
-            """
-        )
+            """,
+        ),
     )
 
     def __init__(self):
@@ -455,8 +455,10 @@ class UnivariateNonlinearDecompositionTransformation(Transformation):
             )
 
     def _apply_to(self, model, **kwds):
-        self._config = UnivariateNonlinearDecompositionTransformation.CONFIG(value=kwds, preserve_implicit=True)
-        
+        self._config = UnivariateNonlinearDecompositionTransformation.CONFIG(
+            value=kwds, preserve_implicit=True
+        )
+
         self._check_for_unknown_active_components(model)
 
         objectives = list(
@@ -470,7 +472,7 @@ class UnivariateNonlinearDecompositionTransformation(Transformation):
         setattr(model, bname, Block())
         block = getattr(model, bname)
         visitor = _UnivariateNonlinearDecompositionVisitor(
-            aux_block=block, 
+            aux_block=block,
             aggressive_substitution=self._config.aggressive_substitution,
         )
 
