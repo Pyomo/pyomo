@@ -21,11 +21,11 @@ from pyomo.core.base.units_container import _PyomoUnit
 
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.core.base import (
-    VarData, 
-    ParamData, 
-    ExpressionData, 
-    VarList, 
-    ConstraintList, 
+    VarData,
+    ParamData,
+    ExpressionData,
+    VarList,
+    ConstraintList,
     Block,
     Constraint,
     Objective,
@@ -80,7 +80,7 @@ def _handle_product(node, data, visitor):
         visitor.degree_map[res] = arg2_degree
         visitor.substitution_map[node] = res
         return res
-    
+
     if arg2_degree == 0:
         res = arg1 * arg2
         visitor.node_to_var_map[res] = arg1_vars
@@ -99,7 +99,7 @@ def _handle_product(node, data, visitor):
         arg2_nvars = 1
         arg2_degree = 1
     res = arg1 * arg2
-    # at this point arg1 should have at most 1 variable 
+    # at this point arg1 should have at most 1 variable
     # and arg2 should have at most 1 variable
     if arg1_nvars == 0:
         visitor.node_to_var_map[res] = arg2_vars
@@ -146,8 +146,8 @@ def _handle_sum(node, data, visitor):
 
 def _handle_division(node, data, visitor):
     """
-    This one is a bit tricky. If we encounter both x/z and y/z 
-    at different places in the model, we only want one auxilliary 
+    This one is a bit tricky. If we encounter both x/z and y/z
+    at different places in the model, we only want one auxiliary
     variable for 1/z.
     """
     arg1, arg2 = data
@@ -195,8 +195,10 @@ def _handle_division(node, data, visitor):
         aux * arg2 = 1
         """
         arg2_lb, arg2_ub = compute_bounds_on_expr(arg2)
-        if (arg2_lb is not None and arg2_lb > 0) or (arg2_ub is not None and arg2_ub < 0):
-            c = visitor.block.c.add(aux == 1/arg2)  # keep it univariate if we can
+        if (arg2_lb is not None and arg2_lb > 0) or (
+            arg2_ub is not None and arg2_ub < 0
+        ):
+            c = visitor.block.c.add(aux == 1 / arg2)  # keep it univariate if we can
         else:
             c = visitor.block.c.add(aux * arg2 == 1)
         fbbt(c)
@@ -206,7 +208,7 @@ def _handle_division(node, data, visitor):
     arg2_nvars = 1
     arg2_degree = 1
     res = arg1 * arg2
-    # at this point arg1 should have at most 1 variable 
+    # at this point arg1 should have at most 1 variable
     # and arg2 should have exactly 1 variable
     if arg1_nvars == 0:
         visitor.node_to_var_map[res] = arg2_vars
@@ -249,7 +251,7 @@ def _handle_pow(node, data, visitor):
         arg2_degree = 1
 
     res = arg1**arg2
-    # at this point arg1 should have at most 1 variable 
+    # at this point arg1 should have at most 1 variable
     # and arg2 should have at most 1 variable
     if arg1_nvars == 0:
         visitor.node_to_var_map[res] = arg2_vars
@@ -339,7 +341,9 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
         self.aggressive_substitution = kwds.pop('aggressive_substitution')
         super().__init__(**kwds)
         self.node_to_var_map = ComponentMap()
-        self.degree_map = ComponentMap()  # values will be 0 (constant), 1 (linear), or -1 (nonlinear)
+        self.degree_map = (
+            ComponentMap()
+        )  # values will be 0 (constant), 1 (linear), or -1 (nonlinear)
 
         self.substitution_map = ComponentMap()
 
@@ -351,12 +355,12 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
         if expr in self.substitution_map:
             return False, self.substitution_map[expr]
         return True, None
-    
+
     def beforeChild(self, node, child, child_idx):
         if child in self.substitution_map:
             return False, self.substitution_map[child]
         return True, None
-    
+
     def exitNode(self, node, data):
         nt = type(node)
         if nt in handlers:
@@ -382,7 +386,7 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
             x = self.block.x.add()
             self.substitution_map[expr] = x
             c = self.block.c.add(x == expr)
-            # we need to compute bounds on x now because some of the 
+            # we need to compute bounds on x now because some of the
             # handlers depend on variable bounds (e.g., division)
             fbbt(c)
         return x
@@ -403,7 +407,7 @@ s.t.
 By doing so, each nonlinear function is only a function of one or two variables. 
 If this transformation is used prior to the nonlinear_to_pwl transformation, 
 it can significantly reduce the complexity of the PWL approximation.
-    """
+    """,
 )
 class UnivariateNonlinearDecompositionTransformation(Transformation):
 
@@ -455,9 +459,13 @@ class UnivariateNonlinearDecompositionTransformation(Transformation):
         
         self._check_for_unknown_active_components(model)
 
-        objectives = list(model.component_data_objects(Objective, active=True, descend_into=True))
-        constraints = list(model.component_data_objects(Constraint, active=True, descend_into=True))
-        
+        objectives = list(
+            model.component_data_objects(Objective, active=True, descend_into=True)
+        )
+        constraints = list(
+            model.component_data_objects(Constraint, active=True, descend_into=True)
+        )
+
         bname = unique_component_name(model, 'auxiliary')
         setattr(model, bname, Block())
         block = getattr(model, bname)

@@ -5,12 +5,13 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.common.dependencies import numpy_available, numpy
 from pyomo.core.expr.numeric_expr import ProductExpression
 
-
 pe = pyo
 
 
 def _get_trans():
-    return pyo.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
+    return pyo.TransformationFactory(
+        'contrib.piecewise.univariate_nonlinear_decomposition'
+    )
 
 
 class TestUnivariateNonlinearDecomposition(TestCase):
@@ -19,32 +20,16 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         m.x = pe.Var()
         m.y = pe.Var()
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=m.x + pe.log(m.y + m.z) + 1/pe.exp(m.x**0.5) <= 0)
+        m.c = pe.Constraint(expr=m.x + pe.log(m.y + m.z) + 1 / pe.exp(m.x**0.5) <= 0)
 
         trans = _get_trans()
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c.body,
-            m.x + aux.x[3] + aux.x[2],
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[1].expr,
-            aux.x[1] == (m.y + m.z),
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[2].expr,
-            aux.x[2] == 1/pyo.exp(m.x**0.5),
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[3].expr,
-            aux.x[3] == pyo.log(aux.x[1]),
-        )
+        assertExpressionsEqual(self, m.c.body, m.x + aux.x[3] + aux.x[2])
+        assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == (m.y + m.z))
+        assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == 1 / pyo.exp(m.x**0.5))
+        assertExpressionsEqual(self, aux.c[3].expr, aux.x[3] == pyo.log(aux.x[1]))
         self.assertEqual(m.x.lb, 0)
         self.assertIsNone(m.x.ub)
         self.assertIsNone(m.y.lb)
@@ -72,70 +57,38 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c1.expr,
-            m.z1 + aux.x[2] == 0,
-        )
-        assertExpressionsEqual(
-            self,
-            m.c2.expr,
-            m.z2 + aux.x[2] == 0,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[1].expr,
-            aux.x[1] == m.x + m.y,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[2].expr,
-            aux.x[2] == -pe.log(aux.x[1]),
-        )
+        assertExpressionsEqual(self, m.c1.expr, m.z1 + aux.x[2] == 0)
+        assertExpressionsEqual(self, m.c2.expr, m.z2 + aux.x[2] == 0)
+        assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)
+        assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == -pe.log(aux.x[1]))
 
     def test_product_fixed_variable(self):
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=2*pe.log(m.x + m.y)  <= 0)
+        m.c = pe.Constraint(expr=2 * pe.log(m.x + m.y) <= 0)
 
         trans = _get_trans()
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c.expr,
-            2*pe.log(aux.x[1]) <= 0,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[1].expr,
-            aux.x[1] == m.x + m.y,
-        )
+        assertExpressionsEqual(self, m.c.expr, 2 * pe.log(aux.x[1]) <= 0)
+        assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)
 
     def test_product_variable_fixed(self):
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=pe.log(m.x + m.y)*2  <= 0)
+        m.c = pe.Constraint(expr=pe.log(m.x + m.y) * 2 <= 0)
 
         trans = _get_trans()
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c.expr,
-            pe.log(aux.x[1])*2 <= 0,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[1].expr,
-            aux.x[1] == m.x + m.y,
-        )
+        assertExpressionsEqual(self, m.c.expr, pe.log(aux.x[1]) * 2 <= 0)
+        assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)
 
     def test_prod_sum_sum(self):
         m = pe.ConcreteModel()
@@ -149,21 +102,9 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c.expr,
-            aux.x[1] * aux.x[2] <= 1,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[1].expr,
-            aux.x[1] == m.x1 + m.x2,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[2].expr,
-            aux.x[2] == m.x3 + m.x4,
-        )
+        assertExpressionsEqual(self, m.c.expr, aux.x[1] * aux.x[2] <= 1)
+        assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x1 + m.x2)
+        assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == m.x3 + m.x4)
 
     def test_pow_sum_sum(self):
         m = pe.ConcreteModel()
@@ -177,21 +118,9 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c.expr,
-            aux.x[1] ** aux.x[2] <= 1,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[1].expr,
-            aux.x[1] == m.x1 + m.x2,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[2].expr,
-            aux.x[2] == m.x3 + m.x4,
-        )
+        assertExpressionsEqual(self, m.c.expr, aux.x[1] ** aux.x[2] <= 1)
+        assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x1 + m.x2)
+        assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == m.x3 + m.x4)
 
     def test_division_var_const(self):
         m = pe.ConcreteModel()
@@ -203,11 +132,7 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c.expr,
-            (m.x + m.y) / 2 <= 0,
-        )
+        assertExpressionsEqual(self, m.c.expr, (m.x + m.y) / 2 <= 0)
 
     def test_division_sum_sum(self):
         m = pe.ConcreteModel()
@@ -221,26 +146,10 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c.expr,
-            aux.x[1] * aux.x[3] <= 1,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[1].expr,
-            aux.x[1] == m.x1 + m.x2,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[2].expr,
-            aux.x[2] == m.x3 + m.x4,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[3].expr,
-            aux.x[3] * aux.x[2] == 1,
-        )
+        assertExpressionsEqual(self, m.c.expr, aux.x[1] * aux.x[3] <= 1)
+        assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x1 + m.x2)
+        assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == m.x3 + m.x4)
+        assertExpressionsEqual(self, aux.c[3].expr, aux.x[3] * aux.x[2] == 1)
 
     @skipUnless(numpy_available, "Numpy is not available")
     def test_numpy_float(self):
@@ -248,19 +157,13 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         m.x = pe.Var()
         m.y = pe.Var()
         m.z = pe.Var()
-        m.c = pe.Constraint(expr=ProductExpression((numpy.float64(2.5), pe.log(m.x + m.y)))  <= 0)
+        m.c = pe.Constraint(
+            expr=ProductExpression((numpy.float64(2.5), pe.log(m.x + m.y))) <= 0
+        )
 
         trans = _get_trans()
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(
-            self,
-            m.c.expr,
-            2.5*pe.log(aux.x[1]) <= 0,
-        )
-        assertExpressionsEqual(
-            self,
-            aux.c[1].expr,
-            aux.x[1] == m.x + m.y,
-        )
+        assertExpressionsEqual(self, m.c.expr, 2.5 * pe.log(aux.x[1]) <= 0)
+        assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)
