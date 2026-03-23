@@ -26,10 +26,13 @@ jobs:
         verbose: true
         # How many times to retry a failed request (defaults to 1)
         retry_count: 3
+        # The timeout seconds to provide to requests, defaults to 5 seconds
+        timeout: 60
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures
         exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
         # Exclude:
         #  - All gnu.org links because they consistently fail the checker
-        exclude_patterns: https://www.gnu.org
+        #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
+        exclude_patterns: https://www.gnu.org,https://lpsolve.sourceforge.net/

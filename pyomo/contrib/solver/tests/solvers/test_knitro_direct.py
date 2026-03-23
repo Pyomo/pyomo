@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import io
 from contextlib import redirect_stdout
@@ -16,13 +14,16 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.contrib.solver.common.results import SolutionStatus, TerminationCondition
+from pyomo.contrib.solver.solvers.knitro.api import knitro
 from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
 from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
+from pyomo.contrib.solver.solvers.knitro.engine import Engine
 
 avail = KnitroDirectSolver().available()
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroDirectSolverConfig(unittest.TestCase):
     def test_default_instantiation(self):
         config = KnitroConfig()
@@ -45,6 +46,7 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
     def test_results_extra_info_mip(self):
         """Test that MIP-specific extra info is populated for MIP problems."""
@@ -98,6 +100,7 @@ class TestKnitroSolverResultsExtraInfo(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroSolverObjectiveBound(unittest.TestCase):
     def test_objective_bound_mip(self):
         """Test that objective bound is retrieved for MIP problems."""
@@ -135,6 +138,212 @@ class TestKnitroSolverObjectiveBound(unittest.TestCase):
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
+class TestKnitroSolverIncumbentObjective(unittest.TestCase):
+    def test_none_without_objective(self):
+        """Test that incumbent objective is None when no objective is present."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.c1 = pyo.Constraint(expr=m.x + m.y >= 1)
+
+        results = opt.solve(m)
+        self.assertIsNone(results.incumbent_objective)
+
+    def test_none_when_infeasible(self):
+        """Test that incumbent objective is None when problem is infeasible."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(expr=m.x + m.y)
+        m.c1 = pyo.Constraint(expr=m.x + m.y <= -20)
+
+        opt.config.raise_exception_on_nonoptimal_result = False
+        opt.config.load_solutions = False
+        results = opt.solve(m)
+        print(results.solution_status)
+        print(results.termination_condition)
+        self.assertIsNone(results.incumbent_objective)
+
+    def test_none_when_unbounded(self):
+        """Test that incumbent objective is None when problem is unbounded."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, None))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, None))
+        m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
+        m.c1 = pyo.Constraint(expr=m.x + m.y >= -10)
+
+        opt.config.raise_exception_on_nonoptimal_result = False
+        opt.config.load_solutions = False
+        results = opt.solve(m)
+        self.assertIsNone(results.incumbent_objective)
+
+    def test_value_when_optimal(self):
+        """Test that incumbent objective is correct for optimal solution."""
+        opt = KnitroDirectSolver()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.y = pyo.Var(initialize=1.5, bounds=(-5, 5))
+        m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
+        m.c1 = pyo.Constraint(expr=m.x + m.y <= 3)
+
+        results = opt.solve(m)
+        self.assertIsNotNone(results.incumbent_objective)
+        self.assertAlmostEqual(results.incumbent_objective, 3.0)
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
+class TestKnitroSolverSolutionStatus(unittest.TestCase):
+    def test_solution_status_mapping(self):
+        """Test that solution status is correctly mapped from KNITRO status."""
+        engine = Engine()
+
+        # Test that RuntimeError is raised for None status
+        engine._status = None
+        with self.assertRaises(RuntimeError):
+            engine.get_solution_status()
+
+        # Test optimal statuses
+        for code in [
+            knitro.KN_RC_OPTIMAL,
+            knitro.KN_RC_OPTIMAL_OR_SATISFACTORY,
+            knitro.KN_RC_NEAR_OPT,
+        ]:
+            engine._status = code
+            self.assertEqual(engine.get_solution_status(), SolutionStatus.optimal)
+
+        # Test feasible statuses
+        for code in [
+            knitro.KN_RC_FEAS_XTOL,
+            knitro.KN_RC_FEAS_NO_IMPROVE,
+            knitro.KN_RC_FEAS_FTOL,
+            -103,  # KN_RC_FEAS_BEST
+            -104,  # KN_RC_FEAS_MULTISTART
+            knitro.KN_RC_ITER_LIMIT_FEAS,
+            knitro.KN_RC_TIME_LIMIT_FEAS,
+            knitro.KN_RC_FEVAL_LIMIT_FEAS,
+            knitro.KN_RC_MIP_EXH_FEAS,
+            knitro.KN_RC_MIP_TERM_FEAS,
+            knitro.KN_RC_MIP_SOLVE_LIMIT_FEAS,
+            knitro.KN_RC_MIP_NODE_LIMIT_FEAS,
+        ]:
+            engine._status = code
+            self.assertEqual(engine.get_solution_status(), SolutionStatus.feasible)
+
+        # Test infeasible statuses
+        for code in [
+            knitro.KN_RC_INFEASIBLE,
+            knitro.KN_RC_INFEAS_CON_BOUNDS,
+            knitro.KN_RC_INFEAS_VAR_BOUNDS,
+            knitro.KN_RC_INFEAS_MULTISTART,
+        ]:
+            engine._status = code
+            self.assertEqual(engine.get_solution_status(), SolutionStatus.infeasible)
+
+        # Test noSolution statuses (anything else)
+        for code in [-501, -600, -99999, -1]:
+            engine._status = code
+            self.assertEqual(engine.get_solution_status(), SolutionStatus.noSolution)
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
+class TestKnitroSolverTerminationCondition(unittest.TestCase):
+    def test_termination_condition_mapping(self):
+        """Test that termination condition is correctly mapped from KNITRO status."""
+        engine = Engine()
+
+        # Test that RuntimeError is raised for None status
+        engine._status = None
+        with self.assertRaises(RuntimeError):
+            engine.get_termination_condition()
+
+        # Test convergenceCriteriaSatisfied
+        for code in [
+            knitro.KN_RC_OPTIMAL,
+            knitro.KN_RC_OPTIMAL_OR_SATISFACTORY,
+            knitro.KN_RC_NEAR_OPT,
+        ]:
+            engine._status = code
+            self.assertEqual(
+                engine.get_termination_condition(),
+                TerminationCondition.convergenceCriteriaSatisfied,
+            )
+
+        # Test locallyInfeasible
+        for code in [knitro.KN_RC_INFEAS_NO_IMPROVE, knitro.KN_RC_INFEAS_MULTISTART]:
+            engine._status = code
+            self.assertEqual(
+                engine.get_termination_condition(),
+                TerminationCondition.locallyInfeasible,
+            )
+
+        # Test provenInfeasible
+        for code in [
+            knitro.KN_RC_INFEASIBLE,
+            knitro.KN_RC_INFEAS_CON_BOUNDS,
+            knitro.KN_RC_INFEAS_VAR_BOUNDS,
+        ]:
+            engine._status = code
+            self.assertEqual(
+                engine.get_termination_condition(),
+                TerminationCondition.provenInfeasible,
+            )
+
+        # Test infeasibleOrUnbounded
+        for code in [knitro.KN_RC_UNBOUNDED, knitro.KN_RC_UNBOUNDED_OR_INFEAS]:
+            engine._status = code
+            self.assertEqual(
+                engine.get_termination_condition(),
+                TerminationCondition.infeasibleOrUnbounded,
+            )
+
+        # Test iterationLimit
+        for code in [
+            knitro.KN_RC_ITER_LIMIT_FEAS,
+            knitro.KN_RC_FEVAL_LIMIT_FEAS,
+            knitro.KN_RC_MIP_EXH_FEAS,
+            knitro.KN_RC_MIP_TERM_FEAS,
+            knitro.KN_RC_MIP_SOLVE_LIMIT_FEAS,
+            knitro.KN_RC_MIP_NODE_LIMIT_FEAS,
+            knitro.KN_RC_ITER_LIMIT_INFEAS,
+            knitro.KN_RC_FEVAL_LIMIT_INFEAS,
+            knitro.KN_RC_MIP_EXH_INFEAS,
+            knitro.KN_RC_MIP_SOLVE_LIMIT_INFEAS,
+            knitro.KN_RC_MIP_NODE_LIMIT_INFEAS,
+        ]:
+            engine._status = code
+            self.assertEqual(
+                engine.get_termination_condition(), TerminationCondition.iterationLimit
+            )
+
+        # Test interrupted
+        engine._status = knitro.KN_RC_USER_TERMINATION
+        self.assertEqual(
+            engine.get_termination_condition(), TerminationCondition.interrupted
+        )
+
+        # Test error (-500 > status >= -600)
+        for code in [-501, -550, -600]:
+            engine._status = code
+            self.assertEqual(
+                engine.get_termination_condition(), TerminationCondition.error
+            )
+
+        # Test unknown (anything else outside the defined ranges)
+        for code in [-601, -99999, -1]:
+            engine._status = code
+            self.assertEqual(
+                engine.get_termination_condition(), TerminationCondition.unknown
+            )
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroDirectSolverInterface(unittest.TestCase):
     def test_class_member_list(self):
         opt = KnitroDirectSolver()
@@ -175,56 +384,9 @@ class TestKnitroDirectSolverInterface(unittest.TestCase):
         self.assertTrue(opt._available_cache)
         self.assertIsNotNone(opt._available_cache)
 
-    def test_solution_status_mapping(self):
-        opt = KnitroDirectSolver()
-        for opt_status in [0, -100]:
-            status = opt._get_solution_status(opt_status)
-            self.assertEqual(status, SolutionStatus.optimal)
-
-        for opt_status in [*range(-101, -103, -1), *range(-400, -406, -1)]:
-            status = opt._get_solution_status(opt_status)
-            self.assertEqual(status, SolutionStatus.feasible)
-
-        for opt_status in [-200, -204, -205, -206]:
-            status = opt._get_solution_status(opt_status)
-            self.assertEqual(status, SolutionStatus.infeasible)
-
-        for opt_status in [-501, -99999, -1]:
-            status = opt._get_solution_status(opt_status)
-            self.assertEqual(status, SolutionStatus.noSolution)
-
-    def test_termination_condition_mapping(self):
-        opt = KnitroDirectSolver()
-        for opt_status in [0, -100]:
-            term_cond = opt._get_termination_condition(opt_status)
-            self.assertEqual(
-                term_cond, TerminationCondition.convergenceCriteriaSatisfied
-            )
-        term_cond = opt._get_termination_condition(-202)
-        self.assertEqual(term_cond, TerminationCondition.locallyInfeasible)
-        for opt_status in [-200, -204, -205]:
-            term_cond = opt._get_termination_condition(opt_status)
-            self.assertEqual(term_cond, TerminationCondition.provenInfeasible)
-        for opt_status in [-300, -301]:
-            term_cond = opt._get_termination_condition(opt_status)
-            self.assertEqual(term_cond, TerminationCondition.infeasibleOrUnbounded)
-        for opt_status in [-400, -410]:
-            term_cond = opt._get_termination_condition(opt_status)
-            self.assertEqual(term_cond, TerminationCondition.iterationLimit)
-        for opt_status in [-401, -411]:
-            term_cond = opt._get_termination_condition(opt_status)
-            self.assertEqual(term_cond, TerminationCondition.maxTimeLimit)
-        term_cond = opt._get_termination_condition(-500)
-        self.assertEqual(term_cond, TerminationCondition.interrupted)
-        for opt_status in [-501, -550, -599]:
-            term_cond = opt._get_termination_condition(opt_status)
-            self.assertEqual(term_cond, TerminationCondition.error)
-        for opt_status in [-600, -99999, -1]:
-            term_cond = opt._get_termination_condition(opt_status)
-            self.assertEqual(term_cond, TerminationCondition.unknown)
-
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
+@unittest.pytest.mark.solver("knitro_direct")
 class TestKnitroDirectSolver(unittest.TestCase):
     def setUp(self):
         self.opt = KnitroDirectSolver()
