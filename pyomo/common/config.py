@@ -1,20 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
+# This module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
 
 """The Pyomo configuration system.
 
@@ -378,50 +376,96 @@ class IsInstance:
         return f"IsInstance[{', '.join(class_names)}]"
 
 
-class ListOf:
-    """Domain validator for lists of a specified type
+class _Container:
+    """Domain validator for containers of a specified type
+
+    Incoming values are converted using the ``domain`` callable (if not
+    set / ``None``, then the ``itemtype`` is used as the ``domain``).
+    If the incoming value is iterable and *not* an instance of
+    ``itemtype``, then the incoming value is iterated over to generate
+    individual entries in the container.
 
     Parameters
     ----------
     itemtype: type
-        The type for each element in the list
+        The type for each element in the container
 
     domain: Callable
         A domain validator (callable that takes the incoming value,
         validates it, and returns the appropriate domain type) for each
-        element in the list.  If not specified, defaults to the
-        `itemtype`.
+        element in the container.  If not specified, defaults to the
+        ``itemtype``.
 
     string_lexer: Callable
         A preprocessor (lexer) called for all string values.  If
-        NOTSET, then strings are split on whitespace and/or commas
+        ``NOTSET``, then strings are split on whitespace and/or commas
         (honoring simple use of single or double quotes).  If None, then
         no tokenization is performed.
 
     """
 
-    def __init__(self, itemtype, domain=None, string_lexer=NOTSET):
+    def __init__(self, itemtype=None, domain=None, string_lexer=NOTSET):
         self.itemtype = itemtype
         if domain is None:
-            self.domain = self.itemtype
-        else:
-            self.domain = domain
+            domain = self.itemtype
         if string_lexer is NOTSET:
-            self.string_lexer = _default_string_list_lexer
-        else:
-            self.string_lexer = string_lexer
-        self.__name__ = 'ListOf(%s)' % (getattr(self.domain, '__name__', self.domain),)
+            string_lexer = _default_string_list_lexer
+
+        if domain is None:
+            raise ValueError(
+                f"{self.__class__.__name__}: either itemtype or domain must be non-None"
+            )
+        self.domain = domain
+        self.string_lexer = string_lexer
+        self.__name__ = '%s(%s)' % (
+            self.__class__.__name__,
+            getattr(self.domain, '__name__', self.domain),
+        )
 
     def __call__(self, value):
         if isinstance(value, str) and self.string_lexer is not None:
-            return [self.domain(v) for v in self.string_lexer(value)]
-        if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
-            return [self.domain(v) for v in value]
-        return [self.domain(value)]
+            return self.ReturnType(self.domain(v) for v in self.string_lexer(value))
+        if hasattr(value, '__iter__') and (
+            self.itemtype is None or not isinstance(value, self.itemtype)
+        ):
+            return self.ReturnType(self.domain(v) for v in value)
+        return self.ReturnType([self.domain(value)])
 
     def domain_name(self):
         _dn = _domain_name(self.domain) or ""
-        return f'ListOf[{_dn}]'
+        return f'{self.__class__.__name__}[{_dn}]'
+
+
+class ListOf(_Container):
+    __doc__ = _Container.__doc__.replace('container', 'list')
+    ReturnType = list
+
+
+class SetOf(_Container):
+    __doc__ = _Container.__doc__.replace('container', 'set').replace(
+        "\n    Parameters",
+        """
+    Note that :py:class:`SetOf` can be used (in conjunction with
+    :py:class:`In`) to implement a "SubsetOf" domain.  For example, you
+    can define a domain validator that admits values that are
+    convertible to :py:`int` as long as they are in the set ``{1, 3, 5}``
+    with:
+
+    ..doctest::
+
+        >>> d = SetOf(domain=In({1, 3, 5}, int))
+        >>> d([1, 5.2, 1])
+        {1, 5}
+        >>> d([1, 5, 2])
+        Traceback (most recent call last):
+          ...
+        ValueError: value 2 not in domain {1, 3, 5}
+
+    Parameters
+    """,
+    )
+
+    ReturnType = set
 
 
 class Module:
@@ -702,20 +746,19 @@ class ConfigEnum(enum.Enum):
             return cls(arg)
 
 
-def _dump(*args, **kwds):
-    # TODO: Change the default behavior to no longer be YAML.
-    # This was a legacy decision that may no longer be the best
-    # decision, given changes to technology over the years.
+def _get_dump():
     try:
         from yaml import safe_dump as dump
     except ImportError:
         # dump = lambda x,**y: str(x)
         # YAML uses lowercase True/False
         def dump(x, **args):
+            if x is None:
+                return "null"
             if type(x) is bool:
                 return str(x).lower()
             if type(x) is type:
-                return str(type(x))
+                return str(x)
             if isinstance(x, str):
                 # If the str is a number, then we need to quote it.
                 try:
@@ -725,8 +768,15 @@ def _dump(*args, **kwds):
                     return str(x)
             return str(x)
 
+    return dump
+
+
+def _dump(*args, **kwds):
+    # TODO: Change the default behavior to no longer be YAML.
+    # This was a legacy decision that may no longer be the best
+    # decision, given changes to technology over the years.
     assert '_dump' in globals()
-    globals()['_dump'] = dump
+    globals()['_dump'] = _get_dump()
     return dump(*args, **kwds)
 
 
@@ -792,7 +842,7 @@ def _value2string(prefix, value, obj):
     if value is not None:
         try:
             data = value.value(False) if value is obj else value
-            if getattr(builtins, data.__class__.__name__, None) is not None:
+            if data.__class__.__module__ == 'builtins':
                 _str += _dump(
                     data, default_flow_style=True, allow_unicode=True
                 ).rstrip()
@@ -801,7 +851,7 @@ def _value2string(prefix, value, obj):
             else:
                 _str += str(data)
         except:
-            _str += str(type(data))
+            _str += str(data)
     return _str.rstrip()
 
 
@@ -814,7 +864,7 @@ def _value2yaml(prefix, value, obj):
             if _str.endswith("..."):
                 _str = _str[:-3].rstrip()
         except:
-            _str += str(type(data))
+            _str += str(data)
     return _str.rstrip()
 
 

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from __future__ import annotations
 
@@ -33,11 +31,11 @@ def load_import_suffixes(
         elif suffix.local_name == 'rc':
             rc_suffix = suffix
     if dual_suffix is not None:
-        for k, v in solution_loader.get_duals(solution_id=solution_id).items():
-            dual_suffix[k] = v
+        dual_suffix.clear()
+        dual_suffix.update(solution_loader.get_duals(solution_id=solution_id))
     if rc_suffix is not None:
-        for k, v in solution_loader.get_reduced_costs(solution_id=solution_id).items():
-            rc_suffix[k] = v
+        rc_suffix.clear()
+        rc_suffix.update(solution_loader.get_reduced_costs(solution_id=solution_id))
 
 
 class SolutionLoaderBase:
@@ -77,7 +75,7 @@ class SolutionLoaderBase:
 
         Parameters
         ----------
-        solution_id: Optional[Any]
+        solution_id: Any
             If there are multiple solutions, this specifies which solution
             should be loaded. If None, the default solution will be used.
         """

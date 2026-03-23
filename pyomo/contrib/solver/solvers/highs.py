@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import io
@@ -233,6 +231,20 @@ class _MutableConstraintBounds:
         lb = value(self.lower_expr)
         ub = value(self.upper_expr)
         self.highs.changeRowBounds(row_ndx, lb, ub)
+
+
+class HighsSolutionLoader(PersistentSolutionLoader):
+    def get_number_of_solutions(self) -> int:
+        self._assert_solution_still_valid()
+        if self._solver._solver_model.getSolution().value_valid:
+            return 1
+        return 0
+
+    def get_solution_ids(self):
+        self._assert_solution_still_valid()
+        if self._solver._solver_model.getSolution().value_valid:
+            return [None]
+        return []
 
 
 class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
@@ -673,7 +685,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         status = highs.getModelStatus()
 
         results = Results()
-        results.solution_loader = PersistentSolutionLoader(self, self._model)
+        results.solution_loader = HighsSolutionLoader(self, self._model)
         results.solver_name = self.name
         results.solver_version = self.version()
         results.solver_config = config
@@ -770,19 +782,17 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         return results
 
     def _load_vars(self, vars_to_load=None, solution_id=None):
-        if solution_id is not None:
-            raise NotImplementedError(
-                'highs interface does not currently support multiple solutions'
-            )
+        assert (
+            solution_id is None
+        ), 'highs interface does not currently support multiple solutions'
         for v, val in self._get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def _get_primals(self, vars_to_load=None, solution_id=None):
-        if solution_id is not None:
-            raise NotImplementedError(
-                'highs interface does not currently support multiple solutions'
-            )
+        assert (
+            solution_id is None
+        ), 'highs interface does not currently support multiple solutions'
         if self._sol is None or not self._sol.value_valid:
             raise NoSolutionError()
 
@@ -806,10 +816,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         return res
 
     def _get_reduced_costs(self, vars_to_load=None, solution_id=None):
-        if solution_id is not None:
-            raise NotImplementedError(
-                'highs interface does not currently support multiple solutions'
-            )
+        assert (
+            solution_id is None
+        ), 'highs interface does not currently support multiple solutions'
         if self._sol is None or not self._sol.dual_valid:
             raise NoReducedCostsError()
         res = ComponentMap()
@@ -828,10 +837,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         return res
 
     def _get_duals(self, cons_to_load=None, solution_id=None):
-        if solution_id is not None:
-            raise NotImplementedError(
-                'highs interface does not currently support multiple solutions'
-            )
+        assert (
+            solution_id is None
+        ), 'highs interface does not currently support multiple solutions'
         if self._sol is None or not self._sol.dual_valid:
             raise NoDualsError()
 
