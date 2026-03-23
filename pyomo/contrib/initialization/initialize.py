@@ -1,3 +1,4 @@
+from typing import Optional
 from pyomo.core.base.block import BlockData
 from enum import Enum
 from pyomo.contrib.initialization.utils import get_vars, shallow_clone
@@ -5,17 +6,20 @@ from pyomo.common.collections import ComponentMap
 from pyomo.contrib.initialization.pwl_init import _initialize_with_piecewise_linear_approximation
 from pyomo.contrib.initialization.lp_approx_init import _initialize_with_LP_approximation
 from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.initialization.global_init import _initialize_with_global_solver
 
 
 class InitializationMethod(Enum):
     pwl_approximation = "pwl_approximation"
     lp_approximation = "lp_approximation"
+    global_opt = "global_opt"
 
 
 def initialize_nlp(
     nlp: BlockData, 
-    mip_solver: SolverBase,
-    nlp_solver: SolverBase,
+    mip_solver: Optional[SolverBase] = None,
+    nlp_solver: Optional[SolverBase] = None,
+    global_solver: Optional[SolverBase] = None,
     method: InitializationMethod = InitializationMethod.pwl_approximation,
     default_bound=1.0e8,
     max_pwl_refinement_iter=100,
@@ -34,6 +38,8 @@ def initialize_nlp(
 
     # run the initialization
     if method == InitializationMethod.pwl_approximation:
+        assert mip_solver is not None, f"mip_solver must be specified for {method}"
+        assert nlp_solver is not None, f"nlp_solver must be specified for {method}"
         res = _initialize_with_piecewise_linear_approximation(
             nlp=nlp,
             mip_solver=mip_solver,
@@ -43,11 +49,16 @@ def initialize_nlp(
             num_cons_to_refine_per_iter=num_pwl_cons_to_refine_per_iter,
         )
     elif method == InitializationMethod.lp_approximation:
+        assert mip_solver is not None, f"mip_solver must be specified for {method}"
+        assert nlp_solver is not None, f"nlp_solver must be specified for {method}"
         res = _initialize_with_LP_approximation(
             nlp=nlp,
             lp_solver=mip_solver,
             nlp_solver=nlp_solver,
         )
+    elif method == InitializationMethod.global_opt:
+        assert global_solver is not None, f"global_solver must be specified for {method}"
+        res = _initialize_with_global_solver(nlp=nlp, global_solver=global_solver)
     else:
         raise ValueError(f'unexpected initialization method: {method}')    
 

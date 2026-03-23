@@ -1,0 +1,28 @@
+from pyomo.core.base.block import BlockData
+from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect, ScipPersistent
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
+def _initialize_with_global_solver(
+    nlp: BlockData,
+    global_solver: SolverBase,
+):
+    if isinstance(global_solver, (ScipDirect, ScipPersistent)):
+        opts = {'limits/solutions': 1}
+    elif isinstance(global_solver, (GurobiDirectMINLP,)):
+        opts = {'SolutionLimit': 1}
+    else:
+        raise NotImplementedError('Currently, the initialization module only works with new solver interface, so the global solvers are limited to ScipDirect, ScipPersistent, and GurobiDirectMINLP.')
+    res = global_solver.solve(nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False, solver_options=opts)
+    logger.info(f'solved NLP: {res.solution_status}, {res.termination_condition}')
+    if res.incumbent_objective is not None:
+        res.solution_loader.load_vars()
+    else:
+        raise RuntimeError('no feasible solution found')
+    
+    return res
