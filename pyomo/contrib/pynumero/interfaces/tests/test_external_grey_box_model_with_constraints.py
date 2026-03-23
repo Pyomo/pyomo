@@ -25,6 +25,11 @@ if not (numpy_available and scipy_available):
 
 from scipy.sparse import coo_matrix
 
+from pyomo.contrib.pynumero.asl import AmplInterface
+
+if not AmplInterface.available():
+    raise unittest.SkipTest("ASL interface is not available")
+
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
     ExternalGreyBoxBlock,
     ExternalGreyBoxModel,
