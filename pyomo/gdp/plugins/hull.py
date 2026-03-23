@@ -644,10 +644,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
         # The parent disjunct's local vars should include all of this
         # disjunction's local or generalized local vars.
-        # NOTE not doing this in _transform_disjunct anymore; verify this still works.
-        # Compared to the previous version, this could lead to adding variables on
-        # disactivated disjuncts to the parent's local vars, but this should not
-        # change anything.
         local_vars_by_disjunct[parent_disjunct].update(generalized_local_vars)
 
         xorConstraint.add(index, (or_expr, 1))
