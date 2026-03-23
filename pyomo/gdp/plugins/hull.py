@@ -434,9 +434,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     "actually exists, then if we still cannot find it, override our "
                     "search process using the `well_defined_points` option."
                 )
-        # We have a point.
+        # Found a point
         if not math.isfinite(value(test_expr)):
-            raise DeveloperError("Theoretically unreachable")
+            raise DeveloperError("unreachable")
         x0_map = ComponentMap()
         used_vars = ComponentSet()
         for x in itertools.chain(regular_vars, fallback_vars):
@@ -447,14 +447,17 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             x.fixed = orig_fixed[x]
         return x0_map, used_vars
 
-    # This one is going to get a little janky...
-    # Let's start with just baron for the time being.
+    # Use gurobi_direct_minlp for the heuristic for now. It needs to be
+    # a nonlinear solver.
     def _solve_for_first_feasible_solution(self, test_model):
-        results = SolverFactory("baron").solve(test_model, load_solutions=True)
+        results = SolverFactory("gurobi_direct_minlp").solve(
+            test_model, load_solutions=False
+        )
         if results.solver.termination_condition is TerminationCondition.infeasible:
             return False
         if results.solver.status is not SolverStatus.ok:
             raise GDP_Error(f"Unexpected solver status {results.solver.status}.")
+        test_model.solutions.load_from(results)
         return True
 
     def _transform_disjunctionData(
