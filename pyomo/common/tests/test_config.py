@@ -42,6 +42,7 @@ def yaml_load(arg):
     return yaml.load(arg, **yaml_load_args)
 
 
+import pyomo.common.config as _config
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -61,6 +62,7 @@ from pyomo.common.config import (
     In,
     IsInstance,
     ListOf,
+    SetOf,
     Module,
     Path,
     PathList,
@@ -76,8 +78,10 @@ from pyomo.common.config import (
     DEVELOPER_OPTION,
     _UnpickleableDomain,
     _picklable,
+    _value2string,
 )
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.modeling import NOTSET
 
 
 # Utility to redirect display() to a string
@@ -99,6 +103,14 @@ class GlobalClass:
     "test class for test_known_types"
 
     pass
+
+
+class NOOP:
+    def __getattr__(self, attr):
+        def noop(*args, **kwargs):
+            pass
+
+        return noop
 
 
 def ExampleConfig():
@@ -788,6 +800,11 @@ class TestConfigDomains(unittest.TestCase):
             c.a = ["/a/b/c", 2]
 
     def test_ListOf(self):
+        with self.assertRaisesRegex(
+            ValueError, "ListOf: either itemtype or domain must be non-None"
+        ):
+            ListOf()
+
         c = ConfigDict()
         c.declare('a', ConfigValue(domain=ListOf(int), default=None))
         self.assertEqual(c.get('a').domain_name(), 'ListOf[int]')
@@ -849,6 +866,72 @@ class TestConfigDomains(unittest.TestCase):
             c.c = [0]
         c.c = [3, 6, 9]
         self.assertEqual(c.c, [3, 6, 9])
+
+    def test_SetOf(self):
+        with self.assertRaisesRegex(
+            ValueError, "SetOf: either itemtype or domain must be non-None"
+        ):
+            SetOf()
+
+        c = ConfigDict()
+        c.declare('a', ConfigValue(domain=SetOf(int), default=None))
+        self.assertEqual(c.get('a').domain_name(), 'SetOf[int]')
+
+        self.assertEqual(c.a, None)
+        c.a = 5
+        self.assertEqual(c.a, {5})
+        c.a = (5, 6.6)
+        self.assertEqual(c.a, {5, 6})
+        c.a = '7,8'
+        self.assertEqual(c.a, {7, 8})
+
+        ref = (
+            r"(?m)Failed casting a\s+to SetOf\(int\)\s+"
+            r"Error: invalid literal for int\(\) with base 10: 'a'"
+        )
+        with self.assertRaisesRegex(ValueError, ref):
+            c.a = 'a'
+
+        c.declare('b', ConfigValue(domain=SetOf(str), default=None))
+        self.assertEqual(c.get('b').domain_name(), 'SetOf[str]')
+        self.assertEqual(c.b, None)
+        c.b = "'Hello, World'"
+        self.assertEqual(c.b, {"Hello, World"})
+        c.b = "Hello, World"
+        self.assertEqual(c.b, {"Hello", "World"})
+        c.b = ("A", 6)
+        self.assertEqual(c.b, {"A", "6"})
+        with self.assertRaises(ValueError):
+            c.b = "'Hello, World"
+
+        c.declare('b1', ConfigValue(domain=SetOf(str, string_lexer=None), default=None))
+        self.assertEqual(c.get('b1').domain_name(), 'SetOf[str]')
+        self.assertEqual(c.b1, None)
+        c.b1 = "'Hello, World'"
+        self.assertEqual(c.b1, {"'Hello, World'"})
+        c.b1 = "Hello, World"
+        self.assertEqual(c.b1, {"Hello, World"})
+        c.b1 = ("A", 6)
+        self.assertEqual(c.b1, {"A", "6"})
+        c.b1 = "'Hello, World"
+        self.assertEqual(c.b1, {"'Hello, World"})
+
+        c.declare('c', ConfigValue(domain=SetOf(int, PositiveInt)))
+        self.assertEqual(c.get('c').domain_name(), 'SetOf[PositiveInt]')
+        self.assertEqual(c.c, None)
+        c.c = 6
+        self.assertEqual(c.c, {6})
+
+        ref = (
+            r"(?m)Failed casting %s\s+to SetOf\(PositiveInt\)\s+"
+            r"Error: Expected positive int, but received %s"
+        )
+        with self.assertRaisesRegex(ValueError, ref % (6.5, 6.5)):
+            c.c = 6.5
+        with self.assertRaisesRegex(ValueError, ref % (r"\[0\]", "0")):
+            c.c = [0]
+        c.c = [3, 6, 9]
+        self.assertEqual(c.c, {3, 6, 9})
 
     def test_Module(self):
         c = ConfigDict()
@@ -1503,16 +1586,11 @@ bar:
         )
 
     def test_display_nondata_type(self):
-        class NOOP:
-            def __getattr__(self, attr):
-                def noop(*args, **kwargs):
-                    pass
-
-                return noop
-
         cfg = ConfigDict()
         cfg.declare('callback', ConfigValue(default=NOOP))
-        self.assertEqual(_display(cfg), "callback: <class 'type'>\n")
+        self.assertEqual(
+            _display(cfg), "callback: <class 'pyomo.common.tests.test_config.NOOP'>\n"
+        )
 
     def test_display_userdata_declare_block(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
@@ -3079,17 +3157,11 @@ c: 1.0
         self.assertEqual(mod_copy._description, "new description")
         self.assertEqual(mod_copy._visibility, 0)
 
-    def test_template_nondata(self):
-        class NOOP:
-            def __getattr__(self, attr):
-                def noop(*args, **kwargs):
-                    pass
-
-                return noop
-
         cfg = ConfigDict()
         cfg.declare('callback', ConfigValue(default=NOOP, description="docstr"))
-        self._validateTemplate(cfg, "callback: <class 'type'>  # docstr\n")
+        self._validateTemplate(
+            cfg, "callback: <class 'pyomo.common.tests.test_config.NOOP'>  # docstr\n"
+        )
 
     def test_pickle(self):
         def anon_domain(domain):
@@ -3439,11 +3511,7 @@ option_2: int, default=5
         cfg = CustomConfig()
         OUT = StringIO()
         cfg.display(ostream=OUT)
-        # Note: pypy outputs "None" as "null"
-        self.assertEqual(
-            "time_limit: None\nstream_solver: None\n",
-            OUT.getvalue().replace('null', 'None'),
-        )
+        self.assertEqual("time_limit: null\nstream_solver: null\n", OUT.getvalue())
 
         # Test that creating a copy of a ConfigDict with declared fields
         # in the __init__ does not result in duplicate outputs in the
@@ -3451,10 +3519,7 @@ option_2: int, default=5
         cfg2 = cfg({'time_limit': 10, 'stream_solver': 0})
         OUT = StringIO()
         cfg2.display(ostream=OUT)
-        self.assertEqual(
-            "time_limit: 10.0\nstream_solver: false\n",
-            OUT.getvalue().replace('null', 'None'),
-        )
+        self.assertEqual("time_limit: 10.0\nstream_solver: false\n", OUT.getvalue())
 
     def test_domain_name(self):
         cfg = ConfigDict()
@@ -3833,6 +3898,38 @@ dict1:
         self.assertEqual(dkfc._ensure_blank_line(""), "")
         self.assertEqual(dkfc._ensure_blank_line("a"), "a\n\n")
         self.assertEqual(dkfc._ensure_blank_line("b\n"), "b\n\n")
+
+    def test_value2str(self):
+        def d(val, obj=NOTSET):
+            return _value2string("", val, obj)
+
+        self.assertEqual("", d(None))
+        self.assertEqual("true", d(True))
+        self.assertEqual("<class 'int'>", d(int))
+        self.assertEqual("<class 'pyomo.common.config.ConfigDict'>", d(ConfigDict))
+        self.assertEqual("1", d(1))
+        self.assertEqual("a", d('a'))
+        self.assertEqual("'1'", d('1'))
+        cv = ConfigValue(None)
+        self.assertEqual("null", d(cv, cv))
+
+        orig = _config._dump, sys.modules.get('yaml', None)
+        try:
+            sys.modules['yaml'] = sys.modules[__name__]
+            _config._dump = _config._get_dump()
+            self.assertEqual("", d(None))
+            self.assertEqual("true", d(True))
+            self.assertEqual("<class 'int'>", d(int))
+            self.assertEqual("<class 'pyomo.common.config.ConfigDict'>", d(ConfigDict))
+            self.assertEqual("1", d(1))
+            self.assertEqual("a", d('a'))
+            self.assertEqual("'1'", d('1'))
+            cv = ConfigValue(None)
+            self.assertEqual("null", d(cv, cv))
+        finally:
+            _config._dump, sys.modules['yaml'] = orig
+            if sys.modules['yaml'] is None:
+                del sys.modules['yaml']
 
 
 if __name__ == "__main__":
