@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.dependencies import attempt_import
 
@@ -120,8 +118,9 @@ def _finalize_docplex(module, available):
     _time_point_dispatchers[_END_TIME] = module.end_of
 
 
-cp, docplex_available = attempt_import('docplex.cp.model', callback=_finalize_docplex)
-cp_solver, docplex_available = attempt_import('docplex.cp.solver')
+cp, _cp_model = attempt_import('docplex.cp.model', callback=_finalize_docplex)
+cp_solver, _cp_solver = attempt_import('docplex.cp.solver')
+docplex_available = _cp_model & _cp_solver
 
 logger = logging.getLogger('pyomo.contrib.cp')
 
@@ -1307,7 +1306,7 @@ class CPOptimizerSolver:
         pass
 
     def available(self, exception_flag=True):
-        return Executable('cpoptimizer').available() and docplex_available
+        return Executable('cpoptimizer') and bool(docplex_available)
 
     def license_is_valid(self):
         if CPOptimizerSolver._unrestricted_license is None:
