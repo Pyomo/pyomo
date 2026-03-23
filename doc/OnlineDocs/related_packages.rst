@@ -1,8 +1,11 @@
 Related Packages
 ================
 
-The following is list of software packages that utilize or build off
-of Pyomo. This is certainly not a comprehensive list. [#f1]_
+The following is a list of software packages\ [#f1]_ that utilize or
+build off of Pyomo.  This is certainly not a comprehensive list.  Please
+reach out to the Pyomo developers if you would like your project added
+here.
+
 
 Modeling Extensions
 -------------------
@@ -56,10 +59,13 @@ Domain-Specific Applications
 |  Prescient               | https://github.com/grid-parity-exchange/prescient       |  Production Cost Model for power systems    |
 |                          |                                                         |  simulation and analysis                    |
 +--------------------------+---------------------------------------------------------+---------------------------------------------+
-|  PyPSA                   | https://github.com/pypsa/pypsa                          |  Python for Power system Analysis           |
+|  PrOMMiS                 | https://github.com/prommis/prommis                      |  Process Optimization and Modeling for      |
+|                          |                                                         |  Minerals Sustainability                    |
 +--------------------------+---------------------------------------------------------+---------------------------------------------+
-
+|  WaterTAP                | https://github.com/watertap-org/watertap                |  Water treatment process modeling           |
++--------------------------+---------------------------------------------------------+---------------------------------------------+
 
 .. rubric:: Footnotes
 
-.. [#f1] Please note that the Pyomo team does not evaluate or endorse the packages listed above.
+.. [#f1] Please note that the Pyomo team does not evaluate nor
+         necessarily endorse the listed packages.

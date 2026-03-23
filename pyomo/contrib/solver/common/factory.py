@@ -1,18 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 
-from pyomo.opt.base.solvers import LegacySolverFactory
+from typing import TYPE_CHECKING
+
 from pyomo.common.factory import Factory
 from pyomo.contrib.solver.common.base import LegacySolverWrapper
+from pyomo.opt.base.solvers import LegacySolverFactory
 
 
 class SolverFactoryClass(Factory):
@@ -106,6 +106,12 @@ class SolverFactoryClass(Factory):
             return cls
 
         return decorator
+
+    if TYPE_CHECKING:
+        from pyomo.contrib.solver.common.base import SolverBase
+
+        # NOTE: `Factory.__call__` can return None, but for the common case
+        def __call__(self, name, **kwds) -> SolverBase: ...
 
 
 #: Global registry/factory for "v2" solver interfaces.

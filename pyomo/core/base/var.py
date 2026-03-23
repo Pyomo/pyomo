@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from __future__ import annotations
 import logging
@@ -576,13 +574,13 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     _ComponentDataClass = VarData
 
     @overload
-    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
-
-    @overload
     def __new__(cls: Type[ScalarVar], *args, **kwargs) -> ScalarVar: ...
 
     @overload
     def __new__(cls: Type[IndexedVar], *args, **kwargs) -> IndexedVar: ...
+
+    @overload
+    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
 
     def __new__(cls, *args, **kwargs):
         if cls is not Var:
@@ -844,7 +842,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             headers.append(('Units', str(self._units)))
         return (
             headers,
-            self._data.items(),
+            self.items,
             ("Lower", "Value", "Upper", "Fixed", "Stale", "Domain"),
             lambda k, v: [
                 value(v.lb),

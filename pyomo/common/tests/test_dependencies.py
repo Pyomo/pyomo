@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import inspect
 import sys
@@ -90,12 +88,12 @@ class TestDependencies(unittest.TestCase):
 
     def test_import_success(self):
         module_obj, module_available = attempt_import(
-            'ply', 'Testing import of ply', defer_import=False
+            'pyomo.tpl.ply', 'Testing import of ply', defer_import=False
         )
         self.assertTrue(module_available)
-        import ply
+        import pyomo.tpl.ply
 
-        self.assertTrue(module_obj is ply)
+        self.assertTrue(module_obj is pyomo.tpl.ply)
 
     def test_local_deferred_import(self):
         self.assertIs(type(deps.bogus_available), DeferredImportIndicator)
@@ -185,7 +183,7 @@ class TestDependencies(unittest.TestCase):
         packaging_available, "min_version tests require packaging module"
     )
     def test_and_or(self):
-        mod0, avail0 = attempt_import('ply', defer_import=True)
+        mod0, avail0 = attempt_import('pyomo.tpl.ply', defer_import=True)
         mod1, avail1 = attempt_import('pyomo.common.tests.dep_mod', defer_import=True)
         mod2, avail2 = attempt_import(
             'pyomo.common.tests.dep_mod', minimum_version='2.0', defer_import=True
@@ -247,7 +245,9 @@ class TestDependencies(unittest.TestCase):
         def _record_avail(module, avail):
             ans.append(avail)
 
-        mod0, avail0 = attempt_import('ply', defer_import=True, callback=_record_avail)
+        mod0, avail0 = attempt_import(
+            'pyomo.tpl.ply', defer_import=True, callback=_record_avail
+        )
         mod1, avail1 = attempt_import(
             'pyomo.common.tests.dep_mod',
             minimum_version='2.0',

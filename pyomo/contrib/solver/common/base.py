@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from typing import Sequence, Dict, Optional, Mapping, List, Tuple
 import os
@@ -321,22 +319,6 @@ class PersistentSolverBase(SolverBase):
             f"Derived class {self.__class__.__name__} failed to implement required method 'set_objective'."
         )
 
-    def add_variables(self, variables: List[VarData]):
-        """
-        Add variables to the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'add_variables'."
-        )
-
-    def add_parameters(self, params: List[ParamData]):
-        """
-        Add parameters to the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'add_parameters'."
-        )
-
     def add_constraints(self, cons: List[ConstraintData]):
         """
         Add constraints to the model.
@@ -351,22 +333,6 @@ class PersistentSolverBase(SolverBase):
         """
         raise NotImplementedError(
             f"Derived class {self.__class__.__name__} failed to implement required method 'add_block'."
-        )
-
-    def remove_variables(self, variables: List[VarData]):
-        """
-        Remove variables from the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_variables'."
-        )
-
-    def remove_parameters(self, params: List[ParamData]):
-        """
-        Remove parameters from the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_parameters'."
         )
 
     def remove_constraints(self, cons: List[ConstraintData]):

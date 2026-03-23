@@ -1,19 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import sys
 from weakref import ref as weakref_ref
 import gc
 import math
+from typing import TypeVar
 
 from pyomo.common import timing
 from pyomo.common.collections import Bunch
@@ -572,6 +571,10 @@ class ModelSolutions:
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
 
+# NOTE: Python 3.11+ use `typing.Self`
+ModelType = TypeVar("ModelType", bound="Model")
+
+
 @ModelComponentFactory.register(
     'Model objects can be used as a component of other models.'
 )
@@ -583,9 +586,9 @@ class Model(ScalarBlock):
 
     _Block_reserved_words = set()
 
-    def __new__(cls, *args, **kwds):
+    def __new__(cls: type[ModelType], *args, **kwds) -> ModelType:
         if cls != Model:
-            return super(Model, cls).__new__(cls)
+            return super(Model, cls).__new__(cls)  # type: ignore
 
         raise TypeError(
             "Directly creating the 'Model' class is not allowed.  Please use the "

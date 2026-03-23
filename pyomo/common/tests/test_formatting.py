@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 from collections import namedtuple
 from io import StringIO
 
@@ -96,8 +94,8 @@ Key      : s                : val
         data = {(2,): (["a", 1], 1), (1, 3): ({1: 'a', 2: '2'}, '2')}
         tabular_writer(os, "", data.items(), [], lambda k, v: v)
         ref = u"""
-{1: 'a', 2: '2'} : 2
         ['a', 1] : 1
+{1: 'a', 2: '2'} : 2
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
 

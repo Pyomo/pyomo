@@ -1,19 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import re
 import sys
 import time
 import logging
 import shlex
+from typing import overload
 
 from pyomo.common import Factory
 from pyomo.common.enums import SolverAPIVersion
@@ -143,6 +142,11 @@ The original solver was created with the following parameters:
 
 
 class SolverFactoryClass(Factory):
+    @overload
+    def __call__(self, _name: None = None, **kwds) -> "SolverFactoryClass": ...
+    @overload
+    def __call__(self, _name, **kwds) -> "OptSolver": ...
+
     def __call__(self, _name=None, **kwds):
         if _name is None:
             return self
