@@ -3,11 +3,13 @@ from enum import Enum
 from pyomo.contrib.initialization.utils import get_vars, shallow_clone
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.initialization.pwl_init import _initialize_with_piecewise_linear_approximation
+from pyomo.contrib.initialization.lp_approx_init import _initialize_with_LP_approximation
 from pyomo.contrib.solver.common.base import SolverBase
 
 
 class InitializationMethod(Enum):
     pwl_approximation = "pwl_approximation"
+    lp_approximation = "lp_approximation"
 
 
 def initialize_nlp(
@@ -32,13 +34,19 @@ def initialize_nlp(
 
     # run the initialization
     if method == InitializationMethod.pwl_approximation:
-        _initialize_with_piecewise_linear_approximation(
+        res = _initialize_with_piecewise_linear_approximation(
             nlp=nlp,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             default_bound=default_bound,
             max_iter=max_pwl_refinement_iter,
             num_cons_to_refine_per_iter=num_pwl_cons_to_refine_per_iter,
+        )
+    elif method == InitializationMethod.lp_approximation:
+        res = _initialize_with_LP_approximation(
+            nlp=nlp,
+            lp_solver=mip_solver,
+            nlp_solver=nlp_solver,
         )
     else:
         raise ValueError(f'unexpected initialization method: {method}')    
@@ -53,3 +61,5 @@ def initialize_nlp(
             assert v.fixed
         else:
             v.unfix()
+
+    return res

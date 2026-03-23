@@ -180,7 +180,7 @@ class _PWLRefinementVisitor(StreamBasedExpressionVisitor):
         setattr(self.m.auxiliary._pyomo_contrib_nonlinear_to_pwl, fname, new_func)
         new_expr = new_func(*variables)
         for v, val in zip(variables, var_values):
-            v.value = val
+            v.set_value(val, skip_validation=True)
         self.named_expr_map[node] = new_expr
         self.substitution[child] = new_expr.expr
         return False, new_expr.expr
@@ -197,7 +197,20 @@ def _refine_pwl_approx(
     violations = []
     for expr in pwl_expr_to_con_map.keys():
         func = expr.pw_linear_function
-        var_vals = tuple(i.value for i in expr.args)
+        var_vals = []
+        for v in expr.args:
+            if math.isclose(v.lb, v.ub, rel_tol=1e-6, abs_tol=1e-6):
+                val = 0.5 * (v.lb + v.ub)
+            elif v.value is None:
+                val = None
+            else:
+                val = v.value
+                if val <= v.lb + 1e-6 + 1e-6 * abs(v.lb):
+                    val += 1e-5
+                if val >= v.ub - 1e-6 - 1e-6 * abs(v.ub):
+                    val -= 1e-5
+            var_vals.append(val)
+        # var_vals = tuple(i.value for i in expr.args)
         # for v, val in zip(expr.args, var_vals):
         #     print(f'{str(v):<20}{val:<20.5f}{v.lb:<20.5f}{v.ub:<20.5f}{id(v):<20}')
         if any(i is None for i in var_vals):
@@ -278,6 +291,7 @@ def _initialize_with_piecewise_linear_approximation(
     """
     pwl_expr_to_con_map = _get_pwl_constraints(pwl)
     solved = False
+    last_nlp_res = None
     for _iter in range(max_iter):
         logger.info(f'PWL initialization: iter {_iter}')
 
@@ -292,12 +306,12 @@ def _initialize_with_piecewise_linear_approximation(
         logger.info('applied the disaggregated logarithmic transformation')
 
         # solve the MILP
-        res = mip_solver.solve(_pwl, load_solutions=True)
+        res = mip_solver.solve(_pwl, load_solutions=True, raise_exception_on_nonoptimal_result=False)
         logger.info(f'solved MILP: {res.solution_status}, {res.termination_condition}')
 
         #load the variable values back into orig_vars
         for ov, nv in zip(orig_vars, new_vars):
-            ov.value = nv.value
+            ov.set_value(nv.value, skip_validation=True)
 
         # refine the PWL approximation
         _refine_pwl_approx(
@@ -308,7 +322,8 @@ def _initialize_with_piecewise_linear_approximation(
         logger.info('refined PWL approximation')
 
         # try solving the NLP
-        res = nlp_solver.solve(nlp, tee=True, load_solutions=False, raise_exception_on_nonoptimal_result=False)
+        res = nlp_solver.solve(nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False)
+        last_nlp_res = res
         logger.info(f'solved NLP: {res.solution_status}, {res.termination_condition}')
         if res.incumbent_objective is not None:
             solved = True
@@ -317,3 +332,5 @@ def _initialize_with_piecewise_linear_approximation(
 
     if not solved:
         raise RuntimeError('no feasible solution found')
+
+    return last_nlp_res
