@@ -1,19 +1,19 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import io
+import re
 
 import pyomo.environ as pyo
 from pyomo.common import unittest
 from pyomo.common.collections import ComponentMap
+from pyomo.common.errors import MouseTrap
 from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.solver.solvers.asl_sol_reader import (
     ASLSolFileSolutionLoader,
@@ -575,3 +575,90 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         self.assertEqual(m.y[1].value, None)
         self.assertEqual(m.y[2].value, None)
         self.assertEqual(m.y[3].value, None)
+
+    def test_suffixes(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x == 1)
+        m.obj = pyo.Objective(expr=m.x)
+        m.test_var_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_con_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
+
+        sol_data = ASLSolFileData()
+        sol_data.var_suffixes = {'test_var_suffix': {0: 1.1}}
+        sol_data.con_suffixes = {'test_con_suffix': {0: 2.2}}
+        sol_data.obj_suffixes = {'test_obj_suffix': {0: 3.3}}
+        sol_data.problem_suffixes = {'test_problem_suffix': 4.4}
+
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
+        loader.load_import_suffixes()
+
+        self.assertEqual(
+            ComponentMap(m.test_var_suffix.items()), ComponentMap([(m.x, 1.1)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_con_suffix.items()), ComponentMap([(m.c, 2.2)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_obj_suffix.items()), ComponentMap([(m.obj, 3.3)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_problem_suffix.items()), ComponentMap([(None, 4.4)])
+        )
+
+    def test_suffixes_scaling_error(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x == 1)
+        m.obj = pyo.Objective(expr=m.x)
+        m.test_var_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_con_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
+        nl_info.scaling = ScalingFactors([2], [3], [4])
+
+        sol_data = ASLSolFileData()
+        sol_data.var_suffixes = {'test_var_suffix': {0: 1.1}}
+        sol_data.con_suffixes = {'test_con_suffix': {0: 2.2}}
+        sol_data.obj_suffixes = {'test_obj_suffix': {0: 3.3}}
+        sol_data.problem_suffixes = {'test_problem_suffix': 4.4}
+
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
+
+        pattern = re.compile(r".*General suffixes .*Turn scaling off.*", re.DOTALL)
+        with self.assertRaisesRegex(MouseTrap, pattern):
+            loader.load_import_suffixes()
+
+    def test_suffixes_eliminated_vars_error(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x == 1)
+        m.obj = pyo.Objective(expr=m.x)
+        m.test_var_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_con_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
+        nl_info.eliminated_vars = [(m.y, 2 * m.x)]
+
+        sol_data = ASLSolFileData()
+        sol_data.var_suffixes = {'test_var_suffix': {0: 1.1}}
+        sol_data.con_suffixes = {'test_con_suffix': {0: 2.2}}
+        sol_data.obj_suffixes = {'test_obj_suffix': {0: 3.3}}
+        sol_data.problem_suffixes = {'test_problem_suffix': 4.4}
+
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
+
+        pattern = re.compile(
+            r".*Suffixes are not available.* Turn presolve off.*", re.DOTALL
+        )
+        with self.assertRaisesRegex(MouseTrap, pattern):
+            loader.load_import_suffixes()

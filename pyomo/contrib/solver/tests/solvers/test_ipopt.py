@@ -1,25 +1,20 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import datetime
 import os
 import stat
 import subprocess
 import sys
-import time
-import threading
 from contextlib import contextmanager
 
 import pyomo.environ as pyo
-from pyomo.common.envvar import is_windows
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict, ADVANCED_OPTION
 from pyomo.common.errors import ApplicationError, MouseTrap
@@ -55,6 +50,7 @@ def windows_tee_buffer(size=1 << 20):
         tee._pipe_buffersize = old
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptSolverConfig(unittest.TestCase):
     def test_default_instantiation(self):
         config = ipopt.IpoptConfig()
@@ -89,6 +85,7 @@ class TestIpoptSolverConfig(unittest.TestCase):
         self.assertFalse(config.executable.available())
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
         loader = ipopt.IpoptSolutionLoader(
@@ -107,6 +104,7 @@ class TestIpoptSolutionLoader(unittest.TestCase):
             loader.get_duals()
 
 
+@unittest.pytest.mark.solver("ipopt")
 class TestIpoptInterface(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_command_line_options(self):
@@ -1879,6 +1877,7 @@ else:
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.pytest.mark.solver("ipopt")
 class TestIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
@@ -1975,7 +1974,7 @@ class TestIpopt(unittest.TestCase):
         ipopt_instance = ipopt.Ipopt()
         results = ipopt_instance.solve(model)
         timing_info = results.timing_info
-        if ipopt_instance.version()[0:1] <= (3, 13):
+        if ipopt_instance.version()[:2] <= (3, 13):
             # We are running an older version of IPOPT (<= 3.13)
             self.assertIn('IPOPT (w/o function evaluations)', timing_info.keys())
             self.assertIn('NLP function evaluations', timing_info.keys())
@@ -2093,6 +2092,7 @@ class TestIpopt(unittest.TestCase):
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.pytest.mark.solver("ipopt")
 class TestLegacyIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
