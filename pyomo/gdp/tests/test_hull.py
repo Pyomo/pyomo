@@ -2897,6 +2897,7 @@ class DomainRestrictionTest(unittest.TestCase):
         self.assertEqual(m_pts[m.disjunction][m.a], 0)
         self.assertEqual(m_pts[m.disjunction][m.x], 0)
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_simple_case(self):
         m = models.makeTwoTermDisj()
         m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
@@ -2916,6 +2917,7 @@ class DomainRestrictionTest(unittest.TestCase):
         ):
             self.assertEqual(str(c1.expr), str(c2.expr))
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_handle_fixed_disagg(self):
         m = models.makeTwoTermDisj()
         m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
@@ -2924,6 +2926,7 @@ class DomainRestrictionTest(unittest.TestCase):
         hull.apply_to(m, assume_fixed_vars_permanent=False)
         self.assertIn(m.x, hull.get_well_defined_points_map(m)[m.disjunction])
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_handle_fixed_no_disagg(self):
         m = models.makeTwoTermDisj()
         m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
@@ -2940,6 +2943,7 @@ class DomainRestrictionTest(unittest.TestCase):
             0.0 * m.d[0].binary_indicator_var,
         )
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_no_good_point(self):
         m = models.makeTwoTermDisj()
         m.d[0].nonlinear = Constraint(expr=log(-((m.x) ** 2) - 1) >= 0)
@@ -2950,6 +2954,7 @@ class DomainRestrictionTest(unittest.TestCase):
             m,
         )
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_various_nonlinear(self):
         m = models.makeTwoTermDisj()
         m.y = Var(bounds=(-5, 5))

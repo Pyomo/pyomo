@@ -53,6 +53,7 @@ from pyomo.gdp.util import (
     is_child_of,
     _warn_for_active_disjunct,
 )
+from pyomo.gdp.plugins.multiple_bigm import Solver
 from pyomo.core.util import target_list
 from pyomo.core.expr.visitor import (
     IdentifyVariableVisitor,
@@ -255,6 +256,18 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         """,
         ),
     )
+    CONFIG.declare(
+        'well_defined_points_heuristic_solver',
+        cfg.ConfigValue(
+            default='gurobi_direct_minlp',
+            domain=Solver,
+            description="Solver used for the base points heuristic",
+            doc="""
+        Solver used for the base points heuristic. This must be a
+        nonlinear solver in general.
+        """,
+        ),
+    )
     transformation_name = 'hull'
 
     def __init__(self):
@@ -450,7 +463,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     # Use gurobi_direct_minlp for the heuristic for now. It needs to be
     # a nonlinear solver.
     def _solve_for_first_feasible_solution(self, test_model):
-        results = SolverFactory("gurobi_direct_minlp").solve(
+        results = self._config.well_defined_points_heuristic_solver.solve(
             test_model, load_solutions=False
         )
         if results.solver.termination_condition is TerminationCondition.infeasible:
@@ -1312,7 +1325,7 @@ EPS = 1e-4
 
 
 def _handlePowExpression(node):
-    (base, exp) = node.args
+    base, exp = node.args
     # if base is not variable, nothing for us to do
     if base.__class__ in EXPR.native_types or not base.is_potentially_variable():
         return ()
