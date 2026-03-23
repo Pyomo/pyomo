@@ -150,7 +150,7 @@ class Test(unittest.TestCase):
         self.assertTrue(re.search('Pyomo Model Transformations', OUT))
         self.assertTrue(re.search('core.relax_integer_vars', OUT))
         # test a transformation that we know is deprecated
-        self.assertTrue(re.search(r'duality.linear_dual\s+\[DEPRECATED\]', OUT))
+        self.assertTrue(re.search(r'gdp.chull\s+\[DEPRECATED\]', OUT))
 
     def test_downloader(self):
         _orig = DownloadFactory._cls
