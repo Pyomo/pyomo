@@ -239,7 +239,7 @@ class HighsSolutionLoader(PersistentSolutionLoader):
         if self._solver._solver_model.getSolution().value_valid:
             return 1
         return 0
-    
+
     def get_solution_ids(self):
         self._assert_solution_still_valid()
         if self._solver._solver_model.getSolution().value_valid:
