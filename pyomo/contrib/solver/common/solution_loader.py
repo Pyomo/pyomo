@@ -35,12 +35,14 @@ def load_import_suffixes(
         elif suffix.local_name == 'rc':
             rc_suffix = suffix
     if dual_suffix is not None:
+        dual_suffix.clear()
         duals = solution_loader.get_duals(solution_id=solution_id)
         if duals is NotImplemented:
             logger.warning(f'Cannot load duals into suffix')
         else:
             dual_suffix.update(duals)
     if rc_suffix is not None:
+        rc_suffix.clear()
         rc = solution_loader.get_reduced_costs(solution_id=solution_id)
         if rc is NotImplemented:
             logger.warning(f'cannot load duals into suffix')
