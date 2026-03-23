@@ -140,7 +140,7 @@ def _handle_param(node, data, opt, visitor):
         return node.value
     if not opt.is_persistent():
         return node.value
-    if not node.mutable:
+    if node.is_constant():
         return node.value
     if id(node) not in opt._pyomo_param_to_solver_param_map:
         scip_param = opt._add_param(node)
