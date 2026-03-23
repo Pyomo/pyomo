@@ -47,7 +47,7 @@ from pyomo.core.util import target_list
 from pyomo.contrib.piecewise import PiecewiseLinearExpression, PiecewiseLinearFunction
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
-from pyomo.repn.quadratic import QuadraticRepnVisitor
+from pyomo.repn.quadratic import QuadraticRepnVisitor, QuadraticRepn
 from pyomo.repn.util import ExprType, OrderedVarRecorder
 
 
@@ -660,7 +660,7 @@ class NonlinearToPWL(Transformation):
                 return ExprType.QUADRATIC, True
         return ExprType.GENERAL, True
 
-    def _separate_linear_parts(self, repn):
+    def _separate_linear_parts(self, repn: QuadraticRepn, visitor: QuadraticRepnVisitor):
         """
         The idea here is to ensure that linear parts of constraints
         always get separated from the nonlinear parts, even if
@@ -676,27 +676,16 @@ class NonlinearToPWL(Transformation):
 
         0 >= PWL(exp(x) + x**3 - y)
         """
+        assert repn.multiplier == 1
         var_map = self._quadratic_repn_visitor.var_map
-        linear = 0
-        nonlinear = 0
-        if repn.nonlinear is not None:
-            nonlinear += repn.nonlinear
-        if repn.quadratic:
-            for (x1, x2), coef in repn.quadratic.items():
-                if repn.multiplier_flag(coef):
-                    if x1 == x2:
-                        nonlinear += coef * var_map[x1] ** 2
-                    else:
-                        nonlinear += coef * (var_map[x1] * var_map[x2])
-        if repn.linear:
-            for vid, coef in repn.linear.items():
-                if repn.multiplier_flag(coef):
-                    linear += coef * var_map[vid]
-        if repn.constant_flag(repn.constant):
-            linear += repn.constant
-        if repn.multiplier_flag(repn.multiplier) != 1:
-            linear *= repn.multiplier
-            nonlinear *= repn.multiplier
+        linear_repn = QuadraticRepn()
+        linear_repn.constant = repn.constant
+        linear_repn.linear = repn.linear
+        linear = linear_repn.to_expression(visitor)
+        nonlinear_repn = QuadraticRepn()
+        nonlinear_repn.quadratic = repn.quadratic
+        nonlinear_repn.nonlinear = repn.nonlinear
+        nonlinear = nonlinear_repn.to_expression(visitor)
 
         return linear, nonlinear
 
@@ -710,17 +699,15 @@ class NonlinearToPWL(Transformation):
         if not needs_approximating:
             return None, expr_type
 
-        linear_part, nonlinear_part = self._separate_linear_parts(repn)
+        linear_part, nonlinear_part = self._separate_linear_parts(repn, self._quadratic_repn_visitor)
 
         # Additively decompose expr and work on the pieces
         pwl_summands = [linear_part]
-        for k, subexpr in enumerate(
-            _additively_decompose_expr(
-                nonlinear_part, config.min_dimension_to_additively_decompose
-            )
-            if config.additively_decompose
-            else (nonlinear_part,)
-        ):
+        if config.additively_decompose:
+            subexpr_list = _additively_decompose_expr(nonlinear_part, config.min_dimension_to_additively_decompose)
+        else:
+            subexpr_list = [nonlinear_part]
+        for k, subexpr in enumerate(subexpr_list):
             # First check if this is a good idea
             expr_vars = list(identify_variables(subexpr, include_fixed=False))
             orig_values = ComponentMap((v, v.value) for v in expr_vars)
