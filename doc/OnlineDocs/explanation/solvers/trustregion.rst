@@ -85,7 +85,7 @@ Globalization Strategies
 The TRF solver supports two globalization strategies to control step acceptance
 and trust region updates: the **filter** method (default) and the **funnel** method.
 The strategy is selected via the ``globalization_strategy`` keyword argument
-(``0`` for filter, ``1`` for funnel).
+(``'filter'`` for filter, ``'funnel'`` for funnel).
 
 **Filter Method (default)**
 
@@ -210,14 +210,14 @@ Step 3 (alternative): Solve with TRF (Funnel)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To use the funnel globalization strategy instead of the filter, set
-``globalization_strategy=1``. The funnel-specific parameters can also be
+``globalization_strategy='funnel'``. The funnel-specific parameters can also be
 customized as needed:
 
 .. doctest::
    :skipif: not ipopt_available
 
    >>> # === Instantiate the TRF solver object with funnel strategy ===
-   >>> trf_solver = pyo.SolverFactory('trustregion', globalization_strategy=1)
+   >>> trf_solver = pyo.SolverFactory('trustregion', globalization_strategy='funnel')
    >>> # === Solve with TRF using the funnel globalization strategy ===
    >>> result = trf_solver.solve(model, [model.z[0], model.z[1], model.z[2]])
    EXIT: Optimal solution found.
@@ -231,7 +231,7 @@ The funnel parameters can also be customized at solve time:
    >>> result = trf_solver.solve(
    ...     model,
    ...     [model.z[0], model.z[1], model.z[2]],
-   ...     globalization_strategy=1,
+   ...     globalization_strategy='funnel',
    ...     funnel_param_kappa_f=0.3,
    ...     funnel_param_eta=1e-4,
    ... )

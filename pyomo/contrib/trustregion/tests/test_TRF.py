@@ -108,7 +108,9 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.maximum_feasibility, 50.0)
         self.assertEqual(CONFIG.param_filter_gamma_theta, 0.01)
         self.assertEqual(CONFIG.param_filter_gamma_f, 0.01)
-        self.assertEqual(CONFIG.globalization_strategy, 0)  # 0 -> default - filter
+        self.assertEqual(
+            CONFIG.globalization_strategy, 'filter'
+        )  # 0 -> default - filter
         self.assertEqual(CONFIG.funnel_param_phi_min, 1e-8)
         self.assertEqual(CONFIG.funnel_param_kappa_f, 0.25)
         self.assertEqual(CONFIG.funnel_param_kappa_r, 1.05)
@@ -119,7 +121,7 @@ class TestTrustRegionConfig(unittest.TestCase):
 
     def test_funnel_globalization(self):
         self.TRF = SolverFactory(
-            'trustregion', globalization_strategy=1
+            'trustregion', globalization_strategy='funnel'
         )  # Set Funnel strategy
 
         log_OUTPUT = StringIO()
@@ -136,7 +138,7 @@ class TestTrustRegionConfig(unittest.TestCase):
 
     def test_filter_globalization(self):
         self.TRF = SolverFactory(
-            'trustregion', globalization_strategy=0
+            'trustregion', globalization_strategy='filter'
         )  # Set Filter strategy (default)
 
         log_OUTPUT = StringIO()
@@ -308,7 +310,7 @@ class TestTrustRegionMethod(unittest.TestCase):
     def test_funnel_step_rejection(self):
         """Test Funnel globalization strategy with a problem that invokes step rejection."""
         self.TRF = SolverFactory(
-            'trustregion', globalization_strategy=1  # Funnel strategy
+            'trustregion', globalization_strategy='funnel'  # Funnel strategy
         )
 
         # Run the solver

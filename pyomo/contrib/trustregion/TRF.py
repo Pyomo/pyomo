@@ -80,7 +80,7 @@ def trust_region_method(model, decision_variables, ext_fcn_surrogate_map_rule, c
     trust_radius = config.trust_radius
 
     # Initialising funnel method
-    use_funnel_globalization_strategy = config.globalization_strategy == 1
+    use_funnel_globalization_strategy = config.globalization_strategy == 'funnel'
     if use_funnel_globalization_strategy:
         funnel = Funnel(
             phi_init=feasibility_k,
@@ -469,11 +469,11 @@ def _trf_config():
     CONFIG.declare(
         'globalization_strategy',
         ConfigValue(
-            default=0,
-            domain=In([0, 1]),
+            default='filter',
+            domain=In(['filter', 'funnel']),
             description="Globalization strategy selection. "
-            "``0`` = Filter (default), ``1`` = Funnel. "
-            "Default = 0.",
+            "``'filter'`` = Filter method (default), ``'funnel'`` = Funnel method. "
+            "Default = ``'filter'``.",
         ),
     )
 
