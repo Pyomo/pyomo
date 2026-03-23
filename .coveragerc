@@ -3,6 +3,7 @@ omit =
     setup.py
     */tests/*
     */tmp/*
+    pyomo/tpl/**
 
 # The [run] section must be at the end, as the build harness will add a
 # "data_file" directive to the end of this file.

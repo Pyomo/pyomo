@@ -1,20 +1,17 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from abc import abstractmethod
 from collections.abc import Mapping, Sequence
 import datetime
 import time
 from io import StringIO
-from typing import Optional
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import ApplicationError, DeveloperError, PyomoException
@@ -56,7 +53,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
     _engine: Engine
     _model_data: KnitroModelData
     _stream: StringIO
-    _saved_var_values: dict[int, Optional[float]]
+    _saved_var_values: dict[int, float | None]
 
     def __init__(self, **kwds) -> None:
         PackageChecker.__init__(self)
@@ -79,10 +76,10 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         self._presolve(model, config, timer)
         self._validate_problem()
 
-        self._stream = StringIO()
         if config.restore_variable_values_after_solve:
             self._save_var_values()
 
+        self._stream = StringIO()
         with capture_output(TeeStream(self._stream, *config.tee), capture_fd=True):
             self._solve(config, timer)
 
@@ -133,14 +130,13 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         raise NotImplementedError
 
     def _postsolve(self, config: KnitroConfig, timer: HierarchicalTimer) -> Results:
-        status = self._engine.get_status()
         results = Results()
         results.solver_name = self.name
         results.solver_version = self.version()
         results.solver_log = self._stream.getvalue()
         results.solver_config = config
-        results.solution_status = self._get_solution_status(status)
-        results.termination_condition = self._get_termination_condition(status)
+        results.solution_status = self._engine.get_solution_status()
+        results.termination_condition = self._engine.get_termination_condition()
         results.incumbent_objective = self._engine.get_obj_value()
 
         if self._is_mip():
@@ -182,10 +178,10 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         self,
         item_type: type[ItemType],
         value_type: ValueType,
-        items: Optional[Sequence[ItemType]] = None,
+        items: Sequence[ItemType] | None = None,
         *,
         exists: bool,
-        solution_id: Optional[int] = None,
+        solution_id: int | None = None,
     ) -> Mapping[ItemType, float]:
         error_type = self._get_error_type(item_type, value_type)
         if not exists:
@@ -212,48 +208,6 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             ConstraintData: self._model_data.cons,
         }
         return maps[item_type]
-
-    @staticmethod
-    def _get_solution_status(status: int) -> SolutionStatus:
-        """
-        Map KNITRO status codes to Pyomo SolutionStatus values.
-
-        See https://www.artelys.com/app/docs/knitro/3_referenceManual/returnCodes.html
-        """
-        if status in {0, -100}:
-            return SolutionStatus.optimal
-        elif -101 >= status >= -199 or -400 >= status >= -409:
-            return SolutionStatus.feasible
-        elif status in {-200, -204, -205, -206}:
-            return SolutionStatus.infeasible
-        else:
-            return SolutionStatus.noSolution
-
-    @staticmethod
-    def _get_termination_condition(status: int) -> TerminationCondition:
-        """
-        Map KNITRO status codes to Pyomo TerminationCondition values.
-
-        See https://www.artelys.com/app/docs/knitro/3_referenceManual/returnCodes.html
-        """
-        if status in {0, -100}:
-            return TerminationCondition.convergenceCriteriaSatisfied
-        elif status == -202:
-            return TerminationCondition.locallyInfeasible
-        elif status in {-200, -204, -205}:
-            return TerminationCondition.provenInfeasible
-        elif status in {-300, -301}:
-            return TerminationCondition.infeasibleOrUnbounded
-        elif status in {-400, -410}:
-            return TerminationCondition.iterationLimit
-        elif status in {-401, -411}:
-            return TerminationCondition.maxTimeLimit
-        elif status == -500:
-            return TerminationCondition.interrupted
-        elif -500 > status >= -599:
-            return TerminationCondition.error
-        else:
-            return TerminationCondition.unknown
 
     @staticmethod
     def _get_error_type(

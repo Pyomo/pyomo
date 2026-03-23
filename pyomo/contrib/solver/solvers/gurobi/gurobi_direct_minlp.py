@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 
 import datetime
@@ -584,8 +582,8 @@ class GurobiDirectMINLPSolutionLoader(GurobiDirectSolutionLoaderBase):
         self._var_map = var_map
         self._con_map = con_map
 
-    def _var_pair_iter(self):
-        return self._var_map.items()
+    def _get_var_lists(self):
+        return list(self._var_map.keys()), list(self._var_map.values())
 
     def _get_var_map(self):
         return self._var_map

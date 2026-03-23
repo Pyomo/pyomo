@@ -31,7 +31,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v251017.0
+  CACHE_VER: v260304.0
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: |
@@ -75,13 +75,16 @@ jobs:
         verbose: true
         # How many times to retry a failed request (defaults to 1)
         retry_count: 3
+        # The timeout seconds to provide to requests, defaults to 5 seconds
+        timeout: 60
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures
         exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
         # Exclude:
         #  - All gnu.org links because they consistently fail the checker
-        exclude_patterns: https://www.gnu.org
+        #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
+        exclude_patterns: https://www.gnu.org,https://lpsolve.sourceforge.net/
 
 
   build:
@@ -236,13 +239,18 @@ jobs:
     - name: Configure curl
       run: |
         CURLRC="$(cat <<EOF
-           retry = 0
-           max-time = 30
+           retry = 8
+           max-time = 150
+           location
         EOF
         )"
-        echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
-        echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
-        echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "$CURLRC" | sed -r 's/^ +//' > ${GITHUB_WORKSPACE}/.curlrc
+        echo "$CURLRC" | sed -r 's/^ +//' > ${GITHUB_WORKSPACE}/_curlrc
+        if test "${{matrix.TARGET}}" == win; then
+            echo "CURL_HOME=$GITHUB_WORKSPACE" | sed 's|/|\\|g' >> $GITHUB_ENV
+        else
+            echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        fi
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
@@ -267,6 +275,7 @@ jobs:
         # Notes:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
+        sudo apt-get update ca-certificates
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils \
             libginac-dev
@@ -346,7 +355,7 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            python -m pip install --cache-dir cache/pip cplex docplex \
+            python -m pip install --cache-dir cache/pip 'cplex!=22.1.2.1' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
@@ -426,7 +435,7 @@ jobs:
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
             # release on that platform.
-            if [[ ${{matrix.TARGET}} == win && ${{matrix.python}} =~ 3.1[01] ]]; then
+            if [[ "${{matrix.TARGET}}" == win && ${{matrix.python}} =~ 3.1[01] ]]; then
                 # We would like to just use something like:
                 #  - "!=9.5.1" (conda errors)
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
@@ -533,61 +542,73 @@ jobs:
         echo "$IPOPT_DIR" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
-        NEW_PYOMO_PATH="$IPOPT_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
-        mkdir -p $IPOPT_DIR
+        echo "PYOMO_PATH=$IPOPT_DIR:$PYOMO_PATH" >> $GITHUB_ENV
+        mkdir -p "$IPOPT_DIR"
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
             URL=https://github.com/IDAES/idaes-ext
-            RELEASE=$(curl --max-time 150 --retry 8 \
-                -L -s -H 'Accept: application/json' ${URL}/releases/latest)
+            RELEASE=$(curl -s -H 'Accept: application/json' ${URL}/releases/latest)
             VER=$(echo $RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
+            if test -z "$VER"; then
+                echo "FAILED identifying IPOPT release"
+                exit 1
+            fi
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
-                curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz \
-                    -o $IPOPT_TAR
+                curl $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz > "$IPOPT_TAR"
             elif test "${{matrix.TARGET}}" == osx; then
-                curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-darwin-aarch64.tar.gz \
-                    -o $IPOPT_TAR
+                curl $URL/idaes-solvers-darwin-aarch64.tar.gz > "$IPOPT_TAR"
             else
-                curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-windows-x86_64.tar.gz \
-                    $URL/idaes-lib-windows-x86_64.tar.gz > $IPOPT_TAR
+                # Note: use stdout redirection instead of -o because the
+                # shell can handle mixed "/" and "\", but curl cannot.
+                curl $URL/idaes-solvers-windows-x86_64.tar.gz > "$IPOPT_TAR"
             fi
         fi
-        cd $IPOPT_DIR
+        cd "$IPOPT_DIR"
         if test "${{matrix.TARGET}}" == win; then
-            tar -xzi < $IPOPT_TAR
+            # tar on Windows apparently can't open "drive:\path" file names
+            tar -xzi < "$IPOPT_TAR"
         else
-            tar -xzf $IPOPT_TAR
+            tar -xzf "$IPOPT_TAR"
         fi
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
+        $IPOPT_DIR/ipopt -v
 
     - name: Install GAMS
-      if: ${{ ! matrix.slim }}
-      # We install using Powershell because the GAMS installer hangs
-      # when launched from bash on Windows
+      if: ${{ ! matrix.slim && matrix.TARGET != 'osx' }}
+      # - We install using Powershell because the GAMS installer hangs
+      #   when launched from bash on Windows
+      # - We no longer install on OSX because GAMS no longer distributes
+      #   self extracting ZIP for OSX and the package is difficult [for JDS]
+      #   to install in GHA
       shell: pwsh
       run: |
         $GAMS_DIR = "${env:TPL_DIR}/gams"
         echo "$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        echo "LD_LIBRARY_PATH=${env:LD_LIBRARY_PATH}:$GAMS_DIR" `
+        echo "LD_LIBRARY_PATH=${env:LD_LIBRARY_PATH}:$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
+        echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" | `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        # Note: we put GAMS_DIR at the *end* of PYOMO_PATH so explicitly
+        #    installed solvers will be found first.
+        echo "PYOMO_PATH=${env:PYOMO_PATH}:$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
         # Demo licenses are included for 5mo from the newest release
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/latest"
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/52.5.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
-            $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            $osxarch = (uname -m).Trim()
+            if ( "$osxarch" -eq "arm64" ) {
+                $URL = "$URL/macosx/osx_arm64_sfx.exe"
+            } else {
+                $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            }
         } else {
             $URL = "$URL/linux/linux_x64_64_sfx.exe"
         }
@@ -615,15 +636,26 @@ jobs:
       if: ${{ ! matrix.slim }}
       run: |
         GAMS_DIR="$TPL_DIR/gams"
-        NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
-        py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
-            ;print(v if v != "_27" else "")')
-        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
-            echo "Installing GAMS Python bindings"
-            pushd $GAMS_DIR/apifiles/Python/api$py_ver
-            $PYTHON_EXE setup.py install
+        pyver=$($PYTHON_EXE -c 'import sys; print("%s%s" % sys.version_info[:2])')
+        WHL=$(find "$GAMS_DIR/api/python/bdist" -name "*cp$pyver*.whl")
+        TRY_PYPI=0
+        set +e
+        if test -n "$WHL"; then
+            # Starting in 51.2.1 < GAMS <= 53.1, GAMS bundles wheels
+            echo "Installing GAMS Python bindings from wheel"
+            $PYTHON_EXE -m pip install "$WHL" || TRY_PYPI=1
+        elif test -e "$GAMS_DIR/apifiles/Python/api_$pyver"; then
+            echo "Installing GAMS Python bindings using setup.py"
+            pushd "$GAMS_DIR/apifiles/Python/api_$pyver"
+            $PYTHON_EXE setup.py install || TRY_PYPI=1
             popd
+        else
+            TRY_PYPI=1
+        fi
+        if test $TRY_PYPI -ne 0; then
+            echo "Installing GAMS Python bindings from PyPI"
+            # Note: we are seeing segfaults with 53.1 under pytest on GHA/linux
+            $PYTHON_EXE -m pip install 'gamsapi!=53.1' gamspy-highs gamspy-ipopt
         fi
 
     - name: Install BARON
@@ -633,16 +665,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $CURRENT_PYOMO_PATH="${env:PYOMO_PATH}"
-        # Prepend BARON_DIR with appropriate path separator
-        if ( "${{matrix.TARGET}}" -eq "win" ) {
-            $PATH_SEPARATOR = ";"
-        } else {
-            $PATH_SEPARATOR = ":"
-        }
-        $NEW_PYOMO_PATH = "$BARON_DIR$PATH_SEPARATOR$CURRENT_PYOMO_PATH"
-        echo "New PYOMO_PATH: $NEW_PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" | `
+        echo "PYOMO_PATH=${BARON_DIR}:${env:PYOMO_PATH}" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $URL = "https://minlp-downloads.nyc3.cdn.digitaloceanspaces.com/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -678,17 +701,20 @@ jobs:
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "${GJH_DIR}" >> $GITHUB_PATH
-        NEW_PYOMO_PATH="$GJH_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
+        echo "PYOMO_PATH=$GJH_DIR:$PYOMO_PATH" >> $GITHUB_ENV
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir -p "$INSTALL_DIR"
             INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
             URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
-            curl --max-time 150 --retry 8 -L $URL > $INSTALLER
+            curl $URL > $INSTALLER
             cd $INSTALL_DIR
             unzip -q $INSTALLER
             cd gjh_asl_json-master/Thirdparty
+            # Patch get.ASL to use curl
+            URL="http://www.ampl.com/netlib/ampl/solvers.tgz"
+            sed -i "s|wget |curl -o solvers.tgz |" get.ASL
+            cat get.ASL
             ./get.ASL
             cd ..
             make
@@ -748,7 +774,13 @@ jobs:
         echo ""
         echo "Pyomo download-extensions"
         echo ""
-        pyomo download-extensions || exit 1
+        #
+        # [26 Feb 26] For unknown reasons, SSL verification has stopped
+        # working on GHA (even though everything is fine when run
+        # locally).  Giving up and just turning off SSL verification.
+        # Someone should revisit this in the future.
+        #
+        pyomo download-extensions --retry 3 --retry-sleep 60 --insecure || exit 1
         echo ""
         echo "Pyomo build-extensions"
         echo ""
