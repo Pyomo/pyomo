@@ -23,7 +23,12 @@ from pyomo.contrib.pynumero.dependencies import (
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+from scipy.sparse import coo_matrix
+
+from pyomo.contrib.pynumero.interfaces.external_grey_box import (
+    ExternalGreyBoxBlock,
+    ExternalGreyBoxModel,
+)
 from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
     ExternalGreyBoxConstraint,
 )
@@ -464,7 +469,7 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
                 h = pyomo_nlp.evaluate_hessian_lag()
 
 
-class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
+class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
     """Tests for integration of ExternalGreyBoxBlock with incidence analysis"""
 
     def build_model(self):
@@ -509,24 +514,22 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         # Check that the get_incident_variables method on the implicit constraint body returns the correct variables
         # Implicit constraint: 'pdrop1'
         body_obj1 = m.egb.pdrop1.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
-        assert len(incident_vars1) == 5
+        incident_vars1 = body_obj1.get_incident_variables()
+        assert len(incident_vars1) == 4
         expected_names = [
             'egb.inputs[Pin]',
             'egb.inputs[c]',
             'egb.inputs[F]',
             'egb.inputs[P1]',
-            'egb.inputs[P3]',
         ]
         for v in incident_vars1:
             assert v.name in expected_names
 
         # Implicit constraint: 'pdrop3'
         body_obj1 = m.egb.pdrop3.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
-        assert len(incident_vars1) == 5
+        incident_vars1 = body_obj1.get_incident_variables()
+        assert len(incident_vars1) == 4
         expected_names = [
-            'egb.inputs[Pin]',
             'egb.inputs[c]',
             'egb.inputs[F]',
             'egb.inputs[P1]',
@@ -537,14 +540,12 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
 
         # Implicit constraint: 'P2_constraint'
         body_obj1 = m.egb.P2_constraint.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
-        assert len(incident_vars1) == 6
+        incident_vars1 = body_obj1.get_incident_variables()
+        assert len(incident_vars1) == 4
         expected_names = [
-            'egb.inputs[Pin]',
             'egb.inputs[c]',
             'egb.inputs[F]',
             'egb.inputs[P1]',
-            'egb.inputs[P3]',
             'egb.outputs[P2]',
         ]
         for v in incident_vars1:
@@ -552,14 +553,12 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
 
         # Implicit constraint: 'Pout_constraint'
         body_obj1 = m.egb.Pout_constraint.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
-        assert len(incident_vars1) == 6
+        incident_vars1 = body_obj1.get_incident_variables()
+        assert len(incident_vars1) == 4
         expected_names = [
             'egb.inputs[Pin]',
             'egb.inputs[c]',
             'egb.inputs[F]',
-            'egb.inputs[P1]',
-            'egb.inputs[P3]',
             'egb.outputs[Pout]',
         ]
         for v in incident_vars1:
@@ -580,12 +579,11 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
 
         assert len(var_dm_partition.underconstrained) == 4
         assert len(var_dm_partition.unmatched) == 3
-        var_names = [
-            v.name
-            for v in var_dm_partition.underconstrained + var_dm_partition.unmatched
-        ]
-        for v in var_names:
-            assert v in [
+
+        for v in var_dm_partition.underconstrained:
+            # output variables should be in the under-constrained set
+            # The other two variables should be drawn from the inputs, but we cannot guarantee which ones
+            assert v.name in [
                 'egb.inputs[Pin]',
                 'egb.inputs[c]',
                 'egb.inputs[F]',
@@ -593,6 +591,18 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
                 'egb.inputs[P3]',
                 'egb.outputs[P2]',
                 'egb.outputs[Pout]',
+            ]
+
+        for v in var_dm_partition.unmatched:
+            # Unmatched set will have the remaining 3 input variables, but again we cannot guarantee which ones
+            # We will instead check that the name is one of the inputs and that it is not in the under-constrained set
+            assert v.name not in [u.name for u in var_dm_partition.underconstrained]
+            assert v.name in [
+                'egb.inputs[Pin]',
+                'egb.inputs[c]',
+                'egb.inputs[F]',
+                'egb.inputs[P1]',
+                'egb.inputs[P3]',
             ]
 
         assert len(con_dm_partition.underconstrained) == 4
@@ -730,6 +740,106 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
                 'link_P2',
                 'link_Pout',
             ]
+
+
+class MyGreyBox(ExternalGreyBoxModel):
+    def n_inputs(self):
+        return 4
+
+    def input_names(self):
+        return [f"x[{i}]" for i in range(1, self.n_inputs() + 1)]
+
+    def n_equality_constraints(self):
+        return 3
+
+    def equality_constraint_names(self):
+        return [f"eq[{i}]" for i in range(1, self.n_equality_constraints() + 1)]
+
+    def set_input_values(self, input_values):
+        if len(input_values) != self.n_inputs():
+            raise ValueError(
+                f"Expected {self.n_inputs()} inputs, got {len(input_values)}."
+            )
+        self._inputs = np.asarray(input_values, dtype=float)
+
+    def evaluate_equality_constraints(self):
+        x1, x2, x3, x4 = self._inputs
+        return np.array(
+            [x2 * x3**1.5 * x4 - 5.0, x1 - x2 + x4 - 4.0, x1 * np.exp(-x3) - 1.0],
+            dtype=float,
+        )
+
+    def evaluate_jacobian_equality_constraints(self):
+        x1, x2, x3, x4 = self._inputs
+
+        # Rows correspond to eq[1], eq[2], eq[3]
+        # Cols correspond to x[1], x[2], x[3], x[4]
+        rows = np.array([0, 0, 0, 1, 1, 1, 2, 2], dtype=int)
+        cols = np.array([1, 2, 3, 0, 1, 3, 0, 2], dtype=int)
+        data = np.array(
+            [
+                x3**1.5 * x4,  # d(eq1)/d(x2)
+                1.5 * x2 * x3**0.5 * x4,  # d(eq1)/d(x3)
+                x2 * x3**1.5,  # d(eq1)/d(x4)
+                1.0,  # d(eq2)/d(x1)
+                -1.0,  # d(eq2)/d(x2)
+                1.0,  # d(eq2)/d(x4)
+                np.exp(-x3),  # d(eq3)/d(x1)
+                -x1 * np.exp(-x3),  # d(eq3)/d(x3)
+            ],
+            dtype=float,
+        )
+        return coo_matrix(
+            (data, (rows, cols)), shape=(self.n_equality_constraints(), self.n_inputs())
+        )
+
+    def finalize_block_construction(self, block):
+        self._inputs = np.full(self.n_inputs(), 1.0, dtype=float)
+        for v in block.inputs.values():
+            v.set_value(1.0)
+
+
+def test_with_custom_input_names():
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([1, 2, 3, 4], bounds=(0.0, None), initialize=1.0)
+    m.objective = pyo.Objective(
+        expr=m.x[1] ** 2 + 2 * m.x[2] ** 2 + 3 * m.x[3] ** 2 + 4 * m.x[4] ** 2
+    )
+    m.grey_box = ExternalGreyBoxBlock()
+    m.grey_box.set_external_model(
+        MyGreyBox(),
+        inputs=[m.x[i] for i in range(1, 5)],
+        build_implicit_constraint_objects=True,
+    )
+
+    igraph = IncidenceGraphInterface(m)
+    matching = igraph.maximum_matching()
+
+    # Minimal check on results, as we really only want to make sure the code runs
+    # when given custom input names
+    assert len(matching) == 3
+
+
+def test_custom_input_and_output_names():
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([1, 2, 3, 4, 5], bounds=(0.0, None), initialize=1.0)
+    m.y = pyo.Var([1, 2], bounds=(0.0, None), initialize=1.0)
+
+    m.egb = ExternalGreyBoxBlock()
+    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian()
+    m.egb.set_external_model(
+        external_model,
+        build_implicit_constraint_objects=True,
+        inputs=[m.x[i] for i in range(1, 6)],
+        outputs=[m.y[i] for i in range(1, 3)],
+    )
+
+    igraph = IncidenceGraphInterface(m)
+    matching = igraph.maximum_matching()
+
+    # Minimal check on results, as we really only want to make sure the code runs
+    # when given custom input names
+    assert len(matching) == 4
 
 
 if __name__ == '__main__':

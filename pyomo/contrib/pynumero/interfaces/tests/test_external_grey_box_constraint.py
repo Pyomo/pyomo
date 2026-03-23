@@ -531,7 +531,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         self.assertIn("invalid_constraint_id", str(context.exception))
 
     def test_get_incident_variables_without_jacobian(self):
-        """Test get_incident_variables returns all input variables when use_jacobian=False."""
+        """Test get_incident_variables returns all input variables."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleEquality()
@@ -540,7 +540,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
 
         body_obj = m.egb.c.body
-        incident_vars = body_obj.get_incident_variables(use_jacobian=False)
+        incident_vars = body_obj.get_incident_variables()
 
         # Should return all 4 input variables
         self.assertEqual(len(incident_vars), 4)
@@ -549,62 +549,6 @@ class TestEGBConstraintBody(unittest.TestCase):
         self.assertEqual(
             actual_names, [f'egb.inputs[{name}]' for name in expected_names]
         )
-
-    def test_get_incident_variables_with_jacobian_all_nonzero(self):
-        """Test get_incident_variables with use_jacobian=True when all Jacobian entries are non-zero."""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        external_model = ex_models.PressureDropSingleEquality()
-        m.egb.set_external_model(external_model)
-
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
-
-        # Set inputs to non-zero values so all Jacobian entries are non-zero
-        external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
-
-        body_obj = m.egb.c.body
-        incident_vars = body_obj.get_incident_variables(use_jacobian=True)
-
-        # Should return all 4 input variables since all Jacobian entries are non-zero
-        self.assertEqual(len(incident_vars), 4)
-        expected_names = ['Pin', 'c', 'F', 'Pout']
-        actual_names = [var.name for var in incident_vars]
-        self.assertEqual(
-            actual_names, [f'egb.inputs[{name}]' for name in expected_names]
-        )
-
-    def test_get_incident_variables_with_jacobian_some_zero(self):
-        """Test get_incident_variables with use_jacobian=True when some Jacobian entries are zero."""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        external_model = ex_models.PressureDropTwoEqualities()
-        m.egb.set_external_model(external_model)
-
-        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop2')
-        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='pdropout')
-
-        # Set F=0 so that derivatives with respect to c and F are zero
-        external_model.set_input_values(
-            np.asarray([100, 2, 0, 90, 80], dtype=np.float64)
-        )
-
-        # For first constraint (pdrop2): P2 - (Pin - 2*c*F^2)
-        # Jacobian: [-1, 0, 0, 1, 0] (only Pin and P2 are non-zero)
-        body_obj1 = m.egb.c1.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=True)
-        self.assertEqual(len(incident_vars1), 2)
-        names1 = [var.name for var in incident_vars1]
-        self.assertIn('egb.inputs[Pin]', names1)
-        self.assertIn('egb.inputs[P2]', names1)
-
-        # For second constraint (pdropout): Pout - (P2 - 2*c*F^2)
-        # Jacobian: [0, 0, 0, -1, 1] (only P2 and Pout are non-zero)
-        body_obj2 = m.egb.c2.body
-        incident_vars2 = body_obj2.get_incident_variables(use_jacobian=True)
-        self.assertEqual(len(incident_vars2), 2)
-        names2 = [var.name for var in incident_vars2]
-        self.assertIn('egb.inputs[P2]', names2)
-        self.assertIn('egb.inputs[Pout]', names2)
 
     def test_get_incident_variables_with_output_constraint(self):
         """Test get_incident_variables for output-based constraints."""
@@ -617,8 +561,7 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         body_obj = m.egb.c.body
 
-        # Test without Jacobian
-        incident_vars = body_obj.get_incident_variables(use_jacobian=False)
+        incident_vars = body_obj.get_incident_variables()
         self.assertEqual(len(incident_vars), 4)
         expected_names = [
             'egb.inputs[Pin]',
@@ -627,43 +570,6 @@ class TestEGBConstraintBody(unittest.TestCase):
             'egb.outputs[Pout]',
         ]
         assert all(var.name in expected_names for var in incident_vars)
-
-        # Test with Jacobian (all non-zero)
-        external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
-        incident_vars = body_obj.get_incident_variables(use_jacobian=True)
-        self.assertEqual(len(incident_vars), 4)
-        assert all(var.name in expected_names for var in incident_vars)
-
-    def test_get_incident_variables_with_custom_tolerance(self):
-        """Test get_incident_variables with custom Jacobian tolerance."""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        external_model = ex_models.PressureDropSingleEquality()
-        m.egb.set_external_model(external_model)
-
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
-
-        # Set inputs so that some Jacobian entries are small but non-zero
-        # With c=0.001 and F=0.001, the derivative w.r.t. c is 4*F^2 = 4e-6
-        external_model.set_input_values(
-            np.asarray([100, 0.001, 0.001, 50], dtype=np.float64)
-        )
-
-        body_obj = m.egb.c.body
-
-        # With default tolerance (1e-8), should include variables with Jacobian entry 4e-6
-        incident_vars_default = body_obj.get_incident_variables(use_jacobian=True)
-        self.assertEqual(len(incident_vars_default), 4)
-
-        # With higher tolerance (1e-5), should exclude variable with Jacobian entry 4e-6
-        incident_vars_high_tol = body_obj.get_incident_variables(
-            use_jacobian=True, jac_tolerance=1e-5
-        )
-        # c and F derivatives should be filtered out
-        self.assertEqual(len(incident_vars_high_tol), 2)
-        names = [var.name for var in incident_vars_high_tol]
-        self.assertIn('egb.inputs[Pin]', names)
-        self.assertIn('egb.inputs[Pout]', names)
 
     def test_get_incident_variables_multiple_outputs(self):
         """Test get_incident_variables for different output constraints in same model."""
@@ -680,8 +586,8 @@ class TestEGBConstraintBody(unittest.TestCase):
         body_obj1 = m.egb.c1.body
         body_obj2 = m.egb.c2.body
 
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=True)
-        incident_vars2 = body_obj2.get_incident_variables(use_jacobian=True)
+        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars2 = body_obj2.get_incident_variables()
 
         self.assertEqual(len(incident_vars1), 4)
         self.assertEqual(len(incident_vars2), 4)
@@ -713,24 +619,22 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Implicit constraint: 'pdrop1'
         body_obj1 = m.egb.pdrop1.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
-        self.assertEqual(len(incident_vars1), 5)
+        incident_vars1 = body_obj1.get_incident_variables()
+        self.assertEqual(len(incident_vars1), 4)
         expected_names = [
             'egb.inputs[Pin]',
             'egb.inputs[c]',
             'egb.inputs[F]',
             'egb.inputs[P1]',
-            'egb.inputs[P3]',
         ]
         for v in incident_vars1:
             self.assertIn(v.name, expected_names)
 
         # Implicit constraint: 'pdrop3'
         body_obj1 = m.egb.pdrop3.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
-        self.assertEqual(len(incident_vars1), 5)
+        incident_vars1 = body_obj1.get_incident_variables()
+        self.assertEqual(len(incident_vars1), 4)
         expected_names = [
-            'egb.inputs[Pin]',
             'egb.inputs[c]',
             'egb.inputs[F]',
             'egb.inputs[P1]',
@@ -741,14 +645,12 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Implicit constraint: 'P2_constraint'
         body_obj1 = m.egb.P2_constraint.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
-        self.assertEqual(len(incident_vars1), 6)
+        incident_vars1 = body_obj1.get_incident_variables()
+        self.assertEqual(len(incident_vars1), 4)
         expected_names = [
-            'egb.inputs[Pin]',
             'egb.inputs[c]',
             'egb.inputs[F]',
             'egb.inputs[P1]',
-            'egb.inputs[P3]',
             'egb.outputs[P2]',
         ]
         for v in incident_vars1:
@@ -756,14 +658,12 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Implicit constraint: 'Pout_constraint'
         body_obj1 = m.egb.Pout_constraint.body
-        incident_vars1 = body_obj1.get_incident_variables(use_jacobian=False)
-        self.assertEqual(len(incident_vars1), 6)
+        incident_vars1 = body_obj1.get_incident_variables()
+        self.assertEqual(len(incident_vars1), 4)
         expected_names = [
-            'egb.inputs[Pin]',
             'egb.inputs[c]',
             'egb.inputs[F]',
-            'egb.inputs[P1]',
-            'egb.inputs[P3]',
+            'egb.inputs[Pin]',
             'egb.outputs[Pout]',
         ]
         for v in incident_vars1:
@@ -803,29 +703,6 @@ class TestEGBConstraintBody(unittest.TestCase):
             self.assertTrue(hasattr(var, 'fixed'))
             self.assertTrue(hasattr(var, 'lb'))
             self.assertTrue(hasattr(var, 'ub'))
-
-    def test_get_incident_variables_with_zero_jacobian_entries(self):
-        """Test get_incident_variables when all Jacobian entries are exactly zero."""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        external_model = ex_models.PressureDropSingleEquality()
-        m.egb.set_external_model(external_model)
-
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
-
-        # Set c=0 and F=0, making derivatives w.r.t. c and F equal to zero
-        external_model.set_input_values(np.asarray([100, 0, 0, 50], dtype=np.float64))
-
-        body_obj = m.egb.c.body
-        incident_vars = body_obj.get_incident_variables(use_jacobian=True)
-
-        # Should only include Pin and Pout (which have Jacobian entries -1 and 1)
-        self.assertEqual(len(incident_vars), 2)
-        names = [var.name for var in incident_vars]
-        self.assertIn('egb.inputs[Pin]', names)
-        self.assertIn('egb.inputs[Pout]', names)
-        self.assertNotIn('egb.inputs[c]', names)
-        self.assertNotIn('egb.inputs[F]', names)
 
 
 class TestExternalGreyBoxConstraintSlack(unittest.TestCase):

@@ -69,6 +69,16 @@ class EGBConstraintBody:
                 f"the external model."
             )
 
+    def get_output_var(self):
+        """
+        If this EGBConstraintBody corresponds to an output variable, return the corresponding Pyomo VarData object.
+        Otherwise, return None.
+        """
+        if self._ext_output_idx is not None:
+            out_var = list(self._parent_model.outputs.values())[self._ext_output_idx]
+            return out_var
+        return None
+
     @property
     def is_numeric_type(self):
         """
@@ -94,21 +104,12 @@ class EGBConstraintBody:
         evaluated_value = self._parent_model.get_external_model().evaluate_outputs()[
             self._ext_output_idx
         ]
-        var_value = value(self._parent_model.outputs[self._implicit_constraint_id])
+        var_value = value(self.get_output_var(), exception=exception)
         return var_value - evaluated_value
 
-    def get_incident_variables(
-        self, use_jacobian=False, jac_tolerance=JAC_ZERO_TOLERANCE
-    ):
+    def get_incident_variables(self):
         """
         Get the variables that are incident on this implicit constraint.
-
-        Parameters
-        ----------
-        use_jacobian : bool, optional
-            If True, only include variables with non-zero Jacobian entries.
-        jac_tolerance : float, optional
-            The tolerance below which Jacobian entries are considered zero.
 
         Returns
         -------
@@ -116,42 +117,43 @@ class EGBConstraintBody:
             List containing the variables that participate in the expression
 
         """
-        # There are two ways incident variables could be defined for an implicit constraint:
+        # There are (at least) three ways incident variables could be defined for an implicit constraint:
         # 1) We consider all inputs to the external model to be incident on the implicit constraint
-        # 2) We consider only the inputs that have a non-zero Jacobian entry for the implicit constraint
+        # 2) We trust the shape of the Jacobian returned by the ExternalGreyBoxModel to contain all elements
+        # that could possibly be non-zero (i.e. incident)
+        # 3) We consider only the inputs that have a non-zero Jacobian entry for the implicit constraint
         # to be incident on the implicit constraint
-        # Both have their uses, so we will support both.
+        # For now, we will go with option 2 as it is the most general.
         ext_model = self._parent_model.get_external_model()
         incident_variables = []
 
-        if self._ext_output_idx is not None:
-            # If this constraint is linked to an output variable, then that variable is also incident on the constraint
-            incident_variables.append(
-                self._parent_model.outputs[self._implicit_constraint_id]
-            )
+        # First, if this implicit constraint corresponds to an output variable, we need to include that output
+        # variable as an incident variable since it is part of the expression for the implicit constraint.
+        out_var = self.get_output_var()
+        if out_var is not None:
+            incident_variables.append(out_var)
 
-        if not use_jacobian:
-            # If we are not using the Jacobian to determine incidence, then all inputs are incident
-            for input_name in ext_model.input_names():
-                incident_variables.append(self._parent_model.inputs[input_name])
-        else:
-            # If we are using the Jacobian to determine incidence, then only include variables with non-zero Jacobian entries
-            # AL: To be even more robust, we could look at the Hessian too to catch cases where the Jacobian is just
-            # passing through zero.
+        # Next, get the Jacobian for the external model
+        try:
             if self._ext_eq_cons_idx is not None:
                 jac = ext_model.evaluate_jacobian_equality_constraints().tocsr()
                 con_idx = self._ext_eq_cons_idx
             else:
                 jac = ext_model.evaluate_jacobian_outputs().tocsr()
                 con_idx = self._ext_output_idx
+        except Exception as e:
+            raise RuntimeError(
+                f"Error evaluating Jacobian for external model when getting incident variables for implicit constraint "
+                f"'{self._implicit_constraint_id}'. Original error message: {str(e)}"
+            ) from e
 
-            for input_name in ext_model.input_names():
-                var_idx = ext_model.input_names().index(input_name)
-
-                jacobian_entry = jac[con_idx, var_idx]
-
-                if abs(jacobian_entry) >= jac_tolerance:
-                    incident_variables.append(self._parent_model.inputs[input_name])
+        # Get all variables with entries for this constraint
+        # We do not check value, as we assume entries indicate potential incident variables,
+        # however they may currently have zero derivative values.
+        var_indices = jac.getrow(con_idx).indices
+        incident_variables.extend(
+            list(self._parent_model.inputs.values())[j] for j in var_indices
+        )
 
         return incident_variables
 
