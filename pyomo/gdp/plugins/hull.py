@@ -554,28 +554,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         generalized_local_vars = ComponentSet()
         for var in var_order:
             disjuncts = disjuncts_var_appears_in[var]
-            # # clearly not local if used in more than one disjunct
-            # if len(disjuncts) > 1:
-            #     if self._generate_debug_messages:
-            #         logger.debug(
-            #             "Assuming '%s' is not a local var since it is"
-            #             "used in multiple disjuncts." % var.name
-            #         )
-            #     for disj in disjuncts:
-            #         vars_to_disaggregate[disj].add(var)
-            #         all_vars_to_disaggregate.add(var)
-            # else:  # var only appears in one disjunct
-            #     disjunct = next(iter(disjuncts))
-            #     # We check if the user declared it as local
-            #     if disjunct in local_vars_by_disjunct:
-            #         if var in local_vars_by_disjunct[disjunct]:
-            #             local_vars[disjunct].add(var)
-            #             all_local_vars.add(var)
-            #             continue
-            #     # It's not declared local to this Disjunct, so we
-            #     # disaggregate
-            #     vars_to_disaggregate[disjunct].add(var)
-            #     all_vars_to_disaggregate.add(var)
             for disj in disjuncts:
                 if disj in local_vars_by_disjunct:
                     if var in local_vars_by_disjunct[disj]:
@@ -831,9 +809,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         self._transform_block_components(
             obj, obj, var_substitute_map, x0_substitute_map
         )
-
-        # NOTE: LocalVars promotion moved from here to caller; ensure
-        # nothing has gone horribly wrong
 
         # deactivate disjunct so writers can be happy
         obj._deactivate_without_fixing_indicator()
@@ -1349,7 +1324,7 @@ def _handlePowExpression(node):
 
     # Note: this is problematic for LP, but I don't want to potentially
     # invoke a MIP solve here, so replace "x is nonzero" with "x is >=
-    # eps"
+    # eps". It's a heuristic so this is not critical.
     if exp.__class__ in EXPR.native_types or not exp.is_potentially_variable():
         val = value(exp)
         if round(val) == val:
