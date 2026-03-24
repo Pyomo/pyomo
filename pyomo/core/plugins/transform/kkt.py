@@ -215,7 +215,7 @@ class NonLinearProgrammingKKT:
 
         kkt_block.lagrangean = Expression(expr=lagrangean)
 
-        # enforce stationarity condtiions
+        # enforce stationarity conditions
         deriv_lagrangean = reverse_sd(kkt_block.lagrangean.expr)
         kkt_block.stationarity_conditions = ConstraintList()
         for var in var_set:
