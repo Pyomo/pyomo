@@ -1,12 +1,11 @@
 import pyomo.environ as pyo
 import pyomo.devel.initialization as ini
 from pyomo.contrib.solver.common.factory import SolverFactory
-import logging
 
 
 def build_model():
     m = pyo.ConcreteModel()
-    m.x = pyo.Var()
+    m.x = pyo.Var(bounds=(-20, 20))
     m.c = pyo.Constraint(expr=(m.x+7)*(m.x+5)*(m.x-4) + 200 == 0)
     return m
 
