@@ -264,7 +264,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             description="Solver used for the base points heuristic",
             doc="""
         Solver used for the base points heuristic. This must be a
-        nonlinear solver in general.
+        nonconvex NLP solver in general. Pass as a solver object
+        supporting the V1 solver API version, or a corresponding string
+        for SolverFactory.
         """,
         ),
     )
