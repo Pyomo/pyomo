@@ -448,8 +448,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     "search process using the `well_defined_points` option."
                 )
         # Found a point
-        if not math.isfinite(value(test_expr)):
-            raise DeveloperError("unreachable")
         x0_map = ComponentMap()
         used_vars = ComponentSet()
         for x in itertools.chain(regular_vars, fallback_vars):
@@ -604,7 +602,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         transBlock.private_data().well_defined_points_map[obj] = x0_map
         # Any var that got an offset cannot be local anymore, but it can
         # still be generalized local
-        # breakpoint()
         for var in offset_vars:
             if var in all_local_vars:
                 var_disjunct = next(iter(disjuncts_var_appears_in[var]))
@@ -705,7 +702,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             else:
                 disaggregatedExpr = 0
             for disjunct in disjuncts_var_appears_in[var]:
-                # breakpoint()
                 disaggregatedExpr += disjunct_disaggregated_var_map[disjunct][var]
 
             cons_idx = len(disaggregationConstraint)
@@ -736,7 +732,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         x0_map,
         offset_vars,
     ):
-        # breakpoint()
         relaxationBlock = self._get_disjunct_transformation_block(obj, transBlock)
 
         # Put the disaggregated variables all on their own block so that we can
