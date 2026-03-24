@@ -1,6 +1,6 @@
 from pyomo.core.base.block import BlockData
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.initialization.utils import get_vars
+from pyomo.devel.initialization.utils import get_vars
 import logging
 
 

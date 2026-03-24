@@ -1,10 +1,11 @@
 from pyomo.core.base.block import BlockData
 import pyomo.environ as pe
-from pyomo.contrib.initialization.bounds.bound_variables import bound_all_nonlinear_variables
-from pyomo.contrib.initialization.utils import fix_vars_with_equal_bounds, shallow_clone, get_vars
+from pyomo.devel.initialization.bounds.bound_variables import bound_all_nonlinear_variables
+from pyomo.devel.initialization.utils import fix_vars_with_equal_bounds, shallow_clone, get_vars
 from pyomo.core.expr.visitor import identify_components
 from pyomo.contrib.piecewise.piecewise_linear_expression import PiecewiseLinearExpression
 from pyomo.contrib.piecewise.piecewise_linear_function import PiecewiseLinearFunction
+from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.common.collections import ComponentMap, ComponentSet
 from typing import MutableMapping, Sequence, List
 from pyomo.core.base.constraint import ConstraintData
@@ -36,7 +37,7 @@ import math
 from pyomo.contrib.solver.common.base import SolverBase
 import logging
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.initialization.pwl_init import _minimize_infeasibility
+from pyomo.devel.initialization.pwl_init import _minimize_infeasibility
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.repn.linear import LinearRepnVisitor, LinearRepn
 from pyomo.core.expr.visitor import identify_variables
@@ -175,7 +176,8 @@ def _initialize_with_LP_approximation(
     # try solving the NLP
     nlp_res = nlp_solver.solve(orig_nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False)
     logger.info(f'solved NLP: {nlp_res.solution_status}, {nlp_res.termination_condition}')
-    if nlp_res.incumbent_objective is not None:
+
+    if nlp_res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
         nlp_res.solution_loader.load_vars()
     else:
         raise RuntimeError('no feasible solution found')
