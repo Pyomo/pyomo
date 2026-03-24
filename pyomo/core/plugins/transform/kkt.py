@@ -23,6 +23,7 @@ from pyomo.core import (
     Set,
     TransformationFactory,
     Var,
+    VarList,
     maximize,
     minimize,
 )
@@ -32,35 +33,15 @@ from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 from pyomo.mpec import ComplementarityList, complements
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.util.config_domains import ComponentDataSet
+from pyomo.core.expr.visitor import identify_variables
 
 
 class _KKTReformulationData(AutoSlots.Mixin):
-    __slots__ = (
-        "equality_multiplier_from_con",
-        "equality_con_from_multiplier",
-        "inequality_multiplier_from_con",
-        "inequality_con_from_multiplier",
-        "var_bound_multiplier_index_to_con",
-        "equality_multiplier_index_to_con",
-        "inequality_multiplier_index_to_con",
-        "equality_con_to_expr",
-        "inequality_con_to_expr",
-        "ranged_constraints",
-    )
+    __slots__ = ("obj_dual_map", "dual_obj_map")
 
     def __init__(self):
-        self.equality_multiplier_from_con = ComponentMap()
-        self.equality_con_from_multiplier = ComponentMap()
-        self.inequality_multiplier_from_con = ComponentMap()
-        self.inequality_con_from_multiplier = ComponentMap()
-
-        self.var_bound_multiplier_index_to_con = {}
-        self.equality_multiplier_index_to_con = {}
-        self.inequality_multiplier_index_to_con = {}
-        self.equality_con_to_expr = ComponentMap()
-        self.inequality_con_to_expr = ComponentMap()
-
-        self.ranged_constraints = ComponentSet()
+        self.obj_dual_map = ComponentMap()
+        self.dual_obj_map = ComponentMap()
 
 
 Block.register_private_data_initializer(_KKTReformulationData)
@@ -108,34 +89,21 @@ class NonLinearProgrammingKKT:
         # we should check that all vars the user fixed are included
         # in parametrize_wrt
         params = config.parametrize_wrt
-        vars_in_cons = ComponentSet(
-            get_vars_from_components(model, Constraint, active=True, descend_into=True)
-        )
-        vars_in_obj = ComponentSet(
-            get_vars_from_components(model, Objective, active=True, descend_into=True)
-        )
-        vars_in_model = vars_in_cons | vars_in_obj
-        fixed_vars_in_model = ComponentSet(v for v in vars_in_model if v.is_fixed())
-        missing = fixed_vars_in_model - params
-        if missing:
-            raise ValueError("All fixed variables must be included in parametrize_wrt.")
-
-        # we should also check that all vars the user passes in parametrize_wrt
-        # exist on an active constraint or objective within the model
-        unknown = params - vars_in_model
-        if unknown:
-            raise ValueError(
-                "A variable passed in parametrize_wrt does not exist on an "
-                "active constraint or objective within the model."
-            )
 
         kkt_block = Block(concrete=True)
         kkt_block.parametrize_wrt = params
-        self._reformulate(model, kkt_block)
+        self._reformulate(model, kkt_block, params)
         model.add_component(config.kkt_block_name, kkt_block)
         return model
 
-    def _reformulate(self, model, kkt_block):
+    def _reformulate(self, model, kkt_block, params):
+        # initialize lagrangean
+        info = model.private_data()
+        lagrangean = 0
+        var_set = ComponentSet()
+        fixed_var_set = ComponentSet()
+
+        # collect the active Objectives
         active_objs = list(
             model.component_data_objects(Objective, active=True, descend_into=True)
         )
@@ -143,163 +111,146 @@ class NonLinearProgrammingKKT:
             raise ValueError(
                 f"model must have only one active objective; found {len(active_objs)}"
             )
+        # collect vars from active objective
+        obj = active_objs[0]
+        for v in identify_variables(obj.expr, include_fixed=True):
+            if v.is_fixed():
+                fixed_var_set.add(v)
+            else:
+                var_set.add(v)
+        # add objective to lagrangean
+        lagrangean += obj.sense * obj.expr
 
-        self._construct_lagrangean(model, kkt_block)
-        self._enforce_stationarity_conditions(kkt_block)
-        self._enforce_complementarity_conditions(model, kkt_block)
+        # list of equality multipliers
+        kkt_block.gamma = VarList()
+        # list of inequality multipliers
+        kkt_block.alpha1 = VarList(domain=NonNegativeReals)
+        kkt_block.alpha2 = VarList(domain=NonNegativeReals)
+        # define inequality complements
+        kkt_block.complements = ComplementarityList()
 
-        active_objs[0].deactivate()
-        kkt_block.dummy_obj = Objective(expr=1)
-
-        return model
-
-    def _construct_lagrangean(self, model, kkt_block):
-        # we need to loop through the model and store the
-        # equality and inequality constraints
-        info = model.private_data()
-        equality_cons = []
-        inequality_cons = []
         for con in model.component_data_objects(
             Constraint, descend_into=True, active=True
         ):
             lower, body, upper = con.to_bounded_expression()
             if con.equality:
-                equality_cons.append(con)
-                info.equality_con_to_expr[con] = upper - body
+                # create multiplier
+                gamma_i = kkt_block.gamma.add()
+                # add expression to lagrangean
+                lagrangean += (upper - body) * gamma_i
+                # create mappings
+                info.obj_dual_map[con] = gamma_i
+                info.dual_obj_map[gamma_i] = con
+                # collect variables in constraint
+                for v in identify_variables(body, include_fixed=True):
+                    if v.is_fixed():
+                        fixed_var_set.add(v)
+                    else:
+                        var_set.add(v)
+                for v in identify_variables(upper, include_fixed=True):
+                    if v.is_fixed():
+                        fixed_var_set.add(v)
+                    else:
+                        var_set.add(v)
+
             else:
+                alpha_l = None
                 if lower is not None:
-                    inequality_cons.append((con, "lb"))
-                    info.inequality_con_to_expr.setdefault(con, {})["lb"] = lower - body
+                    # create multiplier
+                    alpha_l = kkt_block.alpha1.add()
+                    # add expression to lagrangean
+                    con_expr = lower - body
+                    lagrangean += con_expr * alpha_l
+                    # create complement
+                    kkt_block.complements.add(complements(alpha_l >= 0, con_expr <= 0))
+                    # create dual -> con mapping
+                    info.dual_obj_map[alpha_l] = con
+                    # collect variables in constraint
+                    for v in identify_variables(lower, include_fixed=True):
+                        if v.is_fixed():
+                            fixed_var_set.add(v)
+                        else:
+                            var_set.add(v)
+
+                alpha_u = None
                 if upper is not None:
-                    inequality_cons.append((con, "ub"))
-                    info.inequality_con_to_expr.setdefault(con, {})["ub"] = body - upper
+                    # create multiplier
+                    alpha_u = kkt_block.alpha2.add()
+                    # add expression to lagrangean
+                    con_expr = body - upper
+                    lagrangean += con_expr * alpha_u
+                    # create complement
+                    kkt_block.complements.add(complements(alpha_u >= 0, con_expr <= 0))
+                    # create dual -> con mapping
+                    info.dual_obj_map[alpha_u] = con
+                    # collect variables in constraint
+                    for v in identify_variables(upper, include_fixed=True):
+                        if v.is_fixed():
+                            fixed_var_set.add(v)
+                        else:
+                            var_set.add(v)
 
-                    # lower is not None and upper is not None -> ranged constraint
-                    if lower is not None:
-                        # we want to keep track of the ranged constraints because the mapping between
-                        # multipliers and ranged constraints will be a tuple (to indicate bound as well)
-                        # instead of simply the model object
-                        info.ranged_constraints.add(con)
+                # create con -> dual mapping. Will return None if a bound doesn't exist.
+                info.obj_dual_map[con] = (alpha_l, alpha_u)
 
-        kkt_block.equality_cons_list = list(equality_cons)
-        kkt_block.gamma_set = RangeSet(0, len(equality_cons) - 1)
-        kkt_block.gamma = Var(kkt_block.gamma_set, domain=Reals)
-        info.equality_multiplier_index_to_con = dict(
-            enumerate(kkt_block.equality_cons_list)
-        )
-        kkt_block.inequality_cons_list = list(inequality_cons)
-        kkt_block.alpha_con_set = RangeSet(0, len(inequality_cons) - 1)
-        kkt_block.alpha_con = Var(kkt_block.alpha_con_set, domain=NonNegativeReals)
-        info.inequality_multiplier_index_to_con = dict(
-            enumerate(kkt_block.inequality_cons_list)
-        )
+        # do error checking on parametrize_wrt
+        missing = fixed_var_set - params
+        if missing:
+            raise ValueError("All fixed variables must be included in parametrize_wrt.")
 
-        # we also need to consider inequality constraints
-        # formed by the user specifying variable bounds
-        var_bound_sides = []
-        vars_in_cons = ComponentSet(
-            get_vars_from_components(model, Constraint, active=True, descend_into=True)
-        )
-        vars_in_obj = ComponentSet(
-            get_vars_from_components(model, Objective, active=True, descend_into=True)
-        )
-        kkt_block.var_set = vars_in_cons | vars_in_obj
-        kkt_block.var_set = kkt_block.var_set - kkt_block.parametrize_wrt
-        for var in kkt_block.var_set:
+        all_vars_set = fixed_var_set | var_set
+        if not (params <= all_vars_set):
+            raise ValueError(
+                "A variable passed in parametrize_wrt does not exist on an "
+                "active constraint or objective within the model."
+            )
+
+        # loop through variables, add terms to Lagrangean and add mappings
+        var_set = var_set - params
+        for var in var_set:
+            alpha_l = None
             if var.has_lb():
-                var_bound_sides.append((var, "lb"))
+                # create multiplier
+                alpha_l = kkt_block.alpha1.add()
+                # add expression to lagrangean
+                con_expr = var.lb - var
+                lagrangean += con_expr * alpha_l
+                # create complement
+                kkt_block.complements.add(complements(alpha_l >= 0, con_expr <= 0))
+                # create dual -> con mapping
+                info.dual_obj_map[alpha_l] = var
+
+            alpha_u = None
             if var.has_ub():
-                var_bound_sides.append((var, "ub"))
-        kkt_block.var_bound_set = RangeSet(0, len(var_bound_sides) - 1)
-        kkt_block.alpha_var_bound = Var(
-            kkt_block.var_bound_set, domain=NonNegativeReals
-        )
+                # create multiplier
+                alpha_u = kkt_block.alpha2.add()
+                # add expression to lagrangean
+                con_expr = var - var.ub
+                lagrangean += con_expr * alpha_u
+                # create complement
+                kkt_block.complements.add(complements(alpha_u >= 0, con_expr <= 0))
+                # create dual -> con mapping
+                info.dual_obj_map[alpha_u] = var
 
-        info.var_bound_multiplier_index_to_con = dict(enumerate(var_bound_sides))
-
-        # indexing the inequality constraint expressions will help
-        # with constructing the lagrangean later
-        def _var_bound_expr_rule(kkt, i):
-            var, side = info.var_bound_multiplier_index_to_con[i]
-            return (var.lb - var) if side == "lb" else (var - var.ub)
-
-        kkt_block.var_bound_expr = Expression(
-            kkt_block.var_bound_set, rule=_var_bound_expr_rule
-        )
-
-        # we will construct the lagrangean by first adding the objective,
-        # and then looping through and adding the product of each constraint and
-        # the corresponding multiplier
-        obj = list(
-            model.component_data_objects(Objective, active=True, descend_into=True)
-        )
-        # Note: maximize is -1 and minimize is +1
-        lagrangean = obj[0].sense * obj[0].expr
-
-        for index, con in enumerate(kkt_block.equality_cons_list):
-            lagrangean += info.equality_con_to_expr[con] * kkt_block.gamma[index]
-            info.equality_con_from_multiplier[kkt_block.gamma[index]] = con
-            info.equality_multiplier_from_con[con] = kkt_block.gamma[index]
-
-        for index, (con, bound) in enumerate(kkt_block.inequality_cons_list):
-            lagrangean += (
-                info.inequality_con_to_expr[con][bound] * kkt_block.alpha_con[index]
-            )
-            # mappings for ranged constraints will consider bounds as well
-            if con in info.ranged_constraints:
-                info.inequality_con_from_multiplier[kkt_block.alpha_con[index]] = (
-                    con,
-                    bound,
-                )
-                info.inequality_multiplier_from_con[(con, bound)] = kkt_block.alpha_con[
-                    index
-                ]
-            else:
-                info.inequality_con_from_multiplier[kkt_block.alpha_con[index]] = con
-                info.inequality_multiplier_from_con[con] = kkt_block.alpha_con[index]
-
-        for i in kkt_block.var_bound_set:
-            lagrangean += kkt_block.var_bound_expr[i] * kkt_block.alpha_var_bound[i]
-            # mappings for ranged constraints built from variable bounds
-            var, bound = info.var_bound_multiplier_index_to_con[i]
-            info.inequality_con_from_multiplier[kkt_block.alpha_var_bound[i]] = (
-                var,
-                bound,
-            )
-            info.inequality_multiplier_from_con[(var, bound)] = (
-                kkt_block.alpha_var_bound[i]
-            )
+            # create var -> dual mapping. Will return None if a var bound doesn't exist.
+            info.obj_dual_map[var] = (alpha_l, alpha_u)
 
         kkt_block.lagrangean = Expression(expr=lagrangean)
 
-    def _enforce_stationarity_conditions(self, kkt_block):
+        # enforce stationarity condtiions
         deriv_lagrangean = reverse_sd(kkt_block.lagrangean.expr)
         kkt_block.stationarity_conditions = ConstraintList()
-        for var in kkt_block.var_set:
+        for var in var_set:
             kkt_block.stationarity_conditions.add(deriv_lagrangean[var] == 0)
 
-    def _enforce_complementarity_conditions(self, model, kkt_block):
-        info = model.private_data()
-        kkt_block.complements = ComplementarityList()
-        for index, (con, bound) in enumerate(kkt_block.inequality_cons_list):
-            kkt_block.complements.add(
-                complements(
-                    kkt_block.alpha_con[index] >= 0,
-                    info.inequality_con_to_expr[con][bound] <= 0,
-                )
-            )
-        # we also need to consider the inequality constraints
-        # formed from the user specifying the variable bounds
-        for i in kkt_block.var_bound_set:
-            kkt_block.complements.add(
-                complements(
-                    kkt_block.alpha_var_bound[i] >= 0, kkt_block.var_bound_expr[i] <= 0
-                )
-            )
+        active_objs[0].deactivate()
+        kkt_block.dummy_obj = Objective(expr=1)
 
-    def get_constraint_from_multiplier(self, model, multiplier_var):
+    def get_object_from_multiplier(self, model, multiplier_var):
         """
-        Return the constraint or variable bound corresponding to a KKT multiplier variable.
+        Return the constraint corresponding to a KKT multiplier variable. If the
+        multiplier corresponds to an inequality formed by a variable bound, the variable
+        is returned.
 
         Parameters
         ----------
@@ -310,26 +261,24 @@ class NonLinearProgrammingKKT:
 
         Returns
         -------
-        Constraint or Tuple
-            - Constraint object for simple constraints
-            - (Constraint, bound) tuple for ranged constraints
-            - (Var, bound) tuple for variable bounds
+        Object
+            - Constraint object
+            - Variable
         """
 
         info = model.private_data()
-        if multiplier_var in info.equality_con_from_multiplier:
-            return info.equality_con_from_multiplier[multiplier_var]
-        if multiplier_var in info.inequality_con_from_multiplier:
-            # if this multiplier var maps to a ranged constraint, we will return a tuple
-            # so that we can indicate which bound the multiplier var maps to
-            return info.inequality_con_from_multiplier[multiplier_var]
-        raise ValueError(
-            f"The KKT multiplier: {multiplier_var.name}, does not exist on {model.name}."
-        )
+        if multiplier_var in info.dual_obj_map:
+            return info.dual_obj_map[multiplier_var]
+        else:
+            raise ValueError(
+                f"The KKT multiplier: {multiplier_var.name}, does not exist on {model.name}."
+            )
 
-    def get_multiplier_from_constraint(self, model, component):
+    def get_multiplier_from_object(self, model, component):
         """
-        Return the multiplier for the constraint.
+        Return the multiplier for the object. If the object is a normal constraint, a single
+        multiplier is returned. If the object is a ranged constraint or a variable, a tuple
+        containing the lower and upper bound multipliers is returned.
 
         Parameters
         ----------
@@ -342,33 +291,13 @@ class NonLinearProgrammingKKT:
         VarData | tuple[VarData | None, VarData | None]
             The KKT multiplier(s) corresponding to the component.
             For ranged constraints/variables, returns (lb_mult, ub_mult),
-            where an entry is None if that bound doesn't exist.
+            where an entry is 'None' if that bound doesn't exist.
         """
+
         info = model.private_data()
-        if isinstance(component, ConstraintData):
-            con = component
-            if con in info.equality_multiplier_from_con:
-                return info.equality_multiplier_from_con[con]
-            elif con in info.inequality_multiplier_from_con:
-                return info.inequality_multiplier_from_con[con]
-            elif con in info.ranged_constraints:
-                lb_mult = info.inequality_multiplier_from_con.get((con, 'lb'))
-                ub_mult = info.inequality_multiplier_from_con.get((con, 'ub'))
-                return (lb_mult, ub_mult)
-            else:
-                raise ValueError(
-                    f"Constraint '{con.name}' does not exist on {model.name}."
-                )
-        elif isinstance(component, VarData):
-            var = component
-            lb_mult = info.inequality_multiplier_from_con.get((var, 'lb'))
-            ub_mult = info.inequality_multiplier_from_con.get((var, 'ub'))
-            if lb_mult is None and ub_mult is None:
-                raise ValueError(
-                    f"No multipliers exist for variable '{var.name}' on {model.name}."
-                )
-            return (lb_mult, ub_mult)
+        if component in info.obj_dual_map:
+            return info.obj_dual_map[component]
         else:
             raise ValueError(
-                f"Component '{component.name}' does not exist on {model.name}."
+                f"The component '{component.name}' either does not exist on '{model.name}', or is not associated with a multiplier."
             )
