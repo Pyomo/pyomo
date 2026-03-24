@@ -43,7 +43,6 @@ from pyomo.core.expr.compare import (
 )
 
 
-@unittest.skipUnless(scipy_available, "Scipy not available")
 class TestKKT(unittest.TestCase):
     def check_primal_kkt_transformation_solns(self, m, m_reform):
         kkt = TransformationFactory('core.kkt')
@@ -60,20 +59,35 @@ class TestKKT(unittest.TestCase):
             results.solver.termination_condition, TerminationCondition.optimal
         )
 
-        for cons in [
-            (m.c1, m_reform.c1),
-            (m.c2, m_reform.c2),
-            (m.c3, m_reform.c3),
-            (m.c4, m_reform.c4),
-        ]:
-            primal_con, kkt_reform_con = cons
-            self.assertAlmostEqual(
-                value(
-                    abs(kkt.get_multiplier_from_constraint(m_reform, kkt_reform_con))
-                ),
-                value(abs(m.dual[primal_con])),
-                delta=1e-6,
-            )
+        # equality constraint
+        self.assertAlmostEqual(
+            value(abs(kkt.get_multiplier_from_object(m_reform, m_reform.c2))),
+            value(abs(m.dual[m.c2])),
+            delta=1e-6,
+        )
+
+        # inequality constraints
+        lower_bound_mult, upper_bound_mult = kkt.get_multiplier_from_object(
+            m_reform, m_reform.c1
+        )
+        self.assertIsNone(lower_bound_mult)
+        self.assertAlmostEqual(
+            value(abs(upper_bound_mult)), value(abs(m.dual[m.c1])), delta=1e-6
+        )
+        lower_bound_mult, upper_bound_mult = kkt.get_multiplier_from_object(
+            m_reform, m_reform.c3
+        )
+        self.assertAlmostEqual(
+            value(abs(lower_bound_mult)), value(abs(m.dual[m.c3])), delta=1e-6
+        )
+        self.assertIsNone(upper_bound_mult)
+        lower_bound_mult, upper_bound_mult = kkt.get_multiplier_from_object(
+            m_reform, m_reform.c4
+        )
+        self.assertIsNone(lower_bound_mult)
+        self.assertAlmostEqual(
+            value(abs(upper_bound_mult)), value(abs(m.dual[m.c4])), delta=1e-6
+        )
 
         for v in [(m.x, m_reform.x), (m.y, m_reform.y)]:
             primal_var, kkt_reform_var = v
@@ -108,50 +122,73 @@ class TestKKT(unittest.TestCase):
         m.obj = Objective(
             expr=(m.x - 3) ** 2 + (m.y - 2) ** 2 + (m.z - 1) ** 2, sense=minimize
         )
+        # upper bounded constraint
         m.c1 = Constraint(expr=m.x**2 + m.y**2 <= 9)
+        # equality constraint
         m.c2 = Constraint(expr=m.x + m.y + m.z == 5)
+        # lower bounded constraint
         m.c3 = Constraint(expr=m.z >= 1)
+        # upper bounded constraint
         m.c4 = Constraint(expr=2 * m.x - m.y <= 4)
 
         kkt = TransformationFactory('core.kkt')
         kkt.apply_to(m)
 
-        gamma0 = kkt.get_multiplier_from_constraint(m, m.c2)
-        alpha_con0 = kkt.get_multiplier_from_constraint(m, m.c1)
-        alpha_con1 = kkt.get_multiplier_from_constraint(m, m.c3)
-        alpha_con2 = kkt.get_multiplier_from_constraint(m, m.c4)
+        # equality constraint
+        gamma0 = kkt.get_multiplier_from_object(m, m.c2)
 
-        self.assertIs(kkt.get_constraint_from_multiplier(m, gamma0), m.c2)
-        self.assertIs(kkt.get_constraint_from_multiplier(m, alpha_con0), m.c1)
-        self.assertIs(kkt.get_constraint_from_multiplier(m, alpha_con1), m.c3)
-        self.assertIs(kkt.get_constraint_from_multiplier(m, alpha_con2), m.c4)
+        self.assertIs(kkt.get_object_from_multiplier(m, gamma0), m.c2)
 
-        c2 = kkt.get_constraint_from_multiplier(m, gamma0)
-        c1 = kkt.get_constraint_from_multiplier(m, alpha_con0)
-        c3 = kkt.get_constraint_from_multiplier(m, alpha_con1)
-        c4 = kkt.get_constraint_from_multiplier(m, alpha_con2)
+        # upper bounded constraint
+        alpha_con0_mults = kkt.get_multiplier_from_object(m, m.c1)
+        alpha_con0_lower_mult = alpha_con0_mults[0]  # None
+        alpha_con0_upper_mult = alpha_con0_mults[1]
 
-        self.assertIs(kkt.get_multiplier_from_constraint(m, c2), gamma0)
-        self.assertIs(kkt.get_multiplier_from_constraint(m, c1), alpha_con0)
-        self.assertIs(kkt.get_multiplier_from_constraint(m, c3), alpha_con1)
-        self.assertIs(kkt.get_multiplier_from_constraint(m, c4), alpha_con2)
+        self.assertIsNone(alpha_con0_lower_mult)
+        self.assertIs(kkt.get_object_from_multiplier(m, alpha_con0_upper_mult), m.c1)
+
+        # lower bounded constraint
+        alpha_con1_mults = kkt.get_multiplier_from_object(m, m.c3)
+        alpha_con1_lower_mult = alpha_con1_mults[0]
+        alpha_con1_upper_mult = alpha_con1_mults[1]  # None
+
+        self.assertIs(kkt.get_object_from_multiplier(m, alpha_con1_lower_mult), m.c3)
+        self.assertIsNone(alpha_con1_upper_mult)
+
+        # upper bounded constraint
+        alpha_con2_mults = kkt.get_multiplier_from_object(m, m.c4)
+        alpha_con2_lower_mult = alpha_con2_mults[0]  # None
+        alpha_con2_upper_mult = alpha_con2_mults[1]
+
+        self.assertIsNone(alpha_con2_lower_mult)
+        self.assertIs(kkt.get_object_from_multiplier(m, alpha_con2_upper_mult), m.c4)
+
+        c2 = kkt.get_object_from_multiplier(m, gamma0)
+        c1 = kkt.get_object_from_multiplier(m, alpha_con0_upper_mult)
+        c3 = kkt.get_object_from_multiplier(m, alpha_con1_lower_mult)
+        c4 = kkt.get_object_from_multiplier(m, alpha_con2_upper_mult)
+
+        self.assertIs(kkt.get_multiplier_from_object(m, c2), gamma0)
+        self.assertIs(kkt.get_multiplier_from_object(m, c1), alpha_con0_mults)
+        self.assertIs(kkt.get_multiplier_from_object(m, c3), alpha_con1_mults)
+        self.assertIs(kkt.get_multiplier_from_object(m, c4), alpha_con2_mults)
 
         self.assertIs(gamma0.ctype, Var)
         self.assertEqual(gamma0.domain, Reals)
         self.assertIsNone(gamma0.ub)
         self.assertIsNone(gamma0.lb)
-        self.assertIs(alpha_con0.ctype, Var)
-        self.assertEqual(alpha_con0.domain, NonNegativeReals)
-        self.assertIsNone(alpha_con0.ub)
-        self.assertEqual(alpha_con1.lb, 0)
-        self.assertIs(alpha_con1.ctype, Var)
-        self.assertEqual(alpha_con1.domain, NonNegativeReals)
-        self.assertIsNone(alpha_con1.ub)
-        self.assertEqual(alpha_con2.lb, 0)
-        self.assertIs(alpha_con2.ctype, Var)
-        self.assertEqual(alpha_con2.domain, NonNegativeReals)
-        self.assertIsNone(alpha_con2.ub)
-        self.assertEqual(alpha_con2.lb, 0)
+
+        self.assertIs(alpha_con0_upper_mult.ctype, Var)
+        self.assertEqual(alpha_con0_upper_mult.domain, NonNegativeReals)
+        self.assertIsNone(alpha_con0_upper_mult.ub)
+
+        self.assertIs(alpha_con1_lower_mult.ctype, Var)
+        self.assertEqual(alpha_con1_lower_mult.domain, NonNegativeReals)
+        self.assertIsNone(alpha_con1_lower_mult.ub)
+
+        self.assertIs(alpha_con2_upper_mult.ctype, Var)
+        self.assertEqual(alpha_con2_upper_mult.domain, NonNegativeReals)
+        self.assertIsNone(alpha_con2_upper_mult.ub)
 
         self.assertIs(c1.ctype, Constraint)
         self.assertIs(c2.ctype, Constraint)
@@ -165,46 +202,54 @@ class TestKKT(unittest.TestCase):
             (m.x - 3) ** 2
             + (m.y - 2) ** 2
             + (m.z - 1) ** 2
-            + (5.0 - (m.x + m.y + m.z)) * gamma0
-            + (m.x**2 + m.y**2 - 9.0) * alpha_con0
-            + (1.0 - m.z) * alpha_con1
-            + (2 * m.x - m.y - 4.0) * alpha_con2,
+            + (m.x**2 + m.y**2 - 9) * alpha_con0_upper_mult
+            + (5 - (m.x + m.y + m.z)) * gamma0
+            + (1 - m.z) * alpha_con1_lower_mult
+            + (2 * m.x - m.y - 4) * alpha_con2_upper_mult,
         )
 
         # test stationarity conditions
         assertExpressionsStructurallyEqual(
             self,
             m.kkt.stationarity_conditions[1].expr,
-            2 * alpha_con2 + 2 * alpha_con0 * m.x - gamma0 + 2 * (m.x - 3) == 0,
+            2 * alpha_con2_upper_mult
+            - gamma0
+            + 2 * alpha_con0_upper_mult * m.x
+            + 2 * (m.x - 3)
+            == 0,
         )
         assertExpressionsStructurallyEqual(
             self,
             m.kkt.stationarity_conditions[2].expr,
-            -alpha_con2 + 2 * alpha_con0 * m.y - gamma0 + 2 * (m.y - 2) == 0,
+            -alpha_con2_upper_mult
+            - gamma0
+            + 2 * alpha_con0_upper_mult * m.y
+            + 2 * (m.y - 2)
+            == 0,
         )
         assertExpressionsStructurallyEqual(
             self,
             m.kkt.stationarity_conditions[3].expr,
-            -alpha_con1 - gamma0 + 2 * (m.z - 1) == 0,
+            -alpha_con1_lower_mult - gamma0 + 2 * (m.z - 1) == 0,
         )
 
         # test complementarity constraints
         assertExpressionsStructurallyEqual(
-            self, m.kkt.complements[1]._args[0], 0 <= alpha_con0
+            self, m.kkt.complements[1]._args[0], 0 <= alpha_con0_upper_mult
         )
         assertExpressionsStructurallyEqual(
             self, m.kkt.complements[1]._args[1], m.x**2 + m.y**2 - 9.0 <= 0
         )
 
         assertExpressionsStructurallyEqual(
-            self, m.kkt.complements[2]._args[0], 0 <= alpha_con1
+            self, m.kkt.complements[2]._args[0], 0 <= alpha_con1_lower_mult
         )
         assertExpressionsStructurallyEqual(
             self, m.kkt.complements[2]._args[1], 1.0 - m.z <= 0
         )
 
         assertExpressionsStructurallyEqual(
-            self, m.kkt.complements[3]._args[0], 0 <= alpha_con2
+            self, m.kkt.complements[3]._args[0], 0 <= alpha_con2_upper_mult
         )
         assertExpressionsStructurallyEqual(
             self, m.kkt.complements[3]._args[1], 2 * m.x - m.y - 4.0 <= 0
@@ -247,42 +292,61 @@ class TestKKT(unittest.TestCase):
         kkt.apply_to(m, parametrize_wrt=[m.outer1, m.outer2])
         TransformationFactory("mpec.simple_nonlinear").apply_to(m)
 
-        gamma0 = kkt.get_multiplier_from_constraint(m, m.c2)
-        alpha_con0 = kkt.get_multiplier_from_constraint(m, m.c1)
-        alpha_con1 = kkt.get_multiplier_from_constraint(m, m.c3)
-        alpha_con2 = kkt.get_multiplier_from_constraint(m, m.c4)
+        # equality constraint
+        gamma0 = kkt.get_multiplier_from_object(m, m.c2)
 
-        self.assertIs(kkt.get_constraint_from_multiplier(m, gamma0), m.c2)
-        self.assertIs(kkt.get_constraint_from_multiplier(m, alpha_con0), m.c1)
-        self.assertIs(kkt.get_constraint_from_multiplier(m, alpha_con1), m.c3)
-        self.assertIs(kkt.get_constraint_from_multiplier(m, alpha_con2), m.c4)
+        self.assertIs(kkt.get_object_from_multiplier(m, gamma0), m.c2)
 
-        c2 = kkt.get_constraint_from_multiplier(m, gamma0)
-        c1 = kkt.get_constraint_from_multiplier(m, alpha_con0)
-        c3 = kkt.get_constraint_from_multiplier(m, alpha_con1)
-        c4 = kkt.get_constraint_from_multiplier(m, alpha_con2)
+        # upper bounded constraint
+        alpha_con0_mults = kkt.get_multiplier_from_object(m, m.c1)
+        alpha_con0_lower_mult = alpha_con0_mults[0]  # None
+        alpha_con0_upper_mult = alpha_con0_mults[1]
 
-        self.assertIs(kkt.get_multiplier_from_constraint(m, c2), gamma0)
-        self.assertIs(kkt.get_multiplier_from_constraint(m, c1), alpha_con0)
-        self.assertIs(kkt.get_multiplier_from_constraint(m, c3), alpha_con1)
-        self.assertIs(kkt.get_multiplier_from_constraint(m, c4), alpha_con2)
+        self.assertIsNone(alpha_con0_lower_mult)
+        self.assertIs(kkt.get_object_from_multiplier(m, alpha_con0_upper_mult), m.c1)
+
+        # lower bounded constraint
+        alpha_con1_mults = kkt.get_multiplier_from_object(m, m.c3)
+        alpha_con1_lower_mult = alpha_con1_mults[0]
+        alpha_con1_upper_mult = alpha_con1_mults[1]  # None
+
+        self.assertIs(kkt.get_object_from_multiplier(m, alpha_con1_lower_mult), m.c3)
+        self.assertIsNone(alpha_con1_upper_mult)
+
+        # upper bounded constraint
+        alpha_con2_mults = kkt.get_multiplier_from_object(m, m.c4)
+        alpha_con2_lower_mult = alpha_con2_mults[0]  # None
+        alpha_con2_upper_mult = alpha_con2_mults[1]
+
+        self.assertIsNone(alpha_con2_lower_mult)
+        self.assertIs(kkt.get_object_from_multiplier(m, alpha_con2_upper_mult), m.c4)
+
+        c2 = kkt.get_object_from_multiplier(m, gamma0)
+        c1 = kkt.get_object_from_multiplier(m, alpha_con0_upper_mult)
+        c3 = kkt.get_object_from_multiplier(m, alpha_con1_lower_mult)
+        c4 = kkt.get_object_from_multiplier(m, alpha_con2_upper_mult)
+
+        self.assertIs(kkt.get_multiplier_from_object(m, c2), gamma0)
+        self.assertIs(kkt.get_multiplier_from_object(m, c1), alpha_con0_mults)
+        self.assertIs(kkt.get_multiplier_from_object(m, c3), alpha_con1_mults)
+        self.assertIs(kkt.get_multiplier_from_object(m, c4), alpha_con2_mults)
 
         self.assertIs(gamma0.ctype, Var)
         self.assertEqual(gamma0.domain, Reals)
         self.assertIsNone(gamma0.ub)
         self.assertIsNone(gamma0.lb)
-        self.assertIs(alpha_con0.ctype, Var)
-        self.assertEqual(alpha_con0.domain, NonNegativeReals)
-        self.assertIsNone(alpha_con0.ub)
-        self.assertEqual(alpha_con1.lb, 0)
-        self.assertIs(alpha_con1.ctype, Var)
-        self.assertEqual(alpha_con1.domain, NonNegativeReals)
-        self.assertIsNone(alpha_con1.ub)
-        self.assertEqual(alpha_con2.lb, 0)
-        self.assertIs(alpha_con2.ctype, Var)
-        self.assertEqual(alpha_con2.domain, NonNegativeReals)
-        self.assertIsNone(alpha_con2.ub)
-        self.assertEqual(alpha_con2.lb, 0)
+
+        self.assertIs(alpha_con0_upper_mult.ctype, Var)
+        self.assertEqual(alpha_con0_upper_mult.domain, NonNegativeReals)
+        self.assertIsNone(alpha_con0_upper_mult.ub)
+
+        self.assertIs(alpha_con1_lower_mult.ctype, Var)
+        self.assertEqual(alpha_con1_lower_mult.domain, NonNegativeReals)
+        self.assertIsNone(alpha_con1_lower_mult.ub)
+
+        self.assertIs(alpha_con2_upper_mult.ctype, Var)
+        self.assertEqual(alpha_con2_upper_mult.domain, NonNegativeReals)
+        self.assertIsNone(alpha_con2_upper_mult.ub)
 
         self.assertIs(c1.ctype, Constraint)
         self.assertIs(c2.ctype, Constraint)
@@ -296,44 +360,51 @@ class TestKKT(unittest.TestCase):
             (m.x - m.outer1) ** 2
             + (m.y - 2) ** 2
             + (m.z - m.outer2) ** 2
+            + (m.x**2 + m.y**2 - (9 + m.outer1)) * alpha_con0_upper_mult
             + (-(m.x + m.y + m.z - (5 + m.outer2))) * gamma0
-            + (m.x**2 + m.y**2 - (9 + m.outer1)) * alpha_con0
-            + (1.0 - m.z) * alpha_con1
-            + (2 * m.x - m.y - (4 + 0.5 * m.outer1)) * alpha_con2,
+            + (1 - m.z) * alpha_con1_lower_mult
+            + (2 * m.x - m.y - (4 + 0.5 * m.outer1)) * alpha_con2_upper_mult,
         )
 
         # test stationarity conditions
         assertExpressionsStructurallyEqual(
             self,
             m.kkt.stationarity_conditions[1].expr,
-            2 * alpha_con2 + 2 * alpha_con0 * m.x - gamma0 + 2 * (m.x - m.outer1) == 0,
+            (2 * alpha_con2_upper_mult - gamma0)
+            + 2 * alpha_con0_upper_mult * m.x
+            + 2 * (m.x - m.outer1)
+            == 0,
         )
         assertExpressionsStructurallyEqual(
             self,
             m.kkt.stationarity_conditions[2].expr,
-            -alpha_con2 + 2 * alpha_con0 * m.y - gamma0 + 2 * (m.y - 2) == 0,
+            -alpha_con2_upper_mult
+            - gamma0
+            + 2 * alpha_con0_upper_mult * m.y
+            + 2 * (m.y - 2)
+            == 0,
         )
         assertExpressionsStructurallyEqual(
             self,
             m.kkt.stationarity_conditions[3].expr,
-            -alpha_con1 - gamma0 + 2 * (m.z - m.outer2) == 0,
+            -alpha_con1_lower_mult - gamma0 + 2 * (m.z - m.outer2) == 0,
         )
 
         # test complementarity constraints
         assertExpressionsStructurallyEqual(
-            self, m.kkt.complements[1]._args[0], 0 <= alpha_con0
+            self, m.kkt.complements[1]._args[0], 0 <= alpha_con0_upper_mult
         )
         assertExpressionsStructurallyEqual(
             self, m.kkt.complements[1]._args[1], m.x**2 + m.y**2 - (9 + m.outer1) <= 0
         )
         assertExpressionsStructurallyEqual(
-            self, m.kkt.complements[2]._args[0], 0 <= alpha_con1
+            self, m.kkt.complements[2]._args[0], 0 <= alpha_con1_lower_mult
         )
         assertExpressionsStructurallyEqual(
-            self, m.kkt.complements[2]._args[1], 1.0 - m.z <= 0
+            self, m.kkt.complements[2]._args[1], 1 - m.z <= 0
         )
         assertExpressionsStructurallyEqual(
-            self, m.kkt.complements[3]._args[0], 0 <= alpha_con2
+            self, m.kkt.complements[3]._args[0], 0 <= alpha_con2_upper_mult
         )
         assertExpressionsStructurallyEqual(
             self,
@@ -427,7 +498,7 @@ class TestKKT(unittest.TestCase):
         ):
             kkt.apply_to(m, parametrize_wrt=[m.b1.x1])
 
-    def test_get_constraint_from_multiplier_error(self):
+    def test_get_object_from_multiplier_error(self):
         m = ConcreteModel(name="model")
         m.x = Var(domain=Reals)
         m.y = Var(domain=Reals)
@@ -442,9 +513,9 @@ class TestKKT(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, f"The KKT multiplier: {m2.gamma}, does not exist on model."
         ):
-            kkt.get_constraint_from_multiplier(m, m2.gamma)
+            kkt.get_object_from_multiplier(m, m2.gamma)
 
-    def test_get_multiplier_from_constraint_error(self):
+    def test_get_multiplier_from_object_error(self):
         m = ConcreteModel(name="model")
         m.x = Var(domain=Reals, bounds=(0, 10))
         m.y = Var(domain=Reals)
@@ -455,15 +526,10 @@ class TestKKT(unittest.TestCase):
         kkt.apply_to(m)
 
         m2 = ConcreteModel()
-        m2.z = Var(bounds=(1, 10))
         m2.new_con = Constraint(expr=m.x <= 5)
 
         with self.assertRaisesRegex(
-            ValueError, "Constraint 'new_con' does not exist on model."
+            ValueError,
+            "The component 'new_con' either does not exist on 'model', or is not associated with a multiplier.",
         ):
-            kkt.get_multiplier_from_constraint(m, component=m2.new_con)
-
-        with self.assertRaisesRegex(
-            ValueError, "No multipliers exist for variable 'z' on model."
-        ):
-            kkt.get_multiplier_from_constraint(m, component=m2.z)
+            kkt.get_multiplier_from_object(m, component=m2.new_con)
