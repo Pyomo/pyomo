@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 
@@ -143,6 +141,20 @@ class TestSeriesData(unittest.TestCase):
         new_data = data.get_interpolated_data(new_t)
         self.assertEqual(
             TimeSeriesData({m.var[:, "A"]: [1.5, 2.5], m.var[:, "B"]: [3, 5]}, new_t),
+            new_data,
+        )
+
+    def test_get_data_interpolate_none(self):
+        m = self._make_model()
+        data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [None, None, None]}
+        data = TimeSeriesData(data_dict, m.time)
+
+        new_t = [0.05, 0.15]
+        new_data = data.get_interpolated_data(new_t)
+        self.assertEqual(
+            TimeSeriesData(
+                {m.var[:, "A"]: [1.5, 2.5], m.var[:, "B"]: [None, None]}, new_t
+            ),
             new_data,
         )
 

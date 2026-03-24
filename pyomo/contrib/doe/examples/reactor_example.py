@@ -1,13 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
+
+# === Required imports ===
 from pyomo.common.dependencies import numpy as np, pathlib
 
 from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
@@ -21,10 +21,14 @@ import json
 # Example for sensitivity analysis on the reactor experiment
 # After sensitivity analysis is done, we perform optimal DoE
 def run_reactor_doe(
-    n_points_for_design=9,
+    n_points_for_C0: int = 9,
+    n_points_for_T0: int = 9,
+    C0_bounds_for_factorial: tuple = (1, 5),
+    T0_bounds_for_factorial: tuple = (300, 700),
     compute_FIM_full_factorial=True,
     plot_factorial_results=True,
-    save_plots=True,
+    figure_file_name="example_reactor_compute_FIM",
+    log_scale=False,
     run_optimal_doe=True,
 ):
     """
@@ -32,14 +36,16 @@ def run_reactor_doe(
 
     Parameters
     ----------
-    n_points_for_design : int, optional
-        number of points to use for the design ranges, by default 9
+    n_points_for_C0 : int, optional
+        number of points to use for the C0 design range, by default 9
+    n_points_for_T0 : int, optional
+        number of points to use for the T0 design range, by default 9
     compute_FIM_full_factorial : bool, optional
         whether to compute the full factorial design, by default True
     plot_factorial_results : bool, optional
         whether to plot the results of the full factorial design, by default True
-    save_plots : bool, optional
-        whether to save draw_factorial_figure plots, by default True
+    figure_file_name : str, optional
+        file name to save the factorial figure, by default "example_reactor_compute_FIM"
     run_optimal_doe : bool, optional
         whether to run the optimal DoE, by default True
     """
@@ -91,8 +97,8 @@ def run_reactor_doe(
     if compute_FIM_full_factorial:
         # Make design ranges to compute the full factorial design
         design_ranges = {
-            "CA[0]": [1, 5, n_points_for_design],
-            "T[0]": [300, 700, n_points_for_design],
+            "CA[0]": [*C0_bounds_for_factorial, n_points_for_C0],
+            "T[0]": [*T0_bounds_for_factorial, n_points_for_T0],
         }
 
         # Compute the full factorial design with the sequential FIM calculation
@@ -100,11 +106,6 @@ def run_reactor_doe(
             design_ranges=design_ranges, method="sequential"
         )
     if plot_factorial_results:
-        if save_plots:
-            figure_file_name = "example_reactor_compute_FIM"
-        else:
-            figure_file_name = None
-
         # Plot the results
         doe_obj.draw_factorial_figure(
             sensitivity_design_variables=["CA[0]", "T[0]"],
@@ -122,7 +123,7 @@ def run_reactor_doe(
             xlabel_text="Concentration of A (M)",
             ylabel_text="Initial Temperature (K)",
             figure_file_name=figure_file_name,
-            log_scale=False,
+            log_scale=log_scale,
         )
 
     ###########################
@@ -161,4 +162,4 @@ def run_reactor_doe(
 
 
 if __name__ == "__main__":
-    run_reactor_doe()
+    run_reactor_doe(figure_file_name=None)

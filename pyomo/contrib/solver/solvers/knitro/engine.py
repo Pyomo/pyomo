@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from types import MappingProxyType
@@ -16,6 +14,8 @@ from typing import Any, TypeVar
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.errors import DeveloperError
 from pyomo.common.numeric_types import value
+from pyomo.contrib.solver.common.results import SolutionStatus, TerminationCondition
+
 from pyomo.contrib.solver.solvers.knitro.api import knitro
 from pyomo.contrib.solver.solvers.knitro.callback import build_callback_handler
 from pyomo.contrib.solver.solvers.knitro.package import Package
@@ -292,16 +292,12 @@ class Engine:
     def get_obj_value(self) -> float | None:
         if not self.has_objective:
             return None
-        if self._status not in {
-            knitro.KN_RC_OPTIMAL,
-            knitro.KN_RC_OPTIMAL_OR_SATISFACTORY,
-            knitro.KN_RC_NEAR_OPT,
-            knitro.KN_RC_ITER_LIMIT_FEAS,
-            knitro.KN_RC_FEAS_NO_IMPROVE,
-            knitro.KN_RC_TIME_LIMIT_FEAS,
+        if self.get_solution_status() in {
+            SolutionStatus.optimal,
+            SolutionStatus.feasible,
         }:
-            return None
-        return self.execute(knitro.KN_get_obj_value)
+            return self.execute(knitro.KN_get_obj_value)
+        return None
 
     def get_obj_bound(self) -> float | None:
         if not self.has_objective:
@@ -443,3 +439,97 @@ class Engine:
     def register_callback(self, i: int | None, expr: NonlinearExpressionData) -> None:
         callback = build_callback_handler(expr, idx=i).expand()
         self.add_callback(i, expr, callback)
+
+    def get_solution_status(self) -> SolutionStatus:
+        """
+        Map KNITRO status codes to Pyomo SolutionStatus values.
+
+        See https://www.artelys.com/app/docs/knitro/3_referenceManual/returnCodes.html
+        """
+        if self._status is None:
+            msg = "Solver has not been run. No solution status is available!"
+            raise RuntimeError(msg)
+        elif self._status in {
+            knitro.KN_RC_OPTIMAL,
+            knitro.KN_RC_OPTIMAL_OR_SATISFACTORY,
+            knitro.KN_RC_NEAR_OPT,
+        }:
+            return SolutionStatus.optimal
+        elif self._status in {
+            knitro.KN_RC_FEAS_XTOL,
+            knitro.KN_RC_FEAS_NO_IMPROVE,
+            knitro.KN_RC_FEAS_FTOL,
+            -103,  # KN_RC_FEAS_BEST
+            -104,  # KN_RC_FEAS_MULTISTART
+            knitro.KN_RC_ITER_LIMIT_FEAS,
+            knitro.KN_RC_TIME_LIMIT_FEAS,
+            knitro.KN_RC_FEVAL_LIMIT_FEAS,
+            knitro.KN_RC_MIP_EXH_FEAS,
+            knitro.KN_RC_MIP_TERM_FEAS,
+            knitro.KN_RC_MIP_SOLVE_LIMIT_FEAS,
+            knitro.KN_RC_MIP_NODE_LIMIT_FEAS,
+        }:
+            return SolutionStatus.feasible
+        elif self._status in {
+            knitro.KN_RC_INFEASIBLE,
+            knitro.KN_RC_INFEAS_CON_BOUNDS,
+            knitro.KN_RC_INFEAS_VAR_BOUNDS,
+            knitro.KN_RC_INFEAS_MULTISTART,
+        }:
+            return SolutionStatus.infeasible
+        else:
+            return SolutionStatus.noSolution
+
+    def get_termination_condition(self) -> TerminationCondition:
+        """
+        Map KNITRO status codes to Pyomo TerminationCondition values.
+
+        See https://www.artelys.com/app/docs/knitro/3_referenceManual/returnCodes.html
+        """
+        if self._status is None:
+            msg = "Solver has not been run. No termination condition is available!"
+            raise RuntimeError(msg)
+        elif self._status in {
+            knitro.KN_RC_OPTIMAL,
+            knitro.KN_RC_OPTIMAL_OR_SATISFACTORY,
+            knitro.KN_RC_NEAR_OPT,
+        }:
+            return TerminationCondition.convergenceCriteriaSatisfied
+        elif self._status in {
+            knitro.KN_RC_INFEAS_NO_IMPROVE,
+            knitro.KN_RC_INFEAS_MULTISTART,
+        }:
+            return TerminationCondition.locallyInfeasible
+        elif self._status in {
+            knitro.KN_RC_INFEASIBLE,
+            knitro.KN_RC_INFEAS_CON_BOUNDS,
+            knitro.KN_RC_INFEAS_VAR_BOUNDS,
+        }:
+            return TerminationCondition.provenInfeasible
+        elif self._status in {knitro.KN_RC_UNBOUNDED, knitro.KN_RC_UNBOUNDED_OR_INFEAS}:
+            return TerminationCondition.infeasibleOrUnbounded
+        elif self._status in {
+            knitro.KN_RC_ITER_LIMIT_FEAS,
+            knitro.KN_RC_FEVAL_LIMIT_FEAS,
+            knitro.KN_RC_MIP_EXH_FEAS,
+            knitro.KN_RC_MIP_TERM_FEAS,
+            knitro.KN_RC_MIP_SOLVE_LIMIT_FEAS,
+            knitro.KN_RC_MIP_NODE_LIMIT_FEAS,
+            knitro.KN_RC_ITER_LIMIT_INFEAS,
+            knitro.KN_RC_FEVAL_LIMIT_INFEAS,
+            knitro.KN_RC_MIP_EXH_INFEAS,
+            knitro.KN_RC_MIP_SOLVE_LIMIT_INFEAS,
+            knitro.KN_RC_MIP_NODE_LIMIT_INFEAS,
+        }:
+            return TerminationCondition.iterationLimit
+        elif self._status in {
+            knitro.KN_RC_TIME_LIMIT_FEAS,
+            knitro.KN_RC_TIME_LIMIT_INFEAS,
+        }:
+            return TerminationCondition.maxTimeLimit
+        elif self._status == knitro.KN_RC_USER_TERMINATION:
+            return TerminationCondition.interrupted
+        elif -500 >= self._status >= -600:
+            return TerminationCondition.error
+        else:
+            return TerminationCondition.unknown

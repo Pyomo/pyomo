@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from bisect import bisect_right
 
@@ -73,7 +71,10 @@ def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
     expr = [None] * len(time_set)
     for i, (h, t) in enumerate(zip(indexes, time_set)):
         l = h - 1
-        expr[i] = data[l] + (data[h] - data[l]) / (time_data[h] - time_data[l]) * (
-            t - time_data[l]
-        )
+        if data[l] is None or data[h] is None:
+            expr[i] = None
+        else:
+            expr[i] = data[l] + (data[h] - data[l]) / (time_data[h] - time_data[l]) * (
+                t - time_data[l]
+            )
     return expr
