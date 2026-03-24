@@ -17,6 +17,7 @@ from pyomo.devel.initialization.lp_approx_init import _initialize_with_LP_approx
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.devel.initialization.global_init import _initialize_with_global_solver
 from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.common.results import Results
 import logging
 
 
@@ -44,10 +45,55 @@ def initialize_nlp(
     nlp_solver: Optional[SolverBase] = None,
     global_solver: Optional[SolverBase] = None,
     method: InitializationMethod = InitializationMethod.global_opt,
-    default_bound=1.0e8,
-    max_pwl_refinement_iter=100,
-    num_pwl_cons_to_refine_per_iter=5,
-):
+    default_bound: float = 1.0e8,
+    max_pwl_refinement_iter: int = 100,
+    num_pwl_cons_to_refine_per_iter: int = 5,
+) -> Results:
+    """
+    Attempt to initialize and subsequently solve the model given by ``nlp``.
+    The basic idea is to apply some method to find good initial values for 
+    the variables and then try to solve the problem with ``nlp_solver``.
+
+    Parameters
+    ----------
+    nlp: BlockData
+        The pyomo model to be initialized.
+    mip_solver: Optional[SolverBase]
+        A solver interface appropriate for LPs and MILPs.
+        Needed for the following methods:
+          - pwl_approximation
+          - lp_approximation
+        Default: gurobi_persistent
+    nlp_solver: Optional[SolverBase]
+        A solver interface appropriate for NLPs.
+        Default: ipopt
+    global_solver: Optional[SolverBase]
+        A solver interface appropriate for global solution of NLPs
+        Default: gurobi_direct_minlp
+    method: InitializationMethod
+        The method used to initialize the model.
+    default_bound: float
+        Some initialize methods require all nonlinear variables to be bounded.
+        For these methods, all unbounded variables will be given lower and 
+        upper bounds equal to default_bound.
+        Needed for the following methods:
+          - pwl_approximation
+          - lp_approximation
+    max_pwl_refinement_iter: int
+        Only used when method = InitializationMethod.pwl_approximation. This is 
+        the maximum number of iterations used to refine the piecewise linear
+        approximation.
+    num_pwl_cons_to_refine_per_iter: int
+        Only used when method = InitializationMethod.pwl_approximation. This is
+        the maximum number of constraints to be refined with additional 
+        segments in the piecewise linear approximation each iteration.
+
+    Returns
+    -------
+    res: Results
+        The results object obtained the last time the nlp_solver was used to 
+        try and solve the model.
+    """
     # get all variable bounds, domains, etc. to restore them later
     orig_vars = get_vars(nlp)
     orig_var_data = ComponentMap(
