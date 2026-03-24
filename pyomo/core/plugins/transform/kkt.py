@@ -18,20 +18,12 @@ from pyomo.core import (
     Expression,
     NonNegativeReals,
     Objective,
-    RangeSet,
-    Reals,
-    Set,
     TransformationFactory,
     Var,
     VarList,
-    maximize,
-    minimize,
 )
-from pyomo.core.base.constraint import ConstraintData
-from pyomo.core.base.var import VarData
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
 from pyomo.mpec import ComplementarityList, complements
-from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.util.config_domains import ComponentDataSet
 from pyomo.core.expr.visitor import identify_variables
 
@@ -133,6 +125,17 @@ class NonLinearProgrammingKKT:
             Constraint, descend_into=True, active=True
         ):
             lower, body, upper = con.to_bounded_expression()
+
+            # collect variables in constraint
+            for expr in (lower, body, upper):
+                if expr is None:
+                    continue
+                for v in identify_variables(expr, include_fixed=True):
+                    if v.is_fixed():
+                        fixed_var_set.add(v)
+                    else:
+                        var_set.add(v)
+
             if con.equality:
                 # create multiplier
                 gamma_i = kkt_block.gamma.add()
@@ -141,17 +144,6 @@ class NonLinearProgrammingKKT:
                 # create mappings
                 info.obj_dual_map[con] = gamma_i
                 info.dual_obj_map[gamma_i] = con
-                # collect variables in constraint
-                for v in identify_variables(body, include_fixed=True):
-                    if v.is_fixed():
-                        fixed_var_set.add(v)
-                    else:
-                        var_set.add(v)
-                for v in identify_variables(upper, include_fixed=True):
-                    if v.is_fixed():
-                        fixed_var_set.add(v)
-                    else:
-                        var_set.add(v)
 
             else:
                 alpha_l = None
@@ -165,12 +157,6 @@ class NonLinearProgrammingKKT:
                     kkt_block.complements.add(complements(alpha_l >= 0, con_expr <= 0))
                     # create dual -> con mapping
                     info.dual_obj_map[alpha_l] = con
-                    # collect variables in constraint
-                    for v in identify_variables(lower, include_fixed=True):
-                        if v.is_fixed():
-                            fixed_var_set.add(v)
-                        else:
-                            var_set.add(v)
 
                 alpha_u = None
                 if upper is not None:
@@ -183,12 +169,6 @@ class NonLinearProgrammingKKT:
                     kkt_block.complements.add(complements(alpha_u >= 0, con_expr <= 0))
                     # create dual -> con mapping
                     info.dual_obj_map[alpha_u] = con
-                    # collect variables in constraint
-                    for v in identify_variables(upper, include_fixed=True):
-                        if v.is_fixed():
-                            fixed_var_set.add(v)
-                        else:
-                            var_set.add(v)
 
                 # create con -> dual mapping. Will return None if a bound doesn't exist.
                 info.obj_dual_map[con] = (alpha_l, alpha_u)
