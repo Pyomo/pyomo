@@ -73,10 +73,8 @@ class NonLinearProgrammingKKT:
         config.set_value(kwds)
 
         if hasattr(model, config.kkt_block_name):
-            raise ValueError(
-                f"""model already has an attribute with the 
-                specified kkt_block_name: '{config.kkt_block_name}'"""
-            )
+            raise ValueError(f"""model already has an attribute with the 
+                specified kkt_block_name: '{config.kkt_block_name}'""")
 
         # we should check that all vars the user fixed are included
         # in parametrize_wrt
