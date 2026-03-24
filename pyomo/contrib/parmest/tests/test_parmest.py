@@ -1410,6 +1410,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
 
         self.pest.diagnostic_mode = False
 
+
 class LinearThetaExperiment(Experiment):
     def __init__(self, x, y, include_second_output=False):
         self.x_data = x
@@ -1535,7 +1536,6 @@ class TestParmestBlockEF(unittest.TestCase):
         total_points = parmest._count_total_experiments(exp_list)
         # The current parmest convention counts datapoints for one output family.
         self.assertEqual(total_points, 2)
-
 
 
 ###########################
