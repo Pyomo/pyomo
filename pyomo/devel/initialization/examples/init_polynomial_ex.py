@@ -1,0 +1,33 @@
+import pyomo.environ as pyo
+import pyomo.devel.initialization as ini
+from pyomo.contrib.solver.common.factory import SolverFactory
+import logging
+
+
+def build_model():
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var()
+    m.c = pyo.Constraint(expr=(m.x+7)*(m.x+5)*(m.x-4) + 200 == 0)
+    return m
+
+
+def main(method: ini.InitializationMethod):
+    m = build_model()
+    nlp_solver = SolverFactory('ipopt')
+    global_solver = SolverFactory('scip_direct')
+    mip_solver = SolverFactory('scip_direct')
+    results = ini.initialize_nlp(
+        nlp=m,
+        nlp_solver=nlp_solver,
+        mip_solver=mip_solver,
+        global_solver=global_solver,
+        method=method,
+    )
+
+    return results.solution_status, m.x.value
+
+
+if __name__ == '__main__':
+    stat, x = main(ini.InitializationMethod.global_opt)
+    print(stat)
+    print(round(x, 4))

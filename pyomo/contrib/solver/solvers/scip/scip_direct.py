@@ -349,7 +349,7 @@ class ScipDirectSolutionLoader(SolutionLoaderBase):
         for v, val in self.get_vars(
             vars_to_load=vars_to_load, solution_id=solution_id
         ).items():
-            v.value = val
+            v.set_value(val, skip_validation=True)
 
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
