@@ -137,6 +137,7 @@ def _initialize_with_LP_approximation(
     nlp: BlockData,
     lp_solver: SolverBase,
     nlp_solver: SolverBase,
+    default_bound=1.0e8, 
 ):
     orig_nlp = nlp
     logger.info('Starting initialization using a linear programming approximation')
@@ -149,9 +150,9 @@ def _initialize_with_LP_approximation(
     trans.apply_to(nlp, aggressive_substitution=False)
     logger.info('applied the univariate_nonlinear_decomposition transformation')
 
-    # let's see if we can get bounds on the nonlinear variables
-    fbbt(nlp)
-    logger.info('ran FBBT')
+    # bounds on the nonlinear variables
+    bound_all_nonlinear_variables(nlp, default_bound=default_bound)
+    logger.info('bounded nonlinear variables')
 
     # Now, we need to fix variables with equal (or nearly equal) bounds.
     # Otherwise, the PWL transformation complains
