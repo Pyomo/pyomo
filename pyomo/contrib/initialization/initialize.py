@@ -7,6 +7,11 @@ from pyomo.contrib.initialization.pwl_init import _initialize_with_piecewise_lin
 from pyomo.contrib.initialization.lp_approx_init import _initialize_with_LP_approximation
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.initialization.global_init import _initialize_with_global_solver
+from pyomo.contrib.solver.common.factory import SolverFactory
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class InitializationMethod(Enum):
@@ -15,12 +20,21 @@ class InitializationMethod(Enum):
     global_opt = "global_opt"
 
 
+def _get_solver(sname, reason):
+    opt = SolverFactory(sname)
+    if opt.available():
+        logger.info(f'Using {sname} for {reason} because a solver was not specified')
+    else:
+        raise RuntimeError(f'No solver was specified for {reason} and the default ({sname}) is not available')
+    return opt
+
+
 def initialize_nlp(
     nlp: BlockData, 
     mip_solver: Optional[SolverBase] = None,
     nlp_solver: Optional[SolverBase] = None,
     global_solver: Optional[SolverBase] = None,
-    method: InitializationMethod = InitializationMethod.pwl_approximation,
+    method: InitializationMethod = InitializationMethod.global_opt,
     default_bound=1.0e8,
     max_pwl_refinement_iter=100,
     num_pwl_cons_to_refine_per_iter=5,
@@ -31,15 +45,12 @@ def initialize_nlp(
         (v, (v.lower, v.upper, v.domain, v.fixed, v.value)) for v in orig_vars
     )
 
-    # create a shallow clone of the model so that the initialization method can 
-    # can work with the original variables but not make any other 
-    # modifications to the model
-    # nlp = shallow_clone(nlp)
-
     # run the initialization
     if method == InitializationMethod.pwl_approximation:
-        assert mip_solver is not None, f"mip_solver must be specified for {method}"
-        assert nlp_solver is not None, f"nlp_solver must be specified for {method}"
+        if mip_solver is None:
+            mip_solver = _get_solver('gurobi_persistent', 'MILP solver')
+        if nlp_solver is None:
+            nlp_solver = _get_solver('ipopt', 'local NLP solver')
         res = _initialize_with_piecewise_linear_approximation(
             nlp=nlp,
             mip_solver=mip_solver,
@@ -49,16 +60,21 @@ def initialize_nlp(
             num_cons_to_refine_per_iter=num_pwl_cons_to_refine_per_iter,
         )
     elif method == InitializationMethod.lp_approximation:
-        assert mip_solver is not None, f"mip_solver must be specified for {method}"
-        assert nlp_solver is not None, f"nlp_solver must be specified for {method}"
+        if mip_solver is None:
+            mip_solver = _get_solver('gurobi_persistent', 'MILP solver')
+        if nlp_solver is None:
+            nlp_solver = _get_solver('ipopt', 'local NLP solver')
         res = _initialize_with_LP_approximation(
             nlp=nlp,
             lp_solver=mip_solver,
             nlp_solver=nlp_solver,
         )
     elif method == InitializationMethod.global_opt:
-        assert global_solver is not None, f"global_solver must be specified for {method}"
-        res = _initialize_with_global_solver(nlp=nlp, global_solver=global_solver)
+        if global_solver is None:
+            global_solver = _get_solver('gurobi_direct_minlp', 'global NLP solver')
+        if nlp_solver is None:
+            nlp_solver = _get_solver('ipopt', 'local NLP solver')
+        res = _initialize_with_global_solver(nlp=nlp, global_solver=global_solver, nlp_solver=nlp_solver)
     else:
         raise ValueError(f'unexpected initialization method: {method}')    
 
