@@ -2,6 +2,15 @@ from typing import Optional
 from pyomo.core.base.block import BlockData
 from enum import Enum
 from pyomo.devel.initialization.utils import get_vars, shallow_clone
+# ____________________________________________________________________________________
+#
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
+
 from pyomo.common.collections import ComponentMap
 from pyomo.devel.initialization.pwl_init import _initialize_with_piecewise_linear_approximation
 from pyomo.devel.initialization.lp_approx_init import _initialize_with_LP_approximation
