@@ -572,7 +572,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 if disj in local_vars_by_disjunct:
                     if var in local_vars_by_disjunct[disj]:
                         if len(disjuncts) == 1:
-                            # was this a noop before?
                             local_vars[disj].add(var)
                             all_local_vars.add(var)
                         else:
