@@ -39,8 +39,64 @@ the following options:
 - ``within`` = Set used for validation; it specifies the domain of 
   valid parameter values.
 
-These options perform in the same way as they do for :class:`Set`. For
-example, given ``model.A`` with values ``{1, 2, 3}``, then there are many
+These options perform in the same way as they do for :class:`Set`.
+
+Performance vs. Flexibility
+---------------------------
+
+By default, Pyomo parameters are **immutable** (``mutable=False``). This choice is
+driven by performance:
+
+* **Immutable (Default):** Pyomo "pre-computes" these values into the algebraic 
+  expressions during model construction. This results in faster model generation 
+  and significantly lower memory usage, especially for large models.
+* **Mutable:** Pyomo maintains the parameter as a symbolic object within 
+  expressions. This allows you to change the value and re-solve without 
+  rebuilding the entire model, but it adds computational overhead.
+
+When to use Mutable
+-------------------
+
+Choosing between mutable and immutable parameters depends on your workflow:
+
+**Use Immutable if:**
+  * The data is static and never changes during the execution of your script.
+  * You want to maximize performance and minimize memory usage for large models.
+
+**Use Mutable if:**
+  * You are running a loop (e.g., sensitivity analysis or decomposition 
+    algorithms) where you change parameter values and re-solve.
+  * You want to update values frequently without the "re-construction" 
+    bottleneck.
+  * The parameter is part of a nonlinear expression that you need to update.
+
+Comparison: Param vs. Var
+-------------------------
+
+It is common to confuse mutable parameters with variables. The following table 
+summarizes the key differences:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Feature
+     - Param (Immutable)
+     - Param (Mutable)
+     - Var
+   * - Can change after solve()?
+     - No
+     - Yes
+     - Yes (by solver)
+   * - Rebuilds model on change?
+     - Yes (requires new Param)
+     - No
+     - No
+   * - Solver sees it as:
+     - A constant number
+     - A constant number
+     - An optimization variable
+
+For example, given ``model.A`` with values ``{1, 2, 3}``, then there are many
 ways to create a parameter that represents a square matrix with 9, 16, 25 on the
 main diagonal and zeros elsewhere, here are two ways to do it. First using a
 Python object to initialize:
