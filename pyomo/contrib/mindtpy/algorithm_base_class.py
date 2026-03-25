@@ -390,18 +390,24 @@ class _MindtPyAlgorithm:
         if ub is not None:
             prob.upper_bound = ub
 
-        # Fallback: if the solver reports optimal termination but does not provide
-        # explicit bounds, infer them from the objective value. For a direct
-        # continuous optimal solve, primal==dual.
+        # Fallback: if the solver reports optimal termination but does not
+        # provide explicit bounds, infer the *primal* bound from the objective
+        # value.  A feasible solution only proves one side of the bound:
+        #   - minimization → upper bound  (any feasible point is an UB)
+        #   - maximization → lower bound  (any feasible point is a LB)
+        # We cannot infer the dual bound without a guarantee of global
+        # optimality (e.g. convexity), which a local NLP solver does not give.
         if (
             lb is None or ub is None
         ) and self.results.solver.termination_condition == tc.optimal:
             obj_val = value(obj.expr, exception=False)
             if obj_val is not None:
-                if lb is None:
-                    prob.lower_bound = obj_val
-                if ub is None:
-                    prob.upper_bound = obj_val
+                if obj.sense == minimize:
+                    if ub is None:
+                        prob.upper_bound = obj_val
+                else:
+                    if lb is None:
+                        prob.lower_bound = obj_val
 
     def build_ordered_component_lists(self, model):
         """Define lists used for future data transfer.
