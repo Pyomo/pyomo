@@ -985,7 +985,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # b - a^Tx_0). Get the a^Tv here and note that b +
                 # a^Tx_0 is exactly h_x0 from earlier, so we will have
                 # it when we need it.
-                expr = linear_repn.multiplier * sum(
+                #
+                # Note: linear_repn.multiplier is always 1 when obtained
+                # from LinearRepnVisitor.walk_expression so we do not
+                # need to read it
+                expr = sum(
                     coef * var_substitute_map[var]
                     for var, coef in linear_repn.linear.items()
                     if coef != 0
@@ -1010,10 +1014,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         # the constraint implies x = x0
                         if (
                             coef != 0
-                            and (
-                                c.lower - linear_repn.constant * linear_repn.multiplier
-                            )
-                            / (coef * linear_repn.multiplier)
+                            and (c.lower - linear_repn.constant) / coef
                             == x0_substitute_map[var]
                         ):
                             v = var_substitute_map[var]
