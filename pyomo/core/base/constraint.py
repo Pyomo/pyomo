@@ -355,10 +355,24 @@ class ConstraintData(ActiveComponentData):
         if expr.__class__ is EqualityExpression:
             return True
         elif expr.__class__ is RangedExpression:
-            # TODO: this is a very restrictive form of structural equality.
             lb = expr.arg(0)
-            if lb is not None and lb is expr.arg(2):
-                return True
+            if lb is not None:
+                # Note that checking native_types is sufficient:
+                # constant expressions should have already been
+                # simplified by the expression system.  If the user
+                # explicitly created relational expressions with
+                # constant arguments, then we assume they knew what they
+                # were doing.
+                if lb.__class__ in native_types:
+                    ub = expr.arg(2)
+                    if ub.__class__ in native_types:
+                        return lb == ub
+                else:
+                    # TBD: this is a very restrictive form of structural
+                    # equality.  In the future it might be "nice" to
+                    # look for mathematical equivalence - but that is
+                    # expensive and likely not worth the effort.
+                    return lb is expr.arg(2)
         return False
 
     @property
