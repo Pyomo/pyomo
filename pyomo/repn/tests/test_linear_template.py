@@ -19,7 +19,17 @@ from pyomo.core.base.enums import SortComponents
 from pyomo.repn.linear_template import LinearTemplateRepnVisitor
 from pyomo.repn.util import TemplateVarRecorder
 
-from pyomo.environ import *
+from pyomo.environ import (
+    Any,
+    ConcreteModel,
+    Constraint,
+    NonNegativeIntegers,
+    Objective,
+    Param,
+    Set,
+    Var,
+    inequality,
+)
 
 
 class TestLinearTemplate(unittest.TestCase):

@@ -84,7 +84,7 @@ def _validate_generator(generator):
 
 def _validate_map(generator):
     # We would love to validate that the map is actually iterating over
-    # Pyom Set objects (and yielding IndexTemplate objects), but there
+    # Pyomo Set objects (and yielding IndexTemplate objects), but there
     # doesn't appear to be a way to interrogate the results of the list
     # / generator that the map is iterating over.  So, we will just have
     # to trust the user <shudder>.
