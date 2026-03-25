@@ -11,12 +11,9 @@ import sys
 import os
 import subprocess
 from itertools import product
-
 from pyomo.common.unittest import pytest
 from parameterized import parameterized, parameterized_class
 import pyomo.common.unittest as unittest
-from pyomo.contrib.mpc import data
-from pyomo.contrib.mpc.examples.cstr import model
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
@@ -1095,7 +1092,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
             def ComputeFirstStageCost_rule(m):
                 return 0
 
-            # Model used in
+            # Model objective component names adjusted to prevent reserved name error.
             m.FirstStage = pyo.Expression(rule=ComputeFirstStageCost_rule)
 
             def ComputeSecondStageCost_rule(m):
@@ -1306,6 +1303,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
             inv_reduced_hessian_barrier,
         )
 
+        # Adjust test to use cov_est.
         # Number of datapoints.
         # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
         # In this example, this is the number of data points in data_df, but that's
@@ -1469,9 +1467,7 @@ class TestParmestBlockEF(unittest.TestCase):
 
         theta_names = model._parmest_theta_names
         self.assertEqual(len(list(model.exp_scenarios.keys())), 2)
-        self.assertEqual(
-            len(list(model.theta_link_constraints.values())), 2 * len(theta_names)
-        )
+        self.assertEqual(len(model.theta_link_constraints), 2 * len(theta_names))
         self.assertTrue(hasattr(model, "Obj"))
         for block in model.exp_scenarios.values():
             self.assertFalse(block.Total_Cost_Objective.active)
