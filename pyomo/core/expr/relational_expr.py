@@ -394,7 +394,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
 
            - :class:`RangedExpression` if none are :const:`None`
            - :class:`InequalityExpression` if exactly one is :const:`None`
-           - The non-None argument if exaclty one is non-None
+           - The non-None argument if exactly one is non-None
            - :const:`None` if all arguments are :const:`None`
 
     """
