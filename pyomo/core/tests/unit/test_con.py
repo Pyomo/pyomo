@@ -267,6 +267,44 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs(model.c.body, model.y)
         self.assertEqual(model.c.upper, 1)
 
+        def rule(model):
+            return (float(0), model.y, float(0))
+
+        model.d = Constraint(rule=rule)
+
+        self.assertEqual(model.d.equality, True)
+        self.assertEqual(model.d.lower, 0)
+        self.assertIs(model.d.body, model.y)
+        self.assertEqual(model.d.upper, 0)
+
+        model.p = Param(mutable=True)
+        e = model.p * 2 + 1
+
+        def rule(model):
+            return (e, model.y, e)
+
+        model.e = Constraint(rule=rule)
+
+        self.assertEqual(model.e.equality, True)
+        self.assertIs(model.e.lower, e)
+        self.assertIs(model.e.body, model.y)
+        self.assertIs(model.e.upper, e)
+
+        #
+        # Note: because we do not test for symbolic equivalence, the
+        # following will be seen as a ranged inequality and not an
+        # equality:
+        #
+        def rule(model):
+            return (e, model.y, model.p * 2 + 1)
+
+        model.f = Constraint(rule=rule)
+
+        self.assertEqual(model.f.equality, False)
+        self.assertIs(model.f.lower, e)
+        self.assertIs(model.f.body, model.y)
+        self.assertIsNot(model.f.upper, e)
+
     def test_tuple_construct_invalid_2sided_inequality(self):
         model = self.create_model(abstract=True)
 
