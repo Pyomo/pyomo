@@ -679,17 +679,19 @@ class NonlinearToPWL(Transformation):
         0 >= PWL(exp(x) + x**3 - y)
         """
         assert repn.multiplier == 1
-        var_map = self._quadratic_repn_visitor.var_map
         linear_repn = QuadraticRepn()
         linear_repn.constant = repn.constant
         linear_repn.linear = repn.linear
         linear = linear_repn.to_expression(visitor)
-        nonlinear_repn = QuadraticRepn()
-        nonlinear_repn.quadratic = repn.quadratic
-        nonlinear_repn.nonlinear = repn.nonlinear
-        nonlinear = nonlinear_repn.to_expression(visitor)
 
-        return linear, nonlinear
+        return linear, repn.quadratic, repn.nonlinear
+    
+    def _get_quadratic_part_of_repn(self, repn: QuadraticRepn, visitor: QuadraticRepnVisitor):
+        assert repn.multiplier == 1
+        r = QuadraticRepn()
+        r.quadratic = repn.quadratic
+        q = r.to_expression(visitor)
+        return q
 
     def _approximate_expression(
         self, expr, obj, trans_block, config, approximate_quadratic
@@ -701,18 +703,35 @@ class NonlinearToPWL(Transformation):
         if not needs_approximating:
             return None, expr_type
 
-        linear_part, nonlinear_part = self._separate_linear_parts(
+        linear_part, quadratic_part, nonlinear_part = self._separate_linear_parts(
             repn, self._quadratic_repn_visitor
         )
 
         # Additively decompose expr and work on the pieces
         pwl_summands = [linear_part]
+        Nmin = config.min_dimension_to_additevely_decompose
         if config.additively_decompose:
-            subexpr_list = _additively_decompose_expr(
-                nonlinear_part, config.min_dimension_to_additively_decompose
-            )
+            # dimension = len(list(identify_variables(input_expr)))
+            vset = ComponentSet()
+            vmap = self._quadratic_repn_visitor.var_map
+            for x1k, x2k in quadratic_part.keys():
+                x1 = vmap[x1k]
+                x2 = vmap[x2k]
+                vset.add(x1)
+                vset.add(x2)
+            if len(vset) < Nmin:
+                vset.update(identify_variables(nonlinear_part))
+            if len(vset) >= Nmin:
+                subexpr_list = []
+                for (x1k, x2k), coef in quadratic_part.items():
+                    x1 = vmap[x1k]
+                    x2 = vmap[x2k]
+                    subexpr_list.append(coef * (x1*x2))
+                subexpr_list.extend(_additively_decompose_expr(nonlinear_part, 0))
+            else:
+                subexpr_list = [self._get_quadratic_part_of_repn(repn, self._quadratic_repn_visitor) + nonlinear_part]
         else:
-            subexpr_list = [nonlinear_part]
+            subexpr_list = [self._get_quadratic_part_of_repn(repn, self._quadratic_repn_visitor) + nonlinear_part]
         for k, subexpr in enumerate(subexpr_list):
             # First check if this is a good idea
             expr_vars = list(identify_variables(subexpr, include_fixed=False))
