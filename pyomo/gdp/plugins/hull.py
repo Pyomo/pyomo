@@ -600,7 +600,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 fallback_vars=all_local_vars,
                 disj_name=obj.name,
             )
-        transBlock.private_data().well_defined_points_map[obj] = x0_map
+        transBlock.parent_block().private_data().well_defined_points_map[obj] = x0_map
         # Any var that got an offset cannot be local anymore, but it can
         # still be generalized local
         for var in offset_vars:
@@ -1275,7 +1275,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         ----------
         b: a Block that was transformed by gdp.hull
         """
-        return b._pyomo_gdp_hull_reformulation.private_data().well_defined_points_map
+        return b.private_data().well_defined_points_map
 
 
 @TransformationFactory.register(
