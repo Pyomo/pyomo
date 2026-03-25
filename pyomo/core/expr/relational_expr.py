@@ -478,10 +478,24 @@ class NotEqualExpression(RelationalExpression):
 
 
 def tuple_to_relational_expr(args):
-    if len(args) == 2:
-        return EqualityExpression(args)
-    else:
-        return inequality(*args)
+    if len(args) == 3:
+        return inequality(*args, strict=False)
+    elif len(args) == 2:
+        lhs, rhs = args
+        ans = _eq_dispatcher[lhs.__class__, rhs.__class__](lhs, rhs)
+        if ans is NotImplemented:
+            raise ValueError(
+                "Cannot create EqualityExpression from argument types "
+                f"'{type(lhs).__name__}' and '{type(rhs).__name__}'"
+            )
+        return ans
+    raise ValueError(
+        "Cannot convert tuple to relational expression. "
+        f"Found a tuple of length {len(args)}. Expecting a tuple of "
+        "length 2 or 3:\n"
+        "    Equality:   (left, right)\n"
+        "    Inequality: (lower, expression, upper)"
+    )
 
 
 def _invalid_relational(op_type, op_str, a, b):
