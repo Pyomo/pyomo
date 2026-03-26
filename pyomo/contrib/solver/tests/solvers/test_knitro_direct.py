@@ -36,13 +36,16 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertIsNone(config.timer)
         self.assertIsNone(config.threads)
         self.assertIsNone(config.time_limit)
+        self.assertFalse(config.use_start)
 
     def test_custom_instantiation(self):
         config = KnitroConfig(description="A description")
         config.tee = True
+        config.use_start = True
         self.assertTrue(config.tee)
         self.assertEqual(config._description, "A description")
         self.assertIsNone(config.time_limit)
+        self.assertTrue(config.use_start)
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
@@ -486,3 +489,89 @@ class TestKnitroDirectSolver(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.x[2]), 4.743, 3)
         self.assertAlmostEqual(pyo.value(m.x[3]), 3.821, 3)
         self.assertAlmostEqual(pyo.value(m.x[4]), 1.379, 3)
+
+
+@unittest.skipIf(not avail, "KNITRO solver is not available")
+class TestKnitroWarmStart(unittest.TestCase):
+    """Test cases for KNITRO warm start (use_start) functionality."""
+
+    def setUp(self):
+        self.opt = KnitroDirectSolver()
+
+    def test_warm_start_reduces_iterations(self):
+        """Test that providing a good starting point reduces the number of iterations."""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-5, 5))
+        m.y = pyo.Var(bounds=(-5, 5))
+        m.obj = pyo.Objective(
+            expr=(1.0 - m.x) ** 2 + 100.0 * (m.y - m.x**2) ** 2, sense=pyo.minimize
+        )
+
+        m.x.set_value(None)
+        m.y.set_value(None)
+        res_no_start = self.opt.solve(m, use_start=False)
+        iters_no_start = res_no_start.extra_info.number_iters
+
+        m.x.set_value(0.9)
+        m.y.set_value(0.9)
+        res_with_start = self.opt.solve(m, use_start=True)
+        iters_with_start = res_with_start.extra_info.number_iters
+
+        self.assertAlmostEqual(pyo.value(m.x), 1.0, 3)
+        self.assertAlmostEqual(pyo.value(m.y), 1.0, 3)
+
+        self.assertLessEqual(iters_with_start, iters_no_start)
+
+    def test_warm_start_uses_initial_values(self):
+        """Test that warm start uses the current variable values."""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, 10))
+        m.y = pyo.Var(bounds=(0, 10))
+        m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
+        m.x.set_value(3.0)
+        m.y.set_value(4.0)
+        res = self.opt.solve(m, use_start=True)
+        self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
+        self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
+        self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
+        self.assertLessEqual(res.extra_info.number_iters, 1)
+
+    def test_warm_start_with_subset_variables(self):
+        """Test warm start when only a subset of variables have initial values."""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, 10))
+        m.y = pyo.Var(bounds=(0, 10))
+        m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
+        m.x.set_value(3.0)
+        m.y.set_value(None)
+        res = self.opt.solve(m, use_start=True)
+        self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
+        self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
+        self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
+
+    def test_warm_start_disabled(self):
+        """Test that use_start=False disables warm start."""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, 10))
+        m.y = pyo.Var(bounds=(0, 10))
+        m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
+        m.x.set_value(3.0)
+        m.y.set_value(4.0)
+        res = self.opt.solve(m, use_start=False)
+        self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
+        self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
+        self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
+
+    def test_warm_start_with_constraints(self):
+        """Test warm start with constrained optimization."""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, None))
+        m.y = pyo.Var(bounds=(0, None))
+        m.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.minimize)
+        m.c1 = pyo.Constraint(expr=m.x + 2 * m.y >= 4)
+        m.c2 = pyo.Constraint(expr=2 * m.x + m.y >= 4)
+        m.x.set_value(1.3)
+        m.y.set_value(1.3)
+        self.opt.solve(m, use_start=True)
+        self.assertAlmostEqual(pyo.value(m.x), 4.0 / 3.0, 3)
+        self.assertAlmostEqual(pyo.value(m.y), 4.0 / 3.0, 3)
