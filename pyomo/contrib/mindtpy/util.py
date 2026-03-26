@@ -39,6 +39,24 @@ pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
 
 
+def _update_solve_solver_options(solve_args, new_options):
+    if 'options' in solve_args and 'solver_options' in solve_args:
+        raise ValueError(
+            "Both 'options' and 'solver_options' were requested. "
+            "Please use one or the other, not both."
+        )
+
+    if 'solver_options' in solve_args:
+        option_kwd = 'solver_options'
+    elif 'options' in solve_args:
+        option_kwd = 'options'
+    else:
+        option_kwd = 'solver_options'
+
+    solve_args[option_kwd] = dict(solve_args.get(option_kwd, {}))
+    solve_args[option_kwd].update(new_options)
+
+
 def calc_jacobians(constraint_list, differentiate_mode):
     """Generates a map of jacobians for the variables in the model.
 
@@ -496,7 +514,7 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     )
 
 
-def update_solver_timelimit(opt, solver_name, timing, config):
+def update_solver_timelimit(opt, solver_name, timing, config, solve_args=None):
     """Updates the time limit for subsolvers.
 
     Parameters
@@ -524,7 +542,12 @@ def update_solver_timelimit(opt, solver_name, timing, config):
     elif solver_name == 'appsi_highs':
         opt.config.time_limit = remaining
     elif solver_name == 'cyipopt':
-        opt.config.options['max_cpu_time'] = float(remaining)
+        if solve_args is None:
+            opt.config.options['max_cpu_time'] = float(remaining)
+        else:
+            _update_solve_solver_options(
+                solve_args, {'max_cpu_time': float(remaining)}
+            )
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
     elif solver_name == 'baron':
@@ -565,7 +588,7 @@ def set_solver_mipgap(opt, solver_name, config):
 
 
 def set_solver_constraint_violation_tolerance(
-    opt, solver_name, config, warm_start=True
+    opt, solver_name, config, warm_start=True, solve_args=None
 ):
     """Set constraint violation tolerance for solvers.
 
@@ -583,7 +606,12 @@ def set_solver_constraint_violation_tolerance(
     elif solver_name in {'ipopt', 'appsi_ipopt'}:
         opt.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'cyipopt':
-        opt.config.options['constr_viol_tol'] = config.zero_tolerance
+        if solve_args is None:
+            opt.config.options['constr_viol_tol'] = config.zero_tolerance
+        else:
+            _update_solve_solver_options(
+                solve_args, {'constr_viol_tol': config.zero_tolerance}
+            )
     elif solver_name == 'gams':
         if config.nlp_solver_args['solver'] in {
             'ipopt',

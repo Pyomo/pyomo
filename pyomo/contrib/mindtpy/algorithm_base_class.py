@@ -275,13 +275,18 @@ class _MindtPyAlgorithm:
                     'Your model is a NLP (nonlinear program). '
                     'Using NLP solver %s to solve.' % config.nlp_solver
                 )
+                nlp_args = dict(config.nlp_solver_args)
                 update_solver_timelimit(
-                    self.nlp_opt, config.nlp_solver, self.timing, config
+                    self.nlp_opt,
+                    config.nlp_solver,
+                    self.timing,
+                    config,
+                    solve_args=nlp_args,
                 )
                 self.nlp_opt.solve(
                     self.original_model,
                     tee=config.nlp_solver_tee,
-                    **config.nlp_solver_args,
+                    **nlp_args,
                 )
                 return False
             else:
@@ -834,7 +839,13 @@ class _MindtPyAlgorithm:
         MindtPy = self.rnlp.MindtPy_utils
         TransformationFactory('core.relax_integer_vars').apply_to(self.rnlp)
         nlp_args = dict(config.nlp_solver_args)
-        update_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
+        update_solver_timelimit(
+            self.nlp_opt,
+            config.nlp_solver,
+            self.timing,
+            config,
+            solve_args=nlp_args,
+        )
         with SuppressInfeasibleWarning():
             results = self.nlp_opt.solve(
                 self.rnlp,
@@ -1109,7 +1120,13 @@ class _MindtPyAlgorithm:
             return self.fixed_nlp, results
         # Solve the NLP
         nlp_args = dict(config.nlp_solver_args)
-        update_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
+        update_solver_timelimit(
+            self.nlp_opt,
+            config.nlp_solver,
+            self.timing,
+            config,
+            solve_args=nlp_args,
+        )
         with SuppressInfeasibleWarning():
             with time_code(self.timing, 'fixed subproblem'):
                 results = self.nlp_opt.solve(
@@ -1381,7 +1398,11 @@ class _MindtPyAlgorithm:
         MindtPy.feas_obj.activate()
         nlp_args = dict(config.nlp_solver_args)
         update_solver_timelimit(
-            self.feasibility_nlp_opt, config.nlp_solver, self.timing, config
+            self.feasibility_nlp_opt,
+            config.nlp_solver,
+            self.timing,
+            config,
+            solve_args=nlp_args,
         )
         try:
             TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
@@ -2395,7 +2416,13 @@ class _MindtPyAlgorithm:
             return fp_nlp, results
         # Solve the NLP
         nlp_args = dict(config.nlp_solver_args)
-        update_solver_timelimit(self.nlp_opt, config.nlp_solver, self.timing, config)
+        update_solver_timelimit(
+            self.nlp_opt,
+            config.nlp_solver,
+            self.timing,
+            config,
+            solve_args=nlp_args,
+        )
         with SuppressInfeasibleWarning():
             with time_code(self.timing, 'fp subproblem'):
                 results = self.nlp_opt.solve(
@@ -2662,10 +2689,21 @@ class _MindtPyAlgorithm:
         set_solver_mipgap(self.mip_opt, config.mip_solver, config)
 
         set_solver_constraint_violation_tolerance(
-            self.nlp_opt, config.nlp_solver, config
+            self.nlp_opt,
+            config.nlp_solver,
+            config,
+            solve_args=(
+                config.nlp_solver_args if config.nlp_solver == 'cyipopt' else None
+            ),
         )
         set_solver_constraint_violation_tolerance(
-            self.feasibility_nlp_opt, config.nlp_solver, config, warm_start=False
+            self.feasibility_nlp_opt,
+            config.nlp_solver,
+            config,
+            warm_start=False,
+            solve_args=(
+                config.nlp_solver_args if config.nlp_solver == 'cyipopt' else None
+            ),
         )
 
         self.set_appsi_solver_update_config()

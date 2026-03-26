@@ -68,6 +68,7 @@ from pyomo.opt import SolverStatus, SolverResults, TerminationCondition
 from pyomo.opt.results.solution import Solution
 
 logger = logging.getLogger(__name__)
+_options_not_set = object()
 
 # This maps the cyipopt STATUS_MESSAGES back to string representations
 # of the Ipopt ApplicationReturnStatus enum
@@ -311,8 +312,30 @@ class PyomoCyIpoptSolver:
 
         return tuple(_int(_) for _ in cyipopt_interface.cyipopt.__version__.split("."))
 
+    def _get_solve_options(
+        self, options=_options_not_set, solver_options=_options_not_set
+    ):
+        if options is not _options_not_set and solver_options is not _options_not_set:
+            raise ValueError(
+                "Both 'options' and 'solver_options' were requested. "
+                "Please use one or the other, not both."
+            )
+
+        solve_options = dict(self.config.options.items())
+        if options is not _options_not_set:
+            solve_options.update(options)
+        elif solver_options is not _options_not_set:
+            solve_options.update(solver_options)
+
+        return solve_options
+
     def solve(self, model, **kwds):
+        options = kwds.pop('options', _options_not_set)
+        solver_options = kwds.pop('solver_options', _options_not_set)
         config = self.config(kwds, preserve_implicit=True)
+        solve_options = self._get_solve_options(
+            options=options, solver_options=solver_options
+        )
 
         if not isinstance(model, Block):
             raise ValueError(
@@ -377,7 +400,7 @@ class PyomoCyIpoptSolver:
         except AttributeError:
             # Fall back to pre-1.0.0 API
             add_option = cyipopt_solver.addOption
-        for k, v in config.options.items():
+        for k, v in solve_options.items():
             add_option(k, v)
 
         timer = TicTocTimer()
