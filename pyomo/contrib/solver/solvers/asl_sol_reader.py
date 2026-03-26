@@ -8,11 +8,12 @@
 # ____________________________________________________________________________________
 
 import io
-from typing import Sequence, Optional, Mapping
+from typing import Sequence, Optional, Mapping, List, Any
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap
 from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.suffix import Suffix
 from pyomo.core.base.var import VarData
 from pyomo.core.expr import value
 from pyomo.core.staleflag import StaleFlagManager
@@ -25,7 +26,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 
 
 class ASLSolFileData:
@@ -53,16 +57,83 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     Loader for solvers that create ASL .sol files (e.g., ipopt)
     """
 
-    def __init__(self, sol_data: ASLSolFileData, nl_info: NLWriterInfo) -> None:
+    def __init__(
+        self, sol_data: ASLSolFileData, nl_info: NLWriterInfo, pyomo_model
+    ) -> None:
         self._sol_data = sol_data
         self._nl_info = nl_info
+        self._pyomo_model = pyomo_model
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
+    def get_number_of_solutions(self) -> int:
+        if self._nl_info is None:
+            return 0
+        return 1
+
+    def get_solution_ids(self) -> List[Any]:
+        return [None]
+
+    def load_import_suffixes(self, solution_id=None):
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
+
+        load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
+
+        # the above only handles duals and reduced costs
+        suffixes_to_load = {}
+        for suffix in self._pyomo_model.component_objects(
+            Suffix, descend_into=True, active=True
+        ):
+            if not suffix.import_enabled():
+                continue
+            suffixes_to_load[suffix.local_name] = suffix
+        data = [
+            (self._sol_data.var_suffixes, self._nl_info.variables),
+            (self._sol_data.con_suffixes, self._nl_info.constraints),
+            (self._sol_data.obj_suffixes, self._nl_info.objectives),
+        ]
+        for suffix_dict, comp_list in data:
+            for suffix_name, suffix_vals in suffix_dict.items():
+                if suffix_name not in suffixes_to_load:
+                    continue
+                if self._nl_info.eliminated_vars:
+                    raise MouseTrap(
+                        'Suffixes are not available when variables have '
+                        'been presolved from the model. Turn presolve off '
+                        '(solver.config.writer_config.linear_presolve=False) to get '
+                        'all suffixes.'
+                    )
+                if self._nl_info.scaling:
+                    raise MouseTrap(
+                        'General suffixes (other than duals and reduced costs) '
+                        'are not available when the model has been scaled. Turn '
+                        'scaling off in the NL writer '
+                        '(solver.config.writer_config.scale_model=False) to get '
+                        'all suffixes.'
+                    )
+                suffix = suffixes_to_load[suffix_name]
+                suffix.clear()
+                for comp_ndx, val in suffix_vals.items():
+                    comp = comp_list[comp_ndx]
+                    suffix[comp] = val
+        for suffix_name, val in self._sol_data.problem_suffixes.items():
+            if suffix_name not in suffixes_to_load:
+                continue
+            suffix = suffixes_to_load[suffix_name]
+            suffix.clear()
+            suffix[None] = val
+
+    def load_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+    ) -> None:
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
         if vars_to_load is not None:
             # If we are given a list of variables to load, it is easiest
-            # to use the filtering in get_primals and then just set
+            # to use the filtering in get_vars and then just set
             # those values.
-            for var, val in self.get_primals(vars_to_load).items():
+            for var, val in self.get_vars(vars_to_load).items():
                 var.set_value(val, skip_validation=True)
             StaleFlagManager.mark_all_as_stale(delayed=True)
             return
@@ -90,9 +161,12 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+    def get_vars(
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
         result = ComponentMap()
         if not self._sol_data.primals:
             # SOL file contained no primal values
@@ -137,8 +211,11 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
         return result
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> dict[ConstraintData, float]:
+        assert (
+            solution_id is None
+        ), f"{self.__class__.__name__} does not support solution_id"
         if len(self._nl_info.eliminated_vars) > 0:
             raise MouseTrap(
                 'Complete duals are not available when variables have '
