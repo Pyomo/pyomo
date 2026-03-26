@@ -40,6 +40,7 @@ from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
 from pyomo.contrib.pynumero.examples.external_grey_box.react_example.reactor_model_outputs import (
     ReactorConcentrationsOutputModel,
 )
@@ -442,6 +443,7 @@ class TestCyIpoptGreyBox(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb']), 1072.4372, places=2)
 
     def test_solve_hessian_not_supported_override_user_option(self):
+        """Make sure we do this even when the user says to use an exact Hessian"""
         m = pyo.ConcreteModel()
         m.reactor = ExternalGreyBoxBlock(external_model=ReactorConcentrationsOutputModel())
         m.k1con = pyo.Constraint(expr=m.reactor.inputs["k1"] == 5 / 6)
@@ -456,3 +458,23 @@ class TestCyIpoptGreyBox(unittest.TestCase):
         self.assertEqual(solver.config.options["hessian_approximation"], "exact")
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.34381, places=3)
         self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb']), 1072.4372, places=2)
+
+    def test_hessian_supported_no_override(self):
+        """Make sure we didn't accidentally override the hessian_approximation
+        option when Hessian *is* supported.
+        """
+        m = pyo.ConcreteModel()
+        external_model = ex_models.PressureDropSingleOutputWithHessian()
+        m.x = pyo.Var(range(external_model.n_inputs()))
+        m.eq = pyo.Constraint(expr=sum(m.x.values()) == 1)
+        solver = pyo.SolverFactory("cyipopt")
+        with TempfileManager.new_context() as temp:
+            logfile = temp.create_tempfile("hessian-no-override.log")
+            options = dict(output_file=logfile, max_iter=0, print_user_options="yes")
+            solver.config.options.update(options)
+            _, cynlp = solver.solve(m, tee=True, return_nlp=True)
+            # IIRC this may be necessary to avoid file IO race condition
+            #cynlp.close()
+            with open(logfile, "r") as fd:
+                solver_trace = fd.read()
+        self.assertNotIn("hessian_approximation", solver_trace)
