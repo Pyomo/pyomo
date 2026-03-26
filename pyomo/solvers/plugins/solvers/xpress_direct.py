@@ -232,6 +232,15 @@ def _finalize_xpress_import(xpress, avail):
             lambda self, prob, *args, **kwargs: prob.getIndexFromName(*args, **kwargs)
         )
         XpressDirect._getObjIndex = lambda self, prob, obj: prob.getIndex(obj)
+        XpressDirect._addRows = lambda self, prob, rowtype, rhs, start, colind, rowcoef, rhsrange=None, names=None: prob.addrows(
+            rowtype, rhs, start, colind, rowcoef, range=rhsrange, names=names
+        )
+        XpressDirect._chgObj = lambda self, prob, *args, **kwargs: prob.chgobj(
+            *args, **kwargs
+        )
+        XpressDirect._chgObjSense = (
+            lambda self, prob, *args, **kwargs: prob.chgobjsense(*args, **kwargs)
+        )
 
         def _getLB(self, prob, *args, **kwargs):
             lb = []
@@ -281,6 +290,12 @@ def _finalize_xpress_import(xpress, avail):
         XpressDirect._getUB = lambda self, prob, *args, **kwargs: prob.getUB(
             *args, **kwargs
         )
+        XpressDirect._chgObj = lambda self, prob, *args, **kwargs: prob.chgObj(
+            *args, **kwargs
+        )
+        XpressDirect._chgObjSense = (
+            lambda self, prob, *args, **kwargs: prob.chgObjSense(*args, **kwargs)
+        )
 
         def _addCols(self, prob, objx, mstart, mrwind, dmatval, bdl, bdu, names, types):
             first_col_ind = prob.attributes.cols
@@ -293,6 +308,17 @@ def _finalize_xpress_import(xpress, avail):
                 prob.chgColType(col_indices, types)
 
         XpressDirect._addCols = _addCols
+
+        def _addRows(
+            self, prob, rowtype, rhs, start, colind, rowcoef, rhsrange=None, names=None
+        ):
+            first_row_ind = prob.attributes.rows
+            prob.addRows(rowtype, rhs, start, colind, rowcoef, range=rhsrange)
+            last_row_ind = prob.attributes.rows - 1
+            if names is not None:
+                prob.addNames(xp.Namespaces.ROW, names, first_row_ind, last_row_ind)
+
+        XpressDirect._addRows = _addRows
 
 
 class _xpress_importer_class:
@@ -355,6 +381,14 @@ class XpressDirect(DirectSolver):
         self._range_constraints = set()
 
         self._python_api_exists = xpress_available
+        # Tracks whether the current solver objective has quadratic terms,
+        # so _set_objective can decide whether to use the chgObj fast path.
+        self._obj_is_quadratic = False
+
+        # Counter-based row-index cache (see _set_instance for details).
+        self._con_insertion_counter = 0
+        self._con_name_to_counter = {}
+        self._deleted_counters = []
 
         # TODO: this isn't a limit of XPRESS, which implements an SLP
         #       method for NLPs. But it is a limit of *this* interface
@@ -891,11 +925,20 @@ class XpressDirect(DirectSolver):
 
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
+        linear_only = kwds.pop('linear_only', False)
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         self._pyomo_con_to_solver_con_map = dict()
         self._solver_con_to_pyomo_con_map = ComponentMap()
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._solver_var_to_pyomo_var_map = ComponentMap()
+        # Counter-based row-index cache used by the persistent interface to
+        # delete rows in O(log M) without an O(N) getIndexFromName lookup.
+        # Each constraint gets a unique insertion counter; the current Xpress
+        # row index equals (counter - number of previously deleted rows with a
+        # lower counter), computable via bisect on the sorted deleted list.
+        self._con_insertion_counter = 0
+        self._con_name_to_counter = {}
+        self._deleted_counters = []
         try:
             if model.name is not None:
                 self._solver_model = xpress.problem(name=model.name)
@@ -909,10 +952,207 @@ class XpressDirect(DirectSolver):
                 "bindings for Xpress?\n\n\t" + "Error message: {0}".format(e)
             )
             raise Exception(msg)
-        self._add_block(model)
+        if linear_only:
+            self._load_linear_problem(model)
+        else:
+            self._add_block(model)
 
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
+
+    def _load_linear_problem(self, model):
+        """Fast path for purely linear/MIP models.
+
+        Uses :class:`~pyomo.repn.plugins.standard_form.LinearStandardFormCompiler`
+        to build the full coefficient matrix and then loads the entire problem
+        into Xpress in a single ``loadproblem()`` call, bypassing the
+        per-constraint Python overhead of ``_add_block``.
+
+        All solver maps are populated from the compiled representation so that
+        the persistent interface (``add_constraint``, ``remove_constraint``,
+        ``add_var``, etc.) continues to work normally after this fast path.
+
+        Parameters
+        ----------
+        model : Pyomo ConcreteModel
+            Must contain only linear constraints and objectives.  Nonlinear
+            expressions will raise an error inside the compiler.
+        """
+        from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
+        from pyomo.common.dependencies import numpy as np
+        import pyomo.core.base.sos
+
+        # Compile: mixed_form preserves <=, >=, == direction;
+        # keep_range_constraints emits range rows as a single 'R' entry.
+        # set_sense=None keeps objective coefficients as-is so we can set
+        # the sense ourselves via chgobjsense after loadproblem.
+        repn = LinearStandardFormCompiler().write(
+            model, mixed_form=True, keep_range_constraints=True, set_sense=None
+        )
+
+        if len(repn.objectives) > 1:
+            raise ValueError("Solver interface does not support multiple objectives.")
+
+        xprob = self._solver_model
+        n_cols = len(repn.columns)
+
+        # ------------------------------------------------------------------
+        # Objective
+        # ------------------------------------------------------------------
+        if repn.objectives:
+            obj = repn.objectives[0]
+            if obj.sense == minimize:
+                obj_sense = xpress.minimize
+            elif obj.sense == maximize:
+                obj_sense = xpress.maximize
+            else:
+                raise ValueError(
+                    'Objective sense is not recognized: {0}'.format(obj.sense)
+                )
+            # c is (n_objectives x n_cols) CSC; convert to CSR for row slicing.
+            c_csr = repn.c.tocsr()
+            c_dense = np.asarray(c_csr[0, :].todense()).flatten()
+            c_offset = float(repn.c_offset[0])
+        else:
+            obj = None
+            obj_sense = xpress.minimize
+            c_csr = None
+            c_dense = np.zeros(n_cols)
+            c_offset = 0.0
+
+        # ------------------------------------------------------------------
+        # Variable arrays
+        # ------------------------------------------------------------------
+        lb = []
+        ub = []
+        colnames = []
+        entind = []
+        coltype_chars = []
+        for i, var in enumerate(repn.columns):
+            bnd_lb, bnd_ub = var.bounds
+            lb.append(-xpress.infinity if bnd_lb is None else float(bnd_lb))
+            ub.append(xpress.infinity if bnd_ub is None else float(bnd_ub))
+            colnames.append(self._symbol_map.getSymbol(var, self._labeler))
+            if var.is_binary():
+                entind.append(i)
+                coltype_chars.append('B')
+            elif var.is_integer():
+                entind.append(i)
+                coltype_chars.append('I')
+
+        # ------------------------------------------------------------------
+        # Constraint arrays
+        # ------------------------------------------------------------------
+        _rowtype_map = {0: 'E', 1: 'L', -1: 'G', 2: 'R'}
+        rowtype = []
+        rownames = []
+        for row_entry in repn.rows:
+            rowtype.append(_rowtype_map[row_entry.bound_type])
+            rownames.append(
+                self._symbol_map.getSymbol(row_entry.constraint, self._labeler)
+            )
+
+        rhs = repn.rhs
+        # rhs_range is all-zeros when keep_range_constraints produced no range
+        # rows; pass None in that case (loadproblem ignores non-'R' rng values
+        # but we avoid passing a useless array).
+        rng = repn.rhs_range if np.any(repn.rhs_range != 0) else None
+
+        # ------------------------------------------------------------------
+        # CSC coefficient matrix
+        # repn.A is already CSC; pass the numpy arrays directly — loadproblem
+        # accepts them without requiring a Python-list copy.
+        # ------------------------------------------------------------------
+        A = repn.A.asformat('csc')
+
+        # ------------------------------------------------------------------
+        # Load the full LP/MIP in one call
+        # ------------------------------------------------------------------
+        xprob.loadproblem(
+            model.name or '',
+            rowtype,
+            rhs,
+            rng,
+            c_dense,
+            A.indptr,
+            None,  # collen — use indptr[ncol] convention
+            A.indices,
+            A.data,
+            lb,
+            ub,
+            colnames=colnames,
+            rownames=rownames,
+            coltype=coltype_chars if coltype_chars else None,
+            entind=entind if entind else None,
+        )
+
+        # Objective sense and constant term (OBJRHS).
+        # chgobj([-1], [-k]) sets OBJRHS = k so the solver adds +k to c^T x.
+        self._chgObjSense(xprob, obj_sense)
+        if c_offset != 0.0:
+            self._chgObj(xprob, [-1], [-c_offset])
+        self._obj_is_quadratic = False
+
+        # ------------------------------------------------------------------
+        # Retrieve linked xpress.var objects (in column index order)
+        # ------------------------------------------------------------------
+        xpress_vars = xprob.getVariable()
+
+        # ------------------------------------------------------------------
+        # Populate variable maps
+        # ------------------------------------------------------------------
+        for var, xv in zip(repn.columns, xpress_vars):
+            self._pyomo_var_to_solver_var_map[var] = xv
+            self._solver_var_to_pyomo_var_map[xv] = var
+            self._referenced_variables[var] = 0
+
+        # ------------------------------------------------------------------
+        # Populate constraint maps and O(log M) row-index counters
+        # ------------------------------------------------------------------
+        for i, (row_entry, conname) in enumerate(zip(repn.rows, rownames)):
+            con = row_entry.constraint
+            self._pyomo_con_to_solver_con_map[con] = conname
+            self._solver_con_to_pyomo_con_map[conname] = con
+            self._con_name_to_counter[conname] = i
+            if row_entry.bound_type == 2:
+                self._range_constraints.add(con)
+        self._con_insertion_counter = len(repn.rows)
+
+        # ------------------------------------------------------------------
+        # Populate _vars_referenced_by_con and _referenced_variables
+        # ------------------------------------------------------------------
+        # Convert A to CSR for efficient per-row nonzero-column access.
+        A_csr = A.tocsr()
+        for i, row_entry in enumerate(repn.rows):
+            con = row_entry.constraint
+            j0, j1 = int(A_csr.indptr[i]), int(A_csr.indptr[i + 1])
+            vars_in_con = ComponentSet(repn.columns[j] for j in A_csr.indices[j0:j1])
+            self._vars_referenced_by_con[con] = vars_in_con
+            for var in vars_in_con:
+                self._referenced_variables[var] += 1
+
+        # ------------------------------------------------------------------
+        # Populate objective reference state
+        # ------------------------------------------------------------------
+        if obj is not None:
+            j0, j1 = int(c_csr.indptr[0]), int(c_csr.indptr[1])
+            obj_vars = ComponentSet(repn.columns[j] for j in c_csr.indices[j0:j1])
+            for var in obj_vars:
+                self._referenced_variables[var] += 1
+            self._objective = obj
+            self._vars_referenced_by_obj = obj_vars
+
+        # ------------------------------------------------------------------
+        # Add SOS constraints (variable maps must be populated first)
+        # ------------------------------------------------------------------
+        for sub_block in model.block_data_objects(descend_into=True, active=True):
+            for sos_con in sub_block.component_data_objects(
+                ctype=pyomo.core.base.sos.SOSConstraint,
+                descend_into=False,
+                active=True,
+                sort=True,
+            ):
+                self._add_sos_constraint(sos_con)
 
     def _add_constraint(self, con):
         if not con.active:
@@ -922,15 +1162,6 @@ class XpressDirect(DirectSolver):
             return None
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
-
-        if con._linear_canonical_form:
-            xpress_expr, referenced_vars = self._get_expr_from_pyomo_repn(
-                con.canonical_form(), self._max_constraint_degree
-            )
-        else:
-            xpress_expr, referenced_vars = self._get_expr_from_pyomo_expr(
-                con.body, self._max_constraint_degree
-            )
 
         if con.has_lb():
             if not is_fixed(con.lower):
@@ -943,51 +1174,129 @@ class XpressDirect(DirectSolver):
                     "Upper bound of constraint {0} is not constant.".format(con)
                 )
 
-        if con.equality:
-            xpress_con = self._addConstraint(
-                self._solver_model,
-                body=xpress_expr,
-                type=xpress.eq,
-                rhs=value(con.lower),
-                name=conname,
-            )
-        elif con.has_lb() and con.has_ub():
-            xpress_con = self._addConstraint(
-                self._solver_model,
-                body=xpress_expr,
-                type=xpress.rng,
-                lb=value(con.lower),
-                ub=value(con.upper),
-                name=conname,
-            )
-            self._range_constraints.add(xpress_con)
-        elif con.has_lb():
-            xpress_con = self._addConstraint(
-                self._solver_model,
-                body=xpress_expr,
-                type=xpress.geq,
-                rhs=value(con.lower),
-                name=conname,
-            )
-        elif con.has_ub():
-            xpress_con = self._addConstraint(
-                self._solver_model,
-                body=xpress_expr,
-                type=xpress.leq,
-                rhs=value(con.upper),
-                name=conname,
-            )
+        if con._linear_canonical_form:
+            repn = con.canonical_form()
         else:
-            raise ValueError(
-                "Constraint does not have a lower "
-                "or an upper bound: {0} \n".format(con)
+            repn = generate_standard_repn(con.body, quadratic=True)
+
+        degree = repn.polynomial_degree()
+        if (degree is None) or (degree > self._max_constraint_degree):
+            raise DegreeError(
+                'XpressDirect does not support expressions of degree {0}.'
+                '\nexpr: {1}'.format(degree, con.body)
+            )
+
+        if repn.quadratic_vars:
+            # Quadratic constraint: build an Xpress expression tree and use
+            # _addConstraint, which links a Python constraint object.
+            try:
+                xpress_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                    repn, self._max_constraint_degree
+                )
+            except DegreeError as e:
+                msg = e.args[0]
+                msg += '\nexpr: {0}'.format(con.body)
+                raise DegreeError(msg)
+
+            if con.equality:
+                self._addConstraint(
+                    self._solver_model,
+                    body=xpress_expr,
+                    type=xpress.eq,
+                    rhs=value(con.lower),
+                    name=conname,
+                )
+            elif con.has_lb() and con.has_ub():
+                self._addConstraint(
+                    self._solver_model,
+                    body=xpress_expr,
+                    type=xpress.rng,
+                    lb=value(con.lower),
+                    ub=value(con.upper),
+                    name=conname,
+                )
+                self._range_constraints.add(conname)
+            elif con.has_lb():
+                self._addConstraint(
+                    self._solver_model,
+                    body=xpress_expr,
+                    type=xpress.geq,
+                    rhs=value(con.lower),
+                    name=conname,
+                )
+            elif con.has_ub():
+                self._addConstraint(
+                    self._solver_model,
+                    body=xpress_expr,
+                    type=xpress.leq,
+                    rhs=value(con.upper),
+                    name=conname,
+                )
+            else:
+                raise ValueError(
+                    "Constraint does not have a lower "
+                    "or an upper bound: {0} \n".format(con)
+                )
+        else:
+            # Linear constraint: bypass expression-tree construction and add
+            # the row directly using _addRows, which is significantly faster
+            # for large models.
+            referenced_vars = ComponentSet(repn.linear_vars)
+            xpress_vars = [
+                self._pyomo_var_to_solver_var_map[v] for v in repn.linear_vars
+            ]
+            coeffs = [float(c) for c in repn.linear_coefs]
+            const = float(repn.constant)
+            n = len(xpress_vars)
+
+            if con.equality:
+                rowtype = ['E']
+                rhs = [value(con.lower) - const]
+                rhsrange = None
+            elif con.has_lb() and con.has_ub():
+                ub_val = value(con.upper) - const
+                lb_val = value(con.lower) - const
+                rowtype = ['R']
+                rhs = [ub_val]
+                rhsrange = [ub_val - lb_val]
+                self._range_constraints.add(conname)
+            elif con.has_lb():
+                rowtype = ['G']
+                rhs = [value(con.lower) - const]
+                rhsrange = None
+            elif con.has_ub():
+                rowtype = ['L']
+                rhs = [value(con.upper) - const]
+                rhsrange = None
+            else:
+                raise ValueError(
+                    "Constraint does not have a lower "
+                    "or an upper bound: {0} \n".format(con)
+                )
+
+            self._addRows(
+                self._solver_model,
+                rowtype,
+                rhs,
+                [0, n],
+                xpress_vars,
+                coeffs,
+                rhsrange=rhsrange,
+                names=[conname],
             )
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
         self._vars_referenced_by_con[con] = referenced_vars
-        self._pyomo_con_to_solver_con_map[con] = xpress_con
-        self._solver_con_to_pyomo_con_map[xpress_con] = con
+        # Store constraint name string (not the xp.constraint object) so the
+        # solver maps are stable across row additions/deletions and compatible
+        # with the name-based getDuals/getSlacks APIs.
+        self._pyomo_con_to_solver_con_map[con] = conname
+        self._solver_con_to_pyomo_con_map[conname] = con
+        # Record the insertion counter so the persistent interface can compute
+        # the current Xpress row index in O(log M) without getIndexFromName.
+        self._con_name_to_counter[conname] = self._con_insertion_counter
+        self._con_insertion_counter += 1
 
     def _add_sos_constraint(self, con):
         if not con.active:
@@ -1045,12 +1354,6 @@ class XpressDirect(DirectSolver):
         return vartype
 
     def _set_objective(self, obj):
-        if self._objective is not None:
-            for var in self._vars_referenced_by_obj:
-                self._referenced_variables[var] -= 1
-            self._vars_referenced_by_obj = ComponentSet()
-            self._objective = None
-
         if obj.active is False:
             raise ValueError('Cannot add inactive objective to solver.')
 
@@ -1061,14 +1364,79 @@ class XpressDirect(DirectSolver):
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
-        xpress_expr, referenced_vars = self._get_expr_from_pyomo_expr(
-            obj.expr, self._max_obj_degree
-        )
+        repn = generate_standard_repn(obj.expr, quadratic=True)
 
-        for var in referenced_vars:
-            self._referenced_variables[var] += 1
+        degree = repn.polynomial_degree()
+        if (degree is None) or (degree > self._max_obj_degree):
+            raise DegreeError(
+                'XpressDirect does not support expressions of degree {0}.'.format(
+                    degree
+                )
+            )
 
-        self._solver_model.setObjective(xpress_expr, sense=sense)
+        if repn.quadratic_vars or self._obj_is_quadratic:
+            # Quadratic objective (or replacing a quadratic one): use
+            # setObjective which handles both the linear and quadratic parts
+            # and safely clears any previous quadratic terms.
+            try:
+                xpress_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                    repn, self._max_obj_degree
+                )
+            except DegreeError as e:
+                msg = e.args[0]
+                msg += '\nexpr: {0}'.format(obj.expr)
+                raise DegreeError(msg)
+
+            if self._objective is not None:
+                for var in self._vars_referenced_by_obj:
+                    self._referenced_variables[var] -= 1
+                self._vars_referenced_by_obj = ComponentSet()
+                self._objective = None
+
+            for var in referenced_vars:
+                self._referenced_variables[var] += 1
+
+            self._solver_model.setObjective(xpress_expr, sense=sense)
+            self._obj_is_quadratic = bool(repn.quadratic_vars)
+        else:
+            # Linear objective fast path: build coefficient arrays directly
+            # and call chgObj, bypassing Xpress expression-tree construction.
+            referenced_vars = ComponentSet(repn.linear_vars)
+            new_xpress_vars = [
+                self._pyomo_var_to_solver_var_map[v] for v in repn.linear_vars
+            ]
+            new_coeffs = [float(c) for c in repn.linear_coefs]
+            const = float(repn.constant)
+
+            if self._objective is not None:
+                # Zero out objective coefficients for variables that are no
+                # longer in the new objective.
+                vars_to_zero = self._vars_referenced_by_obj - referenced_vars
+                if vars_to_zero:
+                    zero_xpress_vars = [
+                        self._pyomo_var_to_solver_var_map[v] for v in vars_to_zero
+                    ]
+                    self._chgObj(
+                        self._solver_model,
+                        zero_xpress_vars,
+                        [0.0] * len(zero_xpress_vars),
+                    )
+                for var in self._vars_referenced_by_obj:
+                    self._referenced_variables[var] -= 1
+                self._vars_referenced_by_obj = ComponentSet()
+                self._objective = None
+
+            # chgobj([-1], [k]) sets OBJRHS = -k, so the objective constant
+            # becomes +k. Pass -const so that OBJRHS = const.
+            self._chgObj(
+                self._solver_model, new_xpress_vars + [-1], new_coeffs + [-const]
+            )
+            self._chgObjSense(self._solver_model, sense)
+            self._obj_is_quadratic = False
+
+            for var in referenced_vars:
+                self._referenced_variables[var] += 1
+
         self._objective = obj
         self._vars_referenced_by_obj = referenced_vars
 
@@ -1167,9 +1535,15 @@ class XpressDirect(DirectSolver):
                 soln_constraints = soln.constraint
 
                 if extract_duals or extract_slacks:
-                    xpress_cons = list(self._solver_con_to_pyomo_con_map.keys())
+                    # Only include regular (non-SOS) constraints, which are
+                    # keyed by name strings in the solver-con map.
+                    xpress_cons = [
+                        con
+                        for con in self._solver_con_to_pyomo_con_map.keys()
+                        if isinstance(con, str)
+                    ]
                     for con in xpress_cons:
-                        soln_constraints[con.name] = {}
+                        soln_constraints[con] = {}
 
                 xpress_vars = list(self._solver_var_to_pyomo_var_map.keys())
                 try:
@@ -1209,24 +1583,25 @@ class XpressDirect(DirectSolver):
                 if extract_duals:
                     vals = self._getDuals(xprob, xpress_cons)
                     for val, con in zip(vals, xpress_cons):
-                        soln_constraints[con.name]["Dual"] = val
+                        soln_constraints[con]["Dual"] = val
 
                 if extract_slacks:
                     for con, val in zip(xpress_cons, slacks):
                         if con in self._range_constraints:
                             ## for xpress, the slack on a range constraint
                             ## is based on the upper bound
-                            lb = con.lb
-                            ub = con.ub
+                            pyomo_con = self._solver_con_to_pyomo_con_map[con]
+                            lb = value(pyomo_con.lower)
+                            ub = value(pyomo_con.upper)
                             ub_s = val
                             expr_val = ub - ub_s
                             lb_s = lb - expr_val
                             if abs(ub_s) > abs(lb_s):
-                                soln_constraints[con.name]["Slack"] = ub_s
+                                soln_constraints[con]["Slack"] = ub_s
                             else:
-                                soln_constraints[con.name]["Slack"] = lb_s
+                                soln_constraints[con]["Slack"] = lb_s
                         else:
-                            soln_constraints[con.name]["Slack"] = val
+                            soln_constraints[con]["Slack"] = val
 
         elif self._load_solutions:
             if have_soln:
@@ -1321,8 +1696,8 @@ class XpressDirect(DirectSolver):
             if xpress_con in self._range_constraints:
                 ## for xpress, the slack on a range constraint
                 ## is based on the upper bound
-                lb = xpress_con.lb
-                ub = xpress_con.ub
+                lb = value(pyomo_con.lower)
+                ub = value(pyomo_con.upper)
                 ub_s = val
                 expr_val = ub - ub_s
                 lb_s = lb - expr_val
