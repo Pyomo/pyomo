@@ -219,8 +219,7 @@ class TestDoEErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            r"FIM provided is not positive definite. It has one or more "
-            r"negative eigenvalue\(s\) less than -{:.1e}".format(
+            r"Matrix provided is not positive definite. It has one or more negative eigenvalue\(s\) less than -{:.1e}".format(
                 _SMALL_TOLERANCE_DEFINITENESS
             ),
         ):
@@ -244,7 +243,7 @@ class TestDoEErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "FIM provided is not symmetric using absolute tolerance {}".format(
+            "Matrix provided is not symmetric using absolute tolerance {}".format(
                 _SMALL_TOLERANCE_SYMMETRY
             ),
         ):
