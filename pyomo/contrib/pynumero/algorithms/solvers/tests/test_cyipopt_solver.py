@@ -39,6 +39,10 @@ from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
 )
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+from pyomo.contrib.pynumero.examples.external_grey_box.react_example.reactor_model_outputs import (
+    ReactorConcentrationsOutputModel,
+)
 
 if cyipopt_available:
     # We don't raise unittest.SkipTest if not cyipopt_available as there is a
@@ -414,3 +418,41 @@ class TestCyIpoptSolver(unittest.TestCase):
         x, y = iterate_data[-1]
         self.assertTrue(np.allclose(x_sol, x))
         self.assertTrue(np.allclose(y_sol, y))
+
+
+class TestCyIpoptGreyBox(unittest.TestCase):
+    """Most of the grey-box functionality is tested elsewhere. Here we just
+    need to test that we correctly override the hessian_approximation option
+    when Hessians aren't supported.
+    """
+
+    def test_solve_hessian_not_supported(self):
+        m = pyo.ConcreteModel()
+        m.reactor = ExternalGreyBoxBlock(external_model=ReactorConcentrationsOutputModel())
+        m.k1con = pyo.Constraint(expr=m.reactor.inputs["k1"] == 5 / 6)
+        m.k2con = pyo.Constraint(expr=m.reactor.inputs["k2"] == 5 / 3)
+        m.k3con = pyo.Constraint(expr=m.reactor.inputs["k3"] == 1 / 6000)
+        m.cafcon = pyo.Constraint(expr=m.reactor.inputs["caf"] == 10000)
+        m.obj = pyo.Objective(expr=m.reactor.outputs["cb"], sense=pyo.maximize)
+        solver = pyo.SolverFactory("cyipopt")
+        results = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(results)
+        self.assertNotIn("hessian_approximation", solver.config.options)
+        self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.34381, places=3)
+        self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb']), 1072.4372, places=2)
+
+    def test_solve_hessian_not_supported_override_user_option(self):
+        m = pyo.ConcreteModel()
+        m.reactor = ExternalGreyBoxBlock(external_model=ReactorConcentrationsOutputModel())
+        m.k1con = pyo.Constraint(expr=m.reactor.inputs["k1"] == 5 / 6)
+        m.k2con = pyo.Constraint(expr=m.reactor.inputs["k2"] == 5 / 3)
+        m.k3con = pyo.Constraint(expr=m.reactor.inputs["k3"] == 1 / 6000)
+        m.cafcon = pyo.Constraint(expr=m.reactor.inputs["caf"] == 10000)
+        m.obj = pyo.Objective(expr=m.reactor.outputs["cb"], sense=pyo.maximize)
+        solver = pyo.SolverFactory("cyipopt")
+        solver.config.options["hessian_approximation"] = "exact"
+        results = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(results)
+        self.assertEqual(solver.config.options["hessian_approximation"], "exact")
+        self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.34381, places=3)
+        self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb']), 1072.4372, places=2)
