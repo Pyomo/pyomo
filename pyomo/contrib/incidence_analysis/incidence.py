@@ -6,6 +6,9 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________________
 """Functionality for identifying variables that participate in expressions"""
 
 from contextlib import nullcontext
@@ -17,6 +20,9 @@ from pyomo.util.subsystems import TemporarySubsystemManager
 from pyomo.contrib.incidence_analysis.config import (
     IncidenceMethod,
     get_config_from_kwds,
+)
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    EGBConstraintBody,
 )
 
 
@@ -170,6 +176,9 @@ def get_incident_variables(expr, **kwds):
         raise RuntimeError("_ampl_repn_visitor must be provided when using ampl_repn")
 
     # Dispatch to correct method
+    if isinstance(expr, EGBConstraintBody):
+        # If the expression is the body of an implicit constraint, we need to use the get_incident_variables method defined on EGBConstraintBody
+        return expr.get_incident_variables()
     if method is IncidenceMethod.identify_variables:
         return _get_incident_via_identify_variables(expr, include_fixed)
     elif method is IncidenceMethod.standard_repn:

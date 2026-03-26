@@ -6,15 +6,16 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________________
 """Utility functions and a utility class for interfacing Pyomo components with
 useful graph algorithms.
 
 """
 
-import enum
 import textwrap
 from pyomo.core.base.block import BlockData
-from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr import EqualityExpression
@@ -29,13 +30,7 @@ from pyomo.common.dependencies import (
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.incidence_analysis.config import get_config_from_kwds
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
-from pyomo.contrib.incidence_analysis.triangularize import (
-    get_scc_of_projection,
-    block_triangularize,
-    get_diagonal_blocks,
-    get_blocks_from_maps,
-)
+from pyomo.contrib.incidence_analysis.triangularize import get_scc_of_projection
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
     RowPartition,
@@ -43,6 +38,10 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
 )
 from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
 from pyomo.contrib.pynumero.asl import AmplInterface
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    ExternalGreyBoxConstraint,
+)
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
     "pyomo.contrib.pynumero.interfaces.pyomo_nlp"
@@ -283,6 +282,15 @@ class IncidenceGraphInterface:
                 for con in model.component_data_objects(Constraint, active=active)
                 if include_inequality or isinstance(con.expr, EqualityExpression)
             ]
+
+            for egb in model.component_data_objects(
+                ExternalGreyBoxBlock, active=active
+            ):
+                for ic in egb.component_data_objects(
+                    ExternalGreyBoxConstraint, active=active
+                ):
+                    self._constraints.append(ic)
+
             self._variables = list(
                 _generate_variables_in_constraints(self._constraints, **self._config)
             )
