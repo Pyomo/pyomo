@@ -816,7 +816,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        solver : Pyomo solver type
+        solver : ~pyomo.opt.base.solvers.OptSolver
             Optimizer to invoke on the bounding problems.
         index : int
             The index of the parameter to solve for bounds.
