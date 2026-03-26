@@ -639,6 +639,8 @@ class TestSolvers(unittest.TestCase):
 
         # Should have a solution loader available
         self.assertTrue(hasattr(res, "solution_loader"))
+        self.assertGreaterEqual(res.solution_loader.get_number_of_solutions(), 1)
+        self.assertGreaterEqual(len(res.solution_loader.get_solution_ids()), 1)
 
         # Should have a copy of the config used
         self.assertIsInstance(res.solver_config, SolverConfig)
@@ -1144,6 +1146,58 @@ class TestSolvers(unittest.TestCase):
                 NoReducedCostsError, '.*does not currently have valid reduced costs.*'
             ):
                 res.solution_loader.get_reduced_costs()
+
+    @mark_parameterized.expand(input=_load_tests(all_solvers))
+    def test_trivial_constraints(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x)
+        m.c3 = pyo.Constraint(expr=m.x >= 0)
+
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 0)
+
+        m.x.fix(1)
+        opt.config.tee = True
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 1)
+        self.assertAlmostEqual(m.y.value, 1)
+
+        m.x.fix(-1)
+        with self.assertRaises(NoOptimalSolutionError):
+            res = opt.solve(m)
+
+        opt.config.load_solutions = False
+        opt.config.raise_exception_on_nonoptimal_result = False
+        res = opt.solve(m)
+        self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
+        if isinstance(opt, Ipopt):
+            acceptable_termination_conditions = {
+                TerminationCondition.locallyInfeasible,
+                TerminationCondition.unbounded,
+                TerminationCondition.provenInfeasible,
+            }
+        else:
+            acceptable_termination_conditions = {
+                TerminationCondition.provenInfeasible,
+                TerminationCondition.infeasibleOrUnbounded,
+            }
+        self.assertIn(res.termination_condition, acceptable_termination_conditions)
+        self.assertIsNone(res.incumbent_objective)
 
     @mark_parameterized.expand(input=_load_tests(all_solvers))
     def test_duals(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
@@ -1729,12 +1783,12 @@ class TestSolvers(unittest.TestCase):
         m.y.value = None
         res.solution_loader.load_vars([m.y])
         self.assertAlmostEqual(m.y.value, 1)
-        primals = res.solution_loader.get_primals()
+        primals = res.solution_loader.get_vars()
         self.assertIn(m.x, primals)
         self.assertIn(m.y, primals)
         self.assertAlmostEqual(primals[m.x], 1)
         self.assertAlmostEqual(primals[m.y], 1)
-        primals = res.solution_loader.get_primals([m.y])
+        primals = res.solution_loader.get_vars([m.y])
         self.assertNotIn(m.x, primals)
         self.assertIn(m.y, primals)
         self.assertAlmostEqual(primals[m.y], 1)
@@ -2085,7 +2139,7 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(res.incumbent_objective, 1)
-        sol = res.solution_loader.get_primals()
+        sol = res.solution_loader.get_vars()
         self.assertIn(m.x, sol)
         self.assertIn(m.y, sol)
         self.assertIn(m.z, sol)
@@ -2095,7 +2149,7 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(res.incumbent_objective, 0)
-        sol = res.solution_loader.get_primals()
+        sol = res.solution_loader.get_vars()
         self.assertIn(m.x, sol)
         self.assertIn(m.y, sol)
         self.assertNotIn(m.z, sol)
@@ -2254,7 +2308,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.incumbent_objective, 1)
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, 1)
-        primals = res.solution_loader.get_primals()
+        primals = res.solution_loader.get_vars()
         self.assertAlmostEqual(primals[m.x], 1)
         self.assertAlmostEqual(primals[m.y], 1)
         if check_duals:
@@ -2270,7 +2324,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(res.incumbent_objective, 2)
         self.assertAlmostEqual(m.x.value, 2)
         self.assertAlmostEqual(m.y.value, 2)
-        primals = res.solution_loader.get_primals()
+        primals = res.solution_loader.get_vars()
         self.assertAlmostEqual(primals[m.x], 2)
         self.assertAlmostEqual(primals[m.y], 2)
         if check_duals:
