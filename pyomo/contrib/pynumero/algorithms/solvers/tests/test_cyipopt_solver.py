@@ -421,6 +421,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         self.assertTrue(np.allclose(y_sol, y))
 
 
+@unittest.skipUnless(cyipopt_available, "cyipopt is not available")
 class TestCyIpoptGreyBox(unittest.TestCase):
     """Most of the grey-box functionality is tested elsewhere. Here we just
     need to test that we correctly override the hessian_approximation option
