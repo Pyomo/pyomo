@@ -474,7 +474,7 @@ class TestCyIpoptGreyBox(unittest.TestCase):
             solver.config.options.update(options)
             _, cynlp = solver.solve(m, tee=True, return_nlp=True)
             # IIRC this may be necessary to avoid file IO race condition
-            #cynlp.close()
+            # cynlp.close()
             with open(logfile, "r") as fd:
                 solver_trace = fd.read()
         self.assertNotIn("hessian_approximation", solver_trace)
