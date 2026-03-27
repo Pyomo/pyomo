@@ -340,7 +340,7 @@ class TrivialRelationalExpression(InequalityExpression):
 
 
 def inequality(lower=None, body=None, upper=None, strict=False):
-    """A utility function that can be used to declare inequality and
+    r"""A utility function that can be used to declare inequality and
     ranged inequality expressions.
 
     The expression::
