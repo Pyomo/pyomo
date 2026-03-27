@@ -519,6 +519,28 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         self.assertEqual(len(slacks), 1)
         self.assertIs(m.rule2, trans.get_relaxed_constraint(m, slacks[0]))
 
+    def test_summation_of_slacks_api(self):
+        m = self.makeModel()
+        m.rule2.deactivate()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m)
+
+        assertExpressionsEqual(
+            self,
+            trans.get_summed_slacks_expr(m),
+            sum(trans.get_slack_variables(m, m.rule1[i])[0] for i in m.S),
+        )
+
+    def test_summation_of_slacks_error(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        with self.assertRaisesRegex(
+            ValueError,
+            "It does not appear that unknown is a model that was transformed "
+            "by the 'core.add_slack_variables' transformation.",
+        ):
+            trans.get_summed_slacks_expr(m)
+
     def checkSlackVars_indexedtarget(self, transBlock):
         self.assertIsInstance(transBlock.component("_slack_plus_rule1[1]"), Var)
         self.assertIsInstance(transBlock.component("_slack_plus_rule1[2]"), Var)

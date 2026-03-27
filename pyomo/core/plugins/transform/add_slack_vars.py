@@ -73,11 +73,12 @@ def target_list(x):
 
 
 class _AddSlackVariablesData(AutoSlots.Mixin):
-    __slots__ = ('slack_variables', 'relaxed_constraint')
+    __slots__ = ('slack_variables', 'relaxed_constraint', 'summed_slacks_expr')
 
     def __init__(self):
         self.slack_variables = defaultdict(list)
         self.relaxed_constraint = ComponentMap()
+        self.summed_slacks_expr = None
 
 
 Block.register_private_data_initializer(_AddSlackVariablesData)
@@ -206,6 +207,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
             cons.set_value((lower, body, upper))
 
+        trans_info.summed_slacks_expr = obj_expr
         if config.add_slack_objective:
             # deactivate the objective
             for o in instance.component_data_objects(Objective):
@@ -268,3 +270,26 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 f"created by applying the 'core.add_slack_variables' transformation "
                 f"to model {model.name}."
             )
+
+    def get_summed_slacks_expr(self, model):
+        """Return an expression summing all the slacks added to the model during the
+        transformation. This would most commonly be used to add a penalty on non-zero
+        slacks to an existing objective.
+
+        Returns
+        -------
+        Expression
+
+        Parameters
+        ----------
+        model: ConcreteModel
+            A model, having had the 'core.add_slack_variables' transformation
+            applied to it
+        """
+        expr = model.private_data().summed_slacks_expr
+        if expr is None:
+            raise ValueError(
+                f"It does not appear that {model.name} is a model that was transformed "
+                f"by the 'core.add_slack_variables' transformation."
+            )
+        return expr
