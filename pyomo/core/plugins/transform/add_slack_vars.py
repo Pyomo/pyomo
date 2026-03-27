@@ -20,7 +20,7 @@ from pyomo.core import (
     value,
     Expression,
     Param,
-    Suffix
+    Suffix,
 )
 
 from pyomo.common.autoslots import AutoSlots
@@ -149,7 +149,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
         if targets is None:
             constraintDatas = self._get_all_constraint_datas(instance)
- 
+
         else:
             constraintDatas = []
             for t in targets:

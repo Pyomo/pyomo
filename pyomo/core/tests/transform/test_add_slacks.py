@@ -504,7 +504,7 @@ class TestAddSlacks(unittest.TestCase):
             + "\n"
             + r"If these components are Block-like "
             r"\(e.g., Disjuncts\) and the intent is to add slacks on them, call "
-            r"the transformation on them directly."
+            r"the transformation on them directly.",
         ):
             TransformationFactory('core.add_slack_variables').apply_to(m)
 
