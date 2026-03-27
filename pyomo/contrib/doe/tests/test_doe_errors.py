@@ -1161,8 +1161,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            ValueError,
-            "must define the same unknown_parameters in the same order",
+            ValueError, "must define the same unknown_parameters in the same order"
         ):
             doe_obj.optimize_experiments()
 
@@ -1198,8 +1197,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            ValueError,
-            "must define the same unknown_parameters in the same order",
+            ValueError, "must define the same unknown_parameters in the same order"
         ):
             doe_obj.optimize_experiments()
 

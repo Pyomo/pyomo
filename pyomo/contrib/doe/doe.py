@@ -3543,7 +3543,7 @@ class DesignOfExperiments:
         ):
             raise ValueError(
                 "objective_option='trace' currently only implemented with "
-                "``_Cholesky_option=True``."
+                "``_Cholesky_option=True`` or ``use_grey_box_objective=True``."
             )
 
         small_number = 1e-10
