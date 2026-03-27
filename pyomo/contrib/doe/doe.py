@@ -906,19 +906,25 @@ class DesignOfExperiments:
             # Add experiment(s) for each scenario
             # TODO: Add s_prev = 0 to handle parameter scenarios
             for s in range(n_param_scenarios):
-                self.model.param_scenario_blocks[s].exp_blocks = pyo.Block(range(n_exp))
+                scenario_block = self.model.param_scenario_blocks[s]
+                scenario_block.exp_blocks = pyo.Block(range(n_exp))
+                reference_exp_block = None
                 for k in range(n_exp):
                     # Generate FIM and Sensitivity expressions for each experiment.
                     # In template mode all experiments share the single template
                     # (experiment_index=0); in user-initialized mode each experiment
                     # maps to its own entry in experiment_list (experiment_index=k).
                     self.create_doe_model(
-                        model=self.model.param_scenario_blocks[s].exp_blocks[k],
+                        model=scenario_block.exp_blocks[k],
                         experiment_index=0 if _template_mode else k,
                         _for_multi_experiment=True,  # Skip creating L matrix per experiment
                     )
-                    # TODO: Update the parameter scenarios for each experiment block
-                    # when using parametric uncertainty
+                    if reference_exp_block is None:
+                        reference_exp_block = scenario_block.exp_blocks[k]
+                    else:
+                        self._synchronize_experiment_parameter_scenarios(
+                            reference_exp_block, scenario_block.exp_blocks[k]
+                        )
 
             # Add symmetry breaking constraints to prevent equivalent permutations for
             # multiple experiments
@@ -1571,6 +1577,49 @@ class DesignOfExperiments:
                         comp.fix()
                     else:
                         comp.unfix()
+
+    def _synchronize_experiment_parameter_scenarios(
+        self, source_exp_block, target_exp_block
+    ):
+        """Copy nominal parameter values to an experiment block and rebuild its FD perturbations."""
+        source_fd_block = source_exp_block.fd_scenario_blocks[0]
+        source_param_values = {
+            str(pyo.ComponentUID(param, context=source_fd_block)): float(value)
+            for param, value in source_fd_block.unknown_parameters.items()
+        }
+
+        for fd_scenario in target_exp_block.scenarios:
+            fd_block = target_exp_block.fd_scenario_blocks[fd_scenario]
+
+            for param in fd_block.unknown_parameters:
+                nominal_value = source_param_values[
+                    str(pyo.ComponentUID(param, context=fd_block))
+                ]
+                fd_block.unknown_parameters[param] = nominal_value
+                param.set_value(nominal_value)
+
+            if self.fd_formula == FiniteDifferenceStep.central:
+                diff = self.step * ((-1) ** fd_scenario)
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                if fd_scenario == 0:
+                    continue
+                diff = self.step
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                if fd_scenario == 0:
+                    continue
+                diff = -self.step
+            else:
+                raise DeveloperError(
+                    "Finite difference option not recognized. Please contact "
+                    "the developers as you should not see this error."
+                )
+
+            perturbed_param = pyo.ComponentUID(
+                target_exp_block.parameter_scenarios[fd_scenario]
+            ).find_component_on(fd_block)
+            perturbed_param.set_value(
+                fd_block.unknown_parameters[perturbed_param] * (1 + diff)
+            )
 
     @staticmethod
     def _evaluate_objective_for_option(fim_matrix, objective_option):
