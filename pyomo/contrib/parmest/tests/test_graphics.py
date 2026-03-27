@@ -61,6 +61,28 @@ class TestGraphics(unittest.TestCase):
     def test_grouped_violinplot(self):
         graphics.grouped_violinplot(self.A, self.B)
 
+    def test_profile_plot_smoke_single_parameter(self):
+        prof = pd.DataFrame(
+            {
+                "profiled_theta": ["theta"] * 3,
+                "theta_value": [0.8, 1.0, 1.2],
+                "lr_stat": [3.0, 0.0, 4.0],
+                "success": [True, True, False],
+            }
+        )
+        graphics.profile_likelihood_plot({"profiles": prof}, alpha=0.95)
+
+    def test_profile_plot_smoke_multi_parameter(self):
+        prof = pd.DataFrame(
+            {
+                "profiled_theta": ["theta_a", "theta_a", "theta_b", "theta_b"],
+                "theta_value": [1.0, 2.0, -1.0, 0.0],
+                "lr_stat": [2.0, 0.0, 1.0, 0.0],
+                "success": [True, True, True, True],
+            }
+        )
+        graphics.profile_likelihood_plot({"profiles": prof}, alpha=0.9)
+
 
 if __name__ == '__main__':
     unittest.main()
