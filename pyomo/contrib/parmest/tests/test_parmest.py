@@ -904,7 +904,8 @@ class TestModelVariants(unittest.TestCase):
                 parmest_input["exp_list"], obj_function=self.objective_function
             )
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            objval, thetavals = pest.theta_est()
+            cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
             obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
@@ -918,7 +919,8 @@ class TestModelVariants(unittest.TestCase):
                 parmest_input["exp_list"], obj_function=self.objective_function
             )
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            objval, thetavals = pest.theta_est()
+            cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
             obj_at_theta = pest.objective_at_theta(
@@ -939,7 +941,8 @@ class TestModelVariants(unittest.TestCase):
                 parmest_input["theta_vals"], initialize_parmest_model=True
             )
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            objval, thetavals = pest.theta_est()
+            cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
@@ -955,7 +958,8 @@ class TestModelVariants(unittest.TestCase):
 
             obj_at_theta = pest.objective_at_theta(initialize_parmest_model=True)
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            objval, thetavals = pest.theta_est()
+            cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
 
@@ -1303,7 +1307,6 @@ class TestReactorDesign_DAE(unittest.TestCase):
             inv_reduced_hessian_barrier,
         )
 
-        # Adjust test to use cov_est.
         # Number of datapoints.
         # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
         # In this example, this is the number of data points in data_df, but that's
@@ -1311,7 +1314,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
         n = 20
 
         # Compute covariance using parmest
-        obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
+        obj, theta = self.pest_df.theta_est()
+        cov = self.pest_df.cov_est(method="reduced_hessian")
 
         # Compute covariance using interior_point
         vars_list = [self.m_df.k1, self.m_df.k2]

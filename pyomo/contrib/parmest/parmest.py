@@ -1570,11 +1570,7 @@ class Estimator:
                 solver=solver, return_values=return_values
             )
 
-        return self._Q_opt(
-            solver=solver,
-            return_values=return_values,
-            bootlist=None,
-        )
+        return self._Q_opt(solver=solver, return_values=return_values, bootlist=None)
 
     def cov_est(self, method="finite_difference", solver="ipopt", step=1e-3):
         """
