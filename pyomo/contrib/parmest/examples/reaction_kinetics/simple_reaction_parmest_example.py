@@ -160,8 +160,10 @@ def main():
     # =======================================================================
     # Estimate both k1 and k2 and compute the covariance matrix
     pest = parmest.Estimator(exp_list, obj_function="SSE")
-    n = 15  # total number of data points used in the objective (y in 15 scenarios)
-    obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=n)
+    # Calculate the objective value and estimated parameters
+    obj, theta = pest.theta_est()
+    # Compute the covariance matrix using the reduced Hessian method
+    cov = pest.cov_est(method="reduced_hessian")
     print(obj)
     print(theta)
     print(cov)

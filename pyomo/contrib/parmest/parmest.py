@@ -1346,8 +1346,6 @@ class Estimator:
         bootlist=None,
         solver="ef_ipopt",
         theta_vals=None,
-        calc_cov=NOTSET,
-        cov_n=NOTSET,
         fix_theta=False,
         multistart=False,
         fixed_theta_values=None,
@@ -1498,41 +1496,6 @@ class Estimator:
             # Convert to DataFrame
             var_values = pd.DataFrame(var_values)
 
-        # Calculate covariance if requested using cov_est()
-        if calc_cov is not NOTSET and calc_cov:
-
-            # Check cov_n argument is set correctly
-            # Needs to be provided
-            assert cov_n is not NOTSET, (
-                "The number of data points 'cov_n' must be provided to calculate "
-                "the covariance matrix."
-            )
-            # Needs to be an integer
-            assert isinstance(cov_n, int), (
-                f"Expected an integer for the 'cov_n' argument. " f"Got {type(cov_n)}."
-            )
-            # Needs to equal total number of data points across all experiments
-            # In progress: Adjusting number_exp to be more robust.
-            # Can be removed in future when cov_n is no longer an input.
-            # assert cov_n == self.number_exp, (
-            #     "The number of data points 'cov_n' must equal the total number "
-            #     "of data points across all experiments."
-            # )
-
-            # Needs to be greater than number of parameters
-            n = cov_n  # number of data points
-            l = len(self.estimated_theta)  # number of fitted parameters
-            assert n > l, (
-                "The number of data points 'cov_n' must be greater than "
-                "the number of fitted parameters."
-            )
-
-            cov = self.cov_est(method='reduced_hessian')
-
-            if return_values is not None and len(return_values) > 0:
-                return obj_value, theta_estimates, var_values, cov
-            else:
-                return obj_value, theta_estimates, cov
         if return_values is not None and len(return_values) > 0:
             return obj_value, theta_estimates, var_values
         else:
@@ -1873,13 +1836,7 @@ class Estimator:
                 solver=solver, return_values=return_values
             )
 
-        return self._Q_opt(
-            solver=solver,
-            return_values=return_values,
-            bootlist=None,
-            calc_cov=calc_cov,
-            cov_n=cov_n,
-        )
+        return self._Q_opt(solver=solver, return_values=return_values, bootlist=None)
 
     def cov_est(self, method="finite_difference", solver="ipopt", step=1e-3):
         """
