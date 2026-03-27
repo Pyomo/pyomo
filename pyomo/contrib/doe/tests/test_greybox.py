@@ -968,7 +968,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     def test_constructor_doe_object_error(self):
         with self.assertRaisesRegex(
             ValueError,
-            "DoE Object must be provided to build external grey box of the FIM.",
+            "Either ``doe_object`` or both ``parameter_names`` and ``fim_initial`` "
+            "must be provided to build the FIM grey box.",
         ):
             grey_box_object = FIMExternalGreyBox(doe_object=None)
 
@@ -1216,22 +1217,31 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
         ]
 
-        DoE_args = get_standard_args(exp_list, "central", "determinant")
-        DoE_args["use_grey_box_objective"] = True
-        DoE_args["step"] = 1e-2
-        DoE_args["grey_box_tee"] = False
+        grey_box_solver = SolverFactory("cyipopt")
+        grey_box_solver.config.options["linear_solver"] = "ma57"
+        grey_box_solver.config.options['tol'] = 1e-4
+        grey_box_solver.config.options['mu_strategy'] = "monotone"
 
-        doe = DesignOfExperiments(**DoE_args)
+        doe = DesignOfExperiments(
+            experiment=exp_list,
+            objective_option="determinant",
+            step=1e-2,
+            use_grey_box_objective=True,
+            grey_box_solver=grey_box_solver,
+            grey_box_tee=False,
+        )
         doe.optimize_experiments()
 
         scenario = doe.results["Scenarios"][0]
+        # The scenario objective is unchanged by swapping the experiment order,
+        # so compare the selected hours in a canonical sorted order.
         got_hours = sorted(
             exp["Experiment Design"][0] for exp in scenario["Experiments"]
         )
-        expected_hours = [1.9321985035514362, 9.999999685577139]
+        expected_hours = sorted([1.9321985035514362, 9.999999685577139])
 
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
-        # self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
+        self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
 
     @unittest.skipIf(
         not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
@@ -1244,27 +1254,123 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
             RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
         ]
-        prior_FIM = np.array(
-            [[15.48181217, 357.97684273], [357.97684273, 8277.28811613]]
+
+        grey_box_solver = SolverFactory("cyipopt")
+        grey_box_solver.config.options["linear_solver"] = "ma57"
+        grey_box_solver.config.options['tol'] = 1e-6
+        grey_box_solver.config.options['mu_strategy'] = "monotone"
+
+        doe = DesignOfExperiments(
+            experiment=exp_list,
+            objective_option="trace",
+            step=1e-2,
+            use_grey_box_objective=True,
+            grey_box_solver=grey_box_solver,
+            grey_box_tee=False,
         )
-
-        DoE_args = get_standard_args(exp_list, "central", "trace")
-        DoE_args["use_grey_box_objective"] = True
-        DoE_args["step"] = 1e-2
-        DoE_args["prior_FIM"] = prior_FIM
-        DoE_args["grey_box_tee"] = False
-
-        doe = DesignOfExperiments(**DoE_args)
         doe.optimize_experiments()
 
         scenario = doe.results["Scenarios"][0]
+        # The chosen pair is order-independent, so normalize both sides before
+        # checking the greybox solution.
         got_hours = sorted(
             exp["Experiment Design"][0] for exp in scenario["Experiments"]
         )
-        expected_hours = [10.0, 10.0]
+        expected_hours = sorted([1.01, 10.0])
 
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
-        self.assertAlmostEqual(scenario["log10 A-opt"], -2.2347, places=3)
+        self.assertAlmostEqual(scenario["log10 A-opt"], -1.9438, places=3)
+
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_optimize_experiments_min_eig_expected_values_greybox(self):
+        # Tests the multi-experiment grey box trace solve against the known
+        # optimal design and E-optimality metric from the standard path.
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
+            RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
+        ]
+
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+
+        grey_box_solver = SolverFactory("cyipopt")
+        grey_box_solver.config.options["linear_solver"] = "ma57"
+        grey_box_solver.config.options['tol'] = 1e-6
+        grey_box_solver.config.options['mu_strategy'] = "monotone"
+
+        doe = DesignOfExperiments(
+            experiment=exp_list,
+            objective_option="minimum_eigenvalue",
+            step=1e-2,
+            solver=solver,
+            use_grey_box_objective=True,
+            grey_box_solver=grey_box_solver,
+            grey_box_tee=False,
+        )
+        doe.optimize_experiments()
+
+        scenario = doe.results["Scenarios"][0]
+        # The chosen pair is order-independent, so normalize both sides before
+        # checking the greybox solution.
+        got_hours = sorted(
+            exp["Experiment Design"][0] for exp in scenario["Experiments"]
+        )
+        expected_hours = sorted([1.0, 10.0])
+
+        # The greybox E-opt solve is stable to roughly two decimal places in
+        # this environment, so keep the assertion aligned with solver noise.
+        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-2)
+        self.assertAlmostEqual(scenario["log10 E-opt"], 1.9532, places=2)
+
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_optimize_experiments_me_opt_expected_values_greybox(self):
+        # Tests the multi-experiment grey box trace solve against the known
+        # optimal design and ME-optimality metric from the standard path.
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
+            RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
+        ]
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+
+        grey_box_solver = SolverFactory("cyipopt")
+        grey_box_solver.config.options["linear_solver"] = "ma57"
+        grey_box_solver.config.options['tol'] = 1e-6
+        grey_box_solver.config.options['mu_strategy'] = "monotone"
+
+        doe = DesignOfExperiments(
+            experiment=exp_list,
+            objective_option="condition_number",
+            step=1e-2,
+            solver=solver,
+            use_grey_box_objective=True,
+            grey_box_solver=grey_box_solver,
+            grey_box_tee=False,
+        )
+        doe.optimize_experiments()
+
+        scenario = doe.results["Scenarios"][0]
+        # The chosen pair is order-independent, so normalize both sides before
+        # checking the greybox solution.
+        got_hours = sorted(
+            exp["Experiment Design"][0] for exp in scenario["Experiments"]
+        )
+        expected_hours = sorted([7.13, 10.0])
+
+        # The condition-number solve is permutation-invariant but still shows
+        # small solver variation in the hour values.
+        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-2)
+        self.assertAlmostEqual(scenario["log10 ME-opt"], 1.5289, places=2)
 
 
 if __name__ == "__main__":
