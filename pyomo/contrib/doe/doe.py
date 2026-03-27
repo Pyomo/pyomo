@@ -333,6 +333,58 @@ class DesignOfExperiments:
         """Return a stable short label for enum-like values."""
         return str(value).split(".")[-1]
 
+    def _grey_box_output_name(self):
+        """Return the output label exposed by the FIM grey box model."""
+        if self.objective_option == ObjectiveLib.trace:
+            return "A-opt"
+        if self.objective_option == ObjectiveLib.determinant:
+            return "log-D-opt"
+        if self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            return "E-opt"
+        if self.objective_option == ObjectiveLib.condition_number:
+            return "ME-opt"
+        raise ValueError(
+            "Grey-box objective support is only available for "
+            "objective_option in ['determinant', 'trace', "
+            "'minimum_eigenvalue', 'condition_number']."
+        )
+
+    def _initialize_grey_box_block(self, egb_block, fim_np, parameter_names):
+        """
+        Seed a grey box block from the FIM computed by the square solve.
+
+        The square solve initializes the finite-difference scenarios and the
+        aggregated FIM, but the external grey box block stores that FIM through
+        its own input/output variables. We therefore push the current FIM values
+        into the grey box explicitly before the final NLP solve so the external
+        model starts from a consistent state.
+        """
+        param_list = list(parameter_names)
+
+        # The external model only takes the symmetric triangular FIM entries as
+        # inputs. That keeps the grey box interface compact while still
+        # reconstructing the full symmetric FIM internally.
+        for i, p1 in enumerate(param_list):
+            for j, p2 in enumerate(param_list):
+                if i >= j:
+                    egb_block.inputs[(p2, p1)].set_value(float(fim_np[i, j]))
+
+        # Initialize the single grey box output so the final solve begins with
+        # an objective value consistent with the current square-solve FIM.
+        if self.objective_option == ObjectiveLib.trace:
+            output_value = np.trace(np.linalg.pinv(fim_np))
+        elif self.objective_option == ObjectiveLib.determinant:
+            output_value = np.log(np.linalg.det(fim_np))
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            output_value = np.min(np.linalg.eigvalsh(fim_np))
+        elif self.objective_option == ObjectiveLib.condition_number:
+            eig = np.linalg.eigvalsh(fim_np)
+            output_value = np.log(np.abs(np.max(eig) / np.min(eig)))
+        else:
+            output_value = 0.0
+
+        egb_block.outputs[self._grey_box_output_name()].set_value(float(output_value))
+
     # Perform doe
     def run_doe(self, model=None, results_file=None):
         """
@@ -426,31 +478,11 @@ class DesignOfExperiments:
         model.obj_cons.activate()
 
         if self.use_grey_box:
-            # Initialize grey box inputs to be fim values currently
-            for i in model.parameter_names:
-                for j in model.parameter_names:
-                    if list(model.parameter_names).index(i) >= list(
-                        model.parameter_names
-                    ).index(j):
-                        model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
-                            pyo.value(model.fim[(i, j)])
-                        )
-            # Set objective value
-            if self.objective_option == ObjectiveLib.trace:
-                trace_val = np.trace(np.linalg.pinv(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
-            elif self.objective_option == ObjectiveLib.determinant:
-                det_val = np.linalg.det(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
-                    np.log(det_val)
-                )
-            elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
-            elif self.objective_option == ObjectiveLib.condition_number:
-                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
-                cond_number = np.log(np.abs(np.max(eig) / np.min(eig)))
-                model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
+            self._initialize_grey_box_block(
+                model.obj_cons.egb_fim_block,
+                np.asarray(self.get_FIM(model=model), dtype=np.float64),
+                model.parameter_names,
+            )
 
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):
@@ -1074,8 +1106,11 @@ class DesignOfExperiments:
                 if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
                     self.model.param_scenario_blocks[s].obj_cons.activate()
 
-            # Initialize scenario-level variables (L, determinant, pseudo_trace) based on
-            # the solved FIM values from the square solve
+            # Initialize scenario-level quantities from the square-solve FIM.
+            # For the algebraic objective path this means Cholesky/determinant
+            # variables. For the grey box path we explicitly seed the external
+            # block inputs/outputs from the aggregated scenario FIM before the
+            # final solve switches to the grey_box_solver.
             parameter_names = (
                 self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
             )
@@ -1112,8 +1147,14 @@ class DesignOfExperiments:
                 if self.only_compute_fim_lower:
                     total_fim_np = self._symmetrize_lower_tri(total_fim_np)
 
+                if self.use_grey_box:
+                    self._initialize_grey_box_block(
+                        scenario.obj_cons.egb_fim_block,
+                        total_fim_np,
+                        parameter_names,
+                    )
                 # Initialize scenario-level variables based on total_fim
-                if hasattr(scenario.obj_cons, "L"):
+                elif hasattr(scenario.obj_cons, "L"):
                     # Compute Cholesky factorization
                     # Check positive definiteness and add jitter if needed
                     min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
@@ -1175,8 +1216,16 @@ class DesignOfExperiments:
         finally:
             self.solver = primary_solver
 
+        # Initialization uses the regular/init solver because it operates on the
+        # algebraic square model. The final NLP solve switches to the grey box
+        # solver only after the external block has been fully seeded above.
+        final_solver = self.grey_box_solver if self.use_grey_box else self.solver
+        final_solver_name = getattr(final_solver, "name", str(final_solver))
+
         # Solve the full model
-        res = self.solver.solve(self.model, tee=self.tee)
+        res = final_solver.solve(
+            self.model, tee=self.grey_box_tee if self.use_grey_box else self.tee
+        )
 
         # Track time used to solve the DoE model
         solve_time = sp_timer.toc(msg=None)
@@ -1392,7 +1441,7 @@ class DesignOfExperiments:
         self.results["run_info"] = {
             "api": "DesignOfExperiments.optimize_experiments",
             "solver": {
-                "name": getattr(self.solver, "name", str(self.solver)),
+                "name": final_solver_name,
                 "status": self.results["Solver Status"],
                 "termination_condition": self.results["Termination Condition"],
                 "message": self.results["Termination Message"],
@@ -1538,7 +1587,11 @@ class DesignOfExperiments:
                 return float(np.trace(fim_matrix))
             elif objective_option == ObjectiveLib.trace:
                 return float(np.trace(np.linalg.inv(fim_matrix)))
-            else:  # minimum_eigenvalue, condition_number, zero, or unknown
+            elif objective_option == ObjectiveLib.minimum_eigenvalue:
+                return float(np.min(np.linalg.eigvalsh(fim_matrix)))
+            elif objective_option == ObjectiveLib.condition_number:
+                return float(np.linalg.cond(fim_matrix))
+            else:  # zero or unknown
                 return 0.0
         except (np.linalg.LinAlgError, ValueError):
             return _bad
@@ -1556,10 +1609,9 @@ class DesignOfExperiments:
         -------
         float
             Objective value.  For maximisation objectives (``determinant``,
-            ``pseudo_trace``) a larger value is better.  For minimisation
-            objectives (``trace`` / A-optimality) a smaller value is better.
-            LHS initialization is not supported for ``minimum_eigenvalue`` or
-            ``condition_number``; those return 0.0.
+            ``pseudo_trace``, ``minimum_eigenvalue``) a larger value is better.
+            For minimisation objectives (``trace`` / A-optimality and
+            ``condition_number`` / ME-optimality) a smaller value is better.
         """
         return self._evaluate_objective_for_option(fim_matrix, self.objective_option)
 
@@ -3117,6 +3169,15 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
 
+        if self.objective_option in [
+            ObjectiveLib.minimum_eigenvalue,
+            ObjectiveLib.condition_number,
+        ]:
+            raise ValueError(
+                f"objective_option='{self.objective_option.value}' requires "
+                "use_grey_box_objective=True."
+            )
+
         if self.objective_option not in [
             ObjectiveLib.determinant,
             ObjectiveLib.trace,
@@ -3386,20 +3447,41 @@ class DesignOfExperiments:
         ----------
         model: model with param_scenario_blocks structure
         """
-        # Validate objective option for multi-experiment
-        if self.objective_option not in [
-            ObjectiveLib.determinant,
-            ObjectiveLib.trace,
-            ObjectiveLib.pseudo_trace,
-            ObjectiveLib.zero,
-        ]:
-            raise DeveloperError(
-                "Objective option not recognized for multi-experiment optimization. "
-                "Please contact the developers as you should not see this error."
-            )
+        # Validate objective option for multi-experiment.
+        if self.use_grey_box:
+            if self.objective_option in [ObjectiveLib.pseudo_trace, ObjectiveLib.zero]:
+                raise ValueError(
+                    "Grey-box objective support in optimize_experiments() is only "
+                    "available for objective_option in ['determinant', 'trace', "
+                    "'minimum_eigenvalue', 'condition_number']."
+                )
+            self._grey_box_output_name()
+        else:
+            if self.objective_option in [
+                ObjectiveLib.minimum_eigenvalue,
+                ObjectiveLib.condition_number,
+            ]:
+                raise ValueError(
+                    f"objective_option='{self.objective_option.value}' requires "
+                    "use_grey_box_objective=True."
+                )
+            if self.objective_option not in [
+                ObjectiveLib.determinant,
+                ObjectiveLib.trace,
+                ObjectiveLib.pseudo_trace,
+                ObjectiveLib.zero,
+            ]:
+                raise DeveloperError(
+                    "Objective option not recognized for multi-experiment optimization. "
+                    "Please contact the developers as you should not see this error."
+                )
 
         # Validate trace objective requires Cholesky option
-        if self.objective_option == ObjectiveLib.trace and not self.Cholesky_option:
+        if (
+            not self.use_grey_box
+            and self.objective_option == ObjectiveLib.trace
+            and not self.Cholesky_option
+        ):
             raise ValueError(
                 "objective_option='trace' currently only implemented with "
                 "``_Cholesky_option=True``."
@@ -3461,14 +3543,26 @@ class DesignOfExperiments:
                         )
                         scenario.total_fim[p, q].value = fim_sum + self.prior_FIM[i, j]
 
-            # 4. Create obj_cons block to hold objective-related constraints
-            # (similar to single-experiment case in create_objective_function)
-            scenario.obj_cons = pyo.Block()
+            # 4. Build the objective representation for this scenario.
+            if self.use_grey_box:
+                # In multi-experiment mode, the grey box should see the
+                # aggregated scenario FIM rather than any one experiment block.
+                # That keeps the objective mathematically aligned with the
+                # public API while reusing the same grey box implementation as
+                # the single-experiment path.
+                self.create_grey_box_objective_function(
+                    model=scenario,
+                    fim_expr=scenario.total_fim,
+                    parameter_names=parameter_names,
+                    build_objective=False,
+                )
             # 5. Create variables and constraints (initialization will happen after square solve)
-            if (
+            elif (
                 self.Cholesky_option
                 and self.objective_option == ObjectiveLib.determinant
             ):
+                # (similar to single-experiment case in create_objective_function)
+                scenario.obj_cons = pyo.Block()
                 # Add lower triangular Cholesky variables per scenario
                 scenario.obj_cons.L = pyo.Var(parameter_names, parameter_names)
 
@@ -3491,6 +3585,7 @@ class DesignOfExperiments:
                 )
 
             elif self.Cholesky_option and self.objective_option == ObjectiveLib.trace:
+                scenario.obj_cons = pyo.Block()
                 # Add lower triangular Cholesky variables per scenario
                 scenario.obj_cons.L = pyo.Var(parameter_names, parameter_names)
                 scenario.obj_cons.L_inv = pyo.Var(parameter_names, parameter_names)
@@ -3556,6 +3651,7 @@ class DesignOfExperiments:
                     )
 
             elif self.objective_option == ObjectiveLib.determinant:
+                scenario.obj_cons = pyo.Block()
                 # Non-Cholesky determinant: create determinant var per scenario
                 scenario.obj_cons.determinant = pyo.Var(bounds=(small_number, None))
 
@@ -3582,6 +3678,7 @@ class DesignOfExperiments:
                 )
 
             elif self.objective_option == ObjectiveLib.pseudo_trace:
+                scenario.obj_cons = pyo.Block()
                 # Pseudo trace objective (Trace of FIM)
                 scenario.obj_cons.pseudo_trace = pyo.Var(bounds=(small_number, None))
 
@@ -3596,7 +3693,23 @@ class DesignOfExperiments:
                 )
 
         # 5. Create single top-level objective summing across scenarios
-        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+        if self.use_grey_box:
+            model.objective = pyo.Objective(
+                expr=sum(
+                    scenario_weights[s]
+                    * model.param_scenario_blocks[s].obj_cons.egb_fim_block.outputs[
+                        self._grey_box_output_name()
+                    ]
+                    for s in range(n_scenarios)
+                ),
+                sense=(
+                    pyo.maximize
+                    if self.objective_option in self._MAXIMIZE_OBJECTIVES
+                    else pyo.minimize
+                ),
+            )
+
+        elif self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
             model.objective = pyo.Objective(
                 expr=sum(
                     scenario_weights[s]
@@ -3650,11 +3763,52 @@ class DesignOfExperiments:
             # Dummy objective
             model.objective = pyo.Objective(expr=0)
 
-    def create_grey_box_objective_function(self, model=None):
+    def create_grey_box_objective_function(
+        self, model=None, fim_expr=None, parameter_names=None, build_objective=True
+    ):
+        """
+        Attach the FIM grey box block to a model or scenario block.
+
+        The same helper is used for both public APIs. In the single-experiment
+        path it connects to ``model.fim`` and also creates the top-level
+        objective. In multi-experiment mode it connects to ``scenario.total_fim``
+        so each scenario contributes its aggregated FIM metric to the outer
+        objective sum.
+        """
         # Add external grey box block to a block named ``obj_cons`` to
         # reuse material for initializing the objective-free square model
         if model is None:
-            model = model = self.model
+            model = self.model
+        if fim_expr is None:
+            if not hasattr(model, "fim"):
+                raise RuntimeError(
+                    "Model provided does not have variable `fim`. Please make "
+                    "sure the model is built properly before creating the grey "
+                    "box objective."
+                )
+            fim_expr = model.fim
+        if parameter_names is None:
+            if not hasattr(model, "parameter_names"):
+                raise RuntimeError(
+                    "Model provided does not define `parameter_names`. Please "
+                    "make sure the model is built properly before creating the "
+                    "grey box objective."
+                )
+            parameter_names = model.parameter_names
+
+        output_name = self._grey_box_output_name()
+
+        # The external model expects a dense symmetric FIM as its initializer.
+        # When the algebraic model stores only the lower triangle, mirror those
+        # values here so the grey box starts from the same physical matrix.
+        fim_vals = [
+            pyo.value(fim_expr[p, q]) for p in parameter_names for q in parameter_names
+        ]
+        fim_initial = np.array(fim_vals, dtype=np.float64).reshape(
+            (len(parameter_names), len(parameter_names))
+        )
+        if self.only_compute_fim_lower:
+            fim_initial = self._symmetrize_lower_tri(fim_initial)
 
         # TODO: Make this naming convention robust
         model.obj_cons = pyo.Block()
@@ -3662,6 +3816,8 @@ class DesignOfExperiments:
         # Create FIM External Grey Box object
         grey_box_FIM = FIMExternalGreyBox(
             doe_object=self,
+            parameter_names=parameter_names,
+            fim_initial=fim_initial,
             objective_option=self.objective_option,
             logger_level=self.logger.getEffectiveLevel(),
         )
@@ -3680,43 +3836,29 @@ class DesignOfExperiments:
             p2: parameter 2
 
             """
-            # Using upper triangular FIM to
-            # make numerics better.
-            if list(model.parameter_names).index(p1) >= list(
-                model.parameter_names
-            ).index(p2):
-                return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p2, p1)]
+            # The grey box receives only the triangular portion of the FIM. We
+            # therefore map the lower-triangular algebraic entries into the
+            # upper-triangular input names expected by ExternalGreyBoxBlock.
+            if list(parameter_names).index(p1) >= list(parameter_names).index(p2):
+                return fim_expr[(p1, p2)] == m.egb_fim_block.inputs[(p2, p1)]
             else:
                 return pyo.Constraint.Skip
 
         # Add the FIM and External Grey
         # Box inputs constraints
         model.obj_cons.FIM_equalities = pyo.Constraint(
-            model.parameter_names, model.parameter_names, rule=FIM_egb_cons
+            parameter_names, parameter_names, rule=FIM_egb_cons
         )
 
-        # Add objective based on user provided
-        # type within ObjectiveLib
-        if self.objective_option == ObjectiveLib.trace:
+        if build_objective:
             model.objective = pyo.Objective(
-                expr=model.obj_cons.egb_fim_block.outputs["A-opt"], sense=pyo.minimize
+                expr=model.obj_cons.egb_fim_block.outputs[output_name],
+                sense=(
+                    pyo.maximize
+                    if self.objective_option in self._MAXIMIZE_OBJECTIVES
+                    else pyo.minimize
+                ),
             )
-        elif self.objective_option == ObjectiveLib.determinant:
-            model.objective = pyo.Objective(
-                expr=model.obj_cons.egb_fim_block.outputs["log-D-opt"],
-                sense=pyo.maximize,
-            )
-        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-            model.objective = pyo.Objective(
-                expr=model.obj_cons.egb_fim_block.outputs["E-opt"], sense=pyo.maximize
-            )
-        elif self.objective_option == ObjectiveLib.condition_number:
-            model.objective = pyo.Objective(
-                expr=model.obj_cons.egb_fim_block.outputs["ME-opt"], sense=pyo.minimize
-            )
-        # Else error not needed for spurious objective
-        # options as the error will always appear
-        # when creating the FIMExternalGreyBox block
 
     # Check to see if the model has all the required suffixes
     def check_model_labels(self, model=None):

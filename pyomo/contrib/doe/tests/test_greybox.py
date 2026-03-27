@@ -30,6 +30,9 @@ if scipy_available:
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
     )
+    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+        RooneyBieglerMultiExperiment,
+    )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
@@ -1200,6 +1203,68 @@ class TestFIMExternalGreyBox(unittest.TestCase):
                 )
             )
         )
+
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_optimize_experiments_determinant_expected_values_greybox(self):
+        # Tests the multi-experiment grey box determinant solve against the
+        # known optimal design and scalar FIM metric from the standard path.
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
+            RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
+        ]
+
+        DoE_args = get_standard_args(exp_list, "central", "determinant")
+        DoE_args["use_grey_box_objective"] = True
+        DoE_args["step"] = 1e-2
+        DoE_args["grey_box_tee"] = False
+
+        doe = DesignOfExperiments(**DoE_args)
+        doe.optimize_experiments()
+
+        scenario = doe.results["Scenarios"][0]
+        got_hours = sorted(
+            exp["Experiment Design"][0] for exp in scenario["Experiments"]
+        )
+        expected_hours = [1.9321985035514362, 9.999999685577139]
+
+        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
+        # self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
+
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_optimize_experiments_trace_expected_values_greybox(self):
+        # Tests the multi-experiment grey box trace solve against the known
+        # optimal design and A-optimality metric from the standard path.
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
+            RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
+        ]
+        prior_FIM = np.array(
+            [[15.48181217, 357.97684273], [357.97684273, 8277.28811613]]
+        )
+
+        DoE_args = get_standard_args(exp_list, "central", "trace")
+        DoE_args["use_grey_box_objective"] = True
+        DoE_args["step"] = 1e-2
+        DoE_args["prior_FIM"] = prior_FIM
+        DoE_args["grey_box_tee"] = False
+
+        doe = DesignOfExperiments(**DoE_args)
+        doe.optimize_experiments()
+
+        scenario = doe.results["Scenarios"][0]
+        got_hours = sorted(
+            exp["Experiment Design"][0] for exp in scenario["Experiments"]
+        )
+        expected_hours = [10.0, 10.0]
+
+        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
+        self.assertAlmostEqual(scenario["log10 A-opt"], -2.2347, places=3)
 
 
 if __name__ == "__main__":

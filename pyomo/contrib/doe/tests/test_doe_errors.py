@@ -1081,6 +1081,30 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
     def _make_solver(self):
         return _make_ipopt_solver()
 
+    def test_optimize_experiments_greybox_rejects_pseudo_trace(self):
+        # Tests that multi-experiment grey box validation fails fast with a
+        # user-facing error when the requested objective is not supported by the
+        # external FIM metric model.
+        class _UnusedGreyBoxSolver:
+            def solve(self, model, tee=False):
+                raise AssertionError("grey_box_solver.solve should not be reached")
+
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="pseudo_trace",
+            use_grey_box_objective=True,
+            step=1e-2,
+            solver=self._make_solver(),
+            grey_box_solver=_UnusedGreyBoxSolver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Grey-box objective support in optimize_experiments\\(\\) is only "
+            "available",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
+
     def test_optimize_experiments_sym_break_var_must_be_input(self):
         # Tests that symmetry-breaking marker variables must also be experiment inputs.
         class _BadSymBreakExperiment:
