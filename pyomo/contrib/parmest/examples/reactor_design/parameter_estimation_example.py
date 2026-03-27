@@ -33,11 +33,14 @@ def main():
 
     pest = parmest.Estimator(exp_list, obj_function='SSE')
 
-    # Parameter estimation with covariance
-    obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=19)
+    # Parameter estimation
+    obj, theta = pest.theta_est()
     print("Least squares objective value:", obj)
     print("Estimated parameters (theta):\n")
     print(theta)
+
+    # Compute the covariance matrix at the estimated parameter
+    cov = pest.cov_est()
     print("Covariance matrix:\n")
     print(cov)
 
