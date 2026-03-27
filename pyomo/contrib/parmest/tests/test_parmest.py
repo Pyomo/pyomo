@@ -903,8 +903,12 @@ class TestModelVariants(unittest.TestCase):
             pest = parmest.Estimator(
                 parmest_input["exp_list"], obj_function=self.objective_function
             )
-
+            # estimate the parameters and covariance matrix
             objval, thetavals = pest.theta_est()
+            # For covariance, using reduced_hessian method since finite difference
+            # and automatic differentiation may differ from paper results in the
+            # 3rd decimal place, likely due to differences in finite difference
+            # approximation of the Jacobian
             cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
