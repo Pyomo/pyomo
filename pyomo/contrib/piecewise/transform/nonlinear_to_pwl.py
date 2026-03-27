@@ -40,14 +40,14 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np, packaging
 from pyomo.common.enums import IntEnum
 from pyomo.common.modeling import unique_component_name
-from pyomo.core.expr.numeric_expr import SumExpression
+from pyomo.core.expr.numeric_expr import SumExpression, mutable_expression
 from pyomo.core.expr import identify_variables
 from pyomo.core.expr import SumExpression
 from pyomo.core.util import target_list
 from pyomo.contrib.piecewise import PiecewiseLinearExpression, PiecewiseLinearFunction
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
-from pyomo.repn.quadratic import QuadraticRepnVisitor
+from pyomo.repn.quadratic import QuadraticRepnVisitor, QuadraticRepn
 from pyomo.repn.util import ExprType, OrderedVarRecorder
 
 
@@ -646,8 +646,9 @@ class NonlinearToPWL(Transformation):
                 bounds.append((v.bounds, v.is_integer()))
         return bounds
 
-    def _needs_approximating(self, expr, approximate_quadratic):
-        repn = self._quadratic_repn_visitor.walk_expression(expr)
+    def _needs_approximating(self, expr, approximate_quadratic, repn=None):
+        if repn is None:
+            repn = self._quadratic_repn_visitor.walk_expression(expr)
         if repn.nonlinear is None:
             if repn.quadratic is None:
                 # Linear constraint. Always skip.
@@ -659,24 +660,82 @@ class NonlinearToPWL(Transformation):
                 return ExprType.QUADRATIC, True
         return ExprType.GENERAL, True
 
+    def _separate_linear_parts(
+        self, repn: QuadraticRepn, visitor: QuadraticRepnVisitor
+    ):
+        """
+        The idea here is to ensure that linear parts of constraints
+        always get separated from the nonlinear parts, even if
+        additively_decompose if False. The idea is that
+
+        y >= exp(x) + x**3
+
+        should become
+
+        y >= PWL(exp(x) + x**3)
+
+        and not
+
+        0 >= PWL(exp(x) + x**3 - y)
+        """
+        assert repn.multiplier == 1
+        linear_repn = QuadraticRepn()
+        linear_repn.constant = repn.constant
+        linear_repn.linear = repn.linear
+        linear = linear_repn.to_expression(visitor)
+
+        return linear, repn.quadratic, repn.nonlinear
+
+    def _get_quadratic_part_of_repn(
+        self, repn: QuadraticRepn, visitor: QuadraticRepnVisitor
+    ):
+        assert repn.multiplier == 1
+        r = QuadraticRepn()
+        r.quadratic = repn.quadratic
+        q = r.to_expression(visitor)
+        return q
+
     def _approximate_expression(
         self, expr, obj, trans_block, config, approximate_quadratic
     ):
+        repn = self._quadratic_repn_visitor.walk_expression(expr)
         expr_type, needs_approximating = self._needs_approximating(
-            expr, approximate_quadratic
+            expr, approximate_quadratic, repn
         )
         if not needs_approximating:
             return None, expr_type
 
+        linear_part, quadratic_part, nonlinear_part = self._separate_linear_parts(
+            repn, self._quadratic_repn_visitor
+        )
+        if quadratic_part is None:
+            quadratic_part = {}
+
         # Additively decompose expr and work on the pieces
-        pwl_summands = []
-        for k, subexpr in enumerate(
-            _additively_decompose_expr(
-                expr, config.min_dimension_to_additively_decompose
-            )
-            if config.additively_decompose
-            else (expr,)
-        ):
+        pwl_summands = [linear_part]
+        Nmin = config.min_dimension_to_additively_decompose
+        subexpr_list = []
+        if config.additively_decompose:
+            # dimension = len(list(identify_variables(input_expr)))
+            vset = set()
+            vmap = self._quadratic_repn_visitor.var_map
+            for x12 in quadratic_part.keys():
+                vset.update(x12)
+            if len(vset) < Nmin and nonlinear_part is not None:
+                vset.update(id(v) for v in identify_variables(nonlinear_part))
+            if len(vset) >= Nmin:
+                for (x1k, x2k), coef in quadratic_part.items():
+                    x1 = vmap[x1k]
+                    x2 = vmap[x2k]
+                    subexpr_list.append(coef * (x1 * x2))
+                if nonlinear_part is not None:
+                    subexpr_list.extend(_additively_decompose_expr(nonlinear_part, 0))
+        if not subexpr_list:
+            e = self._get_quadratic_part_of_repn(repn, self._quadratic_repn_visitor)
+            if nonlinear_part is not None:
+                e += nonlinear_part
+            subexpr_list = [e]
+        for k, subexpr in enumerate(subexpr_list):
             # First check if this is a good idea
             expr_vars = list(identify_variables(subexpr, include_fixed=False))
             orig_values = ComponentMap((v, v.value) for v in expr_vars)
