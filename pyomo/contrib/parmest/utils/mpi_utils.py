@@ -10,6 +10,8 @@
 from collections import OrderedDict
 import importlib
 
+# ParallelTaskManager is used, MPI Interface is not.
+
 """
 This module is a collection of classes that provide a
 friendlier interface to MPI (through mpi4py). They help
