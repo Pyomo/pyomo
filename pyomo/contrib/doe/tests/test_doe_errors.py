@@ -1105,6 +1105,104 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(n_exp=2)
 
+    def test_optimize_experiments_requires_matching_unknown_parameter_values(self):
+        # Tests that user-initialized multi-experiment mode rejects experiments
+        # that linearize around different nominal theta values.
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiExperiment(
+                    hour=2.0, y=10.0, theta={'asymptote': 15.0, 'rate_constant': 0.5}
+                ),
+                RooneyBieglerMultiExperiment(
+                    hour=3.0, y=11.0, theta={'asymptote': 15.0, 'rate_constant': 0.6}
+                ),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "must use the same nominal values for unknown_parameters"
+        ):
+            doe_obj.optimize_experiments()
+
+    def test_optimize_experiments_requires_matching_unknown_parameter_labels(self):
+        # Tests that user-initialized multi-experiment mode rejects experiments
+        # whose unknown-parameter sets differ.
+        class _DifferentUnknownParameterExperiment:
+            def __init__(self, base_exp):
+                self._base_exp = base_exp
+
+            def get_labeled_model(self, **kwargs):
+                m = self._base_exp.get_labeled_model(**kwargs)
+                m.fake_theta = pyo.Var(initialize=1.0)
+                m.fake_theta.fix()
+                m.del_component(m.unknown_parameters)
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    [
+                        (m.asymptote, pyo.value(m.asymptote)),
+                        (m.fake_theta, pyo.value(m.fake_theta)),
+                    ]
+                )
+                return m
+
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiExperiment(hour=2.0, y=10.0),
+                _DifferentUnknownParameterExperiment(
+                    RooneyBieglerMultiExperiment(hour=3.0, y=11.0)
+                ),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "must define the same unknown_parameters in the same order",
+        ):
+            doe_obj.optimize_experiments()
+
+    def test_optimize_experiments_requires_matching_unknown_parameter_order(self):
+        # Tests that user-initialized multi-experiment mode rejects experiments
+        # whose unknown parameters appear in a different order.
+        class _ReorderedUnknownParameterExperiment:
+            def __init__(self, base_exp):
+                self._base_exp = base_exp
+
+            def get_labeled_model(self, **kwargs):
+                m = self._base_exp.get_labeled_model(**kwargs)
+                m.del_component(m.unknown_parameters)
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    [
+                        (m.rate_constant, pyo.value(m.rate_constant)),
+                        (m.asymptote, pyo.value(m.asymptote)),
+                    ]
+                )
+                return m
+
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiExperiment(hour=2.0, y=10.0),
+                _ReorderedUnknownParameterExperiment(
+                    RooneyBieglerMultiExperiment(hour=3.0, y=11.0)
+                ),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "must define the same unknown_parameters in the same order",
+        ):
+            doe_obj.optimize_experiments()
+
     def test_optimize_experiments_sym_break_var_must_be_input(self):
         # Tests that symmetry-breaking marker variables must also be experiment inputs.
         class _BadSymBreakExperiment:

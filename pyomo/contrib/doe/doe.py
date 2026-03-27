@@ -908,7 +908,8 @@ class DesignOfExperiments:
             for s in range(n_param_scenarios):
                 scenario_block = self.model.param_scenario_blocks[s]
                 scenario_block.exp_blocks = pyo.Block(range(n_exp))
-                reference_exp_block = None
+                reference_param_names = None
+                reference_param_values = None
                 for k in range(n_exp):
                     # Generate FIM and Sensitivity expressions for each experiment.
                     # In template mode all experiments share the single template
@@ -919,12 +920,64 @@ class DesignOfExperiments:
                         experiment_index=0 if _template_mode else k,
                         _for_multi_experiment=True,  # Skip creating L matrix per experiment
                     )
-                    if reference_exp_block is None:
-                        reference_exp_block = scenario_block.exp_blocks[k]
+                    if reference_param_names is None:
+                        reference_fd_block = scenario_block.exp_blocks[k].fd_scenario_blocks[
+                            0
+                        ]
+                        reference_param_names = [
+                            str(pyo.ComponentUID(param, context=reference_fd_block))
+                            for param in reference_fd_block.unknown_parameters
+                        ]
+                        reference_param_values = [
+                            float(value)
+                            for value in reference_fd_block.unknown_parameters.values()
+                        ]
                     else:
-                        self._synchronize_experiment_parameter_scenarios(
-                            reference_exp_block, scenario_block.exp_blocks[k]
-                        )
+                        # Multi-experiment aggregation assumes every experiment FIM is
+                        # computed at the same nominal theta. Validate that user-
+                        # initialized experiments share both the unknown-parameter
+                        # labels and their nominal values instead of silently
+                        # overwriting one experiment with another.
+                        current_fd_block = scenario_block.exp_blocks[k].fd_scenario_blocks[
+                            0
+                        ]
+                        current_param_names = [
+                            str(pyo.ComponentUID(param, context=current_fd_block))
+                            for param in current_fd_block.unknown_parameters
+                        ]
+                        # The sensitivity scenarios and resulting FIM bookkeeping both
+                        # depend on the theta ordering used to build each experiment
+                        # block. Require the same parameter order across experiments so
+                        # the aggregated multi-experiment FIM is formed without
+                        # ambiguity or user confusion.
+                        if current_param_names != reference_param_names:
+                            raise ValueError(
+                                "All experiments passed to optimize_experiments() "
+                                "must define the same unknown_parameters in the same "
+                                "order. "
+                                f"Experiment 0 uses {reference_param_names}, while "
+                                f"experiment {k} uses {current_param_names}."
+                            )
+
+                        current_param_values = [
+                            float(value)
+                            for value in current_fd_block.unknown_parameters.values()
+                        ]
+                        for name, ref_val, cur_val in zip(
+                            reference_param_names,
+                            reference_param_values,
+                            current_param_values,
+                        ):
+                            if not math.isclose(
+                                ref_val, cur_val, rel_tol=1e-12, abs_tol=1e-12
+                            ):
+                                raise ValueError(
+                                    "All experiments passed to optimize_experiments() "
+                                    "must use the same nominal values for "
+                                    "unknown_parameters. "
+                                    f"Parameter '{name}' has value {ref_val} in "
+                                    f"experiment 0 and {cur_val} in experiment {k}."
+                                )
 
             # Add symmetry breaking constraints to prevent equivalent permutations for
             # multiple experiments
@@ -1577,49 +1630,6 @@ class DesignOfExperiments:
                         comp.fix()
                     else:
                         comp.unfix()
-
-    def _synchronize_experiment_parameter_scenarios(
-        self, source_exp_block, target_exp_block
-    ):
-        """Copy nominal parameter values to an experiment block and rebuild its FD perturbations."""
-        source_fd_block = source_exp_block.fd_scenario_blocks[0]
-        source_param_values = {
-            str(pyo.ComponentUID(param, context=source_fd_block)): float(value)
-            for param, value in source_fd_block.unknown_parameters.items()
-        }
-
-        for fd_scenario in target_exp_block.scenarios:
-            fd_block = target_exp_block.fd_scenario_blocks[fd_scenario]
-
-            for param in fd_block.unknown_parameters:
-                nominal_value = source_param_values[
-                    str(pyo.ComponentUID(param, context=fd_block))
-                ]
-                fd_block.unknown_parameters[param] = nominal_value
-                param.set_value(nominal_value)
-
-            if self.fd_formula == FiniteDifferenceStep.central:
-                diff = self.step * ((-1) ** fd_scenario)
-            elif self.fd_formula == FiniteDifferenceStep.forward:
-                if fd_scenario == 0:
-                    continue
-                diff = self.step
-            elif self.fd_formula == FiniteDifferenceStep.backward:
-                if fd_scenario == 0:
-                    continue
-                diff = -self.step
-            else:
-                raise DeveloperError(
-                    "Finite difference option not recognized. Please contact "
-                    "the developers as you should not see this error."
-                )
-
-            perturbed_param = pyo.ComponentUID(
-                target_exp_block.parameter_scenarios[fd_scenario]
-            ).find_component_on(fd_block)
-            perturbed_param.set_value(
-                fd_block.unknown_parameters[perturbed_param] * (1 + diff)
-            )
 
     @staticmethod
     def _evaluate_objective_for_option(fim_matrix, objective_option):
