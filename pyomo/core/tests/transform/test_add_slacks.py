@@ -18,6 +18,8 @@ from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 import random
 
+from pyomo.gdp import Disjunct
+
 from pyomo.opt import check_available_solvers
 from pyomo.environ import (
     ConcreteModel,
@@ -486,6 +488,25 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIs(c.body.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(c.body.arg(1).arg(0), -1)
         self.assertIs(c.body.arg(1).arg(1), transBlock._slack_minus_rule4)
+
+    def test_gdp_error(self):
+        m = self.makeModel()
+        m.disj = Disjunct()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"The model \('unknown'\) contains the following active components that the "
+            r"'core.add_slack_variables' transformation does not know how to process:"
+            + "\n\t"
+            + r"\<class 'pyomo.gdp.disjunct.Disjunct'\>:"
+            + "\n\t\t"
+            + r"disj"
+            + "\n"
+            + r"If these components are Block-like "
+            r"\(e.g., Disjuncts\) and the intent is to add slacks on them, call "
+            r"the transformation on them directly."
+        ):
+            TransformationFactory('core.add_slack_variables').apply_to(m)
 
 
 class TestAddSlacks_IndexedConstraints(unittest.TestCase):

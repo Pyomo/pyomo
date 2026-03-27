@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 from collections import defaultdict
+from operator import attrgetter
 
 from pyomo.core import (
     TransformationFactory,
@@ -17,6 +18,9 @@ from pyomo.core import (
     Objective,
     Block,
     value,
+    Expression,
+    Param,
+    Suffix
 )
 
 from pyomo.common.autoslots import AutoSlots
@@ -24,8 +28,15 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.core.base import ComponentUID
+from pyomo.core.base import ComponentUID, SortComponents
 from pyomo.common.deprecation import deprecation_warning
+
+from pyomo.repn.util import categorize_valid_components
+
+### FIXME: Remove the following as soon as non-active components no
+### longer report active==True
+from pyomo.network import Port
+from pyomo.core.base import RangeSet, Set
 
 import logging
 
@@ -137,9 +148,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
         trans_info = instance.private_data()
 
         if targets is None:
-            constraintDatas = instance.component_data_objects(
-                Constraint, descend_into=True
-            )
+            constraintDatas = self._get_all_constraint_datas(instance)
+ 
         else:
             constraintDatas = []
             for t in targets:
@@ -215,6 +225,53 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
             # make a new objective that minimizes sum of slack variables
             xblock._slack_objective = Objective(expr=obj_expr)
+
+    def _get_all_constraint_datas(self, model):
+        components, unknown = categorize_valid_components(
+            model,
+            active=True,
+            sort=SortComponents.deterministic,
+            valid={
+                Block,
+                Expression,
+                Var,
+                Param,
+                Suffix,
+                Objective,
+                # FIXME: Non-active components should not report as Active
+                Set,
+                RangeSet,
+                Port,
+            },
+            targets={Constraint},
+        )
+        if unknown:
+            raise ValueError(
+                "The model ('%s') contains the following active components "
+                "that the 'core.add_slack_variables' transformation does not "
+                "know how to process:\n\t%s\nIf these components are Block-like "
+                "(e.g., Disjuncts) and the intent is to add slacks on them, call "
+                "the transformation on them directly."
+                % (
+                    model.name,
+                    "\n\t".join(
+                        sorted(
+                            "%s:\n\t\t%s"
+                            % (k, "\n\t\t".join(sorted(map(attrgetter('name'), v))))
+                            for k, v in unknown.items()
+                        )
+                    ),
+                )
+            )
+        if components[Constraint]:
+            for block in components[Constraint]:
+                for cons in block.component_data_objects(
+                    Constraint,
+                    active=True,
+                    descend_into=False,
+                    sort=SortComponents.deterministic,
+                ):
+                    yield cons
 
     def get_slack_variables(self, model, constraint):
         """Return the list of slack variables used to relax 'constraint.' Note
