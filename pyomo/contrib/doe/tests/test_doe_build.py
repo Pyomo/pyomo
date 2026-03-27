@@ -7,7 +7,11 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 import json
+import os
 import os.path
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -19,6 +23,7 @@ from pyomo.common.dependencies import (
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
+from pyomo.contrib.doe.doe import ObjectiveLib, _DoEResultsJSONEncoder
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
@@ -27,6 +32,9 @@ if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
+    )
+    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+        RooneyBieglerMultiExperiment,
     )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
@@ -97,9 +105,11 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
         for i in model.output_names
         for j in model.parameter_names
     ]
-    sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
+    sigma_inv = [
+        1 / v for k, v in model.fd_scenario_blocks[0].measurement_error.items()
+    ]
     param_vals = np.array(
-        [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
+        [[v for k, v in model.fd_scenario_blocks[0].unknown_parameters.items()]]
     )
 
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
@@ -123,7 +133,7 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args['experiment'] = experiment
+    args['experiment'] = None if experiment is None else [experiment]
     args['fd_formula'] = fd_method
     args['step'] = 1e-3
     args['objective_option'] = obj_used
@@ -173,16 +183,16 @@ class TestDoeBuild(unittest.TestCase):
             diff = (-1) ** s * doe_obj.step
 
             param_val = pyo.value(
-                pyo.ComponentUID(param).find_component_on(model.scenario_blocks[s])
+                pyo.ComponentUID(param).find_component_on(model.fd_scenario_blocks[s])
             )
 
-            param_val_from_step = model.scenario_blocks[0].unknown_parameters[
-                pyo.ComponentUID(param).find_component_on(model.scenario_blocks[0])
+            param_val_from_step = model.fd_scenario_blocks[0].unknown_parameters[
+                pyo.ComponentUID(param).find_component_on(model.fd_scenario_blocks[0])
             ] * (1 + diff)
 
-            for k, v in model.scenario_blocks[s].unknown_parameters.items():
+            for k, v in model.fd_scenario_blocks[s].unknown_parameters.items():
                 if pyo.ComponentUID(
-                    k, context=model.scenario_blocks[s]
+                    k, context=model.fd_scenario_blocks[s]
                 ) == pyo.ComponentUID(param):
                     continue
 
@@ -212,17 +222,21 @@ class TestDoeBuild(unittest.TestCase):
                 param = model.parameter_scenarios[s]
 
                 param_val = pyo.value(
-                    pyo.ComponentUID(param).find_component_on(model.scenario_blocks[s])
+                    pyo.ComponentUID(param).find_component_on(
+                        model.fd_scenario_blocks[s]
+                    )
                 )
 
-                param_val_from_step = model.scenario_blocks[0].unknown_parameters[
-                    pyo.ComponentUID(param).find_component_on(model.scenario_blocks[0])
+                param_val_from_step = model.fd_scenario_blocks[0].unknown_parameters[
+                    pyo.ComponentUID(param).find_component_on(
+                        model.fd_scenario_blocks[0]
+                    )
                 ] * (1 + diff)
                 self.assertAlmostEqual(param_val, param_val_from_step)
 
-            for k, v in model.scenario_blocks[s].unknown_parameters.items():
+            for k, v in model.fd_scenario_blocks[s].unknown_parameters.items():
                 if (s != 0) and pyo.ComponentUID(
-                    k, context=model.scenario_blocks[s]
+                    k, context=model.fd_scenario_blocks[s]
                 ) == pyo.ComponentUID(param):
                     continue
 
@@ -250,17 +264,21 @@ class TestDoeBuild(unittest.TestCase):
                 param = model.parameter_scenarios[s]
 
                 param_val = pyo.value(
-                    pyo.ComponentUID(param).find_component_on(model.scenario_blocks[s])
+                    pyo.ComponentUID(param).find_component_on(
+                        model.fd_scenario_blocks[s]
+                    )
                 )
 
-                param_val_from_step = model.scenario_blocks[0].unknown_parameters[
-                    pyo.ComponentUID(param).find_component_on(model.scenario_blocks[0])
+                param_val_from_step = model.fd_scenario_blocks[0].unknown_parameters[
+                    pyo.ComponentUID(param).find_component_on(
+                        model.fd_scenario_blocks[0]
+                    )
                 ] * (1 + diff)
                 self.assertAlmostEqual(param_val, param_val_from_step)
 
-            for k, v in model.scenario_blocks[s].unknown_parameters.items():
+            for k, v in model.fd_scenario_blocks[s].unknown_parameters.items():
                 if (s != 0) and pyo.ComponentUID(
-                    k, context=model.scenario_blocks[s]
+                    k, context=model.fd_scenario_blocks[s]
                 ) == pyo.ComponentUID(param):
                     continue
 
@@ -282,7 +300,9 @@ class TestDoeBuild(unittest.TestCase):
         model = doe_obj.model
 
         # Check that the design fixing constraints are generated
-        design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
+        design_vars = [
+            k for k, v in model.fd_scenario_blocks[0].experiment_inputs.items()
+        ]
 
         con_name_base = "global_design_eq_con_"
 
@@ -315,7 +335,9 @@ class TestDoeBuild(unittest.TestCase):
         model = doe_obj.model
 
         # Check that the design fixing constraints are generated
-        design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
+        design_vars = [
+            k for k, v in model.fd_scenario_blocks[0].experiment_inputs.items()
+        ]
 
         con_name_base = "global_design_eq_con_"
 
@@ -348,7 +370,9 @@ class TestDoeBuild(unittest.TestCase):
         model = doe_obj.model
 
         # Check that the design fixing constraints are generated
-        design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
+        design_vars = [
+            k for k, v in model.fd_scenario_blocks[0].experiment_inputs.items()
+        ]
 
         con_name_base = "global_design_eq_con_"
 
@@ -502,11 +526,11 @@ class TestDoeBuild(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        doe_obj._generate_scenario_blocks()
+        doe_obj._generate_fd_scenario_blocks()
 
         for i in doe_obj.model.parameter_scenarios:
             self.assertTrue(
-                doe_obj.model.find_component("scenario_blocks[" + str(i) + "]")
+                doe_obj.model.find_component("fd_scenario_blocks[" + str(i) + "]")
             )
 
 
@@ -569,7 +593,7 @@ class TestDoEObjectiveOptions(unittest.TestCase):
 
         for i, c in enumerate(params):
             for j, d in enumerate(params):
-                # cholesky_inv_imp: only defined for i >= j
+                # inverse constraint only exists for lower triangle (i >= j)
                 if i >= j:
                     self.assertIn(
                         (c, d),
@@ -583,7 +607,7 @@ class TestDoEObjectiveOptions(unittest.TestCase):
                         msg=f"Unexpected cholesky_inv_cons[{c},{d}]",
                     )
 
-                # cholesky_LLinv_imp: only defined for i >= j
+                # identity constraint only defined for lower triangle (i >= j)
                 if i >= j:
                     self.assertIn(
                         (c, d),
@@ -638,6 +662,401 @@ class TestDoEObjectiveOptions(unittest.TestCase):
 
                 expected = 1.0 if i == j else 0.0
                 self.assertAlmostEqual(val, expected, places=4)
+
+
+class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
+    """Coverage for optimize_experiments() build, output, and diagnostics behavior."""
+
+    def _make_solver(self):
+        # Make solver object with options for DoE runs.
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+        return solver
+
+    def test_constructor_accepts_single_experiment_or_list(self):
+        # Tests that the public ``experiment`` argument accepts either one
+        # experiment object or a list of experiment objects.
+        single = DesignOfExperiments(
+            experiment=RooneyBieglerMultiExperiment(hour=2.0),
+            objective_option="pseudo_trace",
+        )
+        as_list = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        self.assertEqual(len(single.experiment_list), 1)
+        self.assertEqual(len(as_list.experiment_list), 1)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_init_solver_used_for_initialization_only(self):
+        # Tests that all pre-final solves use init_solver while the final
+        # optimization solve still uses the primary solver.
+        main_solver = self._make_solver()
+        init_solver = self._make_solver()
+        # Use distinct option values so each solver path can be identified.
+        main_solver.options["max_iter"] = 321
+        init_solver.options["max_iter"] = 123
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=main_solver,
+        )
+
+        # Track both how many times each solver is called and the chronological
+        # order of those calls. The optimize_experiments() contract is that all
+        # setup solves run first on init_solver and the final NLP solve runs last
+        # on the primary solver.
+        main_calls = 0
+        init_calls = 0
+        call_order = []
+        # Record an option value on each solve so the test can verify that the
+        # call really went through the expected solver object, not just the
+        # expected phase label.
+        option_markers = []
+        original_main_solve = main_solver.solve
+        original_init_solve = init_solver.solve
+
+        def _main_solve(*args, **kwargs):
+            nonlocal main_calls
+            main_calls += 1
+            call_order.append("main")
+            option_markers.append(main_solver.options.get("max_iter"))
+            return original_main_solve(*args, **kwargs)
+
+        def _init_solve(*args, **kwargs):
+            nonlocal init_calls
+            init_calls += 1
+            call_order.append("init")
+            option_markers.append(init_solver.options.get("max_iter"))
+            return original_init_solve(*args, **kwargs)
+
+        # Patch both solver objects in place so the real solves still run while
+        # we collect lightweight diagnostics about solver routing.
+        with (
+            patch.object(main_solver, "solve", side_effect=_main_solve),
+            patch.object(init_solver, "solve", side_effect=_init_solve),
+        ):
+            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+
+        # The exact number of initialization solves is implementation-dependent,
+        # but they must all occur before the one final main-solver call.
+        self.assertGreaterEqual(init_calls, 1)  # At least one initialization solve
+        self.assertEqual(main_calls, 1)  # Exactly one main optimization solve
+        self.assertEqual(call_order[-1], "main")
+        self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
+        # Distinct option markers provide a second check that solver routing
+        # matches the expected init-versus-final phase split.
+        self.assertTrue(all(marker == 123 for marker in option_markers[:-1]))
+        self.assertEqual(option_markers[-1], 321)
+        # Result payloads should report the same phase-specific solver names that
+        # were observed through the patched solve() calls above.
+        self.assertEqual(
+            doe_obj.results["settings"]["initialization"]["solver_name"],
+            getattr(init_solver, "name", str(init_solver)),
+        )
+        self.assertEqual(
+            doe_obj.results["run_info"]["solver"]["name"],
+            getattr(main_solver, "name", str(main_solver)),
+        )
+
+    def test_get_experiment_input_vars_direct_and_fd_fallback(self):
+        # Test the helper used by optimize_experiments() finds input vars for both
+        # direct models and finite-difference scenario-block models.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+
+        model_direct = pyo.ConcreteModel()
+        model_direct.x = pyo.Var(initialize=2.0, bounds=(1.0, 10.0))
+        model_direct.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        model_direct.experiment_inputs[model_direct.x] = 2.0
+        vars_direct = doe_obj._get_experiment_input_vars(model_direct)
+        self.assertEqual([v.name for v in vars_direct], [model_direct.x.name])
+
+        model_fd = pyo.ConcreteModel()
+        model_fd.fd_scenario_blocks = pyo.Block([0])
+        model_fd.fd_scenario_blocks[0].x = pyo.Var(initialize=3.0, bounds=(1.0, 10.0))
+        model_fd.fd_scenario_blocks[0].experiment_inputs = pyo.Suffix(
+            direction=pyo.Suffix.LOCAL
+        )
+        model_fd.fd_scenario_blocks[0].experiment_inputs[
+            model_fd.fd_scenario_blocks[0].x
+        ] = 3.0
+        vars_fd = doe_obj._get_experiment_input_vars(model_fd)
+        self.assertEqual(
+            [v.name for v in vars_fd], [model_fd.fd_scenario_blocks[0].x.name]
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_multi_experiment_structure_and_results(self):
+        # Test that the multi-experiment optimize_experiments() run builds the expected
+        # scenario/experiment structure and structured results.
+        solver = self._make_solver()
+
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiExperiment(hour=2.0),
+                RooneyBieglerMultiExperiment(hour=4.0),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=solver,
+        )
+        doe_obj.optimize_experiments()
+
+        scenario_block = doe_obj.model.param_scenario_blocks[0]
+        self.assertTrue(hasattr(scenario_block, "symmetry_breaking_s0_exp1"))
+        self.assertEqual(len(list(scenario_block.exp_blocks.keys())), 2)
+
+        scenario_result = doe_obj.results["Scenarios"][0]
+        self.assertEqual(doe_obj.results["Initialization Method"], "none")
+        self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 2)
+        self.assertEqual(len(scenario_result["Experiments"]), 2)
+        self.assertEqual(len(doe_obj.results["Experiment Design Names"]), 1)
+        self.assertEqual(len(doe_obj.results["Unknown Parameter Names"]), 2)
+
+        # New structured payload checks
+        self.assertIn("run_info", doe_obj.results)
+        self.assertIn("settings", doe_obj.results)
+        self.assertIn("timing", doe_obj.results)
+        self.assertIn("names", doe_obj.results)
+        self.assertIn("scenarios", doe_obj.results)
+        self.assertEqual(
+            doe_obj.results["run_info"]["solver"]["status"],
+            doe_obj.results["Solver Status"],
+        )
+        self.assertEqual(
+            doe_obj.results["settings"]["modeling"]["n_experiments_per_scenario"], 2
+        )
+        self.assertFalse(doe_obj.results["settings"]["modeling"]["template_mode"])
+        self.assertEqual(len(doe_obj.results["scenarios"]), 1)
+        self.assertEqual(doe_obj.results["scenarios"][0]["id"], 0)
+        self.assertEqual(len(doe_obj.results["scenarios"][0]["experiments"]), 2)
+        self.assertEqual(doe_obj.results["scenarios"][0]["experiments"][0]["id"], 0)
+
+        # hour of exp[0] should be <= hour of exp[1] due to symmetry breaking
+        h0 = scenario_result["Experiments"][0]["Experiment Design"][0]
+        h1 = scenario_result["Experiments"][1]["Experiment Design"][0]
+        self.assertLessEqual(h0, h1)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_writes_results_file(self):
+        # Tests that optimize_experiments() writes JSON results when given either
+        # a string path or a pathlib.Path for results_file.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        fd, results_path = tempfile.mkstemp(suffix=".json")
+        os.close(fd)
+        self.addCleanup(
+            lambda: os.path.exists(results_path) and os.remove(results_path)
+        )
+
+        doe_obj.optimize_experiments(n_exp=1, results_file=results_path)
+
+        with open(results_path) as f:
+            payload = json.load(f)
+        self.assertEqual(payload["Initialization Method"], "none")
+        self.assertTrue(payload["settings"]["modeling"]["template_mode"])
+        self.assertIn("Scenarios", payload)
+        self.assertIn("run_info", payload)
+        self.assertIn("settings", payload)
+        self.assertIn("timing", payload)
+        self.assertIn("names", payload)
+        self.assertIn("scenarios", payload)
+
+        path_payload = Path(results_path)
+        doe_obj.optimize_experiments(n_exp=1, results_file=path_payload)
+        with open(results_path) as f:
+            payload_path = json.load(f)
+        self.assertEqual(payload_path["Initialization Method"], "none")
+        self.assertTrue(payload_path["settings"]["modeling"]["template_mode"])
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_single_experiment_defaults_to_template_mode(self):
+        # Tests that optimize_experiments() uses template mode by default when
+        # n_exp=1.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        doe_obj.optimize_experiments()
+        self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 1)
+        self.assertTrue(doe_obj.results["settings"]["modeling"]["template_mode"])
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_timing_includes_lhs_phase_separately(self):
+        # Tests that LHS initialization timing is tracked separately and
+        # contributes additively to total runtime accounting.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        doe_obj.optimize_experiments(
+            n_exp=2, init_method="lhs", init_n_samples=2, init_seed=11
+        )
+
+        timing = doe_obj.results["timing"]
+        self.assertIn("lhs_initialization_s", timing)
+        self.assertGreaterEqual(timing["lhs_initialization_s"], 0.0)
+        self.assertAlmostEqual(
+            timing["total_s"],
+            timing["build_s"]
+            + timing["lhs_initialization_s"]
+            + timing["initialization_s"]
+            + timing["solve_s"],
+            places=8,
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_symmetry_log_once_per_scenario(self):
+        # Tests that symmetry-breaking constraint logging is emitted once per
+        # scenario (not once per generated constraint).
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        with self.assertLogs("pyomo.contrib.doe.doe", level="INFO") as log_cm:
+            doe_obj.optimize_experiments(n_exp=3)
+
+        matching = [
+            m
+            for m in log_cm.output
+            if "Added 2 symmetry breaking constraints for scenario 0" in m
+        ]
+        self.assertEqual(len(matching), 1)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_lhs_diagnostics_populated(self):
+        # Tests that threaded LHS initialization records diagnostics needed for
+        # debugging and performance visibility.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        doe_obj.optimize_experiments(
+            n_exp=2,
+            init_method="lhs",
+            init_n_samples=2,
+            init_seed=11,
+            init_parallel=True,
+            init_combo_parallel=True,
+            init_n_workers=2,
+            init_combo_chunk_size=2,
+            init_combo_parallel_threshold=1,
+            init_max_wall_clock_time=60.0,
+        )
+        lhs_diag = doe_obj.results["diagnostics"]["lhs_initialization"]
+        self.assertIsNotNone(lhs_diag)
+        self.assertEqual(lhs_diag["candidate_fim_mode"], "thread")
+        self.assertEqual(lhs_diag["combo_mode"], "thread")
+        self.assertEqual(lhs_diag["n_workers"], 2)
+        self.assertFalse(lhs_diag["timed_out"])
+        self.assertGreater(lhs_diag["elapsed_total_s"], 0.0)
+        self.assertIn("best_obj", lhs_diag)
+        self.assertIsInstance(lhs_diag["best_obj"], float)
+        self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
+        self.assertGreater(lhs_diag["best_obj"], 0.0)
+        self.assertIn("best_obj_log10", lhs_diag)
+        self.assertIsInstance(lhs_diag["best_obj_log10"], float)
+        self.assertAlmostEqual(
+            lhs_diag["best_obj_log10"], np.log10(lhs_diag["best_obj"]), places=12
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_termination_message_bytes(self):
+        # Tests that solver termination messages returned as bytes are decoded
+        # and persisted as plain strings in results.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        original_solve = doe_obj.solver.solve
+
+        def _solve_with_bytes_message(*args, **kwargs):
+            res = original_solve(*args, **kwargs)
+            res.solver.message = b"byte-message"
+            return res
+
+        with patch.object(
+            doe_obj.solver, "solve", side_effect=_solve_with_bytes_message
+        ):
+            doe_obj.optimize_experiments(n_exp=1)
+
+        self.assertEqual(doe_obj.results["Termination Message"], "byte-message")
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_termination_message_fallback_to_str(self):
+        # Tests that non-string termination messages fall back to str(message) so
+        # results always store a serializable user-facing value.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        original_solve = doe_obj.solver.solve
+
+        class _CustomMessage:
+            def __str__(self):
+                return "custom-message"
+
+        def _solve_with_custom_message(*args, **kwargs):
+            res = original_solve(*args, **kwargs)
+            res.solver.message = _CustomMessage()
+            return res
+
+        with patch.object(
+            doe_obj.solver, "solve", side_effect=_solve_with_custom_message
+        ):
+            doe_obj.optimize_experiments(n_exp=1)
+
+        self.assertEqual(doe_obj.results["Termination Message"], "custom-message")
+
+    def test_maximize_objective_set_contents(self):
+        maximize = DesignOfExperiments._MAXIMIZE_OBJECTIVES
+        self.assertIn(ObjectiveLib.determinant, maximize)
+        self.assertIn(ObjectiveLib.pseudo_trace, maximize)
+        self.assertIn(ObjectiveLib.minimum_eigenvalue, maximize)
+        self.assertNotIn(ObjectiveLib.trace, maximize)
+        self.assertNotIn(ObjectiveLib.condition_number, maximize)
+        self.assertNotIn(ObjectiveLib.zero, maximize)
+
+    def test_doe_results_json_encoder_handles_numpy_and_enum(self):
+        payload = {
+            "scalar": np.int64(7),
+            "array": np.array([1.0, 2.0]),
+            "objective": ObjectiveLib.trace,
+        }
+        encoded = json.dumps(payload, cls=_DoEResultsJSONEncoder)
+        decoded = json.loads(encoded)
+
+        self.assertEqual(decoded["scalar"], 7)
+        self.assertEqual(decoded["array"], [1.0, 2.0])
+        self.assertEqual(decoded["objective"], str(ObjectiveLib.trace))
+
+    def test_symmetrize_lower_tri_helper(self):
+        m = np.array([[1.0, 0.0, 0.0], [2.0, 3.0, 0.0], [4.0, 5.0, 6.0]])
+        got = DesignOfExperiments._symmetrize_lower_tri(m)
+        expected = np.array([[1.0, 2.0, 4.0], [2.0, 3.0, 5.0], [4.0, 5.0, 6.0]])
+        self.assertTrue(np.allclose(got, expected, atol=1e-12))
 
 
 if __name__ == "__main__":
