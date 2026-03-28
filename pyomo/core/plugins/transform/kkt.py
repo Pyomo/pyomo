@@ -103,11 +103,7 @@ class NonLinearProgrammingKKT:
             )
         # collect vars from active objective
         obj = active_objs[0]
-        for v in identify_variables(obj.expr, include_fixed=True):
-            if v.is_fixed():
-                fixed_var_set.add(v)
-            else:
-                var_set.add(v)
+        all_vars_set.update(identify_variables(obj.expr, include_fixed=True))
         # add objective to lagrangean
         lagrangean += obj.sense * obj.expr
 
