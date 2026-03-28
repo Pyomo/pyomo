@@ -90,8 +90,7 @@ class NonLinearProgrammingKKT:
         # initialize lagrangean
         info = model.private_data()
         lagrangean = 0
-        var_set = ComponentSet()
-        fixed_var_set = ComponentSet()
+        all_vars_set = ComponentSet()
 
         # collect the active Objectives
         active_objs = list(
@@ -124,11 +123,7 @@ class NonLinearProgrammingKKT:
             for expr in (lower, body, upper):
                 if expr is None:
                     continue
-                for v in identify_variables(expr, include_fixed=True):
-                    if v.is_fixed():
-                        fixed_var_set.add(v)
-                    else:
-                        var_set.add(v)
+                all_vars_set.update(identify_variables(expr=expr, include_fixed=True))
 
             if con.equality:
                 # create multiplier
@@ -167,12 +162,15 @@ class NonLinearProgrammingKKT:
                 # create con -> dual mapping. Will return None if a bound doesn't exist.
                 info.obj_dual_map[con] = (alpha_l, alpha_u)
 
+        fixed_vars = ComponentSet(v for v in all_vars_set if v.is_fixed())
+        var_set = ComponentSet(all_vars_set)
+        var_set -= fixed_vars
+
         # do error checking on parametrize_wrt
-        missing = fixed_var_set - params
+        missing = fixed_vars - params
         if missing:
             raise ValueError("All fixed variables must be included in parametrize_wrt.")
 
-        all_vars_set = fixed_var_set | var_set
         if not (params <= all_vars_set):
             raise ValueError(
                 "A variable passed in parametrize_wrt does not exist on an "
