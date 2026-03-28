@@ -74,8 +74,8 @@ class NonLinearProgrammingKKT:
 
         if hasattr(model, config.kkt_block_name):
             raise ValueError(
-                f"""model already has an attribute with the 
-                specified kkt_block_name: '{config.kkt_block_name}'"""
+                "model already has an attribute with the"
+                f"specified kkt_block_name: '{config.kkt_block_name}'"
             )
 
         # we should check that all vars the user fixed are included
@@ -89,7 +89,7 @@ class NonLinearProgrammingKKT:
         return model
 
     def _reformulate(self, model, kkt_block, params):
-        # initialize lagrangean
+        # initialize
         info = model.private_data()
         lagrangean = 0
         all_vars_set = ComponentSet()
@@ -105,7 +105,6 @@ class NonLinearProgrammingKKT:
         # collect vars from active objective
         obj = active_objs[0]
         all_vars_set.update(identify_variables(obj.expr, include_fixed=True))
-        # add objective to lagrangean
         lagrangean += obj.sense * obj.expr
 
         # list of equality multipliers
@@ -127,40 +126,28 @@ class NonLinearProgrammingKKT:
                 all_vars_set.update(identify_variables(expr=expr, include_fixed=True))
 
             if con.equality:
-                # create multiplier
                 gamma_i = kkt_block.gamma.add()
-                # add expression to lagrangean
                 lagrangean += (upper - body) * gamma_i
-                # create mappings
                 info.obj_dual_map[con] = gamma_i
                 info.dual_obj_map[gamma_i] = con
 
             else:
                 alpha_l = None
                 if lower is not None:
-                    # create multiplier
                     alpha_l = kkt_block.alpha.add()
-                    # add expression to lagrangean
                     con_expr = lower - body
                     lagrangean += con_expr * alpha_l
-                    # create complement
                     kkt_block.complements.add(complements(alpha_l >= 0, con_expr <= 0))
-                    # create dual -> con mapping
                     info.dual_obj_map[alpha_l] = con
 
                 alpha_u = None
                 if upper is not None:
-                    # create multiplier
                     alpha_u = kkt_block.alpha.add()
-                    # add expression to lagrangean
                     con_expr = body - upper
                     lagrangean += con_expr * alpha_u
-                    # create complement
                     kkt_block.complements.add(complements(alpha_u >= 0, con_expr <= 0))
-                    # create dual -> con mapping
                     info.dual_obj_map[alpha_u] = con
 
-                # create con -> dual mapping. Will return None if a bound doesn't exist.
                 info.obj_dual_map[con] = (alpha_l, alpha_u)
 
         fixed_vars = ComponentSet(v for v in all_vars_set if v.is_fixed())
@@ -172,40 +159,30 @@ class NonLinearProgrammingKKT:
         if missing:
             raise ValueError("All fixed variables must be included in parametrize_wrt.")
 
-        if not (params <= all_vars_set):
+        if not params <= all_vars_set:
             raise ValueError(
                 "A variable passed in parametrize_wrt does not exist on an "
                 "active constraint or objective within the model."
             )
 
-        # loop through variables, add terms to Lagrangean and add mappings
         var_set = var_set - params
         for var in var_set:
             alpha_l = None
             if var.has_lb():
-                # create multiplier
                 alpha_l = kkt_block.alpha.add()
-                # add expression to lagrangean
                 con_expr = var.lb - var
                 lagrangean += con_expr * alpha_l
-                # create complement
                 kkt_block.complements.add(complements(alpha_l >= 0, con_expr <= 0))
-                # create dual -> con mapping
                 info.dual_obj_map[alpha_l] = var
 
             alpha_u = None
             if var.has_ub():
-                # create multiplier
                 alpha_u = kkt_block.alpha.add()
-                # add expression to lagrangean
                 con_expr = var - var.ub
                 lagrangean += con_expr * alpha_u
-                # create complement
                 kkt_block.complements.add(complements(alpha_u >= 0, con_expr <= 0))
-                # create dual -> con mapping
                 info.dual_obj_map[alpha_u] = var
 
-            # create var -> dual mapping. Will return None if a var bound doesn't exist.
             info.obj_dual_map[var] = (alpha_l, alpha_u)
 
         kkt_block.lagrangean = Expression(expr=lagrangean)
@@ -217,7 +194,6 @@ class NonLinearProgrammingKKT:
             kkt_block.stationarity_conditions.add(deriv_lagrangean[var] == 0)
 
         active_objs[0].deactivate()
-        # kkt_block.dummy_obj = Objective(expr=1)
 
     def get_object_from_multiplier(self, model, multiplier_var):
         """
@@ -242,10 +218,9 @@ class NonLinearProgrammingKKT:
         info = model.private_data()
         if multiplier_var in info.dual_obj_map:
             return info.dual_obj_map[multiplier_var]
-        else:
-            raise ValueError(
-                f"The KKT multiplier: {multiplier_var.name}, does not exist on {model.name}."
-            )
+        raise ValueError(
+            f"The KKT multiplier: {multiplier_var.name}, does not exist on {model.name}."
+        )
 
     def get_multiplier_from_object(self, model, component):
         """
@@ -270,7 +245,7 @@ class NonLinearProgrammingKKT:
         info = model.private_data()
         if component in info.obj_dual_map:
             return info.obj_dual_map[component]
-        else:
-            raise ValueError(
-                f"The component '{component.name}' either does not exist on '{model.name}', or is not associated with a multiplier."
-            )
+        raise ValueError(
+            f"The component '{component.name}' either does not exist on "
+            f"'{model.name}', or is not associated with a multiplier."
+        )
