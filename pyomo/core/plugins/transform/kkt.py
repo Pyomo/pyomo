@@ -23,9 +23,9 @@ from pyomo.core import (
     VarList,
 )
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.mpec import ComplementarityList, complements
 from pyomo.util.config_domains import ComponentDataSet
-from pyomo.core.expr.visitor import identify_variables
 
 
 class _KKTReformulationData(AutoSlots.Mixin):
@@ -74,7 +74,7 @@ class NonLinearProgrammingKKT:
 
         if hasattr(model, config.kkt_block_name):
             raise ValueError(
-                "model already has an attribute with the"
+                "model already has an attribute with the "
                 f"specified kkt_block_name: '{config.kkt_block_name}'"
             )
 

@@ -7,40 +7,26 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.common.dependencies import scipy_available
+from pyomo.common import unittest
 from pyomo.common.numeric_types import value
-import pyomo.common.unittest as unittest
-from pyomo.common.autoslots import AutoSlots
-from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.core.base.suffix import Suffix
+from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
 from pyomo.environ import (
-    ConcreteModel,
-    Reals,
     Block,
+    ConcreteModel,
     Constraint,
-    ConstraintList,
-    Expression,
     NonNegativeReals,
     Objective,
-    RangeSet,
     Reals,
-    Set,
-    TransformationFactory,
-    Var,
-    maximize,
-    minimize,
     SolverFactory,
     TerminationCondition,
+    TransformationFactory,
+    Var,
+    minimize,
 )
-from pyomo.core.base.suffix import Suffix
-from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd
-from pyomo.mpec import ComplementarityList, complements
-from pyomo.util.vars_from_expressions import get_vars_from_components
-from pyomo.util.config_domains import ComponentDataSet
-from pyomo.core.expr.compare import (
-    assertExpressionsEqual,
-    assertExpressionsStructurallyEqual,
-)
+from pyomo.opt import check_available_solvers
+
+solvers = check_available_solvers('ipopt')
 
 
 class TestKKT(unittest.TestCase):
@@ -93,6 +79,7 @@ class TestKKT(unittest.TestCase):
             primal_var, kkt_reform_var = v
             self.assertAlmostEqual(value(primal_var), value(kkt_reform_var))
 
+    @unittest.skipIf('ipopt' not in solvers, "ipopt solver is not available")
     def test_kkt_solve(self):
         m = ConcreteModel()
         m.x = Var(domain=Reals)
@@ -411,6 +398,7 @@ class TestKKT(unittest.TestCase):
 
         self.assertFalse(m.obj.active)
 
+    @unittest.skipIf('ipopt' not in solvers, "ipopt solver is not available")
     def test_solve_parametrized_kkt(self):
         m = self.get_bilevel_model()
 
@@ -454,7 +442,7 @@ class TestKKT(unittest.TestCase):
         kkt = TransformationFactory('core.kkt')
 
         with self.assertRaisesRegex(
-            ValueError, f"model must have only one active objective; found 0"
+            ValueError, "model must have only one active objective; found 0"
         ):
             kkt.apply_to(m)
 
@@ -469,8 +457,7 @@ class TestKKT(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            f"""model already has an attribute with the 
-                specified kkt_block_name: 'b1'""",
+            "model already has an attribute with the " "specified kkt_block_name: 'b1'",
         ):
             kkt.apply_to(m, kkt_block_name='b1')
 
@@ -524,6 +511,7 @@ class TestKKT(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "The component 'new_con' either does not exist on 'model', or is not associated with a multiplier.",
+            "The component 'new_con' either does not exist on 'model', "
+            "or is not associated with a multiplier.",
         ):
             kkt.get_multiplier_from_object(m, component=m2.new_con)
