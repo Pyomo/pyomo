@@ -109,8 +109,7 @@ class NonLinearProgrammingKKT:
         # list of equality multipliers
         kkt_block.gamma = VarList()
         # list of inequality multipliers
-        kkt_block.alpha1 = VarList(domain=NonNegativeReals)
-        kkt_block.alpha2 = VarList(domain=NonNegativeReals)
+        kkt_block.alpha = VarList(domain=NonNegativeReals)
         # define inequality complements
         kkt_block.complements = ComplementarityList()
 
@@ -138,7 +137,7 @@ class NonLinearProgrammingKKT:
                 alpha_l = None
                 if lower is not None:
                     # create multiplier
-                    alpha_l = kkt_block.alpha1.add()
+                    alpha_l = kkt_block.alpha.add()
                     # add expression to lagrangean
                     con_expr = lower - body
                     lagrangean += con_expr * alpha_l
@@ -150,7 +149,7 @@ class NonLinearProgrammingKKT:
                 alpha_u = None
                 if upper is not None:
                     # create multiplier
-                    alpha_u = kkt_block.alpha2.add()
+                    alpha_u = kkt_block.alpha.add()
                     # add expression to lagrangean
                     con_expr = body - upper
                     lagrangean += con_expr * alpha_u
@@ -183,7 +182,7 @@ class NonLinearProgrammingKKT:
             alpha_l = None
             if var.has_lb():
                 # create multiplier
-                alpha_l = kkt_block.alpha1.add()
+                alpha_l = kkt_block.alpha.add()
                 # add expression to lagrangean
                 con_expr = var.lb - var
                 lagrangean += con_expr * alpha_l
@@ -195,7 +194,7 @@ class NonLinearProgrammingKKT:
             alpha_u = None
             if var.has_ub():
                 # create multiplier
-                alpha_u = kkt_block.alpha2.add()
+                alpha_u = kkt_block.alpha.add()
                 # add expression to lagrangean
                 con_expr = var - var.ub
                 lagrangean += con_expr * alpha_u
