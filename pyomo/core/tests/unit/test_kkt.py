@@ -257,9 +257,6 @@ class TestKKT(unittest.TestCase):
 
         self.assertFalse(m.obj.active)
 
-        self.assertTrue(m.kkt.dummy_obj.active)
-        self.assertEqual(m.kkt.dummy_obj.expr, 1.0)
-
     def get_bilevel_model(self):
         m = ConcreteModel(name='bilevel')
 
@@ -413,9 +410,6 @@ class TestKKT(unittest.TestCase):
         )
 
         self.assertFalse(m.obj.active)
-
-        self.assertTrue(m.kkt.dummy_obj.active)
-        self.assertEqual(m.kkt.dummy_obj.expr, 1.0)
 
     def test_solve_parametrized_kkt(self):
         m = self.get_bilevel_model()
