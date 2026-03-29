@@ -59,10 +59,18 @@ class TestRooneyBieglerExamples(unittest.TestCase):
         from pyomo.contrib.parmest.examples.rooney_biegler import regularization_example
 
         results = regularization_example.main()
+        # Keep this as a lightweight contract test: example must return both
+        # regularization modes with finite outputs.
+        self.assertIn("L1", results)
+        self.assertIn("L2", results)
+
         l1_obj, l1_theta, _ = results["L1"]
+        l2_obj, l2_theta, _ = results["L2"]
 
         self.assertTrue(math.isfinite(float(l1_obj)))
+        self.assertTrue(math.isfinite(float(l2_obj)))
         self.assertTrue(math.isfinite(float(l1_theta["rate_constant"])))
+        self.assertTrue(math.isfinite(float(l2_theta["rate_constant"])))
         self.assertGreaterEqual(float(l1_theta["rate_constant"]), 0.0)
         self.assertLessEqual(float(l1_theta["rate_constant"]), 5.0)
 
