@@ -2432,5 +2432,377 @@ class TestSquareInitialization_RooneyBiegler_Deprecated(unittest.TestCase):
         self.pest.diagnostic_mode = False
 
 
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest regularization: required dependencies are missing",
+)
+class TestRegularizationCore(unittest.TestCase):
+    # These tests intentionally use a tiny linear model so each expected
+    # regularization term can be computed analytically and reviewed quickly.
+    class LinearExperiment(Experiment):
+        def __init__(self, x, y, theta0_init=0.0, theta1_init=0.0):
+            self.x = float(x)
+            self.y = float(y)
+            self.theta0_init = float(theta0_init)
+            self.theta1_init = float(theta1_init)
+            super().__init__(model=None)
+            self.create_model()
+            self.label_model()
+
+        def create_model(self):
+            m = pyo.ConcreteModel()
+            m.theta0 = pyo.Param(initialize=self.theta0_init, mutable=True)
+            m.theta1 = pyo.Param(initialize=self.theta1_init, mutable=True)
+            m.x = pyo.Param(initialize=self.x, mutable=True)
+            m.pred = pyo.Expression(expr=m.theta0 + m.theta1 * m.x)
+            self.model = m
+
+        def label_model(self):
+            m = self.model
+            m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.experiment_outputs.update([(m.pred, self.y)])
+            m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.unknown_parameters.update(
+                (k, pyo.ComponentUID(k)) for k in [m.theta0, m.theta1]
+            )
+
+    class DummyExperiment(Experiment):
+        def __init__(self):
+            m = pyo.ConcreteModel()
+            m.theta0 = pyo.Param(initialize=0.0, mutable=True)
+            m.theta1 = pyo.Param(initialize=0.0, mutable=True)
+            m.pred = pyo.Expression(expr=m.theta0 + m.theta1)
+            m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.experiment_outputs.update([(m.pred, 0.0)])
+            m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.unknown_parameters.update(
+                (k, pyo.ComponentUID(k)) for k in [m.theta0, m.theta1]
+            )
+            super().__init__(model=m)
+
+    @staticmethod
+    def _make_var_labeled_model(y_obs=5.0):
+        # Var-based helper used for direct objective-expression checks.
+        m = pyo.ConcreteModel()
+        m.theta0 = pyo.Var(initialize=0.0)
+        m.theta1 = pyo.Var(initialize=0.0)
+        m.pred = pyo.Expression(expr=m.theta0 + 2.0 * m.theta1)
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.pred, float(y_obs))])
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update(
+            (k, pyo.ComponentUID(k)) for k in [m.theta0, m.theta1]
+        )
+        return m
+
+    @staticmethod
+    def _obj_at_theta(pest, theta0, theta1):
+        # Evaluate objective for a single theta row to keep assertions explicit.
+        theta = pd.DataFrame([[theta0, theta1]], columns=["theta0", "theta1"])
+        return pest.objective_at_theta(theta_values=theta).iloc[0]["obj"]
+
+    def test_l2_objective_value_matches_manual_quadratic(self):
+        m = self._make_var_labeled_model(y_obs=5.0)
+        m.theta0.set_value(4.0)
+        m.theta1.set_value(-1.0)
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 4.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = pd.Series({"theta0": 1.0, "theta1": 2.0})
+        weight = 3.0
+
+        expr = parmest.L2_regularized_objective(
+            m,
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=weight,
+            obj_function=parmest.SSE,
+        )
+
+        sse_expected = 9.0
+        l2_expected = 27.0
+        expected = sse_expected + weight * l2_expected
+
+        self.assertAlmostEqual(pyo.value(expr), expected)
+
+    def test_l2_penalty_not_double_counted_across_scenarios(self):
+        # Confirms regularization is applied once at the estimator level,
+        # not once per scenario.
+        exp_list = [self.LinearExperiment(1.0, 1.0), self.LinearExperiment(2.0, 2.0)]
+        prior_fim = pd.DataFrame(
+            [[0.0, 0.0], [0.0, 2.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = pd.Series({"theta0": 0.0, "theta1": 0.0})
+
+        pest = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=1.0,
+        )
+
+        obj_val = self._obj_at_theta(pest, 0.0, 1.0)
+        self.assertAlmostEqual(obj_val, 1.0)
+
+    def test_regularization_requires_explicit_option_when_prior_supplied(self):
+        # Guardrail: passing prior/FIM arguments without selecting a
+        # regularization mode should fail fast.
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(
+            ValueError, match="regularization must be set when supplying prior_FIM"
+        ):
+            parmest.Estimator(exp_list, obj_function="SSE", prior_FIM=prior_fim)
+
+    def test_l2_regularization_requires_prior_fim(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+
+        with pytest.raises(ValueError, match="prior_FIM must be provided"):
+            parmest.Estimator(exp_list, obj_function="SSE", regularization="L2")
+
+    def test_user_specified_unsupported_regularization_raises(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+
+        with pytest.raises(TypeError, match="regularization must be None or one of"):
+            parmest.Estimator(
+                exp_list, obj_function="SSE", regularization=lambda m: m.theta0**2
+            )
+
+    def test_l2_lambda_zero_matches_unregularized_objective(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0), self.LinearExperiment(2.0, 2.0)]
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = pd.Series({"theta0": 0.0, "theta1": 0.0})
+
+        pest_base = parmest.Estimator(exp_list, obj_function="SSE")
+        pest_l2_zero = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=0.0,
+        )
+
+        for theta0, theta1 in [(0.0, 0.0), (0.5, 1.5), (-1.0, 2.0)]:
+            obj_base = self._obj_at_theta(pest_base, theta0, theta1)
+            obj_l2_zero = self._obj_at_theta(pest_l2_zero, theta0, theta1)
+            self.assertAlmostEqual(obj_l2_zero, obj_base)
+
+    def test_prior_subset_penalizes_only_selected_parameter(self):
+        # Prior indexed only by theta1 should leave theta0 unpenalized.
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame([[4.0]], index=["theta1"], columns=["theta1"])
+
+        pest_base = parmest.Estimator(exp_list, obj_function="SSE")
+        pest_l2 = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref=pd.Series({"theta1": 0.0}),
+            regularization_weight=1.0,
+        )
+
+        obj_base_theta0 = self._obj_at_theta(pest_base, theta0=1.0, theta1=0.0)
+        obj_l2_theta0 = self._obj_at_theta(pest_l2, theta0=1.0, theta1=0.0)
+        self.assertAlmostEqual(obj_l2_theta0, obj_base_theta0)
+
+        obj_base_theta1 = self._obj_at_theta(pest_base, theta0=0.0, theta1=1.0)
+        obj_l2_theta1 = self._obj_at_theta(pest_l2, theta0=0.0, theta1=1.0)
+        expected_penalty = 0.5 * 4.0 * (1.0**2)
+        self.assertAlmostEqual(obj_l2_theta1 - obj_base_theta1, expected_penalty)
+
+    def test_negative_regularization_weight_raises(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(
+            ValueError, match="regularization_weight must be nonnegative"
+        ):
+            parmest.Estimator(
+                exp_list,
+                obj_function="SSE",
+                regularization="L2",
+                prior_FIM=prior_fim,
+                regularization_weight=-1.0,
+            )
+
+    def test_missing_theta_ref_entries_raise_clear_error(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        pest = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref=pd.Series({"theta0": 0.0}),
+            regularization_weight=1.0,
+        )
+
+        with pytest.raises(
+            ValueError, match=r"theta_ref is missing values for parameter\(s\): theta1"
+        ):
+            _ = self._obj_at_theta(pest, theta0=0.0, theta1=0.0)
+
+    def test_non_psd_prior_fim_rejected(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        non_psd = pd.DataFrame(
+            [[1.0, 2.0], [2.0, -1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(ValueError, match="positive semi-definite"):
+            parmest.Estimator(
+                exp_list, obj_function="SSE", regularization="L2", prior_FIM=non_psd
+            )
+
+    def test_compute_covariance_matrix_adds_prior_fim_weighted(self):
+        exp_list = [self.DummyExperiment(), self.DummyExperiment()]
+
+        def fake_finite_difference_FIM(*args, **kwargs):
+            return np.eye(2)
+
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 3.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_vals = {"theta0": 0.0, "theta1": 0.0}
+
+        # Replace finite-difference FIM with identity so this test isolates
+        # only the prior_FIM + regularization_weight addition path.
+        original_finite_difference_FIM = parmest._finite_difference_FIM
+        try:
+            parmest._finite_difference_FIM = fake_finite_difference_FIM
+            cov = parmest.compute_covariance_matrix(
+                experiment_list=exp_list,
+                method=parmest.CovarianceMethod.finite_difference.value,
+                obj_function=parmest.SSE,
+                theta_vals=theta_vals,
+                step=1e-3,
+                solver="ipopt",
+                tee=False,
+                prior_FIM=prior_fim,
+                regularization_weight=2.0,
+            )
+        finally:
+            # Always restore global function to avoid cross-test contamination.
+            parmest._finite_difference_FIM = original_finite_difference_FIM
+
+        self.assertAlmostEqual(cov.loc["theta0", "theta0"], 0.25)
+        self.assertAlmostEqual(cov.loc["theta1", "theta1"], 0.125)
+        self.assertAlmostEqual(cov.loc["theta0", "theta1"], 0.0)
+        self.assertAlmostEqual(cov.loc["theta1", "theta0"], 0.0)
+
+    def test_l1_smooth_objective_value_matches_manual_expression(self):
+        # Verifies the smooth-L1 form: sum_i w_i * sqrt(delta_i^2 + epsilon).
+        m = self._make_var_labeled_model(y_obs=5.0)
+        m.theta0.set_value(4.0)
+        m.theta1.set_value(-1.0)
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 4.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = pd.Series({"theta0": 1.0, "theta1": 2.0})
+        weight = 3.0
+        eps = 1e-6
+
+        expr = parmest.L1_regularized_objective(
+            m,
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=weight,
+            regularization_epsilon=eps,
+            obj_function=parmest.SSE,
+        )
+
+        sse_expected = 9.0
+        l1_expected = 2.0 * np.sqrt(9.0 + eps) + 4.0 * np.sqrt(9.0 + eps)
+        expected = sse_expected + weight * l1_expected
+
+        self.assertAlmostEqual(pyo.value(expr), expected)
+
+    def test_l1_lambda_zero_matches_unregularized_objective(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0), self.LinearExperiment(2.0, 2.0)]
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = pd.Series({"theta0": 0.0, "theta1": 0.0})
+
+        pest_base = parmest.Estimator(exp_list, obj_function="SSE")
+        pest_l1_zero = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L1",
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=0.0,
+            regularization_epsilon=1e-6,
+        )
+
+        for theta0, theta1 in [(0.0, 0.0), (0.5, 1.5), (-1.0, 2.0)]:
+            obj_base = self._obj_at_theta(pest_base, theta0, theta1)
+            obj_l1_zero = self._obj_at_theta(pest_l1_zero, theta0, theta1)
+            self.assertAlmostEqual(obj_l1_zero, obj_base)
+
+    def test_l1_nonpositive_epsilon_raises(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(ValueError, match="regularization_epsilon must be positive"):
+            parmest.Estimator(
+                exp_list,
+                obj_function="SSE",
+                regularization="L1",
+                prior_FIM=prior_fim,
+                regularization_weight=1.0,
+                regularization_epsilon=0.0,
+            )
+
+        with pytest.raises(ValueError, match="regularization_epsilon must be positive"):
+            parmest.Estimator(
+                exp_list,
+                obj_function="SSE",
+                regularization="L1",
+                prior_FIM=prior_fim,
+                regularization_weight=1.0,
+                regularization_epsilon=-1e-6,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
