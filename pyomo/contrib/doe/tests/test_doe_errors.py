@@ -1027,6 +1027,26 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
     def _make_solver(self):
         return _make_ipopt_solver()
 
+    def test_optimize_experiments_non_greybox_rejects_e_and_me_objectives(self):
+        # E-opt and ME-opt require the greybox objective path in
+        # optimize_experiments(); the standard algebraic multi-experiment build
+        # should fail fast with a user-facing validation error instead.
+        for objective_option in ("minimum_eigenvalue", "condition_number"):
+            with self.subTest(objective=objective_option):
+                doe_obj = DesignOfExperiments(
+                    experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+                    objective_option=objective_option,
+                    step=1e-2,
+                    solver=self._make_solver(),
+                )
+
+                with self.assertRaisesRegex(
+                    ValueError,
+                    rf"objective_option='{objective_option}' requires "
+                    r"use_grey_box_objective=True\.",
+                ):
+                    doe_obj.optimize_experiments(n_exp=2)
+
     def test_optimize_experiments_requires_matching_unknown_parameter_values(self):
         # Tests that user-initialized multi-experiment mode rejects experiments
         # that linearize around different nominal theta values.
