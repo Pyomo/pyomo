@@ -167,7 +167,9 @@ Objective handling in code:
 
 Cholesky-based constraints and variables are used in supported objective paths to stabilize determinant/trace formulations.
 
-## Result Payload Highlights
+We are also implementing `GreyBox-based` A, D, E, and ME-optimality objectives.
+
+## Result Highlights
 
 The solver output includes both legacy fields and structured fields:
 
@@ -176,7 +178,7 @@ The solver output includes both legacy fields and structured fields:
 - `timing` (build/initialization/solve/total timing)
 - `names` (design/output/parameter/error labels)
 - `diagnostics` (symmetry and LHS diagnostics)
-- `scenarios` (scenario-level objective metrics, total FIM, per-experiment details)
+- `param_scenarios` (scenario-level objective metrics, total FIM, per-experiment details)
 
 Notably, initialization settings now include:
 
