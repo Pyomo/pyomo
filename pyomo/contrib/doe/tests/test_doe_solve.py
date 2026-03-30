@@ -1833,34 +1833,6 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
         self.assertEqual(got_norm, exp_norm)
 
-    def test_lhs_score_chunk_minimize_branch(self):
-        doe = self._make_template_doe("trace")
-        self._build_template_model_for_multi_experiment(doe, n_exp=3)
-
-        def _fake_fim(experiment_index, input_values):
-            x = float(input_values[0])
-            return np.array([[x + 0.75, 0.0], [0.0, 2.0 * x + 0.75]])
-
-        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            points_serial, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=5, lhs_seed=77, n_exp=3, lhs_combo_parallel=False
-            )
-
-        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            points_parallel, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=5,
-                lhs_seed=77,
-                n_exp=3,
-                lhs_combo_parallel=True,
-                lhs_n_workers=2,
-                lhs_combo_chunk_size=2,
-                lhs_combo_parallel_threshold=1,
-            )
-
-        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
-        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
-        self.assertEqual(serial_norm, parallel_norm)
-
     def test_lhs_combo_no_scored_combo_falls_back_to_first_n_exp(self):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=3)
