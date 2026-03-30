@@ -1890,53 +1890,31 @@ class TestSingleExperimentSolve(unittest.TestCase):
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestMultiexperimentError(unittest.TestCase):
-    def test_optimize_experiments_greybox_rejects_pseudo_trace(self):
-        # pseudo_trace still uses the algebraic Cholesky path, so this guards
-        # the front-end validation that unsupported objectives fail before any
-        # grey_box_solver call is attempted.
+    def test_optimize_experiments_greybox_unsupported_objectives_are_rejected(self):
+        # These unsupported objectives share the same early-validation path, so
+        # keep them in one table-driven test and verify none reaches the
+        # external grey_box_solver interface.
         class _UnusedGreyBoxSolver:
             def solve(self, model, tee=False):
                 raise AssertionError("grey_box_solver.solve should not be reached")
 
-        doe_obj = DesignOfExperiments(
-            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
-            objective_option="pseudo_trace",
-            use_grey_box_objective=True,
-            step=1e-2,
-            solver=_make_ipopt_solver(),
-            grey_box_solver=_UnusedGreyBoxSolver(),
-        )
+        for objective_option in ("pseudo_trace", "zero"):
+            with self.subTest(objective=objective_option):
+                doe_obj = DesignOfExperiments(
+                    experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+                    objective_option=objective_option,
+                    use_grey_box_objective=True,
+                    step=1e-2,
+                    solver=_make_ipopt_solver(),
+                    grey_box_solver=_UnusedGreyBoxSolver(),
+                )
 
-        with self.assertRaisesRegex(
-            ValueError,
-            "Grey-box objective support in optimize_experiments\\(\\) is only "
-            "available",
-        ):
-            doe_obj.optimize_experiments(n_exp=2)
-
-    def test_optimize_experiments_greybox_zero_objective_is_rejected(self):
-        # The synthetic "zero" objective is another non-greybox path; this
-        # regression ensures optimize_experiments() rejects it with the same
-        # early validation instead of reaching the external solver.
-        class _UnusedGreyBoxSolver:
-            def solve(self, model, tee=False):
-                raise AssertionError("grey_box_solver.solve should not be reached")
-
-        doe_obj = DesignOfExperiments(
-            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
-            objective_option="zero",
-            use_grey_box_objective=True,
-            step=1e-2,
-            solver=_make_ipopt_solver(),
-            grey_box_solver=_UnusedGreyBoxSolver(),
-        )
-
-        with self.assertRaisesRegex(
-            ValueError,
-            "Grey-box objective support in optimize_experiments\\(\\) is only "
-            "available",
-        ):
-            doe_obj.optimize_experiments(n_exp=2)
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Grey-box objective support in optimize_experiments\\(\\) is only "
+                    "available",
+                ):
+                    doe_obj.optimize_experiments(n_exp=2)
 
 
 if __name__ == "__main__":
