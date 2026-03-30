@@ -10,6 +10,7 @@ import copy
 import itertools
 import json
 import os.path
+from unittest.mock import patch
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -347,6 +348,120 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     )
 
     return doe_obj, grey_box_object
+
+
+class _MockGreyBoxSolver:
+    def __init__(self, name="mock-greybox"):
+        self.name = name
+        self.calls = []
+
+    def solve(self, model, tee=False):
+        self.calls.append({"model": model, "tee": tee})
+
+        class _MockSolverInfo:
+            status = "ok"
+            termination_condition = "optimal"
+            message = "mock-greybox-solve"
+
+        class _MockResults:
+            solver = _MockSolverInfo()
+
+        return _MockResults()
+
+
+def _make_ipopt_solver():
+    solver = SolverFactory("ipopt")
+    solver.options["linear_solver"] = "ma57"
+    solver.options["halt_on_ampl_error"] = "yes"
+    solver.options["max_iter"] = 3000
+    return solver
+
+
+def _make_cyipopt_solver(tol=1e-4):
+    grey_box_solver = SolverFactory("cyipopt")
+    grey_box_solver.config.options["linear_solver"] = "ma57"
+    grey_box_solver.config.options['tol'] = tol
+    grey_box_solver.config.options['mu_strategy'] = "monotone"
+    return grey_box_solver
+
+
+def _make_multiexperiment_greybox_doe(
+    objective_option, prior_FIM=None, grey_box_solver=None
+):
+    if prior_FIM is None:
+        prior_FIM = np.zeros((2, 2))
+    return DesignOfExperiments(
+        experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+        objective_option=objective_option,
+        use_grey_box_objective=True,
+        step=1e-2,
+        solver=_make_ipopt_solver(),
+        grey_box_solver=(
+            grey_box_solver if grey_box_solver is not None else _MockGreyBoxSolver()
+        ),
+        prior_FIM=prior_FIM,
+    )
+
+
+def _get_multiexperiment_scenario_data(doe_obj):
+    scenario = doe_obj.model.param_scenario_blocks[0]
+    total_fim = np.array(doe_obj.results["Scenarios"][0]["Total FIM"])
+    parameter_names = list(scenario.exp_blocks[0].parameter_names)
+    return scenario, total_fim, parameter_names
+
+
+def _generate_lhs_candidate_points(doe_obj, lhs_n_samples, lhs_seed):
+    from scipy.stats.qmc import LatinHypercube
+
+    first_exp_block = doe_obj.model.param_scenario_blocks[0].exp_blocks[0]
+    exp_input_vars = doe_obj._get_experiment_input_vars(first_exp_block)
+    lb_vals = np.array([v.lb for v in exp_input_vars])
+    ub_vals = np.array([v.ub for v in exp_input_vars])
+
+    rng = np.random.default_rng(lhs_seed)
+    per_dim_samples = []
+    for i in range(len(exp_input_vars)):
+        dim_seed = int(rng.integers(0, 2**31))
+        sampler = LatinHypercube(d=1, seed=dim_seed)
+        s_unit = sampler.random(n=lhs_n_samples).flatten()
+        s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
+        per_dim_samples.append(s_scaled.tolist())
+
+    return list(itertools.product(*per_dim_samples))
+
+
+def _expected_multiexperiment_greybox_output(objective_option, fim_np):
+    if objective_option == "trace":
+        return float(np.trace(np.linalg.pinv(fim_np)))
+    if objective_option == "determinant":
+        return float(np.log(np.linalg.det(fim_np)))
+    if objective_option == "minimum_eigenvalue":
+        return float(np.min(np.linalg.eigvalsh(fim_np)))
+    if objective_option == "condition_number":
+        eig = np.linalg.eigvalsh(fim_np)
+        return float(np.log(np.abs(np.max(eig) / np.min(eig))))
+    raise AssertionError(f"Unexpected greybox objective: {objective_option!r}")
+
+
+def _reconstruct_fim_from_egb_inputs(egb_block, parameter_names):
+    dim = len(parameter_names)
+    fim = np.zeros((dim, dim))
+    for i, p in enumerate(parameter_names):
+        for j, q in enumerate(parameter_names):
+            if i >= j:
+                fim[i, j] = pyo.value(egb_block.inputs[(q, p)])
+                fim[j, i] = fim[i, j]
+    return fim
+
+
+def _spd_hour_fim_oracle(experiment_index, input_values):
+    hour = float(input_values[0])
+    return np.array([[hour + 2.0, 0.2 * hour], [0.2 * hour, 14.0 - hour]])
+
+
+def _diagonal_hour_fim_oracle(experiment_index, input_values):
+    hour = float(input_values[0])
+    return np.eye(2) * (hour + 1.0)
 
 
 # Test whether or not cyipopt
@@ -1205,172 +1320,623 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             )
         )
 
-    @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
-    )
-    @unittest.skipIf(not pandas_available, "pandas is not available")
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestMultiexperimentBuild(unittest.TestCase):
+    def test_optimize_experiments_greybox_uses_aggregated_fim(self):
+        # Check that the multi-experiment greybox block is seeded from the
+        # aggregated scenario FIM and that the final solve is routed through
+        # the greybox solver interface.
+        grey_box_solver = _MockGreyBoxSolver()
+        doe_obj = _make_multiexperiment_greybox_doe(
+            objective_option="minimum_eigenvalue", grey_box_solver=grey_box_solver
+        )
+
+        doe_obj.optimize_experiments(n_exp=2)
+
+        self.assertEqual(len(grey_box_solver.calls), 1)
+        self.assertEqual(
+            doe_obj.results["run_info"]["solver"]["name"], grey_box_solver.name
+        )
+
+        scenario, total_fim, parameter_names = _get_multiexperiment_scenario_data(
+            doe_obj
+        )
+        self.assertTrue(hasattr(scenario.obj_cons, "egb_fim_block"))
+        self.assertFalse(hasattr(scenario.obj_cons, "L"))
+
+        for i, p in enumerate(parameter_names):
+            for j, q in enumerate(parameter_names):
+                if i >= j:
+                    self.assertAlmostEqual(
+                        pyo.value(scenario.obj_cons.egb_fim_block.inputs[(q, p)]),
+                        total_fim[i, j],
+                        places=7,
+                    )
+
+        self.assertAlmostEqual(
+            pyo.value(scenario.obj_cons.egb_fim_block.outputs["E-opt"]),
+            np.min(np.linalg.eigvalsh(total_fim)),
+            places=7,
+        )
+
+    def test_optimize_experiments_greybox_outputs_match_numpy_for_all_supported_objectives(
+        self,
+    ):
+        # Validate the deterministic wiring: for each supported greybox metric,
+        # the external block output should match direct NumPy on scenario.total_fim.
+        prior_fim = np.array([[6.0, 0.75], [0.75, 4.0]])
+        for objective_option in (
+            "determinant",
+            "trace",
+            "minimum_eigenvalue",
+            "condition_number",
+        ):
+            with self.subTest(objective=objective_option):
+                doe_obj = _make_multiexperiment_greybox_doe(
+                    objective_option=objective_option,
+                    prior_FIM=prior_fim.copy(),
+                    grey_box_solver=_MockGreyBoxSolver(name=f"mock-{objective_option}"),
+                )
+
+                doe_obj.optimize_experiments(n_exp=2)
+
+                scenario, total_fim, parameter_names = (
+                    _get_multiexperiment_scenario_data(doe_obj)
+                )
+                egb_block = scenario.obj_cons.egb_fim_block
+
+                for i, p in enumerate(parameter_names):
+                    for j, q in enumerate(parameter_names):
+                        if i >= j:
+                            self.assertAlmostEqual(
+                                pyo.value(egb_block.inputs[(q, p)]),
+                                total_fim[i, j],
+                                places=7,
+                            )
+
+                self.assertAlmostEqual(
+                    pyo.value(egb_block.outputs[doe_obj._grey_box_output_name()]),
+                    _expected_multiexperiment_greybox_output(
+                        objective_option, total_fim
+                    ),
+                    places=7,
+                )
+
+    def test_optimize_experiments_greybox_prior_fim_is_included_in_inputs_and_output(
+        self,
+    ):
+        # Use a large prior so the external block must see
+        # total_fim = sum(experiment_fim) + prior_FIM.
+        prior_fim = np.array([[100.0, 12.0], [12.0, 80.0]])
+        doe_obj = _make_multiexperiment_greybox_doe(
+            objective_option="determinant",
+            prior_FIM=prior_fim.copy(),
+            grey_box_solver=_MockGreyBoxSolver(),
+        )
+
+        doe_obj.optimize_experiments(n_exp=2)
+
+        scenario, total_fim, parameter_names = _get_multiexperiment_scenario_data(
+            doe_obj
+        )
+        exp_fim_sum = sum(
+            (
+                np.array(exp_data["FIM"])
+                for exp_data in doe_obj.results["Scenarios"][0]["Experiments"]
+            ),
+            np.zeros_like(total_fim),
+        )
+        egb_block = scenario.obj_cons.egb_fim_block
+
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior_fim, atol=1e-6))
+        self.assertFalse(np.allclose(total_fim, exp_fim_sum, atol=1e-6))
+
+        for i, p in enumerate(parameter_names):
+            for j, q in enumerate(parameter_names):
+                if i >= j:
+                    self.assertAlmostEqual(
+                        pyo.value(egb_block.inputs[(q, p)]), total_fim[i, j], places=7
+                    )
+
+        output_with_prior = pyo.value(egb_block.outputs["log-D-opt"])
+        self.assertAlmostEqual(
+            output_with_prior,
+            _expected_multiexperiment_greybox_output("determinant", total_fim),
+            places=7,
+        )
+        self.assertFalse(
+            np.isclose(
+                output_with_prior,
+                _expected_multiexperiment_greybox_output("determinant", exp_fim_sum),
+                rtol=1e-6,
+                atol=1e-6,
+            )
+        )
+
+    def test_optimize_experiments_greybox_uses_init_solver_for_square_solve_and_grey_box_solver_for_final_solve(
+        self,
+    ):
+        # Initialization should use init_solver; the greybox solver should be
+        # reserved for the final optimize_experiments NLP solve.
+        main_solver = _make_ipopt_solver()
+        init_solver = _make_ipopt_solver()
+        init_solver.options["max_iter"] = 123
+        grey_box_solver = _MockGreyBoxSolver()
+
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="minimum_eigenvalue",
+            use_grey_box_objective=True,
+            step=1e-2,
+            solver=main_solver,
+            grey_box_solver=grey_box_solver,
+        )
+
+        init_calls = 0
+        call_order = []
+        original_init_solve = init_solver.solve
+        original_grey_box_solve = grey_box_solver.solve
+
+        def _init_solve(*args, **kwargs):
+            nonlocal init_calls
+            init_calls += 1
+            call_order.append("init")
+            return original_init_solve(*args, **kwargs)
+
+        def _grey_box_solve(*args, **kwargs):
+            call_order.append("greybox")
+            return original_grey_box_solve(*args, **kwargs)
+
+        with (
+            patch.object(
+                main_solver,
+                "solve",
+                side_effect=AssertionError(
+                    "Primary solver should not be used in greybox optimize_experiments()."
+                ),
+            ),
+            patch.object(init_solver, "solve", side_effect=_init_solve),
+            patch.object(grey_box_solver, "solve", side_effect=_grey_box_solve),
+        ):
+            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+
+        self.assertGreaterEqual(init_calls, 1)
+        self.assertEqual(len(grey_box_solver.calls), 1)
+        self.assertEqual(call_order[-1], "greybox")
+        self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
+        self.assertEqual(
+            doe_obj.results["settings"]["initialization"]["solver_name"],
+            getattr(init_solver, "name", str(init_solver)),
+        )
+        self.assertEqual(
+            doe_obj.results["run_info"]["solver"]["name"], grey_box_solver.name
+        )
+
+    def test_optimize_experiments_greybox_is_reentrant_on_same_object(self):
+        # Re-running the same greybox DoE object should rebuild a fresh
+        # external block and reseed it from the current aggregated total FIM.
+        grey_box_solver = _MockGreyBoxSolver()
+        doe_obj = _make_multiexperiment_greybox_doe(
+            objective_option="minimum_eigenvalue",
+            prior_FIM=np.zeros((2, 2)),
+            grey_box_solver=grey_box_solver,
+        )
+
+        doe_obj.optimize_experiments(n_exp=2)
+        first_scenario, first_total_fim, _ = _get_multiexperiment_scenario_data(doe_obj)
+        first_egb_block = first_scenario.obj_cons.egb_fim_block
+
+        self.assertAlmostEqual(
+            pyo.value(first_egb_block.outputs["E-opt"]),
+            _expected_multiexperiment_greybox_output(
+                "minimum_eigenvalue", first_total_fim
+            ),
+            places=7,
+        )
+
+        doe_obj.prior_FIM = np.array([[20.0, 2.0], [2.0, 15.0]])
+        doe_obj.optimize_experiments(n_exp=2)
+
+        second_scenario, second_total_fim, second_parameter_names = (
+            _get_multiexperiment_scenario_data(doe_obj)
+        )
+        second_egb_block = second_scenario.obj_cons.egb_fim_block
+
+        self.assertIsNot(first_egb_block, second_egb_block)
+        self.assertEqual(len(list(doe_obj.model.param_scenario_blocks.keys())), 1)
+        self.assertEqual(len(grey_box_solver.calls), 2)
+        self.assertFalse(np.allclose(first_total_fim, second_total_fim, atol=1e-6))
+
+        for i, p in enumerate(second_parameter_names):
+            for j, q in enumerate(second_parameter_names):
+                if i >= j:
+                    self.assertAlmostEqual(
+                        pyo.value(second_egb_block.inputs[(q, p)]),
+                        second_total_fim[i, j],
+                        places=7,
+                    )
+
+        self.assertAlmostEqual(
+            pyo.value(second_egb_block.outputs["E-opt"]),
+            _expected_multiexperiment_greybox_output(
+                "minimum_eigenvalue", second_total_fim
+            ),
+            places=7,
+        )
+
+    def test_optimize_experiments_greybox_lhs_initialization_scores_e_opt_and_me_opt(
+        self,
+    ):
+        # This checks the LHS candidate-combination scorer for the greybox-only
+        # E-opt and ME-opt objectives. The patched oracle maps the single
+        # Rooney-Biegler design input (hour) to a positive-definite 2x2 FIM so
+        # the best combination can be computed independently and deterministically.
+        lhs_n_samples = 4
+        lhs_seed = 19
+
+        for objective_option in ("minimum_eigenvalue", "condition_number"):
+            with self.subTest(objective=objective_option):
+                doe_obj = _make_multiexperiment_greybox_doe(
+                    objective_option=objective_option,
+                    prior_FIM=np.zeros((2, 2)),
+                    grey_box_solver=_MockGreyBoxSolver(name=f"mock-{objective_option}"),
+                )
+
+                with patch.object(
+                    doe_obj,
+                    "_compute_fim_at_point_no_prior",
+                    side_effect=_spd_hour_fim_oracle,
+                ):
+                    doe_obj.optimize_experiments(
+                        n_exp=2,
+                        init_method="lhs",
+                        init_n_samples=lhs_n_samples,
+                        init_seed=lhs_seed,
+                    )
+
+                lhs_diag = doe_obj.results["diagnostics"]["lhs_initialization"]
+                actual_points = doe_obj.results["LHS Best Initial Points"]
+                candidate_points = _generate_lhs_candidate_points(
+                    doe_obj, lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed
+                )
+                candidate_norm = {
+                    tuple(np.round(point, 8)) for point in candidate_points
+                }
+
+                self.assertEqual(doe_obj.results["Initialization Method"], "lhs")
+                self.assertIsNotNone(lhs_diag)
+                self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
+                self.assertGreater(lhs_diag["best_obj"], 0.0)
+
+                for point in actual_points:
+                    self.assertIn(tuple(np.round(point, 8)), candidate_norm)
+
+                if doe_obj.objective_option in DesignOfExperiments._MAXIMIZE_OBJECTIVES:
+                    best_obj = -np.inf
+                    is_better = lambda new, best: new > best
+                else:
+                    best_obj = np.inf
+                    is_better = lambda new, best: new < best
+
+                for combo in itertools.combinations(range(len(candidate_points)), 2):
+                    fim_total = sum(
+                        (
+                            _spd_hour_fim_oracle(0, candidate_points[idx])
+                            for idx in combo
+                        ),
+                        np.zeros((2, 2)),
+                    )
+                    obj_val = doe_obj._evaluate_objective_from_fim(fim_total)
+                    if is_better(obj_val, best_obj):
+                        best_obj = obj_val
+
+                actual_fim_total = sum(
+                    (_spd_hour_fim_oracle(0, point) for point in actual_points),
+                    np.zeros((2, 2)),
+                )
+                actual_obj = doe_obj._evaluate_objective_from_fim(actual_fim_total)
+
+                self.assertAlmostEqual(actual_obj, best_obj, places=12)
+                self.assertAlmostEqual(lhs_diag["best_obj"], best_obj, places=12)
+
+    def test_optimize_experiments_greybox_initialization_refreshes_inputs_after_square_solve(
+        self,
+    ):
+        # Build-time greybox inputs reflect the template design, but after LHS
+        # changes the starting point the square-solve refresh should reseed the
+        # block from the new aggregated FIM before the final solve.
+        lhs_n_samples = 4
+        lhs_seed = 29
+        captured = {}
+        doe_obj = _make_multiexperiment_greybox_doe(
+            objective_option="minimum_eigenvalue",
+            prior_FIM=np.zeros((2, 2)),
+            grey_box_solver=_MockGreyBoxSolver(),
+        )
+        original_initialize = doe_obj._initialize_grey_box_block
+
+        def _capture_initialize(egb_block, fim_np, parameter_names):
+            captured["before"] = _reconstruct_fim_from_egb_inputs(
+                egb_block, parameter_names
+            )
+            captured["refreshed"] = np.array(fim_np, copy=True)
+            return original_initialize(egb_block, fim_np, parameter_names)
+
+        with (
+            patch.object(
+                doe_obj,
+                "_compute_fim_at_point_no_prior",
+                side_effect=_diagonal_hour_fim_oracle,
+            ),
+            patch.object(
+                doe_obj, "_initialize_grey_box_block", side_effect=_capture_initialize
+            ),
+        ):
+            doe_obj.optimize_experiments(
+                n_exp=1,
+                init_method="lhs",
+                init_n_samples=lhs_n_samples,
+                init_seed=lhs_seed,
+            )
+
+        scenario, total_fim, parameter_names = _get_multiexperiment_scenario_data(
+            doe_obj
+        )
+        final_fim = _reconstruct_fim_from_egb_inputs(
+            scenario.obj_cons.egb_fim_block, parameter_names
+        )
+
+        self.assertIn("before", captured)
+        self.assertIn("refreshed", captured)
+        self.assertFalse(np.allclose(captured["before"], captured["refreshed"]))
+        self.assertTrue(np.allclose(final_fim, captured["refreshed"], atol=1e-7))
+        self.assertTrue(np.allclose(final_fim, total_fim, atol=1e-7))
+        # The Rooney-Biegler template is built with hour=2.0, so this confirms
+        # LHS moved away from the build-time design and made the refresh check meaningful.
+        self.assertNotAlmostEqual(
+            doe_obj.results["LHS Best Initial Points"][0][0], 2.0, places=6
+        )
+
+    def test_optimize_experiments_greybox_tee_flag_reaches_solver(self):
+        # grey_box_tee is only meaningful if it propagates to the external
+        # solver interface, so capture the mocked solve() call and verify tee.
+        grey_box_solver = _MockGreyBoxSolver()
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="minimum_eigenvalue",
+            use_grey_box_objective=True,
+            step=1e-2,
+            solver=_make_ipopt_solver(),
+            grey_box_solver=grey_box_solver,
+            grey_box_tee=True,
+        )
+
+        doe_obj.optimize_experiments(n_exp=2)
+
+        self.assertEqual(len(grey_box_solver.calls), 1)
+        self.assertTrue(grey_box_solver.calls[0]["tee"])
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
+@unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
+@unittest.skipIf(
+    not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+)
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestMultiexperimentSolve(unittest.TestCase):
     def test_optimize_experiments_determinant_expected_values_greybox(self):
-        # Tests the multi-experiment grey box determinant solve against the
-        # known optimal design and scalar FIM metric from the standard path.
+        # The scenario objective is order-invariant, so compare the chosen
+        # experiment hours in sorted order.
         exp_list = [
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
             RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
         ]
-
-        grey_box_solver = SolverFactory("cyipopt")
-        grey_box_solver.config.options["linear_solver"] = "ma57"
-        grey_box_solver.config.options['tol'] = 1e-4
-        grey_box_solver.config.options['mu_strategy'] = "monotone"
 
         doe = DesignOfExperiments(
             experiment=exp_list,
             objective_option="determinant",
             step=1e-2,
             use_grey_box_objective=True,
-            grey_box_solver=grey_box_solver,
+            grey_box_solver=_make_cyipopt_solver(tol=1e-4),
             grey_box_tee=False,
         )
         doe.optimize_experiments()
 
         scenario = doe.results["Scenarios"][0]
-        # The scenario objective is unchanged by swapping the experiment order,
-        # so compare the selected hours in a canonical sorted order.
         got_hours = sorted(
             exp["Experiment Design"][0] for exp in scenario["Experiments"]
         )
-        expected_hours = sorted([1.9321985035514362, 9.999999685577139])
-
-        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
+        self.assertStructuredAlmostEqual(
+            got_hours, sorted([1.9321985035514362, 9.999999685577139]), abstol=1e-3
+        )
         self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
 
-    @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
-    )
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_optimize_experiments_trace_expected_values_greybox(self):
-        # Tests the multi-experiment grey box trace solve against the known
-        # optimal design and A-optimality metric from the standard path.
+        # This is a regression test for the cyipopt-backed multi-experiment
+        # greybox solve on A-opt: the chosen design and reported objective
+        # should stay near the known Rooney-Biegler reference solution.
         exp_list = [
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
             RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
         ]
-
-        grey_box_solver = SolverFactory("cyipopt")
-        grey_box_solver.config.options["linear_solver"] = "ma57"
-        grey_box_solver.config.options['tol'] = 1e-6
-        grey_box_solver.config.options['mu_strategy'] = "monotone"
 
         doe = DesignOfExperiments(
             experiment=exp_list,
             objective_option="trace",
             step=1e-2,
             use_grey_box_objective=True,
-            grey_box_solver=grey_box_solver,
+            grey_box_solver=_make_cyipopt_solver(tol=1e-6),
             grey_box_tee=False,
         )
         doe.optimize_experiments()
 
         scenario = doe.results["Scenarios"][0]
-        # The chosen pair is order-independent, so normalize both sides before
-        # checking the greybox solution.
         got_hours = sorted(
             exp["Experiment Design"][0] for exp in scenario["Experiments"]
         )
-        expected_hours = sorted([1.01, 10.0])
-
-        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
+        self.assertStructuredAlmostEqual(got_hours, sorted([1.01, 10.0]), abstol=1e-3)
         self.assertAlmostEqual(scenario["log10 A-opt"], -1.9438, places=3)
 
-    @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
-    )
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_optimize_experiments_min_eig_expected_values_greybox(self):
-        # Tests the multi-experiment grey box trace solve against the known
-        # optimal design and E-optimality metric from the standard path.
+        # This checks the end-to-end greybox E-opt solve against a stable
+        # reference solution so future greybox wiring changes do not silently
+        # alter the chosen experiment pair or final metric.
         exp_list = [
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
             RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
         ]
-
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
-
-        grey_box_solver = SolverFactory("cyipopt")
-        grey_box_solver.config.options["linear_solver"] = "ma57"
-        grey_box_solver.config.options['tol'] = 1e-6
-        grey_box_solver.config.options['mu_strategy'] = "monotone"
 
         doe = DesignOfExperiments(
             experiment=exp_list,
             objective_option="minimum_eigenvalue",
             step=1e-2,
-            solver=solver,
+            solver=_make_ipopt_solver(),
             use_grey_box_objective=True,
-            grey_box_solver=grey_box_solver,
+            grey_box_solver=_make_cyipopt_solver(tol=1e-6),
             grey_box_tee=False,
         )
         doe.optimize_experiments()
 
         scenario = doe.results["Scenarios"][0]
-        # The chosen pair is order-independent, so normalize both sides before
-        # checking the greybox solution.
         got_hours = sorted(
             exp["Experiment Design"][0] for exp in scenario["Experiments"]
         )
-        expected_hours = sorted([1.0, 10.0])
-
-        # The greybox E-opt solve is stable to roughly two decimal places in
-        # this environment, so keep the assertion aligned with solver noise.
-        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-2)
+        self.assertStructuredAlmostEqual(got_hours, sorted([1.0, 10.0]), abstol=1e-2)
         self.assertAlmostEqual(scenario["log10 E-opt"], 1.9532, places=2)
 
-    @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
-    )
-    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_optimize_experiments_me_opt_expected_values_greybox(self):
-        # Tests the multi-experiment grey box trace solve against the known
-        # optimal design and ME-optimality metric from the standard path.
+        # ME-opt is greybox-only in optimize_experiments(), so keep a dedicated
+        # solve regression here to guard the condition-number objective path.
         exp_list = [
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
             RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
         ]
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
-
-        grey_box_solver = SolverFactory("cyipopt")
-        grey_box_solver.config.options["linear_solver"] = "ma57"
-        grey_box_solver.config.options['tol'] = 1e-6
-        grey_box_solver.config.options['mu_strategy'] = "monotone"
 
         doe = DesignOfExperiments(
             experiment=exp_list,
             objective_option="condition_number",
             step=1e-2,
-            solver=solver,
+            solver=_make_ipopt_solver(),
             use_grey_box_objective=True,
-            grey_box_solver=grey_box_solver,
+            grey_box_solver=_make_cyipopt_solver(tol=1e-6),
             grey_box_tee=False,
         )
         doe.optimize_experiments()
 
         scenario = doe.results["Scenarios"][0]
-        # The chosen pair is order-independent, so normalize both sides before
-        # checking the greybox solution.
         got_hours = sorted(
             exp["Experiment Design"][0] for exp in scenario["Experiments"]
         )
-        expected_hours = sorted([7.13, 10.0])
-
-        # The condition-number solve is permutation-invariant but still shows
-        # small solver variation in the hour values.
-        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-2)
+        self.assertStructuredAlmostEqual(got_hours, sorted([7.13, 10.0]), abstol=1e-2)
         self.assertAlmostEqual(scenario["log10 ME-opt"], 1.5289, places=2)
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
+@unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
+@unittest.skipIf(
+    not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+)
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestSingleExperimentSolve(unittest.TestCase):
+    def test_optimize_experiments_single_experiment_greybox_path_works(self):
+        # Even with n_exp=1, optimize_experiments() should take the template-mode
+        # greybox path, solve with the grey_box_solver, and keep the greybox
+        # block synchronized with the final scenario FIM.
+        grey_box_solver = _make_cyipopt_solver(tol=1e-6)
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="minimum_eigenvalue",
+            step=1e-2,
+            solver=_make_ipopt_solver(),
+            use_grey_box_objective=True,
+            grey_box_solver=grey_box_solver,
+            grey_box_tee=False,
+        )
+
+        doe_obj.optimize_experiments(n_exp=1)
+
+        scenario, total_fim, _ = _get_multiexperiment_scenario_data(doe_obj)
+        scenario_results = doe_obj.results["Scenarios"][0]
+        design_hour = scenario_results["Experiments"][0]["Experiment Design"][0]
+
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 1)
+        self.assertTrue(doe_obj.results["settings"]["modeling"]["template_mode"])
+        self.assertEqual(len(scenario_results["Experiments"]), 1)
+        self.assertEqual(
+            doe_obj.results["run_info"]["solver"]["name"],
+            getattr(grey_box_solver, "name", str(grey_box_solver)),
+        )
+        self.assertGreaterEqual(design_hour, 1.0)
+        self.assertLessEqual(design_hour, 10.0)
+        self.assertTrue(np.isfinite(scenario_results["log10 E-opt"]))
+        self.assertAlmostEqual(
+            pyo.value(scenario.obj_cons.egb_fim_block.outputs["E-opt"]),
+            _expected_multiexperiment_greybox_output("minimum_eigenvalue", total_fim),
+            places=7,
+        )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestMultiexperimentError(unittest.TestCase):
+    def test_optimize_experiments_greybox_rejects_pseudo_trace(self):
+        # pseudo_trace still uses the algebraic Cholesky path, so this guards
+        # the front-end validation that unsupported objectives fail before any
+        # grey_box_solver call is attempted.
+        class _UnusedGreyBoxSolver:
+            def solve(self, model, tee=False):
+                raise AssertionError("grey_box_solver.solve should not be reached")
+
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="pseudo_trace",
+            use_grey_box_objective=True,
+            step=1e-2,
+            solver=_make_ipopt_solver(),
+            grey_box_solver=_UnusedGreyBoxSolver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Grey-box objective support in optimize_experiments\\(\\) is only "
+            "available",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
+
+    def test_optimize_experiments_greybox_zero_objective_is_rejected(self):
+        # The synthetic "zero" objective is another non-greybox path; this
+        # regression ensures optimize_experiments() rejects it with the same
+        # early validation instead of reaching the external solver.
+        class _UnusedGreyBoxSolver:
+            def solve(self, model, tee=False):
+                raise AssertionError("grey_box_solver.solve should not be reached")
+
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="zero",
+            use_grey_box_objective=True,
+            step=1e-2,
+            solver=_make_ipopt_solver(),
+            grey_box_solver=_UnusedGreyBoxSolver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Grey-box objective support in optimize_experiments\\(\\) is only "
+            "available",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
 
 
 if __name__ == "__main__":

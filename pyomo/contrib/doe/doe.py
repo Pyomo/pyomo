@@ -921,9 +921,9 @@ class DesignOfExperiments:
                         _for_multi_experiment=True,  # Skip creating L matrix per experiment
                     )
                     if reference_param_names is None:
-                        reference_fd_block = scenario_block.exp_blocks[k].fd_scenario_blocks[
-                            0
-                        ]
+                        reference_fd_block = scenario_block.exp_blocks[
+                            k
+                        ].fd_scenario_blocks[0]
                         reference_param_names = [
                             str(pyo.ComponentUID(param, context=reference_fd_block))
                             for param in reference_fd_block.unknown_parameters
@@ -938,9 +938,9 @@ class DesignOfExperiments:
                         # initialized experiments share both the unknown-parameter
                         # labels and their nominal values instead of silently
                         # overwriting one experiment with another.
-                        current_fd_block = scenario_block.exp_blocks[k].fd_scenario_blocks[
-                            0
-                        ]
+                        current_fd_block = scenario_block.exp_blocks[
+                            k
+                        ].fd_scenario_blocks[0]
                         current_param_names = [
                             str(pyo.ComponentUID(param, context=current_fd_block))
                             for param in current_fd_block.unknown_parameters
@@ -1208,9 +1208,7 @@ class DesignOfExperiments:
 
                 if self.use_grey_box:
                     self._initialize_grey_box_block(
-                        scenario.obj_cons.egb_fim_block,
-                        total_fim_np,
-                        parameter_names,
+                        scenario.obj_cons.egb_fim_block, total_fim_np, parameter_names
                     )
                 # Initialize scenario-level variables based on total_fim
                 elif hasattr(scenario.obj_cons, "L"):
