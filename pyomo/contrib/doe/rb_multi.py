@@ -1,4 +1,4 @@
-# NO NEED TO CHECK THIS SCRIPT. THIS IS FOR ME TO UNDERSTAND THE RESULT AND WILL BE DELETED LATER.
+#### NO NEED TO CHECK THIS SCRIPT. THIS IS FOR ME TO UNDERSTAND THE RESULT AND WILL BE DELETED LATER.
 """Utility for scanning Rooney-Biegler multi-experiment FIM metrics."""
 
 from pyomo.common.dependencies import (
@@ -36,7 +36,7 @@ def rb_multi(hour: np.ndarray, n_exp: int, prior_FIM):
         requested log10 metric matrices, and the matplotlib figure.
     """
     if not numpy_available:
-        raise ImportError("rb_muti requires numpy.")
+        raise ImportError("rb_multi requires numpy.")
 
     hour = np.asarray(hour, dtype=float).ravel()
     if hour.size == 0:
