@@ -1828,9 +1828,7 @@ class TestMultiexperimentSolve(unittest.TestCase):
         scenario = doe.results["param_scenarios"][0]
         got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(got_hours, sorted([7.13, 10.0]), abstol=1e-2)
-        self.assertAlmostEqual(
-            scenario["metrics"]["log10_me_opt"], 1.5289, places=2
-        )
+        self.assertAlmostEqual(scenario["metrics"]["log10_me_opt"], 1.5289, places=2)
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")

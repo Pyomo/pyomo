@@ -705,9 +705,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
     def _mock_solver_results(self, message):
         return SimpleNamespace(
             solver=SimpleNamespace(
-                status="ok",
-                termination_condition="optimal",
-                message=message,
+                status="ok", termination_condition="optimal", message=message
             )
         )
 
@@ -934,9 +932,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             final_calls["n"] += 1
             return self._mock_solver_results("mock-zero-final")
 
-        with patch.object(
-            doe_obj.solver, "solve", side_effect=_mock_final_solve
-        ):
+        with patch.object(doe_obj.solver, "solve", side_effect=_mock_final_solve):
             doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
         scenario = doe_obj.model.param_scenario_blocks[0]
@@ -979,8 +975,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             len(scenario.obj_cons.cholesky_fim_diag_cons), len(parameter_names) ** 2
         )
         self.assertEqual(
-            len(scenario.obj_cons.cholesky_fim_inv_diag_cons),
-            len(parameter_names) ** 2,
+            len(scenario.obj_cons.cholesky_fim_inv_diag_cons), len(parameter_names) ** 2
         )
         self.assertEqual(
             doe_obj.results["Termination Message"], "mock-trace-roundoff-final"
@@ -1122,6 +1117,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             doe_obj.optimize_experiments(n_exp=1)
 
         self.assertEqual(doe_obj.results["Termination Message"], "custom-message")
+
 
 class TestDoeResultsSerialization(unittest.TestCase):
     """Coverage for DoE results payload serialization helpers."""
