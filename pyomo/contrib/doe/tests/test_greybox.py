@@ -405,7 +405,7 @@ def _make_multiexperiment_greybox_doe(
 
 def _get_multiexperiment_scenario_data(doe_obj):
     scenario = doe_obj.model.param_scenario_blocks[0]
-    total_fim = np.array(doe_obj.results["Scenarios"][0]["Total FIM"])
+    total_fim = np.array(doe_obj.results["param_scenarios"][0]["total_fim"])
     parameter_names = list(scenario.exp_blocks[0].parameter_names)
     return scenario, total_fim, parameter_names
 
@@ -1425,8 +1425,8 @@ class TestMultiexperimentBuild(unittest.TestCase):
         )
         exp_fim_sum = sum(
             (
-                np.array(exp_data["FIM"])
-                for exp_data in doe_obj.results["Scenarios"][0]["Experiments"]
+                np.array(exp_data["fim"])
+                for exp_data in doe_obj.results["param_scenarios"][0]["experiments"]
             ),
             np.zeros_like(total_fim),
         )
@@ -1748,14 +1748,14 @@ class TestMultiexperimentSolve(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(
-            exp["Experiment Design"][0] for exp in scenario["Experiments"]
-        )
+        scenario = doe.results["param_scenarios"][0]
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(
             got_hours, sorted([1.9321985035514362, 9.999999685577139]), abstol=1e-3
         )
-        self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
+        self.assertAlmostEqual(
+            scenario["metrics"]["log10_d_opt"], 6.028152580313302, places=3
+        )
 
     def test_optimize_experiments_trace_expected_values_greybox(self):
         # This is a regression test for the cyipopt-backed multi-experiment
@@ -1776,12 +1776,10 @@ class TestMultiexperimentSolve(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(
-            exp["Experiment Design"][0] for exp in scenario["Experiments"]
-        )
+        scenario = doe.results["param_scenarios"][0]
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(got_hours, sorted([1.01, 10.0]), abstol=1e-3)
-        self.assertAlmostEqual(scenario["log10 A-opt"], -1.9438, places=3)
+        self.assertAlmostEqual(scenario["metrics"]["log10_a_opt"], -1.9438, places=3)
 
     def test_optimize_experiments_min_eig_expected_values_greybox(self):
         # This checks the end-to-end greybox E-opt solve against a stable
@@ -1803,12 +1801,10 @@ class TestMultiexperimentSolve(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(
-            exp["Experiment Design"][0] for exp in scenario["Experiments"]
-        )
+        scenario = doe.results["param_scenarios"][0]
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(got_hours, sorted([1.0, 10.0]), abstol=1e-2)
-        self.assertAlmostEqual(scenario["log10 E-opt"], 1.9532, places=2)
+        self.assertAlmostEqual(scenario["metrics"]["log10_e_opt"], 1.9532, places=2)
 
     def test_optimize_experiments_me_opt_expected_values_greybox(self):
         # ME-opt is greybox-only in optimize_experiments(), so keep a dedicated
@@ -1829,12 +1825,12 @@ class TestMultiexperimentSolve(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(
-            exp["Experiment Design"][0] for exp in scenario["Experiments"]
-        )
+        scenario = doe.results["param_scenarios"][0]
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(got_hours, sorted([7.13, 10.0]), abstol=1e-2)
-        self.assertAlmostEqual(scenario["log10 ME-opt"], 1.5289, places=2)
+        self.assertAlmostEqual(
+            scenario["metrics"]["log10_me_opt"], 1.5289, places=2
+        )
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -1864,20 +1860,20 @@ class TestSingleExperimentSolve(unittest.TestCase):
         doe_obj.optimize_experiments(n_exp=1)
 
         scenario, total_fim, _ = _get_multiexperiment_scenario_data(doe_obj)
-        scenario_results = doe_obj.results["Scenarios"][0]
-        design_hour = scenario_results["Experiments"][0]["Experiment Design"][0]
+        scenario_results = doe_obj.results["param_scenarios"][0]
+        design_hour = scenario_results["experiments"][0]["design"][0]
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
         self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 1)
         self.assertTrue(doe_obj.results["settings"]["modeling"]["template_mode"])
-        self.assertEqual(len(scenario_results["Experiments"]), 1)
+        self.assertEqual(len(scenario_results["experiments"]), 1)
         self.assertEqual(
             doe_obj.results["run_info"]["solver"]["name"],
             getattr(grey_box_solver, "name", str(grey_box_solver)),
         )
         self.assertGreaterEqual(design_hour, 1.0)
         self.assertLessEqual(design_hour, 10.0)
-        self.assertTrue(np.isfinite(scenario_results["log10 E-opt"]))
+        self.assertTrue(np.isfinite(scenario_results["metrics"]["log10_e_opt"]))
         self.assertAlmostEqual(
             pyo.value(scenario.obj_cons.egb_fim_block.outputs["E-opt"]),
             _expected_multiexperiment_greybox_output("minimum_eigenvalue", total_fim),

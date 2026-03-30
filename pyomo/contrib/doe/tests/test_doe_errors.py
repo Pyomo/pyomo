@@ -1047,6 +1047,25 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
                 ):
                     doe_obj.optimize_experiments(n_exp=2)
 
+    def test_optimize_experiments_trace_requires_cholesky_or_greybox(self):
+        # Multi-experiment trace uses the Cholesky-based build unless the
+        # greybox objective path is enabled, so optimize_experiments() should
+        # reject ``_Cholesky_option=False`` before any solve phase begins.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="trace",
+            step=1e-2,
+            solver=self._make_solver(),
+            _Cholesky_option=False,
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"objective_option='trace' currently only implemented with "
+            r"``_Cholesky_option=True`` or ``use_grey_box_objective=True``\.",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
+
     def test_optimize_experiments_requires_matching_unknown_parameter_values(self):
         # Tests that user-initialized multi-experiment mode rejects experiments
         # that linearize around different nominal theta values.

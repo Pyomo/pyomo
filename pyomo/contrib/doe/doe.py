@@ -1205,13 +1205,14 @@ class DesignOfExperiments:
                 )
                 if self.only_compute_fim_lower:
                     total_fim_np = self._symmetrize_lower_tri(total_fim_np)
+                obj_cons = getattr(scenario, "obj_cons", None)
 
                 if self.use_grey_box:
                     self._initialize_grey_box_block(
-                        scenario.obj_cons.egb_fim_block, total_fim_np, parameter_names
+                        obj_cons.egb_fim_block, total_fim_np, parameter_names
                     )
                 # Initialize scenario-level variables based on total_fim
-                elif hasattr(scenario.obj_cons, "L"):
+                elif obj_cons is not None and hasattr(obj_cons, "L"):
                     # Compute Cholesky factorization
                     # Check positive definiteness and add jitter if needed
                     min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
@@ -1233,43 +1234,39 @@ class DesignOfExperiments:
                     # Initialize L values
                     for i, p in enumerate(parameter_names):
                         for j, q in enumerate(parameter_names):
-                            scenario.obj_cons.L[p, q].set_value(L_vals[i, j])
+                            obj_cons.L[p, q].set_value(L_vals[i, j])
 
                     # If trace objective, also initialize L_inv, fim_inv, and cov_trace
-                    if hasattr(scenario.obj_cons, "L_inv"):
+                    if hasattr(obj_cons, "L_inv"):
                         L_inv_vals = np.linalg.inv(L_vals)
 
                         for i, p in enumerate(parameter_names):
                             for j, q in enumerate(parameter_names):
                                 if i >= j:
-                                    scenario.obj_cons.L_inv[p, q].set_value(
-                                        L_inv_vals[i, j]
-                                    )
+                                    obj_cons.L_inv[p, q].set_value(L_inv_vals[i, j])
                                 else:
-                                    scenario.obj_cons.L_inv[p, q].set_value(0.0)
+                                    obj_cons.L_inv[p, q].set_value(0.0)
 
                         # Initialize fim_inv
-                        if hasattr(scenario.obj_cons, "fim_inv"):
+                        if hasattr(obj_cons, "fim_inv"):
                             fim_inv_np = np.linalg.inv(fim_jittered)
                             for i, p in enumerate(parameter_names):
                                 for j, q in enumerate(parameter_names):
-                                    scenario.obj_cons.fim_inv[p, q].set_value(
-                                        fim_inv_np[i, j]
-                                    )
+                                    obj_cons.fim_inv[p, q].set_value(fim_inv_np[i, j])
 
                         # Initialize cov_trace
-                        if hasattr(scenario.obj_cons, "cov_trace"):
+                        if hasattr(obj_cons, "cov_trace"):
                             initial_cov_trace = np.sum(L_inv_vals**2)
-                            scenario.obj_cons.cov_trace.set_value(initial_cov_trace)
+                            obj_cons.cov_trace.set_value(initial_cov_trace)
 
-                if hasattr(scenario.obj_cons, "determinant"):
+                if obj_cons is not None and hasattr(obj_cons, "determinant"):
                     # Initialize determinant
-                    scenario.obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
+                    obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
 
-                if hasattr(scenario.obj_cons, "pseudo_trace"):
+                if obj_cons is not None and hasattr(obj_cons, "pseudo_trace"):
                     # Initialize pseudo_trace
                     pseudo_trace_val = float(np.trace(total_fim_np))
-                    scenario.obj_cons.pseudo_trace.set_value(pseudo_trace_val)
+                    obj_cons.pseudo_trace.set_value(pseudo_trace_val)
         finally:
             self.solver = primary_solver
 
@@ -1323,12 +1320,10 @@ class DesignOfExperiments:
                 )
                 return float("nan")
 
-        # Store results for each scenario
-        self.results["Scenarios"] = []
-        scenarios_structured = []
+        # Store results for each parameter scenario using a single structured payload.
+        param_scenarios = []
         for s in range(n_param_scenarios):
             scenario = self.model.param_scenario_blocks[s]
-            scenario_results = {}
 
             # Get aggregated FIM for this scenario
             total_fim_vals = [
@@ -1344,30 +1339,27 @@ class DesignOfExperiments:
             if self.only_compute_fim_lower:
                 total_fim_np = self._symmetrize_lower_tri(total_fim_np)
 
-            # Store the completed (symmetric) FIM
-            scenario_results["Total FIM"] = total_fim_np.tolist()
-
             # Statistics on the aggregated FIM (consistent with run_doe), guarded
             # against singular/indefinite matrices and numerical failures.
-            scenario_results["log10 A-opt"] = _safe_metric(
+            log10_a_opt = _safe_metric(
                 "log10 A-opt",
                 lambda fim=total_fim_np: np.log10(np.trace(np.linalg.inv(fim))),
                 s,
             )
-            scenario_results["log10 pseudo A-opt"] = _safe_metric(
+            log10_pseudo_a_opt = _safe_metric(
                 "log10 pseudo A-opt",
                 lambda fim=total_fim_np: np.log10(np.trace(fim)),
                 s,
             )
-            scenario_results["log10 D-opt"] = _safe_metric(
+            log10_d_opt = _safe_metric(
                 "log10 D-opt", lambda fim=total_fim_np: np.log10(np.linalg.det(fim)), s
             )
-            scenario_results["log10 E-opt"] = _safe_metric(
+            log10_e_opt = _safe_metric(
                 "log10 E-opt",
                 lambda fim=total_fim_np: np.log10(min(np.linalg.eigvalsh(fim))),
                 s,
             )
-            scenario_results["log10 ME-opt"] = _safe_metric(
+            log10_me_opt = _safe_metric(
                 "log10 ME-opt",
                 lambda fim=total_fim_np: np.log10(np.linalg.cond(fim)),
                 s,
@@ -1375,69 +1367,43 @@ class DesignOfExperiments:
 
             # Store unknown parameter values at scenario level (same for all experiments)
             # Use first experiment to get the values
-            scenario_results["Unknown Parameters"] = self.get_unknown_parameter_values(
-                model=scenario.exp_blocks[0]
-            )
-
-            # Store results for each experiment in this scenario
-            scenario_results["Experiments"] = []
             scenario_structured = {
                 "id": s,
                 "total_fim": total_fim_np.tolist(),
                 "metrics": {
-                    "log10_a_opt": scenario_results["log10 A-opt"],
-                    "log10_pseudo_a_opt": scenario_results["log10 pseudo A-opt"],
-                    "log10_d_opt": scenario_results["log10 D-opt"],
-                    "log10_e_opt": scenario_results["log10 E-opt"],
-                    "log10_me_opt": scenario_results["log10 ME-opt"],
+                    "log10_a_opt": log10_a_opt,
+                    "log10_pseudo_a_opt": log10_pseudo_a_opt,
+                    "log10_d_opt": log10_d_opt,
+                    "log10_e_opt": log10_e_opt,
+                    "log10_me_opt": log10_me_opt,
                 },
-                "unknown_parameters": None,
+                "unknown_parameters": self.get_unknown_parameter_values(
+                    model=scenario.exp_blocks[0]
+                ),
                 "experiments": [],
             }
             for k in range(n_exp):
                 exp_block = scenario.exp_blocks[k]
-                exp_results = {}
-
-                # Use helper functions for consistent extraction (same as run_doe)
-                # Store only the VALUES for each experiment (names are at top level)
-                exp_results["Experiment Design"] = self.get_experiment_input_values(
-                    model=exp_block
-                )
-                exp_results["Experiment Outputs"] = self.get_experiment_output_values(
-                    model=exp_block
-                )
-                exp_results["Measurement Error"] = self.get_measurement_error_values(
-                    model=exp_block
-                )
-
-                # Individual experiment FIM (get_FIM handles symmetry completion)
-                exp_results["FIM"] = self.get_FIM(model=exp_block)
+                design = self.get_experiment_input_values(model=exp_block)
+                outputs = self.get_experiment_output_values(model=exp_block)
+                measurement_error = self.get_measurement_error_values(model=exp_block)
+                fim = self.get_FIM(model=exp_block)
 
                 # Sensitivity matrix for this experiment
-                if hasattr(exp_block, "sensitivity_jacobian"):
-                    exp_results["Sensitivity Matrix"] = self.get_sensitivity_matrix(
-                        model=exp_block
-                    )
-
-                scenario_results["Experiments"].append(exp_results)
                 experiment_structured = {
                     "id": k,
-                    "design": exp_results["Experiment Design"],
-                    "outputs": exp_results["Experiment Outputs"],
-                    "measurement_error": exp_results["Measurement Error"],
-                    "fim": exp_results["FIM"],
+                    "design": design,
+                    "outputs": outputs,
+                    "measurement_error": measurement_error,
+                    "fim": fim,
                 }
-                if "Sensitivity Matrix" in exp_results:
-                    experiment_structured["sensitivity"] = exp_results[
-                        "Sensitivity Matrix"
-                    ]
+                if hasattr(exp_block, "sensitivity_jacobian"):
+                    experiment_structured["sensitivity"] = self.get_sensitivity_matrix(
+                        model=exp_block
+                    )
                 scenario_structured["experiments"].append(experiment_structured)
 
-            self.results["Scenarios"].append(scenario_results)
-            scenario_structured["unknown_parameters"] = scenario_results[
-                "Unknown Parameters"
-            ]
-            scenarios_structured.append(scenario_structured)
+            param_scenarios.append(scenario_structured)
 
         # Store variable names once (structural properties, same across all scenarios/experiments)
         # Use first scenario's first experiment to get the structure
@@ -1580,7 +1546,7 @@ class DesignOfExperiments:
             "warnings": diagnostics_warnings,
             "lhs_initialization": lhs_init_diagnostics,
         }
-        self.results["scenarios"] = scenarios_structured
+        self.results["param_scenarios"] = param_scenarios
 
         # Save results to file if requested
         if results_file is not None:

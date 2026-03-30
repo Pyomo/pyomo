@@ -11,6 +11,7 @@ import os
 import os.path
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from pyomo.common.dependencies import (
@@ -701,6 +702,15 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         solver.options["max_iter"] = 3000
         return solver
 
+    def _mock_solver_results(self, message):
+        return SimpleNamespace(
+            solver=SimpleNamespace(
+                status="ok",
+                termination_condition="optimal",
+                message=message,
+            )
+        )
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_init_solver_used_for_initialization_only(self):
         # Tests that all pre-final solves use init_solver while the final
@@ -824,19 +834,19 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertTrue(hasattr(scenario_block, "symmetry_breaking_s0_exp1"))
         self.assertEqual(len(list(scenario_block.exp_blocks.keys())), 2)
 
-        scenario_result = doe_obj.results["Scenarios"][0]
+        param_scenario = doe_obj.results["param_scenarios"][0]
         self.assertEqual(doe_obj.results["Initialization Method"], "none")
         self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 2)
-        self.assertEqual(len(scenario_result["Experiments"]), 2)
+        self.assertEqual(len(param_scenario["experiments"]), 2)
         self.assertEqual(len(doe_obj.results["Experiment Design Names"]), 1)
         self.assertEqual(len(doe_obj.results["Unknown Parameter Names"]), 2)
 
-        # New structured payload checks
+        # Results should expose a single structured parameter-scenario payload.
         self.assertIn("run_info", doe_obj.results)
         self.assertIn("settings", doe_obj.results)
         self.assertIn("timing", doe_obj.results)
         self.assertIn("names", doe_obj.results)
-        self.assertIn("scenarios", doe_obj.results)
+        self.assertIn("param_scenarios", doe_obj.results)
         self.assertEqual(
             doe_obj.results["run_info"]["solver"]["status"],
             doe_obj.results["Solver Status"],
@@ -845,14 +855,16 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             doe_obj.results["settings"]["modeling"]["n_experiments_per_scenario"], 2
         )
         self.assertFalse(doe_obj.results["settings"]["modeling"]["template_mode"])
-        self.assertEqual(len(doe_obj.results["scenarios"]), 1)
-        self.assertEqual(doe_obj.results["scenarios"][0]["id"], 0)
-        self.assertEqual(len(doe_obj.results["scenarios"][0]["experiments"]), 2)
-        self.assertEqual(doe_obj.results["scenarios"][0]["experiments"][0]["id"], 0)
+        self.assertEqual(len(doe_obj.results["param_scenarios"]), 1)
+        self.assertEqual(doe_obj.results["param_scenarios"][0]["id"], 0)
+        self.assertEqual(len(doe_obj.results["param_scenarios"][0]["experiments"]), 2)
+        self.assertEqual(
+            doe_obj.results["param_scenarios"][0]["experiments"][0]["id"], 0
+        )
 
         # hour of exp[0] should be <= hour of exp[1] due to symmetry breaking
-        h0 = scenario_result["Experiments"][0]["Experiment Design"][0]
-        h1 = scenario_result["Experiments"][1]["Experiment Design"][0]
+        h0 = param_scenario["experiments"][0]["design"][0]
+        h1 = param_scenario["experiments"][1]["design"][0]
         self.assertLessEqual(h0, h1)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -877,12 +889,11 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             payload = json.load(f)
         self.assertEqual(payload["Initialization Method"], "none")
         self.assertTrue(payload["settings"]["modeling"]["template_mode"])
-        self.assertIn("Scenarios", payload)
+        self.assertIn("param_scenarios", payload)
         self.assertIn("run_info", payload)
         self.assertIn("settings", payload)
         self.assertIn("timing", payload)
         self.assertIn("names", payload)
-        self.assertIn("scenarios", payload)
 
         path_payload = Path(results_path)
         doe_obj.optimize_experiments(n_exp=1, results_file=path_payload)
@@ -904,6 +915,76 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         doe_obj.optimize_experiments()
         self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 1)
         self.assertTrue(doe_obj.results["settings"]["modeling"]["template_mode"])
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_zero_objective_works_without_obj_cons(self):
+        # The zero objective intentionally builds no scenario.obj_cons block, so
+        # optimize_experiments() must skip the deactivate/reactivate cycle and
+        # still produce the usual results payload from the square solve.
+        init_solver = self._make_solver()
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="zero",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        final_calls = {"n": 0}
+
+        def _mock_final_solve(*args, **kwargs):
+            final_calls["n"] += 1
+            return self._mock_solver_results("mock-zero-final")
+
+        with patch.object(
+            doe_obj.solver, "solve", side_effect=_mock_final_solve
+        ):
+            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+
+        scenario = doe_obj.model.param_scenario_blocks[0]
+        self.assertFalse(hasattr(scenario, "obj_cons"))
+        self.assertEqual(final_calls["n"], 1)
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(doe_obj.results["Termination Message"], "mock-zero-final")
+        self.assertEqual(len(doe_obj.results["param_scenarios"][0]["experiments"]), 2)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_trace_roundoff_flag_builds_extra_constraints(self):
+        # The multi-experiment trace path optionally adds extra Cholesky/FIM
+        # diagonal constraints to reduce roundoff drift. Keep the square-solve
+        # build real, but mock the final NLP solve because this test is only
+        # checking that the additional constraints were created.
+        init_solver = self._make_solver()
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="trace",
+            step=1e-2,
+            solver=self._make_solver(),
+            improve_cholesky_roundoff_error=True,
+        )
+        final_calls = {"n": 0}
+
+        def _mock_final_solve(*args, **kwargs):
+            final_calls["n"] += 1
+            return self._mock_solver_results("mock-trace-roundoff-final")
+
+        with patch.object(doe_obj.solver, "solve", side_effect=_mock_final_solve):
+            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+
+        scenario = doe_obj.model.param_scenario_blocks[0]
+        parameter_names = list(scenario.exp_blocks[0].parameter_names)
+
+        self.assertEqual(final_calls["n"], 1)
+        self.assertTrue(hasattr(scenario.obj_cons, "cholesky_fim_diag_cons"))
+        self.assertTrue(hasattr(scenario.obj_cons, "cholesky_fim_inv_diag_cons"))
+        self.assertEqual(
+            len(scenario.obj_cons.cholesky_fim_diag_cons), len(parameter_names) ** 2
+        )
+        self.assertEqual(
+            len(scenario.obj_cons.cholesky_fim_inv_diag_cons),
+            len(parameter_names) ** 2,
+        )
+        self.assertEqual(
+            doe_obj.results["Termination Message"], "mock-trace-roundoff-final"
+        )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_timing_includes_lhs_phase_separately(self):

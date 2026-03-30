@@ -1144,7 +1144,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                     doe.optimize_experiments(n_exp=1)
 
         scenario = doe.model.param_scenario_blocks[0]
-        total_fim = np.array(doe.results["Scenarios"][0]["Total FIM"])
+        total_fim = np.array(doe.results["param_scenarios"][0]["total_fim"])
         expected_cholesky_input = total_fim + _SMALL_TOLERANCE_DEFINITENESS * np.eye(
             total_fim.shape[0]
         )
@@ -1233,15 +1233,11 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         # Tests that optimize_experiments() can be run repeatedly on one DoE object.
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(n_exp=1)
-        first_design = doe.results["Scenarios"][0]["Experiments"][0][
-            "Experiment Design"
-        ]
+        first_design = doe.results["param_scenarios"][0]["experiments"][0]["design"]
         first_build_time = doe.results["timing"]["build_s"]
 
         doe.optimize_experiments(n_exp=1)
-        second_design = doe.results["Scenarios"][0]["Experiments"][0][
-            "Experiment Design"
-        ]
+        second_design = doe.results["param_scenarios"][0]["experiments"][0]["design"]
 
         self.assertEqual(len(first_design), len(second_design))
         self.assertIn("timing", doe.results)
@@ -2158,14 +2154,14 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(
-            exp["Experiment Design"][0] for exp in scenario["Experiments"]
-        )
+        scenario = doe.results["param_scenarios"][0]
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         expected_hours = [1.9321985035514362, 9.999999685577139]
 
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
-        self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
+        self.assertAlmostEqual(
+            scenario["metrics"]["log10_d_opt"], 6.028152580313302, places=3
+        )
 
     def test_optimize_experiments_trace_expected_values(self):
         # Tests trace-objective optimization against known expected design/metric values.
@@ -2193,14 +2189,12 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(
-            exp["Experiment Design"][0] for exp in scenario["Experiments"]
-        )
+        scenario = doe.results["param_scenarios"][0]
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         expected_hours = [10.0, 10.0]
 
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
-        self.assertAlmostEqual(scenario["log10 A-opt"], -2.2347, places=3)
+        self.assertAlmostEqual(scenario["metrics"]["log10_a_opt"], -2.2347, places=3)
 
     def test_optimize_experiments_prior_fim_aggregation_non_lhs_template_mode(self):
         # Tests that total FIM equals sum(experiment FIMs) + prior in template mode.
@@ -2210,10 +2204,10 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         doe.optimize_experiments(n_exp=2, init_method=None)
 
-        scenario = doe.results["Scenarios"][0]
-        total_fim = np.array(scenario["Total FIM"])
+        scenario = doe.results["param_scenarios"][0]
+        total_fim = np.array(scenario["total_fim"])
         exp_fim_sum = sum(
-            (np.array(exp_data["FIM"]) for exp_data in scenario["Experiments"]),
+            (np.array(exp_data["fim"]) for exp_data in scenario["experiments"]),
             np.zeros_like(total_fim),
         )
         stored_prior = np.array(doe.results["Prior FIM"])
@@ -2244,10 +2238,10 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
         doe.optimize_experiments(init_method=None)
 
-        scenario = doe.results["Scenarios"][0]
-        total_fim = np.array(scenario["Total FIM"])
+        scenario = doe.results["param_scenarios"][0]
+        total_fim = np.array(scenario["total_fim"])
         exp_fim_sum = sum(
-            (np.array(exp_data["FIM"]) for exp_data in scenario["Experiments"]),
+            (np.array(exp_data["fim"]) for exp_data in scenario["experiments"]),
             np.zeros_like(total_fim),
         )
         stored_prior = np.array(doe.results["Prior FIM"])
@@ -2264,8 +2258,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
                 doe.optimize_experiments(n_exp=1)
 
-        scenario = doe.results["Scenarios"][0]
-        self.assertTrue(np.isnan(scenario["log10 A-opt"]))
+        scenario = doe.results["param_scenarios"][0]
+        self.assertTrue(np.isnan(scenario["metrics"]["log10_a_opt"]))
         self.assertTrue(
             any("failed to compute log10 A-opt" in msg for msg in log_cm.output)
         )
@@ -2309,7 +2303,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         scenario_block = doe.model.param_scenario_blocks[0]
         self.assertTrue(hasattr(scenario_block.obj_cons, "determinant"))
-        total_fim = np.array(doe.results["Scenarios"][0]["Total FIM"])
+        total_fim = np.array(doe.results["param_scenarios"][0]["total_fim"])
         expected_det = np.linalg.det(total_fim)
         self.assertAlmostEqual(
             pyo.value(scenario_block.obj_cons.determinant), expected_det, places=6

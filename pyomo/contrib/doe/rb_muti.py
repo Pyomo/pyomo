@@ -200,7 +200,7 @@ if __name__ == "__main__":
     print("Optimal experiment design:")
     print(doe.results)
 
-    scenario = doe.results["Scenarios"][0]
-    got_hours = sorted(exp["Experiment Design"][0] for exp in scenario["Experiments"])
+    scenario = doe.results["param_scenarios"][0]
+    got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
     expected_hours = [1.9321985035514362, 9.999999685577139]
     results = rb_multi(candidate_hours, n_exp=2, prior_FIM=prior_information_matrix)
