@@ -43,7 +43,7 @@ def rb_multi(hour: np.ndarray, n_exp: int, prior_FIM):
         raise ValueError("`hour` must contain at least one candidate point.")
     if n_exp != 2:
         raise ValueError(
-            f"`rb_muti` currently supports only `n_exp == 2`, got {n_exp!r}."
+            f"`rb_multi` currently supports only `n_exp == 2`, got {n_exp!r}."
         )
     if n_exp > hour.size:
         raise ValueError(
@@ -110,7 +110,7 @@ def rb_multi(hour: np.ndarray, n_exp: int, prior_FIM):
             )
 
     if not matplotlib_available:
-        raise ImportError("Plotting rb_muti results requires matplotlib.")
+        raise ImportError("Plotting rb_multi results requires matplotlib.")
 
     figure, axes = matplotlib.pyplot.subplots(2, 2, figsize=(14, 10), sharex=True)
     axes = axes.flatten()
