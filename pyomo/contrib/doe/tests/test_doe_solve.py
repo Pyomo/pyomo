@@ -1094,11 +1094,18 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
 
     def test_optimize_experiments_cholesky_jitter_branch(self):
-        # Tests that optimization proceeds through the Cholesky jitter branch when needed.
+        # Force the positive-definiteness check down the jitter path and verify
+        # the matrix passed into Cholesky includes the expected diagonal shift.
         doe = self._make_template_doe("determinant")
 
+        from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
+
         original_solve = doe.solver.solve
+        original_eigvals = np.linalg.eigvals
+        original_cholesky = np.linalg.cholesky
         solve_count = {"n": 0}
+        eig_call_count = {"n": 0}
+        cholesky_inputs = []
 
         class _MockSolverInfo:
             status = "ok"
@@ -1114,20 +1121,58 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                 return original_solve(*args, **kwargs)
             return _MockResults()
 
+        def _eigvals_force_jitter(*args, **kwargs):
+            eig_call_count["n"] += 1
+            if eig_call_count["n"] == 1:
+                return np.array([-1.0, 1.0])
+            return original_eigvals(*args, **kwargs)
+
+        def _capture_cholesky(mat, *args, **kwargs):
+            cholesky_inputs.append(np.array(mat, copy=True))
+            return original_cholesky(mat, *args, **kwargs)
+
         with patch(
-            "pyomo.contrib.doe.doe.np.linalg.eigvals",
-            return_value=np.array([-1.0, 1.0]),
+            "pyomo.contrib.doe.doe.np.linalg.eigvals", side_effect=_eigvals_force_jitter
         ) as eigvals_mock:
-            with patch.object(
-                doe.solver, "solve", side_effect=_solve_first_real_then_mock
+            with patch(
+                "pyomo.contrib.doe.doe.np.linalg.cholesky",
+                side_effect=_capture_cholesky,
             ):
-                doe.optimize_experiments(n_exp=1)
+                with patch.object(
+                    doe.solver, "solve", side_effect=_solve_first_real_then_mock
+                ):
+                    doe.optimize_experiments(n_exp=1)
+
+        scenario = doe.model.param_scenario_blocks[0]
+        total_fim = np.array(doe.results["param_scenarios"][0]["total_fim"])
+        expected_cholesky_input = total_fim + _SMALL_TOLERANCE_DEFINITENESS * np.eye(
+            total_fim.shape[0]
+        )
+        param_names = list(scenario.exp_blocks[0].parameter_names)
+        L_vals = np.array(
+            [
+                [pyo.value(scenario.obj_cons.L[p, q]) for q in param_names]
+                for p in param_names
+            ]
+        )
 
         self.assertEqual(doe.results["Solver Status"], "ok")
         self.assertGreaterEqual(eigvals_mock.call_count, 1)
+        self.assertTrue(cholesky_inputs)
+        self.assertTrue(
+            any(
+                np.allclose(chol_arg, expected_cholesky_input, atol=1e-12)
+                for chol_arg in cholesky_inputs
+            )
+        )
+        self.assertTrue(
+            np.allclose(L_vals @ L_vals.T, expected_cholesky_input, atol=1e-8)
+        )
 
-    def test_optimize_experiments_lhs_matches_bruteforce_combo(self):
-        # Tests that LHS-selected initial points match an independent brute-force oracle.
+    def test_lhs_initialize_experiments_matches_bruteforce_combo(self):
+        # Compare the helper's chosen initial design directly against an
+        # independent brute-force scorer so this test isolates LHS selection
+        # instead of the later NLP solve and result-payload bookkeeping.
         n_exp = 2
         lhs_n_samples = 3
         lhs_seed = 17
@@ -1169,44 +1214,30 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         expected_points = [list(candidate_points[i]) for i in best_combo]
 
-        # Run full optimization with LHS initialization and compare chosen points.
         doe = self._make_template_doe("pseudo_trace")
-        doe.optimize_experiments(
+        self._build_template_model_for_multi_experiment(doe, n_exp=n_exp)
+        actual_points, lhs_diag = doe._lhs_initialize_experiments(
+            lhs_n_samples=lhs_n_samples,
+            lhs_seed=lhs_seed,
             n_exp=n_exp,
-            init_method="lhs",
-            init_n_samples=lhs_n_samples,
-            init_seed=lhs_seed,
+            lhs_parallel=False,
+            lhs_combo_parallel=False,
         )
 
-        actual_points = doe.results["LHS Best Initial Points"]
         actual_points_norm = sorted(tuple(np.round(p, 8)) for p in actual_points)
         expected_points_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
         self.assertEqual(actual_points_norm, expected_points_norm)
-        self.assertEqual(doe.results["Initialization Method"], "lhs")
-
-        # Numerical consistency of aggregated FIM in result payload.
-        scenario = doe.results["Scenarios"][0]
-        total_fim = np.array(scenario["Total FIM"])
-        prior = np.array(doe.results["Prior FIM"])
-        exp_fim_sum = sum(
-            (np.array(exp_data["FIM"]) for exp_data in scenario["Experiments"]),
-            np.zeros_like(total_fim),
-        )
-        self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior, atol=1e-6))
+        self.assertAlmostEqual(lhs_diag["best_obj"], best_obj, places=12)
 
     def test_optimize_experiments_is_reentrant_on_same_object(self):
         # Tests that optimize_experiments() can be run repeatedly on one DoE object.
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(n_exp=1)
-        first_design = doe.results["Scenarios"][0]["Experiments"][0][
-            "Experiment Design"
-        ]
+        first_design = doe.results["param_scenarios"][0]["experiments"][0]["design"]
         first_build_time = doe.results["timing"]["build_s"]
 
         doe.optimize_experiments(n_exp=1)
-        second_design = doe.results["Scenarios"][0]["Experiments"][0][
-            "Experiment Design"
-        ]
+        second_design = doe.results["param_scenarios"][0]["experiments"][0]["design"]
 
         self.assertEqual(len(first_design), len(second_design))
         self.assertIn("timing", doe.results)
@@ -1401,30 +1432,84 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
     def test_lhs_parallel_candidate_timeout_cancels_pending(self):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=2)
+        # Track every submitted future so we can later verify which pending
+        # evaluations were explicitly cancelled when the deadline is exceeded.
+        created_futures = []
 
-        def _slow_fim(self_obj, experiment_index, input_values):
-            time.sleep(0.05)
-            x = float(input_values[0])
-            return np.array([[x + 1.0, 0.0], [0.0, x + 2.0]])
+        class _FakeFuture:
+            def __init__(self, idx):
+                self.idx = idx
+                self.cancelled = False
 
-        with patch.object(
-            DesignOfExperiments,
-            "_compute_fim_at_point_no_prior",
-            autospec=True,
-            side_effect=_slow_fim,
-        ):
-            points, diag = doe._lhs_initialize_experiments(
-                lhs_n_samples=8,
-                lhs_seed=5,
-                n_exp=2,
-                lhs_parallel=True,
-                lhs_n_workers=2,
-                lhs_combo_parallel=False,
-                lhs_max_wall_clock_time=0.001,
-            )
+            def result(self):
+                # Return a deterministic candidate-FIM payload keyed by submit order.
+                x = float(self.idx + 1.0)
+                return self.idx, np.array([[x, 0.0], [0.0, x + 1.0]])
+
+            def cancel(self):
+                self.cancelled = True
+                return True
+
+        class _FakeExecutor:
+            # Record submitted work but do not execute it asynchronously; the
+            # test controls completion order through the patched wait() call.
+            def __init__(self, max_workers=None):
+                self.created = []
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def submit(self, fn, idx_pt):
+                fut = _FakeFuture(idx_pt[0])
+                self.created.append(fut)
+                created_futures.append(fut)
+                return fut
+
+        def _fake_wait(pending, timeout=None, return_when=None):
+            # Pretend exactly one future finishes per wait cycle and leave the
+            # rest pending so timeout handling has something to cancel.
+            done = {min(pending, key=lambda fut: fut.idx)}
+            still_pending = set(pending) - done
+            return done, still_pending
+
+        perf_counter_calls = {"n": 0}
+
+        def _fake_perf_counter():
+            # Keep the clock at t=0 long enough to fill the initial pending
+            # queue, then jump past the deadline so the code cancels leftovers.
+            perf_counter_calls["n"] += 1
+            if perf_counter_calls["n"] <= 6:
+                return 0.0
+            return 1.0
+
+        with patch("pyomo.contrib.doe.doe._cf.ThreadPoolExecutor", _FakeExecutor):
+            with patch("pyomo.contrib.doe.doe._cf.wait", side_effect=_fake_wait):
+                with patch(
+                    "pyomo.contrib.doe.doe.time.perf_counter",
+                    side_effect=_fake_perf_counter,
+                ):
+                    points, diag = doe._lhs_initialize_experiments(
+                        lhs_n_samples=20,
+                        lhs_seed=5,
+                        n_exp=2,
+                        lhs_parallel=True,
+                        lhs_n_workers=2,
+                        lhs_combo_parallel=False,
+                        lhs_max_wall_clock_time=0.5,
+                    )
 
         self.assertEqual(len(points), 2)
         self.assertTrue(diag["timed_out"])
+        # With 2 workers, the implementation allows up to 4 pending candidate
+        # FIM futures before waiting for one to complete.
+        self.assertEqual(len(created_futures), 4)
+        # Our fake scheduler completes futures 0 and 1, so timeout should only
+        # cancel the still-pending futures from the tail of that first batch.
+        self.assertEqual(sum(fut.cancelled for fut in created_futures), 2)
+        self.assertEqual([fut.idx for fut in created_futures if fut.cancelled], [2, 3])
 
     def test_lhs_no_candidate_fim_scored_uses_zero_fallback(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -1689,9 +1774,11 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
 
         stage = {"timeout": False}
+        created_futures = []
 
         class _FakeFuture:
-            def __init__(self, payload):
+            def __init__(self, idx, payload):
+                self.idx = idx
                 self._payload = payload
                 self.cancelled = False
 
@@ -1720,14 +1807,14 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                     if idx == 0
                     else (9.0 - idx, (0, 2), False)
                 )
-                fut = _FakeFuture(payload)
+                fut = _FakeFuture(idx, payload)
                 self.created.append(fut)
+                created_futures.append(fut)
                 return fut
 
         def _fake_wait(pending, return_when=None):
-            pending_list = list(pending)
-            done = {pending_list[0]}
-            still_pending = set(pending_list[1:])
+            done = {min(pending, key=lambda fut: fut.idx)}
+            still_pending = set(pending) - done
             stage["timeout"] = True
             return done, still_pending
 
@@ -1754,6 +1841,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         self.assertEqual(len(points), 2)
         self.assertTrue(diag["timed_out"])
+        self.assertEqual(len(created_futures), 3)
+        self.assertEqual(sum(fut.cancelled for fut in created_futures), 2)
+        self.assertEqual([fut.idx for fut in created_futures if fut.cancelled], [1, 2])
 
     def test_lhs_combo_parallel_minimize_objective_update(self):
         doe = self._make_template_doe("trace")
@@ -1832,34 +1922,6 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
         exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
         self.assertEqual(got_norm, exp_norm)
-
-    def test_lhs_score_chunk_minimize_branch(self):
-        doe = self._make_template_doe("trace")
-        self._build_template_model_for_multi_experiment(doe, n_exp=3)
-
-        def _fake_fim(experiment_index, input_values):
-            x = float(input_values[0])
-            return np.array([[x + 0.75, 0.0], [0.0, 2.0 * x + 0.75]])
-
-        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            points_serial, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=5, lhs_seed=77, n_exp=3, lhs_combo_parallel=False
-            )
-
-        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            points_parallel, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=5,
-                lhs_seed=77,
-                n_exp=3,
-                lhs_combo_parallel=True,
-                lhs_n_workers=2,
-                lhs_combo_chunk_size=2,
-                lhs_combo_parallel_threshold=1,
-            )
-
-        serial_norm = sorted(tuple(np.round(p, 8)) for p in points_serial)
-        parallel_norm = sorted(tuple(np.round(p, 8)) for p in points_parallel)
-        self.assertEqual(serial_norm, parallel_norm)
 
     def test_lhs_combo_no_scored_combo_falls_back_to_first_n_exp(self):
         doe = self._make_template_doe("pseudo_trace")
@@ -2092,14 +2154,14 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(
-            exp["Experiment Design"][0] for exp in scenario["Experiments"]
-        )
+        scenario = doe.results["param_scenarios"][0]
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         expected_hours = [1.9321985035514362, 9.999999685577139]
 
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
-        self.assertAlmostEqual(scenario["log10 D-opt"], 6.028152580313302, places=3)
+        self.assertAlmostEqual(
+            scenario["metrics"]["log10_d_opt"], 6.028152580313302, places=3
+        )
 
     def test_optimize_experiments_trace_expected_values(self):
         # Tests trace-objective optimization against known expected design/metric values.
@@ -2127,14 +2189,12 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["Scenarios"][0]
-        got_hours = sorted(
-            exp["Experiment Design"][0] for exp in scenario["Experiments"]
-        )
+        scenario = doe.results["param_scenarios"][0]
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         expected_hours = [10.0, 10.0]
 
         self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
-        self.assertAlmostEqual(scenario["log10 A-opt"], -2.2347, places=3)
+        self.assertAlmostEqual(scenario["metrics"]["log10_a_opt"], -2.2347, places=3)
 
     def test_optimize_experiments_prior_fim_aggregation_non_lhs_template_mode(self):
         # Tests that total FIM equals sum(experiment FIMs) + prior in template mode.
@@ -2144,10 +2204,10 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         doe.optimize_experiments(n_exp=2, init_method=None)
 
-        scenario = doe.results["Scenarios"][0]
-        total_fim = np.array(scenario["Total FIM"])
+        scenario = doe.results["param_scenarios"][0]
+        total_fim = np.array(scenario["total_fim"])
         exp_fim_sum = sum(
-            (np.array(exp_data["FIM"]) for exp_data in scenario["Experiments"]),
+            (np.array(exp_data["fim"]) for exp_data in scenario["experiments"]),
             np.zeros_like(total_fim),
         )
         stored_prior = np.array(doe.results["Prior FIM"])
@@ -2178,10 +2238,10 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
         doe.optimize_experiments(init_method=None)
 
-        scenario = doe.results["Scenarios"][0]
-        total_fim = np.array(scenario["Total FIM"])
+        scenario = doe.results["param_scenarios"][0]
+        total_fim = np.array(scenario["total_fim"])
         exp_fim_sum = sum(
-            (np.array(exp_data["FIM"]) for exp_data in scenario["Experiments"]),
+            (np.array(exp_data["fim"]) for exp_data in scenario["experiments"]),
             np.zeros_like(total_fim),
         )
         stored_prior = np.array(doe.results["Prior FIM"])
@@ -2198,8 +2258,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
                 doe.optimize_experiments(n_exp=1)
 
-        scenario = doe.results["Scenarios"][0]
-        self.assertTrue(np.isnan(scenario["log10 A-opt"]))
+        scenario = doe.results["param_scenarios"][0]
+        self.assertTrue(np.isnan(scenario["metrics"]["log10_a_opt"]))
         self.assertTrue(
             any("failed to compute log10 A-opt" in msg for msg in log_cm.output)
         )
@@ -2243,7 +2303,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         scenario_block = doe.model.param_scenario_blocks[0]
         self.assertTrue(hasattr(scenario_block.obj_cons, "determinant"))
-        total_fim = np.array(doe.results["Scenarios"][0]["Total FIM"])
+        total_fim = np.array(doe.results["param_scenarios"][0]["total_fim"])
         expected_det = np.linalg.det(total_fim)
         self.assertAlmostEqual(
             pyo.value(scenario_block.obj_cons.determinant), expected_det, places=6

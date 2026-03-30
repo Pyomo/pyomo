@@ -11,6 +11,7 @@ import os
 import os.path
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from pyomo.common.dependencies import (
@@ -162,6 +163,20 @@ def get_standard_args(experiment, fd_method, obj_used):
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoeBuild(unittest.TestCase):
+    def test_constructor_accepts_single_experiment_or_list(self):
+        # The public constructor should normalize either form into the same
+        # internal experiment_list representation.
+        single = DesignOfExperiments(
+            experiment=RooneyBieglerMultiExperiment(hour=2.0),
+            objective_option="pseudo_trace",
+        )
+        as_list = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+        )
+        self.assertEqual(len(single.experiment_list), 1)
+        self.assertEqual(len(as_list.experiment_list), 1)
+
     def test_rooney_biegler_fd_central_check_fd_eqns(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -551,6 +566,18 @@ class TestReactorExample(unittest.TestCase):
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEObjectiveOptions(unittest.TestCase):
+    def test_maximize_objective_set_contents(self):
+        # The objective-sense partition drives maximize/minimize scoring logic
+        # in initialization and solve helpers, so keep a direct regression on
+        # the public enum membership of the maximize set.
+        maximize = DesignOfExperiments._MAXIMIZE_OBJECTIVES
+        self.assertIn(ObjectiveLib.determinant, maximize)
+        self.assertIn(ObjectiveLib.pseudo_trace, maximize)
+        self.assertIn(ObjectiveLib.minimum_eigenvalue, maximize)
+        self.assertNotIn(ObjectiveLib.trace, maximize)
+        self.assertNotIn(ObjectiveLib.condition_number, maximize)
+        self.assertNotIn(ObjectiveLib.zero, maximize)
+
     def test_trace_constraints(self):
         fd_method = "central"
         obj_used = "trace"
@@ -675,19 +702,12 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         solver.options["max_iter"] = 3000
         return solver
 
-    def test_constructor_accepts_single_experiment_or_list(self):
-        # Tests that the public ``experiment`` argument accepts either one
-        # experiment object or a list of experiment objects.
-        single = DesignOfExperiments(
-            experiment=RooneyBieglerMultiExperiment(hour=2.0),
-            objective_option="pseudo_trace",
+    def _mock_solver_results(self, message):
+        return SimpleNamespace(
+            solver=SimpleNamespace(
+                status="ok", termination_condition="optimal", message=message
+            )
         )
-        as_list = DesignOfExperiments(
-            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
-            objective_option="pseudo_trace",
-        )
-        self.assertEqual(len(single.experiment_list), 1)
-        self.assertEqual(len(as_list.experiment_list), 1)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_init_solver_used_for_initialization_only(self):
@@ -812,19 +832,19 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertTrue(hasattr(scenario_block, "symmetry_breaking_s0_exp1"))
         self.assertEqual(len(list(scenario_block.exp_blocks.keys())), 2)
 
-        scenario_result = doe_obj.results["Scenarios"][0]
+        param_scenario = doe_obj.results["param_scenarios"][0]
         self.assertEqual(doe_obj.results["Initialization Method"], "none")
         self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 2)
-        self.assertEqual(len(scenario_result["Experiments"]), 2)
+        self.assertEqual(len(param_scenario["experiments"]), 2)
         self.assertEqual(len(doe_obj.results["Experiment Design Names"]), 1)
         self.assertEqual(len(doe_obj.results["Unknown Parameter Names"]), 2)
 
-        # New structured payload checks
+        # Results should expose a single structured parameter-scenario payload.
         self.assertIn("run_info", doe_obj.results)
         self.assertIn("settings", doe_obj.results)
         self.assertIn("timing", doe_obj.results)
         self.assertIn("names", doe_obj.results)
-        self.assertIn("scenarios", doe_obj.results)
+        self.assertIn("param_scenarios", doe_obj.results)
         self.assertEqual(
             doe_obj.results["run_info"]["solver"]["status"],
             doe_obj.results["Solver Status"],
@@ -833,14 +853,16 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             doe_obj.results["settings"]["modeling"]["n_experiments_per_scenario"], 2
         )
         self.assertFalse(doe_obj.results["settings"]["modeling"]["template_mode"])
-        self.assertEqual(len(doe_obj.results["scenarios"]), 1)
-        self.assertEqual(doe_obj.results["scenarios"][0]["id"], 0)
-        self.assertEqual(len(doe_obj.results["scenarios"][0]["experiments"]), 2)
-        self.assertEqual(doe_obj.results["scenarios"][0]["experiments"][0]["id"], 0)
+        self.assertEqual(len(doe_obj.results["param_scenarios"]), 1)
+        self.assertEqual(doe_obj.results["param_scenarios"][0]["id"], 0)
+        self.assertEqual(len(doe_obj.results["param_scenarios"][0]["experiments"]), 2)
+        self.assertEqual(
+            doe_obj.results["param_scenarios"][0]["experiments"][0]["id"], 0
+        )
 
         # hour of exp[0] should be <= hour of exp[1] due to symmetry breaking
-        h0 = scenario_result["Experiments"][0]["Experiment Design"][0]
-        h1 = scenario_result["Experiments"][1]["Experiment Design"][0]
+        h0 = param_scenario["experiments"][0]["design"][0]
+        h1 = param_scenario["experiments"][1]["design"][0]
         self.assertLessEqual(h0, h1)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -865,12 +887,11 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             payload = json.load(f)
         self.assertEqual(payload["Initialization Method"], "none")
         self.assertTrue(payload["settings"]["modeling"]["template_mode"])
-        self.assertIn("Scenarios", payload)
+        self.assertIn("param_scenarios", payload)
         self.assertIn("run_info", payload)
         self.assertIn("settings", payload)
         self.assertIn("timing", payload)
         self.assertIn("names", payload)
-        self.assertIn("scenarios", payload)
 
         path_payload = Path(results_path)
         doe_obj.optimize_experiments(n_exp=1, results_file=path_payload)
@@ -892,6 +913,73 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         doe_obj.optimize_experiments()
         self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 1)
         self.assertTrue(doe_obj.results["settings"]["modeling"]["template_mode"])
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_zero_objective_works_without_obj_cons(self):
+        # The zero objective intentionally builds no scenario.obj_cons block, so
+        # optimize_experiments() must skip the deactivate/reactivate cycle and
+        # still produce the usual results payload from the square solve.
+        init_solver = self._make_solver()
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="zero",
+            step=1e-2,
+            solver=self._make_solver(),
+        )
+        final_calls = {"n": 0}
+
+        def _mock_final_solve(*args, **kwargs):
+            final_calls["n"] += 1
+            return self._mock_solver_results("mock-zero-final")
+
+        with patch.object(doe_obj.solver, "solve", side_effect=_mock_final_solve):
+            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+
+        scenario = doe_obj.model.param_scenario_blocks[0]
+        self.assertFalse(hasattr(scenario, "obj_cons"))
+        self.assertEqual(final_calls["n"], 1)
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(doe_obj.results["Termination Message"], "mock-zero-final")
+        self.assertEqual(len(doe_obj.results["param_scenarios"][0]["experiments"]), 2)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_optimize_experiments_trace_roundoff_flag_builds_extra_constraints(self):
+        # The multi-experiment trace path optionally adds extra Cholesky/FIM
+        # diagonal constraints to reduce roundoff drift. Keep the square-solve
+        # build real, but mock the final NLP solve because this test is only
+        # checking that the additional constraints were created.
+        init_solver = self._make_solver()
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="trace",
+            step=1e-2,
+            solver=self._make_solver(),
+            improve_cholesky_roundoff_error=True,
+        )
+        final_calls = {"n": 0}
+
+        def _mock_final_solve(*args, **kwargs):
+            final_calls["n"] += 1
+            return self._mock_solver_results("mock-trace-roundoff-final")
+
+        with patch.object(doe_obj.solver, "solve", side_effect=_mock_final_solve):
+            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+
+        scenario = doe_obj.model.param_scenario_blocks[0]
+        parameter_names = list(scenario.exp_blocks[0].parameter_names)
+
+        self.assertEqual(final_calls["n"], 1)
+        self.assertTrue(hasattr(scenario.obj_cons, "cholesky_fim_diag_cons"))
+        self.assertTrue(hasattr(scenario.obj_cons, "cholesky_fim_inv_diag_cons"))
+        self.assertEqual(
+            len(scenario.obj_cons.cholesky_fim_diag_cons), len(parameter_names) ** 2
+        )
+        self.assertEqual(
+            len(scenario.obj_cons.cholesky_fim_inv_diag_cons), len(parameter_names) ** 2
+        )
+        self.assertEqual(
+            doe_obj.results["Termination Message"], "mock-trace-roundoff-final"
+        )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_timing_includes_lhs_phase_separately(self):
@@ -1030,16 +1118,13 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
         self.assertEqual(doe_obj.results["Termination Message"], "custom-message")
 
-    def test_maximize_objective_set_contents(self):
-        maximize = DesignOfExperiments._MAXIMIZE_OBJECTIVES
-        self.assertIn(ObjectiveLib.determinant, maximize)
-        self.assertIn(ObjectiveLib.pseudo_trace, maximize)
-        self.assertIn(ObjectiveLib.minimum_eigenvalue, maximize)
-        self.assertNotIn(ObjectiveLib.trace, maximize)
-        self.assertNotIn(ObjectiveLib.condition_number, maximize)
-        self.assertNotIn(ObjectiveLib.zero, maximize)
+
+class TestDoeResultsSerialization(unittest.TestCase):
+    """Coverage for DoE results payload serialization helpers."""
 
     def test_doe_results_json_encoder_handles_numpy_and_enum(self):
+        # Results payloads are written to JSON from optimize_experiments(), so
+        # the encoder must normalize numpy scalars/arrays and ObjectiveLib enums.
         payload = {
             "scalar": np.int64(7),
             "array": np.array([1.0, 2.0]),
@@ -1052,7 +1137,13 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertEqual(decoded["array"], [1.0, 2.0])
         self.assertEqual(decoded["objective"], str(ObjectiveLib.trace))
 
+
+class TestDoeBuildHelpers(unittest.TestCase):
+    """Coverage for small matrix helpers used by build/solve paths."""
+
     def test_symmetrize_lower_tri_helper(self):
+        # Only the lower-triangular FIM is stored in several code paths; this
+        # helper must mirror it to a full symmetric matrix without doubling the diagonal.
         m = np.array([[1.0, 0.0, 0.0], [2.0, 3.0, 0.0], [4.0, 5.0, 6.0]])
         got = DesignOfExperiments._symmetrize_lower_tri(m)
         expected = np.array([[1.0, 2.0, 4.0], [2.0, 3.0, 5.0], [4.0, 5.0, 6.0]])
