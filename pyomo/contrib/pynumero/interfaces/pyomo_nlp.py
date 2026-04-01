@@ -575,8 +575,8 @@ class PyomoGreyBoxNLP(NLP):
                 self._init_greybox_primals[i] = var.value
             self._greybox_primals_lb[i] = -np.inf if var.lb is None else var.lb
             self._greybox_primals_ub[i] = np.inf if var.ub is None else var.ub
-        self._greybox_primals_lb.flags.writeable = False
-        self._greybox_primals_ub.flags.writeable = False
+        self._greybox_primals_lb.flags.writable = False
+        self._greybox_primals_ub.flags.writable = False
 
         self._greybox_primals = self._init_greybox_primals.copy()
 
@@ -647,8 +647,8 @@ class PyomoGreyBoxNLP(NLP):
 
         # might want the user to be able to specify these at some point
         self._init_greybox_duals = np.zeros(self._n_greybox_constraints)
-        self._init_greybox_primals.flags.writeable = False
-        self._init_greybox_duals.flags.writeable = False
+        self._init_greybox_primals.flags.writable = False
+        self._init_greybox_duals.flags.writable = False
         self._greybox_duals = self._init_greybox_duals.copy()
 
         # compute the jacobian for the external greybox models

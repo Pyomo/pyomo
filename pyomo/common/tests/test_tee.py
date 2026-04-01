@@ -256,7 +256,7 @@ class TestTeeStream(unittest.TestCase):
         self.assertRegex(
             log.getvalue(),
             f"Error writing to output stream <logging.RootLogger @ {_id}>:"
-            r"\n.*\nIs this a writeable TextIOBase object\?\n"
+            r"\n.*\nIs this a writable TextIOBase object\?\n"
             r"The following was left in the output buffer:\n    'hi\\n'\n$",
         )
 
@@ -616,7 +616,7 @@ class TestCapture(unittest.TestCase):
             OUT.getvalue(),
             f"Error writing to output stream <builtins.int @ {_id}>:\n"
             "    AttributeError: 'int' object has no attribute 'write'\n"
-            "Is this a writeable TextIOBase object?\n"
+            "Is this a writable TextIOBase object?\n"
             "The following was left in the output buffer:\n    'hi\\n'\n",
         )
 
@@ -627,7 +627,7 @@ class TestCapture(unittest.TestCase):
             OUT.getvalue(),
             f"Error writing to output stream <builtins.int @ {_id}>:\n"
             "    AttributeError: 'int' object has no attribute 'write'\n"
-            "Is this a writeable TextIOBase object?\n"
+            "Is this a writable TextIOBase object?\n"
             "The following was left in the output buffer:\n    'hi\\n'\n",
         )
 

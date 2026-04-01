@@ -114,10 +114,10 @@ class MPIBlockVector(BaseBlockVector, np.ndarray):
 
         # make some pointers unmutable. These arrays don't change after
         # MPIBlockVector has been created
-        obj._rank_owner.flags.writeable = False
-        obj._owned_blocks.flags.writeable = False
-        obj._owned_mask.flags.writeable = False
-        obj._unique_owned_blocks.flags.writeable = False
+        obj._rank_owner.flags.writable = False
+        obj._owned_blocks.flags.writable = False
+        obj._owned_mask.flags.writable = False
+        obj._unique_owned_blocks.flags.writable = False
 
         obj._broadcasted = False
 

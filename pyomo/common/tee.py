@@ -703,7 +703,7 @@ class _StreamHandle:
                 if getattr(stream, 'closed', False):
                     msg += "Output stream closed before all output was written to it."
                 else:
-                    msg += "Is this a writeable TextIOBase object?"
+                    msg += "Is this a writable TextIOBase object?"
                 logger.error(
                     f"{msg}\nThe following was left in the output buffer:\n"
                     f"    {ostring!r}"

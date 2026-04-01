@@ -108,9 +108,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
             ), 'rank_owner must be the same in all processors'
 
         # make some of the pointers unmutable
-        self._rank_owner.flags.writeable = False
-        self._owned_mask.flags.writeable = False
-        self._unique_owned_mask.flags.writeable = False
+        self._rank_owner.flags.writable = False
+        self._owned_mask.flags.writable = False
+        self._unique_owned_mask.flags.writable = False
 
     @property
     def bshape(self):
