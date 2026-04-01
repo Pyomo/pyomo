@@ -10,9 +10,7 @@
 
 from unittest.mock import MagicMock
 
-from pyomo.opt import TerminationCondition
-from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverStatus
+from pyomo.opt import TerminationCondition as tc, SolverStatus
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
@@ -77,9 +75,9 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
         self.assertIn(
             results.solver.termination_condition,
             [
-                TerminationCondition.optimal,
-                TerminationCondition.locallyOptimal,
-                TerminationCondition.feasible,
+                tc.optimal,
+                tc.locallyOptimal,
+                tc.feasible,
             ],
         )
         # Core regression: primal values must be loaded onto the model.
@@ -118,7 +116,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
 
         self.assertIsNotNone(results)
         self.assertEqual(
-            results.solver.termination_condition, TerminationCondition.infeasible
+            results.solver.termination_condition, tc.infeasible
         )
 
     def test_short_circuit_linear_model_uses_lp_path(self):
@@ -142,7 +140,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
 
         self.assertIsNotNone(results)
         self.assertEqual(
-            results.solver.termination_condition, TerminationCondition.optimal
+            results.solver.termination_condition, tc.optimal
         )
         self.assertAlmostEqual(m.x.value, 1.0, places=4)
 
@@ -190,9 +188,9 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
         self.assertIn(
             results.solver.termination_condition,
             [
-                TerminationCondition.optimal,
-                TerminationCondition.locallyOptimal,
-                TerminationCondition.feasible,
+                tc.optimal,
+                tc.locallyOptimal,
+                tc.feasible,
             ],
         )
         self.assertAlmostEqual(m.x.value, 2.0, places=4)
@@ -219,7 +217,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
 
         self.assertIsNotNone(results)
         self.assertEqual(
-            results.solver.termination_condition, TerminationCondition.optimal
+            results.solver.termination_condition, tc.optimal
         )
         self.assertAlmostEqual(m.x.value, 5.0, places=4)
 
