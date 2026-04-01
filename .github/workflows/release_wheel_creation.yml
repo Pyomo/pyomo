@@ -60,7 +60,7 @@ jobs:
           os: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Update README.md
         shell: bash
         run: |
@@ -109,7 +109,7 @@ jobs:
           TARGET: 'py314'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Update README.md
         shell: bash
         run: |
@@ -142,7 +142,7 @@ jobs:
       matrix:
         python-version: ['3.12']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Update README.md
         shell: bash
         run: |
@@ -178,7 +178,7 @@ jobs:
           TARGET: generic_tarball
         python-version: ['3.10']
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Update README.md
       shell: bash
       run: |
