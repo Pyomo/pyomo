@@ -33,7 +33,7 @@ from pyomo.contrib.pynumero.interfaces.nlp_projections import ProjectedNLP
 from pyomo.core.base.suffix import SuffixFinder
 
 
-# Todo: make some of the numpy arrays not writeable from __init__
+# Todo: make some of the numpy arrays not writable from __init__
 class PyomoNLPWithGreyBoxBlocks(NLP):
     def __init__(self, pyomo_model):
         super(PyomoNLPWithGreyBoxBlocks, self).__init__()
