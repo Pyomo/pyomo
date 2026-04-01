@@ -77,6 +77,8 @@ class FiniteDifferenceStep(Enum):
 
 
 class GradientMethod(Enum):
+    """Available sensitivity-calculation backends for DoE workflows."""
+
     forward = "forward"
     central = "central"
     backward = "backward"
@@ -127,6 +129,12 @@ class DesignOfExperiments:
               - ``experimental_inputs``,
               - ``experimental_outputs``
 
+        gradient_method:
+            Sensitivity-calculation backend used by the DoE workflow. Options
+            are ``forward``, ``central``, ``backward``, ``pynumero``, and
+            ``kaug``. If omitted, the value from ``fd_formula`` is used for
+            backward compatibility with the existing finite-difference
+            interface.
         fd_formula:
             Finite difference formula for computing the sensitivity matrix. Must be
             one of [``central``, ``forward``, ``backward``], default: ``central``
@@ -586,7 +594,10 @@ class DesignOfExperiments:
         ----------
         model: model to compute FIM, default: None, (self.compute_FIM_model)
         method: string to specify which method should be used
-                options are ``kaug`` and ``sequential``
+                options are ``kaug`` and ``sequential``. When the
+                ``gradient_method`` is ``pynumero`` or ``kaug``, the
+                analytic sensitivity path is used regardless of this
+                argument.
 
         Returns
         -------
@@ -645,7 +656,13 @@ class DesignOfExperiments:
         return self._computed_FIM
 
     def _analytic_FIM(self, model=None):
-        """Compute the FIM using analytic/automatic sensitivities."""
+        """Compute the FIM using analytic or automatic sensitivities.
+
+        This helper is used for gradient methods that do not require
+        finite-difference scenarios. For ``pynumero``, sensitivities are
+        constructed through :class:`ExperimentGradients`. For ``kaug``,
+        sensitivities are extracted from the K_AUG interface.
+        """
         if model is None:
             self.compute_FIM_model = self.experiment.get_labeled_model(
                 **self.get_labeled_model_args
@@ -703,6 +720,7 @@ class DesignOfExperiments:
         self.analytic_FIM = self.kaug_jac.T @ cov_y @ self.kaug_jac + self.prior_FIM
 
     def _validated_fd_formula(self):
+        """Return the validated finite-difference scheme for FD gradients."""
         if not isinstance(self.fd_formula, FiniteDifferenceStep):
             raise DeveloperError(
                 "Finite difference option not recognized. Please contact "
