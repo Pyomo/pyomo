@@ -210,6 +210,19 @@ class TestUtilsFIM(unittest.TestCase):
 class TestExperimentGradients(unittest.TestCase):
     """Validate symbolic and automatic differentiation helpers."""
 
+    def _get_expected_polynomial_gradient(self):
+        """Return the exact gradient of the polynomial output at the test point."""
+        return np.array([[2.0, 3.0, 6.0, 1.0]])
+
+    def _get_expected_polynomial_fim_with_prior(self):
+        """Return a positive-definite polynomial FIM used for metric regression."""
+        gradient = self._get_expected_polynomial_gradient().ravel()
+        return np.outer(gradient, gradient) + np.eye(4)
+
+    def _evaluate_polynomial_output(self, a, b, c, d, x1=2.0, x2=3.0):
+        """Evaluate the scalar polynomial model at the test point."""
+        return a * x1 + b * x2 + c * x1 * x2 + d
+
     def test_polynomial_gradients_match_expected(self):
         """Check polynomial output sensitivities against analytic values."""
         experiment = PolynomialExperiment()
@@ -220,7 +233,7 @@ class TestExperimentGradients(unittest.TestCase):
             experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
         )
 
-        expected = np.array([[2.0, 3.0, 6.0, 1.0]])
+        expected = self._get_expected_polynomial_gradient()
 
         self.assertEqual(jacobian.shape, expected.shape)
         self.assertTrue(np.allclose(jacobian, expected))
@@ -241,6 +254,31 @@ class TestExperimentGradients(unittest.TestCase):
                 pyo.value(experiment_gradients.jac_dict_ad[key]),
             )
 
+    def test_polynomial_symbolic_matches_manual_central_difference(self):
+        """Check symbolic sensitivities against a manual central-difference estimate."""
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+        experiment_gradients = ExperimentGradients(model, symbolic=True, automatic=True)
+
+        symbolic = (
+            experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
+            .ravel()
+            .astype(float)
+        )
+        base_values = {"a": 2.0, "b": -1.0, "c": 0.5, "d": -1.0}
+        step = 1e-6
+        finite_difference = []
+        for parameter in ("a", "b", "c", "d"):
+            forward_values = dict(base_values)
+            backward_values = dict(base_values)
+            forward_values[parameter] += step
+            backward_values[parameter] -= step
+            forward = self._evaluate_polynomial_output(**forward_values)
+            backward = self._evaluate_polynomial_output(**backward_values)
+            finite_difference.append((forward - backward) / (2 * step))
+
+        self.assertTrue(np.allclose(symbolic, finite_difference, atol=1e-7, rtol=1e-7))
+
     def test_polynomial_automatic_only_still_sets_both_jacobians(self):
         """Check that both Jacobian maps are prepared in the unified setup path."""
         experiment = PolynomialExperiment()
@@ -252,6 +290,45 @@ class TestExperimentGradients(unittest.TestCase):
 
         self.assertIsNotNone(experiment_gradients.jac_dict_sd)
         self.assertIsNotNone(experiment_gradients.jac_dict_ad)
+
+    def test_polynomial_metric_helpers_match_numpy(self):
+        """Check utility metrics on a polynomial-derived positive-definite FIM."""
+        FIM = self._get_expected_polynomial_fim_with_prior()
+        fim_metrics = get_FIM_metrics(FIM)
+        (
+            det_FIM,
+            trace_cov,
+            trace_FIM,
+            E_vals,
+            E_vecs,
+            D_opt,
+            A_opt,
+            pseudo_A_opt,
+            E_opt,
+            ME_opt,
+        ) = compute_FIM_metrics(FIM)
+
+        self.assertAlmostEqual(det_FIM, np.linalg.det(FIM))
+        self.assertAlmostEqual(trace_cov, np.trace(np.linalg.inv(FIM)))
+        self.assertAlmostEqual(trace_FIM, np.trace(FIM))
+
+        expected_eigs, _expected_vecs = np.linalg.eigh(FIM)
+        self.assertTrue(np.allclose(np.sort(E_vals), np.sort(expected_eigs)))
+        self.assertEqual(E_vecs.shape, FIM.shape)
+
+        self.assertAlmostEqual(D_opt, np.log10(np.linalg.det(FIM)))
+        self.assertAlmostEqual(A_opt, np.log10(np.trace(np.linalg.inv(FIM))))
+        self.assertAlmostEqual(pseudo_A_opt, np.log10(np.trace(FIM)))
+        self.assertAlmostEqual(E_opt, np.log10(np.min(expected_eigs)))
+        self.assertAlmostEqual(
+            ME_opt, np.log10(np.max(expected_eigs) / np.min(expected_eigs))
+        )
+
+        self.assertAlmostEqual(fim_metrics["Determinant of FIM"], np.linalg.det(FIM))
+        self.assertAlmostEqual(
+            fim_metrics["Trace of cov"], np.trace(np.linalg.inv(FIM))
+        )
+        self.assertAlmostEqual(fim_metrics["Trace of FIM"], np.trace(FIM))
 
     def test_polynomial_symbolic_only_still_sets_both_jacobians(self):
         """Check that symbolic-only requests still initialize both Jacobian maps."""

@@ -33,7 +33,10 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.examples.polynomial import run_polynomial_doe
+    from pyomo.contrib.doe.examples.polynomial import (
+        PolynomialExperiment,
+        run_polynomial_doe,
+    )
     from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
@@ -161,6 +164,39 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['_Cholesky_option'] = True
     args['_only_compute_fim_lower'] = True
     return args
+
+
+def get_polynomial_experiment(measurement_error=1.0):
+    """Build a fresh polynomial experiment with a configurable measurement error."""
+    experiment = PolynomialExperiment(data=None)
+    model = experiment.get_labeled_model()
+    model.measurement_error[model.y] = measurement_error
+    return experiment
+
+
+def get_polynomial_args(
+    gradient_method=None,
+    measurement_error=1.0,
+    prior_FIM=None,
+    objective_option="determinant",
+):
+    """Return standard DoE arguments for the public polynomial example."""
+    experiment = get_polynomial_experiment(measurement_error=measurement_error)
+    DoE_args = get_standard_args(experiment, "central", objective_option)
+    DoE_args["scale_nominal_param_value"] = False
+    DoE_args["prior_FIM"] = prior_FIM
+    if gradient_method is not None:
+        DoE_args["gradient_method"] = gradient_method
+    return DoE_args
+
+
+def get_expected_polynomial_fim(x1=1.0, x2=1.0, measurement_error=1.0, prior_FIM=None):
+    """Return the hand-derived polynomial Fisher information matrix."""
+    sensitivity = np.array([x1, x2, x1 * x2, 1.0], dtype=float)
+    fim = np.outer(sensitivity, sensitivity) / (measurement_error**2)
+    if prior_FIM is not None:
+        fim = fim + prior_FIM
+    return fim
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -530,16 +566,61 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
     def test_polynomial_example_compute_fim_pynumero(self):
         """Check that the transplanted polynomial example computes the expected FIM."""
         fim = run_polynomial_doe()
-        expected = np.array(
-            [
-                [1.0, 1.0, 1.0, 1.0],
-                [1.0, 1.0, 1.0, 1.0],
-                [1.0, 1.0, 1.0, 1.0],
-                [1.0, 1.0, 1.0, 1.0],
-            ]
-        )
+        expected = get_expected_polynomial_fim()
         self.assertEqual(fim.shape, expected.shape)
         self.assertTrue(np.allclose(fim, expected))
+
+    def test_polynomial_example_compute_fim_central_smoke(self):
+        """Check that the finite-difference polynomial path returns a symmetric FIM."""
+        doe_obj = DesignOfExperiments(**get_polynomial_args())
+        fim = doe_obj.compute_FIM()
+
+        self.assertEqual(fim.shape, (4, 4))
+        self.assertTrue(np.all(np.isfinite(fim)))
+        self.assertTrue(np.allclose(fim, fim.T))
+
+    def test_polynomial_example_measurement_error_scaling(self):
+        """Check that doubling the measurement error scales the FIM by one quarter."""
+        fim_sigma_one = DesignOfExperiments(
+            **get_polynomial_args(gradient_method="pynumero", measurement_error=1.0)
+        ).compute_FIM()
+        fim_sigma_two = DesignOfExperiments(
+            **get_polynomial_args(gradient_method="pynumero", measurement_error=2.0)
+        ).compute_FIM()
+
+        self.assertTrue(np.allclose(fim_sigma_two, fim_sigma_one / 4.0))
+        self.assertTrue(
+            np.allclose(
+                fim_sigma_two, get_expected_polynomial_fim(measurement_error=2.0)
+            )
+        )
+
+    def test_polynomial_example_prior_fim_adds_directly(self):
+        """Check that the polynomial example adds prior information entry-wise."""
+        prior_FIM = np.diag([1.0, 2.0, 3.0, 4.0])
+        doe_obj = DesignOfExperiments(
+            **get_polynomial_args(
+                gradient_method="pynumero", measurement_error=1.0, prior_FIM=prior_FIM
+            )
+        )
+        expected = get_expected_polynomial_fim(prior_FIM=prior_FIM)
+
+        self.assertTrue(np.allclose(doe_obj.compute_FIM(), expected))
+
+    def test_polynomial_example_run_doe_smoke(self):
+        """Check that the public polynomial example can solve a tiny DoE problem."""
+        prior_FIM = np.eye(4)
+        doe_obj = DesignOfExperiments(
+            **get_polynomial_args(
+                gradient_method="pynumero",
+                prior_FIM=prior_FIM,
+                objective_option="trace",
+            )
+        )
+
+        doe_obj.run_doe()
+
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
     def test_rescale_FIM(self):
         fd_method = "central"
