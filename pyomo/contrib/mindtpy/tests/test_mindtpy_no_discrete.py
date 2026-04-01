@@ -74,11 +74,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
         self.assertIsNotNone(results)
         self.assertIn(
             results.solver.termination_condition,
-            [
-                tc.optimal,
-                tc.locallyOptimal,
-                tc.feasible,
-            ],
+            [tc.optimal, tc.locallyOptimal, tc.feasible],
         )
         # Core regression: primal values must be loaded onto the model.
         self.assertIsNotNone(
@@ -115,9 +111,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
             )
 
         self.assertIsNotNone(results)
-        self.assertEqual(
-            results.solver.termination_condition, tc.infeasible
-        )
+        self.assertEqual(results.solver.termination_condition, tc.infeasible)
 
     def test_short_circuit_linear_model_uses_lp_path(self):
         """Linear model with fixed discrete should use LP short-circuit."""
@@ -139,9 +133,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
             )
 
         self.assertIsNotNone(results)
-        self.assertEqual(
-            results.solver.termination_condition, tc.optimal
-        )
+        self.assertEqual(results.solver.termination_condition, tc.optimal)
         self.assertAlmostEqual(m.x.value, 1.0, places=4)
 
     def test_short_circuit_minimize_nlp_correct_solution(self):
@@ -187,11 +179,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
         self.assertIsNotNone(results)
         self.assertIn(
             results.solver.termination_condition,
-            [
-                tc.optimal,
-                tc.locallyOptimal,
-                tc.feasible,
-            ],
+            [tc.optimal, tc.locallyOptimal, tc.feasible],
         )
         self.assertAlmostEqual(m.x.value, 2.0, places=4)
         # Lower bound should be populated (primal bound for maximization)
@@ -216,9 +204,7 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
             )
 
         self.assertIsNotNone(results)
-        self.assertEqual(
-            results.solver.termination_condition, tc.optimal
-        )
+        self.assertEqual(results.solver.termination_condition, tc.optimal)
         self.assertAlmostEqual(m.x.value, 5.0, places=4)
 
 
