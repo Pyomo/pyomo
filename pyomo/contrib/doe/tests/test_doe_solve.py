@@ -33,6 +33,7 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
+    from pyomo.contrib.doe.examples.polynomial import run_polynomial_doe
     from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
@@ -492,6 +493,53 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
         self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+
+    def test_reactor_run_doe_gradient_matrix(self):
+        """Exercise the old symbolic-branch reactor run_doe matrix."""
+        test_cases = [
+            ("central", "trace"),
+            ("central", "determinant"),
+            ("central", "zero"),
+            ("backward", "trace"),
+            ("backward", "determinant"),
+            ("forward", "trace"),
+            ("forward", "determinant"),
+            ("pynumero", "trace"),
+            ("pynumero", "determinant"),
+            ("pynumero", "zero"),
+        ]
+
+        for gradient_method, objective_option in test_cases:
+            with self.subTest(
+                gradient_method=gradient_method, objective_option=objective_option
+            ):
+                experiment = FullReactorExperiment(data_ex, 10, 3)
+                DoE_args = get_standard_args(experiment, "central", objective_option)
+                DoE_args["gradient_method"] = gradient_method
+
+                doe_obj = DesignOfExperiments(**DoE_args)
+                doe_obj.run_doe()
+
+                self.assertEqual(doe_obj.results["Solver Status"], "ok")
+
+                FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
+                if objective_option == "determinant":
+                    self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
+                self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+
+    def test_polynomial_example_compute_fim_pynumero(self):
+        """Check that the transplanted polynomial example computes the expected FIM."""
+        fim = run_polynomial_doe()
+        expected = np.array(
+            [
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+            ]
+        )
+        self.assertEqual(fim.shape, expected.shape)
+        self.assertTrue(np.allclose(fim, expected))
 
     def test_rescale_FIM(self):
         fd_method = "central"

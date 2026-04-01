@@ -23,10 +23,13 @@ from pyomo.contrib.doe.utils import (
 
 
 class PolynomialExperiment(Experiment):
+    """A small polynomial experiment used to validate symbolic gradients."""
+
     def __init__(self):
         self.model = None
 
     def get_labeled_model(self):
+        """Build and label the experiment model on first access."""
         if self.model is None:
             self.create_model()
             self.finalize_model()
@@ -48,9 +51,11 @@ class PolynomialExperiment(Experiment):
             return m.y == m.a * m.x1 + m.b * m.x2 + m.c * m.x1 * m.x2 + m.d
 
     def finalize_model(self):
+        """No additional model finalization is needed for this example."""
         pass
 
     def label_experiment(self):
+        """Attach the standard DoE suffixes to the polynomial model."""
         m = self.model
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_outputs[m.y] = None
@@ -203,7 +208,10 @@ class TestUtilsFIM(unittest.TestCase):
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestExperimentGradients(unittest.TestCase):
+    """Validate symbolic and automatic differentiation helpers."""
+
     def test_polynomial_gradients_match_expected(self):
+        """Check polynomial output sensitivities against analytic values."""
         experiment = PolynomialExperiment()
         model = experiment.get_labeled_model()
 
@@ -218,6 +226,7 @@ class TestExperimentGradients(unittest.TestCase):
         self.assertTrue(np.allclose(jacobian, expected))
 
     def test_polynomial_symbolic_and_automatic_jacobians_agree(self):
+        """Ensure symbolic and automatic Jacobian entries agree exactly."""
         experiment = PolynomialExperiment()
         model = experiment.get_labeled_model()
 
