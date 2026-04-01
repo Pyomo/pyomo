@@ -81,4 +81,6 @@ Bimap = "Bimap"
 cmo = "cmo"
 # Substituters
 Substituters = "Substituters"
+# NumPy flags attribute and existing user-facing messages
+writeable = "writeable"
 # AS NEEDED: Add More Words Below
