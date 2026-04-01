@@ -241,6 +241,30 @@ class TestExperimentGradients(unittest.TestCase):
                 pyo.value(experiment_gradients.jac_dict_ad[key]),
             )
 
+    def test_polynomial_automatic_only_still_sets_both_jacobians(self):
+        """Check that both Jacobian maps are prepared in the unified setup path."""
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        experiment_gradients = ExperimentGradients(
+            model, symbolic=False, automatic=True
+        )
+
+        self.assertIsNotNone(experiment_gradients.jac_dict_sd)
+        self.assertIsNotNone(experiment_gradients.jac_dict_ad)
+
+    def test_polynomial_symbolic_only_still_sets_both_jacobians(self):
+        """Check that symbolic-only requests still initialize both Jacobian maps."""
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        experiment_gradients = ExperimentGradients(
+            model, symbolic=True, automatic=False
+        )
+
+        self.assertIsNotNone(experiment_gradients.jac_dict_sd)
+        self.assertIsNotNone(experiment_gradients.jac_dict_ad)
+
 
 if __name__ == "__main__":
     unittest.main()

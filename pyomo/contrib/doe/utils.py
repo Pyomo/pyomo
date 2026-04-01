@@ -291,8 +291,11 @@ class ExperimentGradients:
         self.jac_dict_ad = None
         self.jac_measurements_wrt_param = None
 
+        self._requested_symbolic = symbolic
+        self._requested_automatic = automatic
+
         if symbolic or automatic:
-            self._perform_differentiation(symbolic=symbolic, automatic=automatic)
+            self._setup_differentiation()
 
     def _analyze_experiment_model(self):
         model = self.model
@@ -358,12 +361,13 @@ class ExperimentGradients:
         self.measurement_mapping = measurement_mapping
         self.parameter_mapping = parameter_mapping
 
-    def _perform_differentiation(self, symbolic=True, automatic=True):
-        if not symbolic and not automatic:
+    def _setup_differentiation(self):
+        """Build symbolic and automatic Jacobian maps in a single pass."""
+        if not self._requested_symbolic and not self._requested_automatic:
             raise ValueError("At least one differentiation method must be selected.")
 
-        jac_dict_sd = {} if symbolic else None
-        jac_dict_ad = {} if automatic else None
+        jac_dict_sd = {}
+        jac_dict_ad = {}
 
         for i, c in enumerate(self.con_list):
             if not c.equality:
@@ -371,21 +375,19 @@ class ExperimentGradients:
                     "ExperimentGradients currently requires equality constraints."
                 )
 
-            der_map_sd = reverse_sd(c.body) if symbolic else None
-            der_map_ad = reverse_ad(c.body) if automatic else None
+            der_map_sd = reverse_sd(c.body)
+            der_map_ad = reverse_ad(c.body)
 
             for j, v in enumerate(self.var_list):
-                if symbolic:
-                    jac_dict_sd[(i, j)] = der_map_sd.get(v, 0)
-                if automatic:
-                    jac_dict_ad[(i, j)] = der_map_ad.get(v, 0)
+                jac_dict_sd[(i, j)] = der_map_sd.get(v, 0)
+                jac_dict_ad[(i, j)] = der_map_ad.get(v, 0)
 
         self.jac_dict_sd = jac_dict_sd
         self.jac_dict_ad = jac_dict_ad
 
     def compute_gradient_outputs_wrt_unknown_parameters(self):
         if self.jac_dict_ad is None:
-            self._perform_differentiation(symbolic=False, automatic=True)
+            self._setup_differentiation()
 
         jac_con_wrt_param = np.zeros((self.num_constraints, self.num_params))
         for i in range(self.num_constraints):
@@ -412,7 +414,7 @@ class ExperimentGradients:
 
     def construct_sensitivity_constraints(self, model=None):
         if self.jac_dict_sd is None:
-            self._perform_differentiation(symbolic=True, automatic=False)
+            self._setup_differentiation()
 
         if model is None:
             model = self.model

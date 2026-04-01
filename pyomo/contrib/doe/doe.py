@@ -678,7 +678,7 @@ class DesignOfExperiments:
         self.solver.solve(model, tee=self.tee)
 
         if self._gradient_method == GradientMethod.pynumero:
-            experiment_grad = ExperimentGradients(model, automatic=True, symbolic=False)
+            experiment_grad = ExperimentGradients(model, automatic=True, symbolic=True)
             jac = experiment_grad.compute_gradient_outputs_wrt_unknown_parameters()
             if self.scale_nominal_param_value:
                 for i, (_, v) in enumerate(model.unknown_parameters.items()):
