@@ -661,9 +661,7 @@ class DesignOfExperiments:
         self.solver.solve(model, tee=self.tee)
 
         if self._gradient_method == GradientMethod.pynumero:
-            experiment_grad = ExperimentGradients(
-                model, automatic=True, symbolic=False
-            )
+            experiment_grad = ExperimentGradients(model, automatic=True, symbolic=False)
             jac = experiment_grad.compute_gradient_outputs_wrt_unknown_parameters()
             if self.scale_nominal_param_value:
                 for i, (_, v) in enumerate(model.unknown_parameters.items()):
@@ -1373,7 +1371,10 @@ class DesignOfExperiments:
                 for ind, k in enumerate(model.base_model.unknown_parameters.keys())
             )
             model.scenarios = range(len(model.base_model.unknown_parameters) * 2)
-        elif fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
+        elif fd_formula in [
+            FiniteDifferenceStep.forward,
+            FiniteDifferenceStep.backward,
+        ]:
             model.parameter_scenarios.update(
                 (ind + 1, k)
                 for ind, k in enumerate(model.base_model.unknown_parameters.keys())
@@ -1413,7 +1414,10 @@ class DesignOfExperiments:
 
             # Forward/Backward difference have a stationary
             # case (s == 0), no parameter to perturb
-            if fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
+            if fd_formula in [
+                FiniteDifferenceStep.forward,
+                FiniteDifferenceStep.backward,
+            ]:
                 if s == 0:
                     return
 

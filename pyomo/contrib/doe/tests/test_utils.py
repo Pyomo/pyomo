@@ -9,7 +9,10 @@
 from pyomo.common.dependencies import numpy as np, numpy_available
 
 import pyomo.common.unittest as unittest
+import pyomo.environ as pyo
+from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.doe.utils import (
+    ExperimentGradients,
     check_FIM,
     compute_FIM_metrics,
     get_FIM_metrics,
@@ -17,6 +20,50 @@ from pyomo.contrib.doe.utils import (
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
 )
+
+
+class PolynomialExperiment(Experiment):
+    def __init__(self):
+        self.model = None
+
+    def get_labeled_model(self):
+        if self.model is None:
+            self.create_model()
+            self.finalize_model()
+            self.label_experiment()
+        return self.model
+
+    def create_model(self):
+        m = self.model = pyo.ConcreteModel()
+        m.x1 = pyo.Var(bounds=(-5, 5), initialize=2)
+        m.x2 = pyo.Var(bounds=(-5, 5), initialize=3)
+        m.a = pyo.Var(bounds=(-5, 5), initialize=2)
+        m.b = pyo.Var(bounds=(-5, 5), initialize=-1)
+        m.c = pyo.Var(bounds=(-5, 5), initialize=0.5)
+        m.d = pyo.Var(bounds=(-5, 5), initialize=-1)
+        m.y = pyo.Var(initialize=0)
+
+        @m.Constraint()
+        def output_equation(m):
+            return m.y == m.a * m.x1 + m.b * m.x2 + m.c * m.x1 * m.x2 + m.d
+
+    def finalize_model(self):
+        pass
+
+    def label_experiment(self):
+        m = self.model
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs[m.y] = None
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error[m.y] = 1
+
+        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_inputs[m.x1] = None
+        m.experiment_inputs[m.x2] = None
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update((k, pyo.value(k)) for k in [m.a, m.b, m.c, m.d])
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -152,6 +199,38 @@ class TestUtilsFIM(unittest.TestCase):
         self.assertAlmostEqual(
             fim_metrics["log10(Modified E-Optimality)"], expected['ME_opt']
         )
+
+
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+class TestExperimentGradients(unittest.TestCase):
+    def test_polynomial_gradients_match_expected(self):
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        experiment_gradients = ExperimentGradients(model, symbolic=True, automatic=True)
+        jacobian = (
+            experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
+        )
+
+        expected = np.array([[2.0, 3.0, 6.0, 1.0]])
+
+        self.assertEqual(jacobian.shape, expected.shape)
+        self.assertTrue(np.allclose(jacobian, expected))
+
+    def test_polynomial_symbolic_and_automatic_jacobians_agree(self):
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        experiment_gradients = ExperimentGradients(model, symbolic=True, automatic=True)
+
+        self.assertEqual(
+            set(experiment_gradients.jac_dict_sd), set(experiment_gradients.jac_dict_ad)
+        )
+        for key in experiment_gradients.jac_dict_sd:
+            self.assertAlmostEqual(
+                pyo.value(experiment_gradients.jac_dict_sd[key]),
+                pyo.value(experiment_gradients.jac_dict_ad[key]),
+            )
 
 
 if __name__ == "__main__":

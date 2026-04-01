@@ -408,6 +408,24 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
             np.all(np.isclose(doe_obj.compute_FIM(method="kaug"), expected_FIM))
         )
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_compute_FIM_pynumero(self):
+        fd_method = "central"
+        obj_used = "zero"
+
+        experiment = get_rooney_biegler_experiment()
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["gradient_method"] = "pynumero"
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        expected_FIM = np.array(
+            [[18957.7788694, 4238.27606876], [4238.27606876, 947.52577076]]
+        )
+
+        self.assertTrue(np.all(np.isclose(doe_obj.compute_FIM(), expected_FIM)))
+
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with backward finite differences
     @unittest.skipIf(not pandas_available, "pandas is not available")
@@ -456,6 +474,24 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
             (set(CA_vals).issuperset(set([1, 5])))
             and (set(T_vals).issuperset(set([300, 700])))
         )
+
+    def test_reactor_run_doe_pynumero(self):
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["gradient_method"] = "pynumero"
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.run_doe()
+
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
+
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
+        self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
+        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
     def test_rescale_FIM(self):
         fd_method = "central"

@@ -360,9 +360,7 @@ class ExperimentGradients:
 
     def _perform_differentiation(self, symbolic=True, automatic=True):
         if not symbolic and not automatic:
-            raise ValueError(
-                "At least one differentiation method must be selected."
-            )
+            raise ValueError("At least one differentiation method must be selected.")
 
         jac_dict_sd = {} if symbolic else None
         jac_dict_ad = {} if automatic else None

@@ -763,6 +763,22 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.compute_FIM(method="Bad Method")
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_run_doe_rejects_kaug_gradient_method(self):
+        experiment = get_rooney_biegler_experiment_flag()
+
+        DoE_args = get_standard_args(
+            experiment, fd_method="central", obj_used="pseudo_trace", flag=None
+        )
+        DoE_args["gradient_method"] = "kaug"
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        with self.assertRaisesRegex(
+            ValueError, "Cannot use GradientMethod.kaug for DoE optimization."
+        ):
+            doe_obj.run_doe()
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_invalid_trace_without_cholesky(self):
         fd_method = "central"
         obj_used = "trace"
