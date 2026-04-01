@@ -81,4 +81,6 @@ Bimap = "Bimap"
 cmo = "cmo"
 # Substituters
 Substituters = "Substituters"
+# numpy uses writeable in their API, which causes us problems
+writeable = "writeable"
 # AS NEEDED: Add More Words Below
