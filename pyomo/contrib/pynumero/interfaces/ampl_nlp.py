@@ -128,16 +128,16 @@ class AslNLP(ExtendedNLP):
         self._init_duals_full = np.zeros(self._n_con_full, dtype=np.float64)
         self._asl.get_init_x(self._init_primals)
         self._asl.get_init_multipliers(self._init_duals_full)
-        self._init_primals.flags.writable = False
-        self._init_duals_full.flags.writable = False
+        self._init_primals.flags.writeable = False
+        self._init_duals_full.flags.writeable = False
 
         # get the bounds on the primal variables
         self._primals_lb = np.zeros(self._n_primals, dtype=np.float64)
         self._primals_ub = np.zeros(self._n_primals, dtype=np.float64)
         self._asl.get_x_lower_bounds(self._primals_lb)
         self._asl.get_x_upper_bounds(self._primals_ub)
-        self._primals_lb.flags.writable = False
-        self._primals_ub.flags.writable = False
+        self._primals_lb.flags.writeable = False
+        self._primals_ub.flags.writeable = False
 
         # get the bounds on the constraints (equality and
         # inequality are mixed in the ampl solver library)
@@ -163,16 +163,16 @@ class AslNLP(ExtendedNLP):
         # inequalities (extracted from con_full)
         self._con_ineq_lb = np.compress(self._con_full_ineq_mask, self._con_full_lb)
         self._con_ineq_ub = np.compress(self._con_full_ineq_mask, self._con_full_ub)
-        self._con_ineq_lb.flags.writable = False
-        self._con_ineq_ub.flags.writable = False
+        self._con_ineq_lb.flags.writeable = False
+        self._con_ineq_ub.flags.writeable = False
 
         # get the initial values for the dual variables
         self._init_duals_eq = np.compress(self._con_full_eq_mask, self._init_duals_full)
         self._init_duals_ineq = np.compress(
             self._con_full_ineq_mask, self._init_duals_full
         )
-        self._init_duals_eq.flags.writable = False
-        self._init_duals_ineq.flags.writable = False
+        self._init_duals_eq.flags.writeable = False
+        self._init_duals_ineq.flags.writeable = False
 
         # TODO: Should we be doing this or not?
         # adjust the rhs to be 0 for equality constraints (in both full and eq)
@@ -182,8 +182,8 @@ class AslNLP(ExtendedNLP):
         # change the upper and lower bounds to zero for equality constraints
         self._con_full_lb[self._con_full_eq_mask] = 0.0
         self._con_full_ub[self._con_full_eq_mask] = 0.0
-        self._con_full_lb.flags.writable = False
-        self._con_full_ub.flags.writable = False
+        self._con_full_lb.flags.writeable = False
+        self._con_full_ub.flags.writeable = False
 
         # set number of equatity and inequality constraints from maps
         self._n_con_eq = len(self._con_eq_full_map)
@@ -195,8 +195,8 @@ class AslNLP(ExtendedNLP):
         self._asl.struct_jac_g(self._irows_jac_full, self._jcols_jac_full)
         self._irows_jac_full -= 1
         self._jcols_jac_full -= 1
-        self._irows_jac_full.flags.writable = False
-        self._jcols_jac_full.flags.writable = False
+        self._irows_jac_full.flags.writeable = False
+        self._jcols_jac_full.flags.writeable = False
 
         self._nz_con_full_eq_mask = np.isin(self._irows_jac_full, self._con_eq_full_map)
         self._nz_con_full_ineq_mask = np.logical_not(self._nz_con_full_eq_mask)
@@ -228,10 +228,10 @@ class AslNLP(ExtendedNLP):
         for i, v in enumerate(self._irows_jac_ineq):
             self._irows_jac_ineq[i] = full_ineq_map[v]
 
-        self._irows_jac_eq.flags.writable = False
-        self._jcols_jac_eq.flags.writable = False
-        self._irows_jac_ineq.flags.writable = False
-        self._jcols_jac_ineq.flags.writable = False
+        self._irows_jac_eq.flags.writeable = False
+        self._jcols_jac_eq.flags.writeable = False
+        self._irows_jac_ineq.flags.writeable = False
+        self._jcols_jac_ineq.flags.writeable = False
 
         # set nnz for equality and inequality jacobian
         self._nnz_jac_eq = len(self._jcols_jac_eq)
@@ -252,8 +252,8 @@ class AslNLP(ExtendedNLP):
         self._jcols_hess = np.concatenate((self._jcols_hess, self._irows_hess[lower]))
         self._nnz_hessian_lag = self._irows_hess.size
 
-        self._irows_hess.flags.writable = False
-        self._jcols_hess.flags.writable = False
+        self._irows_hess.flags.writeable = False
+        self._jcols_hess.flags.writeable = False
 
     def _build_constraint_maps(self):
         """Creates internal maps and masks that convert from the full
@@ -276,10 +276,10 @@ class AslNLP(ExtendedNLP):
         self._con_eq_full_map = self._con_full_eq_mask.nonzero()[0]
         self._con_full_ineq_mask = abs_bounds_difference >= tolerance_equalities
         self._con_ineq_full_map = self._con_full_ineq_mask.nonzero()[0]
-        self._con_full_eq_mask.flags.writable = False
-        self._con_eq_full_map.flags.writable = False
-        self._con_full_ineq_mask.flags.writable = False
-        self._con_ineq_full_map.flags.writable = False
+        self._con_full_eq_mask.flags.writeable = False
+        self._con_eq_full_map.flags.writeable = False
+        self._con_full_ineq_mask.flags.writeable = False
+        self._con_ineq_full_map.flags.writeable = False
 
         # these do not appear to be used anywhere - keeping the logic for now
         """
@@ -293,10 +293,10 @@ class AslNLP(ExtendedNLP):
         self._lb_ineq_map = np.where(self._ineq_lb_mask)[0]
         self._ineq_ub_mask = np.isin(self._ineq_g_map, ub_g_map)
         self._ub_ineq_map = np.where(self._ineq_ub_mask)[0]
-        self._ineq_lb_mask.flags.writable = False
-        self._lb_ineq_map.flags.writable = False
-        self._ineq_ub_mask.flags.writable = False
-        self._ub_ineq_map.flags.writable = False
+        self._ineq_lb_mask.flags.writeable = False
+        self._lb_ineq_map.flags.writeable = False
+        self._ineq_ub_mask.flags.writeable = False
+        self._ub_ineq_map.flags.writeable = False
         """
 
     # overloaded from NLP

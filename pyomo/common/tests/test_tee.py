@@ -112,11 +112,11 @@ class TestTeeStream(unittest.TestCase):
             err.write("err1\n")
             err.writelines(["err2\n", "err3\n"])
         self.assertEqual(a.getvalue(), "out1\nout2\nout3\nerr1\nerr2\nerr3\n")
-        # Note: 'is not writable' appears to work for all platforms
+        # Note: 'is not writeable' appears to work for all platforms
         # except PyPy, where the exception is "readonly attribute
         # 'name'"
         with self.assertRaisesRegex(
-            AttributeError, '.*(is not writable)|(readonly attribute)'
+            AttributeError, '.*(is not writeable)|(readonly attribute)'
         ):
             tee.TeeStream().STDOUT.name = 'foo'
 
@@ -256,7 +256,7 @@ class TestTeeStream(unittest.TestCase):
         self.assertRegex(
             log.getvalue(),
             f"Error writing to output stream <logging.RootLogger @ {_id}>:"
-            r"\n.*\nIs this a writable TextIOBase object\?\n"
+            r"\n.*\nIs this a writeable TextIOBase object\?\n"
             r"The following was left in the output buffer:\n    'hi\\n'\n$",
         )
 
@@ -616,7 +616,7 @@ class TestCapture(unittest.TestCase):
             OUT.getvalue(),
             f"Error writing to output stream <builtins.int @ {_id}>:\n"
             "    AttributeError: 'int' object has no attribute 'write'\n"
-            "Is this a writable TextIOBase object?\n"
+            "Is this a writeable TextIOBase object?\n"
             "The following was left in the output buffer:\n    'hi\\n'\n",
         )
 
@@ -627,7 +627,7 @@ class TestCapture(unittest.TestCase):
             OUT.getvalue(),
             f"Error writing to output stream <builtins.int @ {_id}>:\n"
             "    AttributeError: 'int' object has no attribute 'write'\n"
-            "Is this a writable TextIOBase object?\n"
+            "Is this a writeable TextIOBase object?\n"
             "The following was left in the output buffer:\n    'hi\\n'\n",
         )
 
