@@ -503,6 +503,86 @@ class TestDoEErrors(unittest.TestCase):
                 fixed_design_variables={"hour": 1},
             )
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_reactor_figure_drawing_more_than_two_sens_vars(self):
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        synthetic_results = {
+            "hour": [1.0, 2.0],
+            "temperature": [300.0, 310.0],
+            "pressure": [1.0, 1.1],
+            "log10 D-opt": [1.0, 2.0],
+            "log10 A-opt": [0.1, 0.2],
+            "log10 pseudo A-opt": [0.3, 0.4],
+            "log10 E-opt": [0.5, 0.6],
+            "log10 ME-opt": [0.7, 0.8],
+            "eigval_min": [1.0, 2.0],
+            "eigval_max": [3.0, 4.0],
+            "det_FIM": [5.0, 6.0],
+            "trace_cov": [7.0, 8.0],
+            "trace_FIM": [9.0, 10.0],
+            "solve_time": [0.01, 0.02],
+        }
+
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Currently, only 1D and 2D sensitivity plotting is supported.",
+        ):
+            doe_obj.draw_factorial_figure(
+                results=synthetic_results,
+                sensitivity_design_variables=["hour", "temperature", "pressure"],
+                fixed_design_variables={},
+                full_design_variable_names=["hour", "temperature", "pressure"],
+            )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_reactor_figure_drawing_requires_all_other_design_vars_fixed(self):
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = run_rooney_biegler_doe()["experiment"]
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        # Use a synthetic table shape that mimics multiple design variables so we can
+        # exercise the dimensionality guard without needing a heavier example.
+        synthetic_results = {
+            "hour": [1.0, 2.0],
+            "temperature": [300.0, 300.0],
+            "pressure": [1.0, 1.0],
+            "log10 D-opt": [1.0, 2.0],
+            "log10 A-opt": [0.1, 0.2],
+            "log10 pseudo A-opt": [0.3, 0.4],
+            "log10 E-opt": [0.5, 0.6],
+            "log10 ME-opt": [0.7, 0.8],
+            "eigval_min": [1.0, 2.0],
+            "eigval_max": [3.0, 4.0],
+            "det_FIM": [5.0, 6.0],
+            "trace_cov": [7.0, 8.0],
+            "trace_FIM": [9.0, 10.0],
+            "solve_time": [0.01, 0.02],
+        }
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Error: All design variables that are not used to generate sensitivity plots must be fixed.",
+        ):
+            doe_obj.draw_factorial_figure(
+                results=synthetic_results,
+                sensitivity_design_variables=["hour"],
+                fixed_design_variables={"temperature": 300.0},
+                full_design_variable_names=["hour", "temperature", "pressure"],
+            )
+
     def test_reactor_check_get_FIM_without_FIM(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -761,6 +841,22 @@ class TestDoEErrors(unittest.TestCase):
             ),
         ):
             doe_obj.compute_FIM(method="Bad Method")
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_run_doe_rejects_kaug_gradient_method(self):
+        experiment = get_rooney_biegler_experiment_flag()
+
+        DoE_args = get_standard_args(
+            experiment, fd_method="central", obj_used="pseudo_trace", flag=None
+        )
+        DoE_args["gradient_method"] = "kaug"
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        with self.assertRaisesRegex(
+            ValueError, "Cannot use GradientMethod.kaug for DoE optimization."
+        ):
+            doe_obj.run_doe()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_invalid_trace_without_cholesky(self):

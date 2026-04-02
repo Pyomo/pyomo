@@ -6,10 +6,24 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-from pyomo.common.dependencies import numpy as np, numpy_available
+import copy
+import json
+import os.path
+
+from pyomo.common.dependencies import (
+    numpy as np,
+    numpy_available,
+    pandas as pd,
+    pandas_available,
+    scipy_available,
+)
+from pyomo.common.fileutils import this_file_dir
 
 import pyomo.common.unittest as unittest
+import pyomo.environ as pyo
+from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.doe.utils import (
+    ExperimentGradients,
     check_FIM,
     compute_FIM_metrics,
     get_FIM_metrics,
@@ -17,6 +31,72 @@ from pyomo.contrib.doe.utils import (
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
 )
+
+if scipy_available:
+    from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+        RooneyBieglerExperiment,
+    )
+from pyomo.opt import SolverFactory
+
+currdir = this_file_dir()
+file_path = os.path.join(currdir, "..", "examples", "result.json")
+
+with open(file_path) as f:
+    data_ex = json.load(f)
+
+data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
+
+ipopt_available = SolverFactory("ipopt").available()
+
+
+class PolynomialExperiment(Experiment):
+    """A small polynomial experiment used to validate symbolic gradients."""
+
+    def __init__(self):
+        self.model = None
+
+    def get_labeled_model(self):
+        """Build and label the experiment model on first access."""
+        if self.model is None:
+            self.create_model()
+            self.finalize_model()
+            self.label_experiment()
+        return self.model
+
+    def create_model(self):
+        m = self.model = pyo.ConcreteModel()
+        m.x1 = pyo.Var(bounds=(-5, 5), initialize=2)
+        m.x2 = pyo.Var(bounds=(-5, 5), initialize=3)
+        m.a = pyo.Var(bounds=(-5, 5), initialize=2)
+        m.b = pyo.Var(bounds=(-5, 5), initialize=-1)
+        m.c = pyo.Var(bounds=(-5, 5), initialize=0.5)
+        m.d = pyo.Var(bounds=(-5, 5), initialize=-1)
+        m.y = pyo.Var(initialize=0)
+
+        @m.Constraint()
+        def output_equation(m):
+            return m.y == m.a * m.x1 + m.b * m.x2 + m.c * m.x1 * m.x2 + m.d
+
+    def finalize_model(self):
+        """No additional model finalization is needed for this example."""
+        pass
+
+    def label_experiment(self):
+        """Attach the standard DoE suffixes to the polynomial model."""
+        m = self.model
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs[m.y] = None
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error[m.y] = 1
+
+        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_inputs[m.x1] = None
+        m.experiment_inputs[m.x2] = None
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update((k, pyo.value(k)) for k in [m.a, m.b, m.c, m.d])
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -151,6 +231,261 @@ class TestUtilsFIM(unittest.TestCase):
         self.assertAlmostEqual(fim_metrics["log10(E-Optimality)"], expected['E_opt'])
         self.assertAlmostEqual(
             fim_metrics["log10(Modified E-Optimality)"], expected['ME_opt']
+        )
+
+
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+class TestExperimentGradients(unittest.TestCase):
+    """Validate symbolic and automatic differentiation helpers."""
+
+    def _assert_symbolic_and_automatic_jacobians_agree(
+        self, model, atol=1e-8, rtol=1e-8
+    ):
+        """Check that symbolic and automatic Jacobian tables agree entry by entry."""
+        experiment_gradients = ExperimentGradients(model, symbolic=True, automatic=True)
+
+        self.assertEqual(
+            set(experiment_gradients.jac_dict_sd), set(experiment_gradients.jac_dict_ad)
+        )
+        for key in experiment_gradients.jac_dict_sd:
+            self.assertTrue(
+                np.isclose(
+                    pyo.value(experiment_gradients.jac_dict_sd[key]),
+                    pyo.value(experiment_gradients.jac_dict_ad[key]),
+                    atol=atol,
+                    rtol=rtol,
+                ),
+                msg=f"Mismatch at Jacobian entry {key}",
+            )
+        return experiment_gradients
+
+    def _get_rooney_biegler_experiment(
+        self, hour=5.0, y=15.6, asymptote=15.0, rate_constant=0.5, measure_error=0.1
+    ):
+        """Build a Rooney-Biegler experiment for gradient validation."""
+        data = pd.DataFrame(data=[[hour, y]], columns=["hour", "y"])
+        return RooneyBieglerExperiment(
+            data=data.iloc[0],
+            theta={"asymptote": asymptote, "rate_constant": rate_constant},
+            measure_error=measure_error,
+        )
+
+    def _get_reactor_experiment(self, ca0=5.0, temperature_offset=0.0, nfe=5, ncp=2):
+        """Build a lightly perturbed reactor experiment for gradient validation."""
+        reactor_data = copy.deepcopy(data_ex)
+        reactor_data["CA0"] = ca0
+        reactor_data["control_points"] = {
+            t: value + temperature_offset
+            for t, value in reactor_data["control_points"].items()
+        }
+        return ReactorExperiment(data=reactor_data, nfe=nfe, ncp=ncp)
+
+    def _initialize_reactor_model(self, model):
+        """Solve the reactor model once to populate state values for AD checks."""
+        for v in model.experiment_inputs.keys():
+            v.fix()
+        for v in model.unknown_parameters.keys():
+            v.fix()
+
+        solver = SolverFactory("ipopt")
+        solver.options["linear_solver"] = "ma57"
+        solver.options["halt_on_ampl_error"] = "yes"
+        solver.options["max_iter"] = 3000
+        results = solver.solve(model, tee=False)
+
+        self.assertEqual(str(results.solver.status).lower(), "ok")
+        return model
+
+    def _get_expected_polynomial_gradient(self):
+        """Return the exact gradient of the polynomial output at the test point."""
+        return np.array([[2.0, 3.0, 6.0, 1.0]])
+
+    def _get_expected_polynomial_fim_with_prior(self):
+        """Return a positive-definite polynomial FIM used for metric regression."""
+        gradient = self._get_expected_polynomial_gradient().ravel()
+        return np.outer(gradient, gradient) + np.eye(4)
+
+    def _evaluate_polynomial_output(self, a, b, c, d, x1=2.0, x2=3.0):
+        """Evaluate the scalar polynomial model at the test point."""
+        return a * x1 + b * x2 + c * x1 * x2 + d
+
+    def test_polynomial_gradients_match_expected(self):
+        """Check polynomial output sensitivities against analytic values."""
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        experiment_gradients = ExperimentGradients(model, symbolic=True, automatic=True)
+        jacobian = (
+            experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
+        )
+
+        expected = self._get_expected_polynomial_gradient()
+
+        self.assertEqual(jacobian.shape, expected.shape)
+        self.assertTrue(np.allclose(jacobian, expected))
+
+    def test_polynomial_symbolic_and_automatic_jacobians_agree(self):
+        """Ensure symbolic and automatic Jacobian entries agree exactly."""
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        self._assert_symbolic_and_automatic_jacobians_agree(model)
+
+    def test_polynomial_symbolic_matches_manual_central_difference(self):
+        """Check symbolic sensitivities against a manual central-difference estimate."""
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+        experiment_gradients = ExperimentGradients(model, symbolic=True, automatic=True)
+
+        symbolic = (
+            experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
+            .ravel()
+            .astype(float)
+        )
+        base_values = {"a": 2.0, "b": -1.0, "c": 0.5, "d": -1.0}
+        step = 1e-6
+        finite_difference = []
+        for parameter in ("a", "b", "c", "d"):
+            forward_values = dict(base_values)
+            backward_values = dict(base_values)
+            forward_values[parameter] += step
+            backward_values[parameter] -= step
+            forward = self._evaluate_polynomial_output(**forward_values)
+            backward = self._evaluate_polynomial_output(**backward_values)
+            finite_difference.append((forward - backward) / (2 * step))
+
+        self.assertTrue(np.allclose(symbolic, finite_difference, atol=1e-7, rtol=1e-7))
+
+    def test_polynomial_automatic_only_still_sets_both_jacobians(self):
+        """Check that both Jacobian maps are prepared in the unified setup path."""
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        experiment_gradients = ExperimentGradients(
+            model, symbolic=False, automatic=True
+        )
+
+        self.assertIsNotNone(experiment_gradients.jac_dict_sd)
+        self.assertIsNotNone(experiment_gradients.jac_dict_ad)
+
+    def test_polynomial_metric_helpers_match_numpy(self):
+        """Check utility metrics on a polynomial-derived positive-definite FIM."""
+        FIM = self._get_expected_polynomial_fim_with_prior()
+        fim_metrics = get_FIM_metrics(FIM)
+        (
+            det_FIM,
+            trace_cov,
+            trace_FIM,
+            E_vals,
+            E_vecs,
+            D_opt,
+            A_opt,
+            pseudo_A_opt,
+            E_opt,
+            ME_opt,
+        ) = compute_FIM_metrics(FIM)
+
+        self.assertAlmostEqual(det_FIM, np.linalg.det(FIM))
+        self.assertAlmostEqual(trace_cov, np.trace(np.linalg.inv(FIM)))
+        self.assertAlmostEqual(trace_FIM, np.trace(FIM))
+
+        expected_eigs, _expected_vecs = np.linalg.eigh(FIM)
+        self.assertTrue(np.allclose(np.sort(E_vals), np.sort(expected_eigs)))
+        self.assertEqual(E_vecs.shape, FIM.shape)
+
+        self.assertAlmostEqual(D_opt, np.log10(np.linalg.det(FIM)))
+        self.assertAlmostEqual(A_opt, np.log10(np.trace(np.linalg.inv(FIM))))
+        self.assertAlmostEqual(pseudo_A_opt, np.log10(np.trace(FIM)))
+        self.assertAlmostEqual(E_opt, np.log10(np.min(expected_eigs)))
+        self.assertAlmostEqual(
+            ME_opt, np.log10(np.max(expected_eigs) / np.min(expected_eigs))
+        )
+
+        self.assertAlmostEqual(fim_metrics["Determinant of FIM"], np.linalg.det(FIM))
+        self.assertAlmostEqual(
+            fim_metrics["Trace of cov"], np.trace(np.linalg.inv(FIM))
+        )
+        self.assertAlmostEqual(fim_metrics["Trace of FIM"], np.trace(FIM))
+
+    def test_polynomial_symbolic_only_still_sets_both_jacobians(self):
+        """Check that symbolic-only requests still initialize both Jacobian maps."""
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        experiment_gradients = ExperimentGradients(
+            model, symbolic=True, automatic=False
+        )
+
+        self.assertIsNotNone(experiment_gradients.jac_dict_sd)
+        self.assertIsNotNone(experiment_gradients.jac_dict_ad)
+
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_rooney_biegler_symbolic_and_automatic_jacobians_agree(self):
+        """Check Rooney-Biegler Jacobians from symbolic and automatic differentiation."""
+        experiment = self._get_rooney_biegler_experiment()
+        model = experiment.get_labeled_model()
+
+        self._assert_symbolic_and_automatic_jacobians_agree(model)
+
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_rooney_biegler_gradients_match_closed_form(self):
+        """Check Rooney-Biegler sensitivities against the closed-form derivatives."""
+        hour = 7.0
+        asymptote = 14.0
+        rate_constant = 0.4
+        experiment = self._get_rooney_biegler_experiment(
+            hour=hour, y=19.8, asymptote=asymptote, rate_constant=rate_constant
+        )
+        model = experiment.get_labeled_model()
+        experiment_gradients = self._assert_symbolic_and_automatic_jacobians_agree(
+            model
+        )
+
+        jacobian = (
+            experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
+        )
+        expected = np.array(
+            [
+                [
+                    1.0 - np.exp(-rate_constant * hour),
+                    asymptote * hour * np.exp(-rate_constant * hour),
+                ]
+            ]
+        )
+
+        self.assertEqual(jacobian.shape, expected.shape)
+        self.assertTrue(np.allclose(jacobian, expected, atol=1e-7, rtol=1e-7))
+
+    @unittest.skipIf(not scipy_available, "scipy is not available")
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_reactor_symbolic_and_automatic_jacobians_agree(self):
+        """Check reactor Jacobians from symbolic and automatic differentiation."""
+        experiment = self._get_reactor_experiment()
+        model = self._initialize_reactor_model(experiment.get_labeled_model())
+
+        experiment_gradients = self._assert_symbolic_and_automatic_jacobians_agree(
+            model, atol=1e-6, rtol=1e-6
+        )
+
+        self.assertGreater(len(experiment_gradients.jac_dict_sd), 0)
+        self.assertEqual(
+            len(experiment_gradients.jac_dict_sd), len(experiment_gradients.jac_dict_ad)
+        )
+
+    @unittest.skipIf(not scipy_available, "scipy is not available")
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_reactor_symbolic_and_automatic_jacobians_agree_at_perturbed_point(self):
+        """Check reactor Jacobian agreement at a perturbed operating point."""
+        experiment = self._get_reactor_experiment(ca0=4.0, temperature_offset=25.0)
+        model = self._initialize_reactor_model(experiment.get_labeled_model())
+
+        experiment_gradients = self._assert_symbolic_and_automatic_jacobians_agree(
+            model, atol=1e-6, rtol=1e-6
+        )
+
+        self.assertGreater(len(experiment_gradients.jac_dict_sd), 0)
+        self.assertEqual(
+            len(experiment_gradients.jac_dict_sd), len(experiment_gradients.jac_dict_ad)
         )
 
 

@@ -27,9 +27,12 @@
 import pyomo.environ as pyo
 
 from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.collections import ComponentSet
 
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
+from pyomo.core.expr.calculus.diff_with_pyomo import reverse_sd, reverse_ad
+from pyomo.core.expr.visitor import identify_variables
 
 import logging
 
@@ -266,3 +269,166 @@ def get_FIM_metrics(FIM):
         "log10(E-Optimality)": E_opt,
         "log10(Modified E-Optimality)": ME_opt,
     }
+
+
+class ExperimentGradients:
+    """Utilities for differentiating labeled experiment models.
+
+    This helper was transplanted from the symbolic-gradient development branch
+    and trimmed to the pieces needed by the modern DoE implementation:
+    - build measurement / parameter index mappings
+    - compute sensitivities with reverse-mode automatic differentiation
+    - add symbolic sensitivity constraints to a Pyomo model
+    """
+
+    def __init__(self, experiment_model, symbolic=True, automatic=True, verbose=False):
+        self.model = experiment_model
+        self.verbose = verbose
+
+        self._analyze_experiment_model()
+
+        self.jac_dict_sd = None
+        self.jac_dict_ad = None
+        self.jac_measurements_wrt_param = None
+
+        self._requested_symbolic = symbolic
+        self._requested_automatic = automatic
+
+        if symbolic or automatic:
+            self._setup_differentiation()
+
+    def _analyze_experiment_model(self):
+        model = self.model
+
+        for v in model.experiment_inputs.keys():
+            v.fix()
+        for v in model.unknown_parameters.keys():
+            v.fix()
+
+        param_set = ComponentSet(model.unknown_parameters.keys())
+        output_set = ComponentSet(model.experiment_outputs.keys())
+        con_set = ComponentSet()
+        var_set = ComponentSet()
+
+        for c in model.component_data_objects(
+            pyo.Constraint, descend_into=True, active=True
+        ):
+            con_set.add(c)
+            for v in identify_variables(c.body, include_fixed=False):
+                var_set.add(v)
+
+        for p in model.unknown_parameters.keys():
+            if p not in var_set:
+                var_set.add(p)
+
+        measurement_mapping = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        parameter_mapping = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        measurement_error_included = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
+        con_list = list(con_set)
+        var_list = list(var_set)
+
+        param_index = []
+        model_var_index = []
+        measurement_index = []
+
+        for i, v in enumerate(var_list):
+            if v in param_set:
+                param_index.append(i)
+                parameter_mapping[v] = i
+            else:
+                model_var_index.append(i)
+                if v in output_set:
+                    measurement_index.append(i)
+                    measurement_error_included[v] = model.measurement_error[v]
+                    measurement_mapping[v] = i
+
+        for o in model.experiment_outputs.keys():
+            if o not in var_set:
+                measurement_mapping[o] = None
+
+        self.con_list = con_list
+        self.var_list = var_list
+        self.param_index = param_index
+        self.model_var_index = model_var_index
+        self.measurement_index = measurement_index
+        self.measurement_error_included = measurement_error_included
+        self.num_measurements = len(output_set)
+        self.num_params = len(param_set)
+        self.num_constraints = len(con_set)
+        self.num_vars = len(var_set)
+        self.var_set = var_set
+        self.measurement_mapping = measurement_mapping
+        self.parameter_mapping = parameter_mapping
+
+    def _setup_differentiation(self):
+        """Build symbolic and automatic Jacobian maps in a single pass."""
+        if not self._requested_symbolic and not self._requested_automatic:
+            raise ValueError("At least one differentiation method must be selected.")
+
+        jac_dict_sd = {}
+        jac_dict_ad = {}
+
+        for i, c in enumerate(self.con_list):
+            if not c.equality:
+                raise ValueError(
+                    "ExperimentGradients currently requires equality constraints."
+                )
+
+            der_map_sd = reverse_sd(c.body)
+            der_map_ad = reverse_ad(c.body)
+
+            for j, v in enumerate(self.var_list):
+                jac_dict_sd[(i, j)] = der_map_sd.get(v, 0)
+                jac_dict_ad[(i, j)] = der_map_ad.get(v, 0)
+
+        self.jac_dict_sd = jac_dict_sd
+        self.jac_dict_ad = jac_dict_ad
+
+    def compute_gradient_outputs_wrt_unknown_parameters(self):
+        if self.jac_dict_ad is None:
+            self._setup_differentiation()
+
+        jac_con_wrt_param = np.zeros((self.num_constraints, self.num_params))
+        for i in range(self.num_constraints):
+            for j, p in enumerate(self.param_index):
+                jac_con_wrt_param[i, j] = self.jac_dict_ad[(i, p)]
+
+        jac_con_wrt_vars = np.zeros((self.num_constraints, len(self.model_var_index)))
+        for i in range(self.num_constraints):
+            for j, v in enumerate(self.model_var_index):
+                jac_con_wrt_vars[i, j] = self.jac_dict_ad[(i, v)]
+
+        jac_vars_wrt_param = np.linalg.solve(jac_con_wrt_vars, -jac_con_wrt_param)
+
+        jac_measurements_wrt_param = np.zeros((self.num_measurements, self.num_params))
+        for ind, m in enumerate(self.model.experiment_outputs.keys()):
+            i = self.measurement_mapping[m]
+            if i is None:
+                jac_measurements_wrt_param[ind, :] = 0.0
+            else:
+                jac_measurements_wrt_param[ind, :] = jac_vars_wrt_param[i, :]
+
+        self.jac_measurements_wrt_param = jac_measurements_wrt_param
+        return jac_measurements_wrt_param
+
+    def construct_sensitivity_constraints(self, model=None):
+        if self.jac_dict_sd is None:
+            self._setup_differentiation()
+
+        if model is None:
+            model = self.model
+
+        model.param_index = pyo.Set(initialize=self.param_index)
+        model.constraint_index = pyo.Set(initialize=range(len(self.con_list)))
+        model.var_index = pyo.Set(initialize=self.model_var_index)
+        model.jac_variables_wrt_param = pyo.Var(
+            model.var_index, model.param_index, initialize=0
+        )
+
+        @model.Constraint(model.constraint_index, model.param_index)
+        def jacobian_constraint(model, i, j):
+            return self.jac_dict_sd[(i, j)] == -sum(
+                model.jac_variables_wrt_param[k, j] * self.jac_dict_sd[(i, k)]
+                for k in model.var_index
+            )

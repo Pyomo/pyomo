@@ -25,6 +25,7 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
+    from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
     )
@@ -266,6 +267,35 @@ class TestDoeBuild(unittest.TestCase):
 
                 other_param_val = pyo.value(k)
                 self.assertAlmostEqual(other_param_val, v)
+
+    def test_polynomial_example_labels(self):
+        experiment = PolynomialExperiment(data=None)
+        model = experiment.get_labeled_model()
+
+        self.assertEqual(len(model.experiment_outputs), 1)
+        self.assertEqual(len(model.measurement_error), 1)
+        self.assertEqual(len(model.experiment_inputs), 2)
+        self.assertEqual(len(model.unknown_parameters), 4)
+
+        self.assertIn(model.y, model.experiment_outputs)
+        self.assertIn(model.y, model.measurement_error)
+        self.assertIn(model.x1, model.experiment_inputs)
+        self.assertIn(model.x2, model.experiment_inputs)
+
+    def test_polynomial_example_create_doe_model_pynumero(self):
+        experiment = PolynomialExperiment(data=None)
+
+        DoE_args = get_standard_args(
+            experiment, fd_method="central", obj_used="determinant"
+        )
+        DoE_args["gradient_method"] = "pynumero"
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.create_doe_model()
+
+        model = doe_obj.model
+        self.assertEqual(len(model.scenarios), 1)
+        self.assertTrue(hasattr(model.scenario_blocks[0], "jac_variables_wrt_param"))
 
     def test_rooney_biegler_fd_central_design_fixing(self):
         fd_method = "central"
