@@ -469,8 +469,7 @@ class TestExperimentGradients(unittest.TestCase):
 
         self.assertGreater(len(experiment_gradients.jac_dict_sd), 0)
         self.assertEqual(
-            len(experiment_gradients.jac_dict_sd),
-            len(experiment_gradients.jac_dict_ad),
+            len(experiment_gradients.jac_dict_sd), len(experiment_gradients.jac_dict_ad)
         )
 
     @unittest.skipIf(not scipy_available, "scipy is not available")
@@ -486,8 +485,7 @@ class TestExperimentGradients(unittest.TestCase):
 
         self.assertGreater(len(experiment_gradients.jac_dict_sd), 0)
         self.assertEqual(
-            len(experiment_gradients.jac_dict_sd),
-            len(experiment_gradients.jac_dict_ad),
+            len(experiment_gradients.jac_dict_sd), len(experiment_gradients.jac_dict_ad)
         )
 
 

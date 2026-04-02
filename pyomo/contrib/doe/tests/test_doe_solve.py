@@ -530,6 +530,36 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
+    def test_reactor_run_doe_determinant_regression(self):
+        """Check a stable reactor optimum fingerprint against expected values."""
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+        doe_obj = DesignOfExperiments(
+            **get_standard_args(experiment, "central", "determinant")
+        )
+
+        doe_obj.run_doe()
+
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(
+            str(doe_obj.results["Termination Condition"]).lower(), "optimal"
+        )
+
+        design = doe_obj.results["Experiment Design"]
+        self.assertAlmostEqual(design[0], 5.0, places=6)
+        self.assertAlmostEqual(design[1], 481.8802587133011, places=3)
+        self.assertAlmostEqual(design[-1], 300.00103052372924, places=3)
+
+        self.assertAlmostEqual(
+            doe_obj.results["log10 D-opt"], 19.31805092114778, places=4
+        )
+        self.assertAlmostEqual(
+            doe_obj.results["log10 A-opt"], -2.936916407094173, places=4
+        )
+
+        fim = np.array(doe_obj.results["FIM"])
+        self.assertAlmostEqual(fim[0, 0], 173179.08904385, places=1)
+        self.assertAlmostEqual(fim[3, 3], 8218128.34162048, places=1)
+
     def test_reactor_run_doe_gradient_matrix(self):
         """Exercise the old symbolic-branch reactor run_doe matrix."""
         test_cases = [
