@@ -194,13 +194,13 @@ if __name__ == "__main__":
         step=1e-2,
         use_grey_box_objective=True,
         grey_box_solver=grey_box_solver,
-        grey_box_tee=False,
+        grey_box_tee=True,
     )
     doe.optimize_experiments()
     print("Optimal experiment design:")
     print(doe.results)
 
-    scenario = doe.results["param_scenarios"][0]
+    scenario = doe.results["solution"]["param_scenarios"][0]
     got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
     expected_hours = [1.9321985035514362, 9.999999685577139]
     results = rb_multi(candidate_hours, n_exp=2, prior_FIM=prior_information_matrix)

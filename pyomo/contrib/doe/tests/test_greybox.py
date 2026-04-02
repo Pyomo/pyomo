@@ -405,7 +405,7 @@ def _make_multiexperiment_greybox_doe(
 
 def _get_multiexperiment_scenario_data(doe_obj):
     scenario = doe_obj.model.param_scenario_blocks[0]
-    total_fim = np.array(doe_obj.results["param_scenarios"][0]["total_fim"])
+    total_fim = np.array(doe_obj.results["solution"]["param_scenarios"][0]["total_fim"])
     parameter_names = list(scenario.exp_blocks[0].parameter_names)
     return scenario, total_fim, parameter_names
 
@@ -1339,7 +1339,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
 
         self.assertEqual(len(grey_box_solver.calls), 1)
         self.assertEqual(
-            doe_obj.results["run_info"]["solver"]["name"], grey_box_solver.name
+            doe_obj.results["optimization_solve"]["solver"], grey_box_solver.name
         )
 
         scenario, total_fim, parameter_names = _get_multiexperiment_scenario_data(
@@ -1426,7 +1426,9 @@ class TestMultiexperimentBuild(unittest.TestCase):
         exp_fim_sum = sum(
             (
                 np.array(exp_data["fim"])
-                for exp_data in doe_obj.results["param_scenarios"][0]["experiments"]
+                for exp_data in doe_obj.results["solution"]["param_scenarios"][0][
+                    "experiments"
+                ]
             ),
             np.zeros_like(total_fim),
         )
@@ -1509,11 +1511,11 @@ class TestMultiexperimentBuild(unittest.TestCase):
         self.assertEqual(call_order[-1], "greybox")
         self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
         self.assertEqual(
-            doe_obj.results["settings"]["initialization"]["solver_name"],
+            doe_obj.results["initialization"]["solver"],
             getattr(init_solver, "name", str(init_solver)),
         )
         self.assertEqual(
-            doe_obj.results["run_info"]["solver"]["name"], grey_box_solver.name
+            doe_obj.results["optimization_solve"]["solver"], grey_box_solver.name
         )
 
     def test_optimize_experiments_greybox_is_reentrant_on_same_object(self):
@@ -1598,8 +1600,12 @@ class TestMultiexperimentBuild(unittest.TestCase):
                         init_seed=lhs_seed,
                     )
 
-                lhs_diag = doe_obj.results["diagnostics"]["lhs_initialization"]
-                actual_points = doe_obj.results["LHS Best Initial Points"]
+                lhs_init = doe_obj.results["initialization"]
+                lhs_diag = {
+                    "best_obj": lhs_init["best_initial_objective_value"],
+                    "timed_out": lhs_init["timed_out"],
+                }
+                actual_points = lhs_init["selected_initial_designs"]
                 candidate_points = _generate_lhs_candidate_points(
                     doe_obj, lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed
                 )
@@ -1607,8 +1613,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
                     tuple(np.round(point, 8)) for point in candidate_points
                 }
 
-                self.assertEqual(doe_obj.results["Initialization Method"], "lhs")
-                self.assertIsNotNone(lhs_diag)
+                self.assertEqual(doe_obj.results["initialization"]["method"], "lhs")
                 self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
                 self.assertGreater(lhs_diag["best_obj"], 0.0)
 
@@ -1698,7 +1703,9 @@ class TestMultiexperimentBuild(unittest.TestCase):
         # The Rooney-Biegler template is built with hour=2.0, so this confirms
         # LHS moved away from the build-time design and made the refresh check meaningful.
         self.assertNotAlmostEqual(
-            doe_obj.results["LHS Best Initial Points"][0][0], 2.0, places=6
+            doe_obj.results["initialization"]["selected_initial_designs"][0][0],
+            2.0,
+            places=6,
         )
 
     def test_optimize_experiments_greybox_tee_flag_reaches_solver(self):
@@ -1748,13 +1755,13 @@ class TestMultiexperimentSolve(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["param_scenarios"][0]
+        scenario = doe.results["solution"]["param_scenarios"][0]
         got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(
             got_hours, sorted([1.9321985035514362, 9.999999685577139]), abstol=1e-3
         )
         self.assertAlmostEqual(
-            scenario["metrics"]["log10_d_opt"], 6.028152580313302, places=3
+            scenario["quality_metrics"]["log10_d_opt"], 6.028152580313302, places=3
         )
 
     def test_optimize_experiments_trace_expected_values_greybox(self):
@@ -1776,10 +1783,12 @@ class TestMultiexperimentSolve(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["param_scenarios"][0]
+        scenario = doe.results["solution"]["param_scenarios"][0]
         got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(got_hours, sorted([1.01, 10.0]), abstol=1e-3)
-        self.assertAlmostEqual(scenario["metrics"]["log10_a_opt"], -1.9438, places=3)
+        self.assertAlmostEqual(
+            scenario["quality_metrics"]["log10_a_opt"], -1.9438, places=3
+        )
 
     def test_optimize_experiments_min_eig_expected_values_greybox(self):
         # This checks the end-to-end greybox E-opt solve against a stable
@@ -1801,10 +1810,12 @@ class TestMultiexperimentSolve(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["param_scenarios"][0]
+        scenario = doe.results["solution"]["param_scenarios"][0]
         got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(got_hours, sorted([1.0, 10.0]), abstol=1e-2)
-        self.assertAlmostEqual(scenario["metrics"]["log10_e_opt"], 1.9532, places=2)
+        self.assertAlmostEqual(
+            scenario["quality_metrics"]["log10_e_opt"], 1.9532, places=2
+        )
 
     def test_optimize_experiments_me_opt_expected_values_greybox(self):
         # ME-opt is greybox-only in optimize_experiments(), so keep a dedicated
@@ -1825,10 +1836,12 @@ class TestMultiexperimentSolve(unittest.TestCase):
         )
         doe.optimize_experiments()
 
-        scenario = doe.results["param_scenarios"][0]
+        scenario = doe.results["solution"]["param_scenarios"][0]
         got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
         self.assertStructuredAlmostEqual(got_hours, sorted([7.13, 10.0]), abstol=1e-2)
-        self.assertAlmostEqual(scenario["metrics"]["log10_me_opt"], 1.5289, places=2)
+        self.assertAlmostEqual(
+            scenario["quality_metrics"]["log10_me_opt"], 1.5289, places=2
+        )
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -1858,20 +1871,22 @@ class TestSingleExperimentSolve(unittest.TestCase):
         doe_obj.optimize_experiments(n_exp=1)
 
         scenario, total_fim, _ = _get_multiexperiment_scenario_data(doe_obj)
-        scenario_results = doe_obj.results["param_scenarios"][0]
+        scenario_results = doe_obj.results["solution"]["param_scenarios"][0]
         design_hour = scenario_results["experiments"][0]["design"][0]
 
-        self.assertEqual(doe_obj.results["Solver Status"], "ok")
-        self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 1)
-        self.assertTrue(doe_obj.results["settings"]["modeling"]["template_mode"])
+        self.assertEqual(doe_obj.results["optimization_solve"]["status"], "ok")
+        self.assertEqual(
+            doe_obj.results["problem"]["number_of_experiments_per_scenario"], 1
+        )
+        self.assertTrue(doe_obj.results["problem"]["used_template_experiment"])
         self.assertEqual(len(scenario_results["experiments"]), 1)
         self.assertEqual(
-            doe_obj.results["run_info"]["solver"]["name"],
+            doe_obj.results["optimization_solve"]["solver"],
             getattr(grey_box_solver, "name", str(grey_box_solver)),
         )
         self.assertGreaterEqual(design_hour, 1.0)
         self.assertLessEqual(design_hour, 10.0)
-        self.assertTrue(np.isfinite(scenario_results["metrics"]["log10_e_opt"]))
+        self.assertTrue(np.isfinite(scenario_results["quality_metrics"]["log10_e_opt"]))
         self.assertAlmostEqual(
             pyo.value(scenario.obj_cons.egb_fim_block.outputs["E-opt"]),
             _expected_multiexperiment_greybox_output("minimum_eigenvalue", total_fim),

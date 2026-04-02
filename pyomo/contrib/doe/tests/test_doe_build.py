@@ -774,11 +774,11 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # Result payloads should report the same phase-specific solver names that
         # were observed through the patched solve() calls above.
         self.assertEqual(
-            doe_obj.results["settings"]["initialization"]["solver_name"],
+            doe_obj.results["initialization"]["solver"],
             getattr(init_solver, "name", str(init_solver)),
         )
         self.assertEqual(
-            doe_obj.results["run_info"]["solver"]["name"],
+            doe_obj.results["optimization_solve"]["solver"],
             getattr(main_solver, "name", str(main_solver)),
         )
 
@@ -832,33 +832,34 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertTrue(hasattr(scenario_block, "symmetry_breaking_s0_exp1"))
         self.assertEqual(len(list(scenario_block.exp_blocks.keys())), 2)
 
-        param_scenario = doe_obj.results["param_scenarios"][0]
-        self.assertEqual(doe_obj.results["Initialization Method"], "none")
-        self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 2)
+        param_scenario = doe_obj.results["solution"]["param_scenarios"][0]
+        self.assertEqual(doe_obj.results["initialization"]["method"], "none")
+        self.assertEqual(
+            doe_obj.results["problem"]["number_of_experiments_per_scenario"], 2
+        )
         self.assertEqual(len(param_scenario["experiments"]), 2)
-        self.assertEqual(len(doe_obj.results["Experiment Design Names"]), 1)
-        self.assertEqual(len(doe_obj.results["Unknown Parameter Names"]), 2)
+        self.assertEqual(len(doe_obj.results["problem"]["design_variables"]), 1)
+        self.assertEqual(len(doe_obj.results["problem"]["parameters"]), 2)
 
         # Results should expose a single structured parameter-scenario payload.
-        self.assertIn("run_info", doe_obj.results)
-        self.assertIn("settings", doe_obj.results)
+        self.assertIn("problem", doe_obj.results)
+        self.assertIn("initialization", doe_obj.results)
+        self.assertIn("optimization_solve", doe_obj.results)
         self.assertIn("timing", doe_obj.results)
-        self.assertIn("names", doe_obj.results)
-        self.assertIn("param_scenarios", doe_obj.results)
+        self.assertIn("solution", doe_obj.results)
+        self.assertEqual(doe_obj.results["solution"]["objective"], "pseudo_trace")
+        self.assertEqual(doe_obj.results["optimization_solve"]["status"], "ok")
+        self.assertFalse(doe_obj.results["problem"]["used_template_experiment"])
+        self.assertEqual(len(doe_obj.results["solution"]["param_scenarios"]), 1)
+        self.assertEqual(param_scenario["param_scenario_id"], 0)
+        self.assertEqual(param_scenario["param_scenario_weight"], 1.0)
+        self.assertEqual(len(param_scenario["experiments"]), 2)
+        self.assertEqual(param_scenario["experiments"][0]["exp_id"], 0)
         self.assertEqual(
-            doe_obj.results["run_info"]["solver"]["status"],
-            doe_obj.results["Solver Status"],
+            doe_obj.results["problem"]["measurement_error_values"],
+            doe_obj.get_measurement_error_values(model=scenario_block.exp_blocks[0]),
         )
-        self.assertEqual(
-            doe_obj.results["settings"]["modeling"]["n_experiments_per_scenario"], 2
-        )
-        self.assertFalse(doe_obj.results["settings"]["modeling"]["template_mode"])
-        self.assertEqual(len(doe_obj.results["param_scenarios"]), 1)
-        self.assertEqual(doe_obj.results["param_scenarios"][0]["id"], 0)
-        self.assertEqual(len(doe_obj.results["param_scenarios"][0]["experiments"]), 2)
-        self.assertEqual(
-            doe_obj.results["param_scenarios"][0]["experiments"][0]["id"], 0
-        )
+        self.assertNotIn("measurement_errors", param_scenario["experiments"][0])
 
         # hour of exp[0] should be <= hour of exp[1] due to symmetry breaking
         h0 = param_scenario["experiments"][0]["design"][0]
@@ -885,20 +886,19 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
         with open(results_path) as f:
             payload = json.load(f)
-        self.assertEqual(payload["Initialization Method"], "none")
-        self.assertTrue(payload["settings"]["modeling"]["template_mode"])
-        self.assertIn("param_scenarios", payload)
-        self.assertIn("run_info", payload)
-        self.assertIn("settings", payload)
+        self.assertEqual(payload["initialization"]["method"], "none")
+        self.assertTrue(payload["problem"]["used_template_experiment"])
+        self.assertIn("solution", payload)
+        self.assertEqual(payload["solution"]["objective"], "pseudo_trace")
+        self.assertIn("optimization_solve", payload)
+        self.assertIn("problem", payload)
         self.assertIn("timing", payload)
-        self.assertIn("names", payload)
-
         path_payload = Path(results_path)
         doe_obj.optimize_experiments(n_exp=1, results_file=path_payload)
         with open(results_path) as f:
             payload_path = json.load(f)
-        self.assertEqual(payload_path["Initialization Method"], "none")
-        self.assertTrue(payload_path["settings"]["modeling"]["template_mode"])
+        self.assertEqual(payload_path["initialization"]["method"], "none")
+        self.assertTrue(payload_path["problem"]["used_template_experiment"])
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_single_experiment_defaults_to_template_mode(self):
@@ -911,8 +911,10 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=self._make_solver(),
         )
         doe_obj.optimize_experiments()
-        self.assertEqual(doe_obj.results["Number of Experiments per Scenario"], 1)
-        self.assertTrue(doe_obj.results["settings"]["modeling"]["template_mode"])
+        self.assertEqual(
+            doe_obj.results["problem"]["number_of_experiments_per_scenario"], 1
+        )
+        self.assertTrue(doe_obj.results["problem"]["used_template_experiment"])
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_zero_objective_works_without_obj_cons(self):
@@ -938,9 +940,13 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         scenario = doe_obj.model.param_scenario_blocks[0]
         self.assertFalse(hasattr(scenario, "obj_cons"))
         self.assertEqual(final_calls["n"], 1)
-        self.assertEqual(doe_obj.results["Solver Status"], "ok")
-        self.assertEqual(doe_obj.results["Termination Message"], "mock-zero-final")
-        self.assertEqual(len(doe_obj.results["param_scenarios"][0]["experiments"]), 2)
+        self.assertEqual(doe_obj.results["optimization_solve"]["status"], "ok")
+        self.assertEqual(
+            doe_obj.results["optimization_solve"]["message"], "mock-zero-final"
+        )
+        self.assertEqual(
+            len(doe_obj.results["solution"]["param_scenarios"][0]["experiments"]), 2
+        )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_trace_roundoff_flag_builds_extra_constraints(self):
@@ -978,7 +984,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             len(scenario.obj_cons.cholesky_fim_inv_diag_cons), len(parameter_names) ** 2
         )
         self.assertEqual(
-            doe_obj.results["Termination Message"], "mock-trace-roundoff-final"
+            doe_obj.results["optimization_solve"]["message"],
+            "mock-trace-roundoff-final",
         )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -996,14 +1003,14 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         )
 
         timing = doe_obj.results["timing"]
-        self.assertIn("lhs_initialization_s", timing)
-        self.assertGreaterEqual(timing["lhs_initialization_s"], 0.0)
+        self.assertIn("lhs_initialization_time_s", timing)
+        self.assertGreaterEqual(timing["lhs_initialization_time_s"], 0.0)
         self.assertAlmostEqual(
-            timing["total_s"],
-            timing["build_s"]
-            + timing["lhs_initialization_s"]
-            + timing["initialization_s"]
-            + timing["solve_s"],
+            timing["total_time_s"],
+            timing["build_time_s"]
+            + timing["lhs_initialization_time_s"]
+            + timing["initialization_time_s"]
+            + timing["optimization_solve_time_s"],
             places=8,
         )
 
@@ -1049,21 +1056,22 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             init_combo_parallel_threshold=1,
             init_max_wall_clock_time=60.0,
         )
-        lhs_diag = doe_obj.results["diagnostics"]["lhs_initialization"]
-        self.assertIsNotNone(lhs_diag)
-        self.assertEqual(lhs_diag["candidate_fim_mode"], "thread")
-        self.assertEqual(lhs_diag["combo_mode"], "thread")
-        self.assertEqual(lhs_diag["n_workers"], 2)
-        self.assertFalse(lhs_diag["timed_out"])
-        self.assertGreater(lhs_diag["elapsed_total_s"], 0.0)
-        self.assertIn("best_obj", lhs_diag)
-        self.assertIsInstance(lhs_diag["best_obj"], float)
-        self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
-        self.assertGreater(lhs_diag["best_obj"], 0.0)
-        self.assertIn("best_obj_log10", lhs_diag)
-        self.assertIsInstance(lhs_diag["best_obj_log10"], float)
+        lhs_init = doe_obj.results["initialization"]
+        self.assertEqual(lhs_init["candidate_fim_evaluation_mode"], "thread")
+        self.assertEqual(lhs_init["combination_scoring_mode"], "thread")
+        self.assertEqual(lhs_init["workers"], 2)
+        self.assertFalse(lhs_init["timed_out"])
+        self.assertGreater(lhs_init["time_s"], 0.0)
+        self.assertIn("best_initial_objective_value", lhs_init)
+        self.assertIsInstance(lhs_init["best_initial_objective_value"], float)
+        self.assertTrue(np.isfinite(lhs_init["best_initial_objective_value"]))
+        self.assertGreater(lhs_init["best_initial_objective_value"], 0.0)
+        self.assertIn("best_initial_objective_value_log10", lhs_init)
+        self.assertIsInstance(lhs_init["best_initial_objective_value_log10"], float)
         self.assertAlmostEqual(
-            lhs_diag["best_obj_log10"], np.log10(lhs_diag["best_obj"]), places=12
+            lhs_init["best_initial_objective_value_log10"],
+            np.log10(lhs_init["best_initial_objective_value"]),
+            places=12,
         )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -1088,7 +1096,9 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(n_exp=1)
 
-        self.assertEqual(doe_obj.results["Termination Message"], "byte-message")
+        self.assertEqual(
+            doe_obj.results["optimization_solve"]["message"], "byte-message"
+        )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_termination_message_fallback_to_str(self):
@@ -1116,7 +1126,9 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         ):
             doe_obj.optimize_experiments(n_exp=1)
 
-        self.assertEqual(doe_obj.results["Termination Message"], "custom-message")
+        self.assertEqual(
+            doe_obj.results["optimization_solve"]["message"], "custom-message"
+        )
 
 
 class TestDoeResultsSerialization(unittest.TestCase):

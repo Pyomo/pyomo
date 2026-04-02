@@ -1296,9 +1296,8 @@ class DesignOfExperiments:
         )
 
         # Collect results
-        self.results = {}
-        self.results["Solver Status"] = res.solver.status
-        self.results["Termination Condition"] = res.solver.termination_condition
+        solver_status = str(res.solver.status)
+        termination_condition = str(res.solver.termination_condition)
         if isinstance(res.solver.message, str):
             results_message = res.solver.message
         elif isinstance(res.solver.message, bytes):
@@ -1307,7 +1306,6 @@ class DesignOfExperiments:
             results_message = (
                 str(res.solver.message) if res.solver.message is not None else ""
             )
-        self.results["Termination Message"] = results_message
 
         def _safe_metric(metric_name, compute_fn, scenario_index):
             try:
@@ -1320,7 +1318,9 @@ class DesignOfExperiments:
                 )
                 return float("nan")
 
-        # Store results for each parameter scenario using a single structured payload.
+        # Store results for each parameter scenario using a single structured
+        # payload. The outer ``solution.param_scenarios`` list is always present
+        # so the API shape stays the same for single- and multi-scenario cases.
         param_scenarios = []
         for s in range(n_param_scenarios):
             scenario = self.model.param_scenario_blocks[s]
@@ -1364,38 +1364,35 @@ class DesignOfExperiments:
                 lambda fim=total_fim_np: np.log10(np.linalg.cond(fim)),
                 s,
             )
-
-            # Store unknown parameter values at scenario level (same for all experiments)
-            # Use first experiment to get the values
+            # Scenario-level results capture the aggregate design quality and the
+            # common parameter values used by all experiments in the scenario.
             scenario_structured = {
-                "id": s,
+                "param_scenario_id": s,
+                "param_scenario_weight": float(self.scenario_weights[s]),
                 "total_fim": total_fim_np.tolist(),
-                "metrics": {
+                "parameter_values": self.get_unknown_parameter_values(
+                    model=scenario.exp_blocks[0]
+                ),
+                "quality_metrics": {
                     "log10_a_opt": log10_a_opt,
                     "log10_pseudo_a_opt": log10_pseudo_a_opt,
                     "log10_d_opt": log10_d_opt,
                     "log10_e_opt": log10_e_opt,
                     "log10_me_opt": log10_me_opt,
                 },
-                "unknown_parameters": self.get_unknown_parameter_values(
-                    model=scenario.exp_blocks[0]
-                ),
                 "experiments": [],
             }
             for k in range(n_exp):
                 exp_block = scenario.exp_blocks[k]
-                design = self.get_experiment_input_values(model=exp_block)
-                outputs = self.get_experiment_output_values(model=exp_block)
-                measurement_error = self.get_measurement_error_values(model=exp_block)
-                fim = self.get_FIM(model=exp_block)
-
-                # Sensitivity matrix for this experiment
+                # Each experiment entry carries only quantities that differ from
+                # one experiment block to the next. Measurement-error data is
+                # reported once at the top level as shared problem metadata.
                 experiment_structured = {
-                    "id": k,
-                    "design": design,
-                    "outputs": outputs,
-                    "measurement_error": measurement_error,
-                    "fim": fim,
+                    "exp_id": k,
+                    "design": self.get_experiment_input_values(model=exp_block),
+                    "outputs": self.get_experiment_output_values(model=exp_block),
+                    "fim": self.get_FIM(model=exp_block),
+                    "sensitivity": None,
                 }
                 if hasattr(exp_block, "sensitivity_jacobian"):
                     experiment_structured["sensitivity"] = self.get_sensitivity_matrix(
@@ -1405,148 +1402,143 @@ class DesignOfExperiments:
 
             param_scenarios.append(scenario_structured)
 
-        # Store variable names once (structural properties, same across all scenarios/experiments)
-        # Use first scenario's first experiment to get the structure
+        # Store labels once because they describe the axes of every numeric list
+        # and matrix in the payload.
         first_exp_block_fd = (
             self.model.param_scenario_blocks[0].exp_blocks[0].fd_scenario_blocks[0]
         )
-        self.results["Experiment Design Names"] = [
+        design_variable_labels = [
             str(pyo.ComponentUID(comp, context=first_exp_block_fd))
             for comp in first_exp_block_fd.experiment_inputs
         ]
-        self.results["Experiment Output Names"] = [
+        output_labels = [
             str(pyo.ComponentUID(comp, context=first_exp_block_fd))
             for comp in first_exp_block_fd.experiment_outputs
         ]
-        self.results["Unknown Parameter Names"] = [
+        parameter_labels = [
             str(pyo.ComponentUID(comp, context=first_exp_block_fd))
             for comp in first_exp_block_fd.unknown_parameters
         ]
-        self.results["Measurement Error Names"] = [
+        measurement_error_labels = [
             str(pyo.ComponentUID(comp, context=first_exp_block_fd))
             for comp in first_exp_block_fd.measurement_error
         ]
-
-        # Store general settings and info
-        self.results["Number of Scenarios"] = n_param_scenarios
-        self.results["Number of Experiments per Scenario"] = n_exp
-        self.results["Prior FIM"] = self.prior_FIM.tolist()
-        self.results["Objective expression"] = self._enum_label(self.objective_option)
-        self.results["Finite Difference Scheme"] = self._enum_label(self.fd_formula)
-        self.results["Finite Difference Step"] = self.step
-        self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
-
-        # Initialization info
-        self.results["Initialization Method"] = (
-            resolved_init_method.value if resolved_init_method is not None else "none"
+        measurement_error_values = self.get_measurement_error_values(
+            model=self.model.param_scenario_blocks[0].exp_blocks[0]
         )
-        if resolved_init_method == InitializationMethod.lhs:
-            self.results["LHS Samples Per Dimension"] = init_n_samples
-            self.results["LHS Seed"] = init_seed
-            self.results["LHS Best Initial Points"] = best_initial_points
-
-        # Timing statistics
-        self.results["Build Time"] = build_time
-        self.results["Initialization Time"] = initialization_time
-        self.results["LHS Initialization Time"] = lhs_initialization_time
-        self.results["Solve Time"] = solve_time
-        self.results["Wall-clock Time"] = (
+        total_time = (
             build_time + lhs_initialization_time + initialization_time + solve_time
         )
-
-        # Structured result payload
-        objective_sense = (
-            "maximize"
-            if self.objective_option in self._MAXIMIZE_OBJECTIVES
-            else "minimize"
+        initialization_method = (
+            resolved_init_method.value if resolved_init_method is not None else "none"
         )
+        lhs_details = lhs_init_diagnostics or {}
 
-        self.results["run_info"] = {
-            "api": "DesignOfExperiments.optimize_experiments",
-            "solver": {
-                "name": final_solver_name,
-                "status": self.results["Solver Status"],
-                "termination_condition": self.results["Termination Condition"],
-                "message": self.results["Termination Message"],
-            },
-        }
-        self.results["settings"] = {
-            "objective": {
-                "name": self.results["Objective expression"],
-                "sense": objective_sense,
-            },
-            "finite_difference": {
-                "scheme": self.results["Finite Difference Scheme"],
-                "step": self.results["Finite Difference Step"],
-            },
-            "scaling": {
-                "nominal_parameter_scaling": self.results["Nominal Parameter Scaling"]
+        self.results = {
+            "problem": {
+                # Each parameter scenario corresponds to one parameter vector in
+                # the solve, so this count matches the length of
+                # ``solution["param_scenarios"]``.
+                "number_of_param_scenarios": n_param_scenarios,
+                "number_of_experiments_per_scenario": n_exp,
+                "used_template_experiment": _template_mode,
+                "finite_difference_scheme": self._enum_label(self.fd_formula),
+                "finite_difference_step": self.step,
+                "scaled_nominal_parameters": self.scale_nominal_param_value,
+                "prior_fim": self.prior_FIM.tolist(),
+                "measurement_error_values": measurement_error_values,
+                "design_variables": design_variable_labels,
+                "outputs": output_labels,
+                "parameters": parameter_labels,
+                "measurement_errors": measurement_error_labels,
             },
             "initialization": {
-                "method": self.results["Initialization Method"],
-                "solver_name": init_solver_name,
-                "lhs_n_samples": self.results.get("LHS Samples Per Dimension"),
-                "lhs_seed": self.results.get("LHS Seed"),
-                "best_points": self.results.get("LHS Best Initial Points"),
-                "lhs_parallel": (
+                "method": initialization_method,
+                "solver": init_solver_name,
+                "samples_per_design_variable": (
+                    init_n_samples
+                    if resolved_init_method == InitializationMethod.lhs
+                    else None
+                ),
+                "random_seed": (
+                    init_seed
+                    if resolved_init_method == InitializationMethod.lhs
+                    else None
+                ),
+                "parallel_candidate_fim_evaluation": (
                     init_parallel
                     if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
-                "lhs_combo_parallel": (
+                "parallel_combination_scoring": (
                     init_combo_parallel
                     if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
-                "lhs_n_workers": (
+                "workers": (
                     init_n_workers
                     if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
-                "lhs_combo_chunk_size": (
+                "combination_chunk_size": (
                     init_combo_chunk_size
                     if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
-                "lhs_combo_parallel_threshold": (
+                "parallel_combination_threshold": (
                     init_combo_parallel_threshold
                     if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
-                "lhs_max_wall_clock_time": (
+                "max_time_s": (
                     init_max_wall_clock_time
                     if resolved_init_method == InitializationMethod.lhs
                     else None
                 ),
+                "candidate_fim_evaluation_mode": lhs_details.get("candidate_fim_mode"),
+                "combination_scoring_mode": lhs_details.get("combo_mode"),
+                "number_of_candidate_designs": lhs_details.get("n_candidates"),
+                "number_of_design_combinations": lhs_details.get("n_combinations"),
+                "sampling_time_s": lhs_details.get("elapsed_sampling_s"),
+                "candidate_fim_evaluation_time_s": lhs_details.get(
+                    "elapsed_fim_eval_s"
+                ),
+                "combination_scoring_time_s": lhs_details.get(
+                    "elapsed_combo_scoring_s"
+                ),
+                "time_s": lhs_details.get("elapsed_total_s"),
+                "timed_out": lhs_details.get("timed_out"),
+                "selected_initial_designs": (
+                    best_initial_points
+                    if resolved_init_method == InitializationMethod.lhs
+                    else None
+                ),
+                "best_initial_objective_value": lhs_details.get("best_obj"),
+                "best_initial_objective_value_log10": lhs_details.get("best_obj_log10"),
             },
-            "modeling": {
-                "n_scenarios": self.results["Number of Scenarios"],
-                "n_experiments_per_scenario": self.results[
-                    "Number of Experiments per Scenario"
-                ],
-                "template_mode": _template_mode,
+            "experiment_ordering": {
+                "design_variable": symmetry_breaking_info["variable"],
+                "chosen_by": symmetry_breaking_info["source"],
             },
-            "prior_fim": self.results["Prior FIM"],
-        }
-        self.results["timing"] = {
-            "build_s": self.results["Build Time"],
-            "lhs_initialization_s": self.results["LHS Initialization Time"],
-            "initialization_s": self.results["Initialization Time"],
-            "solve_s": self.results["Solve Time"],
-            "total_s": self.results["Wall-clock Time"],
-        }
-        self.results["names"] = {
-            "experiment_design": self.results["Experiment Design Names"],
-            "experiment_output": self.results["Experiment Output Names"],
-            "unknown_parameter": self.results["Unknown Parameter Names"],
-            "measurement_error": self.results["Measurement Error Names"],
-        }
-        self.results["diagnostics"] = {
-            "symmetry_breaking": symmetry_breaking_info,
+            "optimization_solve": {
+                "solver": final_solver_name,
+                "status": solver_status,
+                "termination_condition": termination_condition,
+                "message": results_message,
+            },
+            "timing": {
+                "build_time_s": build_time,
+                "initialization_time_s": initialization_time,
+                "lhs_initialization_time_s": lhs_initialization_time,
+                "optimization_solve_time_s": solve_time,
+                "total_time_s": total_time,
+            },
             "warnings": diagnostics_warnings,
-            "lhs_initialization": lhs_init_diagnostics,
+            "solution": {
+                "objective": self._enum_label(self.objective_option),
+                "param_scenarios": param_scenarios,
+            },
         }
-        self.results["param_scenarios"] = param_scenarios
 
         # Save results to file if requested
         if results_file is not None:
