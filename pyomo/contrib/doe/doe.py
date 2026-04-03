@@ -476,10 +476,11 @@ class DesignOfExperiments:
                     pseudo_trace_val
                 )
             elif self.objective_option == ObjectiveLib.determinant:
-                det_val = np.linalg.det(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
-                    np.log(det_val)
-                )
+                fim_val = np.array(self.get_FIM(), dtype=float)
+                sign, logdet = np.linalg.slogdet(fim_val)
+                if sign <= 0 or not np.isfinite(logdet):
+                    logdet = np.log(1e-12)
+                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(logdet)
             elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
                 eig, _ = np.linalg.eig(np.array(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
