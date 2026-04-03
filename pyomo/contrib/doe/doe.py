@@ -452,7 +452,21 @@ class DesignOfExperiments:
 
         # Solve the full model, which has now been initialized with the square solve
         if self.use_grey_box:
-            res = self.grey_box_solver.solve(model, tee=self.grey_box_tee)
+            grey_box_solver_options = None
+            if hasattr(self.grey_box_solver, 'config') and hasattr(
+                self.grey_box_solver.config, 'options'
+            ):
+                grey_box_solver_options = dict(
+                    self.grey_box_solver.config.options.items()
+                )
+            if grey_box_solver_options:
+                res = self.grey_box_solver.solve(
+                    model,
+                    tee=self.grey_box_tee,
+                    solver_options=grey_box_solver_options,
+                )
+            else:
+                res = self.grey_box_solver.solve(model, tee=self.grey_box_tee)
         else:
             res = self.solver.solve(model, tee=self.tee)
 
