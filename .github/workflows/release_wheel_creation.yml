@@ -64,7 +64,9 @@ jobs:
       - name: Update README.md
         shell: bash
         run: |
-          sed -i '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md
+          # Don't use "sed -i" because sed -i requires an argument on OSX
+          sed '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md > README.new
+          mv README.new README.md
       - name: Build wheels
         uses: pypa/cibuildwheel@main
         with:
@@ -113,7 +115,8 @@ jobs:
       - name: Update README.md
         shell: bash
         run: |
-          sed -i '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md
+          sed '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md > README.new
+          mv README.new README.md
       - name: Set up QEMU
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v3
@@ -146,7 +149,8 @@ jobs:
       - name: Update README.md
         shell: bash
         run: |
-          sed -i '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md
+          sed '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md > README.new
+          mv README.new README.md
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -182,7 +186,8 @@ jobs:
     - name: Update README.md
       shell: bash
       run: |
-        sed -i '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md
+        sed '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md > README.new
+        mv README.new README.md
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
