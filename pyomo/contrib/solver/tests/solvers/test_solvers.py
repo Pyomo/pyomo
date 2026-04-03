@@ -42,6 +42,7 @@ from pyomo.contrib.solver.solvers.gams import GAMS
 
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
+from pyomo.contrib.solver.solvers.knitro.persistent import KnitroPersistentSolver
 from pyomo.contrib.solver.tests.solvers import instances
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -76,6 +77,7 @@ all_solvers = [
     ('highs', Highs),
     ('gams', GAMS),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
@@ -83,31 +85,37 @@ mip_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('highs', Highs),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 nlp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 qcp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('gurobi_persistent', GurobiPersistent),
     ('knitro_direct', KnitroDirectSolver),
+    ('knitro_persistent', KnitroPersistentSolver),
 ]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 
 
-def _load_tests(solver_list):
+def _load_tests(solver_list, skip=None):
     res = list()
     for solver_name, solver in solver_list:
+        if skip and solver_name in skip:
+            continue
         if solver_name in nl_solvers_set:
             test_name = f"{solver_name}_presolve"
             res.append((test_name, solver, True))
@@ -2172,7 +2180,7 @@ class TestSolvers(unittest.TestCase):
             opt.config.writer_config.linear_presolve = False
 
         """
-        when c2 gets presolved out, c1 becomes 
+        when c2 gets presolved out, c1 becomes
         x - y + y = 0 which becomes
         x - 0*y == 0 which is the zero we are testing for
         """
