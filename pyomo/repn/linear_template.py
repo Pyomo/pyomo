@@ -453,7 +453,9 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         for i, coef in zip(linear_indices, linear_data):
             v = vl[i]
             if not v.fixed:
-                raise RuntimeError(f"Constraint {obj} has non-fixed {bound} bound")
+                raise InvalidConstraintError(
+                    f"Constraint {obj} has non-fixed {bound} bound"
+                )
             ans += v.value * coef
         linear_indices.clear()
         linear_data.clear()

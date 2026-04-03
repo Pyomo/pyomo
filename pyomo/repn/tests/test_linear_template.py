@@ -1170,11 +1170,11 @@ class TestLinearTemplate(unittest.TestCase):
         m.p[1].unfix()
         m.p[3].unfix()
         with self.assertRaisesRegex(
-            RuntimeError, r"Constraint c\[1\] has non-fixed lower bound"
+            InvalidConstraintError, r"Constraint c\[1\] has non-fixed lower bound"
         ):
             self._eval(m.c[1])
         with self.assertRaisesRegex(
-            RuntimeError, r"Constraint c\[2\] has non-fixed upper bound"
+            InvalidConstraintError, r"Constraint c\[2\] has non-fixed upper bound"
         ):
             self._eval(m.c[2])
 
