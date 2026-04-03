@@ -6,6 +6,9 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________________
 import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
@@ -166,6 +169,27 @@ class CondensedSparseSummation:
             nz_tuples.update(zip(m.row, m.col))
         nz_tuples = sorted(nz_tuples)
         self._nz_tuples = nz_tuples
+
+        # Check to ensure we have some non-zeroes.
+        # If not, we still need to maintain consistent internal state and maps so sum() returns a valid empty matrix.
+        if len(nz_tuples) == 0:
+            # All matrices have empty nonzero structure (e.g., linear models with empty Hessian).
+            # Maintain consistent internal state and maps so sum() returns a valid empty matrix.
+            self._row = np.array([], dtype=np.int64)
+            self._col = np.array([], dtype=np.int64)
+            self._shape = None
+            self._maps = []
+            for m in list_of_matrices:
+                nnz = len(m.data)
+                # Map from each matrix's data vector (length nnz, usually 0) into the
+                # condensed data vector (length 0). This must exist for sum().
+                self._maps.append(coo_matrix((0, nnz)))
+                if self._shape is None:
+                    self._shape = m.shape
+                else:
+                    assert self._shape == m.shape
+            return
+
         self._row, self._col = list(zip(*nz_tuples))
         row_col_to_nz_map = {t: i for i, t in enumerate(nz_tuples)}
 
