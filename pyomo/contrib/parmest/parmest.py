@@ -297,6 +297,335 @@ def SSE_weighted(model):
         )
 
 
+def _validate_prior_FIM(prior_FIM, require_psd=True):
+    """
+    Validate user-supplied prior Fisher Information Matrix.
+
+    Parameters
+    ----------
+    prior_FIM : pd.DataFrame
+        Prior Fisher Information Matrix with parameter names as both row and
+        column labels.
+    require_psd : bool, optional
+        If True, enforce positive semi-definiteness. Default is True.
+    """
+    if not isinstance(prior_FIM, pd.DataFrame):
+        raise TypeError("prior_FIM must be a pandas DataFrame.")
+
+    if prior_FIM.shape[0] != prior_FIM.shape[1]:
+        raise ValueError("prior_FIM must be square.")
+
+    if set(prior_FIM.index) != set(prior_FIM.columns):
+        raise ValueError(
+            "prior_FIM row and column labels must match the same parameter names."
+        )
+
+    if not np.issubdtype(prior_FIM.values.dtype, np.number):
+        raise TypeError("prior_FIM entries must be numeric.")
+
+    if not np.all(np.isfinite(prior_FIM.values)):
+        raise ValueError("prior_FIM entries must be finite.")
+
+    if not np.allclose(prior_FIM.values, prior_FIM.values.T):
+        raise ValueError("prior_FIM must be symmetric.")
+
+    if require_psd:
+        eigenvalues = np.linalg.eigvalsh(prior_FIM.values)
+        if np.any(eigenvalues < -1e-10):  # tolerance for numerical noise
+            raise ValueError("prior_FIM must be positive semi-definite.")
+
+
+def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
+    """
+    Calculates (theta - theta_ref)^T * prior_FIM * (theta - theta_ref)
+    using label-based alignment for safety and subsets for efficiency.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Annotated Pyomo model
+    prior_FIM : pd.DataFrame
+        Prior Fisher Information Matrix from previous experimental design
+    theta_ref: pd.Series, optional
+        Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
+    Returns
+    -------
+    expr : Pyomo expression
+        Expression representing the L2-regularized objective addition
+    """
+    _validate_prior_FIM(prior_FIM, require_psd=True)
+
+    # Get current model parameters
+    # We assume model.unknown_parameters is a list of Pyomo Var objects
+    current_param_names = [p.name for p in model.unknown_parameters]
+    param_map = {p.name: p for p in model.unknown_parameters}
+
+    # Confirm all matching parameters in both prior_FIM index and columns
+    common_params = [
+        p
+        for p in current_param_names
+        if p in prior_FIM.columns and p in prior_FIM.index
+    ]
+
+    if len(common_params) == 0:
+
+        logger.warning(
+            "Warning: No matching parameters found between Model and Prior FIM. Returning standard objective."
+        )
+
+        return 0.0  # No regularization if no common parameters
+
+    elif len(common_params) < len(set(prior_FIM.columns).union(set(prior_FIM.index))):
+
+        logger.warning(
+            "Warning: Only a subset of parameters in the Prior FIM match the Model parameters. "
+            "Regularization will be applied only to the matching subset."
+        )
+    else:
+
+        logger.info(
+            "All parameters in the Prior FIM match the Model parameters. Regularization will be applied to all parameters."
+        )
+
+    # Slice the dataframes to ONLY the common subset
+    sub_FIM = prior_FIM.loc[common_params, common_params]
+
+    # For the reference theta, we also subset to the common parameters. If theta_ref is None, we create a zero vector of the right size.
+    if theta_ref is not None:
+        if not isinstance(theta_ref, pd.Series):
+            theta_ref = pd.Series(theta_ref)
+
+        missing_ref = [p for p in common_params if p not in theta_ref.index]
+        if missing_ref:
+            raise ValueError(
+                "theta_ref is missing values for parameter(s): "
+                + ", ".join(missing_ref)
+            )
+        sub_theta = theta_ref.loc[common_params]
+    else:
+        sub_theta = pd.Series(0, index=common_params)
+
+        # Fill the sub_theta with the initialized model parameter values (or zeros if not initialized)
+        for param in common_params:
+            sub_theta.loc[param] = pyo.value(param_map[param])
+        logger.info(
+            "theta_ref is None. Using initialized parameter values as reference."
+        )
+
+    # Construct the Quadratic Form (The L2 term)
+    # @Reviewers: This can be calculated in a loop or in a vector form.
+    # Are there any issues with the vectorized form that we should be aware of for Pyomo expressions?
+    # The loop form is more transparent but the vectorized form is more efficient and concise.
+
+    #   l2_expr = 0.0
+    #     for i in common_params:
+    #         di = name_to_var[i] - float(theta0.loc[i])
+    #         for j in common_params:
+    #             qij = float(sub_FIM.loc[i, j])
+    #             if qij != 0.0:
+    #                 dj = name_to_var[j] - float(theta0.loc[j])
+    #                 l2_expr += qij * di * dj
+
+    # Create the (theta - theta_ref) vector, ensuring alignment by parameter name
+    delta_params = np.array(
+        [param_map[p] - sub_theta.loc[p] for p in common_params]
+    )  # (theta - theta_ref) vector
+
+    # Compute the quadratic form: delta^T * FIM * delta
+    l2_term = delta_params.T @ sub_FIM.values @ delta_params
+    l2_term *= 0.5  # apply the 0.5 convention for quadratic regularization
+
+    return l2_term
+
+
+def L2_regularized_objective(
+    model, prior_FIM, theta_ref=None, regularization_weight=1.0, obj_function=SSE
+):
+    """
+    Calculates objective + regularization_weight*(theta - theta_ref)^T * prior_FIM * (theta - theta_ref)
+    using label-based alignment for safety and subsets for efficiency.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Annotated Pyomo model
+    prior_FIM : pd.DataFrame
+        Prior Fisher Information Matrix from previous experimental design
+    theta_ref: pd.Series, optional
+        Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
+    regularization_weight: float, optional
+        Weighting factor for the regularization term. Default is 1.0.
+    obj_function: callable, optional
+        Built-in objective function selected by the user, e.g., `SSE`. Default is `SSE`.
+
+    Returns
+    -------
+    expr : Pyomo expression
+        Expression representing the L2-regularized objective
+    """
+
+    # Calculate the L2 penalty term
+    l2_term = _calculate_L2_penalty(model, prior_FIM, theta_ref)
+
+    # Combine with objective
+    object_expr = obj_function(model)
+
+    # Calculate the regularized objective
+    l2reg_objective = object_expr + (regularization_weight * l2_term)
+
+    return l2reg_objective
+
+
+def _calculate_L1_smooth_penalty(
+    model, prior_FIM, theta_ref=None, regularization_epsilon=1e-6
+):
+    """
+    Calculates smooth L1 penalty:
+    sum_i w_i*sqrt((theta_i - theta_ref_i)^2 + regularization_epsilon)
+    where w_i is the corresponding diagonal entry in prior_FIM.
+    using label-based alignment for safety and subsets for efficiency.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Annotated Pyomo model
+    prior_FIM : pd.DataFrame
+        Prior Fisher Information Matrix used for label-based variable selection
+    theta_ref: pd.Series, optional
+        Reference parameter values used in regularization. If None, defaults to
+        the current parameter values in the model.
+    regularization_epsilon: float, optional
+        Positive smoothing parameter in the smooth absolute value approximation.
+
+    Returns
+    -------
+    expr : Pyomo expression
+        Expression representing the smooth L1 objective addition
+    """
+    _validate_prior_FIM(prior_FIM, require_psd=True)
+
+    if regularization_epsilon <= 0:
+        raise ValueError("regularization_epsilon must be positive.")
+
+    # Get current model parameters
+    current_param_names = [p.name for p in model.unknown_parameters]
+    param_map = {p.name: p for p in model.unknown_parameters}
+
+    # Confirm all matching parameters in both prior_FIM index and columns
+    common_params = [
+        p
+        for p in current_param_names
+        if p in prior_FIM.columns and p in prior_FIM.index
+    ]
+
+    if len(common_params) == 0:
+        logger.warning(
+            "Warning: No matching parameters found between Model and Prior FIM. Returning standard objective."
+        )
+        return 0.0
+    elif len(common_params) < len(set(prior_FIM.columns).union(set(prior_FIM.index))):
+        logger.warning(
+            "Warning: Only a subset of parameters in the Prior FIM match the Model parameters. "
+            "Regularization will be applied only to the matching subset."
+        )
+    else:
+        logger.info(
+            "All parameters in the Prior FIM match the Model parameters. Regularization will be applied to all parameters."
+        )
+
+    # Slice to matching subset and use diagonal entries as nonnegative weights.
+    sub_FIM = prior_FIM.loc[common_params, common_params]
+
+    # Construct reference vector over the matching subset
+    if theta_ref is not None:
+        if not isinstance(theta_ref, pd.Series):
+            theta_ref = pd.Series(theta_ref)
+        missing_ref = [p for p in common_params if p not in theta_ref.index]
+        if missing_ref:
+            raise ValueError(
+                "theta_ref is missing values for parameter(s): "
+                + ", ".join(missing_ref)
+            )
+        sub_theta = theta_ref.loc[common_params]
+    else:
+        sub_theta = pd.Series(0, index=common_params)
+        for param in common_params:
+            sub_theta.loc[param] = pyo.value(param_map[param])
+        logger.info(
+            "theta_ref is None. Using initialized parameter values as reference."
+        )
+
+    l1_term = 0.0
+    for p in common_params:
+        weight = float(sub_FIM.loc[p, p])
+        var = param_map[p]
+        has_finite_lb = True
+        has_finite_ub = True
+        if hasattr(var, "lb") and hasattr(var, "ub"):
+            lb = pyo.value(var.lb, exception=False) if var.lb is not None else None
+            ub = pyo.value(var.ub, exception=False) if var.ub is not None else None
+            has_finite_lb = lb is not None and np.isfinite(lb)
+            has_finite_ub = ub is not None and np.isfinite(ub)
+        if weight == 0.0:
+            if not has_finite_lb and not has_finite_ub:
+                logger.warning(
+                    "L1 regularization weight is zero for parameter '%s' and the "
+                    "parameter has no finite bounds. This can create a weakly "
+                    "identified flat direction.",
+                    p,
+                )
+            continue
+        delta = var - sub_theta.loc[p]
+        l1_term += weight * pyo.sqrt(delta * delta + regularization_epsilon)
+
+    return l1_term
+
+
+def L1_regularized_objective(
+    model,
+    prior_FIM,
+    theta_ref=None,
+    regularization_weight=1.0,
+    regularization_epsilon=1e-6,
+    obj_function=SSE,
+):
+    """
+    Calculates objective + regularization_weight*sum_i w_i*sqrt((theta_i-theta_ref_i)^2 + regularization_epsilon)
+    where w_i is the corresponding diagonal entry in prior_FIM.
+    using label-based alignment for safety and subsets for efficiency.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Annotated Pyomo model
+    prior_FIM : pd.DataFrame
+        Prior Fisher Information Matrix used for label-based variable selection
+    theta_ref: pd.Series, optional
+        Reference parameter values used in regularization. If None, defaults to
+        the current parameter values in the model.
+    regularization_weight: float, optional
+        Weighting factor for the regularization term. Default is 1.0.
+    regularization_epsilon: float, optional
+        Positive smoothing parameter in the smooth absolute value approximation.
+    obj_function: callable, optional
+        Built-in objective function selected by the user, e.g., `SSE`. Default is `SSE`.
+
+    Returns
+    -------
+    expr : Pyomo expression
+        Expression representing the smooth L1-regularized objective
+    """
+    l1_term = _calculate_L1_smooth_penalty(
+        model,
+        prior_FIM=prior_FIM,
+        theta_ref=theta_ref,
+        regularization_epsilon=regularization_epsilon,
+    )
+    object_expr = obj_function(model)
+    l1reg_objective = object_expr + (regularization_weight * l1_term)
+    return l1reg_objective
+
+
 def _check_model_labels(model):
     """
     Checks if the annotated Pyomo model contains the necessary suffixes
@@ -373,6 +702,11 @@ class CovarianceMethod(Enum):
 class ObjectiveType(Enum):
     SSE = "SSE"
     SSE_weighted = "SSE_weighted"
+
+
+class RegularizationType(Enum):
+    L2 = "L2"
+    L1 = "L1"
 
 
 # Compute the Jacobian matrix of measured variables with respect to the parameters
@@ -474,6 +808,8 @@ def compute_covariance_matrix(
     solver,
     tee,
     estimated_var=None,
+    prior_FIM=None,
+    regularization_weight=1.0,
 ):
     """
     Computes the covariance matrix of the estimated parameters using
@@ -502,7 +838,13 @@ def compute_covariance_matrix(
         Value of the estimated variance of the measurement error
         in cases where the user does not supply the
         measurement error standard deviation
-
+    prior_FIM: pd.DataFrame, optional
+        Prior Fisher Information Matrix from previous experimental design
+        to be added to the FIM of the current experiments for covariance estimation.
+        The prior_FIM should be a square matrix with parameter names as both
+        row and column labels.
+    regularization_weight: float, optional
+        Weighting factor for the regularization term. Default is 1.0.
     Returns
     -------
     cov : pd.DataFrame
@@ -539,6 +881,24 @@ def compute_covariance_matrix(
             )
 
     FIM = np.sum(FIM_all_exp, axis=0)
+
+    # Add prior_FIM if including regularization. We expand the prior FIM to match the size of the
+    # FIM and align it based on parameter names to ensure correct addition.
+    # Add the prior FIM to the FIM of the current experiments, weighted by the regularization weight
+    if prior_FIM is not None:
+        if regularization_weight < 0:
+            raise ValueError("regularization_weight must be nonnegative.")
+
+        expanded_prior_FIM = _expand_prior_FIM(
+            experiment_list[0], prior_FIM  # theta_vals
+        )  # sanity check and alignment
+
+        # Check that the prior FIM shape is the same as the FIM shape
+        if expanded_prior_FIM.shape != FIM.shape:
+            raise ValueError(
+                "The shape of the prior FIM must be the same as the shape of the FIM."
+            )
+        FIM += expanded_prior_FIM * regularization_weight
 
     # calculate the covariance matrix
     try:
@@ -745,6 +1105,40 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
     return FIM
 
 
+def _expand_prior_FIM(experiment, prior_FIM):
+    """
+    Expands the prior FIM to match the size of the FIM of the current experiment
+
+    Parameters
+    ----------
+    experiment : Experiment class
+        Experiment class object that contains the Pyomo model
+        for a particular experimental condition
+    prior_FIM : pd.DataFrame
+        Prior Fisher Information Matrix from previous experimental design
+
+    Returns
+    -------
+    expanded_prior_FIM : pd.DataFrame
+        Expanded prior FIM with the same size as the FIM of the current experiment
+    """
+    _validate_prior_FIM(prior_FIM, require_psd=True)
+
+    model = _get_labeled_model(experiment)
+
+    # Extract parameter names from the Pyomo model
+    param_names = [param.name for param in model.unknown_parameters]
+
+    # 1. Expand Prior FIM
+    # We reindex to match param_names. Parameters not in prior_FIM
+    # will be filled with 0, which maintains the PSD property.
+    expanded_prior_FIM = prior_FIM.reindex(
+        index=param_names, columns=param_names, fill_value=0.0
+    )
+
+    return expanded_prior_FIM
+
+
 class Estimator:
     """
     Parameter estimation class
@@ -768,6 +1162,28 @@ class Estimator:
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute).
         Default is None.
+
+        Added keyword arguments for objective regularization:
+    regularization: string, optional
+        Built-in regularization type ("L2" or "L1"). If no regularization is
+        specified, no regularization term is added to the objective.
+        Default is None.
+    prior_FIM: pd.DataFrame, optional
+        Prior Fisher Information Matrix from previous experimental design
+        to be added to the FIM of the current experiments for regularization.
+        The prior_FIM should be a square matrix with parameter names as both
+        row and column labels.
+    theta_ref: pd.Series, optional
+        Reference parameter values used in regularization.
+        If None, defaults to the current parameter values in the model.
+    regularization_weight: float, optional
+        Weighting factor for the regularization term. Used with
+        ``regularization="L2"`` or ``regularization="L1"``
+        and defaults to 1.0 when omitted.
+    regularization_epsilon: float, optional
+        Positive smoothing parameter used with ``regularization="L1"``
+        in ``sqrt((theta-theta_ref)^2 + regularization_epsilon)``.
+        Defaults to ``1e-6`` when omitted.
     """
 
     # The singledispatchmethod decorator is used here as a deprecation
@@ -780,6 +1196,11 @@ class Estimator:
         self,
         experiment_list,
         obj_function=None,
+        regularization=None,
+        prior_FIM=None,
+        theta_ref=None,
+        regularization_weight=None,
+        regularization_epsilon=None,
         tee=False,
         diagnostic_mode=False,
         solver_options=None,
@@ -810,9 +1231,90 @@ class Estimator:
         else:
             self.obj_function = obj_function
 
+        if isinstance(regularization, str):
+            try:
+                self.regularization = RegularizationType(regularization)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid regularization type: '{regularization}'. "
+                    f"Choose from: {[e.value for e in RegularizationType]}."
+                )
+        elif isinstance(regularization, RegularizationType):
+            self.regularization = regularization
+        elif regularization is None:
+            self.regularization = None
+        else:
+            raise TypeError(
+                "regularization must be None or one of "
+                f"{[e.value for e in RegularizationType]}."
+            )
+
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
+
+        # Validate regularization options and defaults
+        if self.regularization is None:
+            if (
+                prior_FIM is not None
+                or theta_ref is not None
+                or regularization_weight is not None
+                or regularization_epsilon is not None
+            ):
+                raise ValueError(
+                    "regularization must be set when supplying prior_FIM, theta_ref, "
+                    "regularization_weight, or regularization_epsilon."
+                )
+            self.prior_FIM = None
+            self.theta_ref = None
+            self.regularization_weight = None
+            self.regularization_epsilon = None
+        elif self.regularization == RegularizationType.L2:
+            if prior_FIM is None:
+                raise ValueError("prior_FIM must be provided when regularization='L2'.")
+            _validate_prior_FIM(prior_FIM, require_psd=True)
+            if theta_ref is not None and not isinstance(theta_ref, pd.Series):
+                theta_ref = pd.Series(theta_ref)
+            if regularization_epsilon is not None:
+                raise ValueError(
+                    "regularization_epsilon is only supported when regularization='L1'."
+                )
+
+            if regularization_weight is None:
+                regularization_weight = 1.0
+            if regularization_weight < 0:
+                raise ValueError("regularization_weight must be nonnegative.")
+
+            self.prior_FIM = prior_FIM
+            self.theta_ref = theta_ref
+            self.regularization_weight = regularization_weight
+            self.regularization_epsilon = None
+        elif self.regularization == RegularizationType.L1:
+            if prior_FIM is None:
+                raise ValueError("prior_FIM must be provided when regularization='L1'.")
+            _validate_prior_FIM(prior_FIM, require_psd=True)
+            if theta_ref is not None and not isinstance(theta_ref, pd.Series):
+                theta_ref = pd.Series(theta_ref)
+
+            if regularization_weight is None:
+                regularization_weight = 1.0
+            if regularization_weight < 0:
+                raise ValueError("regularization_weight must be nonnegative.")
+
+            if regularization_epsilon is None:
+                regularization_epsilon = 1e-6
+            if regularization_epsilon <= 0:
+                raise ValueError("regularization_epsilon must be positive.")
+
+            self.prior_FIM = prior_FIM
+            self.theta_ref = theta_ref
+            self.regularization_weight = regularization_weight
+            self.regularization_epsilon = regularization_epsilon
+        else:
+            raise ValueError(
+                f"Unsupported regularization option: {self.regularization}. "
+                f"Choose from {[e.value for e in RegularizationType]}."
+            )
 
         # TODO: delete this when the deprecated interface is removed
         self.pest_deprecated = None
@@ -909,6 +1411,63 @@ class Estimator:
 
         return model_theta_list
 
+    # Reviewers: Put in architecture to calculate a regularization weight based on the current parameter values and the prior FIM.
+    # However, if the prior_FIM is properly defined, this should not be necessary. Are there any use cases for this where we should give
+    # the user a scaling option, or remove and trust the prior_FIM to be properly scaled?
+
+    # def _calc_regularization_weight(self, solver='ipopt'):
+    #     """
+    #     Calculate regularization weight as the ratio of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
+    #     """
+    #     # Solve the model at the current parameter values to get the objective function value
+    #     sse_vals = []
+    #     for experiment in self.exp_list:
+    #         model = _get_labeled_model(experiment)
+
+    #         # fix the value of the unknown parameters to the estimated values
+    #         for param in model.unknown_parameters:
+    #             param.fix(pyo.value(param))
+
+    #         # re-solve the model with the estimated parameters
+    #         results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
+    #         assert_optimal_termination(results)
+
+    #         # choose and evaluate the sum of squared errors expression
+    #         if self.obj_function == ObjectiveType.SSE:
+    #             sse_expr = SSE(model)
+    #         elif self.obj_function == ObjectiveType.SSE_weighted:
+    #             sse_expr = SSE_weighted(model)
+    #         else:
+    #             raise ValueError(
+    #                 f"Invalid objective function for covariance calculation. "
+    #                 f"The covariance matrix can only be calculated using the built-in "
+    #                 f"objective functions: {[e.value for e in ObjectiveType]}. Supply "
+    #                 f"the Estimator object one of these built-in objectives and "
+    #                 f"re-run the code."
+    #             )
+    #         l2_expr = _calculate_L2_penalty(model, self.prior_FIM, self.theta_ref)
+
+    #         # evaluate the numerical SSE and store it
+    #         sse_val = pyo.value(sse_expr)
+    #         sse_vals.append(sse_val)
+
+    #     sse = sum(sse_vals)
+
+    #     if l2_expr is None:
+    #         l2_value = 0
+    #     else:
+    #         l2_value = pyo.value(l2_expr)
+
+    #     if l2_value == 0:
+    #         logger.warning(
+    #             "L2 penalty is zero at the current parameter values. Regularization weight set to 1.0 by default."
+    #         )
+    #         return 1.0
+
+    #     reg_weight = float(pyo.value(sse) / (pyo.value(l2_value)))
+    #     logger.info(f"Calculated regularization weight: {reg_weight}")
+    #     return reg_weight
+
     def _create_parmest_model(self, experiment_number):
         """
         Modify the Pyomo model for parameter estimation
@@ -939,15 +1498,45 @@ class Estimator:
 
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
-            if self.obj_function is ObjectiveType.SSE:
-                second_stage_rule = SSE
-                self.covariance_objective = second_stage_rule
-            elif self.obj_function is ObjectiveType.SSE_weighted:
-                second_stage_rule = SSE_weighted
-                self.covariance_objective = second_stage_rule
+
+            if isinstance(self.obj_function, ObjectiveType):
+
+                if self.obj_function == ObjectiveType.SSE:
+                    self.covariance_objective = SSE
+
+                elif self.obj_function == ObjectiveType.SSE_weighted:
+                    self.covariance_objective = SSE_weighted
+
+                base_objective = self.covariance_objective
             else:
                 # A custom function uses model.experiment_outputs as data
-                second_stage_rule = self.obj_function
+                self.covariance_objective = None
+                base_objective = self.obj_function
+
+            if self.regularization is None:
+                second_stage_rule = base_objective
+            elif self.regularization == RegularizationType.L2:
+                second_stage_rule = lambda m: L2_regularized_objective(
+                    m,
+                    prior_FIM=self.prior_FIM,
+                    theta_ref=self.theta_ref,
+                    regularization_weight=self.regularization_weight,
+                    obj_function=base_objective,
+                )
+            elif self.regularization == RegularizationType.L1:
+                second_stage_rule = lambda m: L1_regularized_objective(
+                    m,
+                    prior_FIM=self.prior_FIM,
+                    theta_ref=self.theta_ref,
+                    regularization_weight=self.regularization_weight,
+                    regularization_epsilon=self.regularization_epsilon,
+                    obj_function=base_objective,
+                )
+            else:
+                raise ValueError(
+                    f"Unsupported regularization option: {self.regularization}. "
+                    f"Choose from {[e.value for e in RegularizationType]}."
+                )
 
             model.FirstStageCost = pyo.Expression(expr=0)
             model.SecondStageCost = pyo.Expression(rule=second_stage_rule)
@@ -1262,6 +1851,12 @@ class Estimator:
             )
 
         # check if the user specified 'SSE' or 'SSE_weighted' as the objective function
+        cov_prior_FIM = None
+        cov_regularization_weight = None
+        if self.regularization == RegularizationType.L2:
+            cov_prior_FIM = self.prior_FIM
+            cov_regularization_weight = self.regularization_weight
+
         if self.obj_function == ObjectiveType.SSE:
             # check if the user defined the 'measurement_error' attribute
             if hasattr(model, "measurement_error"):
@@ -1298,6 +1893,8 @@ class Estimator:
                             method,
                             obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
+                            prior_FIM=cov_prior_FIM,
+                            regularization_weight=cov_regularization_weight,
                             solver=solver,
                             step=step,
                             tee=self.tee,
@@ -1328,7 +1925,10 @@ class Estimator:
                             solver=solver,
                             step=step,
                             tee=self.tee,
+                            prior_FIM=cov_prior_FIM,
+                            regularization_weight=cov_regularization_weight,
                         )
+
                 else:
                     raise ValueError(
                         "One or more values of the measurement errors have "
@@ -1366,6 +1966,8 @@ class Estimator:
                             method,
                             obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
+                            prior_FIM=cov_prior_FIM,
+                            regularization_weight=cov_regularization_weight,
                             step=step,
                             solver=solver,
                             tee=self.tee,
@@ -1610,6 +2212,8 @@ class Estimator:
 
         return samplelist
 
+    # @Reviewers: Currently regularization chosen with objective at Estimator initialization,
+    # Would it be preferable to have regularization choice as an argument in the theta_est function instead?
     def theta_est(
         self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
     ):
