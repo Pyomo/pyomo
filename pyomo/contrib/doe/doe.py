@@ -24,6 +24,7 @@
 # publicly, and to permit other to do so.
 # ____________________________________________________________________________________
 
+from contextlib import contextmanager
 from enum import Enum
 from itertools import permutations, product
 
@@ -41,6 +42,7 @@ from pyomo.common.dependencies import (
 )
 
 from pyomo.common.errors import DeveloperError
+from pyomo.common.config import ConfigBlock, ConfigValue, PositiveInt
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
@@ -76,6 +78,58 @@ class FiniteDifferenceStep(Enum):
 
 
 class DesignOfExperiments:
+    RUN_DOE_CONFIG = ConfigBlock("run_doe")
+    RUN_DOE_CONFIG.declare(
+        "scenario_solver_options",
+        ConfigBlock(
+            implicit=True,
+            description=(
+                "Advanced: solver options applied only to scenario-generation "
+                "and initialization solves."
+            ),
+        ),
+    )
+    RUN_DOE_CONFIG.declare(
+        "final_solver_options",
+        ConfigBlock(
+            implicit=True,
+            description=(
+                "Advanced: solver options applied only to the final optimization solve."
+            ),
+        ),
+    )
+    RUN_DOE_CONFIG.declare(
+        "final_solve",
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description="If False, skip the final optimization solve.",
+        ),
+    )
+    RUN_DOE_CONFIG.declare(
+        "inspection",
+        ConfigBlock(
+            implicit=False,
+            description="Advanced: structured model inspection controls.",
+        ),
+    )
+    RUN_DOE_CONFIG.inspection.declare(
+        "enabled",
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="If True, capture structured constraint residual reports.",
+        ),
+    )
+    RUN_DOE_CONFIG.inspection.declare(
+        "top_constraints",
+        ConfigValue(
+            default=20,
+            domain=PositiveInt,
+            description="Number of largest-violation constraints to report.",
+        ),
+    )
+
     def __init__(
         self,
         experiment=None,
@@ -270,7 +324,7 @@ class DesignOfExperiments:
         self._built_scenarios = False
 
     # Perform doe
-    def run_doe(self, model=None, results_file=None):
+    def run_doe(self, model=None, results_file=None, run_config=None):
         """
         Runs DoE for a single experiment estimation. Can save results in
         a file based on the flag.
@@ -281,6 +335,28 @@ class DesignOfExperiments:
         results_file: string name of the file path to save the results
                       to in the form of a .json file
                       default: None --> don't save
+        run_config: optional advanced ConfigBlock or dict for expert controls.
+                    Supported keys are:
+                    - ``scenario_solver_options`` (dict-like)
+                    - ``final_solver_options`` (dict-like)
+                    - ``final_solve`` (bool)
+                    - ``inspection.enabled`` (bool)
+                    - ``inspection.top_constraints`` (positive int)
+
+        Examples
+        --------
+        Basic usage (most users):
+            doe_obj.run_doe()
+
+        Advanced usage with a config dictionary:
+            doe_obj.run_doe(
+                run_config={
+                    "scenario_solver_options": {"max_iter": 200},
+                    "final_solver_options": {"max_iter": 0},
+                    "final_solve": True,
+                    "inspection": {"enabled": True, "top_constraints": 50},
+                }
+            )
 
         """
         # Check results file name
@@ -289,6 +365,22 @@ class DesignOfExperiments:
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
+        run_config_block = self.RUN_DOE_CONFIG()
+        if run_config is not None:
+            run_config_block.set_value(run_config)
+        scenario_solver_options = (
+            dict(run_config_block.scenario_solver_options)
+            if len(run_config_block.scenario_solver_options) > 0
+            else None
+        )
+        final_solver_options = (
+            dict(run_config_block.final_solver_options)
+            if len(run_config_block.final_solver_options) > 0
+            else None
+        )
+        solve_final_model = run_config_block.final_solve
+        inspect_constraints = run_config_block.inspection.enabled
+        inspect_top_constraints = run_config_block.inspection.top_constraints
 
         # Start timer
         sp_timer = TicTocTimer()
@@ -309,7 +401,8 @@ class DesignOfExperiments:
         # TODO: potentially work with this for more complicated models
         # Create the full DoE model (build scenarios for F.D. scheme)
         if not self._built_scenarios:
-            self.create_doe_model(model=model)
+            with self._temporary_solver_options(self.solver, scenario_solver_options):
+                self.create_doe_model(model=model)
 
         # Add the objective function to the model
         if self.use_grey_box:
@@ -343,7 +436,8 @@ class DesignOfExperiments:
         #     # The solver was unsuccessful, might want to warn the user
         #     # or terminate gracefully, etc.
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
-        self.solver.solve(model, tee=self.tee)
+        with self._temporary_solver_options(self.solver, scenario_solver_options):
+            self.solver.solve(model, tee=self.tee)
 
         # Track time to initialize the DoE model
         initialization_time = sp_timer.toc(msg=None)
@@ -376,11 +470,17 @@ class DesignOfExperiments:
             if self.objective_option == ObjectiveLib.trace:
                 trace_val = np.trace(np.linalg.pinv(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
-            elif self.objective_option == ObjectiveLib.determinant:
-                det_val = np.linalg.det(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
-                    np.log(det_val)
+            elif self.objective_option == ObjectiveLib.pseudo_trace:
+                pseudo_trace_val = np.trace(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["pseudo-A-opt"].set_value(
+                    pseudo_trace_val
                 )
+            elif self.objective_option == ObjectiveLib.determinant:
+                fim_val = np.array(self.get_FIM(), dtype=float)
+                sign, logdet = np.linalg.slogdet(fim_val)
+                if sign <= 0 or not np.isfinite(logdet):
+                    logdet = np.log(1e-12)
+                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(logdet)
             elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
                 eig, _ = np.linalg.eig(np.array(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
@@ -389,86 +489,52 @@ class DesignOfExperiments:
                 cond_number = np.log(np.abs(np.max(eig) / np.min(eig)))
                 model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
 
-        # If the model has L, initialize it with the solved FIM
-        if hasattr(model, "L"):
-            # Get the FIM values
-            fim_vals = [
-                pyo.value(model.fim[i, j])
-                for i in model.parameter_names
-                for j in model.parameter_names
-            ]
-            fim_np = np.array(fim_vals).reshape(
-                (len(model.parameter_names), len(model.parameter_names))
+        # Keep Cholesky-related variables synchronized with current FIM values
+        self._initialize_cholesky_from_fim(model=model)
+
+        constraint_residuals = {}
+        if inspect_constraints:
+            constraint_residuals["post_initialization"] = self.get_constraint_residuals(
+                model=model, top_n=inspect_top_constraints
             )
-
-            # Need to compute the full FIM before
-            # initializing the Cholesky factorization
-            if self.only_compute_fim_lower:
-                fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
-
-            # Check if the FIM is positive definite
-            # If not, add jitter to the diagonal
-            # to ensure positive definiteness
-            min_eig = np.min(np.linalg.eigvals(fim_np))
-
-            if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-                # Raise the minimum eigenvalue to at
-                # least _SMALL_TOLERANCE_DEFINITENESS
-                jitter = np.min(
-                    [
-                        -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
-                        _SMALL_TOLERANCE_DEFINITENESS,
-                    ]
-                )
-            else:
-                # No jitter needed
-                jitter = 0
-
-            # Add jitter to the diagonal to ensure positive definiteness
-            L_vals_sq = np.linalg.cholesky(
-                fim_np + jitter * np.eye(len(model.parameter_names))
-            )
-            for i, c in enumerate(model.parameter_names):
-                for j, d in enumerate(model.parameter_names):
-                    model.L[c, d].value = L_vals_sq[i, j]
-
-            # Initialize the inverse of L if it exists
-            if hasattr(model, "L_inv"):
-                L_inv_vals = np.linalg.inv(L_vals_sq)
-
-                for i, c in enumerate(model.parameter_names):
-                    for j, d in enumerate(model.parameter_names):
-                        if i >= j:
-                            model.L_inv[c, d].value = L_inv_vals[i, j]
-                        else:
-                            model.L_inv[c, d].value = 0.0
-                # Initialize the cov_trace if it exists
-                if hasattr(model, "cov_trace"):
-                    initial_cov_trace = np.sum(L_inv_vals**2)
-                    model.cov_trace.value = initial_cov_trace
 
         if hasattr(model, "determinant"):
             model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
 
         # Solve the full model, which has now been initialized with the square solve
-        if self.use_grey_box:
-            res = self.grey_box_solver.solve(model, tee=self.grey_box_tee)
-        else:
-            res = self.solver.solve(model, tee=self.tee)
+        solve_time = 0.0
+        res = None
+        if solve_final_model:
+            if self.use_grey_box:
+                with self._temporary_solver_options(
+                    self.grey_box_solver, final_solver_options
+                ):
+                    res = self.grey_box_solver.solve(model, tee=self.grey_box_tee)
+            else:
+                with self._temporary_solver_options(self.solver, final_solver_options):
+                    res = self.solver.solve(model, tee=self.tee)
 
-        # Track time used to solve the DoE model
-        solve_time = sp_timer.toc(msg=None)
+            # Track time used to solve the DoE model
+            solve_time = sp_timer.toc(msg=None) - (build_time + initialization_time)
 
-        self.logger.info(
-            (
-                "Successfully optimized experiment."
-                "\nSolve time: %0.1f seconds" % solve_time
+            self.logger.info(
+                (
+                    "Successfully optimized experiment."
+                    "\nSolve time: %0.1f seconds" % solve_time
+                )
             )
-        )
+        else:
+            self.logger.info(
+                "Skipped final optimization solve (solve_final_model=False)."
+            )
         self.logger.info(
             "Total time for build, initialization, and solve: %0.1f seconds"
             % (build_time + initialization_time + solve_time)
         )
+        if inspect_constraints:
+            constraint_residuals["post_final_stage"] = self.get_constraint_residuals(
+                model=model, top_n=inspect_top_constraints
+            )
 
         # Avoid accidental carry-over of FIM information
         fim_local = self.get_FIM()
@@ -476,12 +542,19 @@ class DesignOfExperiments:
         # Make sure stale results don't follow the DoE object instance
         self.results = {}
 
-        self.results["Solver Status"] = res.solver.status
-        self.results["Termination Condition"] = res.solver.termination_condition
-        if type(res.solver.message) is str:
-            results_message = res.solver.message
-        elif type(res.solver.message) is bytes:
-            results_message = res.solver.message.decode("utf-8")
+        if res is None:
+            self.results["Solver Status"] = "not_run"
+            self.results["Termination Condition"] = "not_run"
+            results_message = "Final optimization solve was skipped."
+        else:
+            self.results["Solver Status"] = res.solver.status
+            self.results["Termination Condition"] = res.solver.termination_condition
+            if type(res.solver.message) is str:
+                results_message = res.solver.message
+            elif type(res.solver.message) is bytes:
+                results_message = res.solver.message.decode("utf-8")
+            else:
+                results_message = str(res.solver.message)
         self.results["Termination Message"] = results_message
 
         # Important quantities for optimal design
@@ -528,6 +601,8 @@ class DesignOfExperiments:
         self.results["Finite Difference Scheme"] = str(self.fd_formula).split(".")[-1]
         self.results["Finite Difference Step"] = self.step
         self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
+        if inspect_constraints:
+            self.results["Constraint Residuals"] = constraint_residuals
 
         # TODO: Add more useful fields to the results object?
         # TODO: Add MetaData from the user to the results object? Or leave to the user?
@@ -536,6 +611,215 @@ class DesignOfExperiments:
         if results_file is not None:
             with open(results_file, "w") as file:
                 json.dump(self.results, file)
+
+    def _solver_options_container(self, solver):
+        """
+        Return the mutable solver options container.
+
+        Parameters
+        ----------
+        solver: solver interface object
+            Solver used by DoE. Must expose either ``options`` or
+            ``config.options``.
+
+        Returns
+        -------
+        dict-like
+            Mutable solver options object.
+        """
+        if hasattr(solver, "options"):
+            return solver.options
+        if hasattr(solver, "config") and hasattr(solver.config, "options"):
+            return solver.config.options
+        raise ValueError(
+            "Solver does not expose supported options storage. "
+            "Expected ``solver.options`` or ``solver.config.options``."
+        )
+
+    @contextmanager
+    def _temporary_solver_options(self, solver, new_options):
+        """
+        Temporarily apply solver options for a scoped solve call.
+
+        Parameters
+        ----------
+        solver: solver interface object
+            Solver whose options will be temporarily overridden.
+        new_options: dict-like or None
+            Option values to apply while inside the context manager.
+
+        Yields
+        ------
+        None
+            Context with temporary options applied.
+        """
+        if new_options is None:
+            yield
+            return
+
+        options = self._solver_options_container(solver)
+        previous_values = {}
+        added_keys = []
+        for key, val in new_options.items():
+            if key in options:
+                previous_values[key] = options[key]
+            else:
+                added_keys.append(key)
+            options[key] = val
+        try:
+            yield
+        finally:
+            for key in added_keys:
+                if key in options:
+                    del options[key]
+            for key, val in previous_values.items():
+                options[key] = val
+
+    def _compute_cholesky_jitter(self, min_eig):
+        """
+        Compute diagonal regularization for Cholesky initialization.
+
+        Parameters
+        ----------
+        min_eig: float
+            Minimum eigenvalue of the current FIM estimate.
+
+        Returns
+        -------
+        float
+            Nonnegative diagonal shift needed so the minimum eigenvalue
+            is at least ``_SMALL_TOLERANCE_DEFINITENESS``.
+        """
+        return max(0.0, _SMALL_TOLERANCE_DEFINITENESS - float(min_eig))
+
+    def _get_fim_numpy(self, model):
+        """
+        Assemble the current FIM variable values into a NumPy array.
+
+        Parameters
+        ----------
+        model: ConcreteModel
+            DoE model containing variable ``fim``.
+
+        Returns
+        -------
+        ndarray
+            Dense FIM array. If ``only_compute_fim_lower`` is True, the
+            returned array is symmetrized from the lower triangle.
+        """
+        fim_vals = [
+            pyo.value(model.fim[i, j])
+            for i in model.parameter_names
+            for j in model.parameter_names
+        ]
+        fim_np = np.array(fim_vals, dtype=float).reshape(
+            (len(model.parameter_names), len(model.parameter_names))
+        )
+        if self.only_compute_fim_lower:
+            fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
+        return fim_np
+
+    def _initialize_cholesky_from_fim(self, model=None):
+        """
+        Synchronize Cholesky-related variables using the current FIM.
+
+        Parameters
+        ----------
+        model: ConcreteModel, optional
+            DoE model to update. Defaults to ``self.model``.
+
+        Returns
+        -------
+        None
+            Updates model values in place for available variables:
+            ``L``, ``L_inv``, ``fim_inv``, and ``cov_trace``.
+        """
+        if model is None:
+            model = self.model
+        if not hasattr(model, "L"):
+            return
+
+        fim_np = self._get_fim_numpy(model)
+        min_eig = float(np.min(np.linalg.eigvalsh(fim_np)))
+        jitter = self._compute_cholesky_jitter(min_eig)
+        fim_pd = fim_np + jitter * np.eye(len(model.parameter_names))
+
+        L_vals = np.linalg.cholesky(fim_pd)
+        for i, c in enumerate(model.parameter_names):
+            for j, d in enumerate(model.parameter_names):
+                if i >= j:
+                    model.L[c, d].value = L_vals[i, j]
+                else:
+                    model.L[c, d].value = 0.0
+
+        if hasattr(model, "L_inv"):
+            L_inv_vals = np.linalg.inv(L_vals)
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
+                    if i >= j:
+                        model.L_inv[c, d].value = L_inv_vals[i, j]
+                    else:
+                        model.L_inv[c, d].value = 0.0
+
+        if hasattr(model, "fim_inv"):
+            fim_inv_vals = np.linalg.inv(fim_pd)
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
+                    if self.only_compute_fim_lower and i < j:
+                        model.fim_inv[c, d].value = 0.0
+                    else:
+                        model.fim_inv[c, d].value = fim_inv_vals[i, j]
+
+        if hasattr(model, "cov_trace"):
+            fim_inv_np = np.linalg.inv(fim_pd)
+            model.cov_trace.value = np.trace(fim_inv_np)
+
+    def get_constraint_residuals(self, model=None, top_n=20):
+        """Return sorted residual diagnostics for active constraints."""
+        if model is None:
+            model = self.model
+        if top_n is not None and top_n <= 0:
+            raise ValueError("``top_n`` must be a positive integer or None.")
+
+        residuals = []
+        for con in model.component_data_objects(
+            pyo.Constraint, active=True, descend_into=True
+        ):
+            body = pyo.value(con.body, exception=False)
+            lower = pyo.value(con.lower, exception=False) if con.has_lb() else None
+            upper = pyo.value(con.upper, exception=False) if con.has_ub() else None
+            is_equation = (
+                lower is not None
+                and upper is not None
+                and math.isclose(lower, upper, rel_tol=0.0, abs_tol=1e-12)
+            )
+            if body is None:
+                violation = float("inf")
+            elif is_equation:
+                violation = abs(body - lower)
+            else:
+                violation = 0.0
+                if lower is not None:
+                    violation = max(violation, lower - body)
+                if upper is not None:
+                    violation = max(violation, body - upper)
+                violation = max(violation, 0.0)
+
+            residuals.append(
+                {
+                    "constraint_name": con.name,
+                    "body": body,
+                    "lower_bound": lower,
+                    "upper_bound": upper,
+                    "violation": violation,
+                    "constraint_type": "equation" if is_equation else "inequality",
+                }
+            )
+
+        residuals = sorted(residuals, key=lambda x: x["violation"], reverse=True)
+        if top_n is not None:
+            residuals = residuals[:top_n]
+        return residuals
 
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
@@ -898,6 +1182,7 @@ class DesignOfExperiments:
             self.only_compute_fim_lower
             and self.objective_option == ObjectiveLib.determinant
             and not self.Cholesky_option
+            and not self.use_grey_box
         ):
             raise ValueError(
                 "Cannot compute determinant with explicit formula "
@@ -1662,6 +1947,11 @@ class DesignOfExperiments:
         if self.objective_option == ObjectiveLib.trace:
             model.objective = pyo.Objective(
                 expr=model.obj_cons.egb_fim_block.outputs["A-opt"], sense=pyo.minimize
+            )
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["pseudo-A-opt"],
+                sense=pyo.maximize,
             )
         elif self.objective_option == ObjectiveLib.determinant:
             model.objective = pyo.Objective(
