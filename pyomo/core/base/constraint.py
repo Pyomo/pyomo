@@ -222,7 +222,7 @@ class ConstraintData(ActiveComponentData):
             ):
                 raise InvalidConstraintError(
                     f"Constraint '{self.name}' is a Ranged Inequality with a "
-                    "variable lower bound.  Cannot normalize the "
+                    "variable lower bound.  Cannot standardize the "
                     "constraint or send it to a solver."
                 )
             if (
@@ -232,7 +232,7 @@ class ConstraintData(ActiveComponentData):
             ):
                 raise InvalidConstraintError(
                     f"Constraint '{self.name}' is a Ranged Inequality with a "
-                    "variable upper bound.  Cannot normalize the "
+                    "variable upper bound.  Cannot standardize the "
                     "constraint or send it to a solver."
                 )
         elif expr is None:
