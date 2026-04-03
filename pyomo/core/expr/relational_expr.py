@@ -340,52 +340,88 @@ class TrivialRelationalExpression(InequalityExpression):
 
 
 def inequality(lower=None, body=None, upper=None, strict=False):
-    """
-    A utility function that can be used to declare inequality and
-    ranged inequality expressions.  The expression::
-
-        inequality(2, model.x)
-
-    is equivalent to the expression::
-
-        2 <= model.x
+    r"""A utility function that can be used to declare inequality and
+    ranged inequality expressions.
 
     The expression::
 
+        inequality(2, model.x)
+
+    is equivalent to:
+
+    .. math::
+
+        2 \leq x
+
+    and the expression::
+
         inequality(2, model.x, 3)
 
-    is equivalent to the expression::
+    is equivalent to:
 
-        2 <= model.x <= 3
+    .. math::
 
-    .. note:: This ranged inequality syntax is deprecated in Pyomo.
-        This function provides a mechanism for expressing
-        ranged inequalities without chained inequalities.
+        2 \leq x \leq 3
 
-    args:
-        lower: an expression defines a lower bound
-        body: an expression defines the body of a ranged constraint
-        upper: an expression defines an upper bound
-        strict (bool): A boolean value that indicates whether the inequality
-            is strict.  Default is :const:`False`.
+    .. note:: Pyomo does not support constructing
+       :class:`RangedExpression` objects using Python's chained
+       comparison syntax (``lb <= body <= ub``).  Python relies on
+       shortcut Boolean evaluation, which is incompatible with Pyomo's
+       operator overloading.  Instead, :class:`RangedExpression` objects
+       should be created using this function.
 
-    Returns:
-        A relational expression.  The expression is an inequality
-        if any of the values :attr:`lower`, :attr:`body` or
-        :attr:`upper` is :const:`None`.  Otherwise, the expression
-        is a ranged inequality.
+    Parameters
+    ----------
+    lower : int | float | NumericValue | None
+        The expression for the lower bound
+
+    body : int | float | NumericValue | None
+        The expression for the body of a ranged constraint
+
+    lower : int | float | NumericValue | None
+        The expression for the upper bound
+
+    strict : bool
+        If :const:`True`, construct strict inequalities (``<``);
+        otherwise use ``<=``.
+
+    Returns
+    -------
+    expr : RangedExpression | InequalityExpression | NumericValue | int | float | None
+
+        An expression.  The return value depends on the values of
+        ``lower``, ``body``, and ``upper``:
+
+           - :class:`RangedExpression` if none are :const:`None`
+           - :class:`InequalityExpression` if exactly one is :const:`None`
+           - The non-None argument if exactly one is non-None
+           - :const:`None` if all arguments are :const:`None`
+
     """
-    if lower is None:
-        if body is None or upper is None:
-            raise ValueError("Invalid inequality expression.")
-        return InequalityExpression((body, upper), strict)
+    _genexpr = _lt_dispatcher if strict else _le_dispatcher
     if body is None:
-        if lower is None or upper is None:
-            raise ValueError("Invalid inequality expression.")
-        return InequalityExpression((lower, upper), strict)
-    if upper is None:
-        return InequalityExpression((lower, body), strict)
-    return RangedExpression((lower, body, upper), strict)
+        lower, body = body, lower
+    if lower is not None:
+        expr = _genexpr[lower.__class__, body.__class__](lower, body)
+        # If the LHS of the ranged inequality evaluated to a bool, we
+        # need to do some special processing:
+        #  - False: the LHS is trivially infeasible.  Return False.
+        #  - True: the LHS is trivially feasible. Leave body unchanged
+        #    so that it can be compared to the RHS
+        #
+        # ...otherwise, "replace" body with the resulting inequality and
+        # then process the RHS
+        if expr.__class__ is bool:
+            if not expr:
+                return False
+        else:
+            body = expr
+    if upper is not None:
+        if body is not None:
+            body = _genexpr[body.__class__, upper.__class__](body, upper)
+        else:
+            body = upper
+    return body
 
 
 class EqualityExpression(RelationalExpression):
@@ -442,10 +478,24 @@ class NotEqualExpression(RelationalExpression):
 
 
 def tuple_to_relational_expr(args):
-    if len(args) == 2:
-        return EqualityExpression(args)
-    else:
-        return inequality(*args)
+    if len(args) == 3:
+        return inequality(*args, strict=False)
+    elif len(args) == 2:
+        lhs, rhs = args
+        ans = _eq_dispatcher[lhs.__class__, rhs.__class__](lhs, rhs)
+        if ans is NotImplemented:
+            raise ValueError(
+                "Cannot create EqualityExpression from argument types "
+                f"'{type(lhs).__name__}' and '{type(rhs).__name__}'"
+            )
+        return ans
+    raise ValueError(
+        "Cannot convert tuple to relational expression. "
+        f"Found a tuple of length {len(args)}. Expecting a tuple of "
+        "length 2 or 3:\n"
+        "    Equality:   (left, right)\n"
+        "    Inequality: (lower, expression, upper)"
+    )
 
 
 def _invalid_relational(op_type, op_str, a, b):

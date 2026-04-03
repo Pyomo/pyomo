@@ -197,17 +197,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, False)
 
-        try:
-            inequality(None, None)
-            self.fail("expected invalid inequality error.")
-        except ValueError:
-            pass
-
-        try:
-            inequality(m.a, None)
-            self.fail("expected invalid inequality error.")
-        except ValueError:
-            pass
+        # Trivial cases that do not result in inequalities...
+        self.assertEqual(inequality(m.a, None, None), m.a)
+        self.assertEqual(inequality(None, m.a, None), m.a)
+        self.assertEqual(inequality(None, None, m.a), m.a)
+        self.assertEqual(inequality(None, None, None), None)
 
 
 class TestGenerate_RangedExpression(unittest.TestCase):
