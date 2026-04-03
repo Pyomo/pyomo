@@ -49,6 +49,28 @@ determine correct configuration, so if you are running ``black``
 indirectly (for example, using an IDE integration), please ensure you
 are not overriding the project-level configuration set in that file.
 
+Pre-commit Hooks (Optional)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To avoid formatting failures in CI, you can set up
+`pre-commit <https://pre-commit.com/>`_ hooks that automatically run
+``black`` and the spell-checker on staged files before each commit:
+
+::
+
+   pip install pre-commit
+   pre-commit install
+
+After installation, hooks run automatically when you run ``git commit``.
+To manually run hooks on all files:
+
+::
+
+   pre-commit run --all-files
+
+This is optional but recommended, as it catches formatting and spelling
+issues locally before they reach CI.
+
 Online Pyomo documentation is generated using `Sphinx <https://www.sphinx-doc.org/en/master/>`_
 with the ``napoleon`` extension enabled. For API documentation we use of one of these 
 `supported styles for docstrings <https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html>`_, 
