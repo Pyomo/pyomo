@@ -119,8 +119,10 @@ class IpoptConfig(SolverConfig):
 
 class IpoptSolutionLoader(ASLSolFileSolutionLoader):
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
+        if solution_id is not None:
+            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if self._nl_info.eliminated_vars:
             raise MouseTrap(
                 'Complete reduced costs are not available when variables have '
@@ -418,14 +420,14 @@ class Ipopt(SolverBase):
                     )
                     results.solution_status = SolutionStatus.optimal
                     results.solution_loader = IpoptSolutionLoader(
-                        sol_data=ASLSolFileData(), nl_info=nl_info
+                        sol_data=ASLSolFileData(), nl_info=nl_info, pyomo_model=model
                     )
                 else:
                     results.termination_condition = TerminationCondition.emptyModel
                     results.solution_status = SolutionStatus.noSolution
                 results.extra_info.iteration_count = 0
             else:
-                self._run_ipopt(results, config, nl_info, basename, timer)
+                self._run_ipopt(results, config, nl_info, basename, timer, model)
 
         if (
             config.raise_exception_on_nonoptimal_result
@@ -436,19 +438,7 @@ class Ipopt(SolverBase):
         if config.load_solutions:
             if results.solution_status == SolutionStatus.noSolution:
                 raise NoSolutionError()
-            results.solution_loader.load_vars()
-            if (
-                hasattr(model, 'dual')
-                and isinstance(model.dual, Suffix)
-                and model.dual.import_enabled()
-            ):
-                model.dual.update(results.solution_loader.get_duals())
-            if (
-                hasattr(model, 'rc')
-                and isinstance(model.rc, Suffix)
-                and model.rc.import_enabled()
-            ):
-                model.rc.update(results.solution_loader.get_reduced_costs())
+            results.solution_loader.load_solution()
 
         if (
             results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}
@@ -462,7 +452,7 @@ class Ipopt(SolverBase):
                         nl_info.objectives[0].expr,
                         substitution_map={
                             id(v): val
-                            for v, val in results.solution_loader.get_primals().items()
+                            for v, val in results.solution_loader.get_vars().items()
                         },
                         descend_into_named_expressions=True,
                         remove_named_expressions=True,
@@ -500,7 +490,7 @@ class Ipopt(SolverBase):
         # Return the (formatted) command line options
         return cmd_line_options
 
-    def _run_ipopt(self, results, config, nl_info, basename, timer):
+    def _run_ipopt(self, results, config, nl_info, basename, timer, model):
         # Get a copy of the environment to pass to the subprocess
         env = os.environ.copy()
         if nl_info.external_function_libraries:
@@ -590,7 +580,7 @@ class Ipopt(SolverBase):
         else:
             sol_data = ASLSolFileData()
         results.solution_loader = IpoptSolutionLoader(
-            sol_data=sol_data, nl_info=nl_info
+            sol_data=sol_data, nl_info=nl_info, pyomo_model=model
         )
         timer.stop('parse_sol')
 
