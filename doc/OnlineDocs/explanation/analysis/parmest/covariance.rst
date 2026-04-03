@@ -1,14 +1,20 @@
 .. _covariancesection:
 
-Covariance Matrix Estimation
-============================
-
+Uncertainty Quantification
+==========================
 The goal of parameter estimation (see :ref:`driversection` Section) is to estimate unknown model parameters
-from experimental data. When the model parameters are estimated from the data, their accuracy is measured by
-computing the covariance matrix. The diagonal of this covariance matrix contains the variance of the
-estimated parameters which is used to calculate their uncertainty. Assuming Gaussian independent and identically
-distributed measurement errors, the covariance matrix of the estimated parameters can be computed using the
-following methods which have been implemented in parmest.
+from experimental data. Uncertainty quantification is required to ensure that the estimates of the parameters are
+close to their true values. This parameter uncertainty can be computed using four methods in parmest:
+covariance matrix, likelihood ratio test, bootstrapping, and leave-N-out.
+
+Covariance Matrix Estimation
+----------------------------
+
+The uncertainty in estimated model parameters can be quantified by computing the covariance matrix.
+The diagonal of this covariance matrix contains the variance of the estimated parameters which is used to
+calculate their uncertainty. Assuming Gaussian independent and identically distributed measurement errors,
+the covariance matrix of the estimated parameters can be computed using the following methods which have been
+implemented in parmest.
 
 1. Reduced Hessian Method
 
@@ -139,3 +145,83 @@ e.g.,
     >>> obj_val, theta_val = pest.theta_est()
     >>> cov_method = "reduced_hessian"
     >>> cov = pest.cov_est(method=cov_method)
+
+Bootstrapping
+-------------
+
+Bootstrapping is a non-intrusive method that uses resampling to approximate the variance of the parameter estimates.
+By repeatedly fitting the model to resampled datasets, the parameter uncertainty (e.g., variance or covariance)
+can be computed without relying on strong distributional assumptions. This method is summarized as follows:
+
+1. Step 0: Define the input data
+
+    Given input data: :math:`[y_1, \dots, y_n]`
+
+2. Step 1: Generate :math:`B` artificial datasets through sampling
+
+    Sample with replacement from the original data to create :math:`B` bootstrap datasets:
+
+    .. math::
+        \left\{y_1^{(1)}, \dots, y_n^{(1)} \right\}, \dots, \left\{y_1^{(B)}, \dots, y_n^{(B)} \right\}
+
+3. Step 2: Compute the estimator of the parameters
+
+    Fit the model to each bootstrap dataset to obtain parameter estimates:
+
+    .. math::
+        \left\{ \hat{\theta}^{(1)}, \dots, \hat{\theta}^{(B)} \right\}
+
+4. Step 3: Compute the approximate variance of the parameter estimates
+
+    The variability across bootstrap estimates approximates the estimator variance:
+
+    .. math::
+        \text{Var}(\hat{\theta}) =
+        \frac{1}{B} \sum_{j=1}^{B} \left(\hat{\theta}^{(j)}\right)^2
+        -
+        \left(
+        \frac{1}{B} \sum_{j=1}^{B} \hat{\theta}^{(j)}
+        \right)^2
+
+The example code for this method will soon be provided.
+
+Likelihood Ratio Test
+---------------------
+
+The likelihood ratio test is a non-intrusive method that compares how well two parameter sets explain the
+observed data: an unconstrained set and a constrained set defined by the null hypothesis. It is commonly used
+to assess whether restricting parameters significantly degrades model fit. This method is summarized as follows:
+
+1. Step 1: State the hypothesis
+
+    Null hypothesis: :math:`\theta \in \Theta_0` vs. Alternative hypothesis: :math:`\theta \notin \Theta_0`
+
+2. Step 2: Define the test statistic
+
+    The test statistic is the ratio of the maximum likelihood under the full parameter space to that under the
+    constrained space:
+
+    .. math::
+        \lambda_n =
+        \frac{\sup_{\theta \in \Theta} L(\theta; y_1, \dots, y_n)}{
+        \sup_{\theta \in \Theta_0} L(\theta; y_1, \dots, y_n)}
+
+3. Step 3: Define the decision rule
+
+    Reject the null hypothesis if:
+
+    .. math::
+        \lambda_n > c_{\alpha}
+
+    Equivalently, using maximum likelihood estimates:
+
+    .. math::
+        \lambda_n =
+        \frac{L(\hat{\theta}; y_1, \dots, y_n)}{L(\hat{\theta}_0; y_1, \dots, y_n)} > c_{\alpha}
+
+The example code for this method will soon be provided.
+
+Leave-N-Out
+-----------
+
+The documentation, description, and example code for this method will soon be provided.
