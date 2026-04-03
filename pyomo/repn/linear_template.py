@@ -7,6 +7,9 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+import logging
+import sys
+
 from copy import deepcopy
 from itertools import chain
 
@@ -373,47 +376,20 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             return node.args, []
 
     def expand_expression(self, obj, template_info):
-        env = self.env
         try:
             body, lb, ub = self.expanded_templates[id(template_info)]
         except KeyError:
-            smap = self.symbolmap
-            expr, indices = template_info
-            args = [smap.getSymbol(i) for i in indices]
-            if expr is IndexedComponent.Skip:
-                body = lambda i, c, *ind: 0
-                lb = ub = None
-            elif expr.is_expression_type(ExpressionType.RELATIONAL):
-                try:
-                    lb, body, ub = obj.to_bounded_expression()
-                except InvalidConstraintError:
-                    # Ignore the variable lower/upper bound error (for
-                    # now).  We will check later that the individual
-                    # bounds contain no non-fixed linear terms.
-                    #
-                    # Note: the only way to get this exception is if the
-                    # obj is a RangedExpression, so we know that there
-                    # will be 3 args (and this will explicitly fail if
-                    # that is not the case)
-                    lb, body, ub = expr.args
-                if body is not None:
-                    body = self.walk_expression(body).compile(
-                        env, smap, self.expr_cache, args
-                    )
-                if lb is not None:
-                    lb = self.walk_expression(lb).compile(
-                        env, smap, self.expr_cache, args
-                    )
-                if ub is not None:
-                    ub = self.walk_expression(ub).compile(
-                        env, smap, self.expr_cache, args
-                    )
-            else:
-                lb = ub = None
-                body = self.walk_expression(expr).compile(
-                    env, smap, self.expr_cache, args
+            try:
+                body, lb, ub = self._generate_expanded_template(obj, template_info)
+            except:
+                # Provide some context clues for what component failed
+                # compilation
+                msg = sys.exc_info()[1]
+                logging.getLogger(__name__).error(
+                    "Error compiling expanded template expressions for "
+                    f"{obj.__class__.__name__} '{obj.name}'\n    {msg}"
                 )
-            self.expanded_templates[id(template_info)] = body, lb, ub
+                raise
 
         linear_indices = []
         linear_data = []
@@ -446,6 +422,48 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             lb,
             ub,
         )
+
+    def _generate_expanded_template(self, obj, template_info):
+        smap = self.symbolmap
+        expr, indices = template_info
+        args = [smap.getSymbol(i) for i in indices]
+        if expr is IndexedComponent.Skip:
+            body = lambda i, c, *ind: 0
+            lb = ub = None
+        elif expr.is_expression_type(ExpressionType.RELATIONAL):
+            try:
+                lb, body, ub = obj.to_bounded_expression()
+            except InvalidConstraintError:
+                # Ignore the variable lower/upper bound error (for
+                # now).  We will check later that the individual
+                # bounds contain no non-fixed linear terms.
+                #
+                # Note: the only way to get this exception is if the
+                # obj is a RangedExpression, so we know that there
+                # will be 3 args (and this will explicitly fail if
+                # that is not the case)
+                lb, body, ub = expr.args
+            env = self.env
+            if body is not None:
+                body = self.walk_expression(body).compile(
+                    self.env, smap, self.expr_cache, args
+                )
+            if lb is not None:
+                lb = self.walk_expression(lb).compile(
+                    self.env, smap, self.expr_cache, args
+                )
+            if ub is not None:
+                ub = self.walk_expression(ub).compile(
+                    self.env, smap, self.expr_cache, args
+                )
+        else:
+            lb = ub = None
+            body = self.walk_expression(expr).compile(
+                self.env, smap, self.expr_cache, args
+            )
+        ans = body, lb, ub
+        self.expanded_templates[id(template_info)] = ans
+        return ans
 
     def _evaluate_fixed_vars(self, linear_indices, linear_data, obj, bound):
         ans = 0

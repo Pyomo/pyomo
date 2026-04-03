@@ -14,7 +14,8 @@ from pyomo.common import unittest
 import pyomo.core.base.constraint as constraint
 import pyomo.core.base.objective as objective
 
-from pyomo.common.errors import InvalidConstraintError
+from pyomo.common.errors import InvalidConstraintError, InvalidExpressionError
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.enums import SortComponents
 from pyomo.repn.linear_template import LinearTemplateRepnVisitor
 from pyomo.repn.util import TemplateVarRecorder
@@ -703,12 +704,31 @@ class TestLinearTemplate(unittest.TestCase):
         self.assertEqual(lb, 0)
         self.assertEqual(ub, None)
 
+        # Just building the evaluator generates an exception
         with self.assertRaisesRegex(
-            InvalidConstraintError,
-            "LinearTemplateRepn does not support constraints containing "
+            InvalidExpressionError,
+            "LinearTemplateRepn does not support expressions containing "
             "general nonlinear terms.",
         ):
-            ans, const = self._build_evaluator(body)
+            with LoggingIntercept() as LOG:
+                ans, const = self._build_evaluator(body)
+        self.assertEqual(LOG.getvalue(), '')
+
+        # But if we use expand_expression, we also log an informative error
+        with self.assertRaisesRegex(
+            InvalidExpressionError,
+            "LinearTemplateRepn does not support expressions containing "
+            "general nonlinear terms.",
+        ):
+            with LoggingIntercept() as LOG:
+                ans, const = self._eval(m.c)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Error compiling expanded template expressions for "
+            "TemplateScalarConstraint 'c'\n    "
+            "LinearTemplateRepn does not support expressions containing "
+            "general nonlinear terms.\n",
+        )
 
     def test_monomial_expr(self):
         m = ConcreteModel()
