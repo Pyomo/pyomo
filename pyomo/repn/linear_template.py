@@ -11,7 +11,11 @@ from copy import deepcopy
 from itertools import chain
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.errors import InvalidConstraintError, MouseTrap
+from pyomo.common.errors import (
+    InvalidConstraintError,
+    InvalidExpressionError,
+    MouseTrap,
+)
 from pyomo.common.numeric_types import native_types, native_numeric_types
 
 import pyomo.core.expr as expr
@@ -94,8 +98,8 @@ class LinearTemplateRepn(LinearRepn):
         # LinearRepnVisitor to generate nonlinear expressions.  We are
         # explicitly disallowing nonlinear expressions here, so we are
         # going to bail now:
-        raise InvalidConstraintError(
-            "LinearTemplateRepn does not support constraints containing "
+        raise InvalidExpressionError(
+            "LinearTemplateRepn does not support expressions containing "
             "general nonlinear terms."
         )
 

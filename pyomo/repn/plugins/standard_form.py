@@ -20,7 +20,7 @@ from pyomo.common.config import (
 )
 from pyomo.common.dependencies import scipy, numpy as np
 from pyomo.common.enums import ObjectiveSense
-from pyomo.common.errors import InvalidConstraintError
+from pyomo.common.errors import InvalidConstraintError, InvalidExpressionError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import native_types, value
 from pyomo.common.timing import TicTocTimer
@@ -393,7 +393,7 @@ class _LinearStandardFormCompiler_impl:
                 obj_offset.append(repn.constant)
 
                 if repn.nonlinear is not None:
-                    raise ValueError(
+                    raise InvalidExpressionError(
                         f"Model objective ({obj.name}) contains nonlinear terms that "
                         "cannot be compiled to standard (linear) form."
                     )

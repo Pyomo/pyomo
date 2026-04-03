@@ -166,7 +166,19 @@ class InfeasibleConstraintException(PyomoException):
     """
 
 
-class InvalidConstraintError(PyomoException, ValueError):
+class InvalidExpressionError(PyomoException, ValueError):
+    """Exception raised for expressions that cannot be represented or emitted.
+
+    Pyomo will raise this exception when:
+
+      - Compiling an expression that cannot be expressed / written in the
+        target format or interface.
+
+    See also the derived :class:`InvalidConstraintError`.
+    """
+
+
+class InvalidConstraintError(InvalidExpressionError):
     """Exception raised for constraints that cannot be represented or emitted.
 
     Pyomo will raise this exception when:
