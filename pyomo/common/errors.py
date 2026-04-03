@@ -118,11 +118,14 @@ class ApplicationError(Exception):
 
 
 class PyomoException(Exception):
-    """
-    Exception class for other Pyomo exceptions to inherit from,
-    allowing Pyomo exceptions to be caught in a general way
-    (e.g., in other applications that use Pyomo).
-    Subclasses can define a class-level `default_message` attribute.
+    """General base class for Pyomo exceptions.
+
+    This allows Pyomo exceptions to be caught in a general way (e.g., in
+    other applications that use Pyomo).
+
+    Subclasses can define a class-level `default_message` attribute that
+    is used if no other message/arguments are provided.
+
     """
 
     def __init__(self, *args):
