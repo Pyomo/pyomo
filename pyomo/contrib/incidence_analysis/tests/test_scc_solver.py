@@ -150,7 +150,7 @@ class TestGenerateSCC(unittest.TestCase):
                     # At t1, "input var" height[t0] is fixed, so
                     # it is not included here.
                     self.assertEqual(len(inputs), len(other_var_set))
-                    for var in block.input_vars[:]:
+                    for var in block.input_vars.values():
                         self.assertIn(var, other_var_set)
                         self.assertTrue(var.fixed)
 
@@ -214,7 +214,7 @@ class TestGenerateSCC(unittest.TestCase):
                 # At t1, "input var" height[t0] is fixed, so
                 # it is not included here.
                 self.assertEqual(len(inputs), len(other_var_set))
-                for var in block.input_vars[:]:
+                for var in block.input_vars.values():
                     self.assertIn(var, other_var_set)
                     self.assertTrue(var.fixed)
 
