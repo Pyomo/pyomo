@@ -81,7 +81,9 @@ def get_dsdp_dfdp(model, theta):
     _coo_reorder_cols(J, remap=col_remap)
     J = J.tocsc()
     # Calculate sensitivity matrix
-    dsdp = -scipy.sparse.linalg.spsolve(J[:, :ns], J[:, ns:] @ scipy.sparse.identity(np))
+    dsdp = -scipy.sparse.linalg.spsolve(
+        J[:, :ns], J[:, ns:] @ scipy.sparse.identity(np)
+    )
     # Get a map of state vars to columns
     s_map = {id(v): i for i, v in enumerate(s_list)}
     # Get the outputs we are interested in from the list of output vars
