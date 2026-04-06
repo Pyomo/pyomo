@@ -296,20 +296,39 @@ class _MindtPyAlgorithm:
         if len(MindtPy.discrete_variable_list) == 0:
             config.logger.info('Problem has no discrete decisions.')
 
-            obj = next(m.component_data_objects(ctype=Objective, active=True))
-            if (
-                any(
-                    c.body.polynomial_degree()
-                    not in self.mip_constraint_polynomial_degree
-                    for c in MindtPy.constraint_list
-                )
-                or obj.expr.polynomial_degree()
-                not in self.mip_objective_polynomial_degree
-            ):
-                config.logger.info(
-                    'Your model is a NLP (nonlinear program). '
-                    'Using NLP solver %s to solve.' % config.nlp_solver
-                )
+            working_obj = next(m.component_data_objects(ctype=Objective, active=True))
+            original_obj = next(
+                self.original_model.component_data_objects(ctype=Objective, active=True)
+            )
+            obj_degree = getattr(
+                MindtPy,
+                'objective_polynomial_degree',
+                working_obj.expr.polynomial_degree(),
+            )
+            problem_type, solver_to_use, unsupported_structure = (
+                self._classify_short_circuit_problem(MindtPy, obj_degree)
+            )
+            if solver_to_use == 'nlp':
+                if problem_type == 'NLP':
+                    config.logger.info(
+                        'Your model is a NLP (nonlinear program). '
+                        'Using NLP solver %s to solve.' % config.nlp_solver
+                    )
+                else:
+                    problem_type_names = {
+                        'QP': 'QP (quadratic program)',
+                        'QCP': 'QCP (quadratically constrained program)',
+                    }
+                    config.logger.info(
+                        'Your model is a %s, but MIP solver %s does not support %s. '
+                        'Using NLP solver %s to solve.'
+                        % (
+                            problem_type_names[problem_type],
+                            config.mip_solver,
+                            unsupported_structure,
+                            config.nlp_solver,
+                        )
+                    )
                 update_solver_timelimit(
                     self.nlp_opt, config.nlp_solver, self.timing, config
                 )
@@ -322,12 +341,19 @@ class _MindtPyAlgorithm:
                 if len(results.solution) > 0:
                     self.original_model.solutions.load_from(results)
 
-                self._mirror_direct_solve_results(results=results, obj=obj, prob=prob)
+                self._mirror_direct_solve_results(
+                    results=results, obj=original_obj, prob=prob
+                )
                 return False
             else:
+                problem_type_names = {
+                    'LP': 'LP (linear program)',
+                    'QP': 'QP (quadratic program)',
+                    'QCP': 'QCP (quadratically constrained program)',
+                }
                 config.logger.info(
-                    'Your model is an LP (linear program). '
-                    'Using LP solver %s to solve.' % config.mip_solver
+                    'Your model is a %s. Using MIP solver %s to solve.'
+                    % (problem_type_names[problem_type], config.mip_solver)
                 )
                 if isinstance(self.mip_opt, PersistentSolver):
                     self.mip_opt.set_instance(self.original_model)
@@ -343,7 +369,9 @@ class _MindtPyAlgorithm:
                 if len(results.solution) > 0:
                     self.original_model.solutions.load_from(results)
 
-                self._mirror_direct_solve_results(results=results, obj=obj, prob=prob)
+                self._mirror_direct_solve_results(
+                    results=results, obj=original_obj, prob=prob
+                )
                 return False
 
         # Set up dual value reporting
@@ -358,6 +386,65 @@ class _MindtPyAlgorithm:
         # TODO if any continuous variables are multiplied with binary ones,
         #  need to do some kind of transformation (Glover?) or throw an error message
         return True
+
+    def _classify_short_circuit_problem(self, MindtPy, obj_degree):
+        """Classify a no-discrete model for short-circuit direct solves.
+
+        This classification is intentionally independent of
+        ``quadratic_strategy``. In the no-discrete short-circuit path we are
+        selecting a direct subsolver for the original model, not building the
+        MindtPy main problem.
+
+        Returns
+        -------
+        tuple
+            ``(problem_type, solver_to_use, unsupported_structure)`` where
+            ``problem_type`` is one of ``LP``, ``QP``, ``QCP``, or ``NLP``,
+            ``solver_to_use`` is ``mip`` or ``nlp``, and
+            ``unsupported_structure`` is ``None`` unless a quadratic problem
+            must be routed to the NLP solver because the chosen MIP solver does
+            not support the required structure.
+        """
+        has_quadratic_constraints = len(MindtPy.quadratic_constraint_list) > 0
+        has_nonquadratic_constraints = len(MindtPy.nonquadratic_constraint_list) > 0
+
+        if has_nonquadratic_constraints or obj_degree not in (0, 1, 2):
+            return 'NLP', 'nlp', None
+
+        if has_quadratic_constraints:
+            if not self._mip_solver_supports_capability('quadratic_constraint'):
+                return 'QCP', 'nlp', 'quadratic constraints'
+            if obj_degree == 2 and not self._mip_solver_supports_capability(
+                'quadratic_objective'
+            ):
+                return 'QCP', 'nlp', 'quadratic objectives'
+            return 'QCP', 'mip', None
+
+        if obj_degree == 2:
+            if not self._mip_solver_supports_capability('quadratic_objective'):
+                return 'QP', 'nlp', 'quadratic objectives'
+            return 'QP', 'mip', None
+
+        return 'LP', 'mip', None
+
+    def _mip_solver_supports_capability(self, capability):
+        """Return whether the selected MIP solver supports a model feature."""
+        appsi_capabilities = {
+            'appsi_cplex': {'quadratic_objective': True, 'quadratic_constraint': True},
+            'appsi_gurobi': {'quadratic_objective': True, 'quadratic_constraint': True},
+            'appsi_highs': {
+                'quadratic_objective': False,
+                'quadratic_constraint': False,
+            },
+        }
+        solver_name = self.config.mip_solver
+        if solver_name in appsi_capabilities:
+            return appsi_capabilities[solver_name][capability]
+
+        has_capability = getattr(self.mip_opt, 'has_capability', None)
+        if has_capability is None:
+            return False
+        return has_capability(capability)
 
     def _mirror_direct_solve_results(self, results, obj, prob):
         """Mirror a direct (LP/NLP) solve result into MindtPy's results object.
@@ -431,21 +518,31 @@ class _MindtPyAlgorithm:
             )
         else:
             util_block.grey_box_list = []
-        util_block.linear_constraint_list = list(
-            c
-            for c in util_block.constraint_list
-            if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree
-        )
-        util_block.nonlinear_constraint_list = list(
-            c
-            for c in util_block.constraint_list
-            if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree
-        )
+        util_block.linear_constraint_list = []
+        util_block.nonlinear_constraint_list = []
+        util_block.quadratic_constraint_list = []
+        util_block.nonquadratic_constraint_list = []
+        for c in util_block.constraint_list:
+            degree = c.body.polynomial_degree()
+            if degree in self.mip_constraint_polynomial_degree:
+                util_block.linear_constraint_list.append(c)
+            else:
+                util_block.nonlinear_constraint_list.append(c)
+
+            if degree == 2:
+                util_block.quadratic_constraint_list.append(c)
+            elif degree not in (0, 1):
+                util_block.nonquadratic_constraint_list.append(c)
         util_block.objective_list = list(
             model.component_data_objects(
                 ctype=Objective, active=True, descend_into=(Block)
             )
         )
+        util_block.objective_polynomial_degree = None
+        if len(util_block.objective_list) == 1:
+            util_block.objective_polynomial_degree = util_block.objective_list[
+                0
+            ].expr.polynomial_degree()
 
         # Identify the non-fixed variables in (potentially) active constraints and
         # objective functions
