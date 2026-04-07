@@ -183,7 +183,9 @@ can be computed without relying on strong distributional assumptions. This metho
         \frac{1}{B} \sum_{j=1}^{B} \hat{\theta}^{(j)}
         \right)^2
 
-The example code for this method will soon be provided.
+.. note::
+
+   The example code for this method will soon be provided.
 
 Likelihood Ratio Test
 ---------------------
@@ -219,9 +221,13 @@ to assess whether restricting parameters significantly degrades model fit. This 
         \lambda_n =
         \frac{L(\hat{\theta}; y_1, \dots, y_n)}{L(\hat{\theta}_0; y_1, \dots, y_n)} > c_{\alpha}
 
-The example code for this method will soon be provided.
+.. note::
+
+   The example code for this method will soon be provided.
 
 Leave-N-Out
 -----------
 
-The documentation, description, and example code for this method will soon be provided.
+.. note::
+
+   Detailed descriptions and example code for this method will be added in a future update.
