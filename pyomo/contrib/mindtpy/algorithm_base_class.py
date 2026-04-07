@@ -300,11 +300,15 @@ class _MindtPyAlgorithm:
             original_obj = next(
                 self.original_model.component_data_objects(ctype=Objective, active=True)
             )
-            obj_degree = getattr(
-                MindtPy,
-                'objective_polynomial_degree',
-                working_obj.expr.polynomial_degree(),
-            )
+            problem_type_names = {
+                'LP': 'LP (linear program)',
+                'QP': 'QP (quadratic program)',
+                'QCP': 'QCP (quadratically constrained program)',
+                'NLP': 'NLP (nonlinear program)',
+            }
+            obj_degree = MindtPy.objective_polynomial_degree
+            if obj_degree is None:
+                obj_degree = working_obj.expr.polynomial_degree()
             problem_type, solver_to_use, unsupported_structure = (
                 self._classify_short_circuit_problem(MindtPy, obj_degree)
             )
@@ -315,10 +319,6 @@ class _MindtPyAlgorithm:
                         'Using NLP solver %s to solve.' % config.nlp_solver
                     )
                 else:
-                    problem_type_names = {
-                        'QP': 'QP (quadratic program)',
-                        'QCP': 'QCP (quadratically constrained program)',
-                    }
                     config.logger.info(
                         'Your model is a %s, but MIP solver %s does not support %s. '
                         'Using NLP solver %s to solve.'
@@ -346,11 +346,6 @@ class _MindtPyAlgorithm:
                 )
                 return False
             else:
-                problem_type_names = {
-                    'LP': 'LP (linear program)',
-                    'QP': 'QP (quadratic program)',
-                    'QCP': 'QCP (quadratically constrained program)',
-                }
                 config.logger.info(
                     'Your model is a %s. Using MIP solver %s to solve.'
                     % (problem_type_names[problem_type], config.mip_solver)
@@ -405,8 +400,8 @@ class _MindtPyAlgorithm:
             must be routed to the NLP solver because the chosen MIP solver does
             not support the required structure.
         """
-        has_quadratic_constraints = len(MindtPy.quadratic_constraint_list) > 0
-        has_nonquadratic_constraints = len(MindtPy.nonquadratic_constraint_list) > 0
+        has_quadratic_constraints = MindtPy.has_quadratic_constraints
+        has_nonquadratic_constraints = MindtPy.has_nonquadratic_constraints
 
         if has_nonquadratic_constraints or obj_degree not in (0, 1, 2):
             return 'NLP', 'nlp', None
@@ -433,6 +428,7 @@ class _MindtPyAlgorithm:
             'appsi_cplex': {'quadratic_objective': True, 'quadratic_constraint': True},
             'appsi_gurobi': {'quadratic_objective': True, 'quadratic_constraint': True},
             'appsi_highs': {
+                # TODO: revisit if/when the APPSI HiGHS wrapper adds QP support.
                 'quadratic_objective': False,
                 'quadratic_constraint': False,
             },
@@ -520,8 +516,8 @@ class _MindtPyAlgorithm:
             util_block.grey_box_list = []
         util_block.linear_constraint_list = []
         util_block.nonlinear_constraint_list = []
-        util_block.quadratic_constraint_list = []
-        util_block.nonquadratic_constraint_list = []
+        util_block.has_quadratic_constraints = False
+        util_block.has_nonquadratic_constraints = False
         for c in util_block.constraint_list:
             degree = c.body.polynomial_degree()
             if degree in self.mip_constraint_polynomial_degree:
@@ -530,9 +526,9 @@ class _MindtPyAlgorithm:
                 util_block.nonlinear_constraint_list.append(c)
 
             if degree == 2:
-                util_block.quadratic_constraint_list.append(c)
+                util_block.has_quadratic_constraints = True
             elif degree not in (0, 1):
-                util_block.nonquadratic_constraint_list.append(c)
+                util_block.has_nonquadratic_constraints = True
         util_block.objective_list = list(
             model.component_data_objects(
                 ctype=Objective, active=True, descend_into=(Block)
