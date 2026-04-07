@@ -185,7 +185,7 @@ can be computed without relying on strong distributional assumptions. This metho
 
 .. note::
 
-   The example code for this method will soon be provided.
+    The example code for this method will soon be provided.
 
 Likelihood Ratio Test
 ---------------------
@@ -223,11 +223,11 @@ to assess whether restricting parameters significantly degrades model fit. This 
 
 .. note::
 
-   The example code for this method will soon be provided.
+    The example code for this method will soon be provided.
 
 Leave-N-Out
 -----------
 
 .. note::
 
-   Detailed descriptions and example code for this method will be added in a future update.
+    Detailed descriptions and example code for this method will be added in a future update.
