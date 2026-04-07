@@ -259,7 +259,7 @@ class _MindtPyAlgorithm:
         -------
         bool
             True if the model has discrete variables and requires MindtPy iteration.
-            False if the model is purely continuous (LP or NLP).
+            False if the model is purely continuous (LP, QP, QCP, or NLP).
 
         Notes
         -----
@@ -298,7 +298,6 @@ class _MindtPyAlgorithm:
         if len(MindtPy.discrete_variable_list) == 0:
             config.logger.info('Problem has no discrete decisions.')
 
-            working_obj = next(m.component_data_objects(ctype=Objective, active=True))
             original_obj = next(
                 self.original_model.component_data_objects(ctype=Objective, active=True)
             )
@@ -311,6 +310,9 @@ class _MindtPyAlgorithm:
             problem_type_articles = {'LP': 'an', 'QP': 'a', 'QCP': 'a', 'NLP': 'an'}
             obj_degree = MindtPy.objective_polynomial_degree
             if obj_degree is None:
+                working_obj = next(
+                    m.component_data_objects(ctype=Objective, active=True)
+                )
                 obj_degree = working_obj.expr.polynomial_degree()
             problem_type, solver_to_use, unsupported_structure = (
                 self._classify_short_circuit_problem(MindtPy, obj_degree)
@@ -403,6 +405,17 @@ class _MindtPyAlgorithm:
         selecting a direct subsolver for the original model, not building the
         MindtPy main problem.
 
+        Parameters
+        ----------
+        MindtPy : Block
+            The utility block attached to the working model
+            (``model.MindtPy_utils``).  Must have ``has_quadratic_constraints``
+            and ``has_nonquadratic_constraints`` boolean attributes set by
+            ``build_ordered_component_lists``.
+        obj_degree : int or None
+            Polynomial degree of the active objective expression, or ``None``
+            for nonlinear (non-polynomial) objectives.
+
         Returns
         -------
         tuple
@@ -450,6 +463,11 @@ class _MindtPyAlgorithm:
         if solver_name in appsi_capabilities:
             return appsi_capabilities[solver_name][capability]
 
+        # APPSI solvers do not expose has_capability (that is a legacy-interface
+        # method).  Any APPSI solver not in the dict above therefore reaches this
+        # branch and is treated conservatively: all quadratic features are assumed
+        # unsupported, so QP/QCP models are routed to the NLP solver.  To enable
+        # MIP-path routing for a new APPSI solver, add it to appsi_capabilities.
         has_capability = getattr(self.mip_opt, 'has_capability', None)
         if has_capability is None:
             return False

@@ -681,3 +681,40 @@ class TestMindtPyShortCircuitRouting(unittest.TestCase):
 
         algo.mip_opt.solve.assert_not_called()
         algo.nlp_opt.solve.assert_called_once()
+
+    def _make_mixed_degree_model(self):
+        """Model with one quadratic and one cubic constraint (mixed degree)."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.c_quad = Constraint(expr=m.x**2 <= 9)
+        m.c_cubic = Constraint(expr=m.x**3 <= 27)
+        m.obj = Objective(expr=m.x, sense=minimize)
+        return m
+
+    def test_short_circuit_mixed_degree_model_routes_to_nlp(self):
+        """A model with both quadratic and cubic constraints must route to NLP.
+
+        has_quadratic_constraints and has_nonquadratic_constraints are both
+        True.  The NLP short-circuit path should be taken regardless of whether
+        the configured MIP solver claims quadratic support, because the cubic
+        constraint makes this an NLP.
+        """
+        algo = self._make_algorithm(
+            self._make_mixed_degree_model(),
+            mip_solver_name='gurobi',
+            mip_opt=_FakeLegacyMIPSolver(
+                quadratic_objective=True, quadratic_constraint=True
+            ),
+        )
+
+        util = algo.working_model.MindtPy_utils
+        self.assertTrue(util.has_quadratic_constraints)
+        self.assertTrue(util.has_nonquadratic_constraints)
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_not_called()
+        algo.nlp_opt.solve.assert_called_once()
