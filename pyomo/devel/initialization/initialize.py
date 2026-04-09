@@ -19,6 +19,7 @@ from pyomo.devel.initialization.global_init import _initialize_with_global_solve
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import Results
 import logging
+from pyomo.contrib.solver.common.results import SolutionStatus
 
 
 logger = logging.getLogger(__name__)
@@ -41,8 +42,8 @@ def _get_solver(sname, reason):
 
 def initialize_nlp(
     nlp: BlockData, 
+    nlp_solver: SolverBase,
     mip_solver: Optional[SolverBase] = None,
-    nlp_solver: Optional[SolverBase] = None,
     global_solver: Optional[SolverBase] = None,
     method: InitializationMethod = InitializationMethod.global_opt,
     default_bound: float = 1.0e8,
@@ -94,6 +95,15 @@ def initialize_nlp(
         The results object obtained the last time the nlp_solver was used to 
         try and solve the model.
     """
+    # in all cases, try to solve the nlp before doing extra work
+    res = nlp_solver.solve(nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False)
+    logger.info(f'solved NLP: {res.solution_status}, {res.termination_condition}')
+
+    if res.solution_status == SolutionStatus.optimal:
+        res.solution_loader.load_vars()
+        logger.info('NLP solved without any initialization')
+        return res
+
     # get all variable bounds, domains, etc. to restore them later
     orig_vars = get_vars(nlp)
     orig_var_data = ComponentMap(
