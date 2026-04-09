@@ -1,7 +1,3 @@
-from typing import Optional
-from pyomo.core.base.block import BlockData
-from enum import Enum
-from pyomo.devel.initialization.utils import get_vars, shallow_clone
 # ____________________________________________________________________________________
 #
 # Pyomo: Python Optimization Modeling Objects
@@ -11,6 +7,10 @@ from pyomo.devel.initialization.utils import get_vars, shallow_clone
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+from typing import Optional
+from pyomo.core.base.block import BlockData
+from enum import Enum
+from pyomo.devel.initialization.utils import get_vars, shallow_clone
 from pyomo.common.collections import ComponentMap
 from pyomo.devel.initialization.pwl_init import _initialize_with_piecewise_linear_approximation
 from pyomo.devel.initialization.lp_approx_init import _initialize_with_LP_approximation
@@ -91,7 +91,7 @@ def initialize_nlp(
 
     Returns
     -------
-    res: Results
+    res: pyomo.contrib.solver.common.results.Results
         The results object obtained the last time the nlp_solver was used to 
         try and solve the model.
     """

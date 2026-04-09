@@ -84,7 +84,7 @@ Method ``pwl_approximation``
 ----------------------------
 
 This method builds a piecewise linear (PWL) approximation of the model, solves
-it, and initializes the NLP solver at the solutin. If the NLP solver does not 
+it, and initializes the NLP solver at the solution. If the NLP solver does not 
 converge, then the PWL approximation will be refined by adding additional 
 "segments". This is repeated until either a feasible solution is found or 
 the iteration limit is reached. 
