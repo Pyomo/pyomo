@@ -23,7 +23,6 @@ class PolynomialExperiment(Experiment):
         """Build and label the experiment model on first access."""
         if self.model is None:
             self.create_model()
-            self.finalize_model()
             self.label_experiment()
         return self.model
 
@@ -48,10 +47,6 @@ class PolynomialExperiment(Experiment):
         @m.Constraint()
         def output_equation(m):
             return m.y == m.a * m.x1 + m.b * m.x2 + m.c * m.x1 * m.x2 + m.d
-
-    def finalize_model(self):
-        """No additional model finalization is needed for this example."""
-        pass
 
     def label_experiment(self):
         """Attach the standard DoE suffixes to the polynomial model."""
