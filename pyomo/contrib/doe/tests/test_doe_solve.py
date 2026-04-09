@@ -190,7 +190,7 @@ def get_polynomial_args(
     return DoE_args
 
 
-def get_expected_polynomial_fim(x1=1.0, x2=1.0, measurement_error=1.0, prior_FIM=None):
+def get_expected_polynomial_fim(x1=2.0, x2=3.0, measurement_error=1.0, prior_FIM=None):
     """Return the hand-derived polynomial Fisher information matrix."""
     sensitivity = np.array([x1, x2, x1 * x2, 1.0], dtype=float)
     fim = np.outer(sensitivity, sensitivity) / (measurement_error**2)

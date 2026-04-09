@@ -16,8 +16,7 @@ from pyomo.contrib.parmest.experiment import Experiment
 class PolynomialExperiment(Experiment):
     """A small algebraic experiment used for symbolic-gradient testing."""
 
-    def __init__(self, data=None):
-        self.data = data
+    def __init__(self):
         self.model = None
 
     def get_labeled_model(self):
@@ -36,8 +35,8 @@ class PolynomialExperiment(Experiment):
 
         m = self.model = pyo.ConcreteModel()
 
-        m.x1 = pyo.Var(bounds=(-5, 5), initialize=1)
-        m.x2 = pyo.Var(bounds=(-5, 5), initialize=1)
+        m.x1 = pyo.Var(bounds=(-5, 5), initialize=2.0)
+        m.x2 = pyo.Var(bounds=(-5, 5), initialize=3.0)
 
         m.a = pyo.Var(bounds=(-5, 5), initialize=2)
         m.b = pyo.Var(bounds=(-5, 5), initialize=-1)

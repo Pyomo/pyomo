@@ -21,7 +21,6 @@ from pyomo.common.fileutils import this_file_dir
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
-from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.doe.utils import (
     ExperimentGradients,
     check_FIM,
@@ -34,6 +33,7 @@ from pyomo.contrib.doe.utils import (
 
 if scipy_available:
     from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
+    from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
@@ -49,54 +49,6 @@ data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].i
 
 ipopt_available = SolverFactory("ipopt").available()
 
-
-class PolynomialExperiment(Experiment):
-    """A small polynomial experiment used to validate symbolic gradients."""
-
-    def __init__(self):
-        self.model = None
-
-    def get_labeled_model(self):
-        """Build and label the experiment model on first access."""
-        if self.model is None:
-            self.create_model()
-            self.finalize_model()
-            self.label_experiment()
-        return self.model
-
-    def create_model(self):
-        m = self.model = pyo.ConcreteModel()
-        m.x1 = pyo.Var(bounds=(-5, 5), initialize=2)
-        m.x2 = pyo.Var(bounds=(-5, 5), initialize=3)
-        m.a = pyo.Var(bounds=(-5, 5), initialize=2)
-        m.b = pyo.Var(bounds=(-5, 5), initialize=-1)
-        m.c = pyo.Var(bounds=(-5, 5), initialize=0.5)
-        m.d = pyo.Var(bounds=(-5, 5), initialize=-1)
-        m.y = pyo.Var(initialize=0)
-
-        @m.Constraint()
-        def output_equation(m):
-            return m.y == m.a * m.x1 + m.b * m.x2 + m.c * m.x1 * m.x2 + m.d
-
-    def finalize_model(self):
-        """No additional model finalization is needed for this example."""
-        pass
-
-    def label_experiment(self):
-        """Attach the standard DoE suffixes to the polynomial model."""
-        m = self.model
-        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs[m.y] = None
-
-        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error[m.y] = 1
-
-        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_inputs[m.x1] = None
-        m.experiment_inputs[m.x2] = None
-
-        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update((k, pyo.value(k)) for k in [m.a, m.b, m.c, m.d])
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
