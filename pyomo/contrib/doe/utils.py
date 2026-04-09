@@ -89,6 +89,9 @@ def rescale_FIM(FIM, param_vals):
         raise ValueError(
             "param_vals should be a list or numpy array of dimensions: 1 by `n_params`"
         )
+    # Form the matrix with entries scaling_mat[i, j] = 1 / (theta_i theta_j), where theta_i
+    # and theta_j are the i-th and j-th parameter values. The scaled FIM is then
+    # computed elementwise as scaled_FIM[i, j] = FIM[i, j] / (theta_i theta_j).
     scaling_mat = (1 / param_vals).transpose().dot((1 / param_vals))
     scaled_FIM = np.multiply(FIM, scaling_mat)
     return scaled_FIM
@@ -165,17 +168,28 @@ def compute_FIM_metrics(FIM):
 
     # Check whether the FIM is square, positive definite, and symmetric
     check_FIM(FIM)
+    # D-optimality uses det(FIM); larger determinant means a smaller parameter
+    # confidence ellipsoid, i.e., tighter joint parameter uncertainty.
 
-    # Compute FIM metrics
     det_FIM = np.linalg.det(FIM)
     D_opt = np.log10(det_FIM)
 
     # Trace of FIM is the pseudo A-optimality, not the proper definition of A-optimality,
     # The trace of covariance is the proper definition of A-optimality
+    # trace(FIM) gives a convenient proxy for total information, while
+    # trace(FIM^{-1}) gives the standard A-optimality metric based on
+    # total parameter variance.
+    # A-optimality geometrically minimizes the average
+    # squared semi-axis length of the parameter confidence ellipsoid.
+
     trace_FIM = np.trace(FIM)
     pseudo_A_opt = np.log10(trace_FIM)
     trace_cov = np.trace(np.linalg.pinv(FIM))
     A_opt = np.log10(trace_cov)
+
+    # E-optimality uses the smallest eigenvalue of the FIM, so it targets the
+    # worst-identified parameter direction by minimizing the longest axis of the
+    # confidence ellipsoid.
 
     E_vals, E_vecs = np.linalg.eig(FIM)
     E_ind = np.argmin(E_vals.real)  # index of smallest eigenvalue
@@ -192,6 +206,10 @@ def compute_FIM_metrics(FIM):
         E_opt = np.nan
     else:
         E_opt = np.log10(E_vals.real[E_ind])
+
+    # Modified E-optimality is based on the FIM condition number and penalizes
+    # confidence ellipsoids that are highly elongated in one direction.
+
 
     ME_opt = np.log10(np.linalg.cond(FIM))
 
@@ -274,11 +292,16 @@ def get_FIM_metrics(FIM):
 class ExperimentGradients:
     """Utilities for differentiating labeled experiment models.
 
-    This helper was transplanted from the symbolic-gradient development branch
-    and trimmed to the pieces needed by the modern DoE implementation:
-    - build measurement / parameter index mappings
-    - compute sensitivities with reverse-mode automatic differentiation
-    - add symbolic sensitivity constraints to a Pyomo model
+    This helper implements the symbolic sensitivity path used in Pyomo.DoE.
+    Instead of approximating sensitivities by finite-difference perturbations
+    of the unknown parameters theta, it differentiates the 
+    model F(x, u, theta) = 0 with respect to theta, with the design variables
+    u fixed, and solves the resulting auxiliary sensitivity system
+
+        dF/dx * dx/dtheta + dF/dtheta = 0
+
+    to obtain the local output sensitivities dy/dtheta needed for Fisher
+    information matrix calculations.
     """
 
     def __init__(self, experiment_model, symbolic=True, automatic=True, verbose=False):
@@ -298,8 +321,19 @@ class ExperimentGradients:
             self._setup_differentiation()
 
     def _analyze_experiment_model(self):
+        """Build index mappings for constraints, variables, parameters, and outputs.
+
+        This inspects the labeled experiment model and records the ordered
+        constraint and variable lists used later to assemble Jacobian blocks for
+        sensitivity calculations for F(x, u, theta) = 0. It also tracks which
+        indexed quantities correspond to unknown parameters theta and measured
+        outputs y.
+        """
         model = self.model
 
+        # Fix the design variables u and unknown parameters theta so the
+        # remaining active equations define the model F(x, u, theta) = 0
+        # used for sensitivity calculations.
         for v in model.experiment_inputs.keys():
             v.fix()
         for v in model.unknown_parameters.keys():
@@ -317,6 +351,9 @@ class ExperimentGradients:
             for v in identify_variables(c.body, include_fixed=False):
                 var_set.add(v)
 
+        # The parameters theta may not appear in identify_variables(...,
+        # include_fixed=False) after being fixed, but they still need indexed
+        # columns in the full Jacobian.
         for p in model.unknown_parameters.keys():
             if p not in var_set:
                 var_set.add(p)
@@ -332,6 +369,9 @@ class ExperimentGradients:
         model_var_index = []
         measurement_index = []
 
+        # Partition the indexed quantities into parameter columns (theta),
+        # model-variable columns (x), and measured-output rows (y) for later
+        # Jacobian slicing.
         for i, v in enumerate(var_list):
             if v in param_set:
                 param_index.append(i)
@@ -375,10 +415,17 @@ class ExperimentGradients:
                     "ExperimentGradients currently requires equality constraints."
                 )
 
+            # For each equation F_i(x, u, theta) = 0, compute the partial derivatives with
+            # respect to the indexed variables and parameters. These derivatives form the
+            # Jacobian rows used to assemble the blocks dF/dx and dF/dtheta in the
+            # sensitivity system dF/dx * dx/dtheta + dF/dtheta = 0.
+
             der_map_sd = reverse_sd(c.body)
             der_map_ad = reverse_ad(c.body)
 
             for j, v in enumerate(self.var_list):
+                # If a variable or parameter does not appear in F_i, its partial derivative in
+                # that equation is zero, so absent derivative entries are filled in with 0.
                 jac_dict_sd[(i, j)] = der_map_sd.get(v, 0)
                 jac_dict_ad[(i, j)] = der_map_ad.get(v, 0)
 
@@ -386,21 +433,36 @@ class ExperimentGradients:
         self.jac_dict_ad = jac_dict_ad
 
     def compute_gradient_outputs_wrt_unknown_parameters(self):
+        """Compute the output sensitivity matrix with respect to theta.
+
+        This differentiates the model F(x, u, theta) = 0 with u fixed, solves
+        for dx/dtheta, and then extracts the measured-output rows to return
+        dy/dtheta.
+        """
         if self.jac_dict_ad is None:
             self._setup_differentiation()
 
+        # Assemble dF/dtheta, the Jacobian block of the model equations with
+        # respect to the unknown parameters theta.
         jac_con_wrt_param = np.zeros((self.num_constraints, self.num_params))
         for i in range(self.num_constraints):
             for j, p in enumerate(self.param_index):
                 jac_con_wrt_param[i, j] = self.jac_dict_ad[(i, p)]
 
+        # Assemble dF/dx, the Jacobian block of the model equations with
+        # respect to the model variables x.
         jac_con_wrt_vars = np.zeros((self.num_constraints, len(self.model_var_index)))
         for i in range(self.num_constraints):
             for j, v in enumerate(self.model_var_index):
                 jac_con_wrt_vars[i, j] = self.jac_dict_ad[(i, v)]
 
+        # With the design variables u fixed, differentiate F(x, u, theta) = 0
+        # to obtain dF/dx * dx/dtheta + dF/dtheta = 0, then solve for
+        # dx/dtheta = -(dF/dx)^{-1}(dF/dtheta).
         jac_vars_wrt_param = np.linalg.solve(jac_con_wrt_vars, -jac_con_wrt_param)
 
+        # Extract the rows of dx/dtheta corresponding to the measured outputs y
+        # to form the sensitivity matrix dy/dtheta used in the FIM.
         jac_measurements_wrt_param = np.zeros((self.num_measurements, self.num_params))
         for ind, m in enumerate(self.model.experiment_outputs.keys()):
             i = self.measurement_mapping[m]
@@ -413,6 +475,15 @@ class ExperimentGradients:
         return jac_measurements_wrt_param
 
     def construct_sensitivity_constraints(self, model=None):
+        """Add symbolic sensitivity variables and constraints to a Pyomo model.
+
+        The added constraints encode the differentiated model equations
+        dF/dx * dx/dtheta + dF/dtheta = 0, where F(x, u, theta) = 0 is the
+        model, x is the vector of model variables, u is the
+        vector of design variables, and theta is the vector of unknown
+        parameters. This makes the local sensitivities dx/dtheta explicit
+        inside the optimization model.
+        """
         if self.jac_dict_sd is None:
             self._setup_differentiation()
 
@@ -422,12 +493,17 @@ class ExperimentGradients:
         model.param_index = pyo.Set(initialize=self.param_index)
         model.constraint_index = pyo.Set(initialize=range(len(self.con_list)))
         model.var_index = pyo.Set(initialize=self.model_var_index)
+        # Introduce Pyomo variables representing dx/dtheta so the local
+        # sensitivity system can be written explicitly inside the optimization
+        # model.
         model.jac_variables_wrt_param = pyo.Var(
             model.var_index, model.param_index, initialize=0
         )
 
         @model.Constraint(model.constraint_index, model.param_index)
         def jacobian_constraint(model, i, j):
+            # Enforce dF/dx * dx/dtheta + dF/dtheta = 0 for each model equation
+            # and parameter.
             return self.jac_dict_sd[(i, j)] == -sum(
                 model.jac_variables_wrt_param[k, j] * self.jac_dict_sd[(i, k)]
                 for k in model.var_index
