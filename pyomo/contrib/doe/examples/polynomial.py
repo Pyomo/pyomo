@@ -73,7 +73,7 @@ class PolynomialExperiment(Experiment):
 
 def run_polynomial_doe():
     """Run a small symbolic DoE FIM calculation for the polynomial model."""
-    experiment = PolynomialExperiment(data=None)
+    experiment = PolynomialExperiment()
 
     doe_obj = DesignOfExperiments(
         experiment,

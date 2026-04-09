@@ -168,7 +168,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 
 def get_polynomial_experiment(measurement_error=1.0):
     """Build a fresh polynomial experiment with a configurable measurement error."""
-    experiment = PolynomialExperiment(data=None)
+    experiment = PolynomialExperiment()
     model = experiment.get_labeled_model()
     model.measurement_error[model.y] = measurement_error
     return experiment

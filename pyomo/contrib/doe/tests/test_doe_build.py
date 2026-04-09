@@ -269,7 +269,7 @@ class TestDoeBuild(unittest.TestCase):
                 self.assertAlmostEqual(other_param_val, v)
 
     def test_polynomial_example_labels(self):
-        experiment = PolynomialExperiment(data=None)
+        experiment = PolynomialExperiment()
         model = experiment.get_labeled_model()
 
         self.assertEqual(len(model.experiment_outputs), 1)
@@ -283,7 +283,7 @@ class TestDoeBuild(unittest.TestCase):
         self.assertIn(model.x2, model.experiment_inputs)
 
     def test_polynomial_example_create_doe_model_pynumero(self):
-        experiment = PolynomialExperiment(data=None)
+        experiment = PolynomialExperiment()
 
         DoE_args = get_standard_args(
             experiment, fd_method="central", obj_used="determinant"
