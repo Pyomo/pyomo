@@ -20,18 +20,17 @@ from pyomo.common.dependencies import (
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
-if not (numpy_available and scipy_available):
-    raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
+if not (numpy_available ):
+    raise unittest.SkipTest("Pyomo.DoE needs numpy to run tests")
 
-if scipy_available:
-    from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
-    from pyomo.contrib.doe.examples.reactor_example import (
-        ReactorExperiment as FullReactorExperiment,
-    )
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-        RooneyBieglerExperiment,
-    )
+from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
+from pyomo.contrib.doe.examples.reactor_example import (
+    ReactorExperiment as FullReactorExperiment,
+)
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 import pyomo.environ as pyo
