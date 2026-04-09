@@ -19,7 +19,7 @@ def get_vars(m: BlockData):
     for c in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
         vset.update(identify_variables(c.body, include_fixed=False))
     for o in m.component_data_objects(pe.Objective, active=True, descend_into=True):
-        vset.update(identify_variables(c.expr, include_fixed=False))
+        vset.update(identify_variables(o.expr, include_fixed=False))
     return vset
 
 
