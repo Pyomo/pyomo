@@ -319,8 +319,15 @@ class TestExperimentGradients(unittest.TestCase):
             model, symbolic=False, automatic=True
         )
 
+        jacobian =(
+            experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
+        )
+        expected = self._get_expected_polynomial_gradient()
+
         self.assertIsNotNone(experiment_gradients.jac_dict_sd)
         self.assertIsNotNone(experiment_gradients.jac_dict_ad)
+        self.assertEqual(jacobian.shape, expected.shape)
+        self.assertTrue(np.allclose(jacobian,expected))
 
     def test_polynomial_metric_helpers_match_numpy(self):
         """Check utility metrics on a polynomial-derived positive-definite FIM."""
@@ -369,6 +376,11 @@ class TestExperimentGradients(unittest.TestCase):
         experiment_gradients = ExperimentGradients(
             model, symbolic=True, automatic=False
         )
+
+        jacobian =(
+            experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
+        )
+        expected = self._get_expected_polynomial_gradient()
 
         self.assertIsNotNone(experiment_gradients.jac_dict_sd)
         self.assertIsNotNone(experiment_gradients.jac_dict_ad)
