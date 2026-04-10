@@ -21,15 +21,17 @@ import pyomo.common.unittest as unittest
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
-if scipy_available:
-    from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
-        BadExperiment,
-        RooneyBieglerExperimentFlag,
-    )
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-        RooneyBieglerExperiment,
-    )
+
+from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+    BadExperiment,
+    RooneyBieglerExperimentFlag,
+)
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
+from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
+
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 from pyomo.opt import SolverFactory
@@ -504,20 +506,22 @@ class TestDoEErrors(unittest.TestCase):
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_figure_drawing_more_than_two_sens_vars(self):
+    def test_polynomial_figure_drawing_more_than_two_sens_vars(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = run_rooney_biegler_doe()["experiment"]
+        experiment = PolynomialExperiment()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag = None)
+        DoE_args["gradient_method"] = "pynumero"
+        DoE_args["scale_nominal_param_value"]=False
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
         synthetic_results = {
-            "hour": [1.0, 2.0],
-            "temperature": [300.0, 310.0],
-            "pressure": [1.0, 1.1],
+            "x1": [0.0, 2.5],
+            "x2": [0.0, 0.0],
+            "x3": [0.0, 0.0],
             "log10 D-opt": [1.0, 2.0],
             "log10 A-opt": [0.1, 0.2],
             "log10 pseudo A-opt": [0.3, 0.4],
@@ -537,28 +541,30 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.draw_factorial_figure(
                 results=synthetic_results,
-                sensitivity_design_variables=["hour", "temperature", "pressure"],
+                sensitivity_design_variables=["x1", "x2", "x3"],
                 fixed_design_variables={},
-                full_design_variable_names=["hour", "temperature", "pressure"],
+                full_design_variable_names=["x1", "x2", "x3"],
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_figure_drawing_requires_all_other_design_vars_fixed(self):
+    def test_polynomial_figure_drawing_requires_all_other_design_vars_fixed(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = run_rooney_biegler_doe()["experiment"]
+        experiment = PolynomialExperiment()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag = None)
+        DoE_args["gradient_method"] = "pynumero"
+        DoE_args["scale_nominal_param_value"]=False
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
         # Use a synthetic table shape that mimics multiple design variables so we can
         # exercise the dimensionality guard without needing a heavier example.
         synthetic_results = {
-            "hour": [1.0, 2.0],
-            "temperature": [300.0, 300.0],
-            "pressure": [1.0, 1.0],
+            "x1": [0.0, 2.5],
+            "x2": [0.0, 0.0],
+            "x3": [0.0, 0.0],
             "log10 D-opt": [1.0, 2.0],
             "log10 A-opt": [0.1, 0.2],
             "log10 pseudo A-opt": [0.3, 0.4],
@@ -578,9 +584,9 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.draw_factorial_figure(
                 results=synthetic_results,
-                sensitivity_design_variables=["hour"],
-                fixed_design_variables={"temperature": 300.0},
-                full_design_variable_names=["hour", "temperature", "pressure"],
+                sensitivity_design_variables=["x1"],
+                fixed_design_variables={"x2": 0.0},
+                full_design_variable_names=["x1", "x2", "x3"],
             )
 
     def test_reactor_check_get_FIM_without_FIM(self):
@@ -844,12 +850,14 @@ class TestDoEErrors(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_run_doe_rejects_kaug_gradient_method(self):
-        experiment = get_rooney_biegler_experiment_flag()
+        experiment = PolynomialExperiment()
 
         DoE_args = get_standard_args(
             experiment, fd_method="central", obj_used="pseudo_trace", flag=None
         )
         DoE_args["gradient_method"] = "kaug"
+        DoE_args["scale_nominal_param_value"] = False
+        
 
         doe_obj = DesignOfExperiments(**DoE_args)
 

@@ -30,13 +30,15 @@ from pyomo.contrib.doe.utils import (
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
 )
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
-if scipy_available:
-    from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
-    from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-        RooneyBieglerExperiment,
-    )
+
+from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
+from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
 from pyomo.opt import SolverFactory
 
 currdir = this_file_dir()

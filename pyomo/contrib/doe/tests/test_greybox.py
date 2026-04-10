@@ -25,14 +25,14 @@ import pyomo.common.unittest as unittest
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
-if scipy_available:
-    from pyomo.contrib.doe import DesignOfExperiments, FIMExternalGreyBox
-    from pyomo.contrib.doe.examples.reactor_example import (
-        ReactorExperiment as FullReactorExperiment,
-    )
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-        RooneyBieglerExperiment,
-    )
+
+from pyomo.contrib.doe import DesignOfExperiments, FIMExternalGreyBox
+from pyomo.contrib.doe.examples.reactor_example import (
+    ReactorExperiment as FullReactorExperiment,
+)
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
 
 import pyomo.environ as pyo
 
