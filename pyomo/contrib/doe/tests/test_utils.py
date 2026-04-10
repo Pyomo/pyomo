@@ -324,8 +324,6 @@ class TestExperimentGradients(unittest.TestCase):
         )
         expected = self._get_expected_polynomial_gradient()
 
-        self.assertIsNotNone(experiment_gradients.jac_dict_sd)
-        self.assertIsNotNone(experiment_gradients.jac_dict_ad)
         self.assertEqual(jacobian.shape, expected.shape)
         self.assertTrue(np.allclose(jacobian,expected))
 
@@ -344,8 +342,8 @@ class TestExperimentGradients(unittest.TestCase):
         )
         expected = self._get_expected_polynomial_gradient()
 
-        self.assertIsNotNone(experiment_gradients.jac_dict_sd)
-        self.assertIsNotNone(experiment_gradients.jac_dict_ad)
+        self.assertEqual(jacobian.shape, expected.shape)
+        self.assertTrue(np.allclose(jacobian, expected))
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_rooney_biegler_symbolic_and_automatic_jacobians_agree(self):
@@ -395,10 +393,11 @@ class TestExperimentGradients(unittest.TestCase):
             model, atol=1e-6, rtol=1e-6
         )
 
-        self.assertGreater(len(experiment_gradients.jac_dict_sd), 0)
-        self.assertEqual(
-            len(experiment_gradients.jac_dict_sd), len(experiment_gradients.jac_dict_ad)
+        expected_n_entries = (
+            len(experiment_gradients.con_list) * len(experiment_gradients.var_list)
         )
+        self.assertEqual(len(experiment_gradients.jac_dict_sd), expected_n_entries)
+        self.assertEqual(len(experiment_gradients.jac_dict_ad), expected_n_entries)
 
     @unittest.skipIf(not scipy_available, "scipy is not available")
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -411,10 +410,11 @@ class TestExperimentGradients(unittest.TestCase):
             model, atol=1e-6, rtol=1e-6
         )
 
-        self.assertGreater(len(experiment_gradients.jac_dict_sd), 0)
-        self.assertEqual(
-            len(experiment_gradients.jac_dict_sd), len(experiment_gradients.jac_dict_ad)
+        expected_n_entries = (
+            len(experiment_gradients.con_list) * len(experiment_gradients.var_list)
         )
+        self.assertEqual(len(experiment_gradients.jac_dict_sd), expected_n_entries)
+        self.assertEqual(len(experiment_gradients.jac_dict_ad), expected_n_entries)
 
 
 if __name__ == "__main__":
