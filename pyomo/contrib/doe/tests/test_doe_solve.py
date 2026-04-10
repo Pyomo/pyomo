@@ -630,19 +630,30 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertTrue(np.allclose(doe_obj.compute_FIM(), expected))
 
     def test_polynomial_example_run_doe_smoke(self):
-        """Check that the public polynomial example can solve a tiny DoE problem."""
+        """Check that the public polynomial example can solve a tiny DoE problem.
+        Also do a regression test to check that the solution returned stays correct over time"""
         prior_FIM = np.eye(4)
         doe_obj = DesignOfExperiments(
             **get_polynomial_args(
                 gradient_method="pynumero",
                 prior_FIM=prior_FIM,
-                objective_option="trace",
+                objective_option="determinant",
             )
         )
 
         doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(str(doe_obj.results["Termination Condition"]).lower(), "optimal")
+        design = doe_obj.results["Experiment Design"]
+        self.assertAlmostEqual(design[0],5.0,places=4)
+        self.assertAlmostEqual(design[1],5.0,places =4)
+
+        self.assertAlmostEqual(doe_obj.results["log10 D-opt"],2.830588683545922, places=4)
+
+        fim = np.array(doe_obj.results["FIM"])
+        self.assertAlmostEqual(fim[0,0], 26.00000045, places=4)
+        self.assertAlmostEqual(fim[3,3], 2.0, places=4)
 
     def test_rescale_FIM(self):
         fd_method = "central"
