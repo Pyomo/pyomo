@@ -950,9 +950,7 @@ jobs:
         fi
 
     - name: Upload codecov reports
-      if: |
-        hashFiles('coverage.xml') != '' &&
-        (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
+      if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
       uses: codecov/codecov-action@v5
       with:
         files: coverage.xml
