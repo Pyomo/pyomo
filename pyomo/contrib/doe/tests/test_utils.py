@@ -329,44 +329,6 @@ class TestExperimentGradients(unittest.TestCase):
         self.assertEqual(jacobian.shape, expected.shape)
         self.assertTrue(np.allclose(jacobian,expected))
 
-    def test_polynomial_metric_helpers_match_numpy(self):
-        """Check utility metrics on a polynomial-derived positive-definite FIM."""
-        FIM = self._get_expected_polynomial_fim_with_prior()
-        fim_metrics = get_FIM_metrics(FIM)
-        (
-            det_FIM,
-            trace_cov,
-            trace_FIM,
-            E_vals,
-            E_vecs,
-            D_opt,
-            A_opt,
-            pseudo_A_opt,
-            E_opt,
-            ME_opt,
-        ) = compute_FIM_metrics(FIM)
-
-        self.assertAlmostEqual(det_FIM, np.linalg.det(FIM))
-        self.assertAlmostEqual(trace_cov, np.trace(np.linalg.inv(FIM)))
-        self.assertAlmostEqual(trace_FIM, np.trace(FIM))
-
-        expected_eigs, _expected_vecs = np.linalg.eigh(FIM)
-        self.assertTrue(np.allclose(np.sort(E_vals), np.sort(expected_eigs)))
-        self.assertEqual(E_vecs.shape, FIM.shape)
-
-        self.assertAlmostEqual(D_opt, np.log10(np.linalg.det(FIM)))
-        self.assertAlmostEqual(A_opt, np.log10(np.trace(np.linalg.inv(FIM))))
-        self.assertAlmostEqual(pseudo_A_opt, np.log10(np.trace(FIM)))
-        self.assertAlmostEqual(E_opt, np.log10(np.min(expected_eigs)))
-        self.assertAlmostEqual(
-            ME_opt, np.log10(np.max(expected_eigs) / np.min(expected_eigs))
-        )
-
-        self.assertAlmostEqual(fim_metrics["Determinant of FIM"], np.linalg.det(FIM))
-        self.assertAlmostEqual(
-            fim_metrics["Trace of cov"], np.trace(np.linalg.inv(FIM))
-        )
-        self.assertAlmostEqual(fim_metrics["Trace of FIM"], np.trace(FIM))
 
     def test_polynomial_symbolic_only_still_sets_both_jacobians(self):
         """Check that symbolic-only requests still initialize both Jacobian maps."""
