@@ -1023,22 +1023,20 @@ class TestRooneyBieglerExample(unittest.TestCase):
     @unittest.skipUnless(ipopt_available, "test requires ipopt")
     def test_draw_factorial_figure_accepts_dataframe_input(self):
         """Check draw_factorial_figure accepts a DataFrame and stores filtered rows."""
-        experiment = FullReactorExperiment(data_ex, 10, 3)
         doe_obj = DesignOfExperiments(
-            **get_standard_args(experiment, "central", "determinant")
+            **get_polynomial_args(gradient_method = "pynumero", objective_option="determinant")
         )
 
         results = doe_obj.compute_FIM_full_factorial(
-            design_ranges={"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]},
-            method="sequential",
+            design_ranges={"x1": [0, 5, 2], "x2": [0, 5, 2]}
         )
         results_pd = pd.DataFrame(results)
 
         doe_obj.draw_factorial_figure(
             results=results_pd,
-            sensitivity_design_variables=["CA[0]"],
-            fixed_design_variables={"T[0]": 300.0},
-            full_design_variable_names=["CA[0]", "T[0]"],
+            sensitivity_design_variables=["x1"],
+            fixed_design_variables={"x2": 0.0},
+            full_design_variable_names=["x1", "x2"],
             log_scale=False,
             figure_file_name=None,
         )
@@ -1046,28 +1044,27 @@ class TestRooneyBieglerExample(unittest.TestCase):
         filtered = doe_obj.figure_result_data
         self.assertIsInstance(filtered, pd.DataFrame)
         self.assertEqual(len(filtered), 2)
-        self.assertTrue(np.allclose(filtered["T[0]"].values, 300.0))
-        self.assertEqual(sorted(filtered["CA[0]"].tolist()), [1.0, 5.0])
+        self.assertTrue(np.allclose(filtered["x2"].values, 0.0))
+        self.assertEqual(sorted(filtered["x1"].tolist()), [0.0, 5.0])
 
     @unittest.skipUnless(pandas_available, "test requires pandas")
     @unittest.skipUnless(ipopt_available, "test requires ipopt")
     def test_draw_factorial_figure_bad_fixed_variable_raises(self):
         """Check draw_factorial_figure rejects unknown fixed design variables."""
-        experiment = run_rooney_biegler_doe()["experiment"]
         doe_obj = DesignOfExperiments(
-            **get_standard_args(experiment, "central", "trace")
+            **get_polynomial_args(gradient_method = "pynumero", objective_option="determinant")
         )
 
-        results = doe_obj.compute_FIM_full_factorial(design_ranges={"hour": [0, 10, 3]})
+        results = doe_obj.compute_FIM_full_factorial(design_ranges={"x1": [0,5,3], "x2":[0,5,3]})
 
         with self.assertRaisesRegex(
             ValueError, "Fixed design variables do not all appear"
         ):
             doe_obj.draw_factorial_figure(
                 results=results,
-                sensitivity_design_variables=["hour"],
+                sensitivity_design_variables=["x1"],
                 fixed_design_variables={"bad_name": 5.0},
-                full_design_variable_names=["hour"],
+                full_design_variable_names=["x1","x2"],
                 log_scale=False,
                 figure_file_name=None,
             )
