@@ -52,7 +52,7 @@ data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].i
 ipopt_available = SolverFactory("ipopt").available()
 
 
-
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestUtilsFIM(unittest.TestCase):
     """Test the check_FIM() from utils.py."""
@@ -187,7 +187,7 @@ class TestUtilsFIM(unittest.TestCase):
             fim_metrics["log10(Modified E-Optimality)"], expected['ME_opt']
         )
 
-
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestExperimentGradients(unittest.TestCase):
     """Validate symbolic and automatic differentiation helpers."""
