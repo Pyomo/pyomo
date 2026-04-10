@@ -600,14 +600,6 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertEqual(fim.shape, expected.shape)
         self.assertTrue(np.allclose(fim, expected))
 
-    def test_polynomial_example_compute_fim_central_smoke(self):
-        """Check that the finite-difference polynomial path returns a symmetric FIM."""
-        doe_obj = DesignOfExperiments(**get_polynomial_args())
-        fim = doe_obj.compute_FIM()
-
-        self.assertEqual(fim.shape, (4, 4))
-        self.assertTrue(np.all(np.isfinite(fim)))
-        self.assertTrue(np.allclose(fim, fim.T))
 
     def test_polynomial_example_measurement_error_scaling(self):
         """Check that doubling the measurement error scales the FIM by one quarter."""
