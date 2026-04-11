@@ -99,7 +99,7 @@ class TestDoEErrors(unittest.TestCase):
 
             doe_obj = DesignOfExperiments(**DoE_args)
 
-    def test_reactor_check_no_get_labeled_model(self):
+    def test_rooney_biegler_check_no_get_labeled_model(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
@@ -114,7 +114,7 @@ class TestDoEErrors(unittest.TestCase):
 
             doe_obj = DesignOfExperiments(**DoE_args)
 
-    def test_reactor_check_no_experiment_outputs(self):
+    def test_rooney_biegler_check_no_experiment_outputs(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
@@ -131,7 +131,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    def test_reactor_check_no_measurement_error(self):
+    def test_rooney_biegler_check_no_measurement_error(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
         flag_val = 2  # Value for faulty model build mode - 2: No meas error
@@ -148,7 +148,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    def test_reactor_check_no_experiment_inputs(self):
+    def test_rooney_biegler_check_no_experiment_inputs(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
         flag_val = 3  # Value for faulty model build mode - 3: No exp inputs/design vars
@@ -165,7 +165,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    def test_reactor_check_no_unknown_parameters(self):
+    def test_rooney_biegler_check_no_unknown_parameters(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
         flag_val = 4  # Value for faulty model build mode - 4: No unknown params
@@ -182,7 +182,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    def test_reactor_check_bad_prior_size(self):
+    def test_rooney_biegler_check_bad_prior_size(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -204,7 +204,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    def test_reactor_check_bad_prior_negative_eigenvalue(self):
+    def test_rooney_biegler_check_bad_prior_negative_eigenvalue(self):
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
@@ -228,7 +228,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    def test_reactor_check_bad_prior_not_symmetric(self):
+    def test_rooney_biegler_check_bad_prior_not_symmetric(self):
         from pyomo.contrib.doe.utils import _SMALL_TOLERANCE_SYMMETRY
 
         fd_method = "central"
@@ -252,7 +252,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    def test_reactor_check_bad_jacobian_init_size(self):
+    def test_rooney_biegler_check_bad_jacobian_init_size(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -273,7 +273,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    def test_reactor_check_unbuilt_update_FIM(self):
+    def test_rooney_biegler_check_unbuilt_update_FIM(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -292,7 +292,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.update_FIM_prior(FIM=FIM_update)
 
-    def test_reactor_check_none_update_FIM(self):
+    def test_rooney_biegler_check_none_update_FIM(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -310,7 +310,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.update_FIM_prior(FIM=FIM_update)
 
-    def test_reactor_check_results_file_name(self):
+    def test_rooney_biegler_check_results_file_name(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -325,7 +325,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.run_doe(results_file=int(15))
 
-    def test_reactor_check_measurement_and_output_length_match(self):
+    def test_rooney_biegler_check_measurement_and_output_length_match(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
         flag_val = (
@@ -346,7 +346,7 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.create_doe_model()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_grid_search_des_range_inputs(self):
+    def test_rooney_biegler_grid_search_des_range_inputs(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -367,7 +367,7 @@ class TestDoEErrors(unittest.TestCase):
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_premature_figure_drawing(self):
+    def test_rooney_biegler_premature_figure_drawing(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -385,7 +385,7 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_figure_drawing_no_des_var_names(self):
+    def test_rooney_biegler_figure_drawing_no_des_var_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -409,7 +409,7 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure(results=doe_obj.fim_factorial_results)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_figure_drawing_no_sens_names(self):
+    def test_rooney_biegler_figure_drawing_no_sens_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -431,7 +431,7 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_figure_drawing_no_fixed_names(self):
+    def test_rooney_biegler_figure_drawing_no_fixed_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -453,7 +453,7 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.draw_factorial_figure(sensitivity_design_variables={"dummy": "var"})
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_figure_drawing_bad_fixed_names(self):
+    def test_rooney_biegler_figure_drawing_bad_fixed_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -479,7 +479,7 @@ class TestDoEErrors(unittest.TestCase):
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_figure_drawing_bad_sens_names(self):
+    def test_rooney_biegler_figure_drawing_bad_sens_names(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -589,7 +589,7 @@ class TestDoEErrors(unittest.TestCase):
                 full_design_variable_names=["x1", "x2", "x3"],
             )
 
-    def test_reactor_check_get_FIM_without_FIM(self):
+    def test_rooney_biegler_check_get_FIM_without_FIM(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -606,7 +606,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.get_FIM()
 
-    def test_reactor_check_get_sens_mat_without_model(self):
+    def test_rooney_biegler_check_get_sens_mat_without_model(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -624,7 +624,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.get_sensitivity_matrix()
 
-    def test_reactor_check_get_exp_inputs_without_model(self):
+    def test_rooney_biegler_check_get_exp_inputs_without_model(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -642,7 +642,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.get_experiment_input_values()
 
-    def test_reactor_check_get_exp_outputs_without_model(self):
+    def test_rooney_biegler_check_get_exp_outputs_without_model(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -660,7 +660,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.get_experiment_output_values()
 
-    def test_reactor_check_get_unknown_params_without_model(self):
+    def test_rooney_biegler_check_get_unknown_params_without_model(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
@@ -678,7 +678,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.get_unknown_parameter_values()
 
-    def test_reactor_check_get_meas_error_without_model(self):
+    def test_rooney_biegler_check_get_meas_error_without_model(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 

@@ -6,7 +6,6 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-import json
 import logging
 import os, os.path
 from glob import glob
@@ -25,7 +24,6 @@ from pyomo.common.dependencies import (
 if matplotlib_available:
     matplotlib.use("Agg")
 
-from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 if not (numpy_available and scipy_available):
@@ -36,11 +34,6 @@ from pyomo.contrib.doe import DesignOfExperiments
 from pyomo.contrib.doe.examples.polynomial import (
     PolynomialExperiment,
     run_polynomial_doe,
-)
-from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
-from pyomo.contrib.doe.examples.reactor_example import (
-    ReactorExperiment as FullReactorExperiment,
-    run_reactor_doe,
 )
 from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     RooneyBieglerExperimentBad,
@@ -57,13 +50,6 @@ from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
 k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
-
-currdir = this_file_dir()
-file_path = os.path.join(currdir, "..", "examples", "result.json")
-
-with open(file_path) as f:
-    data_ex = json.load(f)
-data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
 
 def get_rooney_biegler_data():
@@ -349,12 +335,12 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         # Note: When using prior_FIM, the relationship FIM = Q.T @ sigma_inv @ Q + prior_FIM
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
-    # This legacy reactor-specific Cholesky/bad-prior case is kept disabled in
+    # This legacy Cholesky/bad-prior case is kept disabled in
     # this PR. It is not part of the active regression signal, and this cleanup is
-    # focused on replacing active general-purpose reactor coverage with
+    # focused on replacing active general-purpose coverage with
     # Rooney-Biegler or polynomial examples rather than rewriting inactive,
     # branch-specific tests.
-    def DISABLE_test_reactor_obj_cholesky_solve_bad_prior(self):
+    def DISABLE_test_rooney_biegler_obj_cholesky_solve_bad_prior(self):
         # [10/2025] This test has been disabled because it frequently
         # (and randomly) returns "infeasible" when run on Windows.
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
@@ -362,7 +348,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -665,7 +651,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         # With parameter scaling
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
@@ -677,22 +663,18 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         DoE_args2["scale_nominal_param_value"] = False
 
         doe_obj2 = DesignOfExperiments(**DoE_args2)
-        # Run both problems
-        doe_obj.run_doe()
-        doe_obj2.run_doe()
-
-        # Extract FIM values
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
-        FIM2, Q2, L2, sigma_inv2 = get_FIM_Q_L(doe_obj=doe_obj2)
+        # Compare scaled and unscaled FIMs at the same nominal design. For the
+        # Rooney-Biegler replacement, this avoids introducing determinant-solve
+        # instability that is unrelated to the rescaling utility itself.
+        FIM = doe_obj.compute_FIM()
+        FIM2 = doe_obj2.compute_FIM()
 
         # Get rescaled FIM from the scaled version
         param_vals = np.array(
             [
                 [
                     v
-                    for k, v in doe_obj.model.scenario_blocks[
-                        0
-                    ].unknown_parameters.items()
+                    for k, v in experiment.get_labeled_model().unknown_parameters.items()
                 ]
             ]
         )
@@ -763,72 +745,73 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestDoe(unittest.TestCase):
-    def test_doe_full_factorial(self):
+    def test_polynomial_full_factorial(self):
+        """Check 2D factorial FIM metrics on the lightweight polynomial example."""
         log10_D_opt_expected = [
-            11.77343778527225,
-            13.137792359064383,
-            13.182167857699808,
-            14.54652243150573,
+            3.771625936657566,
+            5.566143287412265,
+            5.910363131426261,
+            6.173537519214883,
         ]
 
         log10_A_opt_expected = [
-            5.59357268009304,
-            5.613318615148643,
-            5.945755198204368,
-            5.965501133259909,
+            3.771846315265457,
+            5.5661468254334245,
+            5.910364732979566,
+            6.173538392929174,
         ]
 
         log10_E_opt_expected = [
-            0.27981268741620413,
-            1.3086595026369012,
-            0.6319952055040333,
-            1.6608420207466377,
+            -4.821637332766436e-17,
+            -7.8206957537542e-13,
+            -2.4960652144337014e-12,
+            -1.0111706376862954e-10,
         ]
 
         log10_ME_opt_expected = [
-            5.221185311075697,
-            4.244741560076784,
-            5.221185311062606,
-            4.244741560083524,
+            3.771625936657538,
+            5.566143287414164,
+            5.910363131438886,
+            6.173537519245602,
         ]
 
         eigval_min_expected = [
-            1.9046390638130666,
-            20.354456134677426,
-            4.285437893696232,
-            45.797526302234304,
+            0.9999999999999999,
+            0.9999999999981992,
+            0.9999999999942526,
+            0.9999999997671694,
         ]
 
         eigval_max_expected = [
-            316955.2855492114,
-            357602.92523637977,
-            713149.3924857995,
-            804606.58178139165,
+            5910.523340060432,
+            368250.4510100104,
+            813510.4413073618,
+            1491205.5769174611,
         ]
 
         det_FIM_expected = [
-            593523317093.4525,
-            13733851875566.766,
-            15211353450350.424,
-            351983602166961.56,
+            5910.523340060814,
+            368250.45101058815,
+            813510.4413089894,
+            1491205.5769048228,
         ]
 
         trace_FIM_expected = [
-            392258.78617108597,
-            410505.1549241871,
-            882582.2688850109,
-            923636.598578955,
+            5913.523340060433,
+            368253.4510100104,
+            813513.4413073619,
+            1491208.5769174611,
         ]
-        ff = run_reactor_doe(
-            n_points_for_C0=2,
-            n_points_for_T0=2,
-            compute_FIM_full_factorial=False,
-            plot_factorial_results=False,
-            run_optimal_doe=False,
-        )
-        ff.compute_FIM_full_factorial(
-            design_ranges={"CA[0]": [1, 1.5, 2], "T[0]": [350, 400, 2]}
-        )
+        experiment = PolynomialExperiment()
+        DoE_args = get_standard_args(experiment, "central", "trace")
+        DoE_args["scale_nominal_param_value"] = False
+        # The polynomial model has one output and four parameters, so the raw
+        # outer-product FIM is rank one. Seed the factorial sweep with an
+        # identity prior to keep the metric regressions positive definite.
+        DoE_args["prior_FIM"] = np.eye(4)
+
+        ff = DesignOfExperiments(**DoE_args)
+        ff.compute_FIM_full_factorial(design_ranges={"x1": [0, 5, 2], "x2": [0, 5, 2]})
 
         ff_results = ff.fim_factorial_results
 
@@ -1149,17 +1132,17 @@ class TestDoEFactorialFigure(unittest.TestCase):
             f"Expected 5 plot files, but found {len(expected_plot_log)}. Files found: {expected_plot_log}",
         )
 
-    def test_doe_2D_plotting_function(self):
-        # For 2D plotting we will use the Rooney-Biegler example in doe/examples
+    def test_polynomial_2D_plotting_function(self):
+        # Use the lightweight polynomial example for generic 2D factorial plotting.
         plt = matplotlib.pyplot
 
         # File prefix for saved plots
-        prefix_linear = "reactor_linear"
-        prefix_log = "reactor_log"
+        prefix_linear = "polynomial_linear"
+        prefix_log = "polynomial_log"
 
         # Clean up any existing plot files from test runs
         def cleanup_files():
-            files_to_remove = glob("reactor_*.png")
+            files_to_remove = glob("polynomial_*.png")
             for f in files_to_remove:
                 try:
                     os.remove(f)
@@ -1169,15 +1152,20 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         self.addCleanup(cleanup_files)
 
-        # Run the reactor example
-        run_reactor_doe(
-            n_points_for_C0=1,
-            n_points_for_T0=1,
-            compute_FIM_full_factorial=True,
-            plot_factorial_results=True,
+        experiment = PolynomialExperiment()
+        DoE_args = get_standard_args(experiment, "central","determinant")
+        DoE_args["gradient_method"] = "pynumero"
+        DoE_args["scale_nominal_param_value"] = False
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        # Build polynomial factorial results and draw the linear-scale 2D plots.
+        doe_obj.compute_FIM_full_factorial(design_ranges={"x1": [0, 5, 2], "x2": [0, 5, 2]})
+        doe_obj.draw_factorial_figure(
+            sensitivity_design_variables=["x1", "x2"],
+            fixed_design_variables={},
+            full_design_variable_names=["x1", "x2"],
             figure_file_name=prefix_linear,
             log_scale=False,
-            run_optimal_doe=False,
         )
 
         # Verify that the linear scale plots were also created
@@ -1188,15 +1176,13 @@ class TestDoEFactorialFigure(unittest.TestCase):
             f"Expected 5 plot files, but found {len(expected_plot_linear)}. Files found: {expected_plot_linear}",
         )
 
-        # Run the reactor example with log scale
-        run_reactor_doe(
-            n_points_for_C0=1,
-            n_points_for_T0=1,
-            compute_FIM_full_factorial=True,
-            plot_factorial_results=True,
+        # Reuse the same factorial results to draw the log-scale 2D plots.
+        doe_obj.draw_factorial_figure(
+            sensitivity_design_variables=["x1", "x2"],
+            fixed_design_variables={},
+            full_design_variable_names=["x1", "x2"],
             figure_file_name=prefix_log,
             log_scale=True,
-            run_optimal_doe=False,
         )
 
         # Verify that the log scale plots were also created
