@@ -345,6 +345,9 @@ if (
         termination_message = str(doe_object.results.get("Termination Message", ""))
         cyipopt_call_working = bad_message not in termination_message
         if not cyipopt_call_working:
+            # The GreyBox path here uses cyipopt rather than the standalone
+            # IPOPT executable, and the local failure mode we diagnosed was a
+            # missing MA57/HSL runtime on that cyipopt solve path.
             cyipopt_skip_reason = (
                 "cyipopt GreyBox solve path cannot access the MA57/HSL runtime"
             )
