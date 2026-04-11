@@ -1459,9 +1459,9 @@ class DesignOfExperiments:
             elif fd_formula == FiniteDifferenceStep.forward:
                 diff = self.step  # Forward always positive
             else:
-                # TODO: add an error message for this as not being implemented yet
-                diff = 0
-                pass
+                raise DeveloperError(
+                    "Finite difference option not recognized while generating scenario blocks."
+                )
 
             # Update parameter values for the given finite difference scenario
             pyo.ComponentUID(param, context=m.base_model).find_component_on(
