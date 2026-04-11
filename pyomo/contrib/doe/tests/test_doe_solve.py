@@ -349,6 +349,11 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         # Note: When using prior_FIM, the relationship FIM = Q.T @ sigma_inv @ Q + prior_FIM
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
+    # This legacy reactor-specific Cholesky/bad-prior case is kept disabled in
+    # this PR. It is not part of the active regression signal, and this cleanup is
+    # focused on replacing active general-purpose reactor coverage with
+    # Rooney-Biegler or polynomial examples rather than rewriting inactive,
+    # branch-specific tests.
     def DISABLE_test_reactor_obj_cholesky_solve_bad_prior(self):
         # [10/2025] This test has been disabled because it frequently
         # (and randomly) returns "infeasible" when run on Windows.
@@ -480,63 +485,73 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         doe_obj.compute_FIM(method="sequential")
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    def test_reactor_grid_search(self):
+    def test_polynomial_grid_search(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = PolynomialExperiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        # Reduce grid from 3x3 to 2x2 for performance
-        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
+        # Use a small 2x2 polynomial design grid for a lightweight factorial check.
+        design_ranges = {"x1": [0, 5, 2], "x2": [0, 5, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
         )
 
-        # Check to make sure the lengths of the inputs
-        # in results object are indeed correct
-        CA_vals = doe_obj.fim_factorial_results["CA[0]"]
-        T_vals = doe_obj.fim_factorial_results["T[0]"]
+        # Check that the factorial results contain the expected 2x2 grid entries.
+        x1_vals = doe_obj.fim_factorial_results["x1"]
+        x2_vals = doe_obj.fim_factorial_results["x2"]
 
         # assert length is correct (2x2 = 4 evaluations)
-        self.assertTrue((len(CA_vals) == 4) and (len(T_vals) == 4))
-        self.assertTrue((len(set(CA_vals)) == 2) and (len(set(T_vals)) == 2))
+        self.assertTrue((len(x1_vals) == 4) and (len(x2_vals) == 4))
+        self.assertTrue((len(set(x1_vals)) == 2) and (len(set(x2_vals)) == 2))
 
-        # assert unique values are correct
+        # Check that each polynomial design variable spans the requested grid values.
         self.assertTrue(
-            (set(CA_vals).issuperset(set([1, 5])))
-            and (set(T_vals).issuperset(set([300, 700])))
+            (set(x1_vals).issuperset(set([0, 5])))
+            and (set(x2_vals).issuperset(set([0, 5])))
         )
 
-    def test_reactor_run_doe_pynumero(self):
+    def test_rooney_biegler_run_doe_pynumero(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         DoE_args["gradient_method"] = "pynumero"
 
         doe_obj = DesignOfExperiments(**DoE_args)
+        # Rooney-Biegler determinant solves are numerically more stable with a
+        # prior. Use the FIM at the current nominal design as the prior so this
+        # symbolic run_doe() test exercises the intended backend without
+        # relying on a singular starting information matrix.
+        prior_FIM = doe_obj.compute_FIM()
+        doe_obj.prior_FIM = prior_FIM
         doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
         self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
-        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
-    def test_reactor_run_doe_determinant_regression(self):
-        """Check a stable reactor optimum fingerprint against expected values."""
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+    def test_rooney_biegler_run_doe_determinant_regression(self):
+        """Check a stable Rooney-Biegler optimum fingerprint against expected values."""
+        experiment = get_rooney_biegler_experiment()
         DoE_args = get_standard_args(experiment, "central", "determinant")
         DoE_args["gradient_method"] = "pynumero"
         doe_obj = DesignOfExperiments(**DoE_args)
-
+        # Rooney-Biegler determinant solves are numerically more stable with a
+        # prior. Use the FIM at the current nominal design as the prior so this
+        # symbolic regression test keeps the determinant problem well
+        # conditioned while preserving the same backend configuration.
+        prior_FIM = doe_obj.compute_FIM()
+        doe_obj.prior_FIM = prior_FIM
         doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
@@ -545,37 +560,36 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         )
 
         design = doe_obj.results["Experiment Design"]
-        self.assertAlmostEqual(design[0], 5.0, places=6)
-        self.assertAlmostEqual(design[1], 481.8802587133011, delta=1e-3)
-        self.assertAlmostEqual(design[-1], 300.00103052372924, delta=1e-3)
-
-        self.assertAlmostEqual(
-            doe_obj.results["log10 D-opt"], 19.31805092114778, places=4
-        )
-        self.assertAlmostEqual(
-            doe_obj.results["log10 A-opt"], -2.936916407094173, places=4
-        )
-
+        self.assertAlmostEqual(design[0], 9.999999776254937, places=4)
         fim = np.array(doe_obj.results["FIM"])
-        # Use absolute deltas for these large-magnitude FIM entries so the test
-        # remains sensitive to meaningful regressions without failing on small
-        # backend-dependent shifts. Here fim[0,0] is O(1.7e5), so delta=1.0 is
-        # a relative tolerance of about 6e-6; fim[3,3] is O(8.2e6), so
-        # delta=100.0 is about 1e-5 relative.
-        self.assertAlmostEqual(fim[0, 0], 173179.08904385, delta=1.0)
-        self.assertAlmostEqual(fim[3, 3], 8218128.34162048, delta=100.0)
+        self.assertAlmostEqual(fim[0, 0], 41155.59271917, places=2)
+        self.assertAlmostEqual(fim[1, 1], 973.06126181, places=2)
+        self.assertAlmostEqual(
+            doe_obj.results["log10 D-opt"],7.179982499524086, places=4
+        )
+        self.assertAlmostEqual(
+            doe_obj.results["log10 A-opt"], -2.5554049159721415, places=4
+        )
 
-    def test_reactor_run_doe_pynumero_objective_matrix(self):
-        """Exercise the symbolic reactor run_doe path across objective options."""
+    
+
+    def test_rooney_biegler_run_doe_pynumero_objective_matrix(self):
+        """Exercise the symbolic Rooney-Biegler run_doe path across objective options."""
         test_cases = ["trace", "determinant", "zero"]
 
         for objective_option in test_cases:
             with self.subTest(objective_option=objective_option):
-                experiment = FullReactorExperiment(data_ex, 10, 3)
+                experiment = get_rooney_biegler_experiment()
                 DoE_args = get_standard_args(experiment, "central", objective_option)
                 DoE_args["gradient_method"] = "pynumero"
 
                 doe_obj = DesignOfExperiments(**DoE_args)
+                # Rooney-Biegler run_doe() cases are more stable with the
+                # nominal-design FIM supplied as a prior, so each objective is
+                # exercised under the symbolic backend without starting from a
+                # nearly singular information matrix.
+                prior_FIM = doe_obj.compute_FIM()
+                doe_obj.prior_FIM = prior_FIM
                 doe_obj.run_doe()
 
                 self.assertEqual(doe_obj.results["Solver Status"], "ok")
@@ -583,7 +597,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
                 FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
                 if objective_option == "determinant":
                     self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
-                self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+                self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
     def test_polynomial_example_compute_fim_pynumero(self):
         """Check that the transplanted polynomial example computes the expected FIM."""
@@ -689,7 +703,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(FIM2, resc_FIM)))
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    def test_reactor_solve_bad_model(self):
+    def test_rooney_biegler_solve_bad_model(self):
         fd_method = "central"
         obj_used = "determinant"
 
@@ -712,7 +726,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
             doe_obj.run_doe()
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    def test_reactor_grid_search_bad_model(self):
+    def test_rooney_biegler_grid_search_bad_model(self):
         fd_method = "central"
         obj_used = "determinant"
 
