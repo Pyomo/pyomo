@@ -1180,9 +1180,7 @@ class DesignOfExperiments:
                 output_var = output_cuid.find_component_on(m.scenario_blocks[0])
 
                 parameter_cuid = pyo.ComponentUID(p)
-                parameter_var = parameter_cuid.find_component_on(
-                    m.scenario_blocks[0]
-                )
+                parameter_var = parameter_cuid.find_component_on(m.scenario_blocks[0])
 
                 i = experiment_grad.measurement_mapping[output_var]
                 j = experiment_grad.parameter_mapping[parameter_var]
@@ -1227,9 +1225,7 @@ class DesignOfExperiments:
             var_lo = cuid.find_component_on(m.scenario_blocks[s2])
 
             param = m.parameter_scenarios[max(s1, s2)]
-            param_loc = pyo.ComponentUID(param).find_component_on(
-                m.scenario_blocks[0]
-            )
+            param_loc = pyo.ComponentUID(param).find_component_on(m.scenario_blocks[0])
             param_val = m.scenario_blocks[0].unknown_parameters[param_loc]
             param_diff = param_val * fd_step_mult * self.step
             sensitivity_value = (var_up - var_lo) / param_diff
