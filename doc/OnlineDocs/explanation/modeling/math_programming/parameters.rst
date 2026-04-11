@@ -137,7 +137,17 @@ is driven by performance:
 
 * **Immutable (Default):** Pyomo "pre-computes" these values into the algebraic 
   expressions during model construction. This results in faster model generation 
-  and significantly lower memory usage, especially for large models.
+  and significantly lower memory usage, especially for large models. Key 
+  advantages include:
+
+  * **Memory Efficiency:** For indexed parameters, Pyomo avoids creating 
+    individual component data objects, significantly reducing memory overhead.
+  * **Expression Speed:** Values are injected as constants directly into the 
+    expression tree. This allows Pyomo to optimize expression tree walking.
+  * **Simplification:** Pyomo can simplify constant sub-expressions during 
+    model construction (e.g., ``5 * model.p * model.q[i]`` is simplified to a 
+    single float if ``p`` and ``q`` are immutable), further accelerating 
+    subsequent processing.
 * **Mutable:** Pyomo maintains the parameter as a symbolic object within 
   expressions. This allows you to change the value and re-solve without 
   rebuilding the entire model, but it adds computational overhead.
