@@ -1166,76 +1166,84 @@ class DesignOfExperiments:
         if self._gradient_method == GradientMethod.pynumero:
             experiment_grad.construct_sensitivity_constraints(model.scenario_blocks[0])
 
-            def jacobian_rule(m, n, p):
+        def jacobian_rule(m, n, p):
+            """
+            m: Pyomo model
+            n: experimental output
+            p: unknown parameter
+            """
+            if self._gradient_method == GradientMethod.pynumero:
+                # The symbolic/pynumero path already constructs sensitivity
+                # variables on the base scenario block for each
+                # output/parameter pair.
                 output_cuid = pyo.ComponentUID(n)
                 output_var = output_cuid.find_component_on(m.scenario_blocks[0])
 
                 parameter_cuid = pyo.ComponentUID(p)
-                parameter_var = parameter_cuid.find_component_on(m.scenario_blocks[0])
+                parameter_var = parameter_cuid.find_component_on(
+                    m.scenario_blocks[0]
+                )
 
                 i = experiment_grad.measurement_mapping[output_var]
                 j = experiment_grad.parameter_mapping[parameter_var]
 
                 if i is None:
-                    var = 0
+                    sensitivity_value = 0
                 else:
-                    var = m.scenario_blocks[0].jac_variables_wrt_param[i, j]
+                    sensitivity_value = m.scenario_blocks[0].jac_variables_wrt_param[
+                        i, j
+                    ]
 
+                # When nominal-parameter scaling is requested, convert the
+                # direct sensitivity into the scaled convention used in the
+                # DoE model.
                 scale = parameter_var if self.scale_nominal_param_value else 1
                 return m.sensitivity_jacobian[n, p] == (
-                    var * self.scale_constant_value * scale
+                    sensitivity_value * self.scale_constant_value * scale
                 )
 
-        else:
+            # The finite-difference path reconstructs sensitivities from the
+            # perturbed scenario blocks associated with each parameter.
+            fd_step_mult = 1
+            cuid = pyo.ComponentUID(n)
+            param_ind = m.parameter_names.data().index(p)
 
-            def jacobian_rule(m, n, p):
-                """
-                m: Pyomo model
-                n: experimental output
-                p: unknown parameter
-                """
-                fd_step_mult = 1
-                cuid = pyo.ComponentUID(n)
-                param_ind = m.parameter_names.data().index(p)
-
-                if self._gradient_method == GradientMethod.central:
-                    s1 = param_ind * 2
-                    s2 = param_ind * 2 + 1
-                    fd_step_mult = 2
-                elif self._gradient_method == GradientMethod.forward:
-                    s1 = param_ind + 1
-                    s2 = 0
-                elif self._gradient_method == GradientMethod.backward:
-                    s1 = 0
-                    s2 = param_ind + 1
-                else:
-                    raise DeveloperError(
-                        "Gradient method option not recognized while building the Jacobian."
-                    )
-
-                var_up = cuid.find_component_on(m.scenario_blocks[s1])
-                var_lo = cuid.find_component_on(m.scenario_blocks[s2])
-
-                param = m.parameter_scenarios[max(s1, s2)]
-                param_loc = pyo.ComponentUID(param).find_component_on(
-                    m.scenario_blocks[0]
+            if self._gradient_method == GradientMethod.central:
+                s1 = param_ind * 2
+                s2 = param_ind * 2 + 1
+                fd_step_mult = 2
+            elif self._gradient_method == GradientMethod.forward:
+                s1 = param_ind + 1
+                s2 = 0
+            elif self._gradient_method == GradientMethod.backward:
+                s1 = 0
+                s2 = param_ind + 1
+            else:
+                raise DeveloperError(
+                    "Gradient method option not recognized while building the Jacobian."
                 )
-                param_val = m.scenario_blocks[0].unknown_parameters[param_loc]
-                param_diff = param_val * fd_step_mult * self.step
 
-                if self.scale_nominal_param_value:
-                    return (
-                        m.sensitivity_jacobian[n, p]
-                        == (var_up - var_lo)
-                        / param_diff
-                        * param_val
-                        * self.scale_constant_value
-                    )
-                else:
-                    return (
-                        m.sensitivity_jacobian[n, p]
-                        == (var_up - var_lo) / param_diff * self.scale_constant_value
-                    )
+            var_up = cuid.find_component_on(m.scenario_blocks[s1])
+            var_lo = cuid.find_component_on(m.scenario_blocks[s2])
+
+            param = m.parameter_scenarios[max(s1, s2)]
+            param_loc = pyo.ComponentUID(param).find_component_on(
+                m.scenario_blocks[0]
+            )
+            param_val = m.scenario_blocks[0].unknown_parameters[param_loc]
+            param_diff = param_val * fd_step_mult * self.step
+            sensitivity_value = (var_up - var_lo) / param_diff
+
+            # Apply the same nominal-parameter scaling convention used by the
+            # symbolic path so the sensitivity_jacobian has a consistent
+            # meaning regardless of derivative backend.
+            if self.scale_nominal_param_value:
+                sensitivity_value = sensitivity_value * param_val
+
+            return (
+                m.sensitivity_jacobian[n, p]
+                == sensitivity_value * self.scale_constant_value
+            )
 
         # A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
