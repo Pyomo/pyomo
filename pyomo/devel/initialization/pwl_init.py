@@ -237,8 +237,11 @@ def _refine_pwl_approx(
     if len(violations) == 0:
         raise RuntimeError('Did not find any piecewise linear functions with variable values')
     
-    if math.isclose(violations[0][0], 0):
-        raise RuntimeError('All of the original nonlinear functions are satisfied!')
+    tol = 1e-5
+    if math.isclose(violations[0][0], 0, abs_tol=tol):
+        logger.info('All of the original nonlinear functions are satisfied!')
+    
+    violations = [i for i in violations if i[0] > tol]
 
     for err, expr in violations[:num_to_refine]:
         logger.info(f'refining {expr.pw_linear_function._func.expr} with error {err}')

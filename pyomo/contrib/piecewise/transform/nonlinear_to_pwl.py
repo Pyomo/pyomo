@@ -118,13 +118,13 @@ def _get_random_point_grid(bounds, n, func, config, seed=42):
     return list(itertools.product(*linspaces))
 
 
-def _get_uniform_point_grid(bounds, n, func, config):
+def _get_uniform_point_grid(bounds, n, func, config, nudge_factor=0):
     # Generate non-randomized grid of points
     linspaces = []
     for (lb, ub), is_integer in bounds:
         if not is_integer:
             # Issues happen when exactly using the boundary
-            nudge = (ub - lb) * 1e-4
+            nudge = (ub - lb) * nudge_factor
             linspaces.append(np.linspace(lb + nudge, ub - nudge, n))
         else:
             size = min(n, ub - lb + 1)
@@ -139,7 +139,7 @@ def _get_points_lmt_random_sample(bounds, n, func, config, seed=42):
 
 
 def _get_points_lmt_uniform_sample(bounds, n, func, config, seed=42):
-    points = _get_uniform_point_grid(bounds, n, func, config)
+    points = _get_uniform_point_grid(bounds, n, func, config, nudge_factor=1e-4)
     return _get_points_lmt(points, bounds, func, config, seed)
 
 
