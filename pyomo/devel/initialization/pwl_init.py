@@ -63,7 +63,7 @@ def _minimize_infeasibility(m):
         if obj.sense == pe.minimize:
             obj_expr += 0.1*obj.expr
         else:
-            obj_expr -= 0.1*obj_expr
+            obj_expr -= 0.1*obj.expr
         obj.deactivate()
         found_obj = True
 
@@ -102,15 +102,17 @@ def _get_pwl_constraints(m: BlockData) -> MutableMapping[
     comp_types = set()
     comp_types.add(PiecewiseLinearExpression)
     pwl_expr_to_con_map = ComponentMap()
-    for con in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
-        pwl_exprs = list(identify_components(con.expr, comp_types))
+    con_list = list(m.component_data_objects(pe.Constraint, active=True, descend_into=True))
+    obj_list = list(m.component_data_objects(pe.Objective, active=True, descend_into=True))
+    for comp in con_list + obj_list:
+        pwl_exprs = list(identify_components(comp.expr, comp_types))
         if not pwl_exprs:
             continue
         assert len(pwl_exprs) == 1
         e = pwl_exprs[0]
         if e not in pwl_expr_to_con_map:
             pwl_expr_to_con_map[e] = []
-        pwl_expr_to_con_map[e].append(con)
+        pwl_expr_to_con_map[e].append(comp)
     return pwl_expr_to_con_map
 
 
@@ -224,6 +226,7 @@ def _refine_pwl_approx(
         # for v, val in zip(expr.args, var_vals):
         #     print(f'{str(v):<20}{val:<20.5f}{v.lb:<20.5f}{v.ub:<20.5f}{id(v):<20}')
         if any(i is None for i in var_vals):
+            logger.info(f'missing variable values for {expr}')
             continue
         approx_value = func(*var_vals)
         true_value = func._func(*var_vals)
@@ -341,6 +344,6 @@ def _initialize_with_piecewise_linear_approximation(
             break
 
     if not solved:
-        raise RuntimeError('no feasible solution found')
+        logger.warning('initialization was not successful via PWL approximation')
 
     return last_nlp_res
