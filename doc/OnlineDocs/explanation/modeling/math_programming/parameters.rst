@@ -154,7 +154,7 @@ When to use Mutable
 ~~~~~~~~~~~~~~~~~~~
 
 **Use Immutable if:**
-  * The data is static and never changes during the execution of your script.
+  * The data is static and never changes during the lifetime of the model.
   * You want to maximize performance and minimize memory usage for large models.
 
 **Use Mutable if:**
@@ -163,6 +163,7 @@ When to use Mutable
   * You want to update values frequently without the "re-construction" 
     bottleneck.
   * The parameter is part of a nonlinear expression that you need to update.
+  * You want named constants to be preserved in the Pyomo expressions (e.g., for documentation of debugging purposes)
 
 Comparison: Param vs. Var
 -------------------------
@@ -176,16 +177,30 @@ summarizes the key differences:
    * - Feature
      - Param (Immutable)
      - Param (Mutable)
-     - Var
-   * - Can change after solve()?
+     - Var (fixed)
+     - Var (free)
+   * - Can change after model construction?
      - No
      - Yes
-     - Yes (by solver)
+     - Yes
+     - Yes
    * - Rebuilds model on change?
      - Yes (requires new Param)
+     - No
      - No
      - No
    * - Solver sees it as:
      - A constant number
      - A constant number
+     - A constant number
      - An optimization variable
+
+.. note::
+
+   **Should I use a mutable Param or a fixed Var?**
+   While functionally similar, you should use a :class:`Param` for data that 
+   defines the problem instance (like costs or demands) and a :class:`Var` for 
+   the decisions the solver needs to make. Use `fix()` on a :class:`Var` when 
+   you want to temporarily hold a decision constant, and use a mutable 
+   :class:`Param` when you need to update input data for sensitivity analysis 
+    or iterative algorithms.
