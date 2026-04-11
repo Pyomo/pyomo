@@ -6,10 +6,6 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-import copy
-import json
-import os.path
-
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
@@ -17,7 +13,6 @@ from pyomo.common.dependencies import (
     pandas_available,
     scipy_available,
 )
-from pyomo.common.fileutils import this_file_dir
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
@@ -33,21 +28,11 @@ from pyomo.contrib.doe.utils import (
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
-
-from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
     RooneyBieglerExperiment,
 )
 from pyomo.opt import SolverFactory
-
-currdir = this_file_dir()
-file_path = os.path.join(currdir, "..", "examples", "result.json")
-
-with open(file_path) as f:
-    data_ex = json.load(f)
-
-data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
 ipopt_available = SolverFactory("ipopt").available()
 
@@ -224,32 +209,6 @@ class TestExperimentGradients(unittest.TestCase):
             measure_error=measure_error,
         )
 
-    def _get_reactor_experiment(self, ca0=5.0, temperature_offset=0.0, nfe=5, ncp=2):
-        """Build a lightly perturbed reactor experiment for gradient validation."""
-        reactor_data = copy.deepcopy(data_ex)
-        reactor_data["CA0"] = ca0
-        reactor_data["control_points"] = {
-            t: value + temperature_offset
-            for t, value in reactor_data["control_points"].items()
-        }
-        return ReactorExperiment(data=reactor_data, nfe=nfe, ncp=ncp)
-
-    def _initialize_reactor_model(self, model):
-        """Solve the reactor model once to populate state values for AD checks."""
-        for v in model.experiment_inputs.keys():
-            v.fix()
-        for v in model.unknown_parameters.keys():
-            v.fix()
-
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
-        results = solver.solve(model, tee=False)
-
-        self.assertEqual(str(results.solver.status).lower(), "ok")
-        return model
-
     def _get_expected_polynomial_gradient(self):
         """Return the exact gradient of the polynomial output at the test point."""
         return np.array([[2.0, 3.0, 6.0, 1.0]])
@@ -388,10 +347,10 @@ class TestExperimentGradients(unittest.TestCase):
 
     @unittest.skipIf(not scipy_available, "scipy is not available")
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_symbolic_and_automatic_jacobians_agree_at_perturbed_point(self):
-        """Check reactor Jacobian agreement at a perturbed operating point."""
-        experiment = self._get_reactor_experiment(ca0=4.0, temperature_offset=25.0)
-        model = self._initialize_reactor_model(experiment.get_labeled_model())
+    def test_rooney_biegler_symbolic_and_automatic_jacobians_agree_at_perturbed_point(self):
+        """Check Rooney-Biegler Jacobian agreement at a perturbed operating point."""
+        experiment = self._get_rooney_biegler_experiment(hour=7.0, y=19.8, asymptote=14.0, rate_constant=0.4)
+        model = experiment.get_labeled_model()
 
         experiment_gradients = self._assert_symbolic_and_automatic_jacobians_agree(
             model, atol=1e-6, rtol=1e-6

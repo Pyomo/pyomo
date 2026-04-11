@@ -707,7 +707,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        # Use RooneyBiegler bad example (faster than reactor bad example)
+        # Use the Rooney-Biegler bad example as the lightweight bad-model case.
         experiment = RooneyBieglerExperimentBad(
             data=get_rooney_biegler_data(),
             theta={'asymptote': 15, 'rate_constant': 0.5},
@@ -730,7 +730,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         fd_method = "central"
         obj_used = "determinant"
 
-        # Use RooneyBiegler bad example (faster than reactor bad example)
+        # Use the Rooney-Biegler bad example as the lightweight bad-model case.
         experiment = RooneyBieglerExperimentBad(
             data=get_rooney_biegler_data(),
             theta={'asymptote': 15, 'rate_constant': 0.5},
