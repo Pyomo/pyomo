@@ -156,9 +156,11 @@ def _initialize_with_LP_approximation(
 
     # first introduce auxiliary variables so that we don't try to 
     # approximate any functions of more than two variables
-    trans = pe.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
-    trans.apply_to(nlp, aggressive_substitution=False)
-    logger.info('applied the univariate_nonlinear_decomposition transformation')
+    # actually, this is not necessary for this method
+    # we will just comment this out for now
+    # trans = pe.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
+    # trans.apply_to(nlp, aggressive_substitution=False)
+    # logger.info('applied the univariate_nonlinear_decomposition transformation')
 
     # bounds on the nonlinear variables
     bound_all_nonlinear_variables(nlp, default_bound=default_bound)
@@ -189,6 +191,6 @@ def _initialize_with_LP_approximation(
     if nlp_res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
         nlp_res.solution_loader.load_vars()
     else:
-        raise RuntimeError('no feasible solution found')
+        logger.warning('initialization was not successful via LP approximation')
 
     return nlp_res

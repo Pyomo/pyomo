@@ -36,6 +36,6 @@ def _initialize_with_global_solver(
     if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
         res.solution_loader.load_vars()
     else:
-        raise RuntimeError('no feasible solution found')
+        logger.warning('initialization was not successful via global optimization')
     
     return res
