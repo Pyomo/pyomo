@@ -292,6 +292,10 @@ def _initialize_with_piecewise_linear_approximation(
     _minimize_infeasibility(pwl)
     logger.info('reformulated model to minimize infeasibility')
 
+    m_before_pwl = shallow_clone(pwl)
+    vset = list(ComponentSet(get_vars(m_before_pwl)))
+    vset.sort(key=lambda i: i.local_name)
+
     # build the PWL approximation
     trans = pe.TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
     trans.apply_to(pwl, num_points=2, additively_decompose=False)
@@ -328,6 +332,16 @@ def _initialize_with_piecewise_linear_approximation(
         #load the variable values back into orig_vars
         for ov, nv in zip(orig_vars, new_vars):
             ov.set_value(nv.value, skip_validation=True)
+
+        print('\n\n**********************')
+        print(m_before_pwl.obj.expr)
+        print('\nConstraints:')
+        for c in m_before_pwl.component_data_objects(pe.Constraint, active=True, descend_into=True):
+            print(c)
+            print('    ', c.expr)
+        for v in vset:
+            print(v, v.value)
+        m_before_pwl.display()
 
         # refine the PWL approximation
         _refine_pwl_approx(
