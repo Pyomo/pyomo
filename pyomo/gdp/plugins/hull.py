@@ -16,43 +16,26 @@ import pyomo.common.config as cfg
 from pyomo.common import deprecated
 from pyomo.common.collections import ComponentMap, ComponentSet, DefaultComponentMap
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.errors import DeveloperError
-from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr as EXPR
 from pyomo.core.base import TransformationFactory, SortComponents
 from pyomo.core import (
     Block,
-    BooleanVar,
-    Connector,
     Constraint,
     ConstraintList,
-    Param,
     Set,
-    SetOf,
     Suffix,
     Var,
     Expression,
-    SortComponents,
-    TraversalStrategy,
-    Any,
-    RangeSet,
     Reals,
     value,
     NonNegativeIntegers,
-    Binary,
     ConcreteModel,
     Objective,
     Reference,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.disjunct import DisjunctData
 from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
-from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
-from pyomo.gdp.util import (
-    clone_without_expression_components,
-    is_child_of,
-    _warn_for_active_disjunct,
-)
+from pyomo.gdp.util import clone_without_expression_components
 from pyomo.gdp.plugins.multiple_bigm import Solver
 from pyomo.core.util import target_list
 from pyomo.core.expr.visitor import (
@@ -61,8 +44,6 @@ from pyomo.core.expr.visitor import (
 )
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.util import VarRecorder
-from pyomo.util.vars_from_expressions import get_vars_from_components
-from pyomo.opt.base.solvers import SolverFactory
 from pyomo.opt.results.solver import TerminationCondition
 from pyomo.opt.solver import SolverStatus
 from weakref import ref as weakref_ref
