@@ -1303,8 +1303,8 @@ class _WellDefinedConstraintGenerator(StreamBasedExpressionVisitor):
     # has a restricted domain, and if it does add a corresponding
     # constraint
     def exitNode(self, node, data):
-        if node.__class__ in _handlers:
-            for con in _handlers[node.__class__](node):
+        if node.__class__ in _expr_handlers:
+            for con in _expr_handlers[node.__class__](node):
                 # note: con should never be a boolean True here, such
                 # cases should have been filtered out during the handler
                 # call
@@ -1355,37 +1355,73 @@ def _handleDivisionExpression(node):
 
 def _handleUnaryFunctionExpression(node):
     arg = node.args[0]
-    if arg.__class__ in EXPR.native_types or not arg.is_potentially_variable():
+    if (
+        arg.__class__ in EXPR.native_types
+        or not arg.is_potentially_variable()
+        or node.name not in _unary_function_handlers
+    ):
         return ()
-    if node.name == 'log':
-        return (arg >= EPS,)
-    if node.name == 'log10':
-        return (arg >= EPS,)
-    if node.name == 'sqrt':
-        return (arg >= 0,)
-    if node.name == 'asin':
-        return (arg >= -1, arg <= 1)
-    if node.name == 'acos':
-        return (arg >= -1, arg <= 1)
+    else:
+        return _unary_function_handlers[node.name](arg)
+
+
+# Unary function handlers
+
+
+def _handle_log(arg):
+    return (arg >= EPS,)
+
+
+def _handle_log10(arg):
+    return (arg >= EPS,)
+
+
+def _handle_sqrt(arg):
+    return (arg >= 0,)
+
+
+def _handle_asin(arg):
+    return (arg >= -1, arg <= 1)
+
+
+def _handle_acos(arg):
+    return (arg >= -1, arg <= 1)
+
+
+def _handle_tan(arg):
     # It can't be exactly pi/2 plus a multiple of pi. Rather difficult
     # to enforce, so make a conservative effort by instead keeping it in
     # (-pi/2, pi/2).
-    if node.name == 'tan':
-        return (arg >= -(math.pi / 2) + EPS, arg <= (math.pi / 2) - EPS)
-    if node.name == 'acosh':
-        return (arg >= 1,)
-    if node.name == 'atanh':
-        return (arg >= -1 + EPS, arg <= 1 - EPS)
-    # Other Pyomo unary functions should be well-defined.
-    return ()
+    return (arg >= -(math.pi / 2) + EPS, arg <= (math.pi / 2) - EPS)
+
+
+def _handle_acosh(arg):
+    return (arg >= 1,)
+
+
+def _handle_atanh(arg):
+    return (arg >= -1 + EPS, arg <= 1 - EPS)
 
 
 # All expression types that can potentially be
 # ill-defined:
-_handlers = {
+_expr_handlers = {
     # You are on your own here
     # EXPR.ExternalFunctionExpression,
     EXPR.PowExpression: _handlePowExpression,
     EXPR.DivisionExpression: _handleDivisionExpression,
     EXPR.UnaryFunctionExpression: _handleUnaryFunctionExpression,
+}
+
+# All unary functions that can potentially be
+# ill-defined:
+_unary_function_handlers = {
+    'log': _handle_log,
+    'log10': _handle_log10,
+    'sqrt': _handle_sqrt,
+    'asin': _handle_asin,
+    'acos': _handle_acos,
+    'tan': _handle_tan,
+    'acosh': _handle_acosh,
+    'atanh': _handle_atanh,
 }
