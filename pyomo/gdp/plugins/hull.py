@@ -86,7 +86,7 @@ class _HullTransformationData(AutoSlots.Mixin):
         self.original_var_map = ComponentMap()
         self.bigm_constraint_map = DefaultComponentMap(ComponentMap)
         self.disaggregation_constraint_map = DefaultComponentMap(ComponentMap)
-        self.well_defined_points_map = ComponentMap()
+        self.well_defined_points_map = {}
 
 
 Block.register_private_data_initializer(_HullTransformationData)
@@ -234,8 +234,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     CONFIG.declare(
         'well_defined_points',
         cfg.ConfigValue(
-            default=ComponentMap(),
-            domain=ComponentMap,
+            default={},
             description="Distinguished points at which constraints with restricted "
             "domain are well-defined. This will be used as a center point for "
             "transformed constraints.",
@@ -535,13 +534,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 # Note that, because ComponentSets are ordered, we will
                 # eventually disaggregate the vars in a deterministic order
                 # (the order that we found them)
-                seen_vars = set()
                 for var in IdentifyVariableVisitor(
                     include_fixed=not self._config.assume_fixed_vars_permanent
                 ).walk_expression(con.expr):
-                    if id(var) in seen_vars:
-                        continue
-                    seen_vars.add(id(var))
                     if var not in var_order:
                         var_order.add(var)
                         disjuncts_var_appears_in[var] = ComponentSet([disjunct])
@@ -1268,7 +1263,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     def get_well_defined_points_map(self, b):
         """
         Retrieve the well-defined points originally used to transform
-        a Block. Format is a ComponentMap of ComponentMaps identical to
+        a Block. Format is a dict of ComponentMaps identical to
         that of the parameter well_defined_points.
 
         Parameters
