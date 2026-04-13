@@ -629,9 +629,22 @@ def _le_expr_ineq(a, b):
     return RangedExpression((a,) + b.args, (False, b._strict))
 
 
+def _le_native_ineq(a, b):
+    b0, b1 = b.args
+    lhs = _le_dispatcher[a.__class__, b0.__class__](a, b0)
+    if lhs.__class__ is InequalityExpression:
+        return RangedExpression((a, b0, b1), (False, b._strict))
+    elif lhs:
+        # Trivial (feasible) LHS
+        return b
+    else:
+        # Trivial infeasible LHS
+        return False
+
+
 def _le_param_ineq(a, b):
     if a.is_constant():
-        a = a.value
+        return _le_native_ineq(a.value, b)
     return RangedExpression((a,) + b.args, (False, b._strict))
 
 
@@ -639,9 +652,22 @@ def _le_ineq_expr(a, b):
     return RangedExpression(a.args + (b,), (a._strict, False))
 
 
+def _le_ineq_native(a, b):
+    a0, a1 = a.args
+    rhs = _le_dispatcher[a1.__class__, b.__class__](a1, b)
+    if rhs.__class__ is InequalityExpression:
+        return RangedExpression((a0, a1, b), (a._strict, False))
+    elif rhs:
+        # Trivial (feasible) RHS
+        return a
+    else:
+        # Trivial infeasible RHS
+        return False
+
+
 def _le_ineq_param(a, b):
     if b.is_constant():
-        b = b.value
+        return _le_ineq_native(a, b.value)
     return RangedExpression(a.args + (b,), (a._strict, False))
 
 
@@ -684,7 +710,7 @@ _le_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _le_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _le_any_param,
         (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _le_expr,
-        (ARG_TYPE.NATIVE, ARG_TYPE.INEQUALITY): _le_expr_ineq,
+        (ARG_TYPE.NATIVE, ARG_TYPE.INEQUALITY): _le_native_ineq,
         (ARG_TYPE.NATIVE, ARG_TYPE.INVALID_RELATIONAL): _le_invalid,
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _le_param_any,
         (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _le_param_param,
@@ -696,7 +722,7 @@ _le_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _le_expr,
         (ARG_TYPE.OTHER, ARG_TYPE.INEQUALITY): _le_expr_ineq,
         (ARG_TYPE.OTHER, ARG_TYPE.INVALID_RELATIONAL): _le_invalid,
-        (ARG_TYPE.INEQUALITY, ARG_TYPE.NATIVE): _le_ineq_expr,
+        (ARG_TYPE.INEQUALITY, ARG_TYPE.NATIVE): _le_ineq_native,
         (ARG_TYPE.INEQUALITY, ARG_TYPE.PARAM): _le_ineq_param,
         (ARG_TYPE.INEQUALITY, ARG_TYPE.OTHER): _le_ineq_expr,
         (ARG_TYPE.INEQUALITY, ARG_TYPE.INEQUALITY): _le_invalid,
@@ -727,9 +753,22 @@ def _lt_expr_ineq(a, b):
     return RangedExpression((a,) + b.args, (True, b._strict))
 
 
+def _lt_native_ineq(a, b):
+    b0, b1 = b.args
+    lhs = _lt_dispatcher[a.__class__, b0.__class__](a, b0)
+    if lhs.__class__ is InequalityExpression:
+        return RangedExpression((a, b0, b1), (True, b._strict))
+    elif lhs:
+        # Trivial (feasible) LHS
+        return b
+    else:
+        # Trivial infeasible LHS
+        return False
+
+
 def _lt_param_ineq(a, b):
     if a.is_constant():
-        a = a.value
+        return _lt_native_ineq(a.value, b)
     return RangedExpression((a,) + b.args, (True, b._strict))
 
 
@@ -737,9 +776,22 @@ def _lt_ineq_expr(a, b):
     return RangedExpression(a.args + (b,), (a._strict, True))
 
 
+def _lt_ineq_native(a, b):
+    a0, a1 = a.args
+    rhs = _lt_dispatcher[a1.__class__, b.__class__](a1, b)
+    if rhs.__class__ is InequalityExpression:
+        return RangedExpression((a0, a1, b), (a._strict, True))
+    elif rhs:
+        # Trivial (feasible) RHS
+        return a
+    else:
+        # Trivial infeasible RHS
+        return False
+
+
 def _lt_ineq_param(a, b):
     if b.is_constant():
-        b = b.value
+        return _lt_ineq_native(a, b.value)
     return RangedExpression(a.args + (b,), (a._strict, True))
 
 
@@ -782,7 +834,7 @@ _lt_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _lt_native,
         (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _lt_any_param,
         (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _lt_expr,
-        (ARG_TYPE.NATIVE, ARG_TYPE.INEQUALITY): _lt_expr_ineq,
+        (ARG_TYPE.NATIVE, ARG_TYPE.INEQUALITY): _lt_native_ineq,
         (ARG_TYPE.NATIVE, ARG_TYPE.INVALID_RELATIONAL): _lt_invalid,
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _lt_param_any,
         (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _lt_param_param,
@@ -794,7 +846,7 @@ _lt_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _lt_expr,
         (ARG_TYPE.OTHER, ARG_TYPE.INEQUALITY): _lt_expr_ineq,
         (ARG_TYPE.OTHER, ARG_TYPE.INVALID_RELATIONAL): _lt_invalid,
-        (ARG_TYPE.INEQUALITY, ARG_TYPE.NATIVE): _lt_ineq_expr,
+        (ARG_TYPE.INEQUALITY, ARG_TYPE.NATIVE): _lt_ineq_native,
         (ARG_TYPE.INEQUALITY, ARG_TYPE.PARAM): _lt_ineq_param,
         (ARG_TYPE.INEQUALITY, ARG_TYPE.OTHER): _lt_ineq_expr,
         (ARG_TYPE.INEQUALITY, ARG_TYPE.INEQUALITY): _lt_invalid,
