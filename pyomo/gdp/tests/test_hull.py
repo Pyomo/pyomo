@@ -2910,12 +2910,12 @@ class DomainRestrictionTest(unittest.TestCase):
         # using the recorded map is the same thing as the process that
         # created that map
         TransformationFactory('gdp.hull').apply_to(m2, well_defined_points=m_pts)
-        # how to assert that two blocks have (value) identical contents?
+        # The two blocks have (value) identical contents
         for c1, c2 in zip(
             m.component_data_objects(Constraint, sort=SortComponents.deterministic),
             m2.component_data_objects(Constraint, sort=SortComponents.deterministic),
         ):
-            self.assertEqual(str(c1.expr), str(c2.expr))
+            assertExpressionsStructurallyEqual(self, c1.expr, c2.expr)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_handle_fixed_disagg(self):
@@ -2997,24 +2997,26 @@ class WellDefinedConstraintWalkerTest(unittest.TestCase):
         walker = _WellDefinedConstraintGenerator(cons_list=m.cons)
         walker.walk_expression(m.hard.body)
         walker.walk_expression(m.several.body)
-        walked_strings = [str(con.expr) for con in m.cons.values()]
         walker_eps = 1e-4
-        for con in [
-            log(atanh(m.x)) >= walker_eps,
-            atanh(m.x) >= walker_eps,
-            m.x >= -1 + walker_eps,
-            m.x <= 1 - walker_eps,
-            m.x + 1 >= walker_eps,
-            m.x + 2 >= walker_eps,
-            m.x + 3 >= 0,
-            m.x + 4 >= -1,
-            m.x + 4 <= 1,
-            m.x + 5 >= -1,
-            m.x + 5 <= 1,
-            m.x + 6 <= (math.pi / 2) - walker_eps,
-            m.x + 6 >= -(math.pi / 2) + walker_eps,
-            m.x + 7 >= 1,
-            m.x + 8 <= 1 - walker_eps,
-            m.x + 8 >= -1 + walker_eps,
-        ]:
-            self.assertIn(str(con), walked_strings)
+        for con, expected_con in zip(
+            m.cons.values(),
+            [
+                m.x >= -1 + walker_eps,
+                m.x <= 1 - walker_eps,
+                atanh(m.x) >= walker_eps,
+                log(atanh(m.x)) >= walker_eps,
+                m.x + 1 >= walker_eps,
+                m.x + 2 >= walker_eps,
+                m.x + 3 >= 0,
+                m.x + 4 >= -1,
+                m.x + 4 <= 1,
+                m.x + 5 >= -1,
+                m.x + 5 <= 1,
+                m.x + 6 >= -(math.pi / 2) + walker_eps,
+                m.x + 6 <= (math.pi / 2) - walker_eps,
+                m.x + 7 >= 1,
+                m.x + 8 >= -1 + walker_eps,
+                m.x + 8 <= 1 - walker_eps,
+            ],
+        ):
+            assertExpressionsStructurallyEqual(self, con.expr, expected_con)
