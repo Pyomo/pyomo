@@ -21,7 +21,8 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr as EXPR
 from pyomo.core.base import TransformationFactory
-from pyomo.repn import generate_standard_repn
+from pyomo.repn.quadratic import QuadraticRepnVisitor
+from pyomo.repn.util import OrderedVarRecorder
 from pyomo.core import (
     Block,
     BooleanVar,
@@ -113,6 +114,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         (rotated second-order cone), while non-convex quadratics and
         equalities use the general exact hull reformulation. Convexity
         is determined via eigenvalue decomposition of the Hessian matrix.
+        **Important:** unlike most GDP transformations, coefficients are
+        taken from a quadratic representation that **evaluates mutable**
+        :class:`Param` **components to numeric values at transformation**
+        **time**. The reformulated constraints do **not** stay algebraically
+        tied to those Params; changing a mutable Param after transformation
+        does not update the relaxation. Set parameter values before
+        transforming, or use immutable Params, if you need that linkage.
         [default: False]
     eigenvalue_tolerance : float
         Numerical tolerance for eigenvalue-based positive/negative
@@ -215,7 +223,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         cfg.ConfigValue(
             default=False,
             domain=bool,
-            description="Use exact hull reformulation for quadratic constraints.",
+            description="Use exact hull reformulation for quadratic constraints "
+            "(mutable Params are evaluated at transformation time; see doc).",
             doc="""
         If True, quadratic constraints (polynomial degree 2) are reformulated
         using the exact hull instead of the standard perspective function,
@@ -241,6 +250,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         Default is False, which uses the standard perspective function for
         all nonlinear constraints.
+
+        **Departure from typical GDP hull behavior (mutable Parameters):**
+        Coefficients are obtained via ``QuadraticRepnVisitor``, which freezes
+        mutable :class:`Param` values (and other fixed numeric leaves) when the
+        expression is walked. The transformed model is not updated if those
+        Params change later. Most other hull paths keep Param references in the
+        transformed constraints; this option does not. Set mutable Params to
+        their intended values before transforming, or avoid mutable Params in
+        the quadratic body, if you need algebraic linkage to parameters.
         """,
         ),
     )
@@ -783,42 +801,82 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             unique = len(newConstraint)
             name = c.local_name + "_%s" % unique
 
-            polynomial_degree = c.body.polynomial_degree()
+            # QuadraticRepnVisitor / LinearRepnVisitor treat fixed Vars as
+            # constants.  When assume_fixed_vars_permanent is False (default),
+            # fixed variables are still disaggregated, so we temporarily unfix
+            # them so that polynomial_degree, the quadratic walk, and variable
+            # substitutions all see the full variable structure.
+            to_refix = ComponentSet()
+            if not self._config.assume_fixed_vars_permanent:
+                for var in EXPR.identify_variables(c.body, include_fixed=True):
+                    if var.fixed:
+                        to_refix.add(var)
+                        var.unfix()
+
             EPS = self._config.EPS
             mode = self._config.perspective_function
             exact_quad = self._config.exact_hull_quadratic
 
-            use_exact_quad = exact_quad and polynomial_degree == 2
+            # When exact_hull_quadratic is enabled, walk with
+            # QuadraticRepnVisitor (while vars are still unfixed) to get the
+            # quadratic repn and determine if the constraint is quadratic.
+            # Otherwise just use polynomial_degree for NL classification.
+            qrepn = None
+            vm = None
+            if exact_quad:
+                var_map = {}
+                var_order = {}
+                visitor = QuadraticRepnVisitor(
+                    {},
+                    var_recorder=OrderedVarRecorder(
+                        var_map, var_order, SortComponents.deterministic
+                    ),
+                )
+                qrepn = visitor.walk_expression(c.body)
+                vm = visitor.var_map
+
+                is_quadratic = qrepn.quadratic is not None and len(qrepn.quadratic) > 0
+                use_exact_quad = is_quadratic and qrepn.nonlinear is None
+            else:
+                use_exact_quad = False
+
+            if use_exact_quad:
+                self._build_exact_quadratic_hull(
+                    c,
+                    y=disjunct.binary_indicator_var,
+                    disjunct=disjunct,
+                    relaxationBlock=relaxationBlock,
+                    constraint_map=constraint_map,
+                    var_substitute_map=var_substitute_map,
+                    newConstraint=newConstraint,
+                    name=name,
+                    i=i,
+                    obj=obj,
+                    qrepn=qrepn,
+                    vm=vm,
+                )
+                for var in to_refix:
+                    var.fix()
+                continue
+
+            # Not using exact quad: classify via polynomial_degree and refix.
+            polynomial_degree = c.body.polynomial_degree()
+            for var in to_refix:
+                var.fix()
 
             NL = polynomial_degree not in (0, 1)
-            general_NL = NL and not use_exact_quad
 
             # We need to evaluate the expression at the origin *before*
             # we substitute the expression variables with the
             # disaggregated variables
-            if not use_exact_quad and (not NL or mode == "FurmanSawayaGrossmann"):
+            if not NL or mode == "FurmanSawayaGrossmann":
                 h_0 = clone_without_expression_components(
                     c.body, substitute=zero_substitute_map
                 )
 
             y = disjunct.binary_indicator_var
 
-            if use_exact_quad:
-                self._build_exact_quadratic_hull(
-                    c,
-                    y,
-                    disjunct,
-                    relaxationBlock,
-                    constraint_map,
-                    var_substitute_map,
-                    newConstraint,
-                    name,
-                    i,
-                    obj,
-                )
-                continue
-
-            if general_NL:
+            if NL:
                 if mode == "LeeGrossmann":
                     sub_expr = clone_without_expression_components(
                         c.body,
@@ -853,7 +911,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
 
             if c.equality:
-                if general_NL:
+                if NL:
                     # ESJ TODO: This can't happen right? This is the only
                     # obvious case where someone has messed up, but this has to
                     # be nonconvex, right? Shouldn't we tell them?
@@ -904,7 +962,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 if self._generate_debug_messages:
                     _name = c.getname(fully_qualified=True)
                     logger.debug("GDP(Hull): Transforming constraint " + "'%s'", _name)
-                if general_NL:
+                if NL:
                     newConsExpr = expr >= c.lower * y
                 else:
                     newConsExpr = expr - (1 - y) * h_0 >= c.lower * y
@@ -926,7 +984,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 if self._generate_debug_messages:
                     _name = c.getname(fully_qualified=True)
                     logger.debug("GDP(Hull): Transforming constraint " + "'%s'", _name)
-                if general_NL:
+                if NL:
                     newConsExpr = expr <= c.upper * y
                 else:
                     newConsExpr = expr - (1 - y) * h_0 <= c.upper * y
@@ -961,6 +1019,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         name,
         i,
         obj,
+        qrepn,
+        vm,
     ):
         """Build the exact hull reformulation for a single quadratic constraint.
 
@@ -1000,34 +1060,17 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             The index of the constraint in its parent component.
         obj : Constraint
             The parent Constraint component (needed for ``is_indexed``).
+        qrepn : QuadraticRepn
+            Result of ``QuadraticRepnVisitor.walk_expression`` on the constraint
+            body (walked by the caller with fixed Vars temporarily unfixed).
+        vm : dict
+            The visitor's ``var_map``: maps ``id(Var)`` to ``Var`` objects.
         """
-        # generate_standard_repn below uses compute_values=True by default,
-        # which evaluates mutable Params to numeric constants.  The transformed
-        # expressions therefore won't track later Param updates.  This is
-        # acceptable because the eigenvalue-based convexity check requires
-        # numeric coefficients, and a Param change could invalidate the
-        # PSD/NSD classification anyway.
-        mutable_params = list(EXPR.identify_mutable_parameters(c.body))
-        if mutable_params:
-            logger.warning(
-                "GDP(Hull): Constraint '%s' contains mutable parameters %s. "
-                "The exact hull reformulation evaluates these to their current "
-                "numeric values for the eigenvalue-based convexity check; the "
-                "transformed constraint will not update if these parameters "
-                "change later.",
-                c.getname(fully_qualified=True),
-                [p.name for p in mutable_params],
-            )
+        const_term = qrepn.constant if qrepn.constant is not None else 0
 
-        repn = generate_standard_repn(c.body)
-
-        if not repn.is_quadratic():
-            raise GDP_Error(
-                "Constraint '%s' has polynomial degree 2 but its standard "
-                "representation is not quadratic." % c.getname(fully_qualified=True)
-            )
-
-        const_term = repn.constant if repn.constant is not None else 0
+        quad_items = sorted(
+            qrepn.quadratic.items(), key=lambda item: (item[0][0], item[0][1])
+        )
 
         if not numpy_available:
             raise GDP_Error(
@@ -1036,27 +1079,22 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             )
 
         # --- Build the symmetric Q matrix and determine convexity ---
-        all_vars = []
-        var_ids_seen = set()
-        for var_i, var_j in repn.quadratic_vars:
-            if id(var_i) not in var_ids_seen:
-                all_vars.append(var_i)
-                var_ids_seen.add(id(var_i))
-            if id(var_j) not in var_ids_seen:
-                all_vars.append(var_j)
-                var_ids_seen.add(id(var_j))
-
-        n_vars = len(all_vars)
-        var_to_idx = {id(var): idx for idx, var in enumerate(all_vars)}
-        # Q is built symmetric (off-diagonal coefs split equally between
-        # Q[i,j] and Q[j,i]) because np.linalg.eigh assumes symmetry and
-        # x'Qx depends only on the symmetric part of Q.
+        # Quadratic repn keys (vid_i, vid_j) are id(Var); assign contiguous
+        # row/column indices for eigh. Off-diagonal repn coefficients are
+        # split across Q[i,j] and Q[j,i] so Q matches the symmetric Hessian.
+        var_to_idx = {}
+        for (vid_i, vid_j), _coef in quad_items:
+            if vid_i not in var_to_idx:
+                var_to_idx[vid_i] = len(var_to_idx)
+            if vid_j not in var_to_idx:
+                var_to_idx[vid_j] = len(var_to_idx)
+        n_vars = len(var_to_idx)
         Q = np.zeros((n_vars, n_vars))
 
-        for coef, (var_i, var_j) in zip(repn.quadratic_coefs, repn.quadratic_vars):
-            idx_i = var_to_idx[id(var_i)]
-            idx_j = var_to_idx[id(var_j)]
-            if var_i is var_j:
+        for (vid_i, vid_j), coef in quad_items:
+            idx_i = var_to_idx[vid_i]
+            idx_j = var_to_idx[vid_j]
+            if vid_i == vid_j:
                 Q[idx_i, idx_i] += coef
             else:
                 Q[idx_i, idx_j] += 0.5 * coef
@@ -1120,7 +1158,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         if need_non_convex:
             non_conv_expr = self._build_general_exact_hull_expr(
-                repn, var_substitute_map, y, const_term
+                qrepn, vm, var_substitute_map, y, const_term
             )
 
         if use_conic_upper or use_conic_lower:
@@ -1130,7 +1168,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disjunct,
                 relaxationBlock,
                 constraint_map,
-                repn,
+                qrepn,
+                vm,
                 var_substitute_map,
                 const_term,
                 negate_for_conic,
@@ -1202,7 +1241,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
                 constraint_map.src_constraint[newConstraint[name, 'ub']] = c
 
-    def _build_general_exact_hull_expr(self, repn, var_substitute_map, y, const_term):
+    def _build_general_exact_hull_expr(
+        self, qrepn, var_map, var_substitute_map, y, const_term
+    ):
         """Build the general exact hull expression for a quadratic constraint.
 
         Constructs the expression ``v'Qv + c'v*y + d*y**2`` where ``v`` are
@@ -1211,14 +1252,17 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         Parameters
         ----------
-        repn : StandardRepn
-            The standard representation of the constraint body.
+        qrepn : QuadraticRepn
+            Result of ``QuadraticRepnVisitor.walk_expression`` on the constraint
+            body.
+        var_map : dict
+            Maps ``id(Var)`` to ``Var`` for variables appearing in ``qrepn``.
         var_substitute_map : dict
             Mapping from ``id(original_var)`` to disaggregated variable.
         y : Var
             The binary indicator variable.
         const_term : float
-            The constant term from the standard representation.
+            Constant term (``qrepn.constant``, normalized).
 
         Returns
         -------
@@ -1227,7 +1271,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         """
         expr = 0
 
-        for coef, (var_i, var_j) in zip(repn.quadratic_coefs, repn.quadratic_vars):
+        for (vid_i, vid_j), coef in qrepn.quadratic.items():
+            var_i = var_map[vid_i]
+            var_j = var_map[vid_j]
             v_i = var_substitute_map.get(id(var_i), var_i)
             v_j = var_substitute_map.get(id(var_j), var_j)
             if var_i is var_j:
@@ -1235,11 +1281,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             else:
                 expr += coef * v_i * v_j
 
-        lin_coefs = repn.linear_coefs or []
-        lin_vars = repn.linear_vars or []
-        for coef, var in zip(lin_coefs, lin_vars):
-            v = var_substitute_map.get(id(var), var)
-            expr += coef * v * y
+        if qrepn.linear:
+            for vid, coef in sorted(qrepn.linear.items(), key=lambda item: item[0]):
+                var = var_map[vid]
+                v = var_substitute_map.get(id(var), var)
+                expr += coef * v * y
 
         if const_term:
             expr += const_term * y**2
@@ -1253,7 +1299,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         disjunct,
         relaxationBlock,
         constraint_map,
-        repn,
+        qrepn,
+        var_map,
         var_substitute_map,
         const_term,
         negate_for_conic,
@@ -1277,12 +1324,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             The transformation block for the disjunct.
         constraint_map : object
             Private data tracking constraint mappings.
-        repn : StandardRepn
-            The standard representation of the constraint body.
+        qrepn : QuadraticRepn
+            Result of ``QuadraticRepnVisitor.walk_expression`` on the constraint
+            body.
+        var_map : dict
+            Maps ``id(Var)`` to ``Var`` for variables appearing in ``qrepn``.
         var_substitute_map : dict
             Mapping from ``id(original_var)`` to disaggregated variable.
         const_term : float
-            The constant term from the standard representation.
+            Constant term (``qrepn.constant``, normalized).
         negate_for_conic : bool
             If ``True``, coefficients are negated (used when the
             lower-bound constraint is reformulated by negation to obtain a
@@ -1303,12 +1353,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         linear_expr = t
 
-        lin_coefs = repn.linear_coefs or []
-        lin_vars = repn.linear_vars or []
-        for coef, var in zip(lin_coefs, lin_vars):
-            v = var_substitute_map.get(id(var), var)
-            actual_coef = -coef if negate_for_conic else coef
-            linear_expr += actual_coef * v
+        if qrepn.linear:
+            for vid, coef in sorted(qrepn.linear.items(), key=lambda item: item[0]):
+                var = var_map[vid]
+                v = var_substitute_map.get(id(var), var)
+                actual_coef = -coef if negate_for_conic else coef
+                linear_expr += actual_coef * v
 
         if const_term:
             actual_const = -const_term if negate_for_conic else const_term
@@ -1324,7 +1374,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # where the generic quadratic form overall performed better than
         # other formulations tested.
         quadratic_form = 0
-        for coef, (var_i, var_j) in zip(repn.quadratic_coefs, repn.quadratic_vars):
+        for (vid_i, vid_j), coef in qrepn.quadratic.items():
+            var_i = var_map[vid_i]
+            var_j = var_map[vid_j]
             v_i = var_substitute_map.get(id(var_i), var_i)
             v_j = var_substitute_map.get(id(var_j), var_j)
             actual_coef = -coef if negate_for_conic else coef

@@ -1286,6 +1286,36 @@ def makeTwoTermDisj_ConvexQuadUB():
     return m
 
 
+def makeTwoTermDisj_ConvexQuadUB_FixedX():
+    """Same as :func:`makeTwoTermDisj_ConvexQuadUB` but ``x`` is fixed (e.g. to 0).
+
+    Used to test that the exact hull quadratic path still builds a full Q in
+    terms of both variables when ``assume_fixed_vars_permanent`` is False.
+    """
+    m = makeTwoTermDisj_ConvexQuadUB()
+    m.x.fix(0)
+    return m
+
+
+def makeTwoTermDisj_BilinearFixedX():
+    """Bilinear ``x*y <= 1`` where ``x`` is fixed.
+
+    With ``x`` fixed, ``polynomial_degree()`` returns 1.  The exact hull
+    quadratic path should still be entered after temporarily unfixing,
+    since the true structure is degree 2.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2, 2))
+    m.y = Var(bounds=(-2, 2))
+    m.x.fix(1)
+    m.d1 = Disjunct()
+    m.d1.c = Constraint(expr=m.x * m.y <= 1)
+    m.d2 = Disjunct()
+    m.d2.c = Constraint(expr=m.x + m.y <= 1)
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+
 def makeTwoTermDisj_ConvexQuadLB():
     """Two-term disjunction with a convex quadratic lower-bound constraint.
 

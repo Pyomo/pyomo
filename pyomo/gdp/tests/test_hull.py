@@ -3614,17 +3614,81 @@ class TestExactHullQuadratic(unittest.TestCase):
         self.assertAlmostEqual(quad_pairs.get((id(y_ind), id(y_ind)), 0), -1)
 
     # ------------------------------------------------------------------
-    # 16. Mutable parameter warning in exact hull quadratic
+    # 15b. Fixed variable: Q must still include that variable (default config)
     # ------------------------------------------------------------------
     @unittest.skipUnless(numpy_available, "NumPy is not available")
-    def test_mutable_param_warning(self):
-        """A quadratic constraint with a mutable Param should trigger a warning.
+    def test_exact_hull_quadratic_unfixes_for_repn_with_fixed_var(self):
+        """With default ``assume_fixed_vars_permanent``, fixed Vars are
+        disaggregated; the quadratic repn used for the exact hull must not fold
+        them into constants (which would shrink Q and break the reformulation).
+        """
+        m = models.makeTwoTermDisj_ConvexQuadUB_FixedX()
 
-        For ``p*x**2 + y**2 <= 4`` where ``p`` is a mutable Param, the exact
-        hull reformulation evaluates ``p`` to its current numeric value for the
-        eigenvalue-based convexity check.  A warning must be emitted mentioning
-        the constraint name and the mutable parameter name.  The transformation
-        should still succeed (using the evaluated value).
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 2)
+        conic_cons = next(
+            c
+            for c in trans_cons
+            if generate_standard_repn(c.body, compute_values=False).is_quadratic()
+        )
+        repn = generate_standard_repn(conic_cons.body, compute_values=False)
+        quad_pairs = dict(
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
+        )
+        self.assertAlmostEqual(quad_pairs[(id(v_x), id(v_x))], 1)
+        self.assertAlmostEqual(quad_pairs[(id(v_y), id(v_y))], 1)
+
+    # ------------------------------------------------------------------
+    # 15c. Bilinear x*y with x fixed: polynomial_degree is 1 but the
+    #      exact hull path should still be entered after unfixing.
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_exact_hull_quadratic_bilinear_with_fixed_var(self):
+        """A bilinear ``x*y <= 1`` with ``x`` fixed has polynomial_degree 1.
+        The exact hull path must unfix before the degree check so the
+        constraint is recognized as quadratic and gets the exact hull
+        reformulation (general, since Q for x*y is indefinite).
+        """
+        m = models.makeTwoTermDisj_BilinearFixedX()
+
+        self.hull.apply_to(m, exact_hull_quadratic=True)
+
+        relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        v_x = relaxBlock.disaggregatedVars.x
+        v_y = relaxBlock.disaggregatedVars.y
+        y_ind = m.d1.binary_indicator_var
+
+        trans_cons = self.hull.get_transformed_constraints(m.d1.c)
+        self.assertEqual(len(trans_cons), 1)
+        ub_cons = trans_cons[0]
+
+        repn = generate_standard_repn(ub_cons.body, compute_values=False)
+        self.assertTrue(repn.is_quadratic())
+        quad_pairs = dict(
+            zip([(id(a), id(b)) for a, b in repn.quadratic_vars], repn.quadratic_coefs)
+        )
+        cross_coef = quad_pairs.get(
+            (id(v_x), id(v_y)), quad_pairs.get((id(v_y), id(v_x)), None)
+        )
+        self.assertIsNotNone(cross_coef, "Missing bilinear v_x*v_y term")
+        self.assertAlmostEqual(cross_coef, 1)
+
+    # ------------------------------------------------------------------
+    # 16. Mutable parameter: transform uses value at apply_to time
+    # ------------------------------------------------------------------
+    @unittest.skipUnless(numpy_available, "NumPy is not available")
+    def test_mutable_param_exact_hull_freezes_at_transform(self):
+        """Mutable Params in the quadratic body are evaluated when the visitor
+        runs; the transformation succeeds without logging a hull warning.
+
+        For ``p*x**2 + y**2 <= 4`` with ``p`` mutable and ``p=1``, Q is I (PSD)
+        and the conic exact hull path applies.
         """
         m = models.makeTwoTermDisj_QuadMutableParam()
 
@@ -3632,14 +3696,12 @@ class TestExactHullQuadratic(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.gdp.hull', logging.WARNING):
             self.hull.apply_to(m, exact_hull_quadratic=True)
 
-        warning_text = output.getvalue()
-        self.assertIn("mutable parameters", warning_text)
-        self.assertIn("d1.c", warning_text)
-        self.assertIn("p", warning_text)
-        self.assertIn("will not update", warning_text)
+        self.assertEqual(
+            output.getvalue(),
+            "",
+            "No WARNING logs expected for mutable Params (documented in CONFIG)",
+        )
 
-        # The transformation should still produce a valid result.
-        # With p=1, Q = I (PSD), so the conic path should be taken.
         relaxBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
         t_var = relaxBlock.component('_conic_aux_t_c')
         self.assertIsNotNone(
