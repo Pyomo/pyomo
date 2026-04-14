@@ -222,7 +222,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.asbinary,
                 self.ranged,
@@ -291,7 +291,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.zero,
                 self.ranged,
@@ -360,7 +360,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.one,
                 self.ranged,
@@ -429,7 +429,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.native,
                 self.ranged,
@@ -502,7 +502,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.npv,
                 self.ranged,
@@ -571,7 +571,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.param,
                 self.ranged,
@@ -684,7 +684,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.param_mut,
                 self.ranged,
@@ -757,7 +757,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.var,
                 self.ranged,
@@ -882,7 +882,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.mon_native,
                 self.ranged,
@@ -995,7 +995,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.mon_param,
                 self.ranged,
@@ -1100,7 +1100,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.mon_npv,
                 self.ranged,
@@ -1185,7 +1185,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.linear,
                 self.ranged,
@@ -1258,7 +1258,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.sum,
                 self.ranged,
@@ -1339,7 +1339,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.other,
                 self.ranged,
@@ -1424,7 +1424,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l0,
                 self.ranged,
@@ -1509,7 +1509,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l1,
                 self.ranged,
@@ -1594,7 +1594,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l2,
                 self.ranged,
@@ -1663,7 +1663,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.param0,
                 self.ranged,
@@ -1732,7 +1732,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.param1,
                 self.ranged,
@@ -1817,7 +1817,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l3,
                 self.ranged,
@@ -1986,7 +1986,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.eq,
                 self.ranged,
@@ -2160,7 +2160,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.le,
                 self.ranged,
@@ -2334,7 +2334,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.lt,
                 self.ranged,
@@ -2508,7 +2508,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.ranged,
                 self.ranged,
@@ -2582,7 +2582,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            # 24
+            # 24:
             (
                 self.native2,
                 self.ranged,
@@ -2751,7 +2751,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.le2,
                 self.ranged,
@@ -2925,7 +2925,7 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.lt2,
                 self.ranged,
@@ -3105,7 +3105,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.bin,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.asbinary,
                 self.ranged,
@@ -3174,7 +3174,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
             ),
             (self.zero, self.le, RangedExpression((0,) + self.le.args, (False, False))),
             (self.zero, self.lt, RangedExpression((0,) + self.lt.args, (False, True))),
-            # 24
+            # 24:
             (
                 self.zero,
                 self.ranged,
@@ -3239,7 +3239,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
             ),
             (self.one, self.le, RangedExpression((1,) + self.le.args, (False, False))),
             (self.one, self.lt, RangedExpression((1,) + self.lt.args, (False, True))),
-            # 24
+            # 24:
             (
                 self.one,
                 self.ranged,
@@ -3312,7 +3312,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((5,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.native,
                 self.ranged,
@@ -3413,7 +3413,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.npv,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.npv,
                 self.ranged,
@@ -3486,7 +3486,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 RangedExpression((6,) + self.le.args, (False, False)),
             ),
             (self.param, self.lt, False),
-            # 24
+            # 24:
             (
                 self.param,
                 self.ranged,
@@ -3627,7 +3627,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.param_mut,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.param_mut,
                 self.ranged,
@@ -3736,7 +3736,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.var,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.var,
                 self.ranged,
@@ -3881,7 +3881,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.mon_native,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mon_native,
                 self.ranged,
@@ -4030,7 +4030,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.mon_param,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mon_param,
                 self.ranged,
@@ -4155,7 +4155,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.mon_npv,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mon_npv,
                 self.ranged,
@@ -4280,7 +4280,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression(((self.linear,) + self.lt.args), (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.linear,
                 self.ranged,
@@ -4385,7 +4385,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.sum,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.sum,
                 self.ranged,
@@ -4494,7 +4494,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.other,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.other,
                 self.ranged,
@@ -4611,7 +4611,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.l0,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l0,
                 self.ranged,
@@ -4728,7 +4728,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.l1,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l1,
                 self.ranged,
@@ -4849,7 +4849,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.l2,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l2,
                 self.ranged,
@@ -4926,7 +4926,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((0,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.param0,
                 self.ranged,
@@ -4999,7 +4999,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((1,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.param1,
                 self.ranged,
@@ -5116,7 +5116,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.l3,) + self.lt.args, (False, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l3,
                 self.ranged,
@@ -5283,7 +5283,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.eq,
                 self.ranged,
@@ -5437,7 +5437,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.le,
                 self.ranged,
@@ -5562,7 +5562,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.lt,
                 self.ranged,
@@ -5731,7 +5731,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.ranged,
                 self.ranged,
@@ -5815,7 +5815,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 RangedExpression((8,) + self.le.args, (False, False)),
             ),
             (self.native2, self.lt, False),
-            # 24
+            # 24:
             (
                 self.native2,
                 self.ranged,
@@ -5958,7 +5958,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.le2,
                 self.ranged,
@@ -6083,7 +6083,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.lt2,
                 self.ranged,
@@ -6250,7 +6250,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.bin,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.asbinary,
                 self.ranged,
@@ -6319,7 +6319,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
             ),
             (self.zero, self.le, RangedExpression((0,) + self.le.args, (True, False))),
             (self.zero, self.lt, RangedExpression((0,) + self.lt.args, (True, True))),
-            # 24
+            # 24:
             (
                 self.zero,
                 self.ranged,
@@ -6376,7 +6376,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
             ),
             (self.one, self.le, RangedExpression((1,) + self.le.args, (True, False))),
             (self.one, self.lt, RangedExpression((1,) + self.lt.args, (True, True))),
-            # 24
+            # 24:
             (
                 self.one,
                 self.ranged,
@@ -6441,7 +6441,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 RangedExpression((5,) + self.le.args, (True, False)),
             ),
             (self.native, self.lt, RangedExpression((5,) + self.lt.args, (True, True))),
-            # 24
+            # 24:
             (
                 self.native,
                 self.ranged,
@@ -6538,7 +6538,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.npv,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.npv,
                 self.ranged,
@@ -6607,7 +6607,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
             ),
             (self.param, self.le, RangedExpression((6,) + self.le.args, (True, False))),
             (self.param, self.lt, False),
-            # 24
+            # 24:
             (
                 self.param,
                 self.ranged,
@@ -6744,7 +6744,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.param_mut,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.param_mut,
                 self.ranged,
@@ -6849,7 +6849,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.var,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.var,
                 self.ranged,
@@ -6994,7 +6994,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.mon_native,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mon_native,
                 self.ranged,
@@ -7139,7 +7139,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.mon_param,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mon_param,
                 self.ranged,
@@ -7264,7 +7264,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.mon_npv,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mon_npv,
                 self.ranged,
@@ -7385,7 +7385,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression(((self.linear,) + self.lt.args), (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.linear,
                 self.ranged,
@@ -7486,7 +7486,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.sum,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.sum,
                 self.ranged,
@@ -7595,7 +7595,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.other,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.other,
                 self.ranged,
@@ -7712,7 +7712,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.l0,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l0,
                 self.ranged,
@@ -7829,7 +7829,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.l1,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l1,
                 self.ranged,
@@ -7950,7 +7950,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.l2,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l2,
                 self.ranged,
@@ -8023,7 +8023,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 RangedExpression((0,) + self.le.args, (True, False)),
             ),
             (self.param0, self.lt, RangedExpression((0,) + self.lt.args, (True, True))),
-            # 24
+            # 24:
             (
                 self.param0,
                 self.ranged,
@@ -8092,7 +8092,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 RangedExpression((1,) + self.le.args, (True, False)),
             ),
             (self.param1, self.lt, RangedExpression((1,) + self.lt.args, (True, True))),
-            # 24
+            # 24:
             (
                 self.param1,
                 self.ranged,
@@ -8209,7 +8209,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.lt,
                 RangedExpression((self.l3,) + self.lt.args, (True, True)),
             ),
-            # 24
+            # 24:
             (
                 self.mutable_l3,
                 self.ranged,
@@ -8376,7 +8376,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.eq,
                 self.ranged,
@@ -8526,7 +8526,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.le,
                 self.ranged,
@@ -8651,7 +8651,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.lt,
                 self.ranged,
@@ -8820,7 +8820,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.ranged,
                 self.ranged,
@@ -8900,7 +8900,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 RangedExpression((8,) + self.le.args, (True, False)),
             ),
             (self.native2, self.lt, False),
-            # 24
+            # 24:
             (
                 self.native2,
                 self.ranged,
@@ -9043,7 +9043,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.le2,
                 self.ranged,
@@ -9168,7 +9168,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where both "
                 "sub-expressions are relational expressions",
             ),
-            # 24
+            # 24:
             (
                 self.lt2,
                 self.ranged,
