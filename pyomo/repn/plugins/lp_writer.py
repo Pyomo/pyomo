@@ -18,6 +18,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.errors import InvalidConstraintError, InvalidExpressionError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
@@ -375,7 +376,7 @@ class _LPWriter_impl:
         )
         repn = objective_visitor.walk_expression(obj.expr)
         if repn.nonlinear is not None:
-            raise ValueError(
+            raise InvalidExpressionError(
                 f"Model objective ({obj.name}) contains nonlinear terms that "
                 "cannot be written to LP format"
             )
@@ -421,7 +422,7 @@ class _LPWriter_impl:
                 continue
             repn = constraint_visitor.walk_expression(body)
             if repn.nonlinear is not None:
-                raise ValueError(
+                raise InvalidConstraintError(
                     f"Model constraint ({con.name}) contains nonlinear terms that "
                     "cannot be written to LP format"
                 )
