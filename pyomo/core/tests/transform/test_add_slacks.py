@@ -183,7 +183,10 @@ class TestAddSlacks(unittest.TestCase):
     def test_badModel_err(self):
         model = ConcreteModel()
         model.x = Var(within=NonNegativeReals)
-        model.rule1 = Constraint(expr=inequality(6, model.x, 5))
+        model.p = Param(initialize=5, mutable=True)
+        # Note: use a mutable param so expression generation doesn't
+        # immediately recognize the infeasibility
+        model.rule1 = Constraint(expr=inequality(6, model.x, model.p))
         self.assertRaisesRegex(
             RuntimeError,
             "Lower bound exceeds upper bound in constraint rule1*",
