@@ -1873,7 +1873,11 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.L = Param(initialize=0)
         model.U = Param(initialize=1)
-        model.o = Constraint(rule=rule1)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"The constraint expression resolved to a trivial Boolean \(False\)",
+        ):
+            model.o = Constraint(rule=rule1)
 
         #
         def rule1(model):
