@@ -366,7 +366,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
     .. note:: Pyomo does not support constructing
        :class:`RangedExpression` objects using Python's chained
        comparison syntax (``lb <= body <= ub``).  Python relies on the
-       pairwise comparisons returning intermediates that are convertable
+       pairwise comparisons returning intermediates that are convertible
        to ``bool``, which is incompatible with Pyomo's operator
        overloading.  Instead, :class:`RangedExpression` objects should
        be created using this function.
@@ -400,7 +400,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
 
     Two arguments are ``None``
        If two of `lower`, `body`, or `upper` are ``None``, then the
-       rmaining argument is returned from :func:`inequality`.
+       remaining argument is returned from :func:`inequality`.
 
     All None
        If all arguments are ``None``, then ``None`` is returned
