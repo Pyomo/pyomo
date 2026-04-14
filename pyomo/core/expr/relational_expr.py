@@ -365,14 +365,12 @@ def inequality(lower=None, body=None, upper=None, strict=False):
 
     .. note:: Pyomo does not support constructing
        :class:`RangedExpression` objects using Python's chained
-       comparison syntax (``lb <= body <= ub``).  Python relies on the
-       pairwise comparisons returning intermediates that are convertible
-       to ``bool``, which is incompatible with Pyomo's operator
-       overloading.  Instead, :class:`RangedExpression` objects should
-       be created using this function.
+       comparison syntax (``lb <= body <= ub``).
 
-    Edge cases
-    ----------
+       Python relies on the pairwise comparisons returning intermediates
+       that are convertible to :class:`bool`, which is incompatible with
+       Pyomo's operator overloading.  Instead, :class:`RangedExpression`
+       objects should be created using this function.
 
     :func:`inequality` allows for any (or all) of `lower`, `body`, and
     `upper` to be ``None``.  What gets returned from the function
@@ -405,32 +403,26 @@ def inequality(lower=None, body=None, upper=None, strict=False):
     All None
        If all arguments are ``None``, then ``None`` is returned
 
+
     Parameters
     ----------
+
     lower : int | float | NumericValue | None
         The expression for the lower bound
 
     body : int | float | NumericValue | None
         The expression for the body of a ranged constraint
 
-    lower : int | float | NumericValue | None
+    upper : int | float | NumericValue | None
         The expression for the upper bound
 
     strict : bool
-        If :const:`True`, construct strict inequalities (``<``);
-        otherwise use ``<=``.
+        If ``True``, construct strict inequalities (``<``); otherwise
+        use ``<=``.
 
     Returns
     -------
-    expr : RangedExpression | InequalityExpression | NumericValue | int | float | None
-
-        An expression.  The return value depends on the values of
-        ``lower``, ``body``, and ``upper``:
-
-           - :class:`RangedExpression` if none are :const:`None`
-           - :class:`InequalityExpression` if exactly one is :const:`None`
-           - The non-None argument if exactly one is non-None
-           - :const:`None` if all arguments are :const:`None`
+    RangedExpression | InequalityExpression | NumericValue | int | float | None
 
     """
     _genexpr = _lt_dispatcher if strict else _le_dispatcher
