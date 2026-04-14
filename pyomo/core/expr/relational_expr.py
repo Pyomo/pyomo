@@ -365,10 +365,45 @@ def inequality(lower=None, body=None, upper=None, strict=False):
 
     .. note:: Pyomo does not support constructing
        :class:`RangedExpression` objects using Python's chained
-       comparison syntax (``lb <= body <= ub``).  Python relies on
-       shortcut Boolean evaluation, which is incompatible with Pyomo's
-       operator overloading.  Instead, :class:`RangedExpression` objects
-       should be created using this function.
+       comparison syntax (``lb <= body <= ub``).  Python relies on the
+       pairwise comparisons returning intermediates that are convertable
+       to ``bool``, which is incompatible with Pyomo's operator
+       overloading.  Instead, :class:`RangedExpression` objects should
+       be created using this function.
+
+    Edge cases
+    ----------
+
+    :func:`inequality` allows for any (or all) of `lower`, `body`, and
+    `upper` to be ``None``.  What gets returned from the function
+    depends on the number and type of values provided:
+
+    No arguments are ``None``
+       If `lower`, `body`, and `upper` are all non-``None``, then the
+       function will return a :class:`RangedExpression`, unless two
+       adjacent arguments (either `lower` and `body`, or `body` and
+       `upper`) are both constants (e.g., native numeric types or
+       immutable :class:`Param` objects).  If there are two adjacent
+       constant values, then that pair is evaluated.  If the result is
+       ``False``, then the constraint is known to be trivially
+       infeasible and :func:`inequality` will return ``False``.  If the
+       result is ``True``, then the return value is as if the "outer"
+       (`lower` or `upper`) argument had been ``None`` (see the following).
+
+    One argument is ``None``
+       If one of `lower`, `body`, or `upper` is ``None``, then
+       :func:`inequality` will return an :class:`InequalityExpression`
+       object, unless both arguments are constants (e.g., native numeric
+       types or immutable :class:`Param` objects), in which case the
+       expression will be evaluated and the resulting :class:`bool`
+       returned.
+
+    Two arguments are ``None``
+       If two of `lower`, `body`, or `upper` are ``None``, then the
+       rmaining argument is returned from :func:`inequality`.
+
+    All None
+       If all arguments are ``None``, then ``None`` is returned
 
     Parameters
     ----------
