@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseRelational(Base):
-    NUM_TESTS = 26
+    NUM_TESTS = 28
 
     def tearDown(self):
         pass
@@ -66,6 +66,8 @@ class BaseRelational(Base):
         self.eq = self.m.x == self.m.q
         self.le = self.m.x <= self.m.q
         self.lt = self.m.x < self.m.p
+        self.le2 = self.m.q <= self.m.x
+        self.lt2 = self.m.p < self.m.x
         self.ranged = inequality(self.m.p, self.m.x, self.m.q)
 
         # self.TEMPLATE = [
@@ -105,6 +107,8 @@ class BaseRelational(Base):
                 # 24:
                 self.ranged,
                 self.native2,
+                self.le2,
+                self.lt2,
             ]
         )
 
@@ -155,6 +159,8 @@ class TestEquality(BaseRelational, unittest.TestCase):
             # 24:
             (self.invalid, self.ranged, False),
             (self.invalid, self.native2, False),
+            (self.invalid, self.le2, False),
+            (self.invalid, self.lt2, False),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -224,6 +230,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.asbinary, self.native2, EqualityExpression((self.bin, 8))),
+            (
+                self.asbinary,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.asbinary,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -281,6 +299,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.zero, self.native2, False),
+            (
+                self.zero,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.zero,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -338,6 +368,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.one, self.native2, False),
+            (
+                self.one,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.one,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -395,6 +437,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.native, self.native2, False),
+            (
+                self.native,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.native,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -456,6 +510,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.npv, self.native2, EqualityExpression((self.npv, 8))),
+            (
+                self.npv,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.npv,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -513,6 +579,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param, self.native2, False),
+            (
+                self.param,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.param,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -614,6 +692,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param_mut, self.native2, EqualityExpression((self.param_mut, 8))),
+            (
+                self.param_mut,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.param_mut,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -675,6 +765,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.var, self.native2, EqualityExpression((self.var, 8))),
+            (
+                self.var,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.var,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -788,6 +890,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mon_native, self.native2, EqualityExpression((self.mon_native, 8))),
+            (
+                self.mon_native,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.mon_native,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -889,6 +1003,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mon_param, self.native2, EqualityExpression((self.mon_param, 8))),
+            (
+                self.mon_param,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.mon_param,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -982,6 +1108,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mon_npv, self.native2, EqualityExpression((self.mon_npv, 8))),
+            (
+                self.mon_npv,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.mon_npv,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1055,6 +1193,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.linear, self.native2, EqualityExpression((self.linear, 8))),
+            (
+                self.linear,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.linear,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1116,6 +1266,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.sum, self.native2, EqualityExpression((self.sum, 8))),
+            (
+                self.sum,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.sum,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1185,6 +1347,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.other, self.native2, EqualityExpression((self.other, 8))),
+            (
+                self.other,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.other,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1258,6 +1432,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l0, self.native2, False),
+            (
+                self.mutable_l0,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.mutable_l0,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1331,6 +1517,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l1, self.native2, EqualityExpression((self.l1, 8))),
+            (
+                self.mutable_l1,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.mutable_l1,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1404,6 +1602,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l2, self.native2, EqualityExpression((self.l2, 8))),
+            (
+                self.mutable_l2,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.mutable_l2,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1461,6 +1671,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param0, self.native2, False),
+            (
+                self.param0,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.param0,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1518,6 +1740,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param1, self.native2, False),
+            (
+                self.param1,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.param1,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1591,6 +1825,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l3, self.native2, EqualityExpression((self.l3, 8))),
+            (
+                self.mutable_l3,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.mutable_l3,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -1752,6 +1998,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 self.native2,
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
+            ),
+            (
+                self.eq,
+                self.le2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.eq,
+                self.lt2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
             ),
         ]
         self._run_cases(tests, operator.eq)
@@ -1915,6 +2173,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
+            (
+                self.le,
+                self.le2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le,
+                self.lt2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -2076,6 +2346,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 self.native2,
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt,
+                self.le2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt,
+                self.lt2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
             ),
         ]
         self._run_cases(tests, operator.eq)
@@ -2239,6 +2521,18 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
+            (
+                self.ranged,
+                self.le2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.ranged,
+                self.lt2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -2296,6 +2590,366 @@ class TestEquality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.native2, self.native2, True),
+            (
+                self.native2,
+                self.le2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.native2,
+                self.lt2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+        ]
+        self._run_cases(tests, operator.eq)
+
+    def test_eq_le2(self):
+        tests = [
+            (self.le2, self.invalid, False),
+            (
+                self.le2,
+                self.asbinary,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.zero,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.one,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 4:
+            (
+                self.le2,
+                self.native,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.npv,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.param,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.param_mut,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 8:
+            (
+                self.le2,
+                self.var,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.mon_native,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.mon_param,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.mon_npv,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 12:
+            (
+                self.le2,
+                self.linear,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.sum,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.other,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.mutable_l0,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 16:
+            (
+                self.le2,
+                self.mutable_l1,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.mutable_l2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.param0,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.param1,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 20:
+            (
+                self.le2,
+                self.mutable_l3,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.eq,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.le,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.lt,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            # 24
+            (
+                self.le2,
+                self.ranged,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.native2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.le2,
+                self.le2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.lt2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+        ]
+        self._run_cases(tests, operator.eq)
+
+    def test_eq_lt2(self):
+        tests = [
+            (self.lt2, self.invalid, False),
+            (
+                self.lt2,
+                self.asbinary,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.zero,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.one,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 4:
+            (
+                self.lt2,
+                self.native,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.npv,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.param,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.param_mut,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 8:
+            (
+                self.lt2,
+                self.var,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.mon_native,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.mon_param,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.mon_npv,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 12:
+            (
+                self.lt2,
+                self.linear,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.sum,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.other,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.mutable_l0,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 16:
+            (
+                self.lt2,
+                self.mutable_l1,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.mutable_l2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.param0,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.param1,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            # 20:
+            (
+                self.lt2,
+                self.mutable_l3,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.eq,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.le,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.lt,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            # 24
+            (
+                self.lt2,
+                self.ranged,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.native2,
+                "Cannot create an EqualityExpression where one of the "
+                "sub-expressions is a relational expression",
+            ),
+            (
+                self.lt2,
+                self.le2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.lt2,
+                "Cannot create an EqualityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.eq)
 
@@ -2346,6 +3000,8 @@ class TestInequality(BaseRelational, unittest.TestCase):
             # 24:
             (self.invalid, self.ranged, NotImplemented),
             (self.invalid, self.native2, NotImplemented),
+            (self.invalid, self.le2, NotImplemented),
+            (self.invalid, self.lt2, NotImplemented),
         ]
         self._run_cases(tests, operator.le)
 
@@ -2457,6 +3113,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.asbinary, self.native2, InequalityExpression((self.bin, 8), False)),
+            (
+                self.asbinary,
+                self.le2,
+                RangedExpression((self.bin,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.asbinary,
+                self.lt2,
+                RangedExpression((self.bin,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -2516,6 +3182,12 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.zero, self.native2, True),
+            (
+                self.zero,
+                self.le2,
+                RangedExpression((0,) + self.le2.args, (False, False)),
+            ),
+            (self.zero, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.le)
 
@@ -2575,6 +3247,12 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.one, self.native2, True),
+            (
+                self.one,
+                self.le2,
+                RangedExpression((1,) + self.le2.args, (False, False)),
+            ),
+            (self.one, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.le)
 
@@ -2642,6 +3320,12 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.native, self.native2, True),
+            (
+                self.native,
+                self.le2,
+                RangedExpression((5,) + self.le2.args, (False, False)),
+            ),
+            (self.native, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.le)
 
@@ -2737,6 +3421,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.npv, self.native2, InequalityExpression((self.npv, 8), False)),
+            (
+                self.npv,
+                self.le2,
+                RangedExpression((self.npv,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.npv,
+                self.lt2,
+                RangedExpression((self.npv,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -2791,7 +3485,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.le,
                 RangedExpression((6,) + self.le.args, (False, False)),
             ),
-            (self.param, self.lt, RangedExpression((6,) + self.lt.args, (False, True))),
+            (self.param, self.lt, False),
             # 24
             (
                 self.param,
@@ -2800,6 +3494,12 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param, self.native2, True),
+            (
+                self.param,
+                self.le2,
+                RangedExpression((6,) + self.le2.args, (False, False)),
+            ),
+            (self.param, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.le)
 
@@ -2939,6 +3639,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.native2,
                 InequalityExpression((self.param_mut, 8), False),
             ),
+            (
+                self.param_mut,
+                self.le2,
+                RangedExpression((self.param_mut,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.param_mut,
+                self.lt2,
+                RangedExpression((self.param_mut,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -3034,6 +3744,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.var, self.native2, InequalityExpression((self.var, 8), False)),
+            (
+                self.var,
+                self.le2,
+                RangedExpression((self.var,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.var,
+                self.lt2,
+                RangedExpression((self.var,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -3172,6 +3892,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.mon_native,
                 self.native2,
                 InequalityExpression((self.mon_native, 8), False),
+            ),
+            (
+                self.mon_native,
+                self.le2,
+                RangedExpression((self.mon_native,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.mon_native,
+                self.lt2,
+                RangedExpression((self.mon_native,) + self.lt2.args, (False, True)),
             ),
         ]
         self._run_cases(tests, operator.le)
@@ -3312,6 +4042,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.native2,
                 InequalityExpression((self.mon_param, 8), False),
             ),
+            (
+                self.mon_param,
+                self.le2,
+                RangedExpression((self.mon_param,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.mon_param,
+                self.lt2,
+                RangedExpression((self.mon_param,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -3427,6 +4167,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.native2,
                 InequalityExpression((self.mon_npv, 8), False),
             ),
+            (
+                self.mon_npv,
+                self.le2,
+                RangedExpression((self.mon_npv,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.mon_npv,
+                self.lt2,
+                RangedExpression((self.mon_npv,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -3538,6 +4288,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.linear, self.native2, InequalityExpression((self.linear, 8), False)),
+            (
+                self.linear,
+                self.le2,
+                RangedExpression(((self.linear,) + self.le2.args), (False, False)),
+            ),
+            (
+                self.linear,
+                self.lt2,
+                RangedExpression(((self.linear,) + self.lt2.args), (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -3633,6 +4393,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.sum, self.native2, InequalityExpression((self.sum, 8), False)),
+            (
+                self.sum,
+                self.le2,
+                RangedExpression((self.sum,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.sum,
+                self.lt2,
+                RangedExpression((self.sum,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -3732,6 +4502,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.other, self.native2, InequalityExpression((self.other, 8), False)),
+            (
+                self.other,
+                self.le2,
+                RangedExpression((self.other,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.other,
+                self.lt2,
+                RangedExpression((self.other,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -3839,6 +4619,12 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l0, self.native2, True),
+            (
+                self.mutable_l0,
+                self.le2,
+                RangedExpression((self.l0,) + self.le2.args, (False, False)),
+            ),
+            (self.mutable_l0, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.le)
 
@@ -3950,6 +4736,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l1, self.native2, InequalityExpression((self.l1, 8), False)),
+            (
+                self.mutable_l1,
+                self.le2,
+                RangedExpression((self.l1,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.mutable_l1,
+                self.lt2,
+                RangedExpression((self.l1,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4061,6 +4857,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l2, self.native2, InequalityExpression((self.l2, 8), False)),
+            (
+                self.mutable_l2,
+                self.le2,
+                RangedExpression((self.l2,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.mutable_l2,
+                self.lt2,
+                RangedExpression((self.l2,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4128,6 +4934,12 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param0, self.native2, True),
+            (
+                self.param0,
+                self.le2,
+                RangedExpression((0,) + self.le2.args, (False, False)),
+            ),
+            (self.param0, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4195,6 +5007,12 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param1, self.native2, True),
+            (
+                self.param1,
+                self.le2,
+                RangedExpression((1,) + self.le2.args, (False, False)),
+            ),
+            (self.param1, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4306,6 +5124,16 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l3, self.native2, InequalityExpression((self.l3, 8), False)),
+            (
+                self.mutable_l3,
+                self.le2,
+                RangedExpression((self.l3,) + self.le2.args, (False, False)),
+            ),
+            (
+                self.mutable_l3,
+                self.lt2,
+                RangedExpression((self.l3,) + self.lt2.args, (False, True)),
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4468,6 +5296,18 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
+            (
+                self.eq,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.eq,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4609,6 +5449,18 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.native2,
                 RangedExpression((self.le.args + (8,)), (False, False)),
             ),
+            (
+                self.le,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4718,6 +5570,18 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions are relational expressions",
             ),
             (self.lt, self.native2, self.lt),
+            (
+                self.lt,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4880,6 +5744,18 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
+            (
+                self.ranged,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.ranged,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -4938,11 +5814,7 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 self.le,
                 RangedExpression((8,) + self.le.args, (False, False)),
             ),
-            (
-                self.native2,
-                self.lt,
-                RangedExpression((8,) + self.lt.args, (False, True)),
-            ),
+            (self.native2, self.lt, False),
             # 24
             (
                 self.native2,
@@ -4951,6 +5823,290 @@ class TestInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.native2, self.native2, True),
+            (
+                self.native2,
+                self.le2,
+                RangedExpression((8,) + self.le2.args, (False, False)),
+            ),
+            (self.native2, self.lt2, False),
+        ]
+        self._run_cases(tests, operator.le)
+
+    def test_le_le2(self):
+        tests = [
+            (self.le2, self.invalid, NotImplemented),
+            (
+                self.le2,
+                self.asbinary,
+                RangedExpression((self.le2.args + (self.bin,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.zero,
+                RangedExpression((self.le2.args + (0,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.one,
+                RangedExpression((self.le2.args + (1,)), (False, False)),
+            ),
+            # 4:
+            (
+                self.le2,
+                self.native,
+                RangedExpression((self.le2.args + (5,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.npv,
+                RangedExpression((self.le2.args + (self.npv,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.param,
+                RangedExpression((self.le2.args + (6,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.param_mut,
+                RangedExpression((self.le2.args + (self.param_mut,)), (False, False)),
+            ),
+            # 8:
+            (
+                self.le2,
+                self.var,
+                RangedExpression((self.le2.args + (self.var,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.mon_native,
+                RangedExpression((self.le2.args + (self.mon_native,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.mon_param,
+                RangedExpression((self.le2.args + (self.mon_param,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.mon_npv,
+                RangedExpression((self.le2.args + (self.mon_npv,)), (False, False)),
+            ),
+            # 12:
+            (
+                self.le2,
+                self.linear,
+                RangedExpression((self.le2.args + (self.linear,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.sum,
+                RangedExpression((self.le2.args + (self.sum,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.other,
+                RangedExpression((self.le2.args + (self.other,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.mutable_l0,
+                RangedExpression((self.le2.args + (self.l0,)), (False, False)),
+            ),
+            # 16:
+            (
+                self.le2,
+                self.mutable_l1,
+                RangedExpression((self.le2.args + (self.l1,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.mutable_l2,
+                RangedExpression((self.le2.args + (self.l2,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.param0,
+                RangedExpression((self.le2.args + (0,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.param1,
+                RangedExpression((self.le2.args + (1,)), (False, False)),
+            ),
+            # 20:
+            (
+                self.le2,
+                self.mutable_l3,
+                RangedExpression((self.le2.args + (self.l3,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.eq,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.le,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.lt,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            # 24
+            (
+                self.le2,
+                self.ranged,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.native2,
+                RangedExpression((self.le2.args + (8,)), (False, False)),
+            ),
+            (
+                self.le2,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+        ]
+        self._run_cases(tests, operator.le)
+
+    def test_le_lt2(self):
+        tests = [
+            (self.lt2, self.invalid, NotImplemented),
+            (
+                self.lt2,
+                self.asbinary,
+                RangedExpression((self.lt2.args + (self.bin,)), (True, False)),
+            ),
+            (self.lt2, self.zero, False),
+            (self.lt2, self.one, False),
+            # 4:
+            (self.lt2, self.native, False),
+            (
+                self.lt2,
+                self.npv,
+                RangedExpression((self.lt2.args + (self.npv,)), (True, False)),
+            ),
+            (self.lt2, self.param, False),
+            (
+                self.lt2,
+                self.param_mut,
+                RangedExpression((self.lt2.args + (self.param_mut,)), (True, False)),
+            ),
+            # 8:
+            (
+                self.lt2,
+                self.var,
+                RangedExpression((self.lt2.args + (self.var,)), (True, False)),
+            ),
+            (
+                self.lt2,
+                self.mon_native,
+                RangedExpression((self.lt2.args + (self.mon_native,)), (True, False)),
+            ),
+            (
+                self.lt2,
+                self.mon_param,
+                RangedExpression((self.lt2.args + (self.mon_param,)), (True, False)),
+            ),
+            (
+                self.lt2,
+                self.mon_npv,
+                RangedExpression((self.lt2.args + (self.mon_npv,)), (True, False)),
+            ),
+            # 12:
+            (
+                self.lt2,
+                self.linear,
+                RangedExpression((self.lt2.args + (self.linear,)), (True, False)),
+            ),
+            (
+                self.lt2,
+                self.sum,
+                RangedExpression((self.lt2.args + (self.sum,)), (True, False)),
+            ),
+            (
+                self.lt2,
+                self.other,
+                RangedExpression((self.lt2.args + (self.other,)), (True, False)),
+            ),
+            (self.lt2, self.mutable_l0, False),
+            # 16:
+            (
+                self.lt2,
+                self.mutable_l1,
+                RangedExpression((self.lt2.args + (self.l1,)), (True, False)),
+            ),
+            (
+                self.lt2,
+                self.mutable_l2,
+                RangedExpression((self.lt2.args + (self.l2,)), (True, False)),
+            ),
+            (self.lt2, self.param0, False),
+            (self.lt2, self.param1, False),
+            # 20:
+            (
+                self.lt2,
+                self.mutable_l3,
+                RangedExpression((self.lt2.args + (self.l3,)), (True, False)),
+            ),
+            (
+                self.lt2,
+                self.eq,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.le,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.lt,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            # 24
+            (
+                self.lt2,
+                self.ranged,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.native2,
+                RangedExpression((self.lt2.args + (8,)), (True, False)),
+            ),
+            (
+                self.lt2,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.le)
 
@@ -5001,6 +6157,8 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
             # 24:
             (self.invalid, self.ranged, NotImplemented),
             (self.invalid, self.native2, NotImplemented),
+            (self.invalid, self.le2, NotImplemented),
+            (self.invalid, self.lt2, NotImplemented),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5100,6 +6258,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.asbinary, self.native2, InequalityExpression((self.bin, 8), True)),
+            (
+                self.asbinary,
+                self.le2,
+                RangedExpression((self.bin,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.asbinary,
+                self.lt2,
+                RangedExpression((self.bin,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5159,6 +6327,12 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.zero, self.native2, True),
+            (
+                self.zero,
+                self.le2,
+                RangedExpression((0,) + self.le2.args, (True, False)),
+            ),
+            (self.zero, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5210,6 +6384,8 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.one, self.native2, True),
+            (self.one, self.le2, RangedExpression((1,) + self.le2.args, (True, False))),
+            (self.one, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5273,6 +6449,12 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.native, self.native2, True),
+            (
+                self.native,
+                self.le2,
+                RangedExpression((5,) + self.le2.args, (True, False)),
+            ),
+            (self.native, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5364,6 +6546,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.npv, self.native2, InequalityExpression((self.npv, 8), True)),
+            (
+                self.npv,
+                self.le2,
+                RangedExpression((self.npv,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.npv,
+                self.lt2,
+                RangedExpression((self.npv,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5414,7 +6606,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param, self.le, RangedExpression((6,) + self.le.args, (True, False))),
-            (self.param, self.lt, RangedExpression((6,) + self.lt.args, (True, True))),
+            (self.param, self.lt, False),
             # 24
             (
                 self.param,
@@ -5423,6 +6615,12 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param, self.native2, True),
+            (
+                self.param,
+                self.le2,
+                RangedExpression((6,) + self.le2.args, (True, False)),
+            ),
+            (self.param, self.lt2, False),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5558,6 +6756,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.native2,
                 InequalityExpression((self.param_mut, 8), True),
             ),
+            (
+                self.param_mut,
+                self.le2,
+                RangedExpression((self.param_mut,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.param_mut,
+                self.lt2,
+                RangedExpression((self.param_mut,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5649,6 +6857,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.var, self.native2, InequalityExpression((self.var, 8), True)),
+            (
+                self.var,
+                self.le2,
+                RangedExpression((self.var,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.var,
+                self.lt2,
+                RangedExpression((self.var,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5788,6 +7006,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.native2,
                 InequalityExpression((self.mon_native, 8), True),
             ),
+            (
+                self.mon_native,
+                self.le2,
+                RangedExpression((self.mon_native,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.mon_native,
+                self.lt2,
+                RangedExpression((self.mon_native,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -5923,6 +7151,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.native2,
                 InequalityExpression((self.mon_param, 8), True),
             ),
+            (
+                self.mon_param,
+                self.le2,
+                RangedExpression((self.mon_param,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.mon_param,
+                self.lt2,
+                RangedExpression((self.mon_param,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6034,6 +7272,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mon_npv, self.native2, InequalityExpression((self.mon_npv, 8), True)),
+            (
+                self.mon_npv,
+                self.le2,
+                RangedExpression((self.mon_npv,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.mon_npv,
+                self.lt2,
+                RangedExpression((self.mon_npv,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6145,6 +7393,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.linear, self.native2, InequalityExpression((self.linear, 8), True)),
+            (
+                self.linear,
+                self.le2,
+                RangedExpression(((self.linear,) + self.le2.args), (True, False)),
+            ),
+            (
+                self.linear,
+                self.lt2,
+                RangedExpression(((self.linear,) + self.lt2.args), (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6236,6 +7494,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.sum, self.native2, InequalityExpression((self.sum, 8), True)),
+            (
+                self.sum,
+                self.le2,
+                RangedExpression((self.sum,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.sum,
+                self.lt2,
+                RangedExpression((self.sum,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6335,6 +7603,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.other, self.native2, InequalityExpression((self.other, 8), True)),
+            (
+                self.other,
+                self.le2,
+                RangedExpression((self.other,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.other,
+                self.lt2,
+                RangedExpression((self.other,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6442,6 +7720,12 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l0, self.native2, True),
+            (
+                self.mutable_l0,
+                self.le2,
+                RangedExpression((self.l0,) + self.le2.args, (True, False)),
+            ),
+            (self.mutable_l0, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6553,6 +7837,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l1, self.native2, InequalityExpression((self.l1, 8), True)),
+            (
+                self.mutable_l1,
+                self.le2,
+                RangedExpression((self.l1,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.mutable_l1,
+                self.lt2,
+                RangedExpression((self.l1,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6664,6 +7958,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l2, self.native2, InequalityExpression((self.l2, 8), True)),
+            (
+                self.mutable_l2,
+                self.le2,
+                RangedExpression((self.l2,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.mutable_l2,
+                self.lt2,
+                RangedExpression((self.l2,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6727,6 +8031,12 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param0, self.native2, True),
+            (
+                self.param0,
+                self.le2,
+                RangedExpression((0,) + self.le2.args, (True, False)),
+            ),
+            (self.param0, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6790,6 +8100,12 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.param1, self.native2, True),
+            (
+                self.param1,
+                self.le2,
+                RangedExpression((1,) + self.le2.args, (True, False)),
+            ),
+            (self.param1, self.lt2, self.lt2),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -6901,6 +8217,16 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.mutable_l3, self.native2, InequalityExpression((self.l3, 8), True)),
+            (
+                self.mutable_l3,
+                self.le2,
+                RangedExpression((self.l3,) + self.le2.args, (True, False)),
+            ),
+            (
+                self.mutable_l3,
+                self.lt2,
+                RangedExpression((self.l3,) + self.lt2.args, (True, True)),
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -7063,6 +8389,18 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
+            (
+                self.eq,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.eq,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -7200,6 +8538,18 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.native2,
                 RangedExpression((self.le.args + (8,)), (False, True)),
             ),
+            (
+                self.le,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -7309,6 +8659,18 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions are relational expressions",
             ),
             (self.lt, self.native2, self.lt),
+            (
+                self.lt,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -7471,6 +8833,18 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
+            (
+                self.ranged,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.ranged,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.lt)
 
@@ -7525,11 +8899,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.le,
                 RangedExpression((8,) + self.le.args, (True, False)),
             ),
-            (
-                self.native2,
-                self.lt,
-                RangedExpression((8,) + self.lt.args, (True, True)),
-            ),
+            (self.native2, self.lt, False),
             # 24
             (
                 self.native2,
@@ -7538,5 +8908,289 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "sub-expressions is a relational expression",
             ),
             (self.native2, self.native2, False),
+            (
+                self.native2,
+                self.le2,
+                RangedExpression((8,) + self.le2.args, (True, False)),
+            ),
+            (self.native2, self.lt2, False),
+        ]
+        self._run_cases(tests, operator.lt)
+
+    def test_lt_le2(self):
+        tests = [
+            (self.le2, self.invalid, NotImplemented),
+            (
+                self.le2,
+                self.asbinary,
+                RangedExpression((self.le2.args + (self.bin,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.zero,
+                RangedExpression((self.le2.args + (0,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.one,
+                RangedExpression((self.le2.args + (1,)), (False, True)),
+            ),
+            # 4:
+            (
+                self.le2,
+                self.native,
+                RangedExpression((self.le2.args + (5,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.npv,
+                RangedExpression((self.le2.args + (self.npv,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.param,
+                RangedExpression((self.le2.args + (6,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.param_mut,
+                RangedExpression((self.le2.args + (self.param_mut,)), (False, True)),
+            ),
+            # 8:
+            (
+                self.le2,
+                self.var,
+                RangedExpression((self.le2.args + (self.var,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.mon_native,
+                RangedExpression((self.le2.args + (self.mon_native,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.mon_param,
+                RangedExpression((self.le2.args + (self.mon_param,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.mon_npv,
+                RangedExpression((self.le2.args + (self.mon_npv,)), (False, True)),
+            ),
+            # 12:
+            (
+                self.le2,
+                self.linear,
+                RangedExpression((self.le2.args + (self.linear,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.sum,
+                RangedExpression((self.le2.args + (self.sum,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.other,
+                RangedExpression((self.le2.args + (self.other,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.mutable_l0,
+                RangedExpression((self.le2.args + (self.l0,)), (False, True)),
+            ),
+            # 16:
+            (
+                self.le2,
+                self.mutable_l1,
+                RangedExpression((self.le2.args + (self.l1,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.mutable_l2,
+                RangedExpression((self.le2.args + (self.l2,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.param0,
+                RangedExpression((self.le2.args + (0,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.param1,
+                RangedExpression((self.le2.args + (1,)), (False, True)),
+            ),
+            # 20:
+            (
+                self.le2,
+                self.mutable_l3,
+                RangedExpression((self.le2.args + (self.l3,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.eq,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.le,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.lt,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            # 24
+            (
+                self.le2,
+                self.ranged,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.native2,
+                RangedExpression((self.le2.args + (8,)), (False, True)),
+            ),
+            (
+                self.le2,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.le2,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+        ]
+        self._run_cases(tests, operator.lt)
+
+    def test_lt_lt2(self):
+        tests = [
+            (self.lt2, self.invalid, NotImplemented),
+            (
+                self.lt2,
+                self.asbinary,
+                RangedExpression((self.lt2.args + (self.bin,)), (True, True)),
+            ),
+            (self.lt2, self.zero, False),
+            (self.lt2, self.one, False),
+            # 4:
+            (self.lt2, self.native, False),
+            (
+                self.lt2,
+                self.npv,
+                RangedExpression((self.lt2.args + (self.npv,)), (True, True)),
+            ),
+            (self.lt2, self.param, False),
+            (
+                self.lt2,
+                self.param_mut,
+                RangedExpression((self.lt2.args + (self.param_mut,)), (True, True)),
+            ),
+            # 8:
+            (
+                self.lt2,
+                self.var,
+                RangedExpression((self.lt2.args + (self.var,)), (True, True)),
+            ),
+            (
+                self.lt2,
+                self.mon_native,
+                RangedExpression((self.lt2.args + (self.mon_native,)), (True, True)),
+            ),
+            (
+                self.lt2,
+                self.mon_param,
+                RangedExpression((self.lt2.args + (self.mon_param,)), (True, True)),
+            ),
+            (
+                self.lt2,
+                self.mon_npv,
+                RangedExpression((self.lt2.args + (self.mon_npv,)), (True, True)),
+            ),
+            # 12:
+            (
+                self.lt2,
+                self.linear,
+                RangedExpression((self.lt2.args + (self.linear,)), (True, True)),
+            ),
+            (
+                self.lt2,
+                self.sum,
+                RangedExpression((self.lt2.args + (self.sum,)), (True, True)),
+            ),
+            (
+                self.lt2,
+                self.other,
+                RangedExpression((self.lt2.args + (self.other,)), (True, True)),
+            ),
+            (self.lt2, self.mutable_l0, False),
+            # 16:
+            (
+                self.lt2,
+                self.mutable_l1,
+                RangedExpression((self.lt2.args + (self.l1,)), (True, True)),
+            ),
+            (
+                self.lt2,
+                self.mutable_l2,
+                RangedExpression((self.lt2.args + (self.l2,)), (True, True)),
+            ),
+            (self.lt2, self.param0, False),
+            (self.lt2, self.param1, False),
+            # 20:
+            (
+                self.lt2,
+                self.mutable_l3,
+                RangedExpression((self.lt2.args + (self.l3,)), (True, True)),
+            ),
+            (
+                self.lt2,
+                self.eq,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.le,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.lt,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            # 24
+            (
+                self.lt2,
+                self.ranged,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.native2,
+                RangedExpression((self.lt2.args + (8,)), (True, True)),
+            ),
+            (
+                self.lt2,
+                self.le2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
+            (
+                self.lt2,
+                self.lt2,
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions",
+            ),
         ]
         self._run_cases(tests, operator.lt)
