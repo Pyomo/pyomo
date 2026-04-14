@@ -401,6 +401,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
     _genexpr = _lt_dispatcher if strict else _le_dispatcher
     if body is None:
         lower, body = body, lower
+    expr = body
     if lower is not None:
         expr = _genexpr[lower.__class__, body.__class__](lower, body)
         # If the LHS of the ranged inequality evaluated to a bool, we
@@ -418,10 +419,10 @@ def inequality(lower=None, body=None, upper=None, strict=False):
             body = expr
     if upper is not None:
         if body is not None:
-            body = _genexpr[body.__class__, upper.__class__](body, upper)
+            expr = _genexpr[body.__class__, upper.__class__](body, upper)
         else:
-            body = upper
-    return body
+            expr = upper
+    return expr
 
 
 class EqualityExpression(RelationalExpression):
