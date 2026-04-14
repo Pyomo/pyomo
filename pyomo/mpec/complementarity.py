@@ -117,7 +117,12 @@ class ComplementarityData(BlockData):
             _e1, _e2 = _e2, _e1
         #
         if _e2[0] is None and _e2[2] is None:
-            self.c = Constraint(expr=(None, _e2[1], None))
+            # FIXME: this is making an unbounded RangedExpression -
+            # which makes little sense.  When we rework Complimentarity,
+            # we should determine how to avoid this overhead.
+            self.c = Constraint(
+                expr=EXPR.RangedExpression((None, _e2[1], None), strict=False)
+            )
             self.c._complementarity_type = 3
         elif _e2[2] is None:
             self.c = Constraint(expr=_e2[0] <= _e2[1])
