@@ -634,6 +634,12 @@ def _le_native_ineq(a, b):
     b0, b1 = b.args
     lhs = _le_dispatcher[a.__class__, b0.__class__](a, b0)
     if lhs.__class__ is InequalityExpression:
+        bounds = (_lt_dispatcher if b.strict else _le_dispatcher)[
+            a.__class__, b1.__class__
+        ](a, b1)
+        if bounds.__class__ is bool and not bounds:
+            # Trivial infeasible bounds
+            return False
         return RangedExpression((a, b0, b1), (False, b._strict))
     elif lhs:
         # Trivial (feasible) LHS
@@ -657,6 +663,12 @@ def _le_ineq_native(a, b):
     a0, a1 = a.args
     rhs = _le_dispatcher[a1.__class__, b.__class__](a1, b)
     if rhs.__class__ is InequalityExpression:
+        bounds = (_lt_dispatcher if a.strict else _le_dispatcher)[
+            a0.__class__, b.__class__
+        ](a0, b)
+        if bounds.__class__ is bool and not bounds:
+            # Trivial infeasible bounds
+            return False
         return RangedExpression((a0, a1, b), (a._strict, False))
     elif rhs:
         # Trivial (feasible) RHS
@@ -758,6 +770,10 @@ def _lt_native_ineq(a, b):
     b0, b1 = b.args
     lhs = _lt_dispatcher[a.__class__, b0.__class__](a, b0)
     if lhs.__class__ is InequalityExpression:
+        bounds = _lt_dispatcher[a.__class__, b1.__class__](a, b1)
+        if bounds.__class__ is bool and not bounds:
+            # Trivial infeasible bounds
+            return False
         return RangedExpression((a, b0, b1), (True, b._strict))
     elif lhs:
         # Trivial (feasible) LHS
@@ -781,6 +797,10 @@ def _lt_ineq_native(a, b):
     a0, a1 = a.args
     rhs = _lt_dispatcher[a1.__class__, b.__class__](a1, b)
     if rhs.__class__ is InequalityExpression:
+        bounds = _lt_dispatcher[a0.__class__, b.__class__](a0, b)
+        if bounds.__class__ is bool and not bounds:
+            # Trivial infeasible bounds
+            return False
         return RangedExpression((a0, a1, b), (a._strict, True))
     elif rhs:
         # Trivial (feasible) RHS
