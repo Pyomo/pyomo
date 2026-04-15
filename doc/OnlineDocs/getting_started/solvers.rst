@@ -44,8 +44,8 @@ the license requirements for their desired solver.
    * - cyipopt
      - ``pip install cyipopt``
      - ``conda install ‑c conda‑forge cyipopt``
-     - `License <https://cyipopt.readthedocs.io/en/stable/#copyright>`__
-       `Docs <https://cyipopt.readthedocs.io/en/stable/install.html>`__
+     - `License <https://cyipopt.readthedocs.io/stable/#copyright>`__
+       `Docs <https://cyipopt.readthedocs.io/stable/install.html>`__
    * - glpk
      - N/A
      - ``conda install ‑c conda‑forge glpk``
