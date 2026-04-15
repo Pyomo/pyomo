@@ -33,7 +33,11 @@ from pyomo.core.base import (
 from pyomo.core.base.var import ScalarVar
 from pyomo.core.base.param import ScalarParam
 from pyomo.contrib.fbbt import interval
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr, fbbt, ExpressionBoundsVisitor
+from pyomo.contrib.fbbt.fbbt import (
+    compute_bounds_on_expr,
+    fbbt,
+    ExpressionBoundsVisitor,
+)
 from pyomo.core.base.expression import ScalarExpression
 from pyomo.core.base.transformation import Transformation, TransformationFactory
 from pyomo.common.modeling import unique_component_name
@@ -352,7 +356,9 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
         self.block.c = ConstraintList()
         self._leaf_types = {VarData, ScalarVar, ParamData, ScalarVar, float, int}
 
-        self._interval_visitor = ExpressionBoundsVisitor(use_fixed_var_values_as_bounds=True)
+        self._interval_visitor = ExpressionBoundsVisitor(
+            use_fixed_var_values_as_bounds=True
+        )
 
     def initializeWalker(self, expr):
         if expr in self.substitution_map:
