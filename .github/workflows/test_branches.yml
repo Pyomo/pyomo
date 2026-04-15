@@ -37,9 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.11
     - name: Black Formatting Check
@@ -73,7 +73,8 @@ jobs:
         # Exclude:
         #  - All gnu.org links because they consistently fail the checker
         #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
-        exclude_patterns: https://www.gnu.org,https://lpsolve.sourceforge.net/
+        #  - All www.mathworks.com links because MathWorks appears to reject from GHA
+        exclude_patterns: https://www.gnu.org,https://lpsolve.sourceforge.net/,https://www.mathworks.com/
 
 
   build:
@@ -140,7 +141,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Configure job parameters
       run: |
@@ -161,7 +162,7 @@ jobs:
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     #- name: Pip package cache
-    #  uses: actions/cache@v4
+    #  uses: actions/cache@v5
     #  if: matrix.PYENV == 'pip'
     #  id: pip-cache
     #  with:
@@ -169,7 +170,7 @@ jobs:
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: OS package cache
-    #  uses: actions/cache@v4
+    #  uses: actions/cache@v5
     #  if: matrix.TARGET != 'osx'
     #  id: os-cache
     #  with:
@@ -177,7 +178,7 @@ jobs:
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       if: ${{ ! matrix.slim }}
       id: download-cache
       with:
@@ -237,7 +238,7 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python }}
 
@@ -303,7 +304,14 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            python -m pip install --cache-dir cache/pip 'cplex!=22.1.2.1' docplex \
+            # Disallow cplex 22.1.2.1 because it errors fatally when
+            #  computing IIS on python 3.13 and 3.14
+            if [[ ${{matrix.python}} =~ 3.1[34] ]]; then
+                CPLEX='cplex!=22.1.2.1'
+            else
+                CPLEX='cplex'
+            fi
+            python -m pip install --cache-dir cache/pip "$CPLEX" docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
@@ -380,6 +388,18 @@ jobs:
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
+            TIMEOUT_MSG="TIMEOUT: killing conda install process"
+            PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
+            echo "Installing for $PYVER"
+            #
+            # Disallow cplex 22.1.2 and 22.1.2.1, as they error fatally when
+            #   computing IIS on Python 3.13 and 3.14
+            # Disallow cplex 12.9 (caused segfaults in tests)
+            if [[ ${{matrix.python}} =~ 3.1[34] ]]; then
+                CPLEX='cplex>=12.10,<22.1.2|>22.1.2.1'
+            else
+                CPLEX='cplex>=12.10'
+            fi
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
             # release on that platform.
@@ -392,10 +412,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
-            TIMEOUT_MSG="TIMEOUT: killing conda install process"
-            PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
-            echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
+            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
@@ -791,7 +808,7 @@ jobs:
         coverage xml -i
 
     - name: Record build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
         include-hidden-files: true
@@ -809,10 +826,10 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
 
@@ -865,23 +882,23 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
-    #  uses: actions/cache@v4
+    #  uses: actions/cache@v5
     #  id: pip-cache
     #  with:
     #    path: cache/pip
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.10
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         path: artifacts
 
     - name: Set up Python 3.12
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.12
 
@@ -957,7 +974,7 @@ jobs:
 
     - name: Upload codecov reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         files: coverage.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
@@ -969,7 +986,7 @@ jobs:
       if: |
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}

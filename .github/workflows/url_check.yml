@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - name: URL Checker
       uses: urlstechie/urlchecker-action@0.0.34
       with:
@@ -35,4 +35,5 @@ jobs:
         # Exclude:
         #  - All gnu.org links because they consistently fail the checker
         #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
-        exclude_patterns: https://www.gnu.org,https://lpsolve.sourceforge.net/
+        #  - All www.mathworks.com links because MathWorks appears to reject from GHA
+        exclude_patterns: https://www.gnu.org,https://lpsolve.sourceforge.net/,https://www.mathworks.com/
