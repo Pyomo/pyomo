@@ -49,6 +49,7 @@ def initialize_nlp(
     default_bound: float = 1.0e8,
     max_pwl_refinement_iter: int = 100,
     num_pwl_cons_to_refine_per_iter: int = 5,
+    aggressive_substitution: bool = True,
 ) -> Results:
     """
     Attempt to initialize and subsequently solve the model given by ``nlp``.
@@ -123,6 +124,7 @@ def initialize_nlp(
             default_bound=default_bound,
             max_iter=max_pwl_refinement_iter,
             num_cons_to_refine_per_iter=num_pwl_cons_to_refine_per_iter,
+            aggressive_substitution=aggressive_substitution,
         )
     elif method == InitializationMethod.lp_approximation:
         if mip_solver is None:

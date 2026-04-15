@@ -265,6 +265,7 @@ def _initialize_with_piecewise_linear_approximation(
     default_bound=1.0e8, 
     max_iter=100, 
     num_cons_to_refine_per_iter=5,
+    aggressive_substitution=True,
 ):
     logger.info('Starting initialization using a piecewise linear approximation')
     pwl = shallow_clone(nlp)
@@ -273,7 +274,7 @@ def _initialize_with_piecewise_linear_approximation(
     # first introduce auxiliary variables so that we don't try to 
     # approximate any functions of more than two variables
     trans = pe.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
-    trans.apply_to(pwl, aggressive_substitution=True)
+    trans.apply_to(pwl, aggressive_substitution=aggressive_substitution)
     logger.info('applied the univariate_nonlinear_decomposition transformation')
 
     # now we need to try to get bounds on all of the nonlinear variables
