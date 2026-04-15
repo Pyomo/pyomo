@@ -89,6 +89,10 @@ def initialize_nlp(
         Only used when method = InitializationMethod.pwl_approximation. This is
         the maximum number of constraints to be refined with additional 
         segments in the piecewise linear approximation each iteration.
+    aggressive_substitution: bool
+        Only used when method = InitializationMethod.pwl_approximation. This is 
+        passed along to the contrib.piecewise.univariate_nonlinear_decomposition
+        transformation. 
 
     Returns
     -------
