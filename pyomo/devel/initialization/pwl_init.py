@@ -9,10 +9,18 @@
 
 from pyomo.core.base.block import BlockData
 import pyomo.environ as pe
-from pyomo.devel.initialization.bounds.bound_variables import bound_all_nonlinear_variables
-from pyomo.devel.initialization.utils import fix_vars_with_equal_bounds, shallow_clone, get_vars
+from pyomo.devel.initialization.bounds.bound_variables import (
+    bound_all_nonlinear_variables,
+)
+from pyomo.devel.initialization.utils import (
+    fix_vars_with_equal_bounds,
+    shallow_clone,
+    get_vars,
+)
 from pyomo.core.expr.visitor import identify_components
-from pyomo.contrib.piecewise.piecewise_linear_expression import PiecewiseLinearExpression
+from pyomo.contrib.piecewise.piecewise_linear_expression import (
+    PiecewiseLinearExpression,
+)
 from pyomo.contrib.piecewise.piecewise_linear_function import PiecewiseLinearFunction
 from pyomo.common.collections import ComponentMap, ComponentSet
 from typing import MutableMapping, Sequence, List
@@ -36,7 +44,11 @@ from pyomo.core.expr.numeric_expr import (
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,
 )
-from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression, RangedExpression
+from pyomo.core.expr.relational_expr import (
+    EqualityExpression,
+    InequalityExpression,
+    RangedExpression,
+)
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.core.base.var import ScalarVar, VarData
 from pyomo.core.base.param import ScalarParam, ParamData
@@ -46,7 +58,6 @@ from pyomo.contrib.solver.common.base import SolverBase
 import logging
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.solver.common.results import SolutionStatus
-
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +72,9 @@ def _minimize_infeasibility(m):
     for obj in m.component_data_objects(pe.Objective, active=True, descend_into=True):
         assert not found_obj
         if obj.sense == pe.minimize:
-            obj_expr += 0.1*obj.expr
+            obj_expr += 0.1 * obj.expr
         else:
-            obj_expr -= 0.1*obj.expr
+            obj_expr -= 0.1 * obj.expr
         obj.deactivate()
         found_obj = True
 
@@ -92,18 +103,21 @@ def _minimize_infeasibility(m):
             m.extra_cons.add(body - ub - ps <= 0)
             m.extra_cons.add(body - lb + ns >= 0)
 
-    m.slack_obj = pe.Objective(expr=10*sum(m.slacks.values()) + obj_expr)
+    m.slack_obj = pe.Objective(expr=10 * sum(m.slacks.values()) + obj_expr)
 
 
-def _get_pwl_constraints(m: BlockData) -> MutableMapping[
-    PiecewiseLinearExpression, 
-    List[ConstraintData]
-]:
+def _get_pwl_constraints(
+    m: BlockData,
+) -> MutableMapping[PiecewiseLinearExpression, List[ConstraintData]]:
     comp_types = set()
     comp_types.add(PiecewiseLinearExpression)
     pwl_expr_to_con_map = ComponentMap()
-    con_list = list(m.component_data_objects(pe.Constraint, active=True, descend_into=True))
-    obj_list = list(m.component_data_objects(pe.Objective, active=True, descend_into=True))
+    con_list = list(
+        m.component_data_objects(pe.Constraint, active=True, descend_into=True)
+    )
+    obj_list = list(
+        m.component_data_objects(pe.Objective, active=True, descend_into=True)
+    )
     for comp in con_list + obj_list:
         pwl_exprs = list(identify_components(comp.expr, comp_types))
         if not pwl_exprs:
@@ -128,11 +142,11 @@ _handlers = ExitNodeDispatcher()
 for t in [float, int, VarData, ScalarVar, ParamData, ScalarParam, NumericConstant]:
     _handlers[t] = _handle_leaf
 for t in [
-    ProductExpression, 
-    SumExpression, 
-    DivisionExpression, 
-    PowExpression, 
-    MonomialTermExpression, 
+    ProductExpression,
+    SumExpression,
+    DivisionExpression,
+    PowExpression,
+    MonomialTermExpression,
     LinearExpression,
     ExpressionData,
     ScalarExpression,
@@ -170,7 +184,7 @@ class _PWLRefinementVisitor(StreamBasedExpressionVisitor):
             return _handle_leaf(node, data)
         else:
             raise NotImplementedError(f'unrecognized expression type: {nt}')
-        
+
     def beforeChild(self, node, child, child_idx):
         if child in self.substitution:
             return False, self.substitution[child]
@@ -188,7 +202,9 @@ class _PWLRefinementVisitor(StreamBasedExpressionVisitor):
         if len(points[0]) == 1:
             points = [i[0] for i in points]
         new_func = PiecewiseLinearFunction(points=points, function=_func)
-        fname = unique_component_name(self.m.auxiliary._pyomo_contrib_nonlinear_to_pwl, 'f')
+        fname = unique_component_name(
+            self.m.auxiliary._pyomo_contrib_nonlinear_to_pwl, 'f'
+        )
         setattr(self.m.auxiliary._pyomo_contrib_nonlinear_to_pwl, fname, new_func)
         new_expr = new_func(*variables)
         for v, val in zip(variables, var_values):
@@ -201,8 +217,7 @@ class _PWLRefinementVisitor(StreamBasedExpressionVisitor):
 def _refine_pwl_approx(
     m,
     pwl_expr_to_con_map: MutableMapping[
-        PiecewiseLinearExpression, 
-        Sequence[ConstraintData],
+        PiecewiseLinearExpression, Sequence[ConstraintData]
     ],
     num_to_refine: int = 5,
 ):
@@ -235,12 +250,14 @@ def _refine_pwl_approx(
     violations.sort(key=lambda i: i[0], reverse=True)
 
     if len(violations) == 0:
-        raise RuntimeError('Did not find any piecewise linear functions with variable values')
-    
+        raise RuntimeError(
+            'Did not find any piecewise linear functions with variable values'
+        )
+
     tol = 1e-5
     if math.isclose(violations[0][0], 0, abs_tol=tol):
         logger.info('All of the original nonlinear functions are satisfied!')
-    
+
     violations = [i for i in violations if i[0] > tol]
 
     for err, expr in violations[:num_to_refine]:
@@ -259,11 +276,11 @@ def _refine_pwl_approx(
 
 
 def _initialize_with_piecewise_linear_approximation(
-    nlp: BlockData, 
+    nlp: BlockData,
     mip_solver: SolverBase,
     nlp_solver: SolverBase,
-    default_bound=1.0e8, 
-    max_iter=100, 
+    default_bound=1.0e8,
+    max_iter=100,
     num_cons_to_refine_per_iter=5,
     aggressive_substitution=True,
 ):
@@ -271,9 +288,11 @@ def _initialize_with_piecewise_linear_approximation(
     pwl = shallow_clone(nlp)
     logger.info('created a shallow clone of the model')
 
-    # first introduce auxiliary variables so that we don't try to 
+    # first introduce auxiliary variables so that we don't try to
     # approximate any functions of more than two variables
-    trans = pe.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
+    trans = pe.TransformationFactory(
+        'contrib.piecewise.univariate_nonlinear_decomposition'
+    )
     trans.apply_to(pwl, aggressive_substitution=aggressive_substitution)
     logger.info('applied the univariate_nonlinear_decomposition transformation')
 
@@ -288,7 +307,7 @@ def _initialize_with_piecewise_linear_approximation(
 
     # now we modify the model by introducing slacks to make sure the PWL
     # approximatin is feasible
-    # all of the slacks appear linearly, so we don't need to worry about 
+    # all of the slacks appear linearly, so we don't need to worry about
     # upper bounds for them
     _minimize_infeasibility(pwl)
     logger.info('reformulated model to minimize infeasibility')
@@ -323,10 +342,12 @@ def _initialize_with_piecewise_linear_approximation(
         logger.info('applied the disaggregated logarithmic transformation')
 
         # solve the MILP
-        res = mip_solver.solve(_pwl, load_solutions=True, raise_exception_on_nonoptimal_result=False)
+        res = mip_solver.solve(
+            _pwl, load_solutions=True, raise_exception_on_nonoptimal_result=False
+        )
         logger.info(f'solved MILP: {res.solution_status}, {res.termination_condition}')
 
-        #load the variable values back into orig_vars
+        # load the variable values back into orig_vars
         for ov, nv in zip(orig_vars, new_vars):
             ov.set_value(nv.value, skip_validation=True)
 
@@ -339,7 +360,9 @@ def _initialize_with_piecewise_linear_approximation(
         logger.info('refined PWL approximation')
 
         # try solving the NLP
-        res = nlp_solver.solve(nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False)
+        res = nlp_solver.solve(
+            nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False
+        )
         last_nlp_res = res
         logger.info(f'solved NLP: {res.solution_status}, {res.termination_condition}')
         if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:

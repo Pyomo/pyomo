@@ -9,10 +9,18 @@
 
 from pyomo.core.base.block import BlockData
 import pyomo.environ as pe
-from pyomo.devel.initialization.bounds.bound_variables import bound_all_nonlinear_variables
-from pyomo.devel.initialization.utils import fix_vars_with_equal_bounds, shallow_clone, get_vars
+from pyomo.devel.initialization.bounds.bound_variables import (
+    bound_all_nonlinear_variables,
+)
+from pyomo.devel.initialization.utils import (
+    fix_vars_with_equal_bounds,
+    shallow_clone,
+    get_vars,
+)
 from pyomo.core.expr.visitor import identify_components
-from pyomo.contrib.piecewise.piecewise_linear_expression import PiecewiseLinearExpression
+from pyomo.contrib.piecewise.piecewise_linear_expression import (
+    PiecewiseLinearExpression,
+)
 from pyomo.contrib.piecewise.piecewise_linear_function import PiecewiseLinearFunction
 from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -37,7 +45,11 @@ from pyomo.core.expr.numeric_expr import (
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,
 )
-from pyomo.core.expr.relational_expr import EqualityExpression, InequalityExpression, RangedExpression
+from pyomo.core.expr.relational_expr import (
+    EqualityExpression,
+    InequalityExpression,
+    RangedExpression,
+)
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.core.base.var import ScalarVar, VarData
 from pyomo.core.base.param import ScalarParam, ParamData
@@ -52,7 +64,6 @@ from pyomo.repn.linear import LinearRepnVisitor, LinearRepn
 from pyomo.core.expr.visitor import identify_variables
 import numpy as np
 from scipy.stats import qmc
-
 
 logger = logging.getLogger(__name__)
 
@@ -105,10 +116,14 @@ def _build_lp_approx(nlp: BlockData) -> BlockData:
     lp.cons = pe.ConstraintList()
     visitor = LinearRepnVisitor(subexpression_cache={})
 
-    objs = list(nlp.component_data_objects(pe.Objective, active=True, descend_into=True))
+    objs = list(
+        nlp.component_data_objects(pe.Objective, active=True, descend_into=True)
+    )
     if objs:
         if len(objs) > 1:
-            raise NotImplementedError('lp approximation does not support multiple objectives')
+            raise NotImplementedError(
+                'lp approximation does not support multiple objectives'
+            )
         obj = objs[0]
         repn = visitor.walk_expression(obj)
         assert repn.multiplier == 1
@@ -123,7 +138,9 @@ def _build_lp_approx(nlp: BlockData) -> BlockData:
             new_obj_expr += replacement
         lp.obj = pe.Objective(expr=new_obj_expr, sense=obj.sense)
 
-    for con in nlp.component_data_objects(pe.Constraint, active=True, descend_into=True):
+    for con in nlp.component_data_objects(
+        pe.Constraint, active=True, descend_into=True
+    ):
         lb, body, ub = con.to_bounded_expression()
         repn = visitor.walk_expression(body)
         assert repn.multiplier == 1
@@ -144,17 +161,14 @@ def _build_lp_approx(nlp: BlockData) -> BlockData:
 
 
 def _initialize_with_LP_approximation(
-    nlp: BlockData,
-    lp_solver: SolverBase,
-    nlp_solver: SolverBase,
-    default_bound=1.0e8, 
+    nlp: BlockData, lp_solver: SolverBase, nlp_solver: SolverBase, default_bound=1.0e8
 ):
     orig_nlp = nlp
     logger.info('Starting initialization using a linear programming approximation')
     nlp = shallow_clone(nlp)
     logger.info('created a shallow clone of the model')
 
-    # first introduce auxiliary variables so that we don't try to 
+    # first introduce auxiliary variables so that we don't try to
     # approximate any functions of more than two variables
     # actually, this is not necessary for this method
     # we will just comment this out for now
@@ -181,12 +195,18 @@ def _initialize_with_LP_approximation(
     logger.info('replaced nonlinear expressions with linear approximations')
 
     # solve the LP
-    lp_res = lp_solver.solve(lp, load_solutions=True, raise_exception_on_nonoptimal_result=False)
+    lp_res = lp_solver.solve(
+        lp, load_solutions=True, raise_exception_on_nonoptimal_result=False
+    )
     logger.info(f'solved LP: {lp_res.solution_status}, {lp_res.termination_condition}')
 
     # try solving the NLP
-    nlp_res = nlp_solver.solve(orig_nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False)
-    logger.info(f'solved NLP: {nlp_res.solution_status}, {nlp_res.termination_condition}')
+    nlp_res = nlp_solver.solve(
+        orig_nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False
+    )
+    logger.info(
+        f'solved NLP: {nlp_res.solution_status}, {nlp_res.termination_condition}'
+    )
 
     if nlp_res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
         nlp_res.solution_loader.load_vars()

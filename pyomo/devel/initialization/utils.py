@@ -30,7 +30,9 @@ def shallow_clone(m1):
     for con in m1.component_data_objects(pe.Constraint, active=True, descend_into=True):
         m2.cons.add(con.expr)
 
-    objlist = list(m1.component_data_objects(pe.Objective, active=True, descend_into=True))
+    objlist = list(
+        m1.component_data_objects(pe.Objective, active=True, descend_into=True)
+    )
     assert len(objlist) <= 1
     if objlist:
         obj = objlist[0]
@@ -43,5 +45,9 @@ def fix_vars_with_equal_bounds(m):
     for v in get_vars(m):
         if v.fixed:
             continue
-        if v.lb is not None and v.ub is not None and math.isclose(v.lb, v.ub, abs_tol=1e-4, rel_tol=1e-4):
+        if (
+            v.lb is not None
+            and v.ub is not None
+            and math.isclose(v.lb, v.ub, abs_tol=1e-4, rel_tol=1e-4)
+        ):
             v.fix(0.5 * (v.lb + v.ub))

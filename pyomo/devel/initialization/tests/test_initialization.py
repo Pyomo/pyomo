@@ -14,10 +14,13 @@ import pyomo.devel.initialization as ini
 from pyomo.devel.initialization.examples.init_polynomial_ex import main
 from pyomo.common import unittest
 from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.common.results import SolutionStatus, Results, TerminationCondition
+from pyomo.contrib.solver.common.results import (
+    SolutionStatus,
+    Results,
+    TerminationCondition,
+)
 from pyomo.contrib.solver.common.base import Availability, SolverBase
 import pytest
-
 
 scip = SolverFactory('scip_direct')
 ipopt = SolverFactory('ipopt')
@@ -32,16 +35,16 @@ class MockNLPSolver(SolverBase):
 
     def available(self) -> Availability:
         return Availability.FullLicense
-    
+
     def version(self) -> Tuple:
         return (1, 0, 0)
-    
+
     def check_solution(self):
         expected, rel_tol, abs_tol = self.sol_map[self.iter]
         self.iter += 1
         for v, val in zip(self.varlist, expected):
             assert v.value == pytest.approx(val, rel=rel_tol, abs=abs_tol)
-    
+
     def solve(self, model, **kwds) -> Results:
         self.check_solution()
         res = Results()
@@ -95,17 +98,16 @@ class TestInit(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(bounds=(0, 100))
         m.x2 = pyo.Var(bounds=(0, 100))
-        m.obj = pyo.Objective(expr=(3*m.x1*m.x1 + 2*m.x2*m.x1)/m.x1, sense=pyo.maximize)
+        m.obj = pyo.Objective(
+            expr=(3 * m.x1 * m.x1 + 2 * m.x2 * m.x1) / m.x1, sense=pyo.maximize
+        )
         m.c1 = pyo.Constraint(expr=pyo.exp(pyo.log(m.x1 + m.x2)) <= 4)
-        m.c2 = pyo.Constraint(expr=((2*m.x1 + m.x2)**2)**0.5 <= 5)
+        m.c2 = pyo.Constraint(expr=((2 * m.x1 + m.x2) ** 2) ** 0.5 <= 5)
 
         # all the actual testing happens in the MockNLPSolver
         nlp_solver = MockNLPSolver(
-            varlist=[m.x1, m.x2], 
-            sol_map={
-                0: ([None, None], 0, 0), 
-                1: ([1, 3], 1e-6, 1e-6),
-            },
+            varlist=[m.x1, m.x2],
+            sol_map={0: ([None, None], 0, 0), 1: ([1, 3], 1e-6, 1e-6)},
         )
         mip_solver = SolverFactory('highs')
         results = ini.initialize_nlp(
@@ -122,17 +124,16 @@ class TestInit(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(bounds=(0, 100))
         m.x2 = pyo.Var(bounds=(0, 100))
-        m.obj = pyo.Objective(expr=(3*m.x1*m.x1 + 2*m.x2*m.x1)/m.x1, sense=pyo.maximize)
+        m.obj = pyo.Objective(
+            expr=(3 * m.x1 * m.x1 + 2 * m.x2 * m.x1) / m.x1, sense=pyo.maximize
+        )
         m.c1 = pyo.Constraint(expr=pyo.exp(pyo.log(m.x1 + m.x2)) <= 4)
-        m.c2 = pyo.Constraint(expr=((2*m.x1 + m.x2)**2)**0.5 <= 5)
+        m.c2 = pyo.Constraint(expr=((2 * m.x1 + m.x2) ** 2) ** 0.5 <= 5)
 
         # all the actual testing happens in the MockNLPSolver
         nlp_solver = MockNLPSolver(
-            varlist=[m.x1, m.x2], 
-            sol_map={
-                0: ([None, None], 0, 0), 
-                1: ([1, 3], 1e-6, 1e-6),
-            },
+            varlist=[m.x1, m.x2],
+            sol_map={0: ([None, None], 0, 0), 1: ([1, 3], 1e-6, 1e-6)},
         )
         global_solver = SolverFactory('scip_direct')
         results = ini.initialize_nlp(
@@ -144,7 +145,7 @@ class TestInit(unittest.TestCase):
 
     def test_pwl_init(self):
         """
-        Here, we really just want to make sure that the 
+        Here, we really just want to make sure that the
         approximation improves as refinement is done.
         """
         m = pyo.ConcreteModel()
@@ -154,18 +155,18 @@ class TestInit(unittest.TestCase):
 
         # all the actual testing happens in the MockNLPSolver
         nlp_solver = MockNLPSolver(
-            varlist=[m.x], 
+            varlist=[m.x],
             sol_map={
-                0:  ([None], 0, 0),
-                1:  ([1.0975609756097562], 1e-6, 1e-6),
-                2:  ([0.4346767574185112], 1e-6, 1e-6),
-                3:  ([-0.19286405313201946], 1e-6, 1e-6),
-                4:  ([-0.8653073960726083], 1e-6, 1e-6),
-                5:  ([-1.6404750700409576], 1e-6, 1e-6),
-                6:  ([-2.5676344169949443], 1e-6, 1e-6),
-                7:  ([-3.6759614495828297], 1e-6, 1e-6),
-                8:  ([-4.942429761325623], 1e-6, 1e-6),
-                9:  ([-6.259703235160286], 1e-6, 1e-6),
+                0: ([None], 0, 0),
+                1: ([1.0975609756097562], 1e-6, 1e-6),
+                2: ([0.4346767574185112], 1e-6, 1e-6),
+                3: ([-0.19286405313201946], 1e-6, 1e-6),
+                4: ([-0.8653073960726083], 1e-6, 1e-6),
+                5: ([-1.6404750700409576], 1e-6, 1e-6),
+                6: ([-2.5676344169949443], 1e-6, 1e-6),
+                7: ([-3.6759614495828297], 1e-6, 1e-6),
+                8: ([-4.942429761325623], 1e-6, 1e-6),
+                9: ([-6.259703235160286], 1e-6, 1e-6),
                 10: ([-7.457220752001633], 1e-6, 1e-6),
                 11: ([-8.393746738936832], 1e-6, 1e-6),
                 12: ([-9.032852172775847], 1e-6, 1e-6),
@@ -199,6 +200,7 @@ class TestInit(unittest.TestCase):
 
 if __name__ == '__main__':
     import logging
+
     logging.basicConfig(level=logging.INFO)
     t = TestInit()
     t.test_pwl_init()
