@@ -18,7 +18,6 @@ from pyomo.core.base.suffix import Suffix
 from .util import NoSolutionError
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
