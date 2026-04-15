@@ -50,8 +50,15 @@ jobs:
         black . --check --diff
     - name: Spell Check
       uses: crate-ci/typos@master
-      with: 
+      with:
         config: ./.github/workflows/typos.toml
+    - name: Set DNS server
+      run: |
+        # This will hopefully resolve intermittent DNS resolution errors
+        echo "Reset DNS servers to use cloudfare"
+        sudo resolvectl dns eth0 1.1.1.1 1.0.0.1
+        sudo resolvectl flush-caches
+        sudo resolvectl status
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
       uses: urlstechie/urlchecker-action@0.0.34
@@ -700,7 +707,7 @@ jobs:
         echo ""
         echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
 
-    # this has to be done after Pyomo is installed because highspy 
+    # this has to be done after Pyomo is installed because highspy
     # depends on pyomo's find_library function
     - name: Install HiGHS
       if: ${{ ! matrix.slim }}
