@@ -88,7 +88,6 @@ from pyomo.contrib.observer.model_observer import (
     Reason,
 )
 
-
 logger = logging.getLogger(__name__)
 
 
