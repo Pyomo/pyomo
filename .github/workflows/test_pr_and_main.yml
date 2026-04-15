@@ -266,7 +266,7 @@ jobs:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
         for pkg in bash pkg-config unixodbc freetds glpk ginac; do
-            brew list $pkg || brew install $pkg
+            brew list $pkg 2>/dev/null || brew install $pkg
         done
 
     - name: Update Linux
