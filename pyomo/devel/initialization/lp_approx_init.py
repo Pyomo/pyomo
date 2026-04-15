@@ -186,7 +186,7 @@ def _initialize_with_LP_approximation(
     logger.info('fixed variables with equal bounds')
 
     # now we modify the model by introducing slacks to make sure the LP
-    # approximatin is feasible
+    # approximation is feasible
     _minimize_infeasibility(nlp)
     logger.info('reformulated model to minimize infeasibility')
 

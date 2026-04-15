@@ -306,7 +306,7 @@ def _initialize_with_piecewise_linear_approximation(
     logger.info('fixed variables with equal bounds')
 
     # now we modify the model by introducing slacks to make sure the PWL
-    # approximatin is feasible
+    # approximation is feasible
     # all of the slacks appear linearly, so we don't need to worry about
     # upper bounds for them
     _minimize_infeasibility(pwl)

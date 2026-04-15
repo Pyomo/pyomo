@@ -102,7 +102,7 @@ Advantages
 Disadvantages
 ^^^^^^^^^^^^^
 
-* Current implemenation can be slow
+* Current implementation can be slow
 * Requires all nonlinear variables to be bounded
 
 
