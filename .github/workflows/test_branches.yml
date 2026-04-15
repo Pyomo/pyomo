@@ -56,8 +56,10 @@ jobs:
       run: |
         # This will hopefully resolve intermittent DNS resolution errors
         echo "Reset DNS servers to use cloudfare"
-        sudo resolvectl dns eth0 1.1.1.1 1.0.0.1
+        LINK=`resolvectl query github.com | grep link: | sed -r '.*link://'`
+        sudo resolvectl dns $LINK 1.1.1.1 1.0.0.1
         sudo resolvectl flush-caches
+        sudo resolvectl query github.com
         sudo resolvectl status
     - name: URL Checker
       if: env.PYOMO_WORKFLOW == 'branch'
