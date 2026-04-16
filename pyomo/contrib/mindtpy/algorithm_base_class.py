@@ -252,13 +252,14 @@ class _MindtPyAlgorithm:
         This method performs a structural check on the working model.
         It determines if the problem is a true Mixed-Integer program.
         If no discrete variables are present, it serves as a short-circuit.
-        In short-circuit cases, the problem is solved immediately as an LP or NLP.
+        In short-circuit cases, the problem is solved immediately with the
+        configured MIP or NLP subsolver.
 
         Returns
         -------
         bool
             True if the model has discrete variables and requires MindtPy iteration.
-            False if the model is purely continuous (LP or NLP).
+            False if the model is purely continuous (LP, QP, QCP, or NLP).
 
         Notes
         -----
@@ -270,19 +271,20 @@ class _MindtPyAlgorithm:
         This indicates the model is a valid MINLP for decomposition.
 
         2. Continuous Model Handling (The "False" cases)
-        If the discrete variable list is empty, the model is "invalid" for MINLP.
-        The method then differentiates between LP and NLP structures.
+        If the discrete variable list is empty, the model is "invalid" for
+        MINLP. The method then classifies the continuous model as LP, QP, QCP,
+        or NLP and routes it directly to the configured MIP or NLP subsolver.
 
         3. NLP Branch
-        The code checks the ``polynomial_degree`` of constraints and objectives.
-        If any degree is non-linear (not in ``mip_constraint_polynomial_degree``),
-        it is treated as a standard Nonlinear Program (NLP).
-        The ``config.nlp_solver`` is called to solve the original model directly.
+        If the model is structurally nonlinear beyond QP/QCP, or if the chosen
+        MIP solver cannot handle the required quadratic structure, the
+        ``config.nlp_solver`` is called to solve the original model directly.
 
-        4. LP Branch
-        If all components are linear, it is treated as a Linear Program (LP).
-        The ``config.mip_solver`` is utilized for the solution process.
-        Solutions are loaded directly back into the ``original_model``.
+        4. MIP Branch
+        If the continuous model is LP, QP, or QCP and the chosen MIP solver
+        supports the required structure, ``config.mip_solver`` is used for the
+        direct solve. Solutions are loaded directly back into the
+        ``original_model``.
 
         In both continuous cases, the method returns False to bypass the main loop.
         This ensures MindtPy does not attempt decomposition on trivial continuous models.
@@ -291,25 +293,53 @@ class _MindtPyAlgorithm:
         MindtPy = m.MindtPy_utils
         config = self.config
 
-        # Handle LP/NLP being passed to the solver
+        # Handle purely continuous models by short-circuiting to a direct solve
         prob = self.results.problem
         if len(MindtPy.discrete_variable_list) == 0:
             config.logger.info('Problem has no discrete decisions.')
 
-            obj = next(m.component_data_objects(ctype=Objective, active=True))
-            if (
-                any(
-                    c.body.polynomial_degree()
-                    not in self.mip_constraint_polynomial_degree
-                    for c in MindtPy.constraint_list
+            original_obj = next(
+                self.original_model.component_data_objects(ctype=Objective, active=True)
+            )
+            problem_type_names = {
+                'LP': 'LP (linear program)',
+                'QP': 'QP (quadratic program)',
+                'QCP': 'QCP (quadratically constrained program)',
+                'NLP': 'NLP (nonlinear program)',
+            }
+            problem_type_articles = {'LP': 'an', 'QP': 'a', 'QCP': 'a', 'NLP': 'an'}
+            obj_degree = MindtPy.objective_polynomial_degree
+            if obj_degree is None:
+                working_obj = next(
+                    m.component_data_objects(ctype=Objective, active=True)
                 )
-                or obj.expr.polynomial_degree()
-                not in self.mip_objective_polynomial_degree
-            ):
-                config.logger.info(
-                    'Your model is a NLP (nonlinear program). '
-                    'Using NLP solver %s to solve.' % config.nlp_solver
-                )
+                obj_degree = working_obj.expr.polynomial_degree()
+            problem_type, solver_to_use, unsupported_structure = (
+                self._classify_short_circuit_problem(MindtPy, obj_degree)
+            )
+            if solver_to_use == 'nlp':
+                if problem_type == 'NLP':
+                    config.logger.info(
+                        'Your model is %s %s. '
+                        'Using NLP solver %s to solve.'
+                        % (
+                            problem_type_articles[problem_type],
+                            problem_type_names[problem_type],
+                            config.nlp_solver,
+                        )
+                    )
+                else:
+                    config.logger.info(
+                        'Your model is %s %s, but MIP solver %s does not support %s. '
+                        'Using NLP solver %s to solve.'
+                        % (
+                            problem_type_articles[problem_type],
+                            problem_type_names[problem_type],
+                            config.mip_solver,
+                            unsupported_structure,
+                            config.nlp_solver,
+                        )
+                    )
                 update_solver_timelimit(
                     self.nlp_opt, config.nlp_solver, self.timing, config
                 )
@@ -322,12 +352,18 @@ class _MindtPyAlgorithm:
                 if len(results.solution) > 0:
                     self.original_model.solutions.load_from(results)
 
-                self._mirror_direct_solve_results(results=results, obj=obj, prob=prob)
+                self._mirror_direct_solve_results(
+                    results=results, obj=original_obj, prob=prob
+                )
                 return False
             else:
                 config.logger.info(
-                    'Your model is an LP (linear program). '
-                    'Using LP solver %s to solve.' % config.mip_solver
+                    'Your model is %s %s. Using MIP solver %s to solve.'
+                    % (
+                        problem_type_articles[problem_type],
+                        problem_type_names[problem_type],
+                        config.mip_solver,
+                    )
                 )
                 if isinstance(self.mip_opt, PersistentSolver):
                     self.mip_opt.set_instance(self.original_model)
@@ -343,7 +379,9 @@ class _MindtPyAlgorithm:
                 if len(results.solution) > 0:
                     self.original_model.solutions.load_from(results)
 
-                self._mirror_direct_solve_results(results=results, obj=obj, prob=prob)
+                self._mirror_direct_solve_results(
+                    results=results, obj=original_obj, prob=prob
+                )
                 return False
 
         # Set up dual value reporting
@@ -359,12 +397,88 @@ class _MindtPyAlgorithm:
         #  need to do some kind of transformation (Glover?) or throw an error message
         return True
 
+    def _classify_short_circuit_problem(self, MindtPy, obj_degree):
+        """Classify a no-discrete model for short-circuit direct solves.
+
+        This classification is intentionally independent of
+        ``quadratic_strategy``. In the no-discrete short-circuit path we are
+        selecting a direct subsolver for the original model, not building the
+        MindtPy main problem.
+
+        Parameters
+        ----------
+        MindtPy : Block
+            The utility block attached to the working model
+            (``model.MindtPy_utils``).  Must have ``has_quadratic_constraints``
+            and ``has_nonquadratic_constraints`` boolean attributes set by
+            ``build_ordered_component_lists``.
+        obj_degree : int or None
+            Polynomial degree of the active objective expression, or ``None``
+            for nonlinear (non-polynomial) objectives.
+
+        Returns
+        -------
+        tuple
+            ``(problem_type, solver_to_use, unsupported_structure)`` where
+            ``problem_type`` is one of ``LP``, ``QP``, ``QCP``, or ``NLP``,
+            ``solver_to_use`` is ``mip`` or ``nlp``, and
+            ``unsupported_structure`` is ``None`` unless a quadratic problem
+            must be routed to the NLP solver because the chosen MIP solver does
+            not support the required structure.
+        """
+        has_quadratic_constraints = MindtPy.has_quadratic_constraints
+        has_nonquadratic_constraints = MindtPy.has_nonquadratic_constraints
+
+        if has_nonquadratic_constraints or obj_degree not in (0, 1, 2):
+            return 'NLP', 'nlp', None
+
+        if has_quadratic_constraints:
+            if not self._mip_solver_supports_capability('quadratic_constraint'):
+                return 'QCP', 'nlp', 'quadratic constraints'
+            if obj_degree == 2 and not self._mip_solver_supports_capability(
+                'quadratic_objective'
+            ):
+                return 'QCP', 'nlp', 'quadratic objectives'
+            return 'QCP', 'mip', None
+
+        if obj_degree == 2:
+            if not self._mip_solver_supports_capability('quadratic_objective'):
+                return 'QP', 'nlp', 'quadratic objectives'
+            return 'QP', 'mip', None
+
+        return 'LP', 'mip', None
+
+    def _mip_solver_supports_capability(self, capability):
+        """Return whether the selected MIP solver supports a model feature."""
+        appsi_capabilities = {
+            'appsi_cplex': {'quadratic_objective': True, 'quadratic_constraint': True},
+            'appsi_gurobi': {'quadratic_objective': True, 'quadratic_constraint': True},
+            'appsi_highs': {
+                # TODO: revisit if/when the APPSI HiGHS wrapper adds QP support.
+                'quadratic_objective': False,
+                'quadratic_constraint': False,
+            },
+        }
+        solver_name = self.config.mip_solver
+        if solver_name in appsi_capabilities:
+            return appsi_capabilities[solver_name][capability]
+
+        # APPSI solvers do not expose has_capability (that is a legacy-interface
+        # method).  Any APPSI solver not in the dict above therefore reaches this
+        # branch and is treated conservatively: all quadratic features are assumed
+        # unsupported, so QP/QCP models are routed to the NLP solver.  To enable
+        # MIP-path routing for a new APPSI solver, add it to appsi_capabilities.
+        has_capability = getattr(self.mip_opt, 'has_capability', None)
+        if has_capability is None:
+            return False
+        return has_capability(capability)
+
     def _mirror_direct_solve_results(self, results, obj, prob):
-        """Mirror a direct (LP/NLP) solve result into MindtPy's results object.
+        """Mirror a direct short-circuit solve result into MindtPy results.
 
         This is used by `model_is_valid()` when the instance is purely continuous
-        (no discrete variables) and MindtPy short-circuits to a direct LP/NLP
-        solve.
+        (no discrete variables) and MindtPy short-circuits to a direct MIP or
+        NLP solve for an LP, QP, QCP, or NLP model.
 
         Parameters
         ----------
@@ -431,21 +545,31 @@ class _MindtPyAlgorithm:
             )
         else:
             util_block.grey_box_list = []
-        util_block.linear_constraint_list = list(
-            c
-            for c in util_block.constraint_list
-            if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree
-        )
-        util_block.nonlinear_constraint_list = list(
-            c
-            for c in util_block.constraint_list
-            if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree
-        )
+        util_block.linear_constraint_list = []
+        util_block.nonlinear_constraint_list = []
+        util_block.has_quadratic_constraints = False
+        util_block.has_nonquadratic_constraints = False
+        for c in util_block.constraint_list:
+            degree = c.body.polynomial_degree()
+            if degree in self.mip_constraint_polynomial_degree:
+                util_block.linear_constraint_list.append(c)
+            else:
+                util_block.nonlinear_constraint_list.append(c)
+
+            if degree == 2:
+                util_block.has_quadratic_constraints = True
+            elif degree not in (0, 1):
+                util_block.has_nonquadratic_constraints = True
         util_block.objective_list = list(
             model.component_data_objects(
                 ctype=Objective, active=True, descend_into=(Block)
             )
         )
+        util_block.objective_polynomial_degree = None
+        if len(util_block.objective_list) == 1:
+            util_block.objective_polynomial_degree = util_block.objective_list[
+                0
+            ].expr.polynomial_degree()
 
         # Identify the non-fixed variables in (potentially) active constraints and
         # objective functions
