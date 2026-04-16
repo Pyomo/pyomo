@@ -3,9 +3,12 @@ import pyomo.common.unittest as unittest
 import tracemalloc
 import gc
 from pyomo.contrib.appsi.cmodel import cmodel_available
+
 """
 With the fix in place, 
 """
+
+
 class TestAppsiLegacyLeak(unittest.TestCase):
     @unittest.skipIf(not cmodel_available, "APPSI C-extension not available")
     def test_legacy_solver_wrapper_memory_leak(self):
@@ -23,15 +26,15 @@ class TestAppsiLegacyLeak(unittest.TestCase):
         solver = pyo.SolverFactory('appsi_cbc')
         if not solver.available():
             raise unittest.SkipTest("appsi_cbc solver is not available")
-            
+
         solver.set_instance(model)
 
         # Warm-up solve
         solver.solve(model)
         gc.collect()
-        
+
         # 3. Take initial memory snapshot
-    
+
         s1 = tracemalloc.take_snapshot()
 
         # 4. Perform iterative solves
@@ -46,17 +49,21 @@ class TestAppsiLegacyLeak(unittest.TestCase):
         # 5. Measure memory delta
         stats = s2.compare_to(s1, 'lineno')
         total_leak = sum(stat.size_diff for stat in stats)
-        
+
         initial_size = sum(stat.size for stat in s1.statistics('lineno'))
         final_size = sum(stat.size for stat in s2.statistics('lineno'))
         percentage_increase_per_solve = (total_leak / iterations) / initial_size * 100
-
 
         # We allow a small tolerance for memory use growth, set here
         threshold_pct = 1
         print(f"Percentage increase per solve: {percentage_increase_per_solve}%")
         # Check if the leak is substantial
-        self.assertLess(percentage_increase_per_solve, threshold_pct, f"More than {threshold_pct}% memory leak detected across iterations")
+        self.assertLess(
+            percentage_increase_per_solve,
+            threshold_pct,
+            f"More than {threshold_pct}% memory leak detected across iterations",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
