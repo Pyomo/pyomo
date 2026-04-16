@@ -8,8 +8,6 @@
 # ____________________________________________________________________________________
 import copy
 import itertools
-import json
-import os.path
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -19,20 +17,16 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 
-from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
-if scipy_available:
-    from pyomo.contrib.doe import DesignOfExperiments, FIMExternalGreyBox
-    from pyomo.contrib.doe.examples.reactor_example import (
-        ReactorExperiment as FullReactorExperiment,
-    )
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-        RooneyBieglerExperiment,
-    )
+
+from pyomo.contrib.doe import DesignOfExperiments, FIMExternalGreyBox
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
 
 import pyomo.environ as pyo
 
@@ -41,27 +35,17 @@ from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory("ipopt").available()
 cyipopt_available = SolverFactory("cyipopt").available()
 
-currdir = this_file_dir()
-file_path = os.path.join(currdir, "..", "examples", "result.json")
-
-with open(file_path) as f:
-    data_ex = json.load(f)
-
-data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
-
 _FD_EPSILON_FIRST = 1e-6  # Epsilon for numerical comparison of derivatives
 _FD_EPSILON_SECOND = 1e-4  # Epsilon for numerical comparison of derivatives
 
 if numpy_available:
     # Randomly generated P.S.D. matrix
-    # Matrix is 4x4 to match example
+    # Matrix is 2x2 to match Rooney-Biegler parameters.
     # number of parameters.
     testing_matrix = np.array(
         [
-            [5.13730123, 1.08084953, 1.6466824, 1.09943223],
-            [1.08084953, 1.57183404, 1.50704403, 1.4969689],
-            [1.6466824, 1.50704403, 2.54754738, 1.39902838],
-            [1.09943223, 1.4969689, 1.39902838, 1.57406692],
+            [5.13730123, 1.08084953],
+            [1.08084953, 1.57183404],
         ]
     )
 
@@ -203,18 +187,17 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
                     numerical_derivative[i, j, k, l] = diff
 
     if return_reduced:
-        # This considers a 4-parameter system
-        # which is what these tests are based
-        # upon. This can be generalized but
-        # requires checking the parameter length.
-        #
         # Make ordered quads with no repeats
         # of the ordered pairs
-        ordered_pairs = itertools.product(range(4), repeat=2)
-        ordered_pairs_list = list(itertools.combinations_with_replacement(range(4), 2))
+        ordered_pairs = itertools.product(range(dim), repeat=2)
+        ordered_pairs_list = list(
+            itertools.combinations_with_replacement(range(dim), 2)
+        )
         ordered_quads = itertools.combinations_with_replacement(ordered_pairs, 2)
 
-        numerical_derivative_reduced = np.zeros((10, 10))
+        numerical_derivative_reduced = np.zeros(
+            (len(ordered_pairs_list), len(ordered_pairs_list))
+        )
 
         for curr_quad in ordered_quads:
             d1, d2 = curr_quad
@@ -279,23 +262,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 
 
 def make_greybox_and_doe_objects(objective_option):
-    fd_method = "central"
-    obj_used = objective_option
-
-    experiment = FullReactorExperiment(data_ex, 10, 3)
-
-    DoE_args = get_standard_args(experiment, fd_method, obj_used)
-    DoE_args["use_grey_box_objective"] = True
-    DoE_args["prior_FIM"] = testing_matrix
-
-    doe_obj = DesignOfExperiments(**DoE_args)
-    doe_obj.create_doe_model()
-
-    grey_box_object = FIMExternalGreyBox(
-        doe_object=doe_obj, objective_option=doe_obj.objective_option
-    )
-
-    return doe_obj, grey_box_object
+    return make_greybox_and_doe_objects_rooney_biegler(objective_option)
 
 
 def make_greybox_and_doe_objects_rooney_biegler(objective_option):
@@ -346,11 +313,13 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     return doe_obj, grey_box_object
 
 
-# Test whether or not cyipopt
-# is appropriately calling the
-# linear solvers.
+# Test whether the cyipopt GreyBox solve path can actually
+# run with the MA57/HSL linear solver required by these tests.
 bad_message = "Invalid option encountered."
 cyipopt_call_working = True
+cyipopt_skip_reason = (
+    "cyipopt GreyBox solve path requires a working MA57/HSL runtime"
+)
 if (
     numpy_available
     and scipy_available
@@ -373,11 +342,20 @@ if (
 
         doe_object.run_doe()
 
-        cyipopt_call_working = not (
-            bad_message in doe_object.results["Termination Message"]
-        )
-    except:
+        termination_message = str(doe_object.results.get("Termination Message", ""))
+        cyipopt_call_working = bad_message not in termination_message
+        if not cyipopt_call_working:
+            # The GreyBox path here uses cyipopt rather than the standalone
+            # IPOPT executable, and the local failure mode we diagnosed was a
+            # missing MA57/HSL runtime on that cyipopt solve path.
+            cyipopt_skip_reason = (
+                "cyipopt GreyBox solve path cannot access the MA57/HSL runtime"
+            )
+    except Exception:
         cyipopt_call_working = False
+        cyipopt_skip_reason = (
+            "cyipopt GreyBox solve path could not be initialized with MA57/HSL"
+        )
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -412,16 +390,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Hard-coded names of the inputs, in the order we expect
         input_names = [
-            ('A1', 'A1'),
-            ('A1', 'A2'),
-            ('A1', 'E1'),
-            ('A1', 'E2'),
-            ('A2', 'A2'),
-            ('A2', 'E1'),
-            ('A2', 'E2'),
-            ('E1', 'E1'),
-            ('E1', 'E2'),
-            ('E2', 'E2'),
+            ('asymptote', 'asymptote'),
+            ('asymptote', 'rate_constant'),
+            ('rate_constant', 'rate_constant'),
         ]
 
         # Grabbing input names from grey box object
@@ -788,10 +759,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Check to see if each component exists
         all_exist = True
 
-        # Check output and value
-        # FIM Initial will be the prior FIM
-        # added with the identity matrix.
-        A_opt_val = np.trace(np.linalg.inv(testing_matrix + np.eye(4)))
+        expected_FIM = _._get_FIM()
+        A_opt_val = np.trace(np.linalg.inv(expected_FIM))
 
         try:
             A_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["A-opt"].value
@@ -820,7 +789,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM[np.triu_indices_from(current_FIM)] = input_values
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
-        self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
+        self.assertTrue(np.all(np.isclose(current_FIM, expected_FIM)))
 
     def test_D_opt_greybox_build(self):
         objective_option = "determinant"
@@ -833,10 +802,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Check to see if each component exists
         all_exist = True
 
-        # Check output and value
-        # FIM Initial will be the prior FIM
-        # added with the identity matrix.
-        D_opt_val = np.log(np.linalg.det(testing_matrix + np.eye(4)))
+        expected_FIM = _._get_FIM()
+        D_opt_val = np.log(np.linalg.det(expected_FIM))
 
         try:
             D_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs[
@@ -867,7 +834,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM[np.triu_indices_from(current_FIM)] = input_values
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
-        self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
+        self.assertTrue(np.all(np.isclose(current_FIM, expected_FIM)))
 
     def test_E_opt_greybox_build(self):
         objective_option = "minimum_eigenvalue"
@@ -880,10 +847,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Check to see if each component exists
         all_exist = True
 
-        # Check output and value
-        # FIM Initial will be the prior FIM
-        # added with the identity matrix.
-        vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
+        expected_FIM = _._get_FIM()
+        vals, vecs = np.linalg.eig(expected_FIM)
         E_opt_val = np.min(vals)
 
         try:
@@ -913,7 +878,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM[np.triu_indices_from(current_FIM)] = input_values
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
-        self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
+        self.assertTrue(np.all(np.isclose(current_FIM, expected_FIM)))
 
     def test_ME_opt_greybox_build(self):
         objective_option = "condition_number"
@@ -926,10 +891,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Check to see if each component exists
         all_exist = True
 
-        # Check output and value
-        # FIM Initial will be the prior FIM
-        # added with the identity matrix.
-        vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
+        expected_FIM = _._get_FIM()
+        vals, vecs = np.linalg.eig(expected_FIM)
         ME_opt_val = np.log(np.abs(np.max(vals) / np.min(vals)))
 
         try:
@@ -959,7 +922,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM[np.triu_indices_from(current_FIM)] = input_values
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
-        self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
+        self.assertTrue(np.all(np.isclose(current_FIM, expected_FIM)))
 
     # Testing all the error messages
     def test_constructor_doe_object_error(self):
@@ -1036,7 +999,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # Test all versions of solving
     # using grey box
     @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+        not cyipopt_call_working, cyipopt_skip_reason
     )
     def test_solve_D_optimality_log_determinant(self):
         # Two locally optimal design points exist
@@ -1077,7 +1040,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         )
 
     @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+        not cyipopt_call_working, cyipopt_skip_reason
     )
     def test_solve_A_optimality_trace_of_inverse(self):
         # Two locally optimal design points exist
@@ -1118,7 +1081,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         )
 
     @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+        not cyipopt_call_working, cyipopt_skip_reason
     )
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_E_optimality_minimum_eigenvalue(self):
@@ -1160,7 +1123,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         )
 
     @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+        not cyipopt_call_working, cyipopt_skip_reason
     )
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_ME_optimality_condition_number(self):

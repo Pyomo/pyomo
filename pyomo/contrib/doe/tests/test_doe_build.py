@@ -6,7 +6,6 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-import json
 import os.path
 
 from pyomo.common.dependencies import (
@@ -17,20 +16,16 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 
-from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
-if scipy_available:
-    from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.examples.reactor_example import (
-        ReactorExperiment as FullReactorExperiment,
-    )
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-        RooneyBieglerExperiment,
-    )
+from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.examples.polynomial import PolynomialExperiment
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 import pyomo.environ as pyo
@@ -38,15 +33,6 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
-
-currdir = this_file_dir()
-file_path = os.path.join(currdir, "..", "examples", "result.json")
-
-with open(file_path) as f:
-    data_ex = json.load(f)
-
-data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
-
 
 def get_rooney_biegler_experiment():
     """Get a fresh RooneyBieglerExperiment instance for testing.
@@ -266,6 +252,35 @@ class TestDoeBuild(unittest.TestCase):
 
                 other_param_val = pyo.value(k)
                 self.assertAlmostEqual(other_param_val, v)
+
+    def test_polynomial_example_labels(self):
+        experiment = PolynomialExperiment()
+        model = experiment.get_labeled_model()
+
+        self.assertEqual(len(model.experiment_outputs), 1)
+        self.assertEqual(len(model.measurement_error), 1)
+        self.assertEqual(len(model.experiment_inputs), 2)
+        self.assertEqual(len(model.unknown_parameters), 4)
+
+        self.assertIn(model.y, model.experiment_outputs)
+        self.assertIn(model.y, model.measurement_error)
+        self.assertIn(model.x1, model.experiment_inputs)
+        self.assertIn(model.x2, model.experiment_inputs)
+
+    def test_polynomial_example_create_doe_model_pynumero(self):
+        experiment = PolynomialExperiment()
+
+        DoE_args = get_standard_args(
+            experiment, fd_method="central", obj_used="determinant"
+        )
+        DoE_args["gradient_method"] = "pynumero"
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.create_doe_model()
+
+        model = doe_obj.model
+        self.assertEqual(len(model.scenarios), 1)
+        self.assertTrue(hasattr(model.scenario_blocks[0], "jac_variables_wrt_param"))
 
     def test_rooney_biegler_fd_central_design_fixing(self):
         fd_method = "central"
@@ -510,15 +525,19 @@ class TestDoeBuild(unittest.TestCase):
             )
 
 
-class TestReactorExample(unittest.TestCase):
-    def test_reactor_update_suffix_items(self):
-        """Test the reactor example with updating suffix items."""
-        from pyomo.contrib.doe.examples.update_suffix_doe_example import main
+class TestRooneyBieglerExample(unittest.TestCase):
+    def test_rooney_biegler_update_suffix_items(self):
+        """Test updating suffix items on the lightweight Rooney-Biegler model."""
+        from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 
-        # Run the reactor update suffix items example
-        suffix_obj, _, new_vals = main()
+        experiment = get_rooney_biegler_experiment()
+        model = experiment.get_labeled_model()
+        suffix_obj = model.measurement_error
+        orig_vals = np.array(list(suffix_obj.values()))
+        new_vals = orig_vals + 1
 
-        # Check that the suffix object has been updated correctly
+        update_model_from_suffix(suffix_obj, new_vals)
+
         for i, v in enumerate(suffix_obj.values()):
             self.assertAlmostEqual(v, new_vals[i], places=6)
 
