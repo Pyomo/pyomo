@@ -488,6 +488,99 @@ def pairwise_plot(
         plt.close()
 
 
+def profile_likelihood_plot(
+    profile_results, alpha=None, filename=None, by="profiled_theta", y="lr_stat"
+):
+    """
+    Plot profile likelihood curves from Estimator.profile_likelihood results.
+
+    Parameters
+    ----------
+    profile_results: dict or DataFrame
+        Result dict returned by ``Estimator.profile_likelihood()`` or the
+        ``profiles`` DataFrame directly.
+    alpha: float, optional
+        If provided, draw the chi-square threshold line using dof=1.
+    filename: string, optional
+        Filename used to save the figure.
+    by: string, optional
+        Grouping column for separate panels. Default is ``profiled_theta``.
+    y: string, optional
+        Y-axis column to plot. Default is ``lr_stat``.
+    """
+    assert isinstance(profile_results, (dict, pd.DataFrame))
+    assert isinstance(alpha, (type(None), int, float))
+    assert isinstance(filename, (type(None), str))
+    assert isinstance(by, str)
+    assert isinstance(y, str)
+
+    if isinstance(profile_results, dict):
+        if "profiles" not in profile_results:
+            raise KeyError("profile_results dict must contain 'profiles'.")
+        profiles = profile_results["profiles"]
+    else:
+        profiles = profile_results
+
+    if not isinstance(profiles, pd.DataFrame):
+        raise TypeError("profiles must be a pandas DataFrame.")
+    if profiles.empty:
+        raise ValueError("profiles DataFrame is empty.")
+    required_cols = {"theta_value", y, by}
+    missing = required_cols.difference(profiles.columns)
+    if missing:
+        raise KeyError(
+            f"profiles DataFrame is missing required columns: {sorted(missing)}"
+        )
+
+    groups = list(profiles[by].dropna().unique())
+    if len(groups) == 0:
+        raise ValueError(f"No non-null group values found in '{by}'.")
+
+    fig, axes = plt.subplots(
+        nrows=len(groups),
+        ncols=1,
+        figsize=(6.5, max(3.0, 2.8 * len(groups))),
+        squeeze=False,
+    )
+
+    threshold = None
+    if alpha is not None:
+        threshold = stats.chi2.ppf(float(alpha), df=1)
+
+    for i, grp in enumerate(groups):
+        ax = axes[i, 0]
+        subset = profiles[profiles[by] == grp].sort_values("theta_value")
+        ax.plot(subset["theta_value"], subset[y], marker="o", linewidth=1.5)
+        if "success" in subset.columns:
+            failed = subset[~subset["success"].astype(bool)]
+            if len(failed) > 0:
+                ax.scatter(
+                    failed["theta_value"],
+                    failed[y],
+                    marker="x",
+                    color="tab:red",
+                    s=24,
+                    label="failed",
+                )
+        if threshold is not None:
+            ax.axhline(threshold, color="tab:orange", linestyle="--", linewidth=1.0)
+        ax.set_xlabel(str(grp))
+        ax.set_ylabel(y)
+        ax.set_title(f"{by}: {grp}")
+        if (
+            "success" in subset.columns
+            and len(subset[~subset["success"].astype(bool)]) > 0
+        ):
+            ax.legend(loc="best", prop={"size": 8})
+
+    fig.tight_layout()
+    if filename is None:
+        plt.show()
+    else:
+        plt.savefig(filename)
+        plt.close()
+
+
 def fit_rect_dist(theta_values, alpha):
     """
     Fit an alpha-level rectangular distribution to theta values
