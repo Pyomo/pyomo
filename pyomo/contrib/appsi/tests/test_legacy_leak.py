@@ -12,7 +12,7 @@ class TestAppsiLegacyLeak(unittest.TestCase):
         tracemalloc.start()
         # 1. Create a minimal structure
         model = pyo.ConcreteModel()
-        model.I = pyo.RangeSet(1000)
+        model.I = pyo.RangeSet(100)
         model.x = pyo.Var(model.I)
         model.obj = pyo.Objective(expr=sum(model.x[i] for i in model.I))
         model.c = pyo.ConstraintList()
@@ -53,7 +53,8 @@ class TestAppsiLegacyLeak(unittest.TestCase):
 
 
         # We allow a small tolerance for memory use growth, set here
-        threshold_pct = 3
+        threshold_pct = 1
+        print(f"Percentage increase per solve: {percentage_increase_per_solve}%")
         # Check if the leak is substantial
         self.assertLess(percentage_increase_per_solve, threshold_pct, f"More than {threshold_pct}% memory leak detected across iterations")
 
