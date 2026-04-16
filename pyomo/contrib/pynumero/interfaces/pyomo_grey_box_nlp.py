@@ -503,6 +503,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     zip(self._pyomo_model_var_datas, -obj_sign * bound_multipliers[1])
                 )
 
+    def has_hessian_support(self):
+        return self._has_hessian_support
+
 
 def _default_if_none(value, default):
     if value is None:
