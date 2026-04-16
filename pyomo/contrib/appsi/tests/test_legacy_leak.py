@@ -4,10 +4,6 @@ import tracemalloc
 import gc
 from pyomo.contrib.appsi.cmodel import cmodel_available
 
-"""
-With the fix in place, 
-"""
-
 
 class TestAppsiLegacyLeak(unittest.TestCase):
     @unittest.skipIf(not cmodel_available, "APPSI C-extension not available")
