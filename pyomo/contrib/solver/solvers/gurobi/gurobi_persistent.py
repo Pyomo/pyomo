@@ -16,6 +16,7 @@ from pyomo.common.collections import ComponentSet, OrderedSet, ComponentMap
 from pyomo.common.errors import PyomoException
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.var import VarData
@@ -26,6 +27,10 @@ from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeri
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.solver.common.results import Results
 from pyomo.contrib.solver.common.util import IncompatibleModelError
+from pyomo.contrib.solver.common.solution_loader import (
+    SolutionLoaderBase,
+    load_import_suffixes,
+)
 from pyomo.contrib.solver.common.base import PersistentSolverBase
 from pyomo.core.staleflag import StaleFlagManager
 from .gurobi_direct_base import (
@@ -47,8 +52,8 @@ logger = logging.getLogger(__name__)
 
 
 class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
-    def __init__(self, solver_model, var_map, con_map) -> None:
-        super().__init__(solver_model)
+    def __init__(self, solver_model, pyomo_model, var_map, con_map) -> None:
+        super().__init__(solver_model, pyomo_model)
         self._var_map = var_map
         self._con_map = con_map
         self._valid = True
@@ -70,28 +75,40 @@ class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
             raise RuntimeError('The results in the solver are no longer valid.')
 
     def load_vars(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
     ) -> None:
         self._assert_solution_still_valid()
         return super().load_vars(vars_to_load, solution_id)
 
-    def get_primals(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
+    def get_vars(
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
-        return super().get_primals(vars_to_load, solution_id)
+        return super().get_vars(vars_to_load, solution_id)
 
     def get_duals(
-        self, cons_to_load: Sequence[ConstraintData] | None = None
+        self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=None
     ) -> Dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return super().get_duals(cons_to_load)
 
     def get_reduced_costs(
-        self, vars_to_load: Sequence[VarData] | None = None
+        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return super().get_reduced_costs(vars_to_load)
+
+    def get_number_of_solutions(self) -> int:
+        self._assert_solution_still_valid()
+        return super().get_number_of_solutions()
+
+    def get_solution_ids(self) -> List:
+        self._assert_solution_still_valid()
+        return super().get_solution_ids()
+
+    def load_import_suffixes(self, solution_id=None):
+        self._assert_solution_still_valid()
+        super().load_import_suffixes(solution_id)
 
 
 class _MutableLowerBound:
@@ -379,6 +396,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
 
         solution_loader = GurobiPersistentSolutionLoader(
             solver_model=self._solver_model,
+            pyomo_model=pyomo_model,
             var_map=self._pyomo_var_to_solver_var_map,
             con_map=self._pyomo_con_to_solver_con_map,
         )

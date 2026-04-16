@@ -118,13 +118,13 @@ def _get_random_point_grid(bounds, n, func, config, seed=42):
     return list(itertools.product(*linspaces))
 
 
-def _get_uniform_point_grid(bounds, n, func, config):
+def _get_uniform_point_grid(bounds, n, func, config, nudge_factor=0):
     # Generate non-randomized grid of points
     linspaces = []
     for (lb, ub), is_integer in bounds:
         if not is_integer:
             # Issues happen when exactly using the boundary
-            nudge = (ub - lb) * 1e-4
+            nudge = (ub - lb) * nudge_factor
             linspaces.append(np.linspace(lb + nudge, ub - nudge, n))
         else:
             size = min(n, ub - lb + 1)
@@ -139,7 +139,7 @@ def _get_points_lmt_random_sample(bounds, n, func, config, seed=42):
 
 
 def _get_points_lmt_uniform_sample(bounds, n, func, config, seed=42):
-    points = _get_uniform_point_grid(bounds, n, func, config)
+    points = _get_uniform_point_grid(bounds, n, func, config, nudge_factor=1e-4)
     return _get_points_lmt(points, bounds, func, config, seed)
 
 
@@ -343,6 +343,17 @@ def _find_leaves(splits, leaves, input_node):
         else:
             queue.append(splits[node_right])
     return leaves_list
+
+
+class _Evaluator:
+    def __init__(self, expr, expr_vars):
+        self.expr = expr
+        self.expr_vars = expr_vars
+
+    def __call__(self, *args):
+        for i, v in enumerate(self.expr_vars):
+            v.value = args[i]
+        return value(self.expr)
 
 
 @TransformationFactory.register(
@@ -755,10 +766,7 @@ class NonlinearToPWL(Transformation):
                 continue
             # else we approximate subexpr
 
-            def eval_expr(*args):
-                for i, v in enumerate(expr_vars):
-                    v.value = args[i]
-                return value(subexpr)
+            eval_expr = _Evaluator(subexpr, expr_vars)
 
             pwlf = _get_pwl_function_approximation(
                 eval_expr, config, self._get_bounds_list(expr_vars, obj)
