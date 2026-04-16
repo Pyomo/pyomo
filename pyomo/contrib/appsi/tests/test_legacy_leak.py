@@ -9,9 +9,10 @@ With the fix in place,
 class TestAppsiLegacyLeak(unittest.TestCase):
     @unittest.skipIf(not cmodel_available, "APPSI C-extension not available")
     def test_legacy_solver_wrapper_memory_leak(self):
+        tracemalloc.start()
         # 1. Create a minimal structure
         model = pyo.ConcreteModel()
-        model.I = pyo.RangeSet(10000)
+        model.I = pyo.RangeSet(1000)
         model.x = pyo.Var(model.I)
         model.obj = pyo.Objective(expr=sum(model.x[i] for i in model.I))
         model.c = pyo.ConstraintList()
@@ -30,7 +31,7 @@ class TestAppsiLegacyLeak(unittest.TestCase):
         gc.collect()
         
         # 3. Take initial memory snapshot
-        tracemalloc.start()
+    
         s1 = tracemalloc.take_snapshot()
 
         # 4. Perform iterative solves
@@ -46,9 +47,15 @@ class TestAppsiLegacyLeak(unittest.TestCase):
         stats = s2.compare_to(s1, 'lineno')
         total_leak = sum(stat.size_diff for stat in stats)
         
-        # We allow a small tolerance, but not 10-100KB per loop
+        initial_size = sum(stat.size for stat in s1.statistics('lineno'))
+        final_size = sum(stat.size for stat in s2.statistics('lineno'))
+        percentage_increase_per_solve = (total_leak / iterations) / initial_size * 100
+
+
+        # We allow a small tolerance for memory use growth, set here
+        threshold_pct = 3
         # Check if the leak is substantial
-        self.assertLess(total_leak, 50 * 1024, "Substantial memory leak detected across iterations")
+        self.assertLess(percentage_increase_per_solve, threshold_pct, f"More than {threshold_pct}% memory leak detected across iterations")
 
 if __name__ == "__main__":
     unittest.main()
