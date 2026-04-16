@@ -1,0 +1,28 @@
+# Pre-commit hooks for Pyomo
+# See https://pre-commit.com for more information
+#
+# Setup (one-time):
+#   pip install pre-commit
+#   pre-commit install
+#
+# After setup, hooks run automatically on 'git commit'
+# To run manually on all files: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        # Exclusions match pyproject.toml [tool.black] extend-exclude
+        exclude: |
+          (?x)^(
+            examples/pyomobook/python-ch/BadIndent\.py|
+            pyomo/tpl/.*|
+            pyomo/dataportal/_parse_table_datacmds\.py
+          )$
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.27.0
+    hooks:
+      - id: typos
+        args: ["--config", ".github/workflows/typos.toml"]
