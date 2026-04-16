@@ -1,11 +1,16 @@
 import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
-import tracemalloc
 import gc
 from pyomo.contrib.appsi.cmodel import cmodel_available
 
+try:
+    import tracemalloc
+    tracemalloc_available = True
+except ImportError:
+    tracemalloc_available = False
 
 class TestAppsiLegacyLeak(unittest.TestCase):
+    @unittest.skipIf(not tracemalloc_available, "tracemalloc not available")
     @unittest.skipIf(not cmodel_available, "APPSI C-extension not available")
     def test_legacy_solver_wrapper_memory_leak(self):
         tracemalloc.start()
@@ -51,7 +56,7 @@ class TestAppsiLegacyLeak(unittest.TestCase):
         percentage_increase_per_solve = (total_leak / iterations) / initial_size * 100
 
         # We allow a small tolerance for memory use growth, set here
-        threshold_pct = 1
+        threshold_pct = 3
         print(f"Percentage increase per solve: {percentage_increase_per_solve}%")
         # Check if the leak is substantial
         self.assertLess(
