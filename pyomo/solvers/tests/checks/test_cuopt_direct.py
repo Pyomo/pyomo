@@ -126,6 +126,23 @@ class CUOPTTests(unittest.TestCase):
             opt.solve(m, skip_trivial_constraints=True)
 
     @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
+    def test_unbounded_or_infeasible_status(self):
+        # An LP with no variable bounds and an unbounded objective triggers
+        # cuOpt's presolver to return UnboundedOrInfeasible (status 11), which
+        # the plugin maps to TerminationCondition.infeasibleOrUnbounded.
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.obj = Objective(expr=m.x + m.y, sense=minimize)
+
+        opt = SolverFactory('cuopt')
+        res = opt.solve(m, load_solutions=False)
+
+        self.assertEqual(res.solver.termination_condition, "infeasibleOrUnbounded")
+        self.assertEqual(res.solver.status, "warning")
+        self.assertEqual(res.solution[0].status, "unsure")
+
+    @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
     def test_nonlinear_constraint_rejected(self):
         m = ConcreteModel()
         m.x = Var(domain=NonNegativeReals)
