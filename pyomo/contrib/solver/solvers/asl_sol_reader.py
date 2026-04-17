@@ -30,6 +30,10 @@ from pyomo.contrib.solver.common.solution_loader import (
     SolutionLoaderBase,
     load_import_suffixes,
 )
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class ASLSolFileData:
@@ -70,12 +74,13 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
         return 1
 
     def get_solution_ids(self) -> List[Any]:
+        if self._nl_info is None:
+            return []
         return [None]
 
     def load_import_suffixes(self, solution_id=None):
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
+        if solution_id is not None:
+            raise ValueError(f"{self.__class__.__name__} does not support solution_id")
 
         load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
 
@@ -97,25 +102,24 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
                 if suffix_name not in suffixes_to_load:
                     continue
                 if self._nl_info.eliminated_vars:
-                    raise MouseTrap(
-                        'Suffixes are not available when variables have '
+                    logger.warning(
+                        'Suffixes may not be correct when variables have '
                         'been presolved from the model. Turn presolve off '
-                        '(solver.config.writer_config.linear_presolve=False) to get '
-                        'all suffixes.'
+                        '(solver.config.writer_config.linear_presolve=False) to '
+                        'be safe.'
                     )
                 if self._nl_info.scaling:
-                    raise MouseTrap(
+                    logger.warning(
                         'General suffixes (other than duals and reduced costs) '
-                        'are not available when the model has been scaled. Turn '
+                        'may not be correct when the model has been scaled. Turn '
                         'scaling off in the NL writer '
-                        '(solver.config.writer_config.scale_model=False) to get '
-                        'all suffixes.'
+                        '(solver.config.writer_config.scale_model=False) to '
+                        'be safe.'
                     )
                 suffix = suffixes_to_load[suffix_name]
                 suffix.clear()
                 for comp_ndx, val in suffix_vals.items():
-                    comp = comp_list[comp_ndx]
-                    suffix[comp] = val
+                    suffix[comp_list[comp_ndx]] = val
         for suffix_name, val in self._sol_data.problem_suffixes.items():
             if suffix_name not in suffixes_to_load:
                 continue
@@ -126,9 +130,8 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     def load_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> None:
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
+        if solution_id is not None:
+            raise ValueError(f"{self.__class__.__name__} does not support solution_id")
         if vars_to_load is not None:
             # If we are given a list of variables to load, it is easiest
             # to use the filtering in get_vars and then just set
@@ -164,9 +167,8 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
     ) -> Mapping[VarData, float]:
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
+        if solution_id is not None:
+            raise ValueError(f"{self.__class__.__name__} does not support solution_id")
         result = ComponentMap()
         if not self._sol_data.primals:
             # SOL file contained no primal values
@@ -213,15 +215,14 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
     ) -> dict[ConstraintData, float]:
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
+        if solution_id is not None:
+            raise ValueError(f"{self.__class__.__name__} does not support solution_id")
         if len(self._nl_info.eliminated_vars) > 0:
-            raise MouseTrap(
-                'Complete duals are not available when variables have '
+            logger.warning(
+                'Duals may not be correct when variables have '
                 'been presolved from the model.  Turn presolve off '
-                '(solver.config.writer_config.linear_presolve=False) to get '
-                'dual variable values.'
+                '(solver.config.writer_config.linear_presolve=False) to '
+                'be safe.'
             )
 
         scaling = self._nl_info.scaling

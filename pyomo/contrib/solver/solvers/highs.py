@@ -782,17 +782,15 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         return results
 
     def _load_vars(self, vars_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), 'highs interface does not currently support multiple solutions'
+        if solution_id is not None:
+            raise ValueError('highs interface does not currently support multiple solutions')
         for v, val in self._get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def _get_primals(self, vars_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), 'highs interface does not currently support multiple solutions'
+        if solution_id is not None:
+            raise ValueError('highs interface does not currently support multiple solutions')
         if self._sol is None or not self._sol.value_valid:
             raise NoSolutionError()
 
@@ -816,9 +814,8 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         return res
 
     def _get_reduced_costs(self, vars_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), 'highs interface does not currently support multiple solutions'
+        if solution_id is not None:
+            raise ValueError('highs interface does not currently support multiple solutions')
         if self._sol is None or not self._sol.dual_valid:
             raise NoReducedCostsError()
         res = ComponentMap()
@@ -837,9 +834,8 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         return res
 
     def _get_duals(self, cons_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), 'highs interface does not currently support multiple solutions'
+        if solution_id is not None:
+            raise ValueError('highs interface does not currently support multiple solutions')
         if self._sol is None or not self._sol.dual_valid:
             raise NoDualsError()
 

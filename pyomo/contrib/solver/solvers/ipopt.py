@@ -124,11 +124,11 @@ class IpoptSolutionLoader(ASLSolFileSolutionLoader):
         if solution_id is not None:
             raise ValueError(f'{self.__class__.__name__} does not support solution_id')
         if self._nl_info.eliminated_vars:
-            raise MouseTrap(
-                'Complete reduced costs are not available when variables have '
+            logger.warning(
+                'Reduced costs may not be correct when variables have '
                 'been presolved from the model.  Turn presolve off '
-                '(solver.config.writer_config.linear_presolve=False) to get '
-                'reduced costs.'
+                '(solver.config.writer_config.linear_presolve=False) to '
+                'be safe.'
             )
 
         zl_map = self._sol_data.var_suffixes.get('ipopt_zL_out', {})
