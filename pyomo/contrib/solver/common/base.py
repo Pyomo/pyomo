@@ -570,15 +570,10 @@ class LegacySolverWrapper:
         legacy_results._smap_id = id(symbol_map)
         delete_legacy_soln = True
         if load_solutions:
-            if hasattr(model, 'dual') and model.dual.import_enabled():
-                for con, val in results.solution_loader.get_duals().items():
-                    model.dual[con] = val
-            if hasattr(model, 'rc') and model.rc.import_enabled():
-                for var, val in results.solution_loader.get_reduced_costs().items():
-                    model.rc[var] = val
+            results.solution_loader.load_import_suffixes()
         elif results.incumbent_objective is not None:
             delete_legacy_soln = False
-            for var, val in results.solution_loader.get_primals().items():
+            for var, val in results.solution_loader.get_vars().items():
                 legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for con, val in results.solution_loader.get_duals().items():
