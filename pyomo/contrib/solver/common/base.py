@@ -596,6 +596,11 @@ class LegacySolverWrapper:
         legacy_results.timing_info = results.timing_info.value()
         if delete_legacy_soln:
             legacy_results.solution.delete(0)
+            model.solutions.delete_symbol_map(legacy_results._smap_id)
+            legacy_results._smap_id = None
+        else:
+            legacy_results._smap = model.solutions.symbol_map[legacy_results._smap_id]
+            model.solutions.delete_symbol_map(legacy_results._smap_id)
         return legacy_results
 
     def solve(
