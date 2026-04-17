@@ -138,9 +138,7 @@ class CUOPTTests(unittest.TestCase):
         opt = SolverFactory('cuopt')
         res = opt.solve(m, load_solutions=False)
 
-        self.assertEqual(
-            res.solver.termination_condition, "infeasibleOrUnbounded"
-        )
+        self.assertEqual(res.solver.termination_condition, "infeasibleOrUnbounded")
         self.assertEqual(res.solver.status, "warning")
         self.assertEqual(res.solution[0].status, "unsure")
 
