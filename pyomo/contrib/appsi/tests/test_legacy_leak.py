@@ -12,12 +12,10 @@ import pyomo.common.unittest as unittest
 import gc
 from pyomo.contrib.appsi.cmodel import cmodel_available
 
-try:
-    import tracemalloc
+from pyomo.common.dependencies import attempt_import
 
-    tracemalloc_available = True
-except ImportError:
-    tracemalloc_available = False
+# Note: tracemalloc is not always available, e.g., under PyPy
+tracemalloc, tracemalloc_available = attempt_import('tracemalloc')
 
 
 class TestAppsiLegacyLeak(unittest.TestCase):
