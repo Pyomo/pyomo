@@ -559,16 +559,8 @@ class LegacySolverWrapper:
         """Method to handle the preferred action for the solution"""
         symbol_map = legacy_soln.symbol_map = SymbolMap()
         symbol_map.default_labeler = NumericLabeler('x')
-        if not hasattr(model, 'solutions'):
-            # This logic gets around Issue #2130 in which
-            # solutions is not an attribute on Blocks
-            from pyomo.core.base.PyomoModel import ModelSolutions
+        legacy_results._smap_id = None
 
-            setattr(model, 'solutions', ModelSolutions(model))
-        model.solutions.add_symbol_map(symbol_map)
-        legacy_results._smap = symbol_map
-        legacy_results._smap_id = id(symbol_map)
-        delete_legacy_soln = True
         if load_solutions:
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for con, val in results.solution_loader.get_duals().items():
@@ -577,7 +569,6 @@ class LegacySolverWrapper:
                 for var, val in results.solution_loader.get_reduced_costs().items():
                     model.rc[var] = val
         elif results.incumbent_objective is not None:
-            delete_legacy_soln = False
             for var, val in results.solution_loader.get_primals().items():
                 legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
@@ -587,15 +578,16 @@ class LegacySolverWrapper:
                 for var, val in results.solution_loader.get_reduced_costs().items():
                     legacy_soln.variable['Rc'] = val
 
-        legacy_results.solution.insert(legacy_soln)
+            legacy_results.solution.insert(legacy_soln)
+            legacy_results._smap_id = id(symbol_map)
+            legacy_results._smap = symbol_map
+
         # Timing info was not originally on the legacy results, but we
         # want to make it accessible to folks who are utilizing the
         # backwards compatible version.  Note that embedding the
         # ConfigDict broke pickling the legacy_results, so we will only
         # return raw nested dicts
         legacy_results.timing_info = results.timing_info.value()
-        if delete_legacy_soln:
-            legacy_results.solution.delete(0)
         return legacy_results
 
     def solve(
