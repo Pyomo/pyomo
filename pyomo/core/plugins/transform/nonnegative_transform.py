@@ -433,6 +433,8 @@ class NonNegativeTransformation(IsomorphicTransformation):
         and so attr='X', and 1 is a key of vars.
 
         """
+        if lb is None and ub is None:
+            return Constraint.Skip
         return (
             lb,
             sum(c * model.__getattribute__(attr)[v] for (v, c) in vars.items()),
