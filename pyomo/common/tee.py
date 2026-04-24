@@ -342,9 +342,8 @@ class capture_output:
                 cm.__exit__(et, ev, tb)
             except:
                 _stack = self.context_stack
-                FAIL.append(
-                    f"{sys.exc_info()[0].__name__}: {sys.exc_info()[1]} ({len(_stack)+1}: {cm}@{id(cm):x})"
-                )
+                _et, _e, _tb = sys.exc_info()
+                FAIL.append(f"{_et.__name__}: {_e} ({len(_stack)+1}: {cm}@{id(cm):x})")
         return FAIL
 
     def __enter__(self):
