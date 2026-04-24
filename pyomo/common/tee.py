@@ -25,6 +25,7 @@ import time
 
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
+from pyomo.common.shutdown import python_is_shutting_down
 
 _poll_interval = 0.0001
 _poll_rampup_limit = 0.099
@@ -359,7 +360,8 @@ class capture_output:
             #     was trying to start up / run (so the other solver held
             #     the lock, but the GC interrupted that thread and
             #     wouldn't let go).
-            raise DeveloperError("Deadlock starting capture_output")
+            if not python_is_shutting_down():
+                raise DeveloperError("Deadlock starting capture_output")
         try:
             return self._enter_impl()
         finally:
@@ -368,7 +370,8 @@ class capture_output:
     def __exit__(self, et, ev, tb):
         if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
             # See comments & breadcrumbs in __enter__() above.
-            raise DeveloperError("Deadlock closing capture_output")
+            if not python_is_shutting_down():
+                raise DeveloperError("Deadlock closing capture_output")
         try:
             return self._exit_impl(et, ev, tb)
         finally:
