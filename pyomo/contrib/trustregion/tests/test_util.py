@@ -13,7 +13,6 @@
 # U.S. Department of Energy's Office of Fossil Energy and Carbon Management.
 # ____________________________________________________________________________________
 
-from io import StringIO
 import sys
 import logging
 
@@ -21,6 +20,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.contrib.trustregion.util import IterationLogger, minIgnoreNone, maxIgnoreNone
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 
 
 class TestUtil(unittest.TestCase):
@@ -70,12 +70,12 @@ class TestUtil(unittest.TestCase):
         self.iterLogger.newIteration(
             self.iteration, self.thetak, self.objk, self.radius, self.stepNorm
         )
-        OUTPUT = StringIO()
-        with LoggingIntercept(OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+        with LoggingIntercept(None, 'pyomo.contrib.trustregion', logging.INFO) as LOG:
             self.iterLogger.logIteration()
-        self.assertIn('Iteration 0', OUTPUT.getvalue())
-        self.assertIn('feasibility =', OUTPUT.getvalue())
-        self.assertIn('stepNorm =', OUTPUT.getvalue())
+        LOG = LOG.getvalue()
+        self.assertIn('Iteration 0', LOG)
+        self.assertIn('feasibility =', LOG)
+        self.assertIn('stepNorm =', LOG)
 
     def test_updateIteration(self):
         self.iterLogger.newIteration(
@@ -117,10 +117,8 @@ class TestUtil(unittest.TestCase):
         self.iterLogger.newIteration(
             self.iteration, self.thetak, self.objk, self.radius, self.stepNorm
         )
-        OUTPUT = StringIO()
-        sys.stdout = OUTPUT
-        self.iterLogger.printIteration()
-        sys.stdout = sys.__stdout__
+        with capture_output() as OUTPUT:
+            self.iterLogger.printIteration()
         self.assertIn(str(self.radius), OUTPUT.getvalue())
         self.assertIn(str(self.iteration), OUTPUT.getvalue())
         self.assertIn(str(self.thetak), OUTPUT.getvalue())

@@ -70,3 +70,77 @@ class RooneyBieglerExperimentBad(RooneyBieglerExperiment):
         m.bad_con_2 = pyo.Constraint(expr=m.hour <= 0.0)
 
         return m
+
+
+class RooneyBieglerMultiExperiment(RooneyBieglerExperiment):
+    """
+    Experiment class based on the multi-experiment Rooney-Biegler prototype.
+
+    This mirrors the implementation in
+    ``examples/multiexperiment-prototype/rooney_biegler_multiexperiment.py``
+    while allowing test-time control over initial hour and bounds.
+    """
+
+    def __init__(
+        self, hour=2.0, y=10.0, theta=None, measure_error=0.1, hour_bounds=(1.0, 10.0)
+    ):
+        data = {'hour': hour, 'y': y}
+        super().__init__(data=data, measure_error=measure_error, theta=theta)
+        self.hour_bounds = hour_bounds
+
+    def get_labeled_model(self):
+        m = super().get_labeled_model()
+        hour_lb, hour_ub = self.hour_bounds
+        m.hour.setlb(hour_lb)
+        m.hour.setub(hour_ub)
+
+        m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.sym_break_cons[m.hour] = None
+        return m
+
+
+class RooneyBieglerMultiInputExperimentFlag(RooneyBieglerExperiment):
+    """
+    Two-input Rooney-Biegler style experiment for symmetry-breaking tests.
+
+    Parameters
+    ----------
+    sym_break_flag : int
+        0 -> do not add ``sym_break_cons`` suffix
+        1 -> add single marker (hour)
+        2 -> add multiple markers (hour and temp)
+    """
+
+    def __init__(self, hour=2.0, temp=300.0, y=10.0, sym_break_flag=1):
+        data = {'hour': hour, 'y': y}
+        super().__init__(
+            data=data, measure_error=0.1, theta={'asymptote': 15, 'rate_constant': 0.5}
+        )
+        self.hour = hour
+        self.temp = temp
+        self.sym_break_flag = sym_break_flag
+
+    def get_labeled_model(self):
+        m = super().get_labeled_model()
+
+        m.hour.setlb(1.0)
+        m.hour.setub(10.0)
+        m.temp = pyo.Var(initialize=self.temp, bounds=(280.0, 340.0))
+        m.temp.fix()
+
+        # Replace base Rooney-Biegler response with two-input synthetic variant
+        # used only for symmetry-breaking tests.
+        m.del_component(m.response_function)
+        m.response_function = pyo.Constraint(
+            expr=m.y
+            == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour)) + 0.01 * m.temp
+        )
+        m.experiment_inputs[m.temp] = self.temp
+
+        if self.sym_break_flag in (1, 2):
+            m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.sym_break_cons[m.hour] = None
+            if self.sym_break_flag == 2:
+                m.sym_break_cons[m.temp] = None
+
+        return m

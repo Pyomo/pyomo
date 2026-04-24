@@ -12,10 +12,12 @@ Functionality in parmest includes:
 
 * Model-based parameter estimation using experimental data
 * Covariance matrix estimation
-* Bootstrap resampling for parameter estimation
+* Bootstrap resampling for uncertainty quantification
 * Confidence regions based on single or multi-variate distributions
-* Likelihood ratio
+* Likelihood ratio test
 * Leave-N-out cross validation
+* Regularization for objective function improvement
+* Multi-start initialization optimization
 * Parallel processing
 
 Background
