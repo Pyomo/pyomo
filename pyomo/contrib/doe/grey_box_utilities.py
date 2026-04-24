@@ -44,7 +44,14 @@ import pyomo.environ as pyo
 class FIMExternalGreyBox(
     ExternalGreyBoxModel if (scipy_available and numpy_available) else object
 ):
-    def __init__(self, doe_object, objective_option="determinant", logger_level=None):
+    def __init__(
+        self,
+        doe_object=None,
+        objective_option="determinant",
+        logger_level=None,
+        parameter_names=None,
+        fim_initial=None,
+    ):
         """
         Grey box model for metrics on the FIM. This methodology reduces
         numerical complexity for the computation of FIM metrics related
@@ -68,17 +75,35 @@ class FIMExternalGreyBox(
            default: None, or equivalently, use the logging level of doe_object.
 
            NOTE: Use logging.DEBUG for all messages.
+        parameter_names:
+           Optional ordered iterable of parameter labels. When provided, this
+           lets the grey box object operate on any FIM source with the same
+           ordering instead of assuming the data must come from
+           ``doe_object.model.parameter_names``. This is needed for the
+           multi-experiment grey box path because the linked FIM lives on a
+           scenario block (``scenario.total_fim``), while ``doe_object.model``
+           is the top-level container and does not own ``parameter_names``
+           directly.
+        fim_initial:
+           Optional dense, symmetric FIM used to seed the grey box inputs. This
+           is required when ``doe_object`` is not provided.
         """
 
-        if doe_object is None:
+        if doe_object is None and (parameter_names is None or fim_initial is None):
             raise ValueError(
-                "DoE Object must be provided to build external grey box of the FIM."
+                "Either ``doe_object`` or both ``parameter_names`` and "
+                "``fim_initial`` must be provided to build the FIM grey box."
             )
 
         self.doe_object = doe_object
 
-        # Grab parameter list from the doe_object model
-        self._param_names = [i for i in self.doe_object.model.parameter_names]
+        # Grab parameter ordering from the explicit arguments when available.
+        # Multi-experiment optimization passes the aggregated scenario FIM
+        # directly, so we should not assume the linked FIM always shares the
+        # same location as self.doe_object.model.
+        if parameter_names is None:
+            parameter_names = self.doe_object.model.parameter_names
+        self._param_names = [i for i in parameter_names]
         self._n_params = len(self._param_names)
 
         # Check if the doe_object has model components that are required
@@ -93,15 +118,21 @@ class FIMExternalGreyBox(
 
         # If logger level is None, use doe_object's logger level
         if logger_level is None:
-            logger_level = doe_object.logger.level
+            logger_level = (
+                doe_object.logger.level if doe_object is not None else logging.WARNING
+            )
 
         self.logger.setLevel(level=logger_level)
 
         # Set initial values for inputs
         # Need a mask structure
-        self._masking_matrix = np.triu(np.ones_like(self.doe_object.fim_initial))
+        if fim_initial is None:
+            fim_initial = self.doe_object.fim_initial
+        fim_initial = np.asarray(fim_initial, dtype=np.float64)
+
+        self._masking_matrix = np.triu(np.ones_like(fim_initial))
         self._input_values = np.asarray(
-            self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
+            fim_initial[self._masking_matrix > 0], dtype=np.float64
         )
         self._n_inputs = len(self._input_values)
 
