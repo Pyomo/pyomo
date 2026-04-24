@@ -2971,7 +2971,9 @@ class DesignOfExperiments:
                                 model.L_inv[c, d].setlb(self.L_diagonal_lower_bound)
 
         if self._gradient_method == GradientMethod.pynumero:
-            experiment_grad.construct_sensitivity_constraints(model.fd_scenario_blocks[0])
+            experiment_grad.construct_sensitivity_constraints(
+                model.fd_scenario_blocks[0]
+            )
 
         def jacobian_rule(m, n, p):
             """
@@ -2987,7 +2989,9 @@ class DesignOfExperiments:
                 output_var = output_cuid.find_component_on(m.fd_scenario_blocks[0])
 
                 parameter_cuid = pyo.ComponentUID(p)
-                parameter_var = parameter_cuid.find_component_on(m.fd_scenario_blocks[0])
+                parameter_var = parameter_cuid.find_component_on(
+                    m.fd_scenario_blocks[0]
+                )
 
                 i = experiment_grad.measurement_mapping[output_var]
                 j = experiment_grad.parameter_mapping[parameter_var]

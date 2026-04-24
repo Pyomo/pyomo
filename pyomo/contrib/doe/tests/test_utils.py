@@ -25,6 +25,7 @@ from pyomo.contrib.doe.utils import (
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
 )
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
@@ -172,6 +173,7 @@ class TestUtilsFIM(unittest.TestCase):
             fim_metrics["log10(Modified E-Optimality)"], expected['ME_opt']
         )
 
+
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestExperimentGradients(unittest.TestCase):
@@ -278,7 +280,7 @@ class TestExperimentGradients(unittest.TestCase):
             model, symbolic=False, automatic=True
         )
 
-        jacobian =(
+        jacobian = (
             experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
         )
         expected = self._get_expected_polynomial_gradient()
@@ -286,8 +288,7 @@ class TestExperimentGradients(unittest.TestCase):
         self.assertIsNotNone(experiment_gradients.jac_dict_sd)
         self.assertIsNotNone(experiment_gradients.jac_dict_ad)
         self.assertEqual(jacobian.shape, expected.shape)
-        self.assertTrue(np.allclose(jacobian,expected))
-
+        self.assertTrue(np.allclose(jacobian, expected))
 
     def test_polynomial_symbolic_only_still_sets_both_jacobians(self):
         """Check that symbolic-only requests still initialize both Jacobian maps."""
@@ -298,7 +299,7 @@ class TestExperimentGradients(unittest.TestCase):
             model, symbolic=True, automatic=False
         )
 
-        jacobian =(
+        jacobian = (
             experiment_gradients.compute_gradient_outputs_wrt_unknown_parameters()
         )
         expected = self._get_expected_polynomial_gradient()
@@ -343,19 +344,20 @@ class TestExperimentGradients(unittest.TestCase):
         self.assertEqual(jacobian.shape, expected.shape)
         self.assertTrue(np.allclose(jacobian, expected, atol=1e-7, rtol=1e-7))
 
-    
-
     @unittest.skipIf(not scipy_available, "scipy is not available")
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_rooney_biegler_symbolic_and_automatic_jacobians_agree_at_perturbed_point(self):
+    def test_rooney_biegler_symbolic_and_automatic_jacobians_agree_at_perturbed_point(
+        self,
+    ):
         """Check Rooney-Biegler Jacobian agreement at a perturbed operating point."""
-        experiment = self._get_rooney_biegler_experiment(hour=7.0, y=19.8, asymptote=14.0, rate_constant=0.4)
+        experiment = self._get_rooney_biegler_experiment(
+            hour=7.0, y=19.8, asymptote=14.0, rate_constant=0.4
+        )
         model = experiment.get_labeled_model()
 
         experiment_gradients = self._assert_symbolic_and_automatic_jacobians_agree(
             model, atol=1e-6, rtol=1e-6
         )
-        
 
         self.assertGreater(len(experiment_gradients.jac_dict_sd), 0)
         self.assertEqual(

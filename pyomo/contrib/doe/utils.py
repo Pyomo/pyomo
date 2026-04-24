@@ -210,7 +210,6 @@ def compute_FIM_metrics(FIM):
     # Modified E-optimality is based on the FIM condition number and penalizes
     # confidence ellipsoids that are highly elongated in one direction.
 
-
     ME_opt = np.log10(np.linalg.cond(FIM))
 
     return (
@@ -294,7 +293,7 @@ class ExperimentGradients:
 
     This helper implements the symbolic sensitivity path used in Pyomo.DoE.
     Instead of approximating sensitivities by finite-difference perturbations
-    of the unknown parameters theta, it differentiates the 
+    of the unknown parameters theta, it differentiates the
     model F(x, u, theta) = 0 with respect to theta, with the design variables
     u fixed, and solves the resulting auxiliary sensitivity system
 

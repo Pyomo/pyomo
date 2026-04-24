@@ -767,12 +767,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Get rescaled FIM from the scaled version
         param_vals = np.array(
-            [
-                [
-                    v
-                    for k, v in doe_obj.compute_FIM_model.unknown_parameters.items()
-                ]
-            ]
+            [[v for k, v in doe_obj.compute_FIM_model.unknown_parameters.items()]]
         )
 
         resc_FIM = rescale_FIM(FIM, param_vals)

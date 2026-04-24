@@ -47,12 +47,7 @@ _FD_EPSILON_SECOND = 1e-4  # Epsilon for numerical comparison of derivatives
 if numpy_available:
     # Randomly generated P.S.D. matrix
     # Matrix is 2x2 to match Rooney-Biegler parameters.
-    testing_matrix = np.array(
-        [
-            [5.13730123, 1.08084953],
-            [1.08084953, 1.57183404],
-        ]
-    )
+    testing_matrix = np.array([[5.13730123, 1.08084953], [1.08084953, 1.57183404]])
 
     masking_matrix = np.triu(np.ones_like(testing_matrix))
 
