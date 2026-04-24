@@ -17,6 +17,7 @@
 import collections.abc
 import io
 import logging
+import multiprocessing
 import os
 import sys
 import threading
@@ -297,7 +298,7 @@ class capture_output:
 
     """
 
-    startup_shutdown = threading.Lock()
+    startup_shutdown = multiprocessing.Lock()
 
     def __init__(self, output=None, capture_fd=False):
         self.output = output

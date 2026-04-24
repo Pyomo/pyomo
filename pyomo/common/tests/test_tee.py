@@ -601,8 +601,17 @@ class TestCapture(unittest.TestCase):
                     tee.capture_output.startup_shutdown.acquire()
         finally:
             tee._poll_timeout_deadlock = save_poll
-            if tee.capture_output.startup_shutdown.locked():
+            # We would like to just test if out Lock was aquired and
+            # then release it if necessary.  Unfortunately,
+            # multiprocessing.Lock doesn't support locked(), so we will
+            # just catch and eat the error for releasing an unlocked
+            # lock.
+            #
+            ## if tee.capture_output.startup_shutdown.locked():
+            try:
                 tee.capture_output.startup_shutdown.release()
+            except ValueError:
+                pass
             co.reset()
 
     def test_capture_output_invalid_ostream(self):
