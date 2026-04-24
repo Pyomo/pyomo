@@ -37,6 +37,7 @@ _poll_rampup = 10
 # ~(13.1 * #threads) seconds
 _poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
 _poll_timeout_deadlock = 100  # seconds
+_threading_deadlock = 200  # seconds; should be longer than _poll_timeout_deadlock
 _pipe_buffersize = 1 << 16  # 65536
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
@@ -347,7 +348,7 @@ class capture_output:
         return FAIL
 
     def __enter__(self):
-        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+        if not capture_output.startup_shutdown.acquire(timeout=_threading_deadlock):
             # This situation *shouldn't* happen.  If it does, it is
             # unlikely that the user can fix it (or even debug it).
             # Instead they should report it back to us.
@@ -368,7 +369,7 @@ class capture_output:
             capture_output.startup_shutdown.release()
 
     def __exit__(self, et, ev, tb):
-        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+        if not capture_output.startup_shutdown.acquire(timeout=_threading_deadlock):
             # See comments & breadcrumbs in __enter__() above.
             if not python_is_shutting_down():
                 raise DeveloperError("Deadlock closing capture_output")

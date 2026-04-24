@@ -581,8 +581,8 @@ class TestCapture(unittest.TestCase):
             logging.getLogger('pyomo.common.tee').handlers.clear()
 
     def test_atomic_deadlock(self):
-        save_poll = tee._poll_timeout_deadlock
-        tee._poll_timeout_deadlock = 0.01
+        save_poll = tee._threading_deadlock
+        tee._threading_deadlock = 0.01
 
         co = tee.capture_output()
         try:
@@ -600,7 +600,7 @@ class TestCapture(unittest.TestCase):
                 with co:
                     tee.capture_output.startup_shutdown.acquire()
         finally:
-            tee._poll_timeout_deadlock = save_poll
+            tee._threading_deadlock = save_poll
             # We would like to just test if out Lock was aquired and
             # then release it if necessary.  Unfortunately,
             # multiprocessing.Lock doesn't support locked(), so we will
