@@ -606,24 +606,32 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
         for v in var_dm_partition.unmatched:
             # Unmatched set will have the remaining 3 input variables, but again we cannot guarantee which ones
             # We will instead check that the name is one of the inputs and that it is not in the under-constrained set
-            self.assertNotIn(v.name, [u.name for u in var_dm_partition.underconstrained])
-            self.assertIn(v.name, [
-                'egb.inputs[Pin]',
-                'egb.inputs[c]',
-                'egb.inputs[F]',
-                'egb.inputs[P1]',
-                'egb.inputs[P3]',
-            ])
+            self.assertNotIn(
+                v.name, [u.name for u in var_dm_partition.underconstrained]
+            )
+            self.assertIn(
+                v.name,
+                [
+                    'egb.inputs[Pin]',
+                    'egb.inputs[c]',
+                    'egb.inputs[F]',
+                    'egb.inputs[P1]',
+                    'egb.inputs[P3]',
+                ],
+            )
 
         self.assertEqual(len(con_dm_partition.underconstrained), 4)
         con_names = [c.name for c in con_dm_partition.underconstrained]
         for c in con_names:
-            self.assertIn(c, [
-                'egb.pdrop1',
-                'egb.pdrop3',
-                'egb.P2_constraint',
-                'egb.Pout_constraint',
-            ])
+            self.assertIn(
+                c,
+                [
+                    'egb.pdrop1',
+                    'egb.pdrop3',
+                    'egb.P2_constraint',
+                    'egb.Pout_constraint',
+                ],
+            )
 
     def test_grey_box_w_pyomo_components(self):
         """
@@ -653,39 +661,45 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
             for v in var_dm_partition.underconstrained + var_dm_partition.unmatched
         ]
         for v in var_names:
-            self.assertIn(v, [
-                'egb.inputs[Pin]',
-                'egb.inputs[c]',
-                'egb.inputs[F]',
-                'egb.inputs[P1]',
-                'egb.inputs[P3]',
-                'egb.outputs[P2]',
-                'egb.outputs[Pout]',
-                'Pin',
-                'c',
-                'F',
-                'P1',
-                'P3',
-                'P2',
-                'Pout',
-            ])
+            self.assertIn(
+                v,
+                [
+                    'egb.inputs[Pin]',
+                    'egb.inputs[c]',
+                    'egb.inputs[F]',
+                    'egb.inputs[P1]',
+                    'egb.inputs[P3]',
+                    'egb.outputs[P2]',
+                    'egb.outputs[Pout]',
+                    'Pin',
+                    'c',
+                    'F',
+                    'P1',
+                    'P3',
+                    'P2',
+                    'Pout',
+                ],
+            )
 
         self.assertEqual(len(con_dm_partition.underconstrained), 11)
         con_names = [c.name for c in con_dm_partition.underconstrained]
         for c in con_names:
-            self.assertIn(c, [
-                'egb.pdrop1',
-                'egb.pdrop3',
-                'egb.P2_constraint',
-                'egb.Pout_constraint',
-                'link_Pin',
-                'link_c',
-                'link_F',
-                'link_P1',
-                'link_P3',
-                'link_P2',
-                'link_Pout',
-            ])
+            self.assertIn(
+                c,
+                [
+                    'egb.pdrop1',
+                    'egb.pdrop3',
+                    'egb.P2_constraint',
+                    'egb.Pout_constraint',
+                    'link_Pin',
+                    'link_c',
+                    'link_F',
+                    'link_P1',
+                    'link_P3',
+                    'link_P2',
+                    'link_Pout',
+                ],
+            )
 
     def test_grey_box_w_pyomo_components_square(self):
         """
@@ -716,40 +730,46 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
         self.assertEqual(len(var_dm_partition.square), 11)
         var_names = [v.name for v in var_dm_partition.square]
         for v in var_names:
-            self.assertIn(v, [
-                'egb.inputs[Pin]',
-                'egb.inputs[c]',
-                'egb.inputs[F]',
-                'egb.inputs[P1]',
-                'egb.inputs[P3]',
-                'egb.outputs[P2]',
-                'egb.outputs[Pout]',
-                # These three re fixed, so do not appear by default
-                # 'Pin',
-                # 'c',
-                # 'F',
-                'P1',
-                'P3',
-                'P2',
-                'Pout',
-            ])
+            self.assertIn(
+                v,
+                [
+                    'egb.inputs[Pin]',
+                    'egb.inputs[c]',
+                    'egb.inputs[F]',
+                    'egb.inputs[P1]',
+                    'egb.inputs[P3]',
+                    'egb.outputs[P2]',
+                    'egb.outputs[Pout]',
+                    # These three re fixed, so do not appear by default
+                    # 'Pin',
+                    # 'c',
+                    # 'F',
+                    'P1',
+                    'P3',
+                    'P2',
+                    'Pout',
+                ],
+            )
 
         self.assertEqual(len(con_dm_partition.square), 11)
         con_names = [c.name for c in con_dm_partition.square]
         for c in con_names:
-            self.assertIn(c, [
-                'egb.pdrop1',
-                'egb.pdrop3',
-                'egb.P2_constraint',
-                'egb.Pout_constraint',
-                'link_Pin',
-                'link_c',
-                'link_F',
-                'link_P1',
-                'link_P3',
-                'link_P2',
-                'link_Pout',
-            ])
+            self.assertIn(
+                c,
+                [
+                    'egb.pdrop1',
+                    'egb.pdrop3',
+                    'egb.P2_constraint',
+                    'egb.Pout_constraint',
+                    'link_Pin',
+                    'link_c',
+                    'link_F',
+                    'link_P1',
+                    'link_P3',
+                    'link_P2',
+                    'link_Pout',
+                ],
+            )
 
 
 class MyGreyBox(ExternalGreyBoxModel):

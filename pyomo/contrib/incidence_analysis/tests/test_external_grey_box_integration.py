@@ -99,7 +99,10 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertIs(bt_cons[2][0], m.con3)
         self.assertIs(bt_cons[3][0], m.egb.Pout_constraint)
 
-        self.assertEqual(ComponentSet(igraph.get_adjacent_to(m.egb.Pout_constraint)), ComponentSet(m.egb.component_data_objects(pyo.Var)))
+        self.assertEqual(
+            ComponentSet(igraph.get_adjacent_to(m.egb.Pout_constraint)),
+            ComponentSet(m.egb.component_data_objects(pyo.Var)),
+        )
 
     def test_pressure_drop_two_equalities_two_outputs(self):
         m = pyo.ConcreteModel()
@@ -131,15 +134,9 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertEqual(ComponentSet(uc_var), uc_var_set)
 
         uc_con_set = ComponentSet(
-            [
-                m.egb.Pout_constraint,
-                m.egb.P2_constraint,
-                m.egb.pdrop1,
-                m.egb.pdrop3,
-            ]
+            [m.egb.Pout_constraint, m.egb.P2_constraint, m.egb.pdrop1, m.egb.pdrop3]
         )
         self.assertEqual(ComponentSet(uc_con), uc_con_set)
-
 
         self.assertEqual(ComponentSet(oc_var), ComponentSet([]))
         self.assertEqual(ComponentSet(oc_con), ComponentSet([]))
@@ -188,4 +185,6 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
                 self.assertIn(m.egb.inputs["P1"], seen)
 
         # We know that these constraints have to be in the first three blocks
-        self.assertEqual(set(bt_cons[i][0] for i in range(3)), set([m.con1, m.con2, m.con3]))
+        self.assertEqual(
+            set(bt_cons[i][0] for i in range(3)), set([m.con1, m.con2, m.con3])
+        )

@@ -2621,7 +2621,9 @@ class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
         # Create  NLP from m.b - should contain m.v even though it is external to the block
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
 
-        self.assertEqual(pyomo_nlp._pyomo_model_var_names_to_datas, {'x': m.x, 'b.y': m.b.y})
+        self.assertEqual(
+            pyomo_nlp._pyomo_model_var_names_to_datas, {'x': m.x, 'b.y': m.b.y}
+        )
 
         jac = pyomo_nlp.evaluate_jacobian().tocsr()
 
@@ -2654,13 +2656,16 @@ class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
         # Create  NLP from m.b - should contain m.v even though it is external to the block
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
 
-        self.assertEqual(pyomo_nlp._pyomo_model_var_names_to_datas, {
-            'v': m.v,
-            'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
-            'b.egb.inputs[c]': m.b.egb.inputs['c'],
-            'b.egb.inputs[F]': m.b.egb.inputs['F'],
-            'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
-        })
+        self.assertEqual(
+            pyomo_nlp._pyomo_model_var_names_to_datas,
+            {
+                'v': m.v,
+                'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
+                'b.egb.inputs[c]': m.b.egb.inputs['c'],
+                'b.egb.inputs[F]': m.b.egb.inputs['F'],
+                'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
+            },
+        )
 
         jac = pyomo_nlp.evaluate_jacobian().tocsr()
 
@@ -2706,13 +2711,16 @@ class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
         # Create  NLP from m.b - should contain m.v even though it is external to the block
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
 
-        self.assertEqual(pyomo_nlp._pyomo_model_var_names_to_datas, {
-            'v': m.v,
-            'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
-            'b.egb.inputs[c]': m.b.egb.inputs['c'],
-            'b.egb.inputs[F]': m.b.egb.inputs['F'],
-            'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
-        })
+        self.assertEqual(
+            pyomo_nlp._pyomo_model_var_names_to_datas,
+            {
+                'v': m.v,
+                'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
+                'b.egb.inputs[c]': m.b.egb.inputs['c'],
+                'b.egb.inputs[F]': m.b.egb.inputs['F'],
+                'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
+            },
+        )
 
         jac = pyomo_nlp.evaluate_jacobian().tocsr()
 
