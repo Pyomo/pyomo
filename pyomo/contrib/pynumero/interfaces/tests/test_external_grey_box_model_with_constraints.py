@@ -13,6 +13,7 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
+from pyomo.common.collections import ComponentSet
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
@@ -514,60 +515,61 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
         """
         m = self.build_model()
 
-        assert m.egb.has_implicit_constraint_objects
+        self.assertTrue(m.egb.has_implicit_constraint_objects)
 
         # Check that the get_incident_variables method on the implicit constraint body returns the correct variables
         # Implicit constraint: 'pdrop1'
         body_obj1 = m.egb.pdrop1.body
         incident_vars1 = body_obj1.get_incident_variables()
-        assert len(incident_vars1) == 4
-        expected_names = [
-            'egb.inputs[Pin]',
-            'egb.inputs[c]',
-            'egb.inputs[F]',
-            'egb.inputs[P1]',
-        ]
-        for v in incident_vars1:
-            assert v.name in expected_names
+
+        incident_var_set = ComponentSet(
+            [
+                m.egb.inputs['Pin'],
+                m.egb.inputs['c'],
+                m.egb.inputs['F'],
+                m.egb.inputs['P1'],
+            ]
+        )
+        self.assertEqual(ComponentSet(incident_vars1), incident_var_set)
 
         # Implicit constraint: 'pdrop3'
         body_obj1 = m.egb.pdrop3.body
         incident_vars1 = body_obj1.get_incident_variables()
-        assert len(incident_vars1) == 4
-        expected_names = [
-            'egb.inputs[c]',
-            'egb.inputs[F]',
-            'egb.inputs[P1]',
-            'egb.inputs[P3]',
-        ]
-        for v in incident_vars1:
-            assert v.name in expected_names
+        incident_var_set = ComponentSet(
+            [
+                m.egb.inputs['c'],
+                m.egb.inputs['F'],
+                m.egb.inputs['P1'],
+                m.egb.inputs['P3'],
+            ]
+        )
+        self.assertEqual(ComponentSet(incident_vars1), incident_var_set)
 
         # Implicit constraint: 'P2_constraint'
         body_obj1 = m.egb.P2_constraint.body
         incident_vars1 = body_obj1.get_incident_variables()
-        assert len(incident_vars1) == 4
-        expected_names = [
-            'egb.inputs[c]',
-            'egb.inputs[F]',
-            'egb.inputs[P1]',
-            'egb.outputs[P2]',
-        ]
-        for v in incident_vars1:
-            assert v.name in expected_names
+        incident_var_set = ComponentSet(
+            [
+                m.egb.inputs['c'],
+                m.egb.inputs['F'],
+                m.egb.inputs['P1'],
+                m.egb.outputs['P2'],
+            ]
+        )
+        self.assertEqual(ComponentSet(incident_vars1), incident_var_set)
 
         # Implicit constraint: 'Pout_constraint'
         body_obj1 = m.egb.Pout_constraint.body
         incident_vars1 = body_obj1.get_incident_variables()
-        assert len(incident_vars1) == 4
-        expected_names = [
-            'egb.inputs[Pin]',
-            'egb.inputs[c]',
-            'egb.inputs[F]',
-            'egb.outputs[Pout]',
-        ]
-        for v in incident_vars1:
-            assert v.name in expected_names
+        incident_var_set = ComponentSet(
+            [
+                m.egb.inputs['Pin'],
+                m.egb.inputs['c'],
+                m.egb.inputs['F'],
+                m.egb.outputs['Pout'],
+            ]
+        )
+        self.assertEqual(ComponentSet(incident_vars1), incident_var_set)
 
         # Check Dulmage-Mendelsohn partitioning of the incidence graph
         igraph = IncidenceGraphInterface(m, include_inequality=False)
@@ -576,49 +578,52 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
         # In this case, as we have not fixed any variables, we expect the system to be under-constrained.
         # All variables will be in the under-constrained or unmatched sets
         # All constraints will be in the under-constrained set
-        assert var_dm_partition.overconstrained == []
-        assert var_dm_partition.square == []
-        assert con_dm_partition.unmatched == []
-        assert con_dm_partition.overconstrained == []
-        assert con_dm_partition.square == []
+        self.assertEqual(var_dm_partition.overconstrained, [])
+        self.assertEqual(var_dm_partition.square, [])
+        self.assertEqual(con_dm_partition.unmatched, [])
+        self.assertEqual(con_dm_partition.overconstrained, [])
+        self.assertEqual(con_dm_partition.square, [])
 
-        assert len(var_dm_partition.underconstrained) == 4
-        assert len(var_dm_partition.unmatched) == 3
+        self.assertEqual(len(var_dm_partition.underconstrained), 4)
+        self.assertEqual(len(var_dm_partition.unmatched), 3)
 
         for v in var_dm_partition.underconstrained:
             # output variables should be in the under-constrained set
             # The other two variables should be drawn from the inputs, but we cannot guarantee which ones
-            assert v.name in [
-                'egb.inputs[Pin]',
-                'egb.inputs[c]',
-                'egb.inputs[F]',
-                'egb.inputs[P1]',
-                'egb.inputs[P3]',
-                'egb.outputs[P2]',
-                'egb.outputs[Pout]',
-            ]
+            self.assertIn(
+                v.name,
+                [
+                    'egb.inputs[Pin]',
+                    'egb.inputs[c]',
+                    'egb.inputs[F]',
+                    'egb.inputs[P1]',
+                    'egb.inputs[P3]',
+                    'egb.outputs[P2]',
+                    'egb.outputs[Pout]',
+                ],
+            )
 
         for v in var_dm_partition.unmatched:
             # Unmatched set will have the remaining 3 input variables, but again we cannot guarantee which ones
             # We will instead check that the name is one of the inputs and that it is not in the under-constrained set
-            assert v.name not in [u.name for u in var_dm_partition.underconstrained]
-            assert v.name in [
+            self.assertNotIn(v.name, [u.name for u in var_dm_partition.underconstrained])
+            self.assertIn(v.name, [
                 'egb.inputs[Pin]',
                 'egb.inputs[c]',
                 'egb.inputs[F]',
                 'egb.inputs[P1]',
                 'egb.inputs[P3]',
-            ]
+            ])
 
-        assert len(con_dm_partition.underconstrained) == 4
+        self.assertEqual(len(con_dm_partition.underconstrained), 4)
         con_names = [c.name for c in con_dm_partition.underconstrained]
         for c in con_names:
-            assert c in [
+            self.assertIn(c, [
                 'egb.pdrop1',
                 'egb.pdrop3',
                 'egb.P2_constraint',
                 'egb.Pout_constraint',
-            ]
+            ])
 
     def test_grey_box_w_pyomo_components(self):
         """
@@ -626,7 +631,7 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
         a model containing both grey box and other components
         """
         m = self.build_model_with_pyomo_components()
-        assert m.egb.has_implicit_constraint_objects
+        self.assertTrue(m.egb.has_implicit_constraint_objects)
 
         # Check Dulmage-Mendelsohn partitioning of the incidence graph
         igraph = IncidenceGraphInterface(m, include_inequality=False)
@@ -635,20 +640,20 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
         # In this case, as we have not fixed any variables, we expect the system to be under-constrained.
         # All variables will be in the under-constrained or unmatched sets
         # All constraints will be in the under-constrained set
-        assert var_dm_partition.overconstrained == []
-        assert var_dm_partition.square == []
-        assert con_dm_partition.unmatched == []
-        assert con_dm_partition.overconstrained == []
-        assert con_dm_partition.square == []
+        self.assertEqual(var_dm_partition.overconstrained, [])
+        self.assertEqual(var_dm_partition.square, [])
+        self.assertEqual(con_dm_partition.unmatched, [])
+        self.assertEqual(con_dm_partition.overconstrained, [])
+        self.assertEqual(con_dm_partition.square, [])
 
-        assert len(var_dm_partition.underconstrained) == 11
-        assert len(var_dm_partition.unmatched) == 3
+        self.assertEqual(len(var_dm_partition.underconstrained), 11)
+        self.assertEqual(len(var_dm_partition.unmatched), 3)
         var_names = [
             v.name
             for v in var_dm_partition.underconstrained + var_dm_partition.unmatched
         ]
         for v in var_names:
-            assert v in [
+            self.assertIn(v, [
                 'egb.inputs[Pin]',
                 'egb.inputs[c]',
                 'egb.inputs[F]',
@@ -663,12 +668,12 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
                 'P3',
                 'P2',
                 'Pout',
-            ]
+            ])
 
-        assert len(con_dm_partition.underconstrained) == 11
+        self.assertEqual(len(con_dm_partition.underconstrained), 11)
         con_names = [c.name for c in con_dm_partition.underconstrained]
         for c in con_names:
-            assert c in [
+            self.assertIn(c, [
                 'egb.pdrop1',
                 'egb.pdrop3',
                 'egb.P2_constraint',
@@ -680,7 +685,7 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
                 'link_P3',
                 'link_P2',
                 'link_Pout',
-            ]
+            ])
 
     def test_grey_box_w_pyomo_components_square(self):
         """
@@ -701,17 +706,17 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
 
         # In this case, as we have fixed all input variables, we expect the system to be square.
         # All variables and constraints will be in the square sets
-        assert var_dm_partition.unmatched == []
-        assert var_dm_partition.overconstrained == []
-        assert var_dm_partition.underconstrained == []
-        assert con_dm_partition.unmatched == []
-        assert con_dm_partition.overconstrained == []
-        assert con_dm_partition.underconstrained == []
+        self.assertEqual(var_dm_partition.unmatched, [])
+        self.assertEqual(var_dm_partition.overconstrained, [])
+        self.assertEqual(var_dm_partition.underconstrained, [])
+        self.assertEqual(con_dm_partition.unmatched, [])
+        self.assertEqual(con_dm_partition.overconstrained, [])
+        self.assertEqual(con_dm_partition.underconstrained, [])
 
-        assert len(var_dm_partition.square) == 11
+        self.assertEqual(len(var_dm_partition.square), 11)
         var_names = [v.name for v in var_dm_partition.square]
         for v in var_names:
-            assert v in [
+            self.assertIn(v, [
                 'egb.inputs[Pin]',
                 'egb.inputs[c]',
                 'egb.inputs[F]',
@@ -727,12 +732,12 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
                 'P3',
                 'P2',
                 'Pout',
-            ]
+            ])
 
-        assert len(con_dm_partition.square) == 11
+        self.assertEqual(len(con_dm_partition.square), 11)
         con_names = [c.name for c in con_dm_partition.square]
         for c in con_names:
-            assert c in [
+            self.assertIn(c, [
                 'egb.pdrop1',
                 'egb.pdrop3',
                 'egb.P2_constraint',
@@ -744,7 +749,7 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
                 'link_P3',
                 'link_P2',
                 'link_Pout',
-            ]
+            ])
 
 
 class MyGreyBox(ExternalGreyBoxModel):

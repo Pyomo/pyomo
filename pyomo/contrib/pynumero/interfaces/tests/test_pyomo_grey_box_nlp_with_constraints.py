@@ -2621,16 +2621,16 @@ class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
         # Create  NLP from m.b - should contain m.v even though it is external to the block
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
 
-        assert pyomo_nlp._pyomo_model_var_names_to_datas == {'x': m.x, 'b.y': m.b.y}
+        self.assertEqual(pyomo_nlp._pyomo_model_var_names_to_datas, {'x': m.x, 'b.y': m.b.y})
 
         jac = pyomo_nlp.evaluate_jacobian().tocsr()
 
         # Due to external variable, the order is m.b.y, m.x
-        assert jac.shape == (2, 2)
-        assert jac[0, 0] == 2.0
-        assert jac[0, 1] == 1.0
-        assert jac[1, 0] == -4.0
-        assert jac[1, 1] == 3.0
+        self.assertEqual(jac.shape, (2, 2))
+        self.assertEqual(jac[0, 0], 2.0)
+        self.assertEqual(jac[0, 1], 1.0)
+        self.assertEqual(jac[1, 0], -4.0)
+        self.assertEqual(jac[1, 1], 3.0)
 
     def test_greybox_block_w_external_var(self):
         m = pyo.ConcreteModel()
@@ -2654,17 +2654,17 @@ class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
         # Create  NLP from m.b - should contain m.v even though it is external to the block
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
 
-        assert pyomo_nlp._pyomo_model_var_names_to_datas == {
+        self.assertEqual(pyomo_nlp._pyomo_model_var_names_to_datas, {
             'v': m.v,
             'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
             'b.egb.inputs[c]': m.b.egb.inputs['c'],
             'b.egb.inputs[F]': m.b.egb.inputs['F'],
             'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
-        }
+        })
 
         jac = pyomo_nlp.evaluate_jacobian().tocsr()
 
-        assert jac.shape == (2, 5)
+        self.assertEqual(jac.shape, (2, 5))
         primals = pyomo_nlp.primals_names()
         constraints = pyomo_nlp.constraint_names()
 
@@ -2706,17 +2706,17 @@ class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
         # Create  NLP from m.b - should contain m.v even though it is external to the block
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
 
-        assert pyomo_nlp._pyomo_model_var_names_to_datas == {
+        self.assertEqual(pyomo_nlp._pyomo_model_var_names_to_datas, {
             'v': m.v,
             'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
             'b.egb.inputs[c]': m.b.egb.inputs['c'],
             'b.egb.inputs[F]': m.b.egb.inputs['F'],
             'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
-        }
+        })
 
         jac = pyomo_nlp.evaluate_jacobian().tocsr()
 
-        assert jac.shape == (2, 5)
+        self.assertEqual(jac.shape, (2, 5))
         primals = pyomo_nlp.primals_names()
         constraints = pyomo_nlp.constraint_names()
 

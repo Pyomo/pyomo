@@ -127,13 +127,13 @@ class TestCondensedSparseSummation(unittest.TestCase):
 
         # Shape should match number of primals
         n = nlp.n_primals()
-        assert hess.shape == (n, n)
+        self.assertEqual(hess.shape, (n, n))
 
         # For a purely linear model, Hessian must be structurally empty
-        assert hess.nnz == 0
+        self.assertEqual(hess.nnz, 0)
 
         # Also verify the sparse data vector is empty
-        assert len(hess.data) == 0
+        self.assertEqual(len(hess.data), 0)
 
 
 if __name__ == '__main__':
