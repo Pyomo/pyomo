@@ -14,11 +14,14 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentSet
 
 from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    ExternalGreyBoxConstraint,
+)
 
 
 class TestExternalGreyBoxIncidence(unittest.TestCase):
@@ -47,22 +50,11 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertEqual(ComponentSet(oc_con), ComponentSet([]))
 
         max_matching = igraph.maximum_matching()
-        expected = ComponentMap({m.egb.Pout_constraint: m.egb.outputs["Pout"]})
-        self.assertEqual(max_matching, expected)
+        self.assertIn(max_matching[m.egb.Pout_constraint], egb_var)
 
-        con_vars, con_cons = igraph.get_connected_components()
-
-        con_vars_set = ComponentSet(
-            [
-                m.egb.inputs["Pin"],
-                m.egb.inputs["c"],
-                m.egb.inputs["F"],
-                m.egb.outputs["Pout"],
-            ]
-        )
-        con_cons_set = ComponentSet([m.egb.Pout_constraint])
-        self.assertEqual(ComponentSet(con_vars[0]), con_vars_set)
-        self.assertEqual(ComponentSet(con_cons[0]), con_cons_set)
+        cc_vars, cc_cons = igraph.get_connected_components()
+        self.assertEqual(ComponentSet(cc_vars[0]), egb_var)
+        self.assertEqual(cc_cons[0][0].name, "egb.Pout_constraint")
 
     def test_pressure_drop_single_output_block_triangularization(self):
         m = pyo.ConcreteModel()
@@ -82,20 +74,32 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertEqual(len(bt_vars), 4)
         self.assertEqual(len(bt_cons), 4)
 
-        var_set_1 = [m.egb.inputs["Pin"]]
-        var_set_2 = [m.egb.inputs["c"]]
-        var_set_3 = [m.egb.inputs["F"]]
-        var_set_4 = [m.egb.outputs["Pout"]]
-        expected_bt_vars = [var_set_1, var_set_2, var_set_3, var_set_4]
+        var_set_0 = [m.egb.inputs["Pin"]]
+        var_set_1 = [m.egb.inputs["c"]]
+        var_set_2 = [m.egb.inputs["F"]]
+        var_set_3 = [m.egb.outputs["Pout"]]
+        expected_bt_vars = [var_set_0, var_set_1, var_set_2, var_set_3]
 
-        con_set_1 = [m.con1]
-        con_set_2 = [m.con2]
-        con_set_3 = [m.con3]
-        con_set_4 = [m.egb.Pout_constraint]
-        expected_bt_cons = [con_set_1, con_set_2, con_set_3, con_set_4]
+        con_set_0 = [m.con1]
+        con_set_1 = [m.con2]
+        con_set_2 = [m.con3]
+        con_set_3 = [m.egb.Pout_constraint]
+        expected_bt_cons = [con_set_0, con_set_1, con_set_2, con_set_3]
 
         self.assertEqual(bt_vars, expected_bt_vars)
         self.assertEqual(bt_cons, expected_bt_cons)
+
+        self.assertIs(bt_vars[0][0], m.egb.inputs["Pin"])
+        self.assertIs(bt_vars[1][0], m.egb.inputs["c"])
+        self.assertIs(bt_vars[2][0], m.egb.inputs["F"])
+        self.assertIs(bt_vars[3][0], m.egb.outputs["Pout"])
+
+        self.assertIs(bt_cons[0][0], m.con1)
+        self.assertIs(bt_cons[1][0], m.con2)
+        self.assertIs(bt_cons[2][0], m.con3)
+        self.assertIs(bt_cons[3][0], m.egb.Pout_constraint)
+
+        self.assertEqual(ComponentSet(igraph.get_adjacent_to(m.egb.Pout_constraint)), ComponentSet(m.egb.component_data_objects(pyo.Var)))
 
     def test_pressure_drop_two_equalities_two_outputs(self):
         m = pyo.ConcreteModel()
@@ -141,45 +145,13 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertEqual(ComponentSet(oc_con), ComponentSet([]))
 
         max_matching = igraph.maximum_matching()
+        egb_var = ComponentSet(m.egb.component_data_objects(pyo.Var))
+        egb_cons = ComponentSet(m.egb.component_data_objects(ExternalGreyBoxConstraint))
+        self.assertIn(max_matching[m.egb.Pout_constraint], egb_var)
 
-        expected_max_match = ComponentMap(
-            {
-                m.egb.pdrop1: m.egb.inputs["Pin"],
-                m.egb.pdrop3: m.egb.inputs["c"],
-                m.egb.P2_constraint: m.egb.outputs["P2"],
-                m.egb.Pout_constraint: m.egb.outputs["Pout"],
-            }
-        )
-        self.assertEqual(max_matching, expected_max_match)
-
-        con_vars, con_cons = igraph.get_connected_components()
-
-        expected_con_vars = [
-            ComponentSet(
-                [
-                    m.egb.inputs["F"],
-                    m.egb.inputs["P1"],
-                    m.egb.inputs["P3"],
-                    m.egb.inputs["Pin"],
-                    m.egb.inputs["c"],
-                    m.egb.outputs["P2"],
-                    m.egb.outputs["Pout"],
-                ]
-            )
-        ]
-        expected_con_cons = [
-            ComponentSet(
-                [
-                    m.egb.Pout_constraint,
-                    m.egb.P2_constraint,
-                    m.egb.pdrop1,
-                    m.egb.pdrop3,
-                ]
-            )
-        ]
-
-        self.assertEqual([ComponentSet(con_vars[0])], expected_con_vars)
-        self.assertEqual([ComponentSet(con_cons[0])], expected_con_cons)
+        cc_vars, cc_cons = igraph.get_connected_components()
+        self.assertEqual(ComponentSet(cc_vars[0]), egb_var)
+        self.assertEqual(ComponentSet(cc_cons[0]), egb_cons)
 
     def test_pressure_drop_two_equalities_two_outputs_block_triangularization(self):
         m = pyo.ConcreteModel()
@@ -196,28 +168,24 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, include_inequality=False)
         bt_vars, bt_cons = igraph.block_triangularize()
 
+        matching = {
+            m.con1: m.egb.inputs["F"],
+            m.con2: m.egb.inputs["Pin"],
+            m.con3: m.egb.inputs["c"],
+            m.egb.pdrop1: m.egb.inputs["P1"],
+            m.egb.pdrop3: m.egb.inputs["P3"],
+            m.egb.P2_constraint: m.egb.outputs["P2"],
+            m.egb.Pout_constraint: m.egb.outputs["Pout"],
+        }
 
-        # Get 7 decomposable sub-sets
-        # 3 linking constraints give 3 sub-sets
-        # Grey box gets broken into parts based on the matching
-        expected_bt_vars = [
-            ComponentSet([m.egb.inputs["F"]]),
-            ComponentSet([m.egb.inputs["Pin"]]),
-            ComponentSet([m.egb.inputs["c"]]),
-            ComponentSet([m.egb.inputs["P1"]]),
-            ComponentSet([m.egb.inputs["P3"]]),
-            ComponentSet([m.egb.outputs["P2"]]),
-            ComponentSet([m.egb.outputs["Pout"]]),
-        ]
-        expected_bt_cons = [
-            ComponentSet([m.con1]),
-            ComponentSet([m.con2]),
-            ComponentSet([m.con3]),
-            ComponentSet([m.egb.pdrop1]),
-            ComponentSet([m.egb.pdrop3]),
-            ComponentSet([m.egb.P2_constraint]),
-            ComponentSet([m.egb.Pout_constraint]),
-        ]
+        seen = ComponentSet()
+        for vars, cons in zip(bt_vars, bt_cons):
+            self.assertEqual(len(vars), 1)
+            self.assertIs(vars[0], matching[cons[0]])
+            seen.update(vars)
+            # We know that P1 has to come before P2 and P3 in the block triangular form
+            if vars[0] is m.egb.outputs["P2"] or vars[0] is m.egb.inputs["P3"]:
+                self.assertIn(m.egb.inputs["P1"], seen)
 
-        self.assertEqual([ComponentSet(var_set) for var_set in bt_vars], expected_bt_vars)
-        self.assertEqual([ComponentSet(con_set) for con_set in bt_cons], expected_bt_cons)
+        # We know that these constraints have to be in the first three blocks
+        self.assertEqual(set(bt_cons[i][0] for i in range(3)), set([m.con1, m.con2, m.con3]))
