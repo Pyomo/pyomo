@@ -15,6 +15,7 @@ from pyomo.solvers.plugins.solvers import (
     GUROBI,
     BARON,
     ASL,
+    HIGHS,
     pywrapper,
     SCIPAMPL,
     CONOPT,

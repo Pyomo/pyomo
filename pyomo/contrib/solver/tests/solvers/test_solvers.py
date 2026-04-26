@@ -73,7 +73,7 @@ all_solvers = [
     ('gurobi_direct', GurobiDirect),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('ipopt', Ipopt),
-    ('highs', Highs),
+    ('highs_persistent', Highs),
     ('gams', GAMS),
     ('knitro_direct', KnitroDirectSolver),
 ]
@@ -81,7 +81,7 @@ mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('gurobi_direct_minlp', GurobiDirectMINLP),
-    ('highs', Highs),
+    ('highs_persistent', Highs),
     ('knitro_direct', KnitroDirectSolver),
 ]
 nlp_solvers = [
@@ -95,7 +95,7 @@ qcp_solvers = [
     ('ipopt', Ipopt),
     ('knitro_direct', KnitroDirectSolver),
 ]
-qp_solvers = qcp_solvers + [("highs", Highs)]
+qp_solvers = qcp_solvers + [("highs_persistent", Highs)]
 miqcqp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
     ('gurobi_persistent', GurobiPersistent),
@@ -2281,7 +2281,7 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(rc[m.x], 1)
             self.assertAlmostEqual(rc[m.y], 0)
 
-    @mark_parameterized.expand(input=_load_tests([("highs", Highs)]))
+    @mark_parameterized.expand(input=_load_tests([("highs_persistent", Highs)]))
     def test_node_limit(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):

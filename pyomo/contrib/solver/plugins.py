@@ -38,7 +38,7 @@ def load():
         doc='Direct interface to Gurobi accommodating general MINLP',
     )(GurobiDirectMINLP)
     SolverFactory.register(
-        name="highs", legacy_name="highs", doc="Persistent interface to HiGHS"
+        name="highs_persistent", legacy_name="highs_persistent_v2", doc="Persistent interface to HiGHS"
     )(Highs)
     SolverFactory.register(name='gams', legacy_name='gams_v2', doc='Interface to GAMS')(
         GAMS
