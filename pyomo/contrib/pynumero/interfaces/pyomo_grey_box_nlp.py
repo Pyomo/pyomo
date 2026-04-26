@@ -14,7 +14,6 @@ This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
 
-import os
 import numpy as np
 import logging
 
@@ -522,6 +521,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                 model_suffixes['ipopt_zU_out'].update(
                     zip(self._pyomo_model_var_datas, -obj_sign * bound_multipliers[1])
                 )
+
+    def has_hessian_support(self):
+        return self._has_hessian_support
 
     # Compatibility API for PyomoNLP - this is only a partial implementation
     def get_pyomo_variables(self):
