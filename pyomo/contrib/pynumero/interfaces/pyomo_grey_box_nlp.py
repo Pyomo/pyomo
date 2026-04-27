@@ -90,6 +90,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                 )
             }
             # Next, check the PyomoNLP for any Vars that are missing
+            # This can occur if a constraint in the model references a Var that is not part of the model
             for v in self._pyomo_nlp.get_pyomo_variables():
                 self._pyomo_model_var_names_to_datas[
                     v.getname(fully_qualified=True)
@@ -103,13 +104,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             }
             # Check for ExternalGreyBoxConstraint objects and add
             # them too
-            for b in pyomo_model.component_data_objects(pyo.Block, descend_into=True):
-                for c in b.component_data_objects(
-                    ctype=ExternalGreyBoxConstraint, active=True, descend_into=False
-                ):
-                    self._pyomo_model_constraint_names_to_datas[
-                        c.getname(fully_qualified=True)
-                    ] = c
+            for c in pyomo_model.component_data_objects(ExternalGreyBoxConstraint, active=True, descend_into=True):
+                self._pyomo_model_constraint_names_to_datas[c.name] = c
 
         finally:
             # Restore the ctypes of the ExternalGreyBoxBlock components
