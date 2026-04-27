@@ -175,6 +175,37 @@ def get_incident_variables(expr, **kwds):
         # Developer error, this should never happen!
         raise RuntimeError("_ampl_repn_visitor must be provided when using ampl_repn")
 
+    return get_variables_incident_to_constraint(
+        expr, method, include_fixed, linear_only, amplrepnvisitor
+    )
+
+def get_variables_incident_to_constraint(expr, method: IncidenceMethod, include_fixed: bool=False, linear_only: bool=False, amplrepnvisitor=None):
+    """
+    Helper function to identify variables that are incident on an expression, based on the type of the expression and the method specified.
+
+    Parameters
+    ----------
+    expr: NumericExpression
+        The expression to analyze for incident variables.
+    method: IncidenceMethod
+        The method to use for identifying incident variables (not used with EGBConstraintBody).
+    include_fixed: bool, optional
+        Whether to include fixed variables in the result.
+    linear_only: bool, optional
+        Whether to include only linear variables in the result.
+    amplrepnvisitor: optional
+        The AMPL representation visitor, required if using the AMPL representation method.
+
+    Returns
+    -------
+    list of VarData
+        List containing the variables that are incident on the expression.
+    
+    Raises
+    ------
+    ValueError
+        If an unrecognized method is specified for identifying incident variables.
+    """
     # Dispatch to correct method
     if isinstance(expr, EGBConstraintBody):
         # If the expression is the body of an implicit constraint, we need to use the get_incident_variables method defined on EGBConstraintBody
