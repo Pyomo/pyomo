@@ -35,6 +35,7 @@ def collect_import_time(module):
     # Note: test only runs in PY3
     output = output.decode()
     line_re = re.compile(r'.*:\s*(\d+) \|\s*(\d+) \| ( *)([^ ]+)')
+    print(output)
     data = []
     for line in output.splitlines():
         g = line_re.match(line)
@@ -44,7 +45,7 @@ def collect_import_time(module):
         _cumul = int(g.group(2))
         _level = len(g.group(3)) // 2
         _module = g.group(4)
-        # print("%6d %8d %2d %s" % (_self, _cumul, _level, _module))
+        print("%6d %8d %2d %s" % (_self, _cumul, _level, _module))
         while len(data) < _level + 1:
             data.append(ImportData())
         if len(data) > _level + 1:
