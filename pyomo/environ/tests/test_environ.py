@@ -116,7 +116,7 @@ class TestPyomoEnviron(unittest.TestCase):
         print("TPLS (by package time):")
         print(
             "\n".join(
-                "   %12s: %6d (%4.1f%%)" % (m, t, 100 * t / total)
+                "   %15s: %6d (%4.1f%%)" % (m, t, 100 * t / total)
                 for m, t in tpl_by_time
             )
         )
@@ -149,6 +149,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'json',  # Imported on Windows
             'locale',  # Added in Python 3.9
             'logging',
+            'multiprocessing',  # capture_output requires multiprocessing.Lock
             'pickle',
             'platform',
             'shlex',
