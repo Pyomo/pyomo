@@ -35,8 +35,9 @@ def collect_import_time(module):
     # Note: test only runs in PY3
     output = output.decode()
     line_re = re.compile(r'.*:\s*(\d+) \|\s*(\d+) \| ( *)([^ ]+)')
-    print(output)
+    # print(output)
     data = []
+    seen = set()
     for line in output.splitlines():
         g = line_re.match(line)
         if not g:
@@ -45,11 +46,17 @@ def collect_import_time(module):
         _cumul = int(g.group(2))
         _level = len(g.group(3)) // 2
         _module = g.group(4)
-        print("%6d %8d %2d %s" % (_self, _cumul, _level, _module))
+        # print("%6d %8d %2d %s" % (_self, _cumul, _level, _module))
         while len(data) < _level + 1:
             data.append(ImportData())
         if len(data) > _level + 1:
-            assert len(data) == _level + 2
+            if len(data) != _level + 2:
+                if _self in seen:
+                    continue
+                print(output)
+                raise RuntimeError(
+                    f"Error processing line '{line}': unexpected unindent"
+                )
             inner = data.pop()
             inner.tpl = {
                 (k if '(from' in k else "%s (from %s)" % (k, _module), v)
@@ -65,6 +72,7 @@ def collect_import_time(module):
             data[_level].pyomo[_module] = _self
         elif _level > 0:
             data[_level].tpl[_module] = _self
+        seen.add(_self)
     assert len(data) == 1
     return data[0]
 
