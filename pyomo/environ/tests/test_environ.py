@@ -51,7 +51,7 @@ def collect_import_time(module):
             data.append(ImportData())
         if len(data) > _level + 1:
             if len(data) != _level + 2:
-                if _self in seen:
+                if _module in seen:
                     continue
                 print(output)
                 raise RuntimeError(
@@ -72,7 +72,7 @@ def collect_import_time(module):
             data[_level].pyomo[_module] = _self
         elif _level > 0:
             data[_level].tpl[_module] = _self
-        seen.add(_self)
+        seen.add(_module)
     assert len(data) == 1
     return data[0]
 
