@@ -7,7 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from typing import Sequence, Dict, Optional, Mapping, List, Tuple
+from typing import Sequence, Mapping
 import os
 
 from pyomo.core.base.constraint import ConstraintData
@@ -163,7 +163,7 @@ class SolverBase:
             f"Derived class {self.__class__.__name__} failed to implement required method 'available'."
         )
 
-    def version(self) -> Tuple:
+    def version(self) -> tuple:
         """Return the solver version found on the system.
 
         Returns
@@ -231,7 +231,7 @@ class PersistentSolverBase(SolverBase):
         """
         return True
 
-    def _load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
+    def _load_vars(self, vars_to_load: Sequence[VarData] | None = None) -> None:
         """
         Load the solution of the primal variables into the value attribute of the variables.
 
@@ -246,14 +246,14 @@ class PersistentSolverBase(SolverBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def _get_primals(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> Mapping[VarData, float]:
         """
         Get mapping of variables to primals.
 
         Parameters
         ----------
-        vars_to_load : Optional[Sequence[VarData]], optional
+        vars_to_load : Sequence[VarData] | None
             Which vars to be populated into the map. The default is None.
 
         Returns
@@ -266,14 +266,14 @@ class PersistentSolverBase(SolverBase):
         )
 
     def _get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
-    ) -> Dict[ConstraintData, float]:
+        self, cons_to_load: Sequence[ConstraintData] | None = None
+    ) -> dict[ConstraintData, float]:
         """
         Declare sign convention in docstring here.
 
         Parameters
         ----------
-        cons_to_load: list
+        cons_to_load: Sequence[VarData] | None
             A list of the constraints whose duals should be loaded. If cons_to_load
             is None, then the duals for all constraints will be loaded.
 
@@ -285,7 +285,7 @@ class PersistentSolverBase(SolverBase):
         raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def _get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> Mapping[VarData, float]:
         """
         Parameters
@@ -319,7 +319,7 @@ class PersistentSolverBase(SolverBase):
             f"Derived class {self.__class__.__name__} failed to implement required method 'set_objective'."
         )
 
-    def add_constraints(self, cons: List[ConstraintData]):
+    def add_constraints(self, cons: list[ConstraintData]):
         """
         Add constraints to the model.
         """
@@ -335,7 +335,7 @@ class PersistentSolverBase(SolverBase):
             f"Derived class {self.__class__.__name__} failed to implement required method 'add_block'."
         )
 
-    def remove_constraints(self, cons: List[ConstraintData]):
+    def remove_constraints(self, cons: list[ConstraintData]):
         """
         Remove constraints from the model.
         """
@@ -351,7 +351,7 @@ class PersistentSolverBase(SolverBase):
             f"Derived class {self.__class__.__name__} failed to implement required method 'remove_block'."
         )
 
-    def update_variables(self, variables: List[VarData]):
+    def update_variables(self, variables: list[VarData]):
         """
         Update variables on the model.
         """
@@ -562,14 +562,9 @@ class LegacySolverWrapper:
         legacy_results._smap_id = None
 
         if load_solutions:
-            if hasattr(model, 'dual') and model.dual.import_enabled():
-                for con, val in results.solution_loader.get_duals().items():
-                    model.dual[con] = val
-            if hasattr(model, 'rc') and model.rc.import_enabled():
-                for var, val in results.solution_loader.get_reduced_costs().items():
-                    model.rc[var] = val
+            results.solution_loader.load_import_suffixes()
         elif results.incumbent_objective is not None:
-            for var, val in results.solution_loader.get_primals().items():
+            for var, val in results.solution_loader.get_vars().items():
                 legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for con, val in results.solution_loader.get_duals().items():
@@ -595,19 +590,19 @@ class LegacySolverWrapper:
         model: BlockData,
         tee: bool = False,
         load_solutions: bool = True,
-        logfile: Optional[str] = None,
-        solnfile: Optional[str] = None,
-        timelimit: Optional[float] = None,
+        logfile: str | None = None,
+        solnfile: str | None = None,
+        timelimit: float | None = None,
         report_timing: bool = False,
-        solver_io: Optional[str] = None,
-        suffixes: Optional[Sequence] = None,
-        options: Optional[Dict] = None,
+        solver_io: str | None = None,
+        suffixes: Sequence | None = None,
+        options: dict | None = None,
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
         # These are for forward-compatibility
         raise_exception_on_nonoptimal_result: bool = False,
-        solver_options: Optional[Dict] = None,
-        writer_config: Optional[Dict] = None,
+        solver_options: dict | None = None,
+        writer_config: dict | None = None,
     ):
         """
         Solve method: maps new solve method style to backwards compatible version.
