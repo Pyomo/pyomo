@@ -743,12 +743,10 @@ class IndexedExternalGreyBoxConstraint(ExternalGreyBoxConstraint):
                 # Check that implicit_constraint_id is a valid constraint in the external model
                 _validate_implicit_constraint_id(self, implicit_constraint_id)
 
-                print(f"Adding index {idx} to ExternalGreyBoxConstraint '{self.name}' with implicit_constraint_id '{implicit_constraint_id}'")
                 self._data[idx] = self._ComponentDataClass(
                     component=self,
                     implicit_constraint_id=implicit_constraint_id,
                 )
-                print(type(self._data[idx]))
 
     @overload
     def __getitem__(self, index) -> ExternalGreyBoxConstraintData: ...
