@@ -601,7 +601,7 @@ class TestCapture(unittest.TestCase):
                     tee.capture_output.startup_shutdown.acquire()
         finally:
             tee._threading_deadlock = save_poll
-            # We would like to just test if out Lock was aquired and
+            # We would like to just test if out Lock was acquired and
             # then release it if necessary.  Unfortunately,
             # multiprocessing.Lock doesn't support locked(), so we will
             # just catch and eat the error for releasing an unlocked
