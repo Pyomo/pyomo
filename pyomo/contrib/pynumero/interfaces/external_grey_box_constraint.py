@@ -17,6 +17,7 @@ represent implicit constraints defined by external grey-box models within Pyomo.
 from __future__ import annotations
 import sys
 import logging
+from collections.abc import Mapping
 from typing import Union, Type
 from weakref import ref as weakref_ref
 
@@ -416,20 +417,14 @@ class ExternalGreyBoxConstraint(IndexedComponent):
         *indexes,
         expr=None,
         rule=None,
-        implicit_constraint_id=None,
+        implicit_constraint_id: str | dict[tuple, str] | None = None,
         name=None,
         doc=None,
     ): ...
 
     def __init__(self, *args, **kwargs):
         # Get id of the implicit constraint (either the equality_constraint_name or output_name)
-        implicit_constraint_id = kwargs.pop('implicit_constraint_id', None)
-        if implicit_constraint_id is not None:
-            self._implicit_constraint_id = implicit_constraint_id
-        else:
-            raise ValueError(
-                "ExternalGreyBoxConstraints must be provided with a 'implicit_constraint_id' argument "
-            )
+        self._implicit_constraint_id = kwargs.pop('implicit_constraint_id', None)
 
         # Check for normal Constraint arguments, and raise a TypeError if found
         rule = kwargs.pop('rule', None)
@@ -449,10 +444,45 @@ class ExternalGreyBoxConstraint(IndexedComponent):
         kwargs.setdefault('ctype', ExternalGreyBoxConstraint)
         IndexedComponent.__init__(self, *args, **kwargs)
 
+        # Validate implicit_constraint_id
+        if not self.is_indexed():
+            # Scalar EGBConstraint - ensure that implicit_constraint_id is provided
+            if self._implicit_constraint_id is None:
+                raise ValueError(
+                    "The 'implicit_constraint_id' argument must be provided for non-indexed ExternalGreyBoxConstraints."
+                )
+        elif isinstance(self._implicit_constraint_id, Mapping):
+            # Indexed EGBConstraint with implicit_constraint_id mapping - ensure that keys match index set
+            valid_indices = set(self.index_set())
+            provided_indices = set(self._implicit_constraint_id.keys())
+
+            missing = valid_indices - provided_indices
+            extra = provided_indices - valid_indices
+
+            if missing or extra:
+                msg = (
+                    "For indexed ExternalGreyBoxConstraints, the "
+                    "'implicit_constraint_id' mapping keys must exactly match "
+                    "the component index set."
+                )
+                if missing:
+                    msg += f" Missing keys: {sorted(missing, key=str)}."
+                if extra:
+                    msg += f" Invalid keys: {sorted(extra, key=str)}."
+                raise ValueError(msg)
+        elif self._implicit_constraint_id is not None:
+            # Indexed EGBConstraint with unexpected implicit_constraint_id type - raise an error
+            raise TypeError(
+                "For indexed ExternalGreyBoxConstraints, the 'implicit_constraint_id' argument must be a mapping from index to identifier or None."
+            )
+
     def construct(self, data=None):
         """
         Construct the ExternalGreyBoxConstraint.
         """
+        if self._constructed:
+            return
+
         # First, check that the parent_block is an ExternalGreyBoxBlock
         if self.parent_block() is None or not hasattr(
             self.parent_block(), "get_external_model"
@@ -462,19 +492,9 @@ class ExternalGreyBoxConstraint(IndexedComponent):
                 "added to an ExternalGreyBoxBlock."
             )
 
-        # Next, check that the implicit_constraint_id exists in the
-        # external model
-        external_model = self.parent_block().get_external_model()
-        if not (
-            self._implicit_constraint_id in external_model.equality_constraint_names()
-            or self._implicit_constraint_id in external_model.output_names()
-        ):
-            raise ValueError(
-                f"implicit_constraint_id '{self._implicit_constraint_id}' does not exist in the "
-                f"external model associated with ExternalGreyBoxBlock '{self.parent_block().name}'."
-            )
-
         super().construct(data=data)
+
+        self._constructed = True
 
     def _pprint(self):
         """
@@ -546,6 +566,15 @@ class ScalarExternalGreyBoxConstraint(
 
         # Set _data here, as it isn't getting set elsewhere
         self._data[None] = self
+
+    def construct(self, data=None):
+        if self._constructed:
+            return
+
+        # Validate implicit_constraint_id for this scalar constraint
+        _validate_implicit_constraint_id(self, self._implicit_constraint_id)
+
+        ExternalGreyBoxConstraint.construct(self, data=data)
 
     #
     # Singleton ExternalGreyBoxConstraints are strange in that we want them to be
@@ -698,7 +727,49 @@ class IndexedExternalGreyBoxConstraint(ExternalGreyBoxConstraint):
         """Add a ExternalGreyBoxConstraint with a given index."""
         return self.__setitem__(index, expr)
 
+    def construct(self, data=None):
+        super().construct(data=data)
+
+        if not self._data:
+            for idx in self.index_set():
+                # Get implicit_constraint_id for this index
+                if self._implicit_constraint_id is not None:
+                    # If implicit_constraint_id is provided, get the corresponding id for this index
+                    implicit_constraint_id = self._implicit_constraint_id[idx]
+                else:
+                    # Infer implicit_constraint_id from index (assumes index is a single value that can be converted to a string)
+                    implicit_constraint_id = idx
+                
+                # Check that implicit_constraint_id is a valid constraint in the external model
+                _validate_implicit_constraint_id(self, implicit_constraint_id)
+
+                print(f"Adding index {idx} to ExternalGreyBoxConstraint '{self.name}' with implicit_constraint_id '{implicit_constraint_id}'")
+                self._data[idx] = self._ComponentDataClass(
+                    component=self,
+                    implicit_constraint_id=implicit_constraint_id,
+                )
+                print(type(self._data[idx]))
+
     @overload
     def __getitem__(self, index) -> ExternalGreyBoxConstraintData: ...
 
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
+
+
+def _validate_implicit_constraint_id(obj, implicit_constraint_id):
+    if not isinstance(implicit_constraint_id, str):
+        raise TypeError(
+            "ExternalGreyBoxConstraint implicit_constraint_id values must be strings. "
+            f"Invalid value: {implicit_constraint_id!r}"
+        )
+
+    external_model = obj.parent_block().get_external_model()
+
+    if not (
+        implicit_constraint_id in external_model.equality_constraint_names()
+        or implicit_constraint_id in external_model.output_names()
+    ):
+        raise ValueError(
+            f"implicit_constraint_id '{implicit_constraint_id}' does not exist in the "
+            f"external model associated with ExternalGreyBoxBlock '{obj.parent_block().name}'."
+        )

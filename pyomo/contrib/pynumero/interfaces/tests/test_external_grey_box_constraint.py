@@ -1226,5 +1226,37 @@ def test_component_data_objects_with_EGBC():
     assert count == 4
 
 
+def test_indexed_egbc():
+    m = pyo.ConcreteModel()
+    m.egb = ExternalGreyBoxBlock()
+    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
+    m.egb.set_external_model(external_model)
+
+    m.set = pyo.Set(initialize=['P2', 'Pout', 'pdrop1', 'pdrop3'])
+
+    m.egb.c = ExternalGreyBoxConstraint(m.set)
+
+    print(type(m.egb.c))
+    print(m.egb.c._constructed)
+
+    assert False
+
+
+def test_indexed_egbc2():
+    m = pyo.ConcreteModel()
+    m.egb = ExternalGreyBoxBlock()
+    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
+    m.egb.set_external_model(external_model)
+
+    m.set = pyo.Set(initialize=['P2', 'Pout', 'pdrop1', 'pdrop3'])
+
+    m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id={i: i for i in m.set})
+
+    print(type(m.egb.c))
+    print(m.egb.c._constructed)
+
+    assert False
+
+
 if __name__ == '__main__':
     unittest.main()
