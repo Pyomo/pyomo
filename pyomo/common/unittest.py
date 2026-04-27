@@ -44,6 +44,10 @@ from unittest import mock
 # (and then enforce a strict dependence on pytest)
 pytest, pytest_available = attempt_import('pytest')
 
+#: A time limit for acquiring the capture_output.startup_shutdown lock
+#: before terminating a subprocess
+_timeout_terminate_timeout = 2  # seconds
+
 
 def _defaultFormatter(msg, default):
     return msg or default
@@ -487,7 +491,27 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
                 if pipe_recv.poll(seconds):
                     resultType, result, stdout = pipe_recv.recv()
                 else:
-                    test_proc.terminate()
+                    # Note: because we are using capture_output within
+                    # the _runner handler, we can trigger a deadlock
+                    # when we call terminate() while the _runner's
+                    # capture_output holds the startup_shutdown lock
+                    # (terminate() bypasses all __exit__ handlers!).  To
+                    # avoid that, we will grab the lock here before
+                    # terminating the subprocess.
+                    locked = capture_output.startup_shutdown.acquire(
+                        timeout=_timeout_terminate_timeout
+                    )
+                    if not locked:
+                        logging.getLogger(__name__).error(
+                            "Failed to acquire capture_output.startup_shutdown "
+                            "Lock before terminating subprocess on timeout: "
+                            "process deadlock is likely."
+                        )
+                    try:
+                        test_proc.terminate()
+                    finally:
+                        if locked:
+                            capture_output.startup_shutdown.release()
                     raise timeout_raises(
                         "test timed out after %s seconds" % (seconds,)
                     ) from None

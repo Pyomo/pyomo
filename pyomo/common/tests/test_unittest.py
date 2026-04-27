@@ -171,8 +171,28 @@ class TestPyomoUnittest(unittest.TestCase):
 
     def test_timeout_fcn_call(self):
         self.assertEqual(short_sleep(), 42)
-        with self.assertRaisesRegex(TimeoutError, 'test timed out after 0.01 seconds'):
-            long_sleep()
+        with LoggingIntercept() as LOG:
+            with self.assertRaisesRegex(
+                TimeoutError, 'test timed out after 0.01 seconds'
+            ):
+                long_sleep()
+            self.assertEqual(LOG.getvalue(), "")
+            capture_output.startup_shutdown.acquire()
+            save = unittest._timeout_terminate_timeout
+            unittest._timeout_terminate_timeout = 0.01
+            try:
+                with self.assertRaisesRegex(
+                    TimeoutError, 'test timed out after 0.01 seconds'
+                ):
+                    long_sleep()
+            finally:
+                unittest._timeout_terminate_timeout = save
+                capture_output.startup_shutdown.release()
+            self.assertEqual(
+                LOG.getvalue(),
+                "Failed to acquire capture_output.startup_shutdown Lock before "
+                "terminating subprocess on timeout: process deadlock is likely.\n",
+            )
         with self.assertRaisesRegex(
             NameError, r"name 'foo' is not defined\s+Original traceback:"
         ):
