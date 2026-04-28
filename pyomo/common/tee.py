@@ -26,7 +26,7 @@ import time
 # that the startup_shutdown Lock is created *before* the user spawns any
 # subprocesses.  Therefore, we will bite the bullet and import it so
 # we can create the Lock immediately when we import this module.
-import multiprocessing
+from pyomo.common.dependencies import multiprocessing
 
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream

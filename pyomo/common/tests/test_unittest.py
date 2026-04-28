@@ -8,12 +8,12 @@
 # ____________________________________________________________________________________
 
 import datetime
-import multiprocessing
 import os
 import pickle
 import time
 
 import pyomo.common.unittest as unittest
+from pyomo.common.dependencies import multiprocessing
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
