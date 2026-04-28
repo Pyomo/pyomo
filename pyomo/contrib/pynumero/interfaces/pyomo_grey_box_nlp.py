@@ -174,7 +174,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         ]
         for gbnlp in greybox_nlps:
             self._constraint_names.extend(gbnlp.constraint_names())
-            self._constraint_datas.extend(gbnlp.constraint_datas())
+            self._constraint_datas.extend([(gbnlp._block, nm) for nm in gbnlp.constraint_names()])
         self._n_constraints = len(self._constraint_names)
 
         self._has_hessian_support = True

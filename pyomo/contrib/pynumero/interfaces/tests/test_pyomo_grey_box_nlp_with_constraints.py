@@ -2541,7 +2541,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 4.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 20.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), 50.0, places=3)
-        self.assertAlmostEqual(m.dual[m.egb.output_constraints['o']], -100.0, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.output_constraints[o]'], -100.0, places=3)
         self.assertAlmostEqual(
             pyo.value(m.ipopt_zL_out[m.egb.inputs['u']]), 500.0, places=3
         )
@@ -2557,7 +2557,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 10.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 50.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), -125.0, places=3)
-        self.assertAlmostEqual(m.dual[m.egb.output_constraints['o']], 250.0, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.output_constraints[o]'], 250.0, places=3)
         self.assertAlmostEqual(
             pyo.value(m.ipopt_zL_out[m.egb.inputs['u']]), 0.0, places=3
         )
@@ -2583,8 +2583,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 1.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 5.0, places=3)
         self.assertAlmostEqual(pyo.value(m.dual[m.con]), 12.5, places=3)
-        self.assertAlmostEqual(m.dual[m.egb.output_constraints['o']], -25.0, places=3)
-        self.assertAlmostEqual(m.dual[m.egb.eq_constraints['u2_con']], 62.5, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.output_constraints[o]'], -25.0, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.eq_constraints[u2_con]'], 62.5, places=3)
 
 
 class TestGreyBoxObjectives(unittest.TestCase):

@@ -29,30 +29,33 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
 import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
 
 
-# # Store the original set_external_model method
-# _original_set_external_model = ExternalGreyBoxBlockData.set_external_model
-
-
-# def _mocked_set_external_model(self, external_grey_box_model, inputs=None, outputs=None):
-#     """Mocked version that prevents automatic construction of ExternalGreyBoxConstraints.
+def _no_op_construct_implicit_constraints(self):
+    """
+    No-op implementation of _construct_implicit_constraints.
     
-#     This allows tests to manually construct ExternalGreyBoxConstraints to test
-#     the constraint construction logic itself.
-#     """
-#     # Call the original method
-#     _original_set_external_model(self, external_grey_box_model, inputs=inputs, outputs=outputs)
+    This prevents automatic construction of ExternalGreyBoxConstraints,
+    allowing tests to manually construct them to test the constraint 
+    construction logic itself.
+    """
+    pass
+
+
+# Decorator to patch _construct_implicit_constraints with a no-op for test classes
+def skip_implicit_constraint_construction(test_class):
+    """
+    Decorator that patches _construct_implicit_constraints to prevent 
+    automatic construction of implicit constraints in tests.
     
-#     # Remove the automatically constructed constraint objects so tests can construct them manually
-#     if hasattr(self, 'eq_constraints'):
-#         del self.eq_constraints
-#     if hasattr(self, 'output_constraints'):
-#         del self.output_constraints
+    This is scoped to the decorated test class only and won't affect other tests.
+    """
+    return patch.object(
+        ExternalGreyBoxBlockData,
+        '_construct_implicit_constraints',
+        _no_op_construct_implicit_constraints
+    )(test_class)
 
 
-# # Monkey-patch the method to ensure implicit constraint objects are never built automatically
-# ExternalGreyBoxBlockData.set_external_model = _mocked_set_external_model
-
-
+@skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
     """Test construction and initialization of ExternalGreyBoxConstraint."""
 
@@ -365,6 +368,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         self.assertIn("do not have an explicit expression", str(context.exception))
 
 
+@skip_implicit_constraint_construction
 class TestEGBConstraintBody(unittest.TestCase):
     """Test the EGBConstraintBody object returned by the body property."""
 
@@ -745,6 +749,7 @@ class TestEGBConstraintBody(unittest.TestCase):
             self.assertTrue(hasattr(var, 'ub'))
 
 
+@skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
     """Test slack methods of ExternalGreyBoxConstraint."""
 
@@ -809,6 +814,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         self.assertAlmostEqual(call_value, body_value, places=6)
 
 
+@skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintActive(unittest.TestCase):
     """Test active status methods of ExternalGreyBoxConstraint."""
 
@@ -856,6 +862,7 @@ class TestExternalGreyBoxConstraintActive(unittest.TestCase):
         self.assertIn("cannot be activated or deactivated", str(context.exception))
 
 
+@skip_implicit_constraint_construction
 class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
     """Test ScalarExternalGreyBoxConstraint specific functionality."""
 
@@ -977,6 +984,7 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
         )
 
 
+@skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
     """Test with models having multiple equality constraints."""
 
@@ -1028,6 +1036,7 @@ class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.c2.body), 0.0, places=6)
 
 
+@skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
     """Test display and printing methods."""
 
@@ -1098,6 +1107,7 @@ class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
         self.assertEqual(columns, ("Lower", "Body", "Upper", "Active"))
 
 
+@skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintImplicitConstraintId(unittest.TestCase):
     """Test implicit_constraint_id property."""
 
@@ -1127,6 +1137,7 @@ class TestExternalGreyBoxConstraintImplicitConstraintId(unittest.TestCase):
         self.assertEqual(m.egb.c2._implicit_constraint_id, 'pdropout')
 
 
+@skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
     """Integration tests with various external models."""
 
@@ -1192,6 +1203,7 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb2.c.body), 0.0, places=6)
 
 
+@skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
     """Test edge cases and boundary conditions."""
 
@@ -1212,6 +1224,7 @@ class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
         self.assertAlmostEqual(body_value, 0.0, places=6)
 
 
+@skip_implicit_constraint_construction
 class TestIndexedExternalGreyBoxConstraint(unittest.TestCase):
     """Test indexed ExternalGreyBoxConstraint functionality."""
 
@@ -1379,6 +1392,7 @@ class TestIndexedExternalGreyBoxConstraint(unittest.TestCase):
             self.assertEqual(m.egb.c[idx]._implicit_constraint_id, id_map[idx])
 
 
+@skip_implicit_constraint_construction
 class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
     """Test validation errors for indexed ExternalGreyBoxConstraint."""
 
@@ -1537,6 +1551,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
         self.assertIn("does not exist", str(context.exception))
 
 
+@skip_implicit_constraint_construction
 class TestIndexedExternalGreyBoxConstraintAdvanced(unittest.TestCase):
     """Advanced tests for indexed ExternalGreyBoxConstraint."""
 
@@ -1707,6 +1722,7 @@ class TestIndexedExternalGreyBoxConstraintAdvanced(unittest.TestCase):
         self.assertIsInstance(body_value, (float, np.floating))
 
 
+@skip_implicit_constraint_construction
 def test_component_data_objects_with_EGBC():
     """Test that ExternalGreyBoxConstraints can be iterated over using component_data_objects."""
     m = pyo.ConcreteModel()
@@ -1730,6 +1746,7 @@ def test_component_data_objects_with_EGBC():
     assert count == 4
 
 
+@skip_implicit_constraint_construction
 def test_indexed_egbc_no_implicit_constraint_id():
     m = pyo.ConcreteModel()
     m.egb = ExternalGreyBoxBlock()
@@ -1746,6 +1763,7 @@ def test_indexed_egbc_no_implicit_constraint_id():
     assert m.egb.c["pdrop3"]._implicit_constraint_id == "pdrop3"
 
 
+@skip_implicit_constraint_construction
 def test_indexed_egbc_implicit_constraint_id_mapping():
     m = pyo.ConcreteModel()
     m.egb = ExternalGreyBoxBlock()

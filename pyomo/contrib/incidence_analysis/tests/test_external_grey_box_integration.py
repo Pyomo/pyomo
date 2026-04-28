@@ -43,18 +43,18 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         egb_var = ComponentSet(m.egb.component_data_objects(pyo.Var))
         self.assertEqual(ComponentSet(uc_var), egb_var)
 
-        uc_cons_set = ComponentSet([m.egb.Pout_constraint])
+        uc_cons_set = ComponentSet([m.egb.output_constraints["Pout"]])
         self.assertEqual(ComponentSet(uc_con), uc_cons_set)
 
         self.assertEqual(ComponentSet(oc_var), ComponentSet([]))
         self.assertEqual(ComponentSet(oc_con), ComponentSet([]))
 
         max_matching = igraph.maximum_matching()
-        self.assertIn(max_matching[m.egb.Pout_constraint], egb_var)
+        self.assertIn(max_matching[m.egb.output_constraints["Pout"]], egb_var)
 
         cc_vars, cc_cons = igraph.get_connected_components()
         self.assertEqual(ComponentSet(cc_vars[0]), egb_var)
-        self.assertEqual(cc_cons[0][0].name, "egb.Pout_constraint")
+        self.assertEqual(cc_cons[0][0].name, "egb.output_constraints[Pout]")
 
     def test_pressure_drop_single_output_block_triangularization(self):
         m = pyo.ConcreteModel()
@@ -83,7 +83,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         con_set_0 = [m.con1]
         con_set_1 = [m.con2]
         con_set_2 = [m.con3]
-        con_set_3 = [m.egb.Pout_constraint]
+        con_set_3 = [m.egb.output_constraints["Pout"]]
         expected_bt_cons = [con_set_0, con_set_1, con_set_2, con_set_3]
 
         self.assertEqual(bt_vars, expected_bt_vars)
@@ -97,10 +97,10 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertIs(bt_cons[0][0], m.con1)
         self.assertIs(bt_cons[1][0], m.con2)
         self.assertIs(bt_cons[2][0], m.con3)
-        self.assertIs(bt_cons[3][0], m.egb.Pout_constraint)
+        self.assertIs(bt_cons[3][0], m.egb.output_constraints["Pout"])
 
         self.assertEqual(
-            ComponentSet(igraph.get_adjacent_to(m.egb.Pout_constraint)),
+            ComponentSet(igraph.get_adjacent_to(m.egb.output_constraints["Pout"])),
             ComponentSet(m.egb.component_data_objects(pyo.Var)),
         )
 
@@ -133,7 +133,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertEqual(ComponentSet(uc_var), uc_var_set)
 
         uc_con_set = ComponentSet(
-            [m.egb.Pout_constraint, m.egb.P2_constraint, m.egb.pdrop1, m.egb.pdrop3]
+            [m.egb.output_constraints["Pout"], m.egb.output_constraints["P2"], m.egb.eq_constraints["pdrop1"], m.egb.eq_constraints["pdrop3"]]
         )
         self.assertEqual(ComponentSet(uc_con), uc_con_set)
 
@@ -143,7 +143,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         max_matching = igraph.maximum_matching()
         egb_var = ComponentSet(m.egb.component_data_objects(pyo.Var))
         egb_cons = ComponentSet(m.egb.component_data_objects(ExternalGreyBoxConstraint))
-        self.assertIn(max_matching[m.egb.Pout_constraint], egb_var)
+        self.assertIn(max_matching[m.egb.output_constraints["Pout"]], egb_var)
 
         cc_vars, cc_cons = igraph.get_connected_components()
         self.assertEqual(ComponentSet(cc_vars[0]), egb_var)
@@ -167,10 +167,10 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
             m.con1: m.egb.inputs["F"],
             m.con2: m.egb.inputs["Pin"],
             m.con3: m.egb.inputs["c"],
-            m.egb.pdrop1: m.egb.inputs["P1"],
-            m.egb.pdrop3: m.egb.inputs["P3"],
-            m.egb.P2_constraint: m.egb.outputs["P2"],
-            m.egb.Pout_constraint: m.egb.outputs["Pout"],
+            m.egb.eq_constraints["pdrop1"]: m.egb.inputs["P1"],
+            m.egb.eq_constraints["pdrop3"]: m.egb.inputs["P3"],
+            m.egb.output_constraints["P2"]: m.egb.outputs["P2"],
+            m.egb.output_constraints["Pout"]: m.egb.outputs["Pout"],
         }
 
         seen = ComponentSet()

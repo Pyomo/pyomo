@@ -235,7 +235,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
             'egb.inputs[Pout]',
         ]
         x_order = egb_nlp.primals_names()
-        comparison_c_order = ['egb.output_constraints[Pdrop]']
+        comparison_c_order = ['egb.eq_constraints[pdrop]']
         c_order = egb_nlp.constraint_names()
 
         xlb = egb_nlp.primals_lb()
@@ -2584,7 +2584,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(
             m.dual[m.egb]['egb.output_constraints[o]'], -25.0, places=3
         )
-        self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.eq_constraints[u2_con]'], 62.5, places=3)
 
     def test_has_hessian_support_false(self):
         external_model = ex_models.PressureDropSingleOutput()
