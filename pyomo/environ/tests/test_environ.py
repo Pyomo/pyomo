@@ -46,7 +46,7 @@ def collect_import_time(module, preimport=""):
     )
     # Note: test only runs in PY3
     output = output.decode()
-    print(output)
+    # print(output)
     line_re = re.compile(r'.*:\s*(\d+) \|\s*(\d+) \| ( *)([^ ]+)')
     header_re = re.compile(r'.*:\s*(.*)')
     results = []
@@ -183,7 +183,7 @@ class TestPyomoEnviron(unittest.TestCase):
             # pre-load and pre-start multiprocessing so that the
             # asynchronous task triggered by creating a Lock will not be
             # interleaved in the importtime report
-            'import time, multiprocessing; multiprocessing.Lock(); time.sleep(0.1)',
+            'import time, multiprocessing; multiprocessing.Lock(); time.sleep(0.25)',
         )
         python_time, module_tpl_time, pyomo_time, tpl_by_time = summarize_import_time(
             'pyomo.environ', data
