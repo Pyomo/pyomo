@@ -1081,6 +1081,21 @@ def _pyutilib_importer():
 
 
 with declare_modules_as_importable(globals()):
+    # Standard libraries that we will unconditionally import.  We are
+    # importing it here so that import timing is better reported from
+    # pyomo.environ.tests.test_environ (hence the imports are not
+    # necessarily alphebetical)
+    #
+    # Pickle is used by Pyomo and by multiprocessing
+    try:
+        import cPickle as pickle
+    except ImportError:
+        import pickle
+    # multiprocessing is unconditionally needed by capture_output
+    import multiprocessing
+    import multiprocessing.dummy
+    import multiprocessing.resource_tracker
+
     # Standard libraries that are slower to import and not strictly required
     # on all platforms / situations.
     ctypes, _ = attempt_import(
@@ -1127,8 +1142,3 @@ with declare_modules_as_importable(globals()):
         deferred_submodules=['pyplot', 'pylab', 'backends'],
         catch_exceptions=(ImportError, RuntimeError),
     )
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
