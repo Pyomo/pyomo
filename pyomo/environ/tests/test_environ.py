@@ -46,7 +46,7 @@ def collect_import_time(module, preimport=""):
     )
     # Note: test only runs in PY3
     output = output.decode()
-    # print(output)
+    print(output)
     line_re = re.compile(r'.*:\s*(\d+) \|\s*(\d+) \| ( *)([^ ]+)')
     header_re = re.compile(r'.*:\s*(.*)')
     results = []
