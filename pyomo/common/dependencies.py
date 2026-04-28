@@ -1093,8 +1093,6 @@ with declare_modules_as_importable(globals()):
         import pickle
     # multiprocessing is unconditionally needed by capture_output
     import multiprocessing
-    import multiprocessing.dummy
-    import multiprocessing.resource_tracker
 
     # Standard libraries that are slower to import and not strictly required
     # on all platforms / situations.

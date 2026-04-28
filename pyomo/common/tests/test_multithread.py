@@ -9,10 +9,10 @@
 
 import threading
 from threading import Thread
+from multiprocessing.dummy import Pool as ThreadPool
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.dependencies.multiprocessing.dummy import Pool as ThreadPool
 from pyomo.common.multithread import MultiThreadWrapper, MultiThreadWrapperWithMain
 from pyomo.opt.base.solvers import check_available_solvers
 
