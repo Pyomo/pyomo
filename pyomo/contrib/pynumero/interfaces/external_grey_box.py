@@ -351,7 +351,6 @@ class ExternalGreyBoxBlockData(BlockData):
         external_grey_box_model,
         inputs=None,
         outputs=None,
-        build_implicit_constraint_objects=False,
     ):
         """
         Parameters
@@ -364,13 +363,9 @@ class ExternalGreyBoxBlockData(BlockData):
         outputs: List of VarData objects
             If provided, these VarData will be used as outputs from the
             external model.
-        build_implicit_constraint_objects: bool
-            If True, then we will build ExternalGreyBoxConstraint objects to represent the
-            implicit constraints.
 
         """
         self._ex_model = ex_model = external_grey_box_model
-        self._has_implicit_constraint_objects = build_implicit_constraint_objects
         if ex_model is None:
             self._input_names = self._output_names = None
             self.inputs = self.outputs = None
@@ -418,33 +413,23 @@ class ExternalGreyBoxBlockData(BlockData):
         # call the callback so the model can set initialization, bounds, etc.
         external_grey_box_model.finalize_block_construction(self)
 
-        # If required, construct the ExternalGreyBoxConstraint objects
-        if self._has_implicit_constraint_objects:
-            for con_name in self._equality_constraint_names:
-                setattr(
-                    self,
-                    con_name,
-                    ExternalGreyBoxConstraint(
-                        implicit_constraint_id=con_name,
-                        doc=f"Implicit constraint for external grey box constraint {con_name}",
-                    ),
-                )
-            for out_name in self._output_names:
-                setattr(
-                    self,
-                    out_name + "_constraint",
-                    ExternalGreyBoxConstraint(
-                        implicit_constraint_id=out_name,
-                        doc=f"Implicit constraint for external model output {out_name}",
-                    ),
-                )
+        # Construct the ExternalGreyBoxConstraint objects
+        self._construct_implicit_constraints()
 
     def get_external_model(self):
         return self._ex_model
 
-    @property
-    def has_implicit_constraint_objects(self):
-        return self._has_implicit_constraint_objects
+    def _construct_implicit_constraints(self):
+        """
+        Construct the implicit constraints for this block. This should be
+        called by the solver interface before solving to ensure that the
+        implicit constraints are constructed and available on the block.
+        """
+        # Let the EGBConstraints infer names from the indexing sets
+        self._equality_constraint_set = Set(initialize=self._equality_constraint_names, ordered=True)
+
+        self.eq_constraints = ExternalGreyBoxConstraint(self._equality_constraint_set)
+        self.output_constraints = ExternalGreyBoxConstraint(self._output_names_set)
 
 
 class ExternalGreyBoxBlock(Block):
@@ -462,9 +447,6 @@ class ExternalGreyBoxBlock(Block):
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', ExternalGreyBoxBlock)
         self._init_model = Initializer(kwds.pop('external_model', None))
-        self._build_implicit_constraint_objects = Initializer(
-            kwds.pop('build_implicit_constraint_objects', False)
-        )
         Block.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
@@ -486,9 +468,6 @@ class ExternalGreyBoxBlock(Block):
             for index, data in self.items():
                 data.set_external_model(
                     self._init_model(block, index),
-                    build_implicit_constraint_objects=self._build_implicit_constraint_objects(
-                        block, index
-                    ),
                 )
 
 

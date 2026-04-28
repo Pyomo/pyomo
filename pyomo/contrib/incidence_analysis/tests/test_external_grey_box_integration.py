@@ -29,7 +29,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
-            ex_models.PressureDropSingleOutput(), build_implicit_constraint_objects=True
+            ex_models.PressureDropSingleOutput()
         )
 
         igraph = IncidenceGraphInterface(m, include_inequality=False)
@@ -60,7 +60,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
-            ex_models.PressureDropSingleOutput(), build_implicit_constraint_objects=True
+            ex_models.PressureDropSingleOutput(),
         )
 
         # Add constraints to make model square, then rebuild graph to test block triangularization
@@ -109,7 +109,6 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
             ex_models.PressureDropTwoEqualitiesTwoOutputs(),
-            build_implicit_constraint_objects=True,
         )
 
         igraph = IncidenceGraphInterface(m, include_inequality=False)
@@ -155,7 +154,6 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(
             ex_models.PressureDropTwoEqualitiesTwoOutputs(),
-            build_implicit_constraint_objects=True,
         )
 
         # Add constraints to make model square, then rebuild graph to test block triangularization

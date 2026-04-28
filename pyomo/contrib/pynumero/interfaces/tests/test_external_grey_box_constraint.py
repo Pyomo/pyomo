@@ -22,28 +22,35 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import (
 )
 from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
     ExternalGreyBoxConstraint,
+    ExternalGreyBoxConstraintData,
     ScalarExternalGreyBoxConstraint,
     EGBConstraintBody,
 )
 import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
 
 
-# Store the original set_external_model method
-_original_set_external_model = ExternalGreyBoxBlockData.set_external_model
+# # Store the original set_external_model method
+# _original_set_external_model = ExternalGreyBoxBlockData.set_external_model
 
 
-# Wrapper that forces build_implicit_constraint_objects to False
-def _mocked_set_external_model(
-    self, external_grey_box_model, inputs=None, outputs=None, build_implicit_constraint_objects=False
-):
-    """Mocked version that always forces build_implicit_constraint_objects to False."""
-    return _original_set_external_model(
-        self, external_grey_box_model, inputs=inputs, outputs=outputs, build_implicit_constraint_objects=False
-    )
+# def _mocked_set_external_model(self, external_grey_box_model, inputs=None, outputs=None):
+#     """Mocked version that prevents automatic construction of ExternalGreyBoxConstraints.
+    
+#     This allows tests to manually construct ExternalGreyBoxConstraints to test
+#     the constraint construction logic itself.
+#     """
+#     # Call the original method
+#     _original_set_external_model(self, external_grey_box_model, inputs=inputs, outputs=outputs)
+    
+#     # Remove the automatically constructed constraint objects so tests can construct them manually
+#     if hasattr(self, 'eq_constraints'):
+#         del self.eq_constraints
+#     if hasattr(self, 'output_constraints'):
+#         del self.output_constraints
 
 
-# Monkey-patch the method to ensure implicit constraint objects are never built
-ExternalGreyBoxBlockData.set_external_model = _mocked_set_external_model
+# # Monkey-patch the method to ensure implicit constraint objects are never built automatically
+# ExternalGreyBoxBlockData.set_external_model = _mocked_set_external_model
 
 
 class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
@@ -1717,7 +1724,7 @@ def test_component_data_objects_with_EGBC():
     for c in m.egb.component_data_objects(
         ctype=ExternalGreyBoxConstraint, descend_into=False
     ):
-        assert isinstance(c, ScalarExternalGreyBoxConstraint)
+        assert isinstance(c, ExternalGreyBoxConstraintData)
         assert c.local_name in ['P2_constraint', 'Pout_constraint', 'pdrop1', 'pdrop3']
         count += 1
     assert count == 4

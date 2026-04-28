@@ -235,7 +235,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
             'egb.inputs[Pout]',
         ]
         x_order = egb_nlp.primals_names()
-        comparison_c_order = ['egb.pdrop']
+        comparison_c_order = ['egb.output_constraints[Pdrop]']
         c_order = egb_nlp.constraint_names()
 
         xlb = egb_nlp.primals_lb()
@@ -547,7 +547,7 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
             'egb.inputs[Pout]',
         ]
         x_order = egb_nlp.primals_names()
-        comparison_c_order = ['egb.pdrop2', 'egb.pdropout']
+        comparison_c_order = ['egb.eq_constraints[pdrop2]', 'egb.eq_constraints[pdropout]']
         c_order = egb_nlp.constraint_names()
 
         xlb = egb_nlp.primals_lb()
@@ -713,8 +713,8 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         ]
         x_order = egb_nlp.primals_names()
         comparison_c_order = [
-            'egb.pdrop1',
-            'egb.pdrop3',
+            'egb.eq_constraints[pdrop1]',
+            'egb.eq_constraints[pdrop3]',
             'egb.output_constraints[P2]',
             'egb.output_constraints[Pout]',
         ]
@@ -934,8 +934,8 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp = _ExternalGreyBoxAsNLP(m.egb)
 
         comparison_c_order = [
-            'egb.pdrop1',
-            'egb.pdrop3',
+            'egb.eq_constraints[pdrop1]',
+            'egb.eq_constraints[pdrop3]',
             'egb.output_constraints[P2]',
             'egb.output_constraints[Pout]',
         ]
@@ -1204,7 +1204,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
             'egb.inputs[Pout]',
         ]
         x_order = pyomo_nlp.primals_names()
-        comparison_c_order = ['egb.pdrop']
+        comparison_c_order = ['egb.eq_constraints[pdrop]']
         c_order = pyomo_nlp.constraint_names()
 
         xlb = pyomo_nlp.primals_lb()
@@ -1544,7 +1544,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
             'egb.inputs[Pout]',
         ]
         x_order = pyomo_nlp.primals_names()
-        comparison_c_order = ['egb.pdrop2', 'egb.pdropout']
+        comparison_c_order = ['egb.eq_constraints[pdrop2]', 'egb.eq_constraints[pdropout]']
         c_order = pyomo_nlp.constraint_names()
 
         xlb = pyomo_nlp.primals_lb()
@@ -1721,8 +1721,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         ]
         x_order = pyomo_nlp.primals_names()
         comparison_c_order = [
-            'egb.pdrop1',
-            'egb.pdrop3',
+            'egb.eq_constraints[pdrop1]',
+            'egb.eq_constraints[pdrop3]',
             'egb.output_constraints[P2]',
             'egb.output_constraints[Pout]',
         ]
@@ -1935,8 +1935,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         ]
         x_order = pyomo_nlp.primals_names()
         comparison_c_order = [
-            'egb.pdrop1',
-            'egb.pdrop3',
+            'egb.eq_constraints[pdrop1]',
+            'egb.eq_constraints[pdrop3]',
             'egb.output_constraints[P2]',
             'egb.output_constraints[Pout]',
             'incon',
@@ -2242,8 +2242,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         ]
         x_order = pyomo_nlp.primals_names()
         comparison_c_order = [
-            'egb.pdrop1',
-            'egb.pdrop3',
+            'egb.eq_constraints[pdrop1]',
+            'egb.eq_constraints[pdrop3]',
             'egb.output_constraints[P2]',
             'egb.output_constraints[Pout]',
             'incon',
@@ -2288,8 +2288,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         ]
         x_order = pyomo_nlp.primals_names()
         comparison_c_order = [
-            'egb.pdrop1',
-            'egb.pdrop3',
+            'egb.eq_constraints[pdrop1]',
+            'egb.eq_constraints[pdrop3]',
             'egb.output_constraints[P2]',
             'egb.output_constraints[Pout]',
             'incon',
@@ -2367,8 +2367,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         ]
         x_order = pyomo_nlp.primals_names()
         comparison_c_order = [
-            'egb.pdrop1',
-            'egb.pdrop3',
+            'egb.eq_constraints[pdrop1]',
+            'egb.eq_constraints[pdrop3]',
             'egb.output_constraints[P2]',
             'egb.output_constraints[Pout]',
             'incon',
@@ -2465,7 +2465,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertIn('c scaling provided', solver_trace)
         self.assertIn('d scaling provided', solver_trace)
         # x_order: ['egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.inputs[Pin]', 'egb.inputs[c]', 'egb.outputs[P2]', 'egb.outputs[Pout]', 'mu']
-        # c_order: ['ccon', 'pcon', 'pincon', 'egb.pdrop1', 'egb.pdrop3', 'egb.output_constraints[P2]', 'egb.output_constraints[Pout]']
+        # c_order: ['ccon', 'pcon', 'pincon', 'egb.eq_constraints[pdrop1]', 'egb.eq_constraints[pdrop3]', 'egb.output_constraints[P2]', 'egb.output_constraints[Pout]']
         self.assertIn('DenseVector "x scaling vector" with 8 elements:', solver_trace)
         self.assertIn(
             'x scaling vector[    1]= 1.3000000000000000e+00', solver_trace

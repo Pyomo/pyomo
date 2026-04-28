@@ -587,32 +587,14 @@ class _ExternalGreyBoxAsNLP(NLP):
             for k in self._block.outputs
         )
 
-        # For constraints, check to see if we have implicit constraint objects or not.
-        if not self._block.has_implicit_constraint_objects:
-            prefix = self._block.getname(fully_qualified=True)
-            self._constraint_names = [
-                '{}.{}'.format(prefix, nm)
-                for nm in self._ex_model.equality_constraint_names()
-            ]
-            self._constraint_names.extend(
-                [
-                    '{}.output_constraints[{}]'.format(prefix, nm)
-                    for nm in self._ex_model.output_names()
-                ]
-            )
-            # In place of actual constraint data objects, we just store the block and the name of the constraint
-            self._constraint_datas = [
-                (self._block, nm) for nm in self._constraint_names
-            ]
-
-        else:
-            self._constraint_names = []
-            self._constraint_datas = []
-            for c in self._block.component_data_objects(
-                ExternalGreyBoxConstraint, active=True, descend_into=False
-            ):
-                self._constraint_names.append(c.getname(fully_qualified=True))
-                self._constraint_datas.append(c)
+        # Collect implicit constraints.
+        self._constraint_names = []
+        self._constraint_datas = []
+        for c in self._block.component_data_objects(
+            ExternalGreyBoxConstraint, active=True, descend_into=False
+        ):
+            self._constraint_names.append(c.getname(fully_qualified=True))
+            self._constraint_datas.append(c)
 
         # create the numpy arrays of bounds on the primals
         self._primals_lb = BlockVector(2)

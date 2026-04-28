@@ -15,6 +15,7 @@ represent implicit constraints defined by external grey-box models within Pyomo.
 """
 
 from __future__ import annotations
+from operator import index
 import sys
 import logging
 from collections.abc import Mapping
@@ -172,16 +173,16 @@ class ExternalGreyBoxConstraintData(ComponentData):
 
     """
 
-    __slots__ = ('_implicit_constraint_id', '_body')
+    __slots__ = ('_implicit_constraint_id', '_body', '_index')
 
-    def __init__(self, implicit_constraint_id=None, component=None):
+    def __init__(self, implicit_constraint_id=None, component=None, index=NOTSET):
         #
         # These lines represent in-lining of the
         # following constructors:
         #   - ExternalGreyBoxConstraintData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) else None
-
+        self._index = index
         self._implicit_constraint_id = implicit_constraint_id
 
         # Placeholder for body
@@ -571,10 +572,9 @@ class ScalarExternalGreyBoxConstraint(
         if self._constructed:
             return
 
+        ExternalGreyBoxConstraint.construct(self, data=data)
         # Validate implicit_constraint_id for this scalar constraint
         _validate_implicit_constraint_id(self, self._implicit_constraint_id)
-
-        ExternalGreyBoxConstraint.construct(self, data=data)
 
     #
     # Singleton ExternalGreyBoxConstraints are strange in that we want them to be
@@ -746,6 +746,7 @@ class IndexedExternalGreyBoxConstraint(ExternalGreyBoxConstraint):
                 self._data[idx] = self._ComponentDataClass(
                     component=self,
                     implicit_constraint_id=implicit_constraint_id,
+                    index=idx,
                 )
 
     @overload
