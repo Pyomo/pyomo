@@ -55,15 +55,15 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         """Test that constraint objects are created for outputs"""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropSingleOutput()
-        )
+        m.egb.set_external_model(ex_models.PressureDropSingleOutput())
 
         # Check that the constraint object was created for the output
         self.assertTrue(hasattr(m.egb, 'eq_constraints'))
         self.assertTrue(len(m.egb.eq_constraints) == 0)
         self.assertTrue(hasattr(m.egb, 'output_constraints'))
-        self.assertIsInstance(m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData)
+        self.assertIsInstance(
+            m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData
+        )
 
         # Check that no equality constraint objects were created (no equality constraints)
         egbm = m.egb.get_external_model()
@@ -74,13 +74,13 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         """Test that constraint objects are created for equality constraints"""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropSingleEquality(),
-        )
+        m.egb.set_external_model(ex_models.PressureDropSingleEquality())
 
         # Check that the constraint object was created for the equality constraint
         self.assertTrue(hasattr(m.egb, 'eq_constraints'))
-        self.assertIsInstance(m.egb.eq_constraints['pdrop'], ExternalGreyBoxConstraintData)
+        self.assertIsInstance(
+            m.egb.eq_constraints['pdrop'], ExternalGreyBoxConstraintData
+        )
         self.assertTrue(hasattr(m.egb, 'output_constraints'))
         self.assertTrue(len(m.egb.output_constraints) == 0)
 
@@ -93,45 +93,55 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         """Test that constraint objects are created for multiple outputs"""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropTwoOutputs(),
-        )
+        m.egb.set_external_model(ex_models.PressureDropTwoOutputs())
 
         # Check that constraint objects were created for both outputs
         self.assertTrue(hasattr(m.egb, 'output_constraints'))
-        self.assertIsInstance(m.egb.output_constraints['P2'], ExternalGreyBoxConstraintData)
-        self.assertIsInstance(m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData)
+        self.assertIsInstance(
+            m.egb.output_constraints['P2'], ExternalGreyBoxConstraintData
+        )
+        self.assertIsInstance(
+            m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData
+        )
 
     def test_pressure_drop_two_equalities_constraint_creation(self):
         """Test that constraint objects are created for multiple equality constraints"""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropTwoEqualities(),
-        )
+        m.egb.set_external_model(ex_models.PressureDropTwoEqualities())
 
         # Check that constraint objects were created for both equality constraints
         self.assertTrue(hasattr(m.egb, 'eq_constraints'))
-        self.assertIsInstance(m.egb.eq_constraints['pdrop2'], ExternalGreyBoxConstraintData)
-        self.assertIsInstance(m.egb.eq_constraints['pdropout'], ExternalGreyBoxConstraintData)
+        self.assertIsInstance(
+            m.egb.eq_constraints['pdrop2'], ExternalGreyBoxConstraintData
+        )
+        self.assertIsInstance(
+            m.egb.eq_constraints['pdropout'], ExternalGreyBoxConstraintData
+        )
 
     def test_pressure_drop_two_equalities_two_outputs_constraint_creation(self):
         """Test that constraint objects are created for both equality constraints and outputs"""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropTwoEqualitiesTwoOutputs(),
-        )
+        m.egb.set_external_model(ex_models.PressureDropTwoEqualitiesTwoOutputs())
 
         # Check that constraint objects were created for equality constraints
         self.assertTrue(hasattr(m.egb, 'eq_constraints'))
-        self.assertIsInstance(m.egb.eq_constraints['pdrop1'], ExternalGreyBoxConstraintData)
-        self.assertIsInstance(m.egb.eq_constraints['pdrop3'], ExternalGreyBoxConstraintData)
+        self.assertIsInstance(
+            m.egb.eq_constraints['pdrop1'], ExternalGreyBoxConstraintData
+        )
+        self.assertIsInstance(
+            m.egb.eq_constraints['pdrop3'], ExternalGreyBoxConstraintData
+        )
 
         # Check that constraint objects were created for outputs
         self.assertTrue(hasattr(m.egb, 'output_constraints'))
-        self.assertIsInstance(m.egb.output_constraints['P2'], ExternalGreyBoxConstraintData)
-        self.assertIsInstance(m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData)
+        self.assertIsInstance(
+            m.egb.output_constraints['P2'], ExternalGreyBoxConstraintData
+        )
+        self.assertIsInstance(
+            m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData
+        )
 
     def test_pressure_drop_single_equality_with_constraints(self):
         """Test PyomoGreyBoxNLP with single equality constraint and constraint objects"""
@@ -831,10 +841,7 @@ def test_with_custom_input_names():
         expr=m.x[1] ** 2 + 2 * m.x[2] ** 2 + 3 * m.x[3] ** 2 + 4 * m.x[4] ** 2
     )
     m.grey_box = ExternalGreyBoxBlock()
-    m.grey_box.set_external_model(
-        MyGreyBox(),
-        inputs=[m.x[i] for i in range(1, 5)],
-    )
+    m.grey_box.set_external_model(MyGreyBox(), inputs=[m.x[i] for i in range(1, 5)])
 
     igraph = IncidenceGraphInterface(m)
     matching = igraph.maximum_matching()

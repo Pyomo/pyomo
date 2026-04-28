@@ -32,9 +32,9 @@ import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_mo
 def _no_op_construct_implicit_constraints(self):
     """
     No-op implementation of _construct_implicit_constraints.
-    
+
     This prevents automatic construction of ExternalGreyBoxConstraints,
-    allowing tests to manually construct them to test the constraint 
+    allowing tests to manually construct them to test the constraint
     construction logic itself.
     """
     pass
@@ -43,15 +43,15 @@ def _no_op_construct_implicit_constraints(self):
 # Decorator to patch _construct_implicit_constraints with a no-op for test classes
 def skip_implicit_constraint_construction(test_class):
     """
-    Decorator that patches _construct_implicit_constraints to prevent 
+    Decorator that patches _construct_implicit_constraints to prevent
     automatic construction of implicit constraints in tests.
-    
+
     This is scoped to the decorated test class only and won't affect other tests.
     """
     return patch.object(
         ExternalGreyBoxBlockData,
         '_construct_implicit_constraints',
-        _no_op_construct_implicit_constraints
+        _no_op_construct_implicit_constraints,
     )(test_class)
 
 
@@ -118,8 +118,8 @@ class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
             m.c = ExternalGreyBoxConstraint(implicit_constraint_id='test')
         # Check that error message indicates the problem is related to ExternalGreyBoxBlock
         self.assertTrue(
-            "ExternalGreyBoxBlock" in str(context.exception) or
-            "get_external_model" in str(context.exception)
+            "ExternalGreyBoxBlock" in str(context.exception)
+            or "get_external_model" in str(context.exception)
         )
 
     def test_scalar_construction_with_equality_constraint(self):
@@ -1239,8 +1239,7 @@ class TestIndexedExternalGreyBoxConstraint(unittest.TestCase):
 
         # Create indexed constraint with explicit mapping
         m.egb.c = ExternalGreyBoxConstraint(
-            m.set,
-            implicit_constraint_id={i: i for i in m.set}
+            m.set, implicit_constraint_id={i: i for i in m.set}
         )
 
         # Verify construction
@@ -1373,7 +1372,9 @@ class TestIndexedExternalGreyBoxConstraint(unittest.TestCase):
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
         m.egb.set_external_model(external_model)
 
-        m.set = pyo.Set(initialize=[(1, 'P2'), (1, 'Pout'), (2, 'pdrop1'), (2, 'pdrop3')])
+        m.set = pyo.Set(
+            initialize=[(1, 'P2'), (1, 'Pout'), (2, 'pdrop1'), (2, 'pdrop3')]
+        )
 
         # Create mapping from tuple indices to string constraint ids
         id_map = {
@@ -1410,8 +1411,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             m.egb.c = ExternalGreyBoxConstraint(
-                m.set,
-                implicit_constraint_id=incomplete_map
+                m.set, implicit_constraint_id=incomplete_map
             )
 
         self.assertIn("Missing keys", str(context.exception))
@@ -1437,8 +1437,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             m.egb.c = ExternalGreyBoxConstraint(
-                m.set,
-                implicit_constraint_id=mapping_with_extras
+                m.set, implicit_constraint_id=mapping_with_extras
             )
 
         self.assertIn("Invalid keys", str(context.exception))
@@ -1461,10 +1460,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
         }  # Missing 'Pout' and 'pdrop1', extra 'extra'
 
         with self.assertRaises(ValueError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(
-                m.set,
-                implicit_constraint_id=bad_map
-            )
+            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=bad_map)
 
         error_msg = str(context.exception)
         self.assertIn("Missing keys", error_msg)
@@ -1481,10 +1477,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
 
         # Pass a string instead of mapping (invalid for indexed)
         with self.assertRaises(TypeError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(
-                m.set,
-                implicit_constraint_id='P2'
-            )
+            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id='P2')
 
         self.assertIn("must be a mapping", str(context.exception))
 
@@ -1504,10 +1497,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
         }
 
         with self.assertRaises(ValueError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(
-                m.set,
-                implicit_constraint_id=bad_map
-            )
+            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=bad_map)
 
         self.assertIn("invalid_constraint", str(context.exception))
         self.assertIn("does not exist", str(context.exception))
@@ -1522,16 +1512,10 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
         m.set = pyo.Set(initialize=['P2', 'Pout'])
 
         # Create mapping with non-string value
-        bad_map = {
-            'P2': 123,  # Not a string
-            'Pout': 'Pout',
-        }
+        bad_map = {'P2': 123, 'Pout': 'Pout'}  # Not a string
 
         with self.assertRaises(TypeError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(
-                m.set,
-                implicit_constraint_id=bad_map
-            )
+            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=bad_map)
 
         self.assertIn("must be strings", str(context.exception))
 
@@ -1599,21 +1583,20 @@ class TestIndexedExternalGreyBoxConstraintAdvanced(unittest.TestCase):
         # Mix of outputs and equality constraints
         m.set = pyo.Set(initialize=['P2', 'pdrop1'])
 
-        id_map = {
-            'P2': 'P2',  # output
-            'pdrop1': 'pdrop1',  # equality constraint
-        }
+        id_map = {'P2': 'P2', 'pdrop1': 'pdrop1'}  # output  # equality constraint
 
         m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=id_map)
 
         # Set inputs
         # Using  6 inputs: Pin, c, F, P1, P3, and one for the missing input of the equality constraint
         # Inputs: Pin=100, c=2, F=3, P1=82, P3=46, plus empty output placeholders
-        external_model.set_input_values(np.asarray([100, 2, 3, 82, 46], dtype=np.float64))
+        external_model.set_input_values(
+            np.asarray([100, 2, 3, 82, 46], dtype=np.float64)
+        )
 
         # For output P2, set value
         m.egb.outputs['P2'].set_value(64.0)
-        
+
         # Both constraints should be accessible and evaluatable
         self.assertIsNotNone(m.egb.c['P2'].body)
         self.assertIsNotNone(m.egb.c['pdrop1'].body)
@@ -1772,7 +1755,9 @@ def test_indexed_egbc_implicit_constraint_id_mapping():
 
     m.set = pyo.Set(initialize=['P2', 'Pout', 'pdrop1', 'pdrop3'])
 
-    m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id={i: i for i in m.set})
+    m.egb.c = ExternalGreyBoxConstraint(
+        m.set, implicit_constraint_id={i: i for i in m.set}
+    )
 
     assert m.egb.c["P2"]._implicit_constraint_id == "P2"
     assert m.egb.c["Pout"]._implicit_constraint_id == "Pout"

@@ -346,12 +346,7 @@ class ExternalGreyBoxModel:
 
 
 class ExternalGreyBoxBlockData(BlockData):
-    def set_external_model(
-        self,
-        external_grey_box_model,
-        inputs=None,
-        outputs=None,
-    ):
+    def set_external_model(self, external_grey_box_model, inputs=None, outputs=None):
         """
         Parameters
         ----------
@@ -426,7 +421,9 @@ class ExternalGreyBoxBlockData(BlockData):
         implicit constraints are constructed and available on the block.
         """
         # Let the EGBConstraints infer names from the indexing sets
-        self._equality_constraint_set = Set(initialize=self._equality_constraint_names, ordered=True)
+        self._equality_constraint_set = Set(
+            initialize=self._equality_constraint_names, ordered=True
+        )
 
         self.eq_constraints = ExternalGreyBoxConstraint(self._equality_constraint_set)
         self.output_constraints = ExternalGreyBoxConstraint(self._output_names_set)
@@ -466,9 +463,7 @@ class ExternalGreyBoxBlock(Block):
         if self._init_model is not None:
             block = self.parent_block()
             for index, data in self.items():
-                data.set_external_model(
-                    self._init_model(block, index),
-                )
+                data.set_external_model(self._init_model(block, index))
 
 
 class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock):

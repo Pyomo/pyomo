@@ -47,7 +47,9 @@ pyomo_nlp, pyomo_nlp_available = attempt_import(
     "pyomo.contrib.pynumero.interfaces.pyomo_nlp"
 )
 if pyomo_nlp_available:
-    from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import PyomoNLPWithGreyBoxBlocks
+    from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
+        PyomoNLPWithGreyBoxBlocks,
+    )
 asl_available = pyomo_nlp_available & AmplInterface.available()
 
 
@@ -305,7 +307,9 @@ class IncidenceGraphInterface:
             self._incidence_graph = get_bipartite_incidence_graph(
                 self._variables, self._constraints, **self._config
             )
-        elif pyomo_nlp_available and isinstance(model, (pyomo_nlp.PyomoNLP, PyomoNLPWithGreyBoxBlocks)):
+        elif pyomo_nlp_available and isinstance(
+            model, (pyomo_nlp.PyomoNLP, PyomoNLPWithGreyBoxBlocks)
+        ):
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "

@@ -739,7 +739,7 @@ class IndexedExternalGreyBoxConstraint(ExternalGreyBoxConstraint):
                 else:
                     # Infer implicit_constraint_id from index (assumes index is a single value that can be converted to a string)
                     implicit_constraint_id = idx
-                
+
                 # Check that implicit_constraint_id is a valid constraint in the external model
                 _validate_implicit_constraint_id(self, implicit_constraint_id)
 

@@ -272,11 +272,9 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         expr = m.x[1] + m.x[1] * m.x[2] + m.x[1] * pyo.exp(m.x[3])
-        
+
         variables = get_variables_incident_to_constraint(
-            expr, 
-            method=IncidenceMethod.identify_variables,
-            include_fixed=False
+            expr, method=IncidenceMethod.identify_variables, include_fixed=False
         )
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
 
@@ -286,20 +284,16 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m.x = pyo.Var([1, 2, 3], initialize=1.0)
         expr = m.x[1] + m.x[1] * m.x[2] + m.x[1] * pyo.exp(m.x[3])
         m.x[2].fix()
-        
+
         # With include_fixed=True, should include all variables
         variables = get_variables_incident_to_constraint(
-            expr, 
-            method=IncidenceMethod.identify_variables,
-            include_fixed=True
+            expr, method=IncidenceMethod.identify_variables, include_fixed=True
         )
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
-        
+
         # With include_fixed=False, should exclude fixed variables
         variables = get_variables_incident_to_constraint(
-            expr, 
-            method=IncidenceMethod.identify_variables,
-            include_fixed=False
+            expr, method=IncidenceMethod.identify_variables, include_fixed=False
         )
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[3]]))
 
@@ -308,12 +302,12 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         expr = m.x[1] + 2 * m.x[2] + 3 * m.x[3] ** 2
-        
+
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.standard_repn,
             include_fixed=False,
-            linear_only=False
+            linear_only=False,
         )
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
 
@@ -322,12 +316,12 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         expr = 2 * m.x[1] + 2 * m.x[2] * m.x[3] + 3 * m.x[2]
-        
+
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.standard_repn,
             include_fixed=False,
-            linear_only=True
+            linear_only=True,
         )
         # Only x[1] is purely linear
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
@@ -338,12 +332,12 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m.x = pyo.Var([1, 2, 3])
         m.p = pyo.Param([1, 2], mutable=True, initialize=1.0)
         expr = m.p[1] * m.x[1] + m.p[2] * m.x[2] + m.x[3] ** 2
-        
+
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.standard_repn_compute_values,
             include_fixed=False,
-            linear_only=False
+            linear_only=False,
         )
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
 
@@ -354,12 +348,12 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m.p = pyo.Param([1, 2], mutable=True, initialize=1.0)
         m.p[1].set_value(0)
         expr = m.p[1] * m.x[1] + m.p[2] * m.x[2] + m.x[3] ** 2
-        
+
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.standard_repn_compute_values,
             include_fixed=False,
-            linear_only=False
+            linear_only=False,
         )
         # x[1] should be filtered out due to zero coefficient
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[2], m.x[3]]))
@@ -369,16 +363,16 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         expr = m.x[1] + 2 * m.x[2] + 3 * m.x[3] ** 2
-        
+
         # Create AMPLRepnVisitor
         config = get_config_from_kwds(method=IncidenceMethod.ampl_repn)
         visitor = config._ampl_repn_visitor
-        
+
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.ampl_repn,
             linear_only=False,
-            amplrepnvisitor=visitor
+            amplrepnvisitor=visitor,
         )
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
 
@@ -387,16 +381,16 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         expr = 2 * m.x[1] + 2 * m.x[2] * m.x[3] + 3 * m.x[2]
-        
+
         # Create AMPLRepnVisitor
         config = get_config_from_kwds(method=IncidenceMethod.ampl_repn)
         visitor = config._ampl_repn_visitor
-        
+
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.ampl_repn,
             linear_only=True,
-            amplrepnvisitor=visitor
+            amplrepnvisitor=visitor,
         )
         # Only x[1] is purely linear
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
@@ -406,25 +400,25 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         # Create a mock EGBConstraintBody with a get_incident_variables method
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        
+
         mock_egb_body = MagicMock()
         mock_egb_body.get_incident_variables.return_value = [m.x[1], m.x[2]]
-        
+
         # Import EGBConstraintBody to use isinstance check
         from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
             EGBConstraintBody,
         )
-        
+
         # Make the mock an instance of EGBConstraintBody
         mock_egb_body.__class__ = EGBConstraintBody
-        
+
         variables = get_variables_incident_to_constraint(
             mock_egb_body,
             method=IncidenceMethod.standard_repn,  # Method is ignored for EGBConstraintBody
             include_fixed=False,
-            linear_only=False
+            linear_only=False,
         )
-        
+
         # Should call get_incident_variables on the EGBConstraintBody object
         mock_egb_body.get_incident_variables.assert_called_once()
         self.assertEqual(variables, [m.x[1], m.x[2]])
@@ -434,18 +428,15 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         expr = m.x[1] + m.x[2]
-        
+
         # Create an invalid method (not a real IncidenceMethod)
         invalid_method = "not_a_real_method"
-        
+
         with self.assertRaises(ValueError) as cm:
             get_variables_incident_to_constraint(
-                expr,
-                method=invalid_method,
-                include_fixed=False,
-                linear_only=False
+                expr, method=invalid_method, include_fixed=False, linear_only=False
             )
-        
+
         self.assertIn("Unrecognized value", str(cm.exception))
         self.assertIn("for the method used to identify incident", str(cm.exception))
 
@@ -455,24 +446,24 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m.x = pyo.Var([1, 2, 3], initialize=1.0)
         expr = m.x[1] + m.x[2] + m.x[3] ** 2
         m.x[2].fix()
-        
+
         # With include_fixed=True, temporarily unfix variables
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.standard_repn,
             include_fixed=True,
-            linear_only=False
+            linear_only=False,
         )
         self.assertEqual(ComponentSet(variables), ComponentSet(m.x[:]))
         # Variable should still be fixed after the call
         self.assertTrue(m.x[2].fixed)
-        
+
         # With include_fixed=False, exclude fixed variables
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.standard_repn,
             include_fixed=False,
-            linear_only=False
+            linear_only=False,
         )
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1], m.x[3]]))
 
@@ -480,15 +471,15 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         """Test that variables with zero coefficients are properly filtered"""
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        
+
         # Expression where x[1] cancels out
         expr = m.x[1] + m.x[2] * m.x[3] - m.x[1]
-        
+
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.standard_repn,
             include_fixed=False,
-            linear_only=False
+            linear_only=False,
         )
         # x[1] should be filtered out
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[2], m.x[3]]))
@@ -497,20 +488,18 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         """Test filtering of variables that only appear nonlinearly when linear_only=True"""
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        
+
         # x[1] is linear, x[2] is both linear and nonlinear, x[3] is only nonlinear
         expr = 2 * m.x[1] + 3 * m.x[2] + m.x[2] * m.x[3] + m.x[3] ** 2
-        
+
         variables = get_variables_incident_to_constraint(
             expr,
             method=IncidenceMethod.standard_repn,
             include_fixed=False,
-            linear_only=True
+            linear_only=True,
         )
         # Only x[1] should be included (purely linear)
         self.assertEqual(ComponentSet(variables), ComponentSet([m.x[1]]))
-
-
 
 
 if __name__ == "__main__":

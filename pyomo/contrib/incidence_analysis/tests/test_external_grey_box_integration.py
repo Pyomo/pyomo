@@ -28,9 +28,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
     def test_pressure_drop_single_output(self):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropSingleOutput()
-        )
+        m.egb.set_external_model(ex_models.PressureDropSingleOutput())
 
         igraph = IncidenceGraphInterface(m, include_inequality=False)
         var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
@@ -59,9 +57,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
     def test_pressure_drop_single_output_block_triangularization(self):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropSingleOutput(),
-        )
+        m.egb.set_external_model(ex_models.PressureDropSingleOutput())
 
         # Add constraints to make model square, then rebuild graph to test block triangularization
         m.con1 = pyo.Constraint(expr=m.egb.inputs["Pin"] == 1)
@@ -107,9 +103,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
     def test_pressure_drop_two_equalities_two_outputs(self):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropTwoEqualitiesTwoOutputs(),
-        )
+        m.egb.set_external_model(ex_models.PressureDropTwoEqualitiesTwoOutputs())
 
         igraph = IncidenceGraphInterface(m, include_inequality=False)
         var_dm_partition, con_dm_partition = igraph.dulmage_mendelsohn()
@@ -133,7 +127,12 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertEqual(ComponentSet(uc_var), uc_var_set)
 
         uc_con_set = ComponentSet(
-            [m.egb.output_constraints["Pout"], m.egb.output_constraints["P2"], m.egb.eq_constraints["pdrop1"], m.egb.eq_constraints["pdrop3"]]
+            [
+                m.egb.output_constraints["Pout"],
+                m.egb.output_constraints["P2"],
+                m.egb.eq_constraints["pdrop1"],
+                m.egb.eq_constraints["pdrop3"],
+            ]
         )
         self.assertEqual(ComponentSet(uc_con), uc_con_set)
 
@@ -152,9 +151,7 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
     def test_pressure_drop_two_equalities_two_outputs_block_triangularization(self):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(
-            ex_models.PressureDropTwoEqualitiesTwoOutputs(),
-        )
+        m.egb.set_external_model(ex_models.PressureDropTwoEqualitiesTwoOutputs())
 
         # Add constraints to make model square, then rebuild graph to test block triangularization
         m.con1 = pyo.Constraint(expr=m.egb.inputs["F"] == 1)

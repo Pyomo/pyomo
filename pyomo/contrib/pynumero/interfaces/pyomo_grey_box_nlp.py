@@ -104,7 +104,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             }
             # Check for ExternalGreyBoxConstraint objects and add
             # them too
-            for c in pyomo_model.component_data_objects(ExternalGreyBoxConstraint, active=True, descend_into=True):
+            for c in pyomo_model.component_data_objects(
+                ExternalGreyBoxConstraint, active=True, descend_into=True
+            ):
                 self._pyomo_model_constraint_names_to_datas[c.name] = c
 
         finally:
@@ -174,7 +176,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         ]
         for gbnlp in greybox_nlps:
             self._constraint_names.extend(gbnlp.constraint_names())
-            self._constraint_datas.extend([(gbnlp._block, nm) for nm in gbnlp.constraint_names()])
+            self._constraint_datas.extend(
+                [(gbnlp._block, nm) for nm in gbnlp.constraint_names()]
+            )
         self._n_constraints = len(self._constraint_names)
 
         self._has_hessian_support = True

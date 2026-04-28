@@ -179,7 +179,14 @@ def get_incident_variables(expr, **kwds):
         expr, method, include_fixed, linear_only, amplrepnvisitor
     )
 
-def get_variables_incident_to_constraint(expr, method: IncidenceMethod, include_fixed: bool=False, linear_only: bool=False, amplrepnvisitor=None):
+
+def get_variables_incident_to_constraint(
+    expr,
+    method: IncidenceMethod,
+    include_fixed: bool = False,
+    linear_only: bool = False,
+    amplrepnvisitor=None,
+):
     """
     Helper function to identify variables that are incident on an expression, based on the type of the expression and the method specified.
 
@@ -200,7 +207,7 @@ def get_variables_incident_to_constraint(expr, method: IncidenceMethod, include_
     -------
     list of VarData
         List containing the variables that are incident on the expression.
-    
+
     Raises
     ------
     ValueError
