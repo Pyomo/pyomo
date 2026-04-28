@@ -18,6 +18,7 @@ from pyomo.opt.base.solvers import check_available_solvers
 
 import pyomo.environ as pyo
 
+
 class Dummy:
     """asdfg"""
 
