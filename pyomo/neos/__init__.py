@@ -32,7 +32,7 @@ doc = {
     'minos': 'NLP solver',
     'minto': 'MILP solver',
     'mosek': 'Interior point NLP solver',
-    'octeract': 'Deterministic global MINLP solver',
+    # 'octeract': 'Deterministic global MINLP solver',
     'ooqp': 'Convex QP solver',
     'path': 'Nonlinear MCP solver',
     'raposa': 'A Global Solver for Polynomial Programming Problems',
