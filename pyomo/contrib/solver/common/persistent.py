@@ -1,17 +1,15 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  __________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import abc
 import datetime
-from typing import List
+import time
 
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
@@ -74,10 +72,10 @@ class PersistentSolverUtils(abc.ABC):
             self.set_objective(None)
 
     @abc.abstractmethod
-    def _add_variables(self, variables: List[VarData]):
+    def _add_variables(self, variables: list[VarData]):
         pass
 
-    def add_variables(self, variables: List[VarData]):
+    def add_variables(self, variables: list[VarData]):
         for v in variables:
             if id(v) in self._referenced_variables:
                 raise ValueError(f'Variable {v.name} has already been added')
@@ -93,19 +91,19 @@ class PersistentSolverUtils(abc.ABC):
         self._add_variables(variables)
 
     @abc.abstractmethod
-    def _add_parameters(self, params: List[ParamData]):
+    def _add_parameters(self, params: list[ParamData]):
         pass
 
-    def add_parameters(self, params: List[ParamData]):
+    def add_parameters(self, params: list[ParamData]):
         for p in params:
             self._params[id(p)] = p
         self._add_parameters(params)
 
     @abc.abstractmethod
-    def _add_constraints(self, cons: List[ConstraintData]):
+    def _add_constraints(self, cons: list[ConstraintData]):
         pass
 
-    def _check_for_new_vars(self, variables: List[VarData]):
+    def _check_for_new_vars(self, variables: list[VarData]):
         new_vars = {}
         for v in variables:
             v_id = id(v)
@@ -113,7 +111,7 @@ class PersistentSolverUtils(abc.ABC):
                 new_vars[v_id] = v
         self.add_variables(list(new_vars.values()))
 
-    def _check_to_remove_vars(self, variables: List[VarData]):
+    def _check_to_remove_vars(self, variables: list[VarData]):
         vars_to_remove = {}
         for v in variables:
             v_id = id(v)
@@ -122,7 +120,7 @@ class PersistentSolverUtils(abc.ABC):
                 vars_to_remove[v_id] = v
         self.remove_variables(list(vars_to_remove.values()))
 
-    def add_constraints(self, cons: List[ConstraintData]):
+    def add_constraints(self, cons: list[ConstraintData]):
         all_fixed_vars = {}
         for con in cons:
             if con in self._named_expressions:
@@ -146,10 +144,10 @@ class PersistentSolverUtils(abc.ABC):
             v.fix()
 
     @abc.abstractmethod
-    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
+    def _add_sos_constraints(self, cons: list[SOSConstraintData]):
         pass
 
-    def add_sos_constraints(self, cons: List[SOSConstraintData]):
+    def add_sos_constraints(self, cons: list[SOSConstraintData]):
         for con in cons:
             if con in self._vars_referenced_by_con:
                 raise ValueError(f'Constraint {con.name} has already been added')
@@ -223,10 +221,10 @@ class PersistentSolverUtils(abc.ABC):
             self.set_objective(obj)
 
     @abc.abstractmethod
-    def _remove_constraints(self, cons: List[ConstraintData]):
+    def _remove_constraints(self, cons: list[ConstraintData]):
         pass
 
-    def remove_constraints(self, cons: List[ConstraintData]):
+    def remove_constraints(self, cons: list[ConstraintData]):
         self._remove_constraints(cons)
         for con in cons:
             if con not in self._named_expressions:
@@ -242,10 +240,10 @@ class PersistentSolverUtils(abc.ABC):
             del self._vars_referenced_by_con[con]
 
     @abc.abstractmethod
-    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: list[SOSConstraintData]):
         pass
 
-    def remove_sos_constraints(self, cons: List[SOSConstraintData]):
+    def remove_sos_constraints(self, cons: list[SOSConstraintData]):
         self._remove_sos_constraints(cons)
         for con in cons:
             if con not in self._vars_referenced_by_con:
@@ -260,10 +258,10 @@ class PersistentSolverUtils(abc.ABC):
             del self._vars_referenced_by_con[con]
 
     @abc.abstractmethod
-    def _remove_variables(self, variables: List[VarData]):
+    def _remove_variables(self, variables: list[VarData]):
         pass
 
-    def remove_variables(self, variables: List[VarData]):
+    def remove_variables(self, variables: list[VarData]):
         self._remove_variables(variables)
         for v in variables:
             v_id = id(v)
@@ -280,10 +278,10 @@ class PersistentSolverUtils(abc.ABC):
             del self._vars[v_id]
 
     @abc.abstractmethod
-    def _remove_parameters(self, params: List[ParamData]):
+    def _remove_parameters(self, params: list[ParamData]):
         pass
 
-    def remove_parameters(self, params: List[ParamData]):
+    def remove_parameters(self, params: list[ParamData]):
         self._remove_parameters(params)
         for p in params:
             del self._params[id(p)]
@@ -315,10 +313,10 @@ class PersistentSolverUtils(abc.ABC):
         )
 
     @abc.abstractmethod
-    def _update_variables(self, variables: List[VarData]):
+    def _update_variables(self, variables: list[VarData]):
         pass
 
-    def update_variables(self, variables: List[VarData]):
+    def update_variables(self, variables: list[VarData]):
         for v in variables:
             self._vars[id(v)] = (
                 v,
@@ -508,6 +506,7 @@ class PersistentSolverMixin:
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tick = time.perf_counter()
         self._active_config = config = self.config(value=kwds, preserve_implicit=True)
         StaleFlagManager.mark_all_as_stale()
 
@@ -529,9 +528,9 @@ class PersistentSolverMixin:
         res = self._solve()
         self._last_results_object = res
 
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        tock = time.perf_counter()
         res.timing_info.start_timestamp = start_timestamp
-        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.wall_time = tock - tick
         res.timing_info.timer = timer
         self._active_config = self.config
 

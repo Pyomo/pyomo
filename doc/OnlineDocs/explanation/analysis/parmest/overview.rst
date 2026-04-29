@@ -10,7 +10,8 @@ for design optimization.
 
 Functionality in parmest includes:
 
-* Model based parameter estimation using experimental data
+* Model-based parameter estimation using experimental data
+* Covariance matrix estimation
 * Bootstrap resampling for parameter estimation
 * Confidence regions based on single or multi-variate distributions
 * Likelihood ratio
@@ -21,61 +22,56 @@ Background
 ----------
 
 The goal of parameter estimation is to estimate values for 
-a vector, :math:`{\theta}`, to use in the functional form
+a vector, :math:`\boldsymbol{\theta}`, to use in the functional form
 
 .. math::
       
-   y = g(x; \theta)
+   \boldsymbol{y}_i = \boldsymbol{f}\left(\boldsymbol{x}_{i}, \boldsymbol{\theta}\right) +
+    \boldsymbol{\varepsilon}_i \quad \forall \; i \in \{1, \ldots, n\}
 
-where :math:`x` is a vector containing measured data, typically in high
-dimension, :math:`{\theta}` is a vector of values to estimate, in much
-lower dimension, and the response vectors are given as :math:`y_{i},
-i=1,\ldots,m` with :math:`m` also much smaller than the dimension of
-:math:`x`.  This is done by collecting :math:`S` data points, which are
-:math:`{\tilde{x}},{\tilde{y}}` pairs and then finding :math:`{\theta}`
-values that minimize some function of the deviation between the values
-of :math:`{\tilde{y}}` that are measured and the values of
-:math:`g({\tilde{x}};{\theta})` for each corresponding
-:math:`{\tilde{x}}`, which is a subvector of the vector :math:`x`. Note
-that for most experiments, only small parts of :math:`x` will change
-from one experiment to the next.
+where :math:`\boldsymbol{y}_{i} \in \mathbb{R}^m` are observations of the measured or output variables,
+:math:`\boldsymbol{f}` is the model function, :math:`\boldsymbol{x}_{i} \in \mathbb{R}^{q}` are the decision
+or input variables, :math:`\boldsymbol{\theta} \in \mathbb{R}^p` are the model parameters,
+:math:`\boldsymbol{\varepsilon}_{i} \in \mathbb{R}^m` are measurement errors, and :math:`n` is the number of
+experiments.
 
 The following least squares objective can be used to estimate parameter
 values assuming Gaussian independent and identically distributed measurement
-errors, where data points are indexed by :math:`s=1,\ldots,S`
+errors:
 
 .. math::
 
-   \min_{{\theta}} Q({\theta};{\tilde{x}}, {\tilde{y}}) \equiv \sum_{s=1}^{S}q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) \;\;
+   \min_{\boldsymbol{\theta}} \, g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta}) \;\;
 
-where :math:`q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s})` can be:
+where :math:`g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta})` can be:
 
 1. Sum of squared errors
 
     .. math::
 
-       q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) =
-        \sum_{i=1}^{m}\left({\tilde{y}}_{s,i} - g_{i}({\tilde{x}}_{s};{\theta})\right)^{2}
+       g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta}) =
+        \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})
+        \right)^\text{T} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})\right)
 
 2. Weighted sum of squared errors
 
     .. math::
 
-       q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) =
-        \sum_{i=1}^{m}\left(\frac{{\tilde{y}}_{s,i} - g_{i}({\tilde{x}}_{s};{\theta})}{w_i}\right)^{2}
+       g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta}) =
+        \frac{1}{2} \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})
+        \right)^\text{T} \boldsymbol{\Sigma}_{\boldsymbol{y}}^{-1} \left(\boldsymbol{y}_{i} -
+        \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})\right)
 
-i.e., the contribution of sample :math:`s` to :math:`Q`, where :math:`w
-\in \Re^{m}` is a vector containing the standard deviation of the measurement
-errors of :math:`y`. Custom objectives can also be defined for parameter estimation.
+where :math:`\boldsymbol{\Sigma}_{\boldsymbol{y}}` is the measurement error covariance matrix containing the
+standard deviation of the measurement errors of :math:`\boldsymbol{y}`. Custom objectives can also be defined
+for parameter estimation.
 
 In the applications of interest to us, the function :math:`g(\cdot)` is
 usually defined as an optimization problem with a large number of
 (perhaps constrained) optimization variables, a subset of which are
-fixed at values :math:`{\tilde{x}}` when the optimization is performed.
-In other applications, the values of :math:`{\theta}` are fixed
+fixed at values :math:`\boldsymbol{x}` when the optimization is performed.
+In other applications, the values of :math:`\boldsymbol{\theta}` are fixed
 parameter values, but for the problem formulation above, the values of
-:math:`{\theta}` are the primary optimization variables. Note that in
+:math:`\boldsymbol{\theta}` are the primary optimization variables. Note that in
 general, the function :math:`g(\cdot)` will have a large set of
-parameters that are not included in :math:`{\theta}`. Often, the
-:math:`y_{is}` will be vectors themselves, perhaps indexed by time with
-index sets that vary with :math:`s`.
+parameters that are not included in :math:`\boldsymbol{\theta}`.

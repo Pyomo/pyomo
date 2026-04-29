@@ -7,7 +7,7 @@ programs (NLPs and MINLPs), as well as generalized disjunctive programs (GDPs).
 
 This contributed package is maintained by `Qi Chen
 <https://github.com/qtothec>`_ and `his colleagues from Carnegie Mellon
-University <http://capd.cheme.cmu.edu/>`_.
+University <https://capd.cheme.cmu.edu/>`_.
 
 The following preprocessing transformations are available. However, some may
 later be deprecated or combined, depending on their usefulness.

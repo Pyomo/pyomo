@@ -1,14 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
+from pyomo.core.base import Expression
 from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
@@ -20,7 +19,7 @@ def _raise_invalid_cuid(cuid, model):
     raise RuntimeError("Cannot find a component %s on block %s" % (cuid, model))
 
 
-def load_data_from_scalar(data, model, time):
+def load_data_from_scalar(data, model, time, ignore_named_expressions=False):
     """A function to load ScalarData into a model
 
     Arguments
@@ -28,6 +27,7 @@ def load_data_from_scalar(data, model, time):
     data: ~scalar_data.ScalarData
     model: BlockData
     time: Iterable
+    ignore_named_expressions: Bool
 
     """
     data = data.get_data()
@@ -36,6 +36,10 @@ def load_data_from_scalar(data, model, time):
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
+        elif var.ctype == Expression:
+            if ignore_named_expressions:
+                continue
+            raise TypeError("Cannot load data for named Expression")
         # TODO: Time points should probably use find_nearest_index
         # This will have to happen in the calling function, as data
         # doesn't have a list of time points to check.
@@ -46,7 +50,9 @@ def load_data_from_scalar(data, model, time):
             var.set_value(val)
 
 
-def load_data_from_series(data, model, time, tolerance=0.0):
+def load_data_from_series(
+    data, model, time, tolerance=0.0, ignore_named_expressions=False
+):
     """A function to load TimeSeriesData into a model
 
     Arguments
@@ -54,6 +60,7 @@ def load_data_from_series(data, model, time, tolerance=0.0):
     data: TimeSeriesData
     model: BlockData
     time: Iterable
+    ignore_named_expressions: Bool
 
     """
     time_list = list(time)
@@ -74,6 +81,10 @@ def load_data_from_series(data, model, time, tolerance=0.0):
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
+        elif var.ctype == Expression:
+            if ignore_named_expressions:
+                continue
+            raise TypeError("Cannot load data for named Expression")
         for idx, val in zip(time_indices, vals):
             t = time_list[idx]
             var[t].set_value(val)
@@ -87,6 +98,7 @@ def load_data_from_interval(
     prefer_left=True,
     exclude_left_endpoint=True,
     exclude_right_endpoint=False,
+    ignore_named_expressions=False,
 ):
     """A function to load IntervalData into a model
 
@@ -106,6 +118,7 @@ def load_data_from_interval(
     prefer_left: Bool
     exclude_left_endpoint: Bool
     exclude_right_endpoint: Bool
+    ignore_named_expressions: Bool
 
     """
     if prefer_left and exclude_right_endpoint and not exclude_left_endpoint:
@@ -171,6 +184,10 @@ def load_data_from_interval(
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
+        elif var.ctype == Expression:
+            if ignore_named_expressions:
+                continue
+            raise TypeError("Cannot load data for named Expression")
         for i, t in zip(idx_list, time):
             if i is None:
                 # t could not be found in an interval. This is fine.

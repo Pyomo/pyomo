@@ -14,7 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
+    - name: Set DNS server
+      run: |
+        # This will hopefully resolve intermittent DNS resolution errors
+        echo "Reset DNS servers to use cloudfare"
+        LINK=`resolvectl query github.com | grep link: | sed -r 's/.*link://'`
+        sudo resolvectl dns $LINK 1.1.1.1 1.0.0.1
+        sudo resolvectl flush-caches
+        sudo resolvectl query github.com
+        sudo resolvectl status
     - name: URL Checker
       uses: urlstechie/urlchecker-action@0.0.34
       with:
@@ -26,10 +35,14 @@ jobs:
         verbose: true
         # How many times to retry a failed request (defaults to 1)
         retry_count: 3
+        # The timeout seconds to provide to requests, defaults to 5 seconds
+        timeout: 60
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures
         exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
         # Exclude:
         #  - All gnu.org links because they consistently fail the checker
-        exclude_patterns: https://www.gnu.org
+        #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
+        #  - All www.mathworks.com links because MathWorks appears to reject from GHA
+        exclude_patterns: https://www.gnu.org,https://lpsolve.sourceforge.net/,https://www.mathworks.com/

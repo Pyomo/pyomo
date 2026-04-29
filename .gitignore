@@ -16,12 +16,12 @@ __pycache__/
 *.egg-info/
 
 # Documentation builds
+doc/OnlineDocs/api
 doc/OnlineDocs/_build
 doc/OnlineDocs/**/*.spy
 
 # Running pyomo / tests / solvers occasionally leaves extra files
 *.out
-pyomo/dataportal/parse_table_datacmds.py
 gurobi.log
 cplex.log
 

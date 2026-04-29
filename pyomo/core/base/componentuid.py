@@ -1,17 +1,16 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import codecs
 import re
-import ply.lex
+
+import pyomo.tpl.ply.lex as lex
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
@@ -457,7 +456,7 @@ class ComponentUID:
 
         """
         if ComponentUID._lex is None:
-            ComponentUID._lex = ply.lex.lex()
+            ComponentUID._lex = lex.lex()
 
         name = None
         idx_stack = []
@@ -673,7 +672,7 @@ tokens = [
 
 # Numbers should only appear in getitem lists, so they must be followed
 # by a delimiter token (one of ',]')
-@ply.lex.TOKEN(_re_number.pattern + r'(?=[,\]])')
+@lex.TOKEN(_re_number.pattern + r'(?=[,\]])')
 def t_NUMBER(t):
     t.value = _int_or_float(t.value)
     return t
@@ -683,7 +682,7 @@ def t_NUMBER(t):
 # number of "non-special" characters.  This regex matches numbers as
 # well as more traditional string names, so it is important that it is
 # declared *after* t_NUMBER.
-@ply.lex.TOKEN(r'[a-zA-Z_0-9][^' + re.escape(special_chars) + r']*')
+@lex.TOKEN(r'[a-zA-Z_0-9][^' + re.escape(special_chars) + r']*')
 def t_WORD(t):
     t.value = t.value.strip()
     return t
@@ -694,13 +693,13 @@ _quoted_str = r"'(?:[^'\\]|\\.)*'"
 _general_str = "|".join([_quoted_str, _quoted_str.replace("'", '"')])
 
 
-@ply.lex.TOKEN(_general_str)
+@lex.TOKEN(_general_str)
 def t_STRING(t):
     t.value = _re_escape_sequences.sub(_match_escape, t.value[1:-1])
     return t
 
 
-@ply.lex.TOKEN(r'\*{1,2}')
+@lex.TOKEN(r'\*{1,2}')
 def t_STAR(t):
     if len(t.value) == 1:
         t.value = slice(None)
@@ -709,7 +708,7 @@ def t_STAR(t):
     return t
 
 
-@ply.lex.TOKEN(r'\|b?(?:' + _general_str + ")")
+@lex.TOKEN(r'\|b?(?:' + _general_str + ")")
 def t_PICKLE(t):
     start = 3 if t.value[1] == 'b' else 2
     unescaped = _re_escape_sequences.sub(_match_escape, t.value[start:-1])

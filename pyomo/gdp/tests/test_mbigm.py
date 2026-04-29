@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from io import StringIO
 import logging
@@ -35,6 +33,7 @@ from pyomo.environ import (
     TransformationFactory,
     value,
     Var,
+    Block,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.tests.common_tests import (
@@ -1190,3 +1189,35 @@ class EdgeCases(unittest.TestCase):
             TransformationFactory('gdp.mbigm').apply_to(
                 m, reduce_bound_constraints=False
             )
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_transform_on_block(self):
+        # In multiple_bigm.py, if constraint.getname and disjunct.getname do not
+        # set relative_to=instance, the transformation fails because of mismatched
+        # names in _calc_M.
+        # This test ensures that the transformation works on blocks as well as
+        # ConcreteModels.
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.x = Var(bounds=(0, 5))
+        m.b.y = Var()
+        m.b.dis1 = Disjunct()
+        m.b.dis2 = Disjunct()
+
+        m.b.dis1.linear = Constraint(expr=m.b.x * 0.5 + 3 == m.b.y)
+        m.b.dis2.linear = Constraint(expr=m.b.x * 0.2 + 1 == m.b.y)
+        m.b.d = Disjunction(expr=[m.b.dis1, m.b.dis2])
+
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m.b, threads=1)
+        dis1_cons = mbm.get_transformed_constraints(m.b.dis1.linear)
+        assertExpressionsEqual(
+            self,
+            dis1_cons[0].expr,
+            2.0 * m.b.dis2.binary_indicator_var <= 0.5 * m.b.x + 3 - m.b.y,
+        )
+        assertExpressionsEqual(
+            self,
+            dis1_cons[1].expr,
+            0.5 * m.b.x + 3 - m.b.y <= 3.5 * m.b.dis2.binary_indicator_var,
+        )

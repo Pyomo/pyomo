@@ -6,6 +6,7 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
 [![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs&color=44cc11)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
 
+<!-- NOTE: the Pyomo release process will REMOVE-EVERYTHING-BEFORE-THIS-LINE -->
 [![a COIN-OR project](https://www.coin-or.org/GitHub/coin-or-badge.png)](https://www.coin-or.org)
 
 ## Pyomo Overview

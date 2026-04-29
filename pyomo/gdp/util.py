@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import DisjunctData, Disjunct
@@ -374,11 +372,11 @@ def preprocess_targets(targets, instance, knownBlocks, gdp_tree=None):
 
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
-#  putting it here for now so that all the gdp transformations can use it.
-#  Returns True if child is a node or leaf in the tree rooted at parent, False
-#  otherwise. Accepts list of known components in the tree and updates this list
-#  to enhance performance in future calls. Note that both child and parent must
-#  be blocks!
+# putting it here for now so that all the gdp transformations can use it.
+# Returns True if child is a node or leaf in the tree rooted at parent, False
+# otherwise. Accepts list of known components in the tree and updates this list
+# to enhance performance in future calls. Note that both child and parent must
+# be blocks!
 def is_child_of(parent, child, knownBlocks=None):
     # Note: we can get away with a dictionary and not ComponentMap because we
     # will only store Blocks (or their ilk), and Blocks are hashable (only

@@ -1,19 +1,17 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import math
 import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus
-from pyomo.contrib.solver.solvers.gurobi_direct_minlp import GurobiDirectMINLP
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.environ import (
@@ -41,6 +39,7 @@ gurobi_direct = SolverFactory('gurobi_direct_minlp')
 
 
 @unittest.skipUnless(gurobi_direct.available(), "needs Gurobi Direct MINLP interface")
+@unittest.pytest.mark.solver("gurobi_direct_minlp")
 class TestGurobiMINLP(unittest.TestCase):
     def test_gurobi_minlp_sincosexp(self):
         m = ConcreteModel(name="test")

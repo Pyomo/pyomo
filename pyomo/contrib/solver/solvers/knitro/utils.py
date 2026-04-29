@@ -1,16 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections.abc import Iterable, Mapping, MutableSet, Sequence
-from typing import Optional
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.numeric_types import value
@@ -75,11 +72,11 @@ class KnitroModelData:
     variables: list[VarData]
     _vars: MutableSet[VarData]
 
-    def __init__(self, block: Optional[BlockData] = None) -> None:
+    def __init__(self, block: BlockData | None = None) -> None:
         """Initialize a Problem instance.
 
         Args:
-            block (Optional[BlockData]): Pyomo block to initialize from. If None,
+            block (BlockData | None): Pyomo block to initialize from. If None,
                 creates an empty problem that can be populated later.
 
         """

@@ -1,16 +1,14 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections.abc import Callable
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 from pyomo.contrib.solver.solvers.knitro.typing import (
     Callback,
@@ -85,7 +83,7 @@ class ConstraintCallbackHandler(CallbackHandler):
         return 0
 
 
-def build_callback_handler(function: Function, idx: Optional[int]) -> CallbackHandler:
+def build_callback_handler(function: Function, idx: int | None) -> CallbackHandler:
     if idx is None:
         return ObjectiveCallbackHandler(function)
     return ConstraintCallbackHandler(idx, function)

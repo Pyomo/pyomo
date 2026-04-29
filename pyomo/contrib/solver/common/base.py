@@ -1,15 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
-from typing import Sequence, Dict, Optional, Mapping, List, Tuple
+from typing import Sequence, Mapping
 import os
 
 from pyomo.core.base.constraint import ConstraintData
@@ -165,7 +163,7 @@ class SolverBase:
             f"Derived class {self.__class__.__name__} failed to implement required method 'available'."
         )
 
-    def version(self) -> Tuple:
+    def version(self) -> tuple:
         """Return the solver version found on the system.
 
         Returns
@@ -233,7 +231,7 @@ class PersistentSolverBase(SolverBase):
         """
         return True
 
-    def _load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
+    def _load_vars(self, vars_to_load: Sequence[VarData] | None = None) -> None:
         """
         Load the solution of the primal variables into the value attribute of the variables.
 
@@ -248,14 +246,14 @@ class PersistentSolverBase(SolverBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def _get_primals(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> Mapping[VarData, float]:
         """
         Get mapping of variables to primals.
 
         Parameters
         ----------
-        vars_to_load : Optional[Sequence[VarData]], optional
+        vars_to_load : Sequence[VarData] | None
             Which vars to be populated into the map. The default is None.
 
         Returns
@@ -268,14 +266,14 @@ class PersistentSolverBase(SolverBase):
         )
 
     def _get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
-    ) -> Dict[ConstraintData, float]:
+        self, cons_to_load: Sequence[ConstraintData] | None = None
+    ) -> dict[ConstraintData, float]:
         """
         Declare sign convention in docstring here.
 
         Parameters
         ----------
-        cons_to_load: list
+        cons_to_load: Sequence[VarData] | None
             A list of the constraints whose duals should be loaded. If cons_to_load
             is None, then the duals for all constraints will be loaded.
 
@@ -287,7 +285,7 @@ class PersistentSolverBase(SolverBase):
         raise NotImplementedError(f'{type(self)} does not support the get_duals method')
 
     def _get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> Mapping[VarData, float]:
         """
         Parameters
@@ -321,23 +319,7 @@ class PersistentSolverBase(SolverBase):
             f"Derived class {self.__class__.__name__} failed to implement required method 'set_objective'."
         )
 
-    def add_variables(self, variables: List[VarData]):
-        """
-        Add variables to the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'add_variables'."
-        )
-
-    def add_parameters(self, params: List[ParamData]):
-        """
-        Add parameters to the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'add_parameters'."
-        )
-
-    def add_constraints(self, cons: List[ConstraintData]):
+    def add_constraints(self, cons: list[ConstraintData]):
         """
         Add constraints to the model.
         """
@@ -353,23 +335,7 @@ class PersistentSolverBase(SolverBase):
             f"Derived class {self.__class__.__name__} failed to implement required method 'add_block'."
         )
 
-    def remove_variables(self, variables: List[VarData]):
-        """
-        Remove variables from the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_variables'."
-        )
-
-    def remove_parameters(self, params: List[ParamData]):
-        """
-        Remove parameters from the model.
-        """
-        raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_parameters'."
-        )
-
-    def remove_constraints(self, cons: List[ConstraintData]):
+    def remove_constraints(self, cons: list[ConstraintData]):
         """
         Remove constraints from the model.
         """
@@ -385,7 +351,7 @@ class PersistentSolverBase(SolverBase):
             f"Derived class {self.__class__.__name__} failed to implement required method 'remove_block'."
         )
 
-    def update_variables(self, variables: List[VarData]):
+    def update_variables(self, variables: list[VarData]):
         """
         Update variables on the model.
         """
@@ -593,26 +559,12 @@ class LegacySolverWrapper:
         """Method to handle the preferred action for the solution"""
         symbol_map = legacy_soln.symbol_map = SymbolMap()
         symbol_map.default_labeler = NumericLabeler('x')
-        if not hasattr(model, 'solutions'):
-            # This logic gets around Issue #2130 in which
-            # solutions is not an attribute on Blocks
-            from pyomo.core.base.PyomoModel import ModelSolutions
+        legacy_results._smap_id = None
 
-            setattr(model, 'solutions', ModelSolutions(model))
-        model.solutions.add_symbol_map(symbol_map)
-        legacy_results._smap = symbol_map
-        legacy_results._smap_id = id(symbol_map)
-        delete_legacy_soln = True
         if load_solutions:
-            if hasattr(model, 'dual') and model.dual.import_enabled():
-                for con, val in results.solution_loader.get_duals().items():
-                    model.dual[con] = val
-            if hasattr(model, 'rc') and model.rc.import_enabled():
-                for var, val in results.solution_loader.get_reduced_costs().items():
-                    model.rc[var] = val
+            results.solution_loader.load_import_suffixes()
         elif results.incumbent_objective is not None:
-            delete_legacy_soln = False
-            for var, val in results.solution_loader.get_primals().items():
+            for var, val in results.solution_loader.get_vars().items():
                 legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for con, val in results.solution_loader.get_duals().items():
@@ -621,15 +573,16 @@ class LegacySolverWrapper:
                 for var, val in results.solution_loader.get_reduced_costs().items():
                     legacy_soln.variable['Rc'] = val
 
-        legacy_results.solution.insert(legacy_soln)
+            legacy_results.solution.insert(legacy_soln)
+            legacy_results._smap_id = id(symbol_map)
+            legacy_results._smap = symbol_map
+
         # Timing info was not originally on the legacy results, but we
         # want to make it accessible to folks who are utilizing the
         # backwards compatible version.  Note that embedding the
         # ConfigDict broke pickling the legacy_results, so we will only
         # return raw nested dicts
         legacy_results.timing_info = results.timing_info.value()
-        if delete_legacy_soln:
-            legacy_results.solution.delete(0)
         return legacy_results
 
     def solve(
@@ -637,19 +590,19 @@ class LegacySolverWrapper:
         model: BlockData,
         tee: bool = False,
         load_solutions: bool = True,
-        logfile: Optional[str] = None,
-        solnfile: Optional[str] = None,
-        timelimit: Optional[float] = None,
+        logfile: str | None = None,
+        solnfile: str | None = None,
+        timelimit: float | None = None,
         report_timing: bool = False,
-        solver_io: Optional[str] = None,
-        suffixes: Optional[Sequence] = None,
-        options: Optional[Dict] = None,
+        solver_io: str | None = None,
+        suffixes: Sequence | None = None,
+        options: dict | None = None,
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
         # These are for forward-compatibility
         raise_exception_on_nonoptimal_result: bool = False,
-        solver_options: Optional[Dict] = None,
-        writer_config: Optional[Dict] = None,
+        solver_options: dict | None = None,
+        writer_config: dict | None = None,
     ):
         """
         Solve method: maps new solve method style to backwards compatible version.

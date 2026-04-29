@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import (
@@ -24,6 +22,7 @@ from pyomo.core.expr.numeric_expr import (
     UnaryFunctionExpression,
     AbsExpression,
 )
+from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.core.expr.relational_expr import (
     RangedExpression,
     InequalityExpression,
@@ -33,6 +32,7 @@ from pyomo.core.base.var import VarData, ScalarVar
 from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.base.expression import ExpressionData, ScalarExpression
 from pyomo.repn.util import ExitNodeDispatcher
+from pyomo.common.numeric_types import native_numeric_types
 from pyomo.common.collections import ComponentSet
 
 
@@ -82,6 +82,7 @@ collector_handlers[InequalityExpression] = handle_skip
 collector_handlers[EqualityExpression] = handle_skip
 collector_handlers[int] = handle_skip
 collector_handlers[float] = handle_skip
+collector_handlers[NumericConstant] = handle_skip
 
 
 class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
@@ -93,6 +94,10 @@ class _ComponentFromExprCollector(StreamBasedExpressionVisitor):
         super().__init__(**kwds)
 
     def exitNode(self, node, data):
+        if type(node) in native_numeric_types:
+            # we need this here to handle numpy
+            # (we can't put numpy in the dispatcher?)
+            return None
         return collector_handlers[node.__class__](node, self)
 
     def beforeChild(self, node, child, child_idx):

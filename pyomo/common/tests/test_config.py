@@ -1,28 +1,26 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the 3-clause BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
+# This module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the 3-clause BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
 #
-#  The configuration test case was originally developed as part of the
-#  Water Security Toolkit (WST)
-#  Copyright (c) 2012 Sandia Corporation.
-#  This software is distributed under the Revised (3-clause) BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
-#  license for use of this work by or on behalf of the U.S. government.
-#  ___________________________________________________________________________
+# The configuration test case was originally developed as part of the
+# Water Security Toolkit (WST)
+# Copyright (c) 2012 Sandia Corporation.
+# This software is distributed under the Revised (3-clause) BSD License.
+# Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
+# license for use of this work by or on behalf of the U.S. government.
+# ____________________________________________________________________________________
 
 import argparse
 import enum
@@ -37,12 +35,14 @@ import pyomo.common.unittest as unittest
 from io import StringIO
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+from pyomo.common.tee import capture_output
 
 
 def yaml_load(arg):
     return yaml.load(arg, **yaml_load_args)
 
 
+import pyomo.common.config as _config
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -62,6 +62,7 @@ from pyomo.common.config import (
     In,
     IsInstance,
     ListOf,
+    SetOf,
     Module,
     Path,
     PathList,
@@ -71,13 +72,16 @@ from pyomo.common.config import (
     String_ConfigFormatter,
     document_kwargs_from_configdict,
     document_class_CONFIG,
+    document_configdict,
     add_docstring_list,
     USER_OPTION,
     DEVELOPER_OPTION,
     _UnpickleableDomain,
     _picklable,
+    _value2string,
 )
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.modeling import NOTSET
 
 
 # Utility to redirect display() to a string
@@ -87,10 +91,26 @@ def _display(obj, *args):
     return test.getvalue()
 
 
+class _Unpicklable:
+    def __getstate__(self):
+        raise RuntimeError("Pickling this should fail")
+
+    def __call__(self, val):
+        return val
+
+
 class GlobalClass:
     "test class for test_known_types"
 
     pass
+
+
+class NOOP:
+    def __getattr__(self, attr):
+        def noop(*args, **kwargs):
+            pass
+
+        return noop
 
 
 def ExampleConfig():
@@ -780,6 +800,11 @@ class TestConfigDomains(unittest.TestCase):
             c.a = ["/a/b/c", 2]
 
     def test_ListOf(self):
+        with self.assertRaisesRegex(
+            ValueError, "ListOf: either itemtype or domain must be non-None"
+        ):
+            ListOf()
+
         c = ConfigDict()
         c.declare('a', ConfigValue(domain=ListOf(int), default=None))
         self.assertEqual(c.get('a').domain_name(), 'ListOf[int]')
@@ -841,6 +866,72 @@ class TestConfigDomains(unittest.TestCase):
             c.c = [0]
         c.c = [3, 6, 9]
         self.assertEqual(c.c, [3, 6, 9])
+
+    def test_SetOf(self):
+        with self.assertRaisesRegex(
+            ValueError, "SetOf: either itemtype or domain must be non-None"
+        ):
+            SetOf()
+
+        c = ConfigDict()
+        c.declare('a', ConfigValue(domain=SetOf(int), default=None))
+        self.assertEqual(c.get('a').domain_name(), 'SetOf[int]')
+
+        self.assertEqual(c.a, None)
+        c.a = 5
+        self.assertEqual(c.a, {5})
+        c.a = (5, 6.6)
+        self.assertEqual(c.a, {5, 6})
+        c.a = '7,8'
+        self.assertEqual(c.a, {7, 8})
+
+        ref = (
+            r"(?m)Failed casting a\s+to SetOf\(int\)\s+"
+            r"Error: invalid literal for int\(\) with base 10: 'a'"
+        )
+        with self.assertRaisesRegex(ValueError, ref):
+            c.a = 'a'
+
+        c.declare('b', ConfigValue(domain=SetOf(str), default=None))
+        self.assertEqual(c.get('b').domain_name(), 'SetOf[str]')
+        self.assertEqual(c.b, None)
+        c.b = "'Hello, World'"
+        self.assertEqual(c.b, {"Hello, World"})
+        c.b = "Hello, World"
+        self.assertEqual(c.b, {"Hello", "World"})
+        c.b = ("A", 6)
+        self.assertEqual(c.b, {"A", "6"})
+        with self.assertRaises(ValueError):
+            c.b = "'Hello, World"
+
+        c.declare('b1', ConfigValue(domain=SetOf(str, string_lexer=None), default=None))
+        self.assertEqual(c.get('b1').domain_name(), 'SetOf[str]')
+        self.assertEqual(c.b1, None)
+        c.b1 = "'Hello, World'"
+        self.assertEqual(c.b1, {"'Hello, World'"})
+        c.b1 = "Hello, World"
+        self.assertEqual(c.b1, {"Hello, World"})
+        c.b1 = ("A", 6)
+        self.assertEqual(c.b1, {"A", "6"})
+        c.b1 = "'Hello, World"
+        self.assertEqual(c.b1, {"'Hello, World"})
+
+        c.declare('c', ConfigValue(domain=SetOf(int, PositiveInt)))
+        self.assertEqual(c.get('c').domain_name(), 'SetOf[PositiveInt]')
+        self.assertEqual(c.c, None)
+        c.c = 6
+        self.assertEqual(c.c, {6})
+
+        ref = (
+            r"(?m)Failed casting %s\s+to SetOf\(PositiveInt\)\s+"
+            r"Error: Expected positive int, but received %s"
+        )
+        with self.assertRaisesRegex(ValueError, ref % (6.5, 6.5)):
+            c.c = 6.5
+        with self.assertRaisesRegex(ValueError, ref % (r"\[0\]", "0")):
+            c.c = [0]
+        c.c = [3, 6, 9]
+        self.assertEqual(c.c, {3, 6, 9})
 
     def test_Module(self):
         c = ConfigDict()
@@ -1022,6 +1113,16 @@ class TestImmutableConfigValue(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
                 config.reset()
 
+    def test_lock_uninitialized(self):
+        cfg = ConfigDict()
+        arg = cfg.declare('arg', ConfigValue(default=5))
+        self.assertIs(arg.__class__, ConfigValue._UninitializedClass)
+
+        with MarkImmutable(arg):
+            self.assertEqual(5, cfg.arg)
+            self.assertIs(arg.__class__, ImmutableConfigValue)
+        self.assertIs(arg.__class__, ConfigValue)
+
 
 class TestConfig(unittest.TestCase):
     def setUp(self):
@@ -1030,6 +1131,7 @@ class TestConfig(unittest.TestCase):
         self.original_environ, os.environ = os.environ, os.environ.copy()
         os.environ["COLUMNS"] = "80"
 
+        # This config was based on the WST flushing model configuration
         self.config = config = ConfigDict(
             "Basic configuration for Flushing models", implicit=True
         )
@@ -1310,6 +1412,53 @@ flushing:
             self.config, reference_template, indent_spacing=3, width=72
         )
 
+    def test_template_10space_narrow(self):
+        reference_template = """# Basic configuration for Flushing models
+network:
+          epanet file: Net3.inp    # EPANET network inp file
+scenario:                          # Single scenario block
+          scenario file: Net3.tsg  # Scenario generation file, see
+                                   #   the TEVASIM documentation
+          merlion: false           # Water quality model
+          detection: [1, 2, 3]     # Sensor placement list,
+                                   #   epanetID
+scenarios: []                      # List of scenario blocks
+nodes: []                          # List of node IDs
+impact:
+          metric: MC               # Population or network based
+                                   #   impact metric
+flushing:
+          flush nodes:
+                    feasible nodes: ALL     # ALL, NZD, NONE, list
+                                            #   or filename
+                    infeasible nodes: NONE  # ALL, NZD, NONE, list
+                                            #   or filename
+                    max nodes: 2            # Maximum number of
+                                            #   nodes to flush
+                    rate: 600.0             # Flushing rate
+                                            #   [gallons/min]
+                    response time: 60.0     # Time [min] between
+                                            #   detection and
+                                            #   flushing
+                    duration: 600.0         # Time [min] for
+                                            #   flushing
+          close valves:
+                    feasible pipes: ALL     # ALL, DIAM min max
+                                            #   [inch], NONE, list
+                                            #   or filename
+                    infeasible pipes: NONE  # ALL, DIAM min max
+                                            #   [inch], NONE, list
+                                            #   or filename
+                    max pipes: 2            # Maximum number of
+                                            #   pipes to close
+                    response time: 60.0     # Time [min] between
+                                            #   detection and
+                                            #   closing valves
+"""
+        self._validateTemplate(
+            self.config, reference_template, indent_spacing=10, width=67
+        )
+
     def test_display_default(self):
         reference = """network:
   epanet file: Net3.inp
@@ -1335,8 +1484,17 @@ flushing:
     max pipes: 2
     response time: 60.0
 """
-        test = _display(self.config)
-        self.assertEqual(test, reference)
+        # test that output goes to stdout:
+        with capture_output() as OUT:
+            self.config.display()
+        self.assertEqual(OUT.getvalue(), reference)
+
+        # test that we can directly capture the output
+        test = StringIO()
+        with capture_output() as OUT:
+            self.config.display(ostream=test)
+        self.assertEqual("", OUT.getvalue())
+        self.assertEqual(test.getvalue(), reference)
 
     def test_display_list(self):
         reference = """network:
@@ -1428,16 +1586,11 @@ bar:
         )
 
     def test_display_nondata_type(self):
-        class NOOP:
-            def __getattr__(self, attr):
-                def noop(*args, **kwargs):
-                    pass
-
-                return noop
-
         cfg = ConfigDict()
         cfg.declare('callback', ConfigValue(default=NOOP))
-        self.assertEqual(_display(cfg), "callback: <class 'type'>\n")
+        self.assertEqual(
+            _display(cfg), "callback: <class 'pyomo.common.tests.test_config.NOOP'>\n"
+        )
 
     def test_display_userdata_declare_block(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
@@ -1450,6 +1603,14 @@ bar:
         self.config.declare("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         self.assertEqual(test, "bar:\n  baz:\n")
+
+    def test_display_error(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "unknown content filter 'badfilter'; valid values are "
+            r"\[None, 'all', 'userdata'\]",
+        ):
+            self.config.display(content_filter='badfilter')
 
     def test_unusedUserValues_default(self):
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
@@ -1761,6 +1922,12 @@ scenarios[1].detection""",
         val = self.config['scenario']['detection']
         self.assertIs(type(val), list)
         self.assertEqual(val, [1, 2, 3])
+
+    def test_setValue_list_scalardomain_str_parser(self):
+        self.config['nodes'] = "10, 5"
+        val = self.config['nodes'].value()
+        self.assertIs(type(val), list)
+        self.assertEqual(val, [10, 5])
 
     def test_setValue_list_scalardomain_list(self):
         self.config['nodes'] = [5, 10]
@@ -2565,6 +2732,33 @@ Scenario definition:
             help,
         )
 
+    def test_argparse_multiple_args(self):
+        parser = argparse.ArgumentParser(prog='tester')
+        cfg = ConfigDict()
+        arg = cfg.declare('arg', ConfigValue(domain=bool, default=False))
+        arg.declare_as_argument()
+        arg.declare_as_argument('--no-arg', action='store_false')
+        cfg.initialize_argparse(parser)
+
+        self.assertEqual(
+            arg._argparse,
+            (
+                (('--arg',), {'action': 'store_true', 'help': None}),
+                (('--no-arg',), {'action': 'store_false', 'help': None}),
+            ),
+        )
+        help = parser.format_help()
+        self.assertEqual(
+            """usage: tester [-h] [--arg] [--no-arg]
+
+options:
+  -h, --help  show this help message and exit
+  --arg
+  --no-arg
+""",
+            help,
+        )
+
     def test_argparse_help_implicit_disable(self):
         self.config['scenario'].declare(
             'epanet',
@@ -2742,6 +2936,53 @@ Node information:
         ):
             leftovers = c.import_argparse(args)
 
+    def test_argparse_errors(self):
+        parser = argparse.ArgumentParser(prog='tester')
+
+        # Cannot specify 'default'
+        config = ConfigDict()
+        with self.assertRaisesRegex(
+            TypeError,
+            "You cannot specify an argparse default value with "
+            "ConfigBase.declare_as_argument",
+        ):
+            config.declare('arg', ConfigValue()).declare_as_argument(default=5)
+
+        # specify a bad group type
+        config = ConfigDict()
+        config.declare('arg', ConfigValue()).declare_as_argument(group=5)
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"Unknown datatype \(int\) for argparse group on configuration "
+            "definition arg",
+        ):
+            config.initialize_argparse(parser)
+
+        # specify an undefined subparser
+        config = ConfigDict()
+        config.declare('arg1', ConfigValue()).declare_as_argument(
+            group=("missing", "arg group")
+        )
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Could not find argparse subparser 'missing' for Config item arg1",
+        ):
+            config.initialize_argparse(parser)
+
+        subp = parser.add_subparsers(title="missing").add_parser('missing')
+        config.initialize_argparse(parser)
+
+        # specify an undefined sub-subparser
+        config = ConfigDict()
+        config.declare('arg2', ConfigValue()).declare_as_argument(
+            group=("missing", "subparser", "arg group")
+        )
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Could not find argparse subparser 'subparser' for Config item arg",
+        ):
+            config.initialize_argparse(parser)
+
     def test_getattr_setattr(self):
         config = ConfigDict()
         foo = config.declare('foo', ConfigDict(implicit=True, implicit_domain=int))
@@ -2916,17 +3157,11 @@ c: 1.0
         self.assertEqual(mod_copy._description, "new description")
         self.assertEqual(mod_copy._visibility, 0)
 
-    def test_template_nondata(self):
-        class NOOP:
-            def __getattr__(self, attr):
-                def noop(*args, **kwargs):
-                    pass
-
-                return noop
-
         cfg = ConfigDict()
         cfg.declare('callback', ConfigValue(default=NOOP, description="docstr"))
-        self._validateTemplate(cfg, "callback: <class 'type'>  # docstr\n")
+        self._validateTemplate(
+            cfg, "callback: <class 'pyomo.common.tests.test_config.NOOP'>  # docstr\n"
+        )
 
     def test_pickle(self):
         def anon_domain(domain):
@@ -3000,6 +3235,14 @@ c: 1.0
             self.assertEqual(out.getvalue(), "")
             self.assertIn('dill', sys.modules)
             self.assertEqual(cfg2['lambda'], 6)
+
+    def test_pickle_error(self):
+        cfg = ConfigDict()
+        cfg.declare('fail', ConfigValue(domain=_Unpicklable(), default=5))
+
+        self.assertEqual(cfg.fail, 5)
+        with self.assertRaisesRegex(RuntimeError, "Pickling this should fail"):
+            pickle.dumps(cfg)
 
     def test_unknowable_types(self):
         obj = ConfigValue()
@@ -3268,11 +3511,7 @@ option_2: int, default=5
         cfg = CustomConfig()
         OUT = StringIO()
         cfg.display(ostream=OUT)
-        # Note: pypy outputs "None" as "null"
-        self.assertEqual(
-            "time_limit: None\nstream_solver: None\n",
-            OUT.getvalue().replace('null', 'None'),
-        )
+        self.assertEqual("time_limit: null\nstream_solver: null\n", OUT.getvalue())
 
         # Test that creating a copy of a ConfigDict with declared fields
         # in the __init__ does not result in duplicate outputs in the
@@ -3280,10 +3519,7 @@ option_2: int, default=5
         cfg2 = cfg({'time_limit': 10, 'stream_solver': 0})
         OUT = StringIO()
         cfg2.display(ostream=OUT)
-        self.assertEqual(
-            "time_limit: 10.0\nstream_solver: false\n",
-            OUT.getvalue().replace('null', 'None'),
-        )
+        self.assertEqual("time_limit: 10.0\nstream_solver: false\n", OUT.getvalue())
 
     def test_domain_name(self):
         cfg = ConfigDict()
@@ -3380,12 +3616,14 @@ option_2: int, default=5
 
             def fcn1(self, **kwargs):
                 "Base class docstring 1"
+                return len(kwargs)
 
             def fcn2(self, **kwargs):
                 "Base class docstring 2"
+                return sum(kwargs.values())
 
             def fcn3(self, **kwargs):
-                pass
+                return ','.join(kwargs)
 
         @document_class_CONFIG(methods=['fcn1', 'fcn2', 'fcn3'])
         class _derived(_base):
@@ -3393,6 +3631,7 @@ option_2: int, default=5
 
             def fcn1(self, **kwargs):
                 "Derived docstring 1"
+                return 10 * len(kwargs)
 
         self.assertEqual(_base.__doc__, None)
         self.assertEqual(
@@ -3465,6 +3704,232 @@ option_2: float, optional
 
     class option 2""",
         )
+
+        # Verify that the overloaded / documented functions are callable
+        b = _base()
+        self.assertEqual(2, b.fcn1(arg1=5, arg2=10))
+        self.assertEqual(15, b.fcn2(arg1=5, arg2=10))
+        self.assertEqual('arg1,arg2', b.fcn3(arg1=5, arg2=10))
+        d = _derived()
+        self.assertEqual(20, d.fcn1(arg1=5, arg2=10))
+        self.assertEqual(15, d.fcn2(arg1=5, arg2=10))
+        self.assertEqual('arg1,arg2', d.fcn3(arg1=5, arg2=10))
+
+    def test_domcument_configdict(self):
+        @document_configdict()
+        class CustomConfig(ConfigDict):
+            def __init__(
+                self,
+                description=None,
+                doc=None,
+                implicit=False,
+                implicit_domain=None,
+                visibility=0,
+            ):
+                super().__init__(
+                    description=description,
+                    doc=doc,
+                    implicit=implicit,
+                    implicit_domain=implicit_domain,
+                    visibility=visibility,
+                )
+
+                self.bool_option = self.declare(
+                    'bool_option', ConfigValue(domain=bool, default=False)
+                )
+
+        self.assertEqual(
+            """Options
+-------
+bool_option: bool, default=False""",
+            CustomConfig.__doc__,
+        )
+
+        @document_configdict()
+        class NestedConfig(ConfigDict):
+            def __init__(
+                self,
+                description=None,
+                doc=None,
+                implicit=False,
+                implicit_domain=None,
+                visibility=0,
+            ):
+                super().__init__(
+                    description=description,
+                    doc=doc,
+                    implicit=implicit,
+                    implicit_domain=implicit_domain,
+                    visibility=visibility,
+                )
+
+                self.str_option = self.declare('str_option', ConfigValue(domain=str))
+
+                self.nested = self.declare('nested', CustomConfig())
+
+        self.assertEqual(
+            """Options
+-------
+str_option: str, optional
+
+nested: CustomConfig, optional""",
+            NestedConfig.__doc__,
+        )
+
+    def test_copy_configdict_default(self):
+        cfg = ConfigDict()
+        cfg.declare("arg_default", ConfigValue(domain=int, default=5))
+        cfg.declare("arg_default_value", ConfigValue(domain=int, default=5))
+        cfg.declare("arg_nodefault", ConfigValue(domain=int))
+        cfg.declare("arg_nodefault_value", ConfigValue(domain=int))
+
+        newcfg = cfg({'arg_default_value': 10, 'arg_nodefault_value': 20})
+        self.assertEqual(newcfg.get('arg_default')._default, 5)
+        self.assertEqual(newcfg.get('arg_default_value')._default, 5)
+        self.assertEqual(newcfg.get('arg_nodefault')._default, None)
+        self.assertEqual(newcfg.get('arg_nodefault_value')._default, None)
+        self.assertEqual(newcfg.get('arg_default')._data, 5)
+        self.assertEqual(newcfg.get('arg_default_value')._data, 10)
+        self.assertEqual(newcfg.get('arg_nodefault')._data, None)
+        self.assertEqual(newcfg.get('arg_nodefault_value')._data, 20)
+
+        cfg.arg_default_value = 10
+        cfg.arg_nodefault_value = 20
+        newcfg = cfg()
+        self.assertEqual(newcfg.get('arg_default')._default, 5)
+        self.assertEqual(newcfg.get('arg_default_value')._default, 10)
+        self.assertEqual(newcfg.get('arg_nodefault')._default, None)
+        self.assertEqual(newcfg.get('arg_nodefault_value')._default, 20)
+        self.assertEqual(newcfg.get('arg_default')._data, 5)
+        self.assertEqual(newcfg.get('arg_default_value')._data, 10)
+        self.assertEqual(newcfg.get('arg_nodefault')._data, None)
+        self.assertEqual(newcfg.get('arg_nodefault_value')._data, 20)
+
+    def test_configdict_add(self):
+        cfg = ConfigDict()
+        with self.assertRaisesRegex(ValueError, "Key 'arg' not defined"):
+            cfg.add('arg', 5)
+
+        cfg = ConfigDict(implicit=True)
+        with LoggingIntercept() as LOG:
+            cfg.add('arg1', 5)
+            self.assertEqual(cfg.arg1, 5)
+        self.assertEqual("", LOG.getvalue())
+        self.assertIs(cfg._data['arg1'].__class__, ConfigValue)
+        self.assertIs(cfg._data['arg1']._visibility, 0)
+
+        with LoggingIntercept() as LOG:
+            cfg.add('arg2', 15, visibility=10)
+            self.assertEqual(cfg.arg2, 15)
+        self.assertEqual("", LOG.getvalue())
+        self.assertIs(cfg._data['arg2'].__class__, ConfigValue)
+        self.assertIs(cfg._data['arg2']._visibility, 10)
+
+        with LoggingIntercept() as LOG:
+            cfg.add('arg3', ConfigValue(default=25), visibility=10)
+            self.assertEqual(cfg.arg3, 25)
+        self.assertEqual(
+            "user-defined Config attributes {'visibility': 10} ignored by "
+            "user-provided UninitializedConfigValue\n",
+            LOG.getvalue(),
+        )
+        self.assertIs(cfg._data['arg3'].__class__, ConfigValue)
+        self.assertIs(cfg._data['arg3']._visibility, 0)
+
+        cfg = ConfigDict(implicit=True, implicit_domain=ConfigValue(domain=str))
+        with LoggingIntercept() as LOG:
+            cfg.add('arg4', 35, visibility=10)
+            self.assertEqual(cfg.arg4, '35')
+        self.assertEqual(
+            "user-defined Config attributes {'visibility': 10} ignored by "
+            "implicit domain\n",
+            LOG.getvalue(),
+        )
+        self.assertIs(cfg._data['arg4'].__class__, ConfigValue)
+        self.assertIs(cfg._data['arg4']._visibility, 0)
+
+    def test_display_visibility(self):
+        cfg = ConfigDict()
+        cfg.declare('arg1', ConfigValue(default=1, visibility=0))
+        cfg.declare('arg2', ConfigValue(default=2, visibility=10))
+        cfg.declare('list1', ConfigList(default=3, domain=str, visibility=0))
+        cfg.declare('list2', ConfigList(default=4, domain=str, visibility=10))
+        d = cfg.declare('dict1', ConfigDict(visibility=0))
+        d.declare('arg3', ConfigValue(default=5, visibility=0))
+        d.declare('arg4', ConfigValue(default=6, visibility=10))
+        d = cfg.declare('dict2', ConfigDict(visibility=10))
+        d.declare('arg5', ConfigValue(default=7, visibility=0))
+        d.declare('arg6', ConfigValue(default=8, visibility=10))
+
+        OUT = StringIO()
+        cfg.display(ostream=OUT)
+        self.assertEqual(
+            """arg1: 1
+arg2: 2
+list1:
+  - '3'
+list2:
+  - '4'
+dict1:
+  arg3: 5
+  arg4: 6
+dict2:
+  arg5: 7
+  arg6: 8
+""",
+            OUT.getvalue(),
+        )
+
+        OUT = StringIO()
+        cfg.display(ostream=OUT, visibility=0)
+        self.assertEqual(
+            """arg1: 1
+list1:
+  - '3'
+dict1:
+  arg3: 5
+""",
+            OUT.getvalue(),
+        )
+
+    def test_ensure_blank_line(self):
+        dkfc = document_kwargs_from_configdict(None)
+        self.assertEqual(dkfc._ensure_blank_line(None), None)
+        self.assertEqual(dkfc._ensure_blank_line(""), "")
+        self.assertEqual(dkfc._ensure_blank_line("a"), "a\n\n")
+        self.assertEqual(dkfc._ensure_blank_line("b\n"), "b\n\n")
+
+    def test_value2str(self):
+        def d(val, obj=NOTSET):
+            return _value2string("", val, obj)
+
+        self.assertEqual("", d(None))
+        self.assertEqual("true", d(True))
+        self.assertEqual("<class 'int'>", d(int))
+        self.assertEqual("<class 'pyomo.common.config.ConfigDict'>", d(ConfigDict))
+        self.assertEqual("1", d(1))
+        self.assertEqual("a", d('a'))
+        self.assertEqual("'1'", d('1'))
+        cv = ConfigValue(None)
+        self.assertEqual("null", d(cv, cv))
+
+        orig = _config._dump, sys.modules.get('yaml', None)
+        try:
+            sys.modules['yaml'] = sys.modules[__name__]
+            _config._dump = _config._get_dump()
+            self.assertEqual("", d(None))
+            self.assertEqual("true", d(True))
+            self.assertEqual("<class 'int'>", d(int))
+            self.assertEqual("<class 'pyomo.common.config.ConfigDict'>", d(ConfigDict))
+            self.assertEqual("1", d(1))
+            self.assertEqual("a", d('a'))
+            self.assertEqual("'1'", d('1'))
+            cv = ConfigValue(None)
+            self.assertEqual("null", d(cv, cv))
+        finally:
+            _config._dump, sys.modules['yaml'] = orig
+            if sys.modules['yaml'] is None:
+                del sys.modules['yaml']
 
 
 if __name__ == "__main__":

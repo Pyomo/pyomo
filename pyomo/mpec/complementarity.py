@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections import namedtuple
 
@@ -119,7 +117,12 @@ class ComplementarityData(BlockData):
             _e1, _e2 = _e2, _e1
         #
         if _e2[0] is None and _e2[2] is None:
-            self.c = Constraint(expr=(None, _e2[1], None))
+            # FIXME: this is making an unbounded RangedExpression -
+            # which makes little sense.  When we rework Complimentarity,
+            # we should determine how to avoid this overhead.
+            self.c = Constraint(
+                expr=EXPR.RangedExpression((None, _e2[1], None), strict=False)
+            )
             self.c._complementarity_type = 3
         elif _e2[2] is None:
             self.c = Constraint(expr=_e2[0] <= _e2[1])

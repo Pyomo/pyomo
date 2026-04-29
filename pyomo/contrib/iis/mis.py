@@ -1,38 +1,70 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-"""
-WaterTAP Copyright (c) 2020-2023, The Regents of the University of California, through Lawrence Berkeley National Laboratory, Oak Ridge National Laboratory, National Renewable Energy Laboratory, and National Energy Technology Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy). All rights reserved.
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
+#
+# This module was originally developed as part of WaterTAP:
+#
+# WaterTAP Copyright (c) 2020-2023, The Regents of the University of
+# California, through Lawrence Berkeley National Laboratory, Oak Ridge
+# National Laboratory, National Renewable Energy Laboratory, and National
+# Energy Technology Laboratory (subject to receipt of any required
+# approvals from the U.S. Dept. of Energy). All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+#     Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#
+#     Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#
+#     Neither the name of the University of California, Lawrence Berkeley
+#     National Laboratory, Oak Ridge National Laboratory, National
+#     Renewable Energy Laboratory, National Energy Technology Laboratory,
+#     U.S. Dept. of Energy nor the names of its contributors may be used
+#     to endorse or promote products derived from this software without
+#     specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+# IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+# OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# You are under no obligation whatsoever to provide any bug fixes,
+# patches, or upgrades to the features, functionality or performance of
+# the source code ("Enhancements") to anyone; however, if you choose to
+# make your Enhancements available either publicly, or directly to
+# Lawrence Berkeley National Laboratory, without imposing a separate
+# written license agreement for such Enhancements, then you hereby grant
+# the following license: a non-exclusive, royalty-free perpetual license
+# to install, use, modify, prepare derivative works, incorporate into
+# other computer software, distribute, and sublicense such enhancements or
+# derivative works thereof, in binary and source code form.
+# ___________________________________________________________________________
 
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+"""Minimal Intractable System (MIS) finder
 
-    Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-
-    Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-    Neither the name of the University of California, Lawrence Berkeley National Laboratory, Oak Ridge National Laboratory, National Renewable Energy Laboratory, National Energy Technology Laboratory, U.S. Dept. of Energy nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-You are under no obligation whatsoever to provide any bug fixes, patches, or upgrades to the features, functionality or performance of the source code ("Enhancements") to anyone; however, if you choose to make your Enhancements available either publicly, or directly to Lawrence Berkeley National Laboratory, without imposing a separate written license agreement for such Enhancements, then you hereby grant the following license: a non-exclusive, royalty-free perpetual license to install, use, modify, prepare derivative works, incorporate into other computer software, distribute, and sublicense such enhancements or derivative works thereof, in binary and source code form.
-"""
-
-"""
-Minimal Intractable System (MIS) finder
-Originally written by Ben Knueven as part of the WaterTAP project:
-   https://github.com/watertap-org/watertap
-That's why this file has the watertap copyright notice.
-
-copied by DLW 18Feb2024 and edited
+Originally written by Ben Knueven as part of the `WaterTAP project
+<https://github.com/watertap-org/watertap>`__.  Copied by DLW 18Feb2024
+and edited.
 
 See: http://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
+
 """
 
 import logging
@@ -88,8 +120,7 @@ class _VariableBoundsAsConstraints(IsomorphicTransformation):
 def compute_infeasibility_explanation(
     model, solver, tee=False, tolerance=1e-8, logger=logger
 ):
-    """
-    This function attempts to determine why a given model is infeasible. It deploys
+    """This function attempts to determine why a given model is infeasible. It deploys
     two main algorithms:
 
     1. Successfully relaxes the constraints of the problem, and reports to the user
@@ -101,15 +132,23 @@ def compute_infeasibility_explanation(
        that removing any single constraint or variable bound would result in a
        feasible subsystem.
 
-    Args
-    ----
-        model: A pyomo block
-        solver: A pyomo solver object or a string for SolverFactory
-        tee (optional):  Display intermediate solves conducted (False)
-        tolerance (optional): The feasibility tolerance to use when declaring a
-            constraint feasible (1e-08)
-        logger:logging.Logger
-            A logger for messages. Uses pyomo.contrib.mis logger by default.
+    Parameters
+    ----------
+    model : BlockData
+        A pyomo block
+
+    solver: OptSolver | SolverBase | str
+        A pyomo solver object or a string for SolverFactory
+
+    tee : bool
+        Display intermediate solves conducted
+
+    tolerance : float
+        The feasibility tolerance to use when declaring a constraint
+        feasible.
+
+    logger: logging.Logger
+        A logger for messages. Uses ``pyomo.contrib.mis`` logger by default.
 
     """
     # Suggested enhancement: It might be useful to return sets of names for each set of relaxed components, as well as the final minimal infeasible system

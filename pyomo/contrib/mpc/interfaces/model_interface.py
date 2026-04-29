@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.dae.flatten import flatten_dae_components
 from pyomo.common.modeling import NOTSET
@@ -172,6 +170,7 @@ class DynamicModelInterface:
         prefer_left=None,
         exclude_left_endpoint=None,
         exclude_right_endpoint=None,
+        ignore_named_expressions=False,
     ):
         """Method to load data into the model.
 
@@ -191,6 +190,10 @@ class DynamicModelInterface:
         time_points: Iterable (optional)
             Subset of time points into which data should be loaded.
             Default of None corresponds to loading into all time points.
+
+        ignore_named_expressions: (optional)
+            ignore data for named expressions, otherwise a TypeError will
+            be raise on encountering a named expression.
 
         """
         if time_points is None:
@@ -213,10 +216,21 @@ class DynamicModelInterface:
             # This covers the case of non-time-indexed variables
             # as keys.
             _error_if_used(prefer_left, excl_left, excl_right, type(data))
-            load_data_from_scalar(data, self.model, time_points)
+            load_data_from_scalar(
+                data,
+                self.model,
+                time_points,
+                ignore_named_expressions=ignore_named_expressions,
+            )
         elif isinstance(data, TimeSeriesData):
             _error_if_used(prefer_left, excl_left, excl_right, type(data))
-            load_data_from_series(data, self.model, time_points, tolerance=tolerance)
+            load_data_from_series(
+                data,
+                self.model,
+                time_points,
+                tolerance=tolerance,
+                ignore_named_expressions=ignore_named_expressions,
+            )
         elif isinstance(data, IntervalData):
             prefer_left = True if prefer_left is None else prefer_left
             excl_left = prefer_left if excl_left is None else excl_left
@@ -229,6 +243,7 @@ class DynamicModelInterface:
                 prefer_left=prefer_left,
                 exclude_left_endpoint=excl_left,
                 exclude_right_endpoint=excl_right,
+                ignore_named_expressions=ignore_named_expressions,
             )
 
     def copy_values_at_time(self, source_time=None, target_time=None):

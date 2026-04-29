@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
@@ -237,9 +235,9 @@ class LinearProgrammingDual:
         Parameters
         ----------
         model: ConcreteModel
-            A primal model passed as an argument to the 'core.lp_dual' transformation
+            A dual model returned from the 'core.lp_dual' transformation
         primal_var: Var
-            A primal variable on 'model'
+            A primal variable on the model passed to the transformation
 
         """
         dual_constraint = model.private_data().dual_constraint
@@ -285,9 +283,9 @@ class LinearProgrammingDual:
         Parameters
         ----------
         model: ConcreteModel
-            A primal model passed as an argument to the 'core.lp_dual' transformation
+            A dual model returned from the 'core.lp_dual' transformation
         primal_constraint: Constraint
-            A constraint on 'model'
+            A constraint on the primal model passed to the transformation
 
         """
         dual_var = model.private_data().dual_var
