@@ -556,13 +556,18 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         with LoggingIntercept() as LOG:
             repn = LinearRepnVisitor(**cfg).walk_expression(param_expr)
-        self.assertEqual(LOG.getvalue(), "")
+        self.assertRegex(
+            LOG.getvalue(),
+            r"DEPRECATED: Encountered 0\*InvalidNumber\(nan\) in expression tree.",
+        )
 
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {})
         self.assertEqual(cfg.var_order, {})
         self.assertEqual(repn.multiplier, 1)
-        self.assertStructuredAlmostEqual(repn.constant, InvalidNumber(nan))
+        # This will be true after we remove the deprecation warning:
+        # self.assertStructuredAlmostEqual(repn.constant, InvalidNumber(nan))
+        self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 

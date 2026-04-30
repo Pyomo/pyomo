@@ -655,15 +655,39 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         self[SumExpression] = self._before_general_expression
 
     @staticmethod
-    def _before_var(visitor, child):
-        _id = id(child)
+    def record_monomial(visitor, result, coef, var):
+        _id = id(var)
         if _id not in visitor.var_map:
-            if child.fixed:
-                return False, (_CONSTANT, check_constant(child.value, child, visitor))
-            visitor.var_recorder.add(child)
+            if var.fixed:
+                var = check_constant(var.value, var, visitor)
+                if not coef and var.__class__ is InvalidNumber:
+                    deprecation_warning(
+                        f"Encountered {coef}*{val2str(var)} in expression "
+                        "tree.  Mapping the NaN result to 0 for compatibility "
+                        "with the lp_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='6.6.0',
+                    )
+                else:
+                    result.constant += coef * var
+                return _CONSTANT
+            visitor.var_recorder.add(var)
+        if coef:
+            if _id in result.linear:
+                result.linear[_id] += coef
+            else:
+                result.linear[_id] = coef
+            return _LINEAR
+        else:
+            return _LINEAR if result.linear else _CONSTANT
+
+    @staticmethod
+    def _before_var(visitor, child):
         ans = visitor.Result()
-        ans.linear[_id] = 1
-        return False, (_LINEAR, ans)
+        return False, (
+            visitor.record_monomial(visitor, ans, 1, child),
+            ans if ans.linear else ans.constant,
+        )
 
     @staticmethod
     def _before_monomial(visitor, child):
@@ -678,44 +702,16 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
             except (ValueError, ArithmeticError):
                 return True, None
 
-        # We want to check / update the var_map before processing "0"
-        # coefficients so that we are consistent with what gets added to the
-        # var_map (e.g., 0*x*y: y is processed by _before_var and will
-        # always be added, but x is processed here)
-        _id = id(arg2)
-        if _id not in visitor.var_map:
-            if arg2.fixed:
-                return False, (
-                    _CONSTANT,
-                    arg1 * check_constant(arg2.value, arg2, visitor),
-                )
-            visitor.var_recorder.add(arg2)
-
-        # Trap multiplication by 0 and nan.  Note that arg1 was reduced
-        # to a numeric value at the beginning of this method.
-        if not arg1:
-            if arg2.fixed:
-                arg2 = check_constant(arg2.value, arg2, visitor)
-                if arg2.__class__ is InvalidNumber:
-                    deprecation_warning(
-                        f"Encountered {arg1}*{val2str(arg2)} in expression "
-                        "tree.  Mapping the NaN result to 0 for compatibility "
-                        "with the lp_v1 writer.  In the future, this NaN "
-                        "will be preserved/emitted to comply with IEEE-754.",
-                        version='6.6.0',
-                    )
-            return False, (_CONSTANT, arg1)
-
         ans = visitor.Result()
-        ans.linear[_id] = arg1
-        return False, (_LINEAR, ans)
+        return False, (
+            visitor.record_monomial(visitor, ans, arg1, arg2),
+            ans if ans.linear else ans.constant,
+        )
 
     @staticmethod
     def _before_linear(visitor, child):
-        var_map = visitor.var_map
         ans = visitor.Result()
         const = 0
-        linear = ans.linear
         for arg in child.args:
             if arg.__class__ is MonomialTermExpression:
                 arg1, arg2 = arg._args_
@@ -725,57 +721,22 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     except (ValueError, ArithmeticError):
                         return True, None
 
-                # Trap multiplication by 0 and nan.  Note that arg1 was
-                # reduced to a numeric value at the beginning of this
-                # method.
-                if not arg1:
-                    if arg2.fixed:
-                        arg2 = check_constant(arg2.value, arg2, visitor)
-                        if arg2.__class__ is InvalidNumber:
-                            deprecation_warning(
-                                f"Encountered {arg1}*{val2str(arg2)} in expression "
-                                "tree.  Mapping the NaN result to 0 for compatibility "
-                                "with the lp_v1 writer.  In the future, this NaN "
-                                "will be preserved/emitted to comply with IEEE-754.",
-                                version='6.6.0',
-                            )
-                    continue
-
-                _id = id(arg2)
-                if _id not in var_map:
-                    if arg2.fixed:
-                        const += arg1 * check_constant(arg2.value, arg2, visitor)
-                        continue
-                    visitor.var_recorder.add(arg2)
-                    linear[_id] = arg1
-                elif _id in linear:
-                    linear[_id] += arg1
-                else:
-                    linear[_id] = arg1
+                visitor.record_monomial(visitor, ans, arg1, arg2)
             elif arg.__class__ in native_numeric_types:
                 const += arg
             elif arg.is_variable_type():
-                _id = id(arg)
-                if _id not in var_map:
-                    if arg.fixed:
-                        const += check_constant(arg.value, arg, visitor)
-                        continue
-                    visitor.var_recorder.add(arg)
-                    linear[_id] = 1
-                elif _id in linear:
-                    linear[_id] += 1
-                else:
-                    linear[_id] = 1
+                visitor.record_monomial(visitor, ans, 1, arg)
             else:
                 try:
                     const += check_constant(visitor.evaluate(arg), arg, visitor)
                 except (ValueError, ArithmeticError):
                     return True, None
-        if linear:
-            ans.constant = const
+
+        ans.constant += const
+        if ans.linear:
             return False, (_LINEAR, ans)
         else:
-            return False, (_CONSTANT, const)
+            return False, (_CONSTANT, ans.constant)
 
     @staticmethod
     def _before_named_expression(visitor, child):
@@ -839,6 +800,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             )
         self.var_recorder = var_recorder
         self.var_map = var_recorder.var_map
+        self.record_monomial = self.before_child_dispatcher.record_monomial
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
