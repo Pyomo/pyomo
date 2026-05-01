@@ -187,7 +187,7 @@ jobs:
           PACKAGES: pyutilib
 
         - os: ubuntu-latest
-          python: 'pypy-3.11-v7.3.20'  #FIXME: Temporary version pin to avoid PyPy 7.3.21
+          python: 'pypy-3.11'
           TARGET: linux
           PYENV: pip
 
