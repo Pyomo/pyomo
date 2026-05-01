@@ -670,24 +670,21 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     )
                 else:
                     result.constant += coef * var
-                return _CONSTANT
+                return
             visitor.var_recorder.add(var)
-        if coef:
-            if _id in result.linear:
-                result.linear[_id] += coef
-            else:
-                result.linear[_id] = coef
-            return _LINEAR
-        else:
-            return _LINEAR if result.linear else _CONSTANT
+        if _id in result.linear:
+            result.linear[_id] += coef
+        elif coef:
+            result.linear[_id] = coef
 
     @staticmethod
     def _before_var(visitor, child):
         ans = visitor.Result()
-        return False, (
-            visitor.record_monomial(visitor, ans, 1, child),
-            ans if ans.linear else ans.constant,
-        )
+        visitor.record_monomial(visitor, ans, 1, child)
+        if ans.linear:
+            return False, (_LINEAR, ans)
+        else:
+            return False, (_CONSTANT, ans.constant)
 
     @staticmethod
     def _before_monomial(visitor, child):
@@ -703,32 +700,35 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 return True, None
 
         ans = visitor.Result()
-        return False, (
-            visitor.record_monomial(visitor, ans, arg1, arg2),
-            ans if ans.linear else ans.constant,
-        )
+        visitor.record_monomial(visitor, ans, arg1, arg2),
+        if ans.linear:
+            return False, (_LINEAR, ans)
+        else:
+            return False, (_CONSTANT, ans.constant)
 
     @staticmethod
     def _before_linear(visitor, child):
         ans = visitor.Result()
+        recorder = visitor.record_monomial
+        evaluate = visitor.evaluate
         const = 0
         for arg in child.args:
             if arg.__class__ is MonomialTermExpression:
                 arg1, arg2 = arg._args_
                 if arg1.__class__ not in native_types:
                     try:
-                        arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
+                        arg1 = check_constant(evaluate(arg1), arg1, visitor)
                     except (ValueError, ArithmeticError):
                         return True, None
 
-                visitor.record_monomial(visitor, ans, arg1, arg2)
+                recorder(visitor, ans, arg1, arg2)
             elif arg.__class__ in native_numeric_types:
                 const += arg
             elif arg.is_variable_type():
-                visitor.record_monomial(visitor, ans, 1, arg)
+                recorder(visitor, ans, 1, arg)
             else:
                 try:
-                    const += check_constant(visitor.evaluate(arg), arg, visitor)
+                    const += check_constant(evaluate(arg), arg, visitor)
                 except (ValueError, ArithmeticError):
                     return True, None
 
