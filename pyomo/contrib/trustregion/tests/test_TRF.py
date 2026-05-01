@@ -15,10 +15,10 @@
 
 import logging
 import sys
-from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 from pyomo.environ import (
     Var,
     ConcreteModel,
@@ -124,12 +124,13 @@ class TestTrustRegionConfig(unittest.TestCase):
             'trustregion', globalization_strategy='funnel'
         )  # Set Funnel strategy
 
-        log_OUTPUT = StringIO()
-        print_OUTPUT = StringIO()
-        sys.stdout = print_OUTPUT
-        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+        with (
+            capture_output() as print_OUTPUT,
+            LoggingIntercept(
+                None, 'pyomo.contrib.trustregion', logging.INFO
+            ) as log_OUTPUT,
+        ):
             solve_status = self.try_solve()
-        sys.stdout = sys.__stdout__
 
         # Assertions
         self.assertTrue(solve_status)
@@ -141,12 +142,13 @@ class TestTrustRegionConfig(unittest.TestCase):
             'trustregion', globalization_strategy='filter'
         )  # Set Filter strategy (default)
 
-        log_OUTPUT = StringIO()
-        print_OUTPUT = StringIO()
-        sys.stdout = print_OUTPUT
-        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+        with (
+            capture_output() as print_OUTPUT,
+            LoggingIntercept(
+                None, 'pyomo.contrib.trustregion', logging.INFO
+            ) as log_OUTPUT,
+        ):
             solve_status = self.try_solve()
-        sys.stdout = sys.__stdout__
 
         # Assertions
         self.assertTrue(solve_status)
@@ -259,19 +261,18 @@ class TestTrustRegionMethod(unittest.TestCase):
         self.decision_variables = [self.m.z[0], self.m.z[1], self.m.z[2]]
 
     def test_solver(self):
-        # Check the log contents
-        log_OUTPUT = StringIO()
-        # Check the printed contents
-        print_OUTPUT = StringIO()
-        sys.stdout = print_OUTPUT
-        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+        with (
+            capture_output() as print_OUTPUT,
+            LoggingIntercept(
+                None, 'pyomo.contrib.trustregion', logging.INFO
+            ) as log_OUTPUT,
+        ):
             result = trust_region_method(
                 self.m,
                 self.decision_variables,
                 self.ext_fcn_surrogate_map_rule,
                 self.config,
             )
-        sys.stdout = sys.__stdout__
         # Check the log to make sure it is capturing
         self.assertIn('Iteration 0', log_OUTPUT.getvalue())
         # Check the printed output
@@ -314,12 +315,13 @@ class TestTrustRegionMethod(unittest.TestCase):
         )
 
         # Run the solver
-        log_OUTPUT = StringIO()
-        print_OUTPUT = StringIO()
-        sys.stdout = print_OUTPUT
-        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+        with (
+            capture_output() as print_OUTPUT,
+            LoggingIntercept(
+                None, 'pyomo.contrib.trustregion', logging.INFO
+            ) as log_OUTPUT,
+        ):
             solve_status = self.TRF.solve(self.m, self.decision_variables)
-        sys.stdout = sys.__stdout__
 
         # Assertions
         self.assertTrue(solve_status)  # Solver should succeed

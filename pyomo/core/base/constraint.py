@@ -37,7 +37,10 @@ from pyomo.core.expr import (
     RangedExpression,
 )
 from pyomo.core.expr.expr_common import _type_check_exception_arg
-from pyomo.core.expr.relational_expr import TrivialRelationalExpression
+from pyomo.core.expr.relational_expr import (
+    TrivialRelationalExpression,
+    tuple_to_relational_expr,
+)
 from pyomo.core.expr.template_expr import templatize_constraint
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -355,10 +358,24 @@ class ConstraintData(ActiveComponentData):
         if expr.__class__ is EqualityExpression:
             return True
         elif expr.__class__ is RangedExpression:
-            # TODO: this is a very restrictive form of structural equality.
             lb = expr.arg(0)
-            if lb is not None and lb is expr.arg(2):
-                return True
+            if lb is not None:
+                # Note that checking native_types is sufficient:
+                # constant expressions should have already been
+                # simplified by the expression system.  If the user
+                # explicitly created relational expressions with
+                # constant arguments, then we assume they knew what they
+                # were doing.
+                if lb.__class__ in native_types:
+                    ub = expr.arg(2)
+                    if ub.__class__ in native_types:
+                        return lb == ub
+                else:
+                    # TBD: this is a very restrictive form of structural
+                    # equality.  In the future it might be "nice" to
+                    # look for mathematical equivalence - but that is
+                    # expensive and likely not worth the effort.
+                    return lb is expr.arg(2)
         return False
 
     @property
@@ -401,61 +418,15 @@ class ConstraintData(ActiveComponentData):
                     "using '<=', '>=', or '=='." % (self.name,)
                 )
             self._expr = expr
-            return
 
         elif expr.__class__ is tuple:  # or expr_type is list:
-            for arg in expr:
-                if (
-                    arg is None
-                    or arg.__class__ in native_numeric_types
-                    or isinstance(arg, NumericValue)
-                ):
-                    continue
-                raise ValueError(
-                    "Constraint '%s' does not have a proper value. "
-                    "Constraint expressions expressed as tuples must "
-                    "contain native numeric types or Pyomo NumericValue "
-                    "objects. Tuple %s contained invalid type, %s"
-                    % (self.name, expr, type(arg).__name__)
-                )
-            if len(expr) == 2:
-                #
-                # Form equality expression
-                #
-                if expr[0] is None or expr[1] is None:
-                    raise ValueError(
-                        "Constraint '%s' does not have a proper value. "
-                        "Equality Constraints expressed as 2-tuples "
-                        "cannot contain None [received %s]" % (self.name, expr)
-                    )
-                self._expr = EqualityExpression(expr)
-                return
-            elif len(expr) == 3:
-                #
-                # Form (ranged) inequality expression
-                #
-                if expr[0] is None:
-                    self._expr = InequalityExpression(expr[1:], False)
-                elif expr[2] is None:
-                    self._expr = InequalityExpression(expr[:2], False)
-                else:
-                    self._expr = RangedExpression(expr, False)
-                return
-            else:
-                raise ValueError(
-                    "Constraint '%s' does not have a proper value. "
-                    "Found a tuple of length %d. Expecting a tuple of "
-                    "length 2 or 3:\n"
-                    "    Equality:   (left, right)\n"
-                    "    Inequality: (lower, expression, upper)"
-                    % (self.name, len(expr))
-                )
-        #
-        # Ignore an 'empty' constraint
-        #
-        if expr is Constraint.Skip:
+            self.set_value(tuple_to_relational_expr(expr))
+
+        elif expr is Constraint.Skip:
+            #
+            # Ignore (and remove) an 'empty' constraint
+            #
             del self.parent_component()[self.index()]
-            return
 
         elif expr is None:
             raise ValueError(_rule_returned_none_error % (self.name,))
@@ -478,14 +449,14 @@ class ConstraintData(ActiveComponentData):
             except AttributeError:
                 pass
 
-        raise ValueError(
-            "Constraint '%s' does not have a proper "
-            "value. Found %s '%s'\nExpecting a tuple or "
-            "relational expression. Examples:"
-            "\n   sum(model.costs) == model.income"
-            "\n   (0, model.price[item], 50)"
-            % (self.name, type(expr).__name__, str(expr))
-        )
+            raise ValueError(
+                "Constraint '%s' does not have a proper "
+                "value. Found %s '%s'\nExpecting a tuple or "
+                "relational expression. Examples:"
+                "\n   sum(model.costs) == model.income"
+                "\n   (0, model.price[item], 50)"
+                % (self.name, type(expr).__name__, str(expr))
+            )
 
     def lslack(self):
         """
