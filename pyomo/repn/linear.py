@@ -727,6 +727,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
             elif arg.is_variable_type():
                 recorder(visitor, ans, 1, arg)
             else:
+                # Fixed objects; e.g. Params & Param expressions
                 try:
                     const += check_constant(evaluate(arg), arg, visitor)
                 except (ValueError, ArithmeticError):
@@ -783,14 +784,15 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         super().__init__()
         self.subexpression_cache = subexpression_cache
         if any(_ is not None for _ in (var_map, var_order, sorter)):
+            _name = self.__class__.__name__
             if var_recorder is not None:
                 raise ValueError(
-                    "LinearRepnVisitor: cannot specify any of var_map, "
+                    f"{_name}: cannot specify any of var_map, "
                     "var_order, or sorter with var_recorder"
                 )
             deprecation_warning(
                 "var_map, var_order, and sorter are deprecated arguments to "
-                "LinearRepnVisitor().  Please pass the VarRecorder object directly.",
+                f"{_name}().  Please pass the VarRecorder object directly.",
                 version='6.8.1',
             )
             var_recorder = OrderedVarRecorder(var_map, var_order, sorter)
