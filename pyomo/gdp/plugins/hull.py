@@ -375,70 +375,74 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         orig_fixed = ComponentMap()
         for x in itertools.chain(regular_vars, fallback_vars):
             x0_map[x] = 0  # ZeroConstant?
-            # also do some setup here
             orig_values[x] = value(x, exception=False)
             orig_fixed[x] = x.fixed
+        # Outer try-finally to ensure we always restore orig_values and
+        # orig_fixed on exit (even if we or the solver throw an exception)
         try:
-            val = value(
-                EXPR.ExpressionReplacementVisitor(substitute=x0_map).walk_expression(
-                    test_expr
+            try:
+                val = value(
+                    EXPR.ExpressionReplacementVisitor(substitute=x0_map).walk_expression(
+                        test_expr
+                    )
                 )
-            )
-            if math.isfinite(val):
-                return x0_map, ComponentSet()
-        except ValueError:  # ('math domain error')
-            pass
-        except ZeroDivisionError:
-            pass
-        except Exception as e:  # can anything else be thrown here?
-            logger.error(
-                "While trying to evaluate an expression, got unexpected exception type "
-                f"{e.__class__.__name__} (was prepared for success or a ValueError)."
-            )
-            raise
-        # Second, try making it well-defined by editing only the regular vars
-        for x in fallback_vars:
-            x.fix(0)
-        for x in regular_vars:
-            x.set_value(0)
-            x.unfix()
-        test_model = ConcreteModel()
-        test_model.test_expr = Expression(expr=test_expr)
-        test_model.obj = Objective(expr=0)
-        # In case the solver can't deal with Vars it doesn't know about
-        for x in itertools.chain(regular_vars, fallback_vars):
-            test_model.add_component(
-                unique_component_name(test_model, x.name), Reference(x)
-            )
-        test_model.well_defined_cons = ConstraintList()
-        _WellDefinedConstraintGenerator(
-            cons_list=test_model.well_defined_cons
-        ).walk_expression(test_expr)
-        feasible = self._solve_for_first_feasible_solution(test_model)
-        # Third, try again, but edit all the vars
-        if not feasible:
+                if math.isfinite(val):
+                    return x0_map, ComponentSet()
+            except ValueError:  # ('math domain error')
+                pass
+            except ZeroDivisionError:
+                pass
+            except Exception as e:  # can anything else be thrown here?
+                logger.error(
+                    "While trying to evaluate an expression, got unexpected exception type "
+                    f"{e.__class__.__name__} (was prepared for success or a ValueError)."
+                )
+                raise
+            # Second, try making it well-defined by editing only the regular vars
             for x in fallback_vars:
+                x.fix(0)
+            for x in regular_vars:
+                x.set_value(0)
                 x.unfix()
-            feasible = self._solve_for_first_feasible_solution(test_model)
-            if not feasible:
-                raise GDP_Error(
-                    f"Unable to find a well-defined point on disjunction {disj_name}. "
-                    "To carry out the hull transformation, each disjunction must have a "
-                    "point at which every constraint function appearing in its "
-                    "disjuncts is well-defined and finite. Please ensure such a point "
-                    "actually exists, then if we still cannot find it, override our "
-                    "search process using the `well_defined_points` option."
+            test_model = ConcreteModel()
+            test_model.test_expr = Expression(expr=test_expr)
+            test_model.obj = Objective(expr=0)
+            # In case the solver can't deal with Vars it doesn't know about
+            for x in itertools.chain(regular_vars, fallback_vars):
+                test_model.add_component(
+                    unique_component_name(test_model, x.name), Reference(x)
                 )
-        # Found a point
-        x0_map = ComponentMap()
-        used_vars = ComponentSet()
-        for x in itertools.chain(regular_vars, fallback_vars):
-            x0_map[x] = value(x)
-            if x0_map[x] != 0:
-                used_vars.add(x)
-            x.set_value(orig_values[x])
-            x.fixed = orig_fixed[x]
-        return x0_map, used_vars
+            test_model.well_defined_cons = ConstraintList()
+            _WellDefinedConstraintGenerator(
+                cons_list=test_model.well_defined_cons
+            ).walk_expression(test_expr)
+            feasible = self._solve_for_first_feasible_solution(test_model)
+            # Third, try again, but edit all the vars
+            if not feasible:
+                for x in fallback_vars:
+                    x.unfix()
+                feasible = self._solve_for_first_feasible_solution(test_model)
+                if not feasible:
+                    raise GDP_Error(
+                        f"Unable to find a well-defined point on disjunction {disj_name}. "
+                        "To carry out the hull transformation, each disjunction must have a "
+                        "point at which every constraint function appearing in its "
+                        "disjuncts is well-defined and finite. Please ensure such a point "
+                        "actually exists, then if we still cannot find it, override our "
+                        "search process using the `well_defined_points` option."
+                    )
+            # Found a point
+            x0_map = ComponentMap()
+            used_vars = ComponentSet()
+            for x in itertools.chain(regular_vars, fallback_vars):
+                x0_map[x] = value(x)
+                if x0_map[x] != 0:
+                    used_vars.add(x)
+            return x0_map, used_vars
+        finally:
+            for x in itertools.chain(regular_vars, fallback_vars):
+                x.set_value(orig_values[x])
+                x.fixed = orig_fixed[x]
 
     # Use gurobi_direct_minlp for the heuristic for now. It needs to be
     # a nonlinear solver.
