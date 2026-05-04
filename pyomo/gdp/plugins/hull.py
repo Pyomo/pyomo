@@ -139,6 +139,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     targets : block, disjunction, or list of those types
         The targets to transform. This can be a block, disjunction, or a
         list of blocks and Disjunctions [default: the instance]
+    well_defined_points: dict-like of ComponentMaps
+        Base points used for handling of functions with restricted
+        domain. See the generated documentation of the config option
+        for full details.
+    well_defined_points_heuristic_solver: Solver object supporting v1 api
+        or corresponding string [default: 'gurobi_direct_minlp']
+        Solver used to search for a base point when constraints are not
+        well-defined at zero. Must be a MINLP solver in general. Override
+        using 'well_defined_points'
     """
 
     CONFIG = cfg.ConfigDict('gdp.hull')
@@ -1092,7 +1101,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
 
             y = disjunct.binary_indicator_var
-            # TODO: ensure not double-transforming quadratic constraints
+
             if NL:
                 if mode == "LeeGrossmann":
                     sub_expr = clone_without_expression_components(
@@ -1891,7 +1900,7 @@ class _WellDefinedConstraintGenerator(StreamBasedExpressionVisitor):
 
 # Epsilon for handling function domains with strict inequalities. This
 # is a heuristic so it's not important for this to be tight.
-EPS = 1e-4
+EPS_HEURISTIC = 1e-4
 
 
 def _handlePowExpression(node):
@@ -1916,10 +1925,10 @@ def _handlePowExpression(node):
                 return ()
             else:
                 # return base != 0
-                return (base >= EPS,)
+                return (base >= EPS_HEURISTIC,)
         elif val >= 0:
             return (base >= 0,)
-    return (base >= EPS,)
+    return (base >= EPS_HEURISTIC,)
 
 
 def _handleDivisionExpression(node):
@@ -1928,7 +1937,7 @@ def _handleDivisionExpression(node):
     if arg.__class__ in EXPR.native_types or not arg.is_potentially_variable():
         return ()
     # Same LP vs MIP problem as before
-    return (arg >= EPS,)
+    return (arg >= EPS_HEURISTIC,)
 
 
 def _handleUnaryFunctionExpression(node):
@@ -1947,11 +1956,11 @@ def _handleUnaryFunctionExpression(node):
 
 
 def _handle_log(arg):
-    return (arg >= EPS,)
+    return (arg >= EPS_HEURISTIC,)
 
 
 def _handle_log10(arg):
-    return (arg >= EPS,)
+    return (arg >= EPS_HEURISTIC,)
 
 
 def _handle_sqrt(arg):
@@ -1970,7 +1979,7 @@ def _handle_tan(arg):
     # It can't be exactly pi/2 plus a multiple of pi. Rather difficult
     # to enforce, so make a conservative effort by instead keeping it in
     # (-pi/2, pi/2).
-    return (arg >= -(math.pi / 2) + EPS, arg <= (math.pi / 2) - EPS)
+    return (arg >= -(math.pi / 2) + EPS_HEURISTIC, arg <= (math.pi / 2) - EPS_HEURISTIC)
 
 
 def _handle_acosh(arg):
@@ -1978,7 +1987,7 @@ def _handle_acosh(arg):
 
 
 def _handle_atanh(arg):
-    return (arg >= -1 + EPS, arg <= 1 - EPS)
+    return (arg >= -1 + EPS_HEURISTIC, arg <= 1 - EPS_HEURISTIC)
 
 
 # All expression types that can potentially be
