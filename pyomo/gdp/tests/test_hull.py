@@ -2924,6 +2924,17 @@ class DomainRestrictionTest(unittest.TestCase):
         ):
             assertExpressionsStructurallyEqual(self, c1.expr, c2.expr)
 
+    def test_well_defined_pts_no_gurobi(self):
+        m = models.makeTwoTermDisj()
+        m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
+        TransformationFactory('gdp.hull').apply_to(
+            m, well_defined_points={m.disjunction: ComponentMap([(m.x, 2), (m.a, 0)])}
+        )
+        m_pts = TransformationFactory('gdp.hull').get_well_defined_points_map(m)
+        # x gets a nonzero offset; a does not
+        self.assertNotEqual(m_pts[m.disjunction][m.x], 0)
+        self.assertEqual(m_pts[m.disjunction][m.a], 0)
+
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_handle_fixed_disagg(self):
         m = models.makeTwoTermDisj()
@@ -2975,7 +2986,7 @@ class DomainRestrictionTest(unittest.TestCase):
         self.assertNotEqual(m_pts[m.disjunction][m.y], 0)
 
     # Ensure proper cleanup on error exit of the base point heuristic
-    @unittest.skipUnless(gurobi_available, "Gurobi is not available")    
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_error_exit(self):
         m = models.makeTwoTermDisj()
         m.y = Var(bounds=(-5, 5))
@@ -2990,7 +3001,7 @@ class DomainRestrictionTest(unittest.TestCase):
         self.assertRaises(GDP_Error, lambda: hull.apply_to(m))
         self.assertEqual(value(m.y), -1)
         self.assertTrue(m.y.fixed)
-        
+
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class NestedDisjunctsInFlatGDP(unittest.TestCase):
@@ -3045,6 +3056,7 @@ class WellDefinedConstraintWalkerTest(unittest.TestCase):
         ):
             assertExpressionsStructurallyEqual(self, con.expr, expected_con)
 
+
 class TestGeneralizedLocalVars(unittest.TestCase):
     # Here m.a appears on both disjuncts of m.disjunction and nowhere
     # else; it is suitable for declaration as LocalVars in which case it
@@ -3069,7 +3081,7 @@ class TestGeneralizedLocalVars(unittest.TestCase):
         m.d = Disjunct([0, 1, 2], rule=d_rule)
         m.disjunction = Disjunction(expr=[m.d[0], m.d[1], m.d[2]])
         return m
-    
+
     def test_generalized_localvars(self):
         # Normal case: both variables are disagreggated whenever they appear
         # Total 10 variables: a, x, three binary indicators, two fallback vars,
@@ -3078,7 +3090,7 @@ class TestGeneralizedLocalVars(unittest.TestCase):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
         self.assertEqual(len(list(m.component_data_objects(Var))), 10)
-        
+
         # True localvars (for x): eliminate its disaggregated version and one fallback var
         # Total 8 variables
         m = self.makeThreeTermDisj()
@@ -3108,6 +3120,7 @@ class TestGeneralizedLocalVars(unittest.TestCase):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
         self.assertEqual(len(list(m.component_data_objects(Var))), 7)
+
 
 class TestExactHullQuadratic(unittest.TestCase):
     """Tests for the ``exact_hull_quadratic`` option of the hull transformation.

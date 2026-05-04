@@ -504,9 +504,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         try:
             try:
                 val = value(
-                    EXPR.ExpressionReplacementVisitor(substitute=x0_map).walk_expression(
-                        test_expr
-                    )
+                    EXPR.ExpressionReplacementVisitor(
+                        substitute=x0_map
+                    ).walk_expression(test_expr)
                 )
                 if math.isfinite(val):
                     return x0_map, ComponentSet()
