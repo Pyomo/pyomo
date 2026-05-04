@@ -2974,6 +2974,23 @@ class DomainRestrictionTest(unittest.TestCase):
         self.assertNotEqual(m_pts[m.disjunction][m.x], 0)
         self.assertNotEqual(m_pts[m.disjunction][m.y], 0)
 
+    # Ensure proper cleanup on error exit of the base point heuristic
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")    
+    def test_error_exit(self):
+        m = models.makeTwoTermDisj()
+        m.y = Var(bounds=(-5, 5))
+        m.y.set_value(-1)
+        m.y.fix()
+        # these cannot both be well-defined
+        m.d[0].log = Constraint(expr=log(m.a + 1) >= 0)
+        m.d[0].log = Constraint(expr=log(-m.a - 2) >= 0)
+        m.d[0].pow = Constraint(expr=m.y ** (-0.5) >= 0)
+        m.d[0].div = Constraint(expr=1 / (m.x) >= 0)
+        hull = TransformationFactory('gdp.hull')
+        self.assertRaises(GDP_Error, lambda: hull.apply_to(m))
+        self.assertEqual(value(m.y), -1)
+        self.assertTrue(m.y.fixed)
+        
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class NestedDisjunctsInFlatGDP(unittest.TestCase):
