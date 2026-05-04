@@ -210,7 +210,6 @@ def compute_FIM_metrics(FIM):
     # Modified E-optimality is based on the FIM condition number and penalizes
     # confidence ellipsoids that are highly elongated in one direction.
 
-
     ME_opt = np.log10(np.linalg.cond(FIM))
 
     return (

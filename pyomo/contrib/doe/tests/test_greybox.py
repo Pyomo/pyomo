@@ -42,12 +42,7 @@ if numpy_available:
     # Randomly generated P.S.D. matrix
     # Matrix is 2x2 to match Rooney-Biegler parameters.
     # number of parameters.
-    testing_matrix = np.array(
-        [
-            [5.13730123, 1.08084953],
-            [1.08084953, 1.57183404],
-        ]
-    )
+    testing_matrix = np.array([[5.13730123, 1.08084953], [1.08084953, 1.57183404]])
 
     masking_matrix = np.triu(np.ones_like(testing_matrix))
 
@@ -317,9 +312,7 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
 # run with the MA57/HSL linear solver required by these tests.
 bad_message = "Invalid option encountered."
 cyipopt_call_working = True
-cyipopt_skip_reason = (
-    "cyipopt GreyBox solve path requires a working MA57/HSL runtime"
-)
+cyipopt_skip_reason = "cyipopt GreyBox solve path requires a working MA57/HSL runtime"
 if (
     numpy_available
     and scipy_available
@@ -998,9 +991,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Test all versions of solving
     # using grey box
-    @unittest.skipIf(
-        not cyipopt_call_working, cyipopt_skip_reason
-    )
+    @unittest.skipIf(not cyipopt_call_working, cyipopt_skip_reason)
     def test_solve_D_optimality_log_determinant(self):
         # Two locally optimal design points exist
         # (time, optimal objective value)
@@ -1039,9 +1030,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             )
         )
 
-    @unittest.skipIf(
-        not cyipopt_call_working, cyipopt_skip_reason
-    )
+    @unittest.skipIf(not cyipopt_call_working, cyipopt_skip_reason)
     def test_solve_A_optimality_trace_of_inverse(self):
         # Two locally optimal design points exist
         # (time, optimal objective value)
@@ -1080,9 +1069,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             )
         )
 
-    @unittest.skipIf(
-        not cyipopt_call_working, cyipopt_skip_reason
-    )
+    @unittest.skipIf(not cyipopt_call_working, cyipopt_skip_reason)
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_E_optimality_minimum_eigenvalue(self):
         # Two locally optimal design points exist
@@ -1122,9 +1109,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             )
         )
 
-    @unittest.skipIf(
-        not cyipopt_call_working, cyipopt_skip_reason
-    )
+    @unittest.skipIf(not cyipopt_call_working, cyipopt_skip_reason)
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_ME_optimality_condition_number(self):
         # Two locally optimal design points exist

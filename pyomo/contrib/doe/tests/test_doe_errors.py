@@ -512,9 +512,9 @@ class TestDoEErrors(unittest.TestCase):
 
         experiment = PolynomialExperiment()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag = None)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args["gradient_method"] = "pynumero"
-        DoE_args["scale_nominal_param_value"]=False
+        DoE_args["scale_nominal_param_value"] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -553,9 +553,9 @@ class TestDoEErrors(unittest.TestCase):
 
         experiment = PolynomialExperiment()
 
-        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag = None)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
         DoE_args["gradient_method"] = "pynumero"
-        DoE_args["scale_nominal_param_value"]=False
+        DoE_args["scale_nominal_param_value"] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -857,7 +857,6 @@ class TestDoEErrors(unittest.TestCase):
         )
         DoE_args["gradient_method"] = "kaug"
         DoE_args["scale_nominal_param_value"] = False
-
 
         doe_obj = DesignOfExperiments(**DoE_args)
 

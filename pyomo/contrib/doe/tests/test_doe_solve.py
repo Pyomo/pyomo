@@ -551,13 +551,11 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertAlmostEqual(fim[0, 0], 41155.59271917, places=2)
         self.assertAlmostEqual(fim[1, 1], 973.06126181, places=2)
         self.assertAlmostEqual(
-            doe_obj.results["log10 D-opt"],7.179982499524086, places=4
+            doe_obj.results["log10 D-opt"], 7.179982499524086, places=4
         )
         self.assertAlmostEqual(
             doe_obj.results["log10 A-opt"], -2.5554049159721415, places=4
         )
-
-
 
     def test_rooney_biegler_run_doe_pynumero_objective_matrix(self):
         """Exercise the symbolic Rooney-Biegler run_doe path across objective options."""
@@ -583,7 +581,9 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
                 FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
                 if objective_option == "determinant":
                     self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
-                self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
+                self.assertTrue(
+                    np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM))
+                )
 
     def test_polynomial_example_compute_fim_pynumero(self):
         """Check that the transplanted polynomial example computes the expected FIM."""
@@ -591,7 +591,6 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         expected = get_expected_polynomial_fim()
         self.assertEqual(fim.shape, expected.shape)
         self.assertTrue(np.allclose(fim, expected))
-
 
     def test_polynomial_example_measurement_error_scaling(self):
         """Check that doubling the measurement error scales the FIM by one quarter."""
@@ -623,7 +622,8 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
     def test_polynomial_example_run_doe_smoke(self):
         """Check that the public polynomial example can solve a tiny DoE problem.
-        Also do a regression test to check that the solution returned stays correct over time"""
+        Also do a regression test to check that the solution returned stays correct over time
+        """
         prior_FIM = np.eye(4)
         doe_obj = DesignOfExperiments(
             **get_polynomial_args(
@@ -636,16 +636,20 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
-        self.assertEqual(str(doe_obj.results["Termination Condition"]).lower(), "optimal")
+        self.assertEqual(
+            str(doe_obj.results["Termination Condition"]).lower(), "optimal"
+        )
         design = doe_obj.results["Experiment Design"]
-        self.assertAlmostEqual(design[0],5.0,places=4)
-        self.assertAlmostEqual(design[1],5.0,places =4)
+        self.assertAlmostEqual(design[0], 5.0, places=4)
+        self.assertAlmostEqual(design[1], 5.0, places=4)
 
-        self.assertAlmostEqual(doe_obj.results["log10 D-opt"],2.830588683545922, places=4)
+        self.assertAlmostEqual(
+            doe_obj.results["log10 D-opt"], 2.830588683545922, places=4
+        )
 
         fim = np.array(doe_obj.results["FIM"])
-        self.assertAlmostEqual(fim[0,0], 26.00000045, places=4)
-        self.assertAlmostEqual(fim[3,3], 2.0, places=4)
+        self.assertAlmostEqual(fim[0, 0], 26.00000045, places=4)
+        self.assertAlmostEqual(fim[3, 3], 2.0, places=4)
 
     def test_rescale_FIM(self):
         fd_method = "central"
@@ -671,12 +675,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Get rescaled FIM from the scaled version
         param_vals = np.array(
-            [
-                [
-                    v
-                    for k, v in experiment.get_labeled_model().unknown_parameters.items()
-                ]
-            ]
+            [[v for k, v in experiment.get_labeled_model().unknown_parameters.items()]]
         )
 
         resc_FIM = rescale_FIM(FIM, param_vals)
@@ -1013,7 +1012,9 @@ class TestRooneyBieglerExample(unittest.TestCase):
     def test_draw_factorial_figure_accepts_dataframe_input(self):
         """Check draw_factorial_figure accepts a DataFrame and stores filtered rows."""
         doe_obj = DesignOfExperiments(
-            **get_polynomial_args(gradient_method = "pynumero", objective_option="determinant")
+            **get_polynomial_args(
+                gradient_method="pynumero", objective_option="determinant"
+            )
         )
 
         results = doe_obj.compute_FIM_full_factorial(
@@ -1041,10 +1042,14 @@ class TestRooneyBieglerExample(unittest.TestCase):
     def test_draw_factorial_figure_bad_fixed_variable_raises(self):
         """Check draw_factorial_figure rejects unknown fixed design variables."""
         doe_obj = DesignOfExperiments(
-            **get_polynomial_args(gradient_method = "pynumero", objective_option="determinant")
+            **get_polynomial_args(
+                gradient_method="pynumero", objective_option="determinant"
+            )
         )
 
-        results = doe_obj.compute_FIM_full_factorial(design_ranges={"x1": [0,5,3], "x2":[0,5,3]})
+        results = doe_obj.compute_FIM_full_factorial(
+            design_ranges={"x1": [0, 5, 3], "x2": [0, 5, 3]}
+        )
 
         with self.assertRaisesRegex(
             ValueError, "Fixed design variables do not all appear"
@@ -1053,7 +1058,7 @@ class TestRooneyBieglerExample(unittest.TestCase):
                 results=results,
                 sensitivity_design_variables=["x1"],
                 fixed_design_variables={"bad_name": 5.0},
-                full_design_variable_names=["x1","x2"],
+                full_design_variable_names=["x1", "x2"],
                 log_scale=False,
                 figure_file_name=None,
             )
@@ -1153,13 +1158,15 @@ class TestDoEFactorialFigure(unittest.TestCase):
         self.addCleanup(cleanup_files)
 
         experiment = PolynomialExperiment()
-        DoE_args = get_standard_args(experiment, "central","determinant")
+        DoE_args = get_standard_args(experiment, "central", "determinant")
         DoE_args["gradient_method"] = "pynumero"
         DoE_args["scale_nominal_param_value"] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
         # Build polynomial factorial results and draw the linear-scale 2D plots.
-        doe_obj.compute_FIM_full_factorial(design_ranges={"x1": [0, 5, 2], "x2": [0, 5, 2]})
+        doe_obj.compute_FIM_full_factorial(
+            design_ranges={"x1": [0, 5, 2], "x2": [0, 5, 2]}
+        )
         doe_obj.draw_factorial_figure(
             sensitivity_design_variables=["x1", "x2"],
             fixed_design_variables={},

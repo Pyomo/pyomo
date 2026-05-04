@@ -34,6 +34,7 @@ from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
 
+
 def get_rooney_biegler_experiment():
     """Get a fresh RooneyBieglerExperiment instance for testing.
 
