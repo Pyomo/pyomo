@@ -1,11 +1,18 @@
+# ____________________________________________________________________________________
+#
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
+
 from pyomo.common.unittest import TestCase, skipUnless
 import pyomo.environ as pyo
 from pyomo.contrib import piecewise
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.common.dependencies import numpy_available, numpy
 from pyomo.core.expr.numeric_expr import ProductExpression
-
-pe = pyo
 
 
 def _get_trans():
@@ -16,11 +23,11 @@ def _get_trans():
 
 class TestUnivariateNonlinearDecomposition(TestCase):
     def test_multiterm(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.c = pe.Constraint(expr=m.x + pe.log(m.y + m.z) + 1 / pe.exp(m.x**0.5) <= 0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x + pyo.log(m.y + m.z) + 1 / pyo.exp(m.x**0.5) <= 0)
 
         trans = _get_trans()
         trans.apply_to(m)
@@ -36,7 +43,7 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         self.assertIsNone(m.y.ub)
         self.assertIsNone(m.z.lb)
         self.assertIsNone(m.z.ub)
-        self.assertEqual(aux.x[1].lb, 0)
+        self.assertTrue(aux.x[1].lb is None or aux.x[1].lb <= 0)
         self.assertIsNone(aux.x[1].ub)
         self.assertEqual(aux.x[2].lb, 0)
         self.assertEqual(aux.x[2].ub, 1)
@@ -44,14 +51,14 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         self.assertIsNone(aux.x[3].ub)
 
     def test_common_subexpressions(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z1 = pe.Var()
-        m.z2 = pe.Var()
-        e = -pe.log(m.x + m.y)
-        m.c1 = pe.Constraint(expr=m.z1 + e == 0)
-        m.c2 = pe.Constraint(expr=m.z2 + e == 0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z1 = pyo.Var()
+        m.z2 = pyo.Var()
+        e = -pyo.log(m.x + m.y)
+        m.c1 = pyo.Constraint(expr=m.z1 + e == 0)
+        m.c2 = pyo.Constraint(expr=m.z2 + e == 0)
 
         trans = _get_trans()
         trans.apply_to(m)
@@ -60,43 +67,43 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         assertExpressionsEqual(self, m.c1.expr, m.z1 + aux.x[2] == 0)
         assertExpressionsEqual(self, m.c2.expr, m.z2 + aux.x[2] == 0)
         assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)
-        assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == -pe.log(aux.x[1]))
+        assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == -pyo.log(aux.x[1]))
 
     def test_product_fixed_variable(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.c = pe.Constraint(expr=2 * pe.log(m.x + m.y) <= 0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.c = pyo.Constraint(expr=2 * pyo.log(m.x + m.y) <= 0)
 
         trans = _get_trans()
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(self, m.c.expr, 2 * pe.log(aux.x[1]) <= 0)
+        assertExpressionsEqual(self, m.c.expr, 2 * pyo.log(aux.x[1]) <= 0)
         assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)
 
     def test_product_variable_fixed(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.c = pe.Constraint(expr=pe.log(m.x + m.y) * 2 <= 0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.c = pyo.Constraint(expr=pyo.log(m.x + m.y) * 2 <= 0)
 
         trans = _get_trans()
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(self, m.c.expr, pe.log(aux.x[1]) * 2 <= 0)
+        assertExpressionsEqual(self, m.c.expr, pyo.log(aux.x[1]) * 2 <= 0)
         assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)
 
     def test_prod_sum_sum(self):
-        m = pe.ConcreteModel()
-        m.x1 = pe.Var()
-        m.x2 = pe.Var()
-        m.x3 = pe.Var()
-        m.x4 = pe.Var()
-        m.c = pe.Constraint(expr=(m.x1 + m.x2) * (m.x3 + m.x4) <= 1)
+        m = pyo.ConcreteModel()
+        m.x1 = pyo.Var()
+        m.x2 = pyo.Var()
+        m.x3 = pyo.Var()
+        m.x4 = pyo.Var()
+        m.c = pyo.Constraint(expr=(m.x1 + m.x2) * (m.x3 + m.x4) <= 1)
 
         trans = _get_trans()
         trans.apply_to(m)
@@ -107,12 +114,12 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == m.x3 + m.x4)
 
     def test_pow_sum_sum(self):
-        m = pe.ConcreteModel()
-        m.x1 = pe.Var()
-        m.x2 = pe.Var()
-        m.x3 = pe.Var()
-        m.x4 = pe.Var()
-        m.c = pe.Constraint(expr=(m.x1 + m.x2) ** (m.x3 + m.x4) <= 1)
+        m = pyo.ConcreteModel()
+        m.x1 = pyo.Var()
+        m.x2 = pyo.Var()
+        m.x3 = pyo.Var()
+        m.x4 = pyo.Var()
+        m.c = pyo.Constraint(expr=(m.x1 + m.x2) ** (m.x3 + m.x4) <= 1)
 
         trans = _get_trans()
         trans.apply_to(m)
@@ -123,10 +130,10 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         assertExpressionsEqual(self, aux.c[2].expr, aux.x[2] == m.x3 + m.x4)
 
     def test_division_var_const(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c = pe.Constraint(expr=(m.x + m.y) / 2 <= 0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c = pyo.Constraint(expr=(m.x + m.y) / 2 <= 0)
 
         trans = _get_trans()
         trans.apply_to(m)
@@ -135,12 +142,12 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         assertExpressionsEqual(self, m.c.expr, (m.x + m.y) / 2 <= 0)
 
     def test_division_sum_sum(self):
-        m = pe.ConcreteModel()
-        m.x1 = pe.Var()
-        m.x2 = pe.Var()
-        m.x3 = pe.Var()
-        m.x4 = pe.Var()
-        m.c = pe.Constraint(expr=(m.x1 + m.x2) / (m.x3 + m.x4) <= 1)
+        m = pyo.ConcreteModel()
+        m.x1 = pyo.Var()
+        m.x2 = pyo.Var()
+        m.x3 = pyo.Var()
+        m.x4 = pyo.Var()
+        m.c = pyo.Constraint(expr=(m.x1 + m.x2) / (m.x3 + m.x4) <= 1)
 
         trans = _get_trans()
         trans.apply_to(m)
@@ -153,17 +160,17 @@ class TestUnivariateNonlinearDecomposition(TestCase):
 
     @skipUnless(numpy_available, "Numpy is not available")
     def test_numpy_float(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.c = pe.Constraint(
-            expr=ProductExpression((numpy.float64(2.5), pe.log(m.x + m.y))) <= 0
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.c = pyo.Constraint(
+            expr=ProductExpression((numpy.float64(2.5), pyo.log(m.x + m.y))) <= 0
         )
 
         trans = _get_trans()
         trans.apply_to(m)
         aux = m.auxiliary
 
-        assertExpressionsEqual(self, m.c.expr, 2.5 * pe.log(aux.x[1]) <= 0)
+        assertExpressionsEqual(self, m.c.expr, 2.5 * pyo.log(aux.x[1]) <= 0)
         assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)

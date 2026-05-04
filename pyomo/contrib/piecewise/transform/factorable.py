@@ -1,3 +1,12 @@
+# ____________________________________________________________________________________
+#
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
+
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.numeric_types import native_numeric_types
@@ -44,6 +53,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.repn.util import categorize_valid_components
 
 
 def _handle_var(node, data, visitor):
@@ -279,9 +289,9 @@ def _handle_pow(node, data, visitor):
 
 def _handle_named_expression(node, data, visitor):
     assert len(data) == 1
-    res = data[0]
-    visitor.substitution_map[node] = res
-    return res
+    node.expr = data[0]
+    visitor.substitution_map[node] = node
+    return node
 
 
 def _handle_negation(node, data, visitor):
@@ -457,16 +467,14 @@ class UnivariateNonlinearDecompositionTransformation(Transformation):
 
     def _check_for_unknown_active_components(self, model):
         known_ctypes = {Constraint, Objective, Block}
-        for ctype in model.collect_ctypes(active=True, descend_into=True):
-            if not issubclass(ctype, ActiveComponent):
-                continue
-            if ctype in known_ctypes:
-                continue
-            if ctype is Suffix:
-                continue
+        ignore = {Suffix}
+        valid, invalid = categorize_valid_components(
+            model=model, active=True, valid=ignore, targets=known_ctypes
+        )
+        if invalid:
             raise NotImplementedError(
                 f'UnivariateNonlinearDecompositionTransformation does not know how to '
-                f'handle components with ctype {ctype}'
+                f'handle components with ctype {list(invalid.keys())}'
             )
 
     def _apply_to(self, model, **kwds):
