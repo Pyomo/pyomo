@@ -3045,6 +3045,70 @@ class WellDefinedConstraintWalkerTest(unittest.TestCase):
         ):
             assertExpressionsStructurallyEqual(self, con.expr, expected_con)
 
+class TestGeneralizedLocalVars(unittest.TestCase):
+    # Here m.a appears on both disjuncts of m.disjunction and nowhere
+    # else; it is suitable for declaration as LocalVars in which case it
+    # becomes generalized local. To use this functionality the LocalVars
+    # suffix should be used with keys for both disjuncts in which m.a
+    # appears. m.x on the other hand is properly local
+    def makeThreeTermDisj(self):
+        m = ConcreteModel()
+        m.a = Var(bounds=(2, 7))
+        m.x = Var(bounds=(4, 9))
+
+        def d_rule(disjunct, flag):
+            m = disjunct.model()
+            if flag == 2:
+                pass
+            elif flag == 1:
+                disjunct.c1 = Constraint(expr=m.a == 0)
+                disjunct.c2 = Constraint(expr=m.x <= 7)
+            else:
+                disjunct.c = Constraint(expr=m.a >= 5)
+
+        m.d = Disjunct([0, 1, 2], rule=d_rule)
+        m.disjunction = Disjunction(expr=[m.d[0], m.d[1], m.d[2]])
+        return m
+    
+    def test_generalized_localvars(self):
+        # Normal case: both variables are disagreggated whenever they appear
+        # Total 10 variables: a, x, three binary indicators, two fallback vars,
+        # two disaggregated a, one disaggregated x
+        m = self.makeThreeTermDisj()
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        self.assertEqual(len(list(m.component_data_objects(Var))), 10)
+        
+        # True localvars (for x): eliminate its disaggregated version and one fallback var
+        # Total 8 variables
+        m = self.makeThreeTermDisj()
+        m.d[1].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[1].LocalVars[m.d[1]] = [m.x]
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        self.assertEqual(len(list(m.component_data_objects(Var))), 8)
+
+        # Generalized localvars (for a): eliminate the fallback variable only
+        m = self.makeThreeTermDisj()
+        m.d[1].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[0].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[0].LocalVars[m.d[0]] = [m.a]
+        m.d[1].LocalVars[m.d[1]] = [m.a]
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        self.assertEqual(len(list(m.component_data_objects(Var))), 9)
+
+        # Both localvars: eliminate both fallbacks and the disaggregated
+        # version of x, but not those of a
+        m = self.makeThreeTermDisj()
+        m.d[1].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[0].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[0].LocalVars[m.d[0]] = [m.a]
+        m.d[1].LocalVars[m.d[1]] = [m.x, m.a]
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        self.assertEqual(len(list(m.component_data_objects(Var))), 7)
+
 class TestExactHullQuadratic(unittest.TestCase):
     """Tests for the ``exact_hull_quadratic`` option of the hull transformation.
 

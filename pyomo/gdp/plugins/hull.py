@@ -649,7 +649,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                         disjuncts_var_appears_in[var] = ComponentSet([disjunct])
                     else:
                         disjuncts_var_appears_in[var].add(disjunct)
-
         # Now, we will disaggregate all variables that are not explicitly
         # declared as being local. If we are moving up in a nested tree, we have
         # marked our own disaggregated variables as local, so they will not be
@@ -677,7 +676,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                             local_vars[disj].add(var)
                             all_local_vars.add(var)
                         else:
-                            vars_to_disaggregate[disjunct].add(var)
+                            vars_to_disaggregate[disj].add(var)
                             all_vars_to_disaggregate.add(var)
                         generalized_local_vars.add(var)
             if var not in generalized_local_vars:
@@ -686,7 +685,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     # it's only on one disjunct.
                     vars_to_disaggregate[disj].add(var)
                 all_vars_to_disaggregate.add(var)
-
         # Find a well-defined point x_0. We need every constraint body
         # to successfully evaluate to something.
         if obj in self._config.well_defined_points:
