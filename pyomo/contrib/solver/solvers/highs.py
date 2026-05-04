@@ -9,7 +9,6 @@
 
 import logging
 import io
-from typing import List, Optional
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
@@ -240,12 +239,6 @@ class HighsSolutionLoader(PersistentSolutionLoader):
             return 1
         return 0
 
-    def get_solution_ids(self):
-        self._assert_solution_still_valid()
-        if self._solver._solver_model.getSolution().value_valid:
-            return [None]
-        return []
-
 
 class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
     """
@@ -268,7 +261,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         self._solver_con_to_pyomo_con_map = {}
         self._mutable_helpers = {}
         self._mutable_bounds = {}
-        self._last_results_object: Optional[Results] = None
+        self._last_results_object: Results | None = None
         self._sol = None
 
     def available(self):
@@ -364,7 +357,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         return lb, ub, vtype
 
-    def _add_variables(self, variables: List[VarData]):
+    def _add_variables(self, variables: list[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -391,7 +384,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             len(vtypes), np.array(indices), np.array(vtypes)
         )
 
-    def _add_parameters(self, params: List[ParamData]):
+    def _add_parameters(self, params: list[ParamData]):
         pass
 
     def _reinit(self):
@@ -423,7 +416,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             if self._objective is None:
                 self.set_objective(None)
 
-    def _add_constraints(self, cons: List[ConstraintData]):
+    def _add_constraints(self, cons: list[ConstraintData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -503,13 +496,13 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             np.array(coef_values, dtype=np.double),
         )
 
-    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
+    def _add_sos_constraints(self, cons: list[SOSConstraintData]):
         if cons:
             raise NotImplementedError(
                 'Highs interface does not support SOS constraints'
             )
 
-    def _remove_constraints(self, cons: List[ConstraintData]):
+    def _remove_constraints(self, cons: list[ConstraintData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -534,13 +527,13 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             {v: k for k, v in self._pyomo_con_to_solver_con_map.items()}
         )
 
-    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: list[SOSConstraintData]):
         if cons:
             raise NotImplementedError(
                 'Highs interface does not support SOS constraints'
             )
 
-    def _remove_variables(self, variables: List[VarData]):
+    def _remove_variables(self, variables: list[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -562,10 +555,10 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         self._pyomo_var_to_solver_var_map.clear()
         self._pyomo_var_to_solver_var_map.update(new_var_map)
 
-    def _remove_parameters(self, params: List[ParamData]):
+    def _remove_parameters(self, params: list[ParamData]):
         pass
 
-    def _update_variables(self, variables: List[VarData]):
+    def _update_variables(self, variables: list[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -693,7 +686,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         results.timing_info.highs_time = highs.getRunTime()
 
         self._sol = highs.getSolution()
-        has_feasible_solution = self._sol.value_valid
+        info = highs.getInfo()
+        # 0: None, 1: Infeasible, 2: Feasible
+        has_feasible_solution = info.primal_solution_status == 2
         if status == highspy.HighsModelStatus.kOptimal:
             results.solution_status = SolutionStatus.optimal
         elif has_feasible_solution:
@@ -751,12 +746,15 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         results.incumbent_objective = None
         results.objective_bound = None
-        info = highs.getInfo()
         if self._objective is not None:
             if has_feasible_solution:
                 results.incumbent_objective = info.objective_function_value
             if info.mip_node_count == -1:
-                if has_feasible_solution:
+                if (
+                    has_feasible_solution
+                    and results.termination_condition
+                    == TerminationCondition.convergenceCriteriaSatisfied
+                ):
                     results.objective_bound = info.objective_function_value
                 else:
                     results.objective_bound = None
@@ -781,18 +779,12 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         return results
 
-    def _load_vars(self, vars_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), 'highs interface does not currently support multiple solutions'
+    def _load_vars(self, vars_to_load=None):
         for v, val in self._get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def _get_primals(self, vars_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), 'highs interface does not currently support multiple solutions'
+    def _get_primals(self, vars_to_load=None):
         if self._sol is None or not self._sol.value_valid:
             raise NoSolutionError()
 
@@ -815,10 +807,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         return res
 
-    def _get_reduced_costs(self, vars_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), 'highs interface does not currently support multiple solutions'
+    def _get_reduced_costs(self, vars_to_load=None):
         if self._sol is None or not self._sol.dual_valid:
             raise NoReducedCostsError()
         res = ComponentMap()
@@ -836,10 +825,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         return res
 
-    def _get_duals(self, cons_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), 'highs interface does not currently support multiple solutions'
+    def _get_duals(self, cons_to_load=None):
         if self._sol is None or not self._sol.dual_valid:
             raise NoDualsError()
 

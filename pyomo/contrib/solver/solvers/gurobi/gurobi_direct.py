@@ -8,7 +8,7 @@
 # ____________________________________________________________________________________
 
 import operator
-from typing import List, Any
+from typing import Any
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.shutdown import python_is_shutting_down
@@ -21,7 +21,6 @@ from pyomo.contrib.solver.common.util import (
     NoSolutionError,
     IncompatibleModelError,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from .gurobi_direct_base import (
     GurobiDirectBase,
     gurobipy,
