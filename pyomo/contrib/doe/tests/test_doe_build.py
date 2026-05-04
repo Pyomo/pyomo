@@ -527,6 +527,7 @@ class TestDoeBuild(unittest.TestCase):
 
 
 class TestRooneyBieglerExample(unittest.TestCase):
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_rooney_biegler_update_suffix_items(self):
         """Test updating suffix items on the lightweight Rooney-Biegler model."""
         from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
