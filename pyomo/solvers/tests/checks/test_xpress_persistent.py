@@ -310,10 +310,11 @@ class TestXpressPersistent(unittest.TestCase):
         m.x2 = pyo.Var()
         m.x3 = pyo.Var()
 
-        m.obj = pyo.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3, sense=pyo.minimize)
-        m.equ1 = pyo.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == 1)
-        m.cone = pyo.Constraint(rule=lambda m: m.x2 * m.x2 + m.x3 * m.x3 <= m.x1 * m.x1)
-        m.equ2 = pyo.Constraint(rule=lambda m: m.x1 >= 0)
+        m.obj = pyo.Objective(expr=2 * m.x1 + m.x2 + m.x3, sense=pyo.minimize)
+        m.equ1 = pyo.Constraint(expr=m.x1 + m.x2 + m.x3 == 1)
+        m.nl = pyo.Constraint(expr=m.x1 * m.x2 <= m.x2 * m.x3)
+        m.cone = pyo.Constraint(expr=m.x2 * m.x2 + m.x3 * m.x3 <= m.x1 * m.x1)
+        m.equ2 = pyo.Constraint(expr=m.x1 >= 0)
 
         opt = pyo.SolverFactory('xpress_direct')
         opt.options['XSLP_SOLVER'] = 0

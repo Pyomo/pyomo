@@ -25,19 +25,6 @@ except ImportError:
     from distutils.errors import DistutilsOptionError
 
 
-def read(*rnames):
-    with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
-        # Strip all leading badges up to, but not including the COIN-OR
-        # badge so that they do not appear in the PyPI description
-        while True:
-            line = README.readline()
-            if 'COIN-OR' in line:
-                break
-            if line.strip() and '[![' not in line:
-                break
-        return line + README.read()
-
-
 def import_pyomo_module(*path):
     _module_globals = dict(globals())
     _module_globals['__name__'] = None

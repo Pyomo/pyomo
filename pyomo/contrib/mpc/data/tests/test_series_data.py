@@ -144,6 +144,20 @@ class TestSeriesData(unittest.TestCase):
             new_data,
         )
 
+    def test_get_data_interpolate_none(self):
+        m = self._make_model()
+        data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [None, None, None]}
+        data = TimeSeriesData(data_dict, m.time)
+
+        new_t = [0.05, 0.15]
+        new_data = data.get_interpolated_data(new_t)
+        self.assertEqual(
+            TimeSeriesData(
+                {m.var[:, "A"]: [1.5, 2.5], m.var[:, "B"]: [None, None]}, new_t
+            ),
+            new_data,
+        )
+
     def test_get_data_interpolate_range_check(self):
         m = self._make_model()
         data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}

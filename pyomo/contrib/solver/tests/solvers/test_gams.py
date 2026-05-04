@@ -78,9 +78,9 @@ class TestGAMSSolverConfig(unittest.TestCase):
 @unittest.pytest.mark.solver("gams")
 class TestGAMSSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
-        loader = gams.GMSSolutionLoader(None, None)
+        loader = gams.GMSSolutionLoader(None, None, None)
         with self.assertRaises(NoSolutionError):
-            loader.get_primals()
+            loader.get_vars()
         with self.assertRaises(NoDualsError):
             loader.get_duals()
         with self.assertRaises(NoReducedCostsError):
@@ -100,7 +100,7 @@ class TestGAMSSolutionLoader(unittest.TestCase):
 
         # We are asserting if there is no solution, the SymbolMap for
         # variable length must be 0
-        loader.get_primals()
+        loader.get_vars()
 
         # if the model is infeasible, no dual information is returned
         with self.assertRaises(NoDualsError):

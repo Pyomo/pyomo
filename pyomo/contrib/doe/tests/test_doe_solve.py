@@ -616,7 +616,8 @@ class TestDoe(unittest.TestCase):
             923636.598578955,
         ]
         ff = run_reactor_doe(
-            n_points_for_design=2,
+            n_points_for_C0=2,
+            n_points_for_T0=2,
             compute_FIM_full_factorial=False,
             plot_factorial_results=False,
             run_optimal_doe=False,
@@ -884,7 +885,8 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Run the reactor example
         run_reactor_doe(
-            n_points_for_design=1,
+            n_points_for_C0=1,
+            n_points_for_T0=1,
             compute_FIM_full_factorial=True,
             plot_factorial_results=True,
             figure_file_name=prefix_linear,
@@ -902,7 +904,8 @@ class TestDoEFactorialFigure(unittest.TestCase):
 
         # Run the reactor example with log scale
         run_reactor_doe(
-            n_points_for_design=1,
+            n_points_for_C0=1,
+            n_points_for_T0=1,
             compute_FIM_full_factorial=True,
             plot_factorial_results=True,
             figure_file_name=prefix_log,

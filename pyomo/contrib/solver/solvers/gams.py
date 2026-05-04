@@ -431,7 +431,7 @@ class GAMS(SolverBase):
         results.solution_status = solution_status
 
         # replaced below, if solution should be loaded
-        results.solution_loader = GMSSolutionLoader(None, None)
+        results.solution_loader = GMSSolutionLoader(model, None, None)
 
         if solvestat == 1:
             results.termination_condition = model_term
@@ -453,7 +453,7 @@ class GAMS(SolverBase):
 
         if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
             results.solution_loader = GMSSolutionLoader(
-                gdx_data=model_soln, gms_info=gms_info
+                pyomo_model=model, gdx_data=model_soln, gms_info=gms_info
             )
 
             if config.load_solutions:
@@ -481,7 +481,7 @@ class GAMS(SolverBase):
                         obj[0].expr,
                         substitution_map={
                             id(v): val
-                            for v, val in results.solution_loader.get_primals().items()
+                            for v, val in results.solution_loader.get_vars().items()
                         },
                         descend_into_named_expressions=True,
                         remove_named_expressions=True,

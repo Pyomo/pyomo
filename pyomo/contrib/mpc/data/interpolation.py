@@ -71,7 +71,10 @@ def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
     expr = [None] * len(time_set)
     for i, (h, t) in enumerate(zip(indexes, time_set)):
         l = h - 1
-        expr[i] = data[l] + (data[h] - data[l]) / (time_data[h] - time_data[l]) * (
-            t - time_data[l]
-        )
+        if data[l] is None or data[h] is None:
+            expr[i] = None
+        else:
+            expr[i] = data[l] + (data[h] - data[l]) / (time_data[h] - time_data[l]) * (
+                t - time_data[l]
+            )
     return expr

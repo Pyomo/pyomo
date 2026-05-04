@@ -11,14 +11,13 @@ import logging
 import os
 import subprocess
 import re
-import tempfile
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
-from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.base.solvers import SolverFactory
 from pyomo.opt.results import (
     SolverResults,
     Solution,
@@ -35,7 +34,7 @@ logger = logging.getLogger('pyomo.solvers')
 class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver"""
 
-    _solver_info_cache = {}
+    _solver_info_cache = {None: (None, False)}
 
     def __init__(self, **kwds):
         #
@@ -73,48 +72,54 @@ class BARONSHELL(SystemCallSolver):
         #               the number's sign.
         self._precision_string = '.17g'
 
-    def _get_dummy_input_files(self, check_license=False):
-        with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
-            # For some reason, if results: 0 is added to the options
-            # section, it causes a file named fort.71 to appear.
-            # So point the ResName option to a temporary file that
-            # we will delete
-            with tempfile.NamedTemporaryFile(mode='w', delete=False) as fr:
-                pass
-            # Doing this for the remaining output files as well.
-            # Can't seem to reliably control the files created by
-            # Baron otherwise.
-            with tempfile.NamedTemporaryFile(mode='w', delete=False) as fs:
-                pass
-            with tempfile.NamedTemporaryFile(mode='w', delete=False) as ft:
-                pass
-            f.write(
-                "//This is a dummy .bar file created to "
-                "return the baron version//\n"
-                "OPTIONS {\n"
-                "results: 1;\n"
-                "ResName: \"" + fr.name + "\";\n"
-                "summary: 1;\n"
-                "SumName: \"" + fs.name + "\";\n"
-                "times: 1;\n"
-                "TimName: \"" + ft.name + "\";\n"
-                "}\n"
-            )
-            f.write("POSITIVE_VARIABLES ")
-            if check_license:
-                f.write(", ".join("x" + str(i) for i in range(11)))
-            else:
-                f.write("x1")
-            f.write(";\n")
-            f.write("OBJ: minimize x1;")
-        return (f.name, fr.name, fs.name, ft.name)
-
-    def _remove_dummy_input_files(self, fnames):
-        for name in fnames:
+    def _test_baron_license(self, solver_exec):
+        with TempfileManager as tmp:
+            dname = tmp.mkdtemp()
+            bar = os.path.join(dname, 'test.bar')
+            lst = os.path.join(dname, 'test.lst')
+            with open(bar, 'w') as BAR:
+                BAR.write(
+                    "//Simple model to test license, return version//\n"
+                    "OPTIONS {\n"
+                    "results: 0;\n"
+                    "summary: 0;\n"
+                    "times: 1;\n"
+                    f"TimName: \"{lst}\";\n"
+                    "}\n"
+                    "POSITIVE_VARIABLES "
+                )
+                BAR.write(", ".join(f"x{i}" for i in range(11)))
+                BAR.write(";\nOBJ: minimize x0;")
             try:
-                os.remove(name)
+                stdout, stderr = subprocess.Popen(
+                    [solver_exec, bar], stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+                ).communicate()
+
             except OSError:
-                pass
+                return None, False
+
+            version = None
+            g = re.search(
+                r'BARON version ([0-9]+)\.([0-9]+)\.([0-9]+)', stdout.decode()
+            )
+            if g:
+                version = tuple(int(i) for i in g.groups())
+
+            if not os.path.exists(lst):
+                return version, False
+
+            with open(lst, 'r') as LST:
+                licensed = LST.read().split()
+            if licensed[7] == '1':
+                licensed = True
+            elif licensed[7] == '11':
+                licensed = False
+            else:
+                raise DeveloperError(
+                    "Unexpected BARON status value (expected 1 or 11, "
+                    f"found {licensed[7]} in times listing {licensed}"
+                )
+        return version, licensed
 
     def license_is_valid(self):
         """Runs a check for a valid Baron license using the
@@ -122,37 +127,10 @@ class BARONSHELL(SystemCallSolver):
         hidden. If the test fails for any reason (including
         the executable being invalid), then this function
         will return False."""
-        solver_exec = self.executable()
-        if (solver_exec, 'licensed') in self._solver_info_cache:
-            return self._solver_info_cache[(solver_exec, 'licensed')]
-
-        if not solver_exec:
-            licensed = False
-        else:
-            fnames = self._get_dummy_input_files(check_license=True)
-            try:
-                process = subprocess.Popen(
-                    [solver_exec, fnames[0]],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                )
-                stdout, stderr = process.communicate()
-                assert stderr is None
-                rc = 0
-                if process.returncode:
-                    rc = 1
-                else:
-                    stdout = stdout.decode()
-                    if "Continuing in demo mode" in stdout:
-                        rc = 1
-            except OSError:
-                rc = 1
-            finally:
-                self._remove_dummy_input_files(fnames)
-            licensed = not rc
-
-        self._solver_info_cache[(solver_exec, 'licensed')] = licensed
-        return licensed
+        exe = self.executable()
+        if exe not in self._solver_info_cache:
+            self._solver_info_cache[exe] = self._test_baron_license(exe)
+        return self._solver_info_cache[exe][1]
 
     def _default_executable(self):
         executable = Executable("baron")
@@ -169,27 +147,10 @@ class BARONSHELL(SystemCallSolver):
         """
         Returns a tuple describing the solver executable version.
         """
-        solver_exec = self.executable()
-        if (solver_exec, 'version') in self._solver_info_cache:
-            return self._solver_info_cache[(solver_exec, 'version')]
-
-        if solver_exec is None:
-            ver = _extract_version('')
-        else:
-            fnames = self._get_dummy_input_files(check_license=False)
-            try:
-                results = subprocess.run(
-                    [solver_exec, fnames[0]],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True,
-                )
-                ver = _extract_version(results.stdout)
-            finally:
-                self._remove_dummy_input_files(fnames)
-
-        self._solver_info_cache[(solver_exec, 'version')] = ver
-        return ver
+        exe = self.executable()
+        if exe not in self._solver_info_cache:
+            self._solver_info_cache[exe] = self._test_baron_license(exe)
+        return self._solver_info_cache[exe][0]
 
     def create_command_line(self, executable, problem_files):
         # The solution file is created in the _convert_problem function.
@@ -443,6 +404,8 @@ class BARONSHELL(SystemCallSolver):
             results.solver.termination_message = (
                 'Run terminated because of a licensing error.'
             )
+        else:
+            raise DeveloperError("Unexpected BARON solver status: {solver_status}")
 
         if model_status == '1':
             soln.status = SolutionStatus.optimal
@@ -457,6 +420,8 @@ class BARONSHELL(SystemCallSolver):
             soln.status = SolutionStatus.feasible
         elif model_status == '5':
             soln.status = SolutionStatus.unknown
+        else:
+            raise DeveloperError("Unexpected BARON model status: {model_status}")
 
         #
         # Process BARON results file

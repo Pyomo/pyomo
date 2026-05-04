@@ -7,9 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-_init_url = "$URL$"
-
-# NOTE: releaselevel should be left at 'invalid' for trunk development
+# NOTE: releaselevel should be left undefined (or !='final') for development
 #     and set to 'final' for releases.  During development, the
 #     major.minor.micro should point to the NEXT release (generally, the
 #     next micro release after the current release).
@@ -17,28 +15,23 @@ _init_url = "$URL$"
 # Note: When cutting a release, also update the major/minor/micro in
 #
 #     pyomo/RELEASE.md
+#     .coin-or/projDesc.xml
 #
-# The VOTD zipbuilder will automatically change releaselevel to "VOTD
-# {hash}" and set the serial number to YYMMDDhhmm.  The serial number
-# should generally be left at 0, unless a downstream package is tracking
-# main and needs a hard reference to "suitably new" development.
 major = 6
 minor = 10
 micro = 1
-releaselevel = 'invalid'
 # releaselevel = 'final'
 serial = 0
 
-if releaselevel == 'final':
-    pass
-elif '/tags/' in _init_url:  # pragma:nocover
-    releaselevel = 'final'
-elif releaselevel == 'invalid':
+
+def _estimate_release_level():
+    "If this is not a final release, attempt to guess the GIT branch or hash"
+
     from os.path import exists as _exists, join as _join, dirname as _dirname
 
     if __file__.endswith('setup.py'):
         # This file is being sourced (exec'ed) from setup.py.
-        # dirname(__file__) setup.py's scope is the root source directory
+        # dirname(__file__) in setup.py's scope is the root source directory
         _rootdir = _dirname(__file__)
     else:
         # Ideally, this should import PYOMO_ROOT_DIR from pyomo.common
@@ -65,15 +58,35 @@ elif releaselevel == 'invalid':
     else:
         releaselevel = 'VOTD'
 
+    return releaselevel
 
+
+def _finalize_version(ver_info):
+    "Compute the final version and __version__ strings"
+
+    major, minor, patch, rl, serial = ver_info
+    __version__ = f'{major}.{minor}.{patch}'
+    if rl.startswith('devel'):
+        __version__ += f".dev{serial}"
+    elif rl.startswith('VOTD'):
+        __version__ += f".a{serial}"
+
+    if rl == 'final':
+        version = __version__
+    else:
+        version = f'{__version__} ({rl})'
+
+    return __version__, version
+
+
+#
+# Set the release level (if this was not marked "final" as part of the
+# release process)
+#
+if globals().get('releaselevel', '') != 'final':
+    releaselevel = _estimate_release_level()
+#
+# Set the version_info, __version__, and version string
+#
 version_info = (major, minor, micro, releaselevel, serial)
-
-__version__ = '.'.join(str(x) for x in version_info[:3])
-if releaselevel.startswith('devel'):
-    __version__ += ".dev%d" % (serial,)
-elif releaselevel.startswith('VOTD'):
-    __version__ += "a%d" % (serial,)
-
-version = __version__
-if releaselevel != 'final':
-    version += ' (' + releaselevel + ')'
+__version__, version = _finalize_version(version_info)

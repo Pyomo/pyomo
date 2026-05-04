@@ -29,6 +29,7 @@ class TestDynamicModelInterface(unittest.TestCase):
         )
         m.input = pyo.Var(m.time, initialize={i: 1.0 - i * 0.1 for i in m.time})
         m.scalar = pyo.Var(initialize=0.5)
+        m.scalar_squared = pyo.Expression(expr=m.scalar**2)
         m.var_squared = pyo.Expression(
             m.time,
             m.comp,
@@ -128,6 +129,21 @@ class TestDynamicModelInterface(unittest.TestCase):
         interface.load_data(data)
         self.assertEqual(m.scalar.value, 6.0)
 
+    def test_load_scalar_data_expr(self):
+        # load_scalar_data has been removed. Instead we simply call
+        # load_data
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        data = {
+            pyo.ComponentUID(m.scalar): 6.0,
+            pyo.ComponentUID(m.scalar_squared): 6.0,
+        }
+        interface.load_data(data, ignore_named_expressions=True)
+        self.assertEqual(m.scalar.value, 6.0)
+        self.assertEqual(pyo.value(m.scalar_squared), 36.0)
+        with self.assertRaises(TypeError):
+            interface.load_data(data)
+
     def test_load_data_at_time_all(self):
         # NOTE: load_data_at_time has been deprecated
         m = self._make_model()
@@ -193,6 +209,24 @@ class TestDynamicModelInterface(unittest.TestCase):
         interface.load_data((data, m.time))
         for i, t in enumerate(m.time):
             self.assertEqual(m.input[t].value, data_list[i])
+
+    def test_load_data_from_dict_indexed_var_list_data_expr(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        data_list = [2, 3, 4]
+        data = {
+            pyo.ComponentUID(m.input): data_list,
+            pyo.ComponentUID(m.var_squared): data_list,
+        }
+        # Need to provide data to load_data that can be interpreted
+        # as a TimeSeriesData
+        interface.load_data((data, m.time), ignore_named_expressions=True)
+        for i, t in enumerate(m.time):
+            self.assertEqual(m.input[t].value, data_list[i])
+        for i in m.var.index_set():
+            self.assertEqual(pyo.value(m.var_squared[i]), pyo.value(m.var[i] ** 2))
+        with self.assertRaises(TypeError):
+            interface.load_data((data, m.time))
 
     def test_load_data_from_ScalarData_to_point(self):
         m = self._make_model()

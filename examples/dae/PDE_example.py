@@ -7,7 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-# Example 1 from http://www.mathworks.com/help/matlab/ref/pdepe.html
+# Example 1 from https://www.mathworks.com/help/matlab/ref/pdepe.html
 
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
