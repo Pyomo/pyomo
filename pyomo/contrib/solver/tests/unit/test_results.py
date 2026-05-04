@@ -21,7 +21,7 @@ from pyomo.core.base.var import Var
 from pyomo.common import unittest
 
 
-class SolutionLoaderExample(solution_loader.SolutionLoaderBase):
+class SolutionLoaderExample(solution_loader.SolutionLoader):
     """
     This is an example instantiation of a SolutionLoader that is used for
     testing generated results.

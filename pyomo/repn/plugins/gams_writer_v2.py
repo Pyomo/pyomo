@@ -18,6 +18,7 @@ from pyomo.common.config import (
     In,
     ListOf,
 )
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import (
@@ -386,9 +387,14 @@ class _GMSWriter_impl(object):
             if repn.linear or getattr(repn, 'quadratic', None):
                 pass
             else:
+                if (lb is not None and lb > offset) or (ub is not None and ub < offset):
+                    raise InfeasibleConstraintException(
+                        f'detected a trivially infeasible constraint: {con}'
+                    )
                 if (
-                    skip_trivial_constraints
-                    and (lb is None or lb <= offset)
+                    # skip_trivial_constraints
+                    # and (lb is None or lb <= offset)
+                    (lb is None or lb <= offset)
                     and (ub is None or ub >= offset)
                 ):
                     continue

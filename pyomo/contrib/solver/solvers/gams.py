@@ -19,6 +19,7 @@ import re
 import pathlib
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.common.fileutils import Executable, ExecutableData
 from pyomo.common.config import (
     ConfigValue,
@@ -37,6 +38,7 @@ from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
     TerminationCondition,
+    get_infeasible_results,
 )
 from pyomo.contrib.solver.solvers.gms_sol_reader import GMSSolutionLoader
 
@@ -292,110 +294,122 @@ class GAMS(SolverBase):
 
         output_filename = None
         with TempfileManager.new_context() as tempfile:
-            # IMPORTANT - only delete the whole tmpdir if the solver was the one
-            # that made the directory. Otherwise, just delete the files the solver
-            # made, if not keepfiles. That way the user can select a directory
-            # they already have, like the current directory, without having to
-            # worry about the rest of the contents of that directory being deleted.
-            if not config.working_dir:
-                dname = tempfile.mkdtemp()
-            else:
-                dname = config.working_dir
-            if not os.path.exists(dname):
-                os.mkdir(dname)
-            basename = os.path.join(dname, model_name)
-            output_filename = basename + '.gms'
-            lst_filename = os.path.join(dname, lst)
+            try:
+                # IMPORTANT - only delete the whole tmpdir if the solver was the one
+                # that made the directory. Otherwise, just delete the files the solver
+                # made, if not keepfiles. That way the user can select a directory
+                # they already have, like the current directory, without having to
+                # worry about the rest of the contents of that directory being deleted.
+                if not config.working_dir:
+                    dname = tempfile.mkdtemp()
+                else:
+                    dname = config.working_dir
+                if not os.path.exists(dname):
+                    os.mkdir(dname)
+                basename = os.path.join(dname, model_name)
+                output_filename = basename + '.gms'
+                lst_filename = os.path.join(dname, lst)
 
-            timer.start(f'write_gms_file')
-            with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
-                gms_info = GAMSWriter().write(
-                    model, gms_file, config=config.writer_config
-                )
-                # NOTE: omit InfeasibleConstraintException for now
-            timer.stop(f'write_gms_file')
-
-            if config.writer_config.put_results_format == 'gdx':
-                results_filename = os.path.join(dname, "GAMS_MODEL_p.gdx")
-                statresults_filename = os.path.join(
-                    dname, "%s_s.gdx" % (config.writer_config.put_results,)
-                )
-            else:
-                results_filename = os.path.join(
-                    dname, "%s.dat" % (config.writer_config.put_results,)
-                )
-                statresults_filename = os.path.join(
-                    dname, "%sstat.dat" % (config.writer_config.put_results,)
-                )
-
-            ####################################################################
-            # Apply solver
-            ####################################################################
-            exe_path = config.executable.path()
-            command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
-
-            # handled tee and logfile based on the length of list and
-            # string respectively
-            command.append(self._log_levels[(bool(config.tee), bool(config.logfile))])
-
-            ostreams = [StringIO()]
-            if config.tee:
-                ostreams.append(sys.stdout)
-
-            with TeeStream(*ostreams) as t:
-                timer.start('subprocess')
-                subprocess_result = subprocess.run(
-                    command, stdout=t.STDOUT, stderr=t.STDERR, cwd=dname
-                )
-                timer.stop('subprocess')
-            rc = subprocess_result.returncode
-            txt = ostreams[0].getvalue()
-            if config.working_dir:
-                logger.info("\nGAMS WORKING DIRECTORY: %s\n" % config.working_dir)
-
-            if rc:
-                # If nothing was raised, or for all other cases, raise this
-                error_message = f"GAMS process encountered an error (returncode={rc})."
-                if rc == 3:
-                    # Execution Error
-                    # Run check_expr_evaluation, which errors if necessary
-                    error_message += (
-                        "\nError rc=3 (GAMS execution error), to be determined later."
+                timer.start(f'write_gms_file')
+                with open(
+                    output_filename, 'w', newline='\n', encoding='utf-8'
+                ) as gms_file:
+                    gms_info = GAMSWriter().write(
+                        model, gms_file, config=config.writer_config
                     )
-                error_message += "\nCheck listing file for details.\n"
-                logger.error(error_message)
-                logger.error(txt.strip())
-                if os.path.exists(lst_filename):
-                    with open(lst_filename, 'r') as FILE:
-                        logger.error(
-                            "\nGAMS Listing file:\n\n%s" % (FILE.read().strip(),)
-                        )
-                raise RuntimeError(error_message)
+                timer.stop(f'write_gms_file')
 
-            timer.start('parse_results')
-            if config.writer_config.put_results_format == 'gdx':
-                model_soln, stat_vars = self._parse_gdx_results(
-                    config, results_filename, statresults_filename
+                if config.writer_config.put_results_format == 'gdx':
+                    results_filename = os.path.join(dname, "GAMS_MODEL_p.gdx")
+                    statresults_filename = os.path.join(
+                        dname, "%s_s.gdx" % (config.writer_config.put_results,)
+                    )
+                else:
+                    results_filename = os.path.join(
+                        dname, "%s.dat" % (config.writer_config.put_results,)
+                    )
+                    statresults_filename = os.path.join(
+                        dname, "%sstat.dat" % (config.writer_config.put_results,)
+                    )
+
+                ####################################################################
+                # Apply solver
+                ####################################################################
+                exe_path = config.executable.path()
+                command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
+
+                # handled tee and logfile based on the length of list and
+                # string respectively
+                command.append(
+                    self._log_levels[(bool(config.tee), bool(config.logfile))]
                 )
-            else:
-                model_soln, stat_vars = self._parse_dat_results(
-                    config, results_filename, statresults_filename
+
+                ostreams = [StringIO()]
+                if config.tee:
+                    ostreams.append(sys.stdout)
+
+                with TeeStream(*ostreams) as t:
+                    timer.start('subprocess')
+                    subprocess_result = subprocess.run(
+                        command, stdout=t.STDOUT, stderr=t.STDERR, cwd=dname
+                    )
+                    timer.stop('subprocess')
+                rc = subprocess_result.returncode
+                txt = ostreams[0].getvalue()
+                if config.working_dir:
+                    logger.info("\nGAMS WORKING DIRECTORY: %s\n" % config.working_dir)
+
+                if rc:
+                    # If nothing was raised, or for all other cases, raise this
+                    error_message = (
+                        f"GAMS process encountered an error (returncode={rc})."
+                    )
+                    if rc == 3:
+                        # Execution Error
+                        # Run check_expr_evaluation, which errors if necessary
+                        error_message += "\nError rc=3 (GAMS execution error), to be determined later."
+                    error_message += "\nCheck listing file for details.\n"
+                    logger.error(error_message)
+                    logger.error(txt.strip())
+                    if os.path.exists(lst_filename):
+                        with open(lst_filename, 'r') as FILE:
+                            logger.error(
+                                "\nGAMS Listing file:\n\n%s" % (FILE.read().strip(),)
+                            )
+                    raise RuntimeError(error_message)
+
+                timer.start('parse_results')
+                if config.writer_config.put_results_format == 'gdx':
+                    model_soln, stat_vars = self._parse_gdx_results(
+                        config, results_filename, statresults_filename
+                    )
+                else:
+                    model_soln, stat_vars = self._parse_dat_results(
+                        config, results_filename, statresults_filename
+                    )
+                timer.stop('parse_results')
+
+                ####################################################################
+                # Postsolve (WIP)
+                results = self._postsolve(
+                    model, timer, config, model_soln, stat_vars, gms_info
                 )
-            timer.stop('parse_results')
 
-            ####################################################################
-            # Postsolve (WIP)
-            results = self._postsolve(
-                model, timer, config, model_soln, stat_vars, gms_info
-            )
+                results.solver_config = config
+                results.solver_log = ostreams[0].getvalue()
 
-            results.solver_config = config
-            results.solver_log = ostreams[0].getvalue()
-
-            tock = time.perf_counter()
-            results.timing_info.start_timestamp = start_timestamp
-            results.timing_info.wall_time = tock - tick
-            results.timing_info.timer = timer
+                tock = time.perf_counter()
+                results.timing_info.start_timestamp = start_timestamp
+                results.timing_info.wall_time = tock - tick
+                results.timing_info.timer = timer
+            except InfeasibleConstraintException as err:
+                err_msg = f'Solution loader does not currently have a valid solution because the problem was proven to be infeasible ({str(err)}). Please check results.termination_condition and/or results.solution_status.'
+                results = get_infeasible_results(
+                    config=config,
+                    err_msg=err_msg,
+                    solver_name=self.name,
+                    solver_version=self.version(),
+                )
             return results
 
     def _postsolve(self, model, timer, config, model_soln, stat_vars, gms_info):

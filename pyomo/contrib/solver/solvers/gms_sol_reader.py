@@ -8,7 +8,7 @@
 # ____________________________________________________________________________________
 
 
-from typing import Dict, Any, List, Sequence, Optional, Mapping, NoReturn
+from typing import Any, Sequence, Optional, Mapping, NoReturn
 
 from pyomo.core.base import Var
 from pyomo.core.base.constraint import ConstraintData
@@ -16,10 +16,7 @@ from pyomo.core.base.var import VarData
 from pyomo.common.collections import ComponentMap
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.gams_writer_v2 import GAMSWriterInfo
-from pyomo.contrib.solver.common.solution_loader import (
-    SolutionLoaderBase,
-    load_import_suffixes,
-)
+from pyomo.contrib.solver.common.solution_loader import SolutionLoader
 from pyomo.contrib.solver.common.util import (
     NoDualsError,
     NoSolutionError,
@@ -27,47 +24,27 @@ from pyomo.contrib.solver.common.util import (
 )
 
 
-class GDXFileData:
-    """
-    Defines the data types found within a .gdx file
-    """
-
-    def __init__(self) -> None:
-        self.primals: List[float] = []
-        self.duals: List[float] = []
-        self.var_suffixes: Dict[str, Dict[int, Any]] = {}
-        self.con_suffixes: Dict[str, Dict[Any]] = {}
-        self.obj_suffixes: Dict[str, Dict[int, Any]] = {}
-        self.problem_suffixes: Dict[str, List[Any]] = {}
-        self.other: List[str] = []
-
-
-class GMSSolutionLoader(SolutionLoaderBase):
+class GMSSolutionLoader(SolutionLoader):
     """
     Loader for solvers that create .gms files (e.g., gams)
     """
 
     def __init__(
-        self, pyomo_model, gdx_data: GDXFileData, gms_info: GAMSWriterInfo
+        self,
+        pyomo_model,
+        gdx_data: dict[str, tuple[float, float]],
+        gms_info: GAMSWriterInfo,
     ) -> None:
         self._gdx_data = gdx_data
         self._gms_info = gms_info
         self._pyomo_model = pyomo_model
-
-    def get_solution_ids(self) -> List[Any]:
-        return [None]
 
     def get_number_of_solutions(self) -> int:
         if self._gms_info is None:
             return 0
         return 1
 
-    def load_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
-    ) -> None:
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
+    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
         if self._gms_info is None:
             raise NoSolutionError()
         if self._gdx_data is None:
@@ -80,11 +57,8 @@ class GMSSolutionLoader(SolutionLoaderBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+        self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
         if self._gms_info is None:
             raise NoSolutionError()
         val_map = {}
@@ -104,11 +78,8 @@ class GMSSolutionLoader(SolutionLoaderBase):
         return res
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
-    ) -> Dict[ConstraintData, float]:
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> dict[ConstraintData, float]:
         if self._gms_info is None:
             raise NoDualsError()
         if self._gdx_data is None:
@@ -131,10 +102,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
 
         return res
 
-    def get_reduced_costs(self, vars_to_load=None, solution_id=None):
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
+    def get_reduced_costs(self, vars_to_load=None):
         if self._gms_info is None:
             raise NoReducedCostsError()
         if self._gdx_data is None:
@@ -152,9 +120,3 @@ class GMSSolutionLoader(SolutionLoaderBase):
             res[obj] = var_map[id(obj)]
 
         return res
-
-    def load_import_suffixes(self, solution_id=None):
-        assert (
-            solution_id is None
-        ), f"{self.__class__.__name__} does not support solution_id"
-        load_import_suffixes(self._pyomo_model, self, solution_id)

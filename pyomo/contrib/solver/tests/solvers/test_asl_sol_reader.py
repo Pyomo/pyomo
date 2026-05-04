@@ -13,8 +13,8 @@ import re
 import pyomo.environ as pyo
 from pyomo.common import unittest
 from pyomo.common.collections import ComponentMap
-from pyomo.common.errors import MouseTrap
 from pyomo.common.fileutils import this_file_dir
+from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.solver.solvers.asl_sol_reader import (
     ASLSolFileSolutionLoader,
     ASLSolFileData,
@@ -448,6 +448,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
             'get_solution_ids',
             'load_import_suffixes',
             'load_solution',
+            'solution',
         ]
         method_list = [
             method
@@ -586,13 +587,35 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
+        m.test_var_suffix_off = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_con_suffix_off = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_obj_suffix_off = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_problem_suffix_off = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+        m.test_var_suffix_off.deactivate()
+        m.test_con_suffix_off.deactivate()
+        m.test_obj_suffix_off.deactivate()
+        m.test_problem_suffix_off.deactivate()
+
         nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
 
         sol_data = ASLSolFileData()
-        sol_data.var_suffixes = {'test_var_suffix': {0: 1.1}}
-        sol_data.con_suffixes = {'test_con_suffix': {0: 2.2}}
-        sol_data.obj_suffixes = {'test_obj_suffix': {0: 3.3}}
-        sol_data.problem_suffixes = {'test_problem_suffix': 4.4}
+        sol_data.var_suffixes = {
+            'test_var_suffix': {0: 1.1},
+            'test_var_suffix_off': {0: 1.0},
+        }
+        sol_data.con_suffixes = {
+            'test_con_suffix': {0: 2.2},
+            'test_con_suffix_off': {0: 2.0},
+        }
+        sol_data.obj_suffixes = {
+            'test_obj_suffix': {0: 3.3},
+            'test_obj_suffix_off': {0: 3.0},
+        }
+        sol_data.problem_suffixes = {
+            'test_problem_suffix': 4.4,
+            'test_problem_suffix_off': 4.0,
+        }
 
         loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
         loader.load_import_suffixes()
@@ -608,6 +631,15 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         )
         self.assertEqual(
             ComponentMap(m.test_problem_suffix.items()), ComponentMap([(None, 4.4)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_problem_suffix_off.items()), ComponentMap()
+        )
+        self.assertEqual(ComponentMap(m.test_var_suffix_off.items()), ComponentMap())
+        self.assertEqual(ComponentMap(m.test_con_suffix_off.items()), ComponentMap())
+        self.assertEqual(ComponentMap(m.test_obj_suffix_off.items()), ComponentMap())
+        self.assertEqual(
+            ComponentMap(m.test_problem_suffix_off.items()), ComponentMap()
         )
 
     def test_suffixes_scaling_error(self):
@@ -631,9 +663,15 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
-        pattern = re.compile(r".*General suffixes .*Turn scaling off.*", re.DOTALL)
-        with self.assertRaisesRegex(MouseTrap, pattern):
+        with LoggingIntercept() as LOG:
             loader.load_import_suffixes()
+        self.assertEqual(
+            LOG.getvalue(),
+            "Suffixes ('test_var_suffix', 'test_con_suffix', 'test_obj_suffix') "
+            "may not be correct when the model has been scaled.  "
+            "Turn scaling off in the NL writer "
+            "(solver.config.writer_config.scale_model=False) to be safe.\n",
+        )
 
     def test_suffixes_eliminated_vars_error(self):
         m = pyo.ConcreteModel()
@@ -657,8 +695,12 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
-        pattern = re.compile(
-            r".*Suffixes are not available.* Turn presolve off.*", re.DOTALL
-        )
-        with self.assertRaisesRegex(MouseTrap, pattern):
+        with LoggingIntercept() as LOG:
             loader.load_import_suffixes()
+        self.assertEqual(
+            LOG.getvalue(),
+            "Suffixes ('test_var_suffix', 'test_con_suffix') may not be correct "
+            "when variables have been presolved from the model.  "
+            "Turn presolve off in the NL writer "
+            "(solver.config.writer_config.linear_presolve=False) to be safe.\n",
+        )

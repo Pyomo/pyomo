@@ -119,50 +119,25 @@ class IpoptConfig(SolverConfig):
 
 class IpoptSolutionLoader(ASLSolFileSolutionLoader):
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> Mapping[VarData, float]:
-        if solution_id is not None:
-            raise ValueError(f'{self.__class__.__name__} does not support solution_id')
-        if self._nl_info.eliminated_vars:
-            raise MouseTrap(
-                'Complete reduced costs are not available when variables have '
-                'been presolved from the model.  Turn presolve off '
-                '(solver.config.writer_config.linear_presolve=False) to get '
-                'reduced costs.'
-            )
-
+        # Ipopt returns the reduced costs through as lower and upper
+        # bound multipliers.  Combine them into a single "rc" suffix and
+        # then use the base ASL reduced costs processing.
         zl_map = self._sol_data.var_suffixes.get('ipopt_zL_out', {})
         zu_map = self._sol_data.var_suffixes.get('ipopt_zU_out', {})
-        # TBD: is it an error if Ipopt fails to return RC info?
-        # if not (zl_map or zu_map):
-        #     raise?
-        if self._nl_info.scaling:
-            # Unscale the zl and zu maps:
-            inv_obj_scale = 1.0
-            if self._nl_info.scaling.objectives:
-                inv_obj_scale /= self._nl_info.scaling.objectives[self._sol_data.objno]
-            var_scale = self._nl_info.scaling.variables
-            zl_map = {k: v * var_scale[k] * inv_obj_scale for k, v in zl_map.items()}
-            zu_map = {k: v * var_scale[k] * inv_obj_scale for k, v in zu_map.items()}
-
-        rc = ComponentMap()
-        for ndx, v in enumerate(self._nl_info.variables):
-            _rc = 0.0
-            if ndx in zl_map:
-                # Note *any* value in zl has an absolute value at least
-                # as big as 0.  No need to test and just overwrite _rc:
-                _rc = zl_map[ndx]
+        self._sol_data.var_suffixes['rc'] = rc = {}
+        for ndx in range(len(self._nl_info.variables)):
+            # Note *any* value in zl has an absolute value at least
+            # as big as 0.  No need to test and just overwrite _rc:
+            _rc = zl_map.get(ndx, 0.0)
             if ndx in zu_map:
                 zu = zu_map[ndx]
                 if abs(zu) > abs(_rc):
                     _rc = zu
-            rc[v] = _rc
+            rc[ndx] = _rc
 
-        if vars_to_load is not None:
-            # Note vars_to_load could contain variables that were
-            # eliminated (so use get()):
-            rc = ComponentMap((v, rc.get(v, 0)) for v in vars_to_load)
-        return rc
+        return super().get_reduced_costs(vars_to_load)
 
 
 #: The set of all ipopt options that can be passed to Ipopt on the command line

@@ -21,6 +21,8 @@ from pyomo.common.config import (
     ADVANCED_OPTION,
     DEVELOPER_OPTION,
 )
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError, NoSolutionError
+from pyomo.contrib.solver.common.solution_loader import NoSolutionSolutionLoader
 from pyomo.opt.results.solution import SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
@@ -240,6 +242,24 @@ class Results(ConfigDict):
         self, content_filter=None, indent_spacing=2, ostream=None, visibility=0
     ):
         return super().display(content_filter, indent_spacing, ostream, visibility)
+
+
+def get_infeasible_results(config, err_msg, solver_name, solver_version):
+    res = Results()
+    res.solution_loader = NoSolutionSolutionLoader(err_msg)
+    res.solution_status = SolutionStatus.noSolution
+    res.termination_condition = TerminationCondition.provenInfeasible
+    res.incumbent_objective = None
+    res.objective_bound = None
+    res.timing_info.gurobi_time = None
+    res.solver_config = config
+    res.solver_name = solver_name
+    res.solver_version = solver_version
+    if config.raise_exception_on_nonoptimal_result:
+        raise NoOptimalSolutionError(err_msg)
+    if config.load_solutions:
+        raise NoSolutionError(err_msg)
+    return res
 
 
 # Everything below here preserves backwards compatibility
