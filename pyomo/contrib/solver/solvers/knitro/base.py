@@ -35,7 +35,7 @@ from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
 from pyomo.contrib.solver.solvers.knitro.engine import Engine
 from pyomo.contrib.solver.solvers.knitro.package import PackageChecker
 from pyomo.contrib.solver.solvers.knitro.solution import (
-    SolutionLoader,
+    KnitroSolutionLoader,
     SolutionProvider,
 )
 from pyomo.contrib.solver.solvers.knitro.typing import ItemData, ItemType, ValueType
@@ -159,7 +159,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         ):
             raise NoOptimalSolutionError()
 
-        results.solution_loader = SolutionLoader(
+        results.solution_loader = KnitroSolutionLoader(
             self,
             has_primals=results.solution_status
             not in {SolutionStatus.infeasible, SolutionStatus.noSolution},
