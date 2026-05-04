@@ -22,7 +22,6 @@ from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
 
 from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.contrib.solver.common.util import NoSolutionError
 from .gurobi_direct_base import GurobiDirectBase, GurobiDirectSolutionLoaderBase
 
@@ -577,8 +576,8 @@ class GurobiMINLPWriter:
 
 
 class GurobiDirectMINLPSolutionLoader(GurobiDirectSolutionLoaderBase):
-    def __init__(self, solver_model, var_map, con_map) -> None:
-        super().__init__(solver_model)
+    def __init__(self, solver_model, pyomo_model, var_map, con_map) -> None:
+        super().__init__(solver_model, pyomo_model)
         self._var_map = var_map
         self._con_map = con_map
 
@@ -640,7 +639,10 @@ class GurobiDirectMINLP(GurobiDirectBase):
                 con_map[pc] = gc
 
         solution_loader = GurobiDirectMINLPSolutionLoader(
-            solver_model=grb_model, var_map=var_map, con_map=con_map
+            solver_model=grb_model,
+            pyomo_model=pyomo_model,
+            var_map=var_map,
+            con_map=con_map,
         )
 
         return grb_model, solution_loader, bool(pyo_obj)
