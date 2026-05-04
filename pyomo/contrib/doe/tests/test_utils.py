@@ -343,7 +343,7 @@ class TestExperimentGradients(unittest.TestCase):
         self.assertEqual(jacobian.shape, expected.shape)
         self.assertTrue(np.allclose(jacobian, expected, atol=1e-7, rtol=1e-7))
 
-    
+
 
     @unittest.skipIf(not scipy_available, "scipy is not available")
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -355,7 +355,7 @@ class TestExperimentGradients(unittest.TestCase):
         experiment_gradients = self._assert_symbolic_and_automatic_jacobians_agree(
             model, atol=1e-6, rtol=1e-6
         )
-        
+
 
         self.assertGreater(len(experiment_gradients.jac_dict_sd), 0)
         self.assertEqual(

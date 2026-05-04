@@ -294,7 +294,7 @@ class ExperimentGradients:
 
     This helper implements the symbolic sensitivity path used in Pyomo.DoE.
     Instead of approximating sensitivities by finite-difference perturbations
-    of the unknown parameters theta, it differentiates the 
+    of the unknown parameters theta, it differentiates the
     model F(x, u, theta) = 0 with respect to theta, with the design variables
     u fixed, and solves the resulting auxiliary sensitivity system
 

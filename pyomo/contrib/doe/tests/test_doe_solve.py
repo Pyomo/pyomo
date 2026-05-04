@@ -557,7 +557,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
             doe_obj.results["log10 A-opt"], -2.5554049159721415, places=4
         )
 
-    
+
 
     def test_rooney_biegler_run_doe_pynumero_objective_matrix(self):
         """Exercise the symbolic Rooney-Biegler run_doe path across objective options."""

@@ -857,7 +857,7 @@ class TestDoEErrors(unittest.TestCase):
         )
         DoE_args["gradient_method"] = "kaug"
         DoE_args["scale_nominal_param_value"] = False
-        
+
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
