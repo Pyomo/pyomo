@@ -983,7 +983,6 @@ class Estimator:
         return model
 
     def _create_scenario_blocks(self, bootlist=None, theta_vals=None, fix_theta=False):
-        # Create scenario block structure
         """
         Create scenario blocks for parameter estimation
         Parameters
