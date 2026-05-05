@@ -349,6 +349,23 @@ def _count_total_experiments(experiment_list):
     """
     Counts the number of data points in the list of experiments
 
+    Assumptions made:
+
+    Currently assumes the number of data points in each experiment is equal to the
+    number of keys in the "experiment_outputs" suffix that belong to the same parent
+    component, which is the case for the example models in the documentation.
+
+    This is to avoid double counting data points in cases where the "experiment_outputs"
+    suffix contains keys that belong to different parent components, e.g., when there are
+    multiple measured variables with different time points.
+
+    Also assumes that the variables are indexed by a single index, which is the case
+    for the example models in the documentation.
+
+    Future versions will allow for heterogeneity in the number of data points across
+    experiments and will require changes to this function.
+
+
     Parameters
     ----------
     experiment_list : list
@@ -364,8 +381,6 @@ def _count_total_experiments(experiment_list):
     for experiment in experiment_list:
         # 1. Identify the first parent component of the experiment outputs
         output_vars = experiment.get_labeled_model().experiment_outputs
-
-        # 1. Identify the first parent component
         first_var_key = list(output_vars.keys())[0]
         first_parent = first_var_key.parent_component()
         # 2. Count only the keys that belong to this specific parent
@@ -845,6 +860,11 @@ class Estimator:
         # boolean to indicate if model is initialized using a square solve
         self.model_initialized = False
 
+        # If self.diagnostic mode is true, then set the logging level to INFO to print
+        # diagnostics from the solver
+        if self.diagnostic_mode:
+            logger.setLevel(logging.INFO)
+
     # The deprecated Estimator constructor
     # This works by checking the type of the first argument passed to
     # the class constructor. If it matches the old interface (i.e. is
@@ -1082,12 +1102,20 @@ class Estimator:
         theta_vals=None,
         fix_theta=False,
     ):
-        '''
-        Making new version of _Q_opt that uses scenario blocks, similar to DoE.
+        """
+        _Q_opt method for parameter estimation using an extended form
+        optimization problem with scenario blocks for each experiment.
+
+        Scenario blocks are created by cloning the original model for
+        each experiment and linking the parameter variables across blocks.
+        The objective is defined as the average of the individual scenario
+        objectives, which allows for simultaneous optimization across
+        all experiments.
+
 
         Steps:
         1. Load model - parmest model should be labeled
-        2. Create scenario blocks (biggest redesign) - clone model to have one per experiment
+        2. Create scenario blocks - clone model to have one per experiment
         3. Define objective and constraints for the block
         4. Solve the block as a single problem
         5. Analyze results and extract parameter estimates
@@ -1126,17 +1154,15 @@ class Estimator:
             WorstStatus : TerminationCondition
                 Solver termination condition.
 
-        '''
+        """
         # Create extended form model with scenario blocks
         model = self._create_scenario_blocks(
             bootlist=bootlist, theta_vals=theta_vals, fix_theta=fix_theta
         )
         expanded_theta_names = list(model._parmest_theta_names)
 
-        # Print model if in diagnostic mode
-        if self.diagnostic_mode:
-            print("Parmest _Q_opt model with scenario blocks:")
-            model.pprint()
+        logger.info("Parmest _Q_opt model with scenario blocks:")
+        logger.info(model.pprint())
 
         # Check solver and set options
         if solver == "k_aug":
