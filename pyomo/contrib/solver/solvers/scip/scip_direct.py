@@ -67,15 +67,14 @@ from pyomo.contrib.solver.common.util import (
     NoSolutionError,
 )
 from pyomo.contrib.solver.common.util import get_objective
-from pyomo.contrib.solver.common.solution_loader import NoSolutionSolutionLoader
+from pyomo.contrib.solver.common.solution_loader import (
+    NoSolutionSolutionLoader,
+    SolutionLoader,
+)
 from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
     TerminationCondition,
-)
-from pyomo.contrib.solver.common.solution_loader import (
-    SolutionLoaderBase,
-    load_import_suffixes,
 )
 from pyomo.common.config import ConfigValue
 from pyomo.common.tee import capture_output, TeeStream
@@ -326,7 +325,7 @@ class _PyomoToScipVisitor(StreamBasedExpressionVisitor):
 logger = logging.getLogger("pyomo.solvers")
 
 
-class ScipDirectSolutionLoader(SolutionLoaderBase):
+class ScipDirectSolutionLoader(SolutionLoader):
     def __init__(self, solver_model, var_map, con_map, pyomo_model, opt) -> None:
         super().__init__()
         self._solver_model = solver_model
@@ -335,6 +334,14 @@ class ScipDirectSolutionLoader(SolutionLoaderBase):
         self._pyomo_model = pyomo_model
         # make sure the scip model does not get freed until the solution loader is garbage collected
         self._opt = opt
+        self._active_solution_id = 0
+
+    def _set_solution_id(self, solution_id: int) -> int:
+        if solution_id is None:
+            solution_id = 0
+        previous_id = self._active_solution_id
+        self._active_solution_id = solution_id
+        return previous_id
 
     def get_number_of_solutions(self) -> int:
         return self._solver_model.getNSols()
@@ -342,42 +349,19 @@ class ScipDirectSolutionLoader(SolutionLoaderBase):
     def get_solution_ids(self) -> List:
         return list(range(self.get_number_of_solutions()))
 
-    def load_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
-    ) -> None:
-        for v, val in self.get_vars(
-            vars_to_load=vars_to_load, solution_id=solution_id
-        ).items():
-            v.value = val
-
     def get_vars(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
+        self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
         if self.get_number_of_solutions() == 0:
             raise NoSolutionError()
         if vars_to_load is None:
             vars_to_load = list(self._var_map.keys())
-        if solution_id is None:
-            solution_id = 0
-        sol = self._solver_model.getSols()[solution_id]
+        sol = self._solver_model.getSols()[self._active_solution_id]
         res = ComponentMap()
         for v in vars_to_load:
             sv = self._var_map[v]
             res[v] = sol[sv]
         return res
-
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None, solution_id=None
-    ) -> Mapping[VarData, float]:
-        return NotImplemented
-
-    def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None, solution_id=None
-    ) -> Dict[ConstraintData, float]:
-        return NotImplemented
-
-    def load_import_suffixes(self, solution_id=None):
-        load_import_suffixes(self._pyomo_model, self, solution_id=solution_id)
 
 
 class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
@@ -393,28 +377,16 @@ class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
             raise RuntimeError('The results in the solver are no longer valid.')
 
     def load_vars(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> None:
         self._assert_solution_still_valid()
-        return super().load_vars(vars_to_load, solution_id)
+        return super().load_vars(vars_to_load)
 
     def get_vars(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
-        return super().get_vars(vars_to_load, solution_id)
-
-    def get_duals(
-        self, cons_to_load: Sequence[ConstraintData] | None = None, solution_id=None
-    ) -> Dict[ConstraintData, float]:
-        self._assert_solution_still_valid()
-        return super().get_duals(cons_to_load)
-
-    def get_reduced_costs(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=None
-    ) -> Mapping[VarData, float]:
-        self._assert_solution_still_valid()
-        return super().get_reduced_costs(vars_to_load)
+        return super().get_vars(vars_to_load)
 
     def get_number_of_solutions(self) -> int:
         self._assert_solution_still_valid()
@@ -424,9 +396,13 @@ class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
         self._assert_solution_still_valid()
         return super().get_solution_ids()
 
-    def load_import_suffixes(self, solution_id=None):
+    def load_import_suffixes(self):
         self._assert_solution_still_valid()
-        super().load_import_suffixes(solution_id)
+        super().load_import_suffixes()
+
+    def _set_solution_id(self, solution_id: int) -> int:
+        self._assert_solution_still_valid()
+        return super()._set_solution_id(solution_id)
 
 
 class ScipDirect(SolverBase):
