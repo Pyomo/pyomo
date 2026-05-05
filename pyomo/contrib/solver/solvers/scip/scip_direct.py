@@ -1095,7 +1095,9 @@ class ScipPersistent(ScipDirect, PersistentSolverBase, Observer):
             self._solver_model.chgVarUb(scip_var, ub)
             impacted_vars = self._change_detector.get_variables_impacted_by_param(p)
             if impacted_vars:
-                self._update_variables(impacted_vars)
+                # Convert list to ComponentMap with Reason.bounds for impacted variables
+                impacted_vars_mapping = ComponentMap((v, Reason.bounds) for v in impacted_vars)
+                self._update_variables(impacted_vars_mapping)
             impacted_cons = self._change_detector.get_constraints_impacted_by_param(p)
             for con in impacted_cons:
                 if con in self._range_constraints:
