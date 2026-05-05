@@ -31,9 +31,8 @@ env:
 jobs:
   lint:
     name: lint/style-and-typos
-    if: |
-      ${{ ! ( contains(github.event.pull_request.title, '[WIP]') ||
-            github.event.pull_request.draft ) }}
+    # Note: 'env' is not available in GHA jobs.<job_id>.if context.
+    if: ${{ ! contains(github.event.pull_request.title, '[WIP]') }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
@@ -62,7 +61,7 @@ jobs:
         sudo resolvectl query github.com
         sudo resolvectl status
     - name: URL Checker
-      if: env.PYOMO_WORKFLOW == 'branch'
+      if: ${{ env.PYOMO_WORKFLOW == 'branch' }}
       uses: urlstechie/urlchecker-action@0.0.34
       with:
         # A comma-separated list of file types to cover in the URL checks
@@ -253,7 +252,7 @@ jobs:
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@v4
       with:
         conda-remove-defaults: true
         auto-update-conda: false
@@ -866,8 +865,8 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    # run even if a build job fails, but not if canceled (except for branches)
-    if: ${{ false }}
+    # run even if a build job fails, but not if canceled
+    if: ${{ success() || failure() }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -976,7 +975,9 @@ jobs:
         fi
 
     - name: Upload codecov reports
-      if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
+      if: |
+        env.PYOMO_WORKFLOW != 'branch' &&
+        (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
       uses: codecov/codecov-action@v6
       with:
         files: coverage.xml
@@ -987,6 +988,7 @@ jobs:
 
     - name: Upload other coverage reports
       if: |
+        env.PYOMO_WORKFLOW != 'branch' &&
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
       uses: codecov/codecov-action@v6
