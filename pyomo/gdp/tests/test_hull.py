@@ -2994,7 +2994,7 @@ class DomainRestrictionTest(unittest.TestCase):
         m.y.fix()
         # these cannot both be well-defined
         m.d[0].log = Constraint(expr=log(m.a + 1) >= 0)
-        m.d[0].log = Constraint(expr=log(-m.a - 2) >= 0)
+        m.d[0].log2 = Constraint(expr=log(-m.a - 2) >= 0)
         m.d[0].pow = Constraint(expr=m.y ** (-0.5) >= 0)
         m.d[0].div = Constraint(expr=1 / (m.x) >= 0)
         hull = TransformationFactory('gdp.hull')
