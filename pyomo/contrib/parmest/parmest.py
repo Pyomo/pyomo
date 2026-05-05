@@ -1260,7 +1260,7 @@ class Estimator:
         if method == CovarianceMethod.reduced_hessian.value:
             # compute the inverse reduced hessian to be used
             # in the "reduced_hessian" method
-            
+
             # retrieve the independent variables (i.e., estimated parameters)
             ind_vars = list(self.ef_instance.parmest_theta.values())
 
