@@ -1074,8 +1074,6 @@ class Estimator:
         self.ef_instance = model
         return model
 
-    # Redesigned _Q_opt method using scenario blocks, and combined with
-    # _Q_at_theta structure.
     def _Q_opt(
         self,
         return_values=None,
@@ -1203,7 +1201,7 @@ class Estimator:
         if return_values is not None and len(return_values) > 0:
             var_values = []
             # In the scenario blocks structure, exp_scenarios is an IndexedBlock
-            exp_blocks = self.ef_instance.exp_scenarios.values()
+            exp_blocks = model.exp_scenarios.values()
             # Loop over each experiment block and extract requested variable values
             for exp_i in exp_blocks:
                 # In each block, extract requested variables
@@ -1234,8 +1232,6 @@ class Estimator:
         else:
             return obj_value, theta_estimates
 
-    # Removed old _Q_opt function
-
     def _cov_at_theta(self, method, solver, step):
         """
         Covariance matrix calculation using all scenarios in the data
@@ -1264,11 +1260,9 @@ class Estimator:
         if method == CovarianceMethod.reduced_hessian.value:
             # compute the inverse reduced hessian to be used
             # in the "reduced_hessian" method
+            
             # retrieve the independent variables (i.e., estimated parameters)
-            ind_vars = []
-            for name in self.ef_instance._parmest_theta_names:
-                var = self.ef_instance.parmest_theta[name]
-                ind_vars.append(var)
+            ind_vars = list(self.ef_instance.parmest_theta.values())
 
             solve_result, inv_red_hes = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
@@ -1873,7 +1867,7 @@ class Estimator:
                 "The `initialize_parmest_model` option in `objective_at_theta()` is "
                 "deprecated and will be removed in future releases. Please ensure the"
                 "model is initialized within the Experiment class definition.",
-                version="6.9.5",
+                version="6.10.1.dev0",
             )
 
         if theta_values is None:
