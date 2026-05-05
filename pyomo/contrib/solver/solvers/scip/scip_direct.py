@@ -376,9 +376,7 @@ class ScipPersistentSolutionLoader(ScipDirectSolutionLoader):
         if not self._valid:
             raise RuntimeError('The results in the solver are no longer valid.')
 
-    def load_vars(
-        self, vars_to_load: Sequence[VarData] | None = None
-    ) -> None:
+    def load_vars(self, vars_to_load: Sequence[VarData] | None = None) -> None:
         self._assert_solution_still_valid()
         return super().load_vars(vars_to_load)
 
@@ -1096,7 +1094,9 @@ class ScipPersistent(ScipDirect, PersistentSolverBase, Observer):
             impacted_vars = self._change_detector.get_variables_impacted_by_param(p)
             if impacted_vars:
                 # Convert list to ComponentMap with Reason.bounds for impacted variables
-                impacted_vars_mapping = ComponentMap((v, Reason.bounds) for v in impacted_vars)
+                impacted_vars_mapping = ComponentMap(
+                    (v, Reason.bounds) for v in impacted_vars
+                )
                 self._update_variables(impacted_vars_mapping)
             impacted_cons = self._change_detector.get_constraints_impacted_by_param(p)
             for con in impacted_cons:
