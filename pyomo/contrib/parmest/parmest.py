@@ -863,7 +863,7 @@ class Estimator:
         # If self.diagnostic mode is true, then set the logging level to INFO to print
         # diagnostics from the solver
         if self.diagnostic_mode:
-            logger.setLevel(logging.INFO)
+            logger.setLevel(logging.DEBUG)
 
     # The deprecated Estimator constructor
     # This works by checking the type of the first argument passed to
@@ -1161,8 +1161,8 @@ class Estimator:
         )
         expanded_theta_names = list(model._parmest_theta_names)
 
-        logger.info("Parmest _Q_opt model with scenario blocks:")
-        logger.info(model.pprint())
+        logger.debug("Parmest _Q_opt model with scenario blocks:")
+        logger.debug(model.pprint())
 
         # Check solver and set options
         if solver == "k_aug":
