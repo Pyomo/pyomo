@@ -489,7 +489,13 @@ def pairwise_plot(
 
 
 def profile_likelihood_plot(
-    profile_results, alpha=None, filename=None, by="profiled_theta", y="lr_stat"
+    profile_results,
+    alpha=None,
+    filename=None,
+    by="profiled_theta",
+    y="lr_stat",
+    ylabel=None,
+    show=True,
 ):
     """
     Plot profile likelihood curves from Estimator.profile_likelihood results.
@@ -507,12 +513,19 @@ def profile_likelihood_plot(
         Grouping column for separate panels. Default is ``profiled_theta``.
     y: string, optional
         Y-axis column to plot. Default is ``lr_stat``.
+    ylabel: string, optional
+        Y-axis label. Default is the value of ``y``.
+
+    Returns
+    -------
+    tuple containing the figure and axes objects
     """
     assert isinstance(profile_results, (dict, pd.DataFrame))
     assert isinstance(alpha, (type(None), int, float))
     assert isinstance(filename, (type(None), str))
     assert isinstance(by, str)
     assert isinstance(y, str)
+    assert isinstance(ylabel, (type(None), str))
 
     if isinstance(profile_results, dict):
         if "profiles" not in profile_results:
@@ -565,7 +578,7 @@ def profile_likelihood_plot(
         if threshold is not None:
             ax.axhline(threshold, color="tab:orange", linestyle="--", linewidth=1.0)
         ax.set_xlabel(str(grp))
-        ax.set_ylabel(y)
+        ax.set_ylabel(ylabel if ylabel is not None else y)
         ax.set_title(f"{by}: {grp}")
         if (
             "success" in subset.columns
@@ -573,12 +586,13 @@ def profile_likelihood_plot(
         ):
             ax.legend(loc="best", prop={"size": 8})
 
-    fig.tight_layout()
-    if filename is None:
+    if filename is not None:
+        fig.savefig(filename)
+        plt.close(fig)
+    elif show:
         plt.show()
-    else:
-        plt.savefig(filename)
-        plt.close()
+
+    return fig, axes
 
 
 def fit_rect_dist(theta_values, alpha):
