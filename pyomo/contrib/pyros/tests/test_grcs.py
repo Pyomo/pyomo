@@ -3899,7 +3899,7 @@ class UnavailableSolver:
 
 class TestPyROSUnavailableSubsolvers(unittest.TestCase):
     """
-    Check that appropriate exceptionsa are raised if
+    Check that appropriate exceptions are raised if
     PyROS is invoked with unavailable subsolvers.
     """
 
@@ -5144,6 +5144,271 @@ class TestPyROSSubsolverErrorEfficiency(unittest.TestCase):
                 pyrosTerminationCondition.subsolver_error,
                 msg="Did not report subsolver error to problem instance.",
             )
+
+# @SolverFactory.register("slow_solver")
+class SlowSolver:
+    """
+    Solver which sleeps for a specified time before solving.
+    """
+
+    def __init__(self, sleep_time, sub_solver):
+        self.sleep_time = sleep_time
+        self.sub_solver = sub_solver
+
+        self.options = Bunch()
+
+    def available(self, exception_flag=True):
+        return True
+
+    def license_is_valid(self):
+        return True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, et, ev, tb):
+        pass
+
+    def solve(self, model, **kwargs):
+        """
+        Sleep, then solve a model.
+
+        Parameters
+        ----------
+        model : ConcreteModel
+            Model of interest.
+
+        Returns
+        -------
+        results : SolverResults
+            Solver results.
+        """
+
+        # ensure only one active objective
+        active_objs = [
+            obj for obj in model.component_data_objects(Objective, active=True)
+        ]
+        assert len(active_objs) == 1
+
+        # sleep for specified time
+        time.sleep(self.sleep_time)
+
+        print("I slept. Now, I will solve.")
+        # invoke subsolver
+        results = self.sub_solver.solve(model, **kwargs)
+
+        return results
+
+
+class CustomExactBoundsUncertaintySet(BoxSet):
+    """
+    Custom uncertainty set that always solves optimization bounding problems.
+    """
+    def __init__(self, bounds, sleep_time, cache):
+        super().__init__(bounds)
+        self.sleep_time = sleep_time
+        self.cache = cache
+
+    @property
+    def parameter_bounds(self):
+        """
+        Solve bounding problems to calculate exact parameter bounds.
+        """
+        solver = SlowSolver(
+            sub_solver=SolverFactory("baron"), sleep_time=self.sleep_time
+        )
+        bounds = self._compute_exact_parameter_bounds(solver=solver)
+
+        if not self.cache:
+            self._cache.clear()
+
+        return bounds
+
+
+@unittest.skipUnless(baron_available, "BARON not available.")
+class TestPyROSCache(unittest.TestCase):
+    """
+    Test PyROS cache creation and clearing.
+    """
+
+    def test_pyros_cache_creation(self):
+        """
+        Check that PyROS creates a cache for storing computed exact parameter bounds.
+        """
+        m = build_leyffer_two_cons()
+
+        # Define the uncertainty set
+        interval = CustomExactBoundsUncertaintySet(bounds=[(0.25, 2)], sleep_time=0, cache=True)
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        # the error solver will cause the first separation problem to fail
+        local_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("baron")
+
+        # check cache has not been created
+        self.assertFalse(hasattr(interval, "_cache"))
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # check cache has been created
+        self.assertTrue(hasattr(interval, "_cache"))
+
+        # check cache has been cleared after solve
+        self.assertTrue(hasattr(interval, "_cache"))
+        self.assertEqual(
+            interval._cache,
+            {},
+            msg="Did not clear uncertainty set cache after solve.",
+        )
+
+    def test_pyros_cache_time(self):
+        """
+        Check that caching improves solve time.
+        """
+        m = build_leyffer_two_cons()
+
+        # Define the uncertainty set
+        interval_cache = CustomExactBoundsUncertaintySet(bounds=[(0.25, 2)], sleep_time=0.5, cache=True)
+        interval_no_cache = CustomExactBoundsUncertaintySet(bounds=[(0.25, 2)], sleep_time=0.5, cache=False)
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        # the error solver will cause the first separation problem to fail
+        local_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results_cache = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval_cache,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        results_no_cache = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval_no_cache,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # caching should always result in less time,
+        # as not caching reruns the slow solver multiple times
+        self.assertGreater(
+            results_no_cache.time,
+            results_cache.time,
+        )
+
+    def test_pyros_cache_solutions(self):
+        """
+        Check that PyROS clears cache before/after and yields accurate results.
+        """
+        m = build_leyffer_two_cons()
+
+        # Define the uncertainty set
+        interval = CustomExactBoundsUncertaintySet(bounds=[(25, 200)], sleep_time=0, cache=True)
+        self.assertEqual(interval.parameter_bounds, [(25,200)])
+
+        # change set attributes, leading to outdated parameter bounds
+        interval.bounds = [(0.25, 2)]
+        self.assertEqual(interval.parameter_bounds, [(25,200)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        # the error solver will cause the first separation problem to fail
+        local_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("baron")
+
+        # Solve with PyROS
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # check results, which should use the correct parameter bounds
+        self.assertEqual(results.iterations, 3)
+        self.assertAlmostEqual(results.final_objective_value, 0.531, places=2)
+        self.assertAlmostEqual(m.x1.value, 3.518, places=2)
+        self.assertAlmostEqual(m.x2.value, 1.547, places=2)
+        self.assertAlmostEqual(m.x3.value, 9.684, places=2)
+        self.assertEqual(
+            results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+
+        # modify the cache
+        interval._cache[0, minimize] = 25
+        interval._cache[0, maximize] = 200
+
+        self.assertEqual(interval.parameter_bounds, [(25,200)])
+
+        # Solve with PyROS
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # check results, which should not change
+        self.assertEqual(results.iterations, 3)
+        self.assertAlmostEqual(results.final_objective_value, 0.531, places=2)
+        self.assertAlmostEqual(m.x1.value, 3.518, places=2)
+        self.assertAlmostEqual(m.x2.value, 1.547, places=2)
+        self.assertAlmostEqual(m.x3.value, 9.684, places=2)
+        self.assertEqual(
+            results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+
 
 
 if __name__ == "__main__":
