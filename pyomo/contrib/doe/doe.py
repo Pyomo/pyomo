@@ -1728,9 +1728,7 @@ class DesignOfExperiments:
             )
             candidate_fims[pt_idx] = fim
             if (pt_idx + 1) % max(1, n_candidates // 10) == 0:
-                self.logger.info(
-                    f"  LHS FIM eval: {pt_idx + 1}/{n_candidates}"
-                )
+                self.logger.info(f"  LHS FIM eval: {pt_idx + 1}/{n_candidates}")
 
         computed_pairs = [
             (pt, fim)
