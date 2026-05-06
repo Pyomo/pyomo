@@ -1474,6 +1474,12 @@ class TestParmestBlockEF(unittest.TestCase):
         model = pest._create_scenario_blocks()
 
         theta_names = model._parmest_theta_names
+        self.assertEqual(list(model.scenario_indices), [0, 1])
+        self.assertEqual(
+            [pyo.value(model.scenario_number[i]) for i in model.scenario_indices],
+            [0, 1],
+        )
+        self.assertEqual(list(model.exp_scenarios.keys()), list(model.scenario_indices))
         self.assertEqual(len(list(model.exp_scenarios.keys())), 2)
         self.assertEqual(len(model.theta_link_constraints), 2 * len(theta_names))
         self.assertTrue(hasattr(model, "Obj"))
@@ -1497,9 +1503,38 @@ class TestParmestBlockEF(unittest.TestCase):
 
         self.assertTrue(model.parmest_theta["theta"].fixed)
         self.assertAlmostEqual(pyo.value(model.parmest_theta["theta"]), 1.0, places=10)
+        self.assertEqual(len(model.theta_link_constraints), 0)
         for block in model.exp_scenarios.values():
             self.assertTrue(block.theta.fixed)
             self.assertAlmostEqual(pyo.value(block.theta), 1.0, places=10)
+
+    def test_duplicate_bootlist_preserves_scenario_mapping(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks(bootlist=[0, 1, 1])
+
+        self.assertEqual(pest.obj_probability_constant, 3)
+        self.assertEqual(list(model.scenario_indices), [0, 1, 2])
+        self.assertEqual(list(model.exp_scenarios.keys()), [0, 1, 2])
+        self.assertEqual(
+            [pyo.value(model.scenario_number[i]) for i in model.scenario_indices],
+            [0, 1, 1],
+        )
+        self.assertIsNot(model.exp_scenarios[1], model.exp_scenarios[2])
+        self.assertAlmostEqual(pyo.value(model.exp_scenarios[1].x), 2.0, places=10)
+        self.assertAlmostEqual(pyo.value(model.exp_scenarios[2].x), 2.0, places=10)
+
+    def test_unfixed_theta_uses_parent_initial_value(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks()
+
+        self.assertFalse(model.parmest_theta["theta"].fixed)
+        for block in model.exp_scenarios.values():
+            self.assertFalse(block.theta.fixed)
+            self.assertAlmostEqual(
+                pyo.value(block.theta),
+                pyo.value(model.parmest_theta["theta"]),
+                places=10,
+            )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_objective_at_theta_fixed_value(self):
@@ -1516,6 +1551,16 @@ class TestParmestBlockEF(unittest.TestCase):
         # with theta initialized to 0, predictions are [1,2], residuals [1,1], avg objective 1
         self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
         self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_objective_at_theta_duplicate_bootlist_counts_duplicates(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        theta_values = pd.DataFrame([[1.0]], columns=["theta"])
+        obj_at_theta = pest.objective_at_theta(
+            theta_values=theta_values, bootlist=[0, 1, 1]
+        )
+        # residuals at theta=1 are [0, 1, 1], objective is averaged over three scenarios
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 2.0 / 3.0, places=8)
 
     def test_invalid_solver_name_raises_runtimeerror(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])

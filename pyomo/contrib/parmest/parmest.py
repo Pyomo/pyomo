@@ -1042,34 +1042,54 @@ class Estimator:
                 parent_theta_var.unfix()
 
         # Set the number of experiments to use, either from bootlist or all experiments
-        scenario_numbers = bootlist if bootlist is not None else list(range(len(self.exp_list)))
+        scenario_numbers = (
+            bootlist if bootlist is not None else list(range(len(self.exp_list)))
+        )
         self.obj_probability_constant = len(scenario_numbers)
         if self.obj_probability_constant <= 0:
             raise ValueError("At least one scenario is required to build the EF model.")
 
-        # Create indexed block for holding scenario models
-        model.exp_scenarios = pyo.Block(range(self.obj_probability_constant))
-        for i, experiment_number in enumerate(scenario_numbers):
+        # Index EF blocks by scenario position, not by experiment number.  This
+        # preserves duplicate entries in bootstrap samples such as [0, 1, 1].
+        model.scenario_indices = pyo.RangeSet(0, self.obj_probability_constant - 1)
+        model.scenario_number = pyo.Param(
+            model.scenario_indices,
+            initialize={
+                i: experiment_number
+                for i, experiment_number in enumerate(scenario_numbers)
+            },
+            within=pyo.NonNegativeIntegers,
+            mutable=False,
+        )
+
+        # Build and copy scenario models into blocks, then link the theta
+        # variables across blocks
+        model.exp_scenarios = pyo.Block(model.scenario_indices)
+        for i in model.scenario_indices:
+            experiment_number = pyo.value(model.scenario_number[i])
             parmest_model = self._create_parmest_model(experiment_number)
-            for name in expanded_theta_names:
-                child_theta_var = parmest_model.find_component(name)
-                parent_theta_var = model.parmest_theta[name]
-                if theta_vals is not None and name in theta_vals:
-                    child_theta_var.set_value(theta_vals[name])
-                else:
-                    child_theta_var.set_value(pyo.value(parent_theta_var))
+            model.exp_scenarios[i].transfer_attributes_from(parmest_model)
+
+        model.theta_link_constraints = pyo.ConstraintList()
+        for name in expanded_theta_names:
+            parent_theta_var = model.parmest_theta[name]
+            if theta_vals is not None and name in theta_vals:
+                theta_value = theta_vals[name]
+            else:
+                theta_value = pyo.value(parent_theta_var)
+
+            # Initialize the copied theta variable in every
+            # scenario block from either user-supplied theta values or the
+            # parent EF theta variable.  Only add linking constraints when
+            # theta is free; in the fixed-theta case the block copy is fixed
+            # directly and the ConstraintList intentionally remains empty.
+            for i in model.scenario_indices:
+                child_theta_var = model.exp_scenarios[i].find_component(name)
+                child_theta_var.set_value(theta_value)
                 if fix_theta:
                     child_theta_var.fix()
                 else:
                     child_theta_var.unfix()
-            model.exp_scenarios[i].transfer_attributes_from(parmest_model)
-
-        model.theta_link_constraints = pyo.ConstraintList()
-        if not fix_theta:
-            for name in expanded_theta_names:
-                parent_theta_var = model.parmest_theta[name]
-                for i in range(self.obj_probability_constant):
-                    child_theta_var = model.exp_scenarios[i].find_component(name)
                     model.theta_link_constraints.add(
                         child_theta_var == parent_theta_var
                     )
@@ -1279,7 +1299,11 @@ class Estimator:
             Covariance matrix of the estimated parameters
         """
         if hasattr(self.ef_instance, "exp_scenarios"):
-            ref_model = self.ef_instance.exp_scenarios[0]
+            # The EF now indexes scenario blocks by scenario position.  Pull the
+            # first position from the model metadata instead of hard-coding 0 so
+            # future indexing changes stay localized to scenario_indices.
+            scenario_index = next(iter(self.ef_instance.scenario_indices))
+            ref_model = self.ef_instance.exp_scenarios[scenario_index]
         else:
             ref_model = self.ef_instance
 
