@@ -656,7 +656,6 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         Validate the uncertainty set with a nonemptiness
         and boundedness check.
-        Clears any cached exact parameter bounds.
 
         Parameters
         ----------
@@ -668,9 +667,6 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         ValueError
             If nonemptiness check or boundedness check fails.
         """
-        # clear any cached exact parameter bounds
-        self._solve_bounds_optimization.cache_clear()
-
         # perform validation checks
         if not self.is_nonempty(config=config):
             raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
