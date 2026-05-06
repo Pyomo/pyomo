@@ -1456,6 +1456,44 @@ class LinearThetaExperiment(Experiment):
         return self.model
 
 
+class IndexedOutputExperiment(Experiment):
+    def __init__(self, y_points, z_points):
+        self.y_points = list(y_points)
+        self.z_points = list(z_points)
+        self.model = None
+
+    def create_model(self):
+        m = pyo.ConcreteModel()
+        m.theta = pyo.Var(initialize=0.0, bounds=(-10.0, 10.0))
+        m.y_index = pyo.Set(dimen=2, ordered=True, initialize=self.y_points)
+        m.z_index = pyo.Set(dimen=2, ordered=True, initialize=self.z_points)
+        m.y = pyo.Var(m.y_index, initialize=0.0)
+        m.z = pyo.Var(m.z_index, initialize=0.0)
+        self.model = m
+
+    def label_model(self):
+        m = self.model
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update(
+            (m.y[idx], float(i)) for i, idx in enumerate(self.y_points, start=1)
+        )
+        m.experiment_outputs.update(
+            (m.z[idx], float(i)) for i, idx in enumerate(self.z_points, start=1)
+        )
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update((m.y[idx], None) for idx in self.y_points)
+        m.measurement_error.update((m.z[idx], None) for idx in self.z_points)
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        return self.model
+
+
 def _build_estimator(data, include_second_output=False):
     exp_list = [
         LinearThetaExperiment(x=x, y=y, include_second_output=include_second_output)
@@ -1575,6 +1613,69 @@ class TestParmestBlockEF(unittest.TestCase):
         total_points = parmest._count_total_experiments(exp_list)
         # The current parmest convention counts datapoints for one output family.
         self.assertEqual(total_points, 2)
+
+    def test_count_total_experiments_tuple_index_multi_output(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (1.0, "A")]
+            ),
+            IndexedOutputExperiment(
+                y_points=[(0.5, "A"), (1.5, "A")], z_points=[(0.5, "A"), (1.5, "A")]
+            ),
+        ]
+        total_points = parmest._count_total_experiments(exp_list)
+        self.assertEqual(total_points, 4)
+
+    def test_count_total_experiments_rejects_mismatched_output_lengths(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A")]
+            )
+        ]
+        with self.assertRaisesRegex(
+            AssertionError,
+            "Experiment output families must have the same number of labeled points",
+        ):
+            parmest._count_total_experiments(exp_list)
+
+    def test_count_total_experiments_rejects_mismatched_time_points(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (2.0, "A")]
+            )
+        ]
+        with self.assertRaisesRegex(
+            AssertionError,
+            "Experiment output families must share the same time/alignment points",
+        ):
+            parmest._count_total_experiments(exp_list)
+
+    def test_count_total_experiments_rejects_heterogeneous_experiment_lengths(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (1.0, "A")]
+            ),
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A"), (2.0, "A")],
+                z_points=[(0.0, "A"), (1.0, "A"), (2.0, "A")],
+            ),
+        ]
+        with self.assertRaisesRegex(
+            AssertionError,
+            "Experiments in experiment_list must contain the same number of labeled points",
+        ):
+            parmest._count_total_experiments(exp_list)
+
+    def test_count_total_experiments_rejects_time_not_in_first_index(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[("A", 0.0), ("A", 1.0)]
+            )
+        ]
+        with self.assertRaisesRegex(
+            AssertionError, "the single index or the first element of a tuple index"
+        ):
+            parmest._count_total_experiments(exp_list)
 
 
 ###########################
