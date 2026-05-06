@@ -34,12 +34,6 @@ optimize_experiments(
     init_method: InitializationMethod = None,
     init_n_samples: int = 5,
     init_seed: int = None,
-    init_parallel: bool = False,
-    init_combo_parallel: bool = False,
-    init_n_workers: int = None,
-    init_combo_chunk_size: int = 5000,
-    init_combo_parallel_threshold: int = 20000,
-    init_max_wall_clock_time: float = None,
     init_solver=None,           
 )
 ```
@@ -51,12 +45,6 @@ optimize_experiments(
 - `init_method`: Initialization strategy (`None` or `"lhs"`).
 - `init_n_samples`: Number of LHS samples per experiment-input dimension.
 - `init_seed`: Random seed used by LHS initialization.
-- `init_parallel`: Enables parallel candidate-point FIM evaluation.
-- `init_combo_parallel`: Enables parallel candidate-combination scoring.
-- `init_n_workers`: Worker count for LHS parallel evaluation/scoring paths.
-- `init_combo_chunk_size`: Number of combinations handled per worker task.
-- `init_combo_parallel_threshold`: Minimum combinations required before using combo parallelism.
-- `init_max_wall_clock_time`: Optional LHS time budget (seconds); returns best-so-far if exceeded.
 - `init_solver`: Optional solver used only during initialization phases (LHS and square init solve).
 
 ## Operating Modes

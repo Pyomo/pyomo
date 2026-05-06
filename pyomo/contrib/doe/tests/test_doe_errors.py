@@ -887,54 +887,6 @@ class TestDoEErrors(unittest.TestCase):
                 r"``init_n_samples`` must be a positive integer, got 2.5.",
             ),
             (
-                "init_parallel must be bool",
-                {"init_method": "lhs", "init_parallel": 1},
-                ValueError,
-                r"``init_parallel`` must be a bool, got 1.",
-            ),
-            (
-                "init_combo_parallel must be bool",
-                {"init_method": "lhs", "init_combo_parallel": "yes"},
-                ValueError,
-                r"``init_combo_parallel`` must be a bool",
-            ),
-            (
-                "init_n_workers must be positive integer",
-                {"init_method": "lhs", "init_n_workers": 0},
-                ValueError,
-                r"``init_n_workers`` must be None or a positive integer",
-            ),
-            (
-                "init_combo_chunk_size must be positive integer",
-                {"init_method": "lhs", "init_combo_chunk_size": 0},
-                ValueError,
-                r"``init_combo_chunk_size`` must be a positive integer",
-            ),
-            (
-                "init_combo_parallel_threshold must be positive integer",
-                {"init_method": "lhs", "init_combo_parallel_threshold": 0},
-                ValueError,
-                r"``init_combo_parallel_threshold`` must be a positive integer",
-            ),
-            (
-                "init_max_wall_clock_time must be positive",
-                {"init_method": "lhs", "init_max_wall_clock_time": 0},
-                ValueError,
-                r"``init_max_wall_clock_time`` must be None or a positive number",
-            ),
-            (
-                "init_max_wall_clock_time rejects nan",
-                {"init_method": "lhs", "init_max_wall_clock_time": float("nan")},
-                ValueError,
-                r"``init_max_wall_clock_time`` must be None or a positive number",
-            ),
-            (
-                "init_max_wall_clock_time rejects inf",
-                {"init_method": "lhs", "init_max_wall_clock_time": float("inf")},
-                ValueError,
-                r"``init_max_wall_clock_time`` must be None or a positive number",
-            ),
-            (
                 "init_seed must be integer",
                 {
                     "n_exp": 2,
@@ -1289,35 +1241,6 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             any("candidate experiment designs" in str(w.message) for w in warn_cm)
         )
         self.assertTrue(any("combinations to evaluate" in msg for msg in log_cm.output))
-
-    def test_lhs_combo_parallel_requested_but_not_used_warns(self):
-        # Tests that combo-parallel requests warn when thresholds force serial scoring.
-        doe_obj = DesignOfExperiments(
-            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
-            objective_option="pseudo_trace",
-            step=1e-2,
-            solver=self._make_solver(),
-        )
-        with patch.object(
-            doe_obj, "_compute_fim_at_point_no_prior", return_value=np.eye(2)
-        ):
-            with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
-                doe_obj.optimize_experiments(
-                    n_exp=2,
-                    init_method="lhs",
-                    init_n_samples=2,
-                    init_seed=11,
-                    init_combo_parallel=True,
-                    init_n_workers=2,
-                    init_combo_parallel_threshold=10_000,
-                )
-
-        self.assertTrue(
-            any(
-                "lhs_combo_parallel=True" in msg and "running serially" in msg
-                for msg in cm.output
-            )
-        )
 
     def test_lhs_missing_bounds_error_message(self):
         # Tests that LHS initialization fails fast when experiment inputs lack bounds.

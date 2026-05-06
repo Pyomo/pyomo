@@ -1036,8 +1036,8 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_lhs_diagnostics_populated(self):
-        # Tests that threaded LHS initialization records diagnostics needed for
-        # debugging and performance visibility.
+        # Tests that LHS initialization records diagnostics needed for debugging
+        # and performance visibility.
         doe_obj = DesignOfExperiments(
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -1049,17 +1049,10 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             init_method="lhs",
             init_n_samples=2,
             init_seed=11,
-            init_parallel=True,
-            init_combo_parallel=True,
-            init_n_workers=2,
-            init_combo_chunk_size=2,
-            init_combo_parallel_threshold=1,
-            init_max_wall_clock_time=60.0,
         )
         lhs_init = doe_obj.results["initialization"]
-        self.assertEqual(lhs_init["candidate_fim_evaluation_mode"], "thread")
-        self.assertEqual(lhs_init["combination_scoring_mode"], "thread")
-        self.assertEqual(lhs_init["workers"], 2)
+        self.assertEqual(lhs_init["candidate_fim_evaluation_mode"], "serial")
+        self.assertEqual(lhs_init["combination_scoring_mode"], "serial")
         self.assertFalse(lhs_init["timed_out"])
         self.assertGreater(lhs_init["time_s"], 0.0)
         self.assertIn("best_initial_objective_value", lhs_init)
