@@ -359,8 +359,10 @@ def _count_total_experiments(experiment_list):
     suffix contains keys that belong to different parent components, e.g., when there are
     multiple measured variables with different time points.
 
-    Also assumes that the variables are indexed by a single index, which is the case
-    for the example models in the documentation.
+    Also assumes that the variables are indexed either by a single index or by a tuple
+    where the time information is stored in the first index. Within each experiment,
+    the output families are expected to share the same time points. Across experiments,
+    the output families are expected to contain the same number of time points.
 
     Future versions will allow for heterogeneity in the number of data points across
     experiments and will require changes to this function.
@@ -377,17 +379,57 @@ def _count_total_experiments(experiment_list):
     total_data_points : int
         The total number of data points in the list of experiments
     """
+
+    def _get_alignment_index(output_var):
+        var_index = output_var.index()
+        if isinstance(var_index, tuple):
+            return var_index[0]
+        return var_index
+
     total_data_points = 0
+    expected_points_per_experiment = None
     for experiment in experiment_list:
-        # 1. Identify the first parent component of the experiment outputs
         output_vars = experiment.get_labeled_model().experiment_outputs
-        first_var_key = list(output_vars.keys())[0]
-        first_parent = first_var_key.parent_component()
-        # 2. Count only the keys that belong to this specific parent
-        first_parent_indices = [
-            v for v in output_vars.keys() if v.parent_component() is first_parent
+        output_var_keys = list(output_vars.keys())
+        assert (
+            output_var_keys
+        ), "Experiment output suffix must contain at least one key."
+
+        grouped_output_vars = {}
+        for output_var in output_var_keys:
+            # Use component name as a stable, hashable key for ScalarVar/IndexedVar.
+            parent_name = output_var.parent_component().name
+            grouped_output_vars.setdefault(parent_name, []).append(output_var)
+
+        first_parent_indices = next(iter(grouped_output_vars.values()))
+        first_parent_alignment = [
+            _get_alignment_index(output_var) for output_var in first_parent_indices
         ]
-        total_data_points += len(first_parent_indices)
+
+        # All output families in one experiment must align on the same index points.
+        for parent_indices in grouped_output_vars.values():
+            assert len(parent_indices) == len(first_parent_indices), (
+                "Experiment output families must have the same number of labeled "
+                "points within each experiment."
+            )
+            assert [
+                _get_alignment_index(output_var) for output_var in parent_indices
+            ] == first_parent_alignment, (
+                "Experiment output families must share the same time/alignment "
+                "points within each experiment, with time information provided by "
+                "the single index or the first element of a tuple index."
+            )
+
+        points_in_experiment = len(first_parent_indices)
+        if expected_points_per_experiment is None:
+            expected_points_per_experiment = points_in_experiment
+        else:
+            assert points_in_experiment == expected_points_per_experiment, (
+                "Experiments in experiment_list must contain the same number of "
+                "labeled points."
+            )
+
+        total_data_points += points_in_experiment
 
     return total_data_points
 
