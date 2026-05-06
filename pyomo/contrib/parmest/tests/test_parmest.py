@@ -11,6 +11,7 @@ import sys
 import os
 import subprocess
 from itertools import product
+from unittest import mock
 from pyomo.common.unittest import pytest
 from parameterized import parameterized, parameterized_class
 import pyomo.common.unittest as unittest
@@ -1469,6 +1470,19 @@ def _build_estimator(data, include_second_output=False):
     "Cannot test parmest: required dependencies are missing",
 )
 class TestParmestBlockEF(unittest.TestCase):
+    def _make_solve_result(self, termination_condition, has_solution=True):
+        result = mock.Mock()
+        result.solver = mock.Mock()
+        result.solver.termination_condition = termination_condition
+        result.solution = [object()] if has_solution else []
+        return result
+
+    def _make_mock_solver(self, solve_result):
+        solver = mock.Mock()
+        solver.options = {}
+        solver.solve.return_value = solve_result
+        return solver
+
     def test_block_ef_structure_counts(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
         model = pest._create_scenario_blocks()
@@ -1535,6 +1549,122 @@ class TestParmestBlockEF(unittest.TestCase):
                 pyo.value(model.parmest_theta["theta"]),
                 places=10,
             )
+
+    def test_q_opt_uses_load_solutions_false(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks()
+        solve_result = self._make_solve_result(pyo.TerminationCondition.optimal)
+        solver = self._make_mock_solver(solve_result)
+
+        with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
+            with mock.patch.object(parmest, "SolverFactory", return_value=solver):
+                pest._Q_opt()
+
+        solver.solve.assert_called_once_with(model, tee=pest.tee, load_solutions=False)
+
+    def test_q_opt_nonfixed_asserts_before_loading_and_preserves_returns(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks()
+        solve_result = self._make_solve_result(pyo.TerminationCondition.optimal)
+        solver = self._make_mock_solver(solve_result)
+        events = []
+
+        with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
+            with mock.patch.object(parmest, "SolverFactory", return_value=solver):
+                with mock.patch.object(
+                    parmest,
+                    "assert_optimal_termination",
+                    side_effect=lambda result: events.append(
+                        ("assert", result.solver.termination_condition)
+                    ),
+                ) as assert_mock:
+                    with mock.patch.object(
+                        model.solutions,
+                        "load_from",
+                        side_effect=lambda result: events.append(
+                            ("load", result.solver.termination_condition)
+                        ),
+                    ) as load_mock:
+                        obj, theta = pest._Q_opt()
+                        obj_with_vars, theta_with_vars, var_values = pest._Q_opt(
+                            return_values=["y"]
+                        )
+
+        self.assertEqual(events[0][0], "assert")
+        self.assertEqual(events[1][0], "load")
+        self.assertEqual(events[2][0], "assert")
+        self.assertEqual(events[3][0], "load")
+        self.assertEqual(assert_mock.call_count, 2)
+        self.assertEqual(load_mock.call_count, 2)
+        self.assertIsInstance(obj, float)
+        self.assertIsInstance(theta, pd.Series)
+        self.assertIsInstance(obj_with_vars, float)
+        self.assertIsInstance(theta_with_vars, pd.Series)
+        self.assertIsInstance(var_values, pd.DataFrame)
+
+    def test_q_opt_fixed_theta_returns_direct_termination_condition(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks(theta_vals={"theta": 1.0}, fix_theta=True)
+        solve_result = self._make_solve_result(pyo.TerminationCondition.maxIterations)
+        solver = self._make_mock_solver(solve_result)
+
+        with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
+            with mock.patch.object(parmest, "SolverFactory", return_value=solver):
+                with mock.patch.object(model.solutions, "load_from") as load_mock:
+                    obj, theta, status = pest._Q_opt(
+                        theta_vals={"theta": 1.0}, fix_theta=True
+                    )
+
+        load_mock.assert_called_once_with(solve_result)
+        self.assertEqual(status, pyo.TerminationCondition.maxIterations)
+        self.assertIsInstance(obj, float)
+        self.assertEqual(theta, {"theta": 1.0})
+
+    def test_q_opt_fixed_theta_infeasible_returns_without_loading_or_evaluating(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks(theta_vals={"theta": 9.0}, fix_theta=True)
+        solve_result = self._make_solve_result(
+            pyo.TerminationCondition.infeasible, has_solution=False
+        )
+        solver = self._make_mock_solver(solve_result)
+
+        with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
+            with mock.patch.object(parmest, "SolverFactory", return_value=solver):
+                with mock.patch.object(model.solutions, "load_from") as load_mock:
+                    with mock.patch.object(
+                        parmest.pyo,
+                        "value",
+                        side_effect=AssertionError(
+                            "pyo.value should not be called for infeasible fixed theta"
+                        ),
+                    ):
+                        obj, theta, status = pest._Q_opt(
+                            theta_vals={"theta": 9.0}, fix_theta=True
+                        )
+
+        load_mock.assert_not_called()
+        self.assertIsNone(obj)
+        self.assertEqual(theta, {})
+        self.assertEqual(status, pyo.TerminationCondition.infeasible)
+
+    def test_objective_at_theta_omits_infeasible_fixed_theta_rows(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        theta_values = pd.DataFrame([[1.0], [9.0]], columns=["theta"])
+
+        with mock.patch.object(
+            pest,
+            "_Q_opt",
+            side_effect=[
+                (0.5, {"theta": 1.0}, pyo.TerminationCondition.optimal),
+                (None, {}, pyo.TerminationCondition.infeasible),
+            ],
+        ):
+            obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
+
+        self.assertEqual(len(obj_at_theta), 1)
+        self.assertEqual(list(obj_at_theta.columns), ["theta", "obj"])
+        self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 1.0, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_objective_at_theta_fixed_value(self):

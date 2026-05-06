@@ -1166,7 +1166,7 @@ class Estimator:
                 Objective value at fixed parameter values.
             theta_estimates : dict
                 Dictionary of fixed parameter values.
-            WorstStatus : TerminationCondition
+            termination_condition : TerminationCondition
                 Solver termination condition.
 
         """
@@ -1196,31 +1196,23 @@ class Estimator:
             for key in self.solver_options:
                 sol.options[key] = self.solver_options[key]
 
-        # Solve model
-        solve_result = sol.solve(model, tee=self.tee)
+        # Solve model without loading solution values until the termination
+        # condition has been checked.
+        solve_result = sol.solve(model, tee=self.tee, load_solutions=False)
+        termination_condition = solve_result.solver.termination_condition
 
         # Separate handling of termination conditions for _Q_at_theta vs _Q_opt
-        # If not fixing theta, ensure optimal termination of the solve to return result
+        # If not fixing theta, ensure optimal termination before loading the result.
         if not fix_theta:
-            # Ensure optimal termination
             assert_optimal_termination(solve_result)
-        # If fixing theta, capture termination condition if not optimal unless infeasible
+            model.solutions.load_from(solve_result)
         else:
-            # Initialize worst_status to optimal, update if not optimal
-            worst_status = pyo.TerminationCondition.optimal
-            # Get termination condition from solve result
-            status = solve_result.solver.termination_condition
-
-            # In case of fixing theta, just log a warning if not optimal
-            if status != pyo.TerminationCondition.optimal:
-                # logger.warning(
-                #     "Solver did not terminate optimally when thetas were fixed. "
-                #     "Termination condition: %s",
-                #     str(status),
-                # )
-                # Unless infeasible, update worst_status
-                if worst_status != pyo.TerminationCondition.infeasible:
-                    worst_status = status
+            if (
+                termination_condition == pyo.TerminationCondition.infeasible
+                or len(solve_result.solution) == 0
+            ):
+                return None, {}, termination_condition
+            model.solutions.load_from(solve_result)
 
         # Extract objective value
         obj_value = pyo.value(model.Obj)
@@ -1232,9 +1224,9 @@ class Estimator:
         self.obj_value = obj_value
         self.estimated_theta = theta_estimates
 
-        # If fixing theta, return objective value, theta estimates, and worst status
+        # If fixing theta, return objective value, theta estimates, and solver status
         if fix_theta:
-            return obj_value, theta_estimates, worst_status
+            return obj_value, theta_estimates, termination_condition
 
         # Return theta estimates as a pandas Series
         theta_estimates = pd.Series(theta_estimates)
@@ -1970,11 +1962,14 @@ class Estimator:
                 obj, thetvals, worststatus = self._Q_opt(
                     theta_vals=Theta, fix_theta=True
                 )
-                if worststatus != pyo.TerminationCondition.infeasible:
+                if (
+                    worststatus != pyo.TerminationCondition.infeasible
+                    and obj is not None
+                ):
                     all_obj.append(list(Theta.values()) + [obj])
         else:
             obj, thetvals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
-            if worststatus != pyo.TerminationCondition.infeasible:
+            if worststatus != pyo.TerminationCondition.infeasible and obj is not None:
                 all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
