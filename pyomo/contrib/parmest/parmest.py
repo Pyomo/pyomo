@@ -1162,7 +1162,9 @@ class Estimator:
         expanded_theta_names = list(model._parmest_theta_names)
 
         logger.debug("Parmest _Q_opt model with scenario blocks:")
-        logger.debug(model.pprint())
+
+        if logger.isEnabledFor(logging.DEBUG):
+            model.pprint()
 
         # Check solver and set options
         if solver == "k_aug":
