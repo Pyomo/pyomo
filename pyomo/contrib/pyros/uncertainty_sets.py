@@ -793,6 +793,9 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         if index is None:
             index = [(True, True)] * self.dim
 
+        # create bounding model
+        bounding_model = self._create_bounding_model()
+
         param_bounds = []
         for idx in range(self.dim):
             bounds = []
@@ -800,30 +803,33 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 if not index[idx][i]:
                     bounds.append(None)
                     continue
-                bounds.append(self._solve_bounds_optimization(solver, idx, sense))
+                bounds.append(self._solve_exact_bounds_optimization(bounding_model, idx, sense, solver))
 
             # add parameter bounds for current dimension
             param_bounds.append(tuple(bounds))
 
         return param_bounds
 
-    @functools.cache
-    def _solve_bounds_optimization(self, solver, index, sense):
+    def _solve_exact_bounds_optimization(self, bounding_model, index, sense, solver):
         """
         Compute value of bounds for a single parameter
         of `self` at a specified index by solving a bounding model.
-        Results are cached as efficiency for large uncertainty sets.
+        Results are cached as efficiency.
 
         Parameters
         ----------
-        solver : ~pyomo.opt.base.solvers.OptSolver
-            Optimizer to invoke on the bounding problems.
+        bounding_model : ConcreteModel
+            Bounding model, with an indexed minimization sense
+            Objective with name 'param_var_objectives' consisting
+            of `N` entries, all of which have been deactivated.
         index : int
             The index of the parameter to solve for bounds.
-        sense : Pyomo objective sense
+        sense : ~pyomo.common.ObjectiveSense
             A Pyomo objective sense to optimize for the bounding model.
             `maximize` solves for an upper bound and
             `minimize` solves for a lower bound.
+        solver : ~pyomo.opt.base.solvers.OptSolver
+            Optimizer to invoke on the bounding problems.
 
         Returns
         -------
@@ -837,16 +843,28 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             If solver failed to compute a bound for a
             coordinate.
         """
-        # create bounding model and get all objectives
-        bounding_model = self._create_bounding_model()
+        # cache initialization
+        if not hasattr(self, "_cache"):
+            self._cache = {}
 
+        # we use saved optimization results for a given index
+        # for either `maximize` UB or `minimize` LB if they exist
+        if (index, sense) in self._cache:
+            return self._cache[index, sense]
+        
         # select objective corresponding to specified index
         obj = bounding_model.param_var_objectives[index]
         obj.activate()
 
         # optimize with specified sense
         obj.sense = sense
-        res = solver.solve(bounding_model, load_solutions=False)
+        try:
+            res = solver.solve(bounding_model, load_solutions=False)
+        finally:
+            # ensure sense is minimize when done, deactivate
+            obj.sense = minimize
+            obj.deactivate()
+
         if check_optimal_termination(res):
             bounding_model.solutions.load_from(res)
         else:
@@ -857,11 +875,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 f"Solver status summary:\n {res.solver}."
             )
 
-        # ensure sense is minimize when done, deactivate
-        obj.sense = minimize
-        obj.deactivate()
-
         bound = value(obj)
+
+        # store in cache
+        self._cache[index, sense] = bound
 
         return bound
 
