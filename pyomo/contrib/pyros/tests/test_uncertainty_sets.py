@@ -24,7 +24,7 @@ from pyomo.common.dependencies import (
 )
 
 from pyomo.environ import SolverFactory
-from pyomo.core.base import ConcreteModel, Param, Var
+from pyomo.core.base import ConcreteModel, Param, Var, maximize, minimize, UnitInterval
 from pyomo.core.expr import RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
@@ -3257,40 +3257,29 @@ class TestCustomUncertaintySet(unittest.TestCase):
         baron = SolverFactory("baron")
         custom_set = CustomUncertaintySet(dim=2)
         self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
-
-        # check clearing cache
-        # Expecting 0 hits, misses, size
-        custom_set._solve_bounds_optimization.cache_clear()
-        info = custom_set._solve_bounds_optimization.cache_info()
-        self.assertEqual(info.hits, 0)
-        self.assertEqual(info.misses, 0)
-        self.assertEqual(info.maxsize, None)
-        self.assertEqual(info.currsize, 0)
-
-        # check cache info
-        # Expecting 4 misses and size 4
         self.assertEqual(
             custom_set._compute_exact_parameter_bounds(baron), [(-1, 1)] * 2
         )
 
-        info = custom_set._solve_bounds_optimization.cache_info()
-        self.assertEqual(info.hits, 0)
-        self.assertEqual(info.misses, 4)
-        self.assertEqual(info.maxsize, None)
-        self.assertEqual(info.currsize, 4)
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_solve_exact_bounds_optimization(self):
+        """
+        Test parameter bounds computations are cached.
+        """
+        baron = SolverFactory("baron")
+        custom_set = CustomUncertaintySet(dim=2)
 
-        # run again and check caching
-        # Expecting additional 4 hits from accessing cached values
-        self.assertEqual(
-            custom_set._compute_exact_parameter_bounds(baron), [(-1, 1)] * 2
-        )
+        # check cache does not exist
+        self.assertFalse(hasattr(custom_set, "_cache"))
 
-        info = custom_set._solve_bounds_optimization.cache_info()
-        self.assertEqual(info.hits, 4)
-        self.assertEqual(info.misses, 4)
-        self.assertEqual(info.maxsize, None)
-        self.assertEqual(info.currsize, 4)
-        custom_set._solve_bounds_optimization.cache_clear()
+        # check bounds calculation
+        self.assertEqual(custom_set._solve_exact_bounds_optimization(custom_set._create_bounding_model(), 0, minimize, baron), -1.0)
+
+        # check cache creation
+        self.assertTrue(hasattr(custom_set, "_cache"))
+
+        # check cache access
+        self.assertIs(custom_set._solve_exact_bounds_optimization(custom_set._create_bounding_model(), 0, minimize, baron), custom_set._cache[0, minimize])
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_solve_feasibility(self):
