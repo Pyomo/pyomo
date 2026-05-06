@@ -1045,10 +1045,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=self._make_solver(),
         )
         doe_obj.optimize_experiments(
-            n_exp=2,
-            init_method="lhs",
-            init_n_samples=2,
-            init_seed=11,
+            n_exp=2, init_method="lhs", init_n_samples=2, init_seed=11
         )
         lhs_init = doe_obj.results["initialization"]
         self.assertEqual(lhs_init["candidate_fim_evaluation_mode"], "serial")

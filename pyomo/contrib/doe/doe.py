@@ -1014,9 +1014,7 @@ class DesignOfExperiments:
                 )
                 best_initial_points, lhs_init_diagnostics = (
                     self._lhs_initialize_experiments(
-                        lhs_n_samples=init_n_samples,
-                        lhs_seed=init_seed,
-                        n_exp=n_exp,
+                        lhs_n_samples=init_n_samples, lhs_seed=init_seed, n_exp=n_exp
                     )
                 )
                 self.logger.info(
@@ -1646,12 +1644,7 @@ class DesignOfExperiments:
 
         return fim
 
-    def _lhs_initialize_experiments(
-        self,
-        lhs_n_samples,
-        lhs_seed,
-        n_exp,
-    ):
+    def _lhs_initialize_experiments(self, lhs_n_samples, lhs_seed, n_exp):
         """
         Use per-dimension Latin Hypercube Sampling to identify a good initial
         experiment design for ``optimize_experiments``.
@@ -1752,7 +1745,8 @@ class DesignOfExperiments:
         # If no candidates were successfully evaluated, use the first candidate with
         # a zero FIM to allow downstream code to run without missing data.
         # This is an extreme fallback that should only occur if every candidate
-        # evaluation failed; in either case we want to avoid crashing and allow
+        # evaluation failed or if the time budget was too small to evaluate
+        # any candidates; in either case we want to avoid crashing and allow
         # the user to get something back (with warnings) rather than nothing.
         timed_out = False
         if not computed_pairs:

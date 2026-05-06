@@ -1224,9 +1224,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=n_exp)
         actual_points, lhs_diag = doe._lhs_initialize_experiments(
-            lhs_n_samples=lhs_n_samples,
-            lhs_seed=lhs_seed,
-            n_exp=n_exp,
+            lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=n_exp
         )
 
         actual_points_norm = sorted(tuple(np.round(p, 8)) for p in actual_points)
@@ -1260,9 +1258,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", return_value=None):
             points, diag = doe._lhs_initialize_experiments(
-                lhs_n_samples=3,
-                lhs_seed=8,
-                n_exp=1,
+                lhs_n_samples=3, lhs_seed=8, n_exp=1
             )
 
         self.assertEqual(len(points), 1)
@@ -1308,9 +1304,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
             got_points, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=lhs_n_samples,
-                lhs_seed=lhs_seed,
-                n_exp=2,
+                lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=2
             )
 
         got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
@@ -1351,10 +1345,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                         "pyomo.contrib.doe.doe", level="WARNING"
                     ) as log_cm:
                         got_points, _ = doe._lhs_initialize_experiments(
-                            lhs_n_samples=lhs_n_samples,
-                            lhs_seed=13,
-                            n_exp=3,
-                                    )
+                            lhs_n_samples=lhs_n_samples, lhs_seed=13, n_exp=3
+                        )
 
         got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
         exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
@@ -1408,9 +1400,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
         with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
             got_points, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=lhs_n_samples,
-                lhs_seed=lhs_seed,
-                n_exp=3,
+                lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=3
             )
 
         got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
@@ -1449,10 +1439,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                 doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim
             ):
                 got_points, _ = doe._lhs_initialize_experiments(
-                    lhs_n_samples=lhs_n_samples,
-                    lhs_seed=123,
-                    n_exp=2,
-                    )
+                    lhs_n_samples=lhs_n_samples, lhs_seed=123, n_exp=2
+                )
 
         # Independent brute-force oracle over explicit candidate points
         best_obj = -np.inf
