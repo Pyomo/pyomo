@@ -451,7 +451,9 @@ class PyROS(object):
                 model_data.timing.start_timer("main.preprocessing")
                 robust_infeasible = model_data.preprocess(user_var_partitioning)
                 model_data.timing.stop_timer("main.preprocessing")
-                preprocessing_time = model_data.timing.get_total_time("main.preprocessing")
+                preprocessing_time = model_data.timing.get_total_time(
+                    "main.preprocessing"
+                )
                 config.progress_logger.info(
                     f"Done preprocessing; required wall time of "
                     f"{preprocessing_time:.3f}s."
@@ -480,7 +482,8 @@ class PyROS(object):
                     # get the most recent master objective, if available
                     return_soln.final_objective_value = None
                     master_epigraph_obj_value = value(
-                        pyros_soln.master_results.master_model.epigraph_obj, exception=False
+                        pyros_soln.master_results.master_model.epigraph_obj,
+                        exception=False,
                     )
                     if master_epigraph_obj_value is not None:
                         # account for sense of the original model objective
@@ -488,7 +491,8 @@ class PyROS(object):
                         # since maximization objective is changed to
                         # minimization objective during preprocessing
                         return_soln.final_objective_value = (
-                            model_data.active_obj_original_sense * master_epigraph_obj_value
+                            model_data.active_obj_original_sense
+                            * master_epigraph_obj_value
                         )
 
                     return_soln.pyros_termination_condition = (

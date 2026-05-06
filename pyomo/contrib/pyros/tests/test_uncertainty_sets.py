@@ -3228,10 +3228,12 @@ class CustomUncertaintySet(UncertaintySet):
     def parameter_bounds(self, val):
         self._parameter_bounds = val
 
+
 class CustomDomainUncertaintySet(CustomUncertaintySet):
     """
     Test simple custom uncertainty set with specified uncertain parameter domains.
     """
+
     def __init__(self, dim):
         self._dim = dim
         self._parameter_bounds = [(0, 1)] * self.dim
@@ -3302,13 +3304,23 @@ class TestCustomUncertaintySet(unittest.TestCase):
         self.assertFalse(hasattr(custom_set, "_cache"))
 
         # check bounds calculation
-        self.assertEqual(custom_set._solve_exact_bounds_optimization(custom_set._create_bounding_model(), 0, minimize, baron), -1.0)
+        self.assertEqual(
+            custom_set._solve_exact_bounds_optimization(
+                custom_set._create_bounding_model(), 0, minimize, baron
+            ),
+            -1.0,
+        )
 
         # check cache creation
         self.assertTrue(hasattr(custom_set, "_cache"))
 
         # check cache access
-        self.assertIs(custom_set._solve_exact_bounds_optimization(custom_set._create_bounding_model(), 0, minimize, baron), custom_set._cache[0, minimize])
+        self.assertIs(
+            custom_set._solve_exact_bounds_optimization(
+                custom_set._create_bounding_model(), 0, minimize, baron
+            ),
+            custom_set._cache[0, minimize],
+        )
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_solve_feasibility(self):
@@ -3386,9 +3398,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         CONFIG = pyros_config()
         custom_set = CustomDomainUncertaintySet(dim=2)
 
-        self.assertEqual(
-            custom_set._fbbt_parameter_bounds(config=CONFIG), [(0, 1)] * 2
-        )
+        self.assertEqual(custom_set._fbbt_parameter_bounds(config=CONFIG), [(0, 1)] * 2)
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):

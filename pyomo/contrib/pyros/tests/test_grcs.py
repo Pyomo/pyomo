@@ -3215,7 +3215,8 @@ class TestLogOriginalModelStatistics(unittest.TestCase):
             state_variables=[m.y],
         )
 
-        expected_log_str = textwrap.dedent("""
+        expected_log_str = textwrap.dedent(
+            """
             Model Statistics (before preprocessing):
               Number of variables : 3
                 First-stage variables : 2
@@ -3225,7 +3226,8 @@ class TestLogOriginalModelStatistics(unittest.TestCase):
               Number of constraints : 3
                 Equality constraints : 1
                 Inequality constraints : 2
-            """)
+            """
+        )
 
         with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
             log_original_model_statistics(model_data, user_var_partitioning)
@@ -5145,6 +5147,7 @@ class TestPyROSSubsolverErrorEfficiency(unittest.TestCase):
                 msg="Did not report subsolver error to problem instance.",
             )
 
+
 # @SolverFactory.register("slow_solver")
 class SlowSolver:
     """
@@ -5204,6 +5207,7 @@ class CustomExactBoundsUncertaintySet(BoxSet):
     """
     Custom uncertainty set that always solves optimization bounding problems.
     """
+
     def __init__(self, bounds, sleep_time, cache):
         super().__init__(bounds)
         self.sleep_time = sleep_time
@@ -5238,7 +5242,9 @@ class TestPyROSCache(unittest.TestCase):
         m = build_leyffer_two_cons()
 
         # Define the uncertainty set
-        interval = CustomExactBoundsUncertaintySet(bounds=[(0.25, 2)], sleep_time=0, cache=True)
+        interval = CustomExactBoundsUncertaintySet(
+            bounds=[(0.25, 2)], sleep_time=0, cache=True
+        )
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -5272,9 +5278,7 @@ class TestPyROSCache(unittest.TestCase):
         # check cache has been cleared after solve
         self.assertTrue(hasattr(interval, "_cache"))
         self.assertEqual(
-            interval._cache,
-            {},
-            msg="Did not clear uncertainty set cache after solve.",
+            interval._cache, {}, msg="Did not clear uncertainty set cache after solve."
         )
 
     def test_pyros_cache_time(self):
@@ -5284,8 +5288,12 @@ class TestPyROSCache(unittest.TestCase):
         m = build_leyffer_two_cons()
 
         # Define the uncertainty set
-        interval_cache = CustomExactBoundsUncertaintySet(bounds=[(0.25, 2)], sleep_time=0.5, cache=True)
-        interval_no_cache = CustomExactBoundsUncertaintySet(bounds=[(0.25, 2)], sleep_time=0.5, cache=False)
+        interval_cache = CustomExactBoundsUncertaintySet(
+            bounds=[(0.25, 2)], sleep_time=0.5, cache=True
+        )
+        interval_no_cache = CustomExactBoundsUncertaintySet(
+            bounds=[(0.25, 2)], sleep_time=0.5, cache=False
+        )
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -5326,10 +5334,7 @@ class TestPyROSCache(unittest.TestCase):
 
         # caching should always result in less time,
         # as not caching reruns the slow solver multiple times
-        self.assertGreater(
-            results_no_cache.time,
-            results_cache.time,
-        )
+        self.assertGreater(results_no_cache.time, results_cache.time)
 
     def test_pyros_cache_solutions(self):
         """
@@ -5338,12 +5343,14 @@ class TestPyROSCache(unittest.TestCase):
         m = build_leyffer_two_cons()
 
         # Define the uncertainty set
-        interval = CustomExactBoundsUncertaintySet(bounds=[(25, 200)], sleep_time=0, cache=True)
-        self.assertEqual(interval.parameter_bounds, [(25,200)])
+        interval = CustomExactBoundsUncertaintySet(
+            bounds=[(25, 200)], sleep_time=0, cache=True
+        )
+        self.assertEqual(interval.parameter_bounds, [(25, 200)])
 
         # change set attributes, leading to outdated parameter bounds
         interval.bounds = [(0.25, 2)]
-        self.assertEqual(interval.parameter_bounds, [(25,200)])
+        self.assertEqual(interval.parameter_bounds, [(25, 200)])
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -5375,14 +5382,15 @@ class TestPyROSCache(unittest.TestCase):
         self.assertAlmostEqual(m.x2.value, 1.547, places=2)
         self.assertAlmostEqual(m.x3.value, 9.684, places=2)
         self.assertEqual(
-            results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
         )
 
         # modify the cache
         interval._cache[0, minimize] = 25
         interval._cache[0, maximize] = 200
 
-        self.assertEqual(interval.parameter_bounds, [(25,200)])
+        self.assertEqual(interval.parameter_bounds, [(25, 200)])
 
         # Solve with PyROS
         results = pyros_solver.solve(
@@ -5406,9 +5414,9 @@ class TestPyROSCache(unittest.TestCase):
         self.assertAlmostEqual(m.x2.value, 1.547, places=2)
         self.assertAlmostEqual(m.x3.value, 9.684, places=2)
         self.assertEqual(
-            results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
         )
-
 
 
 if __name__ == "__main__":

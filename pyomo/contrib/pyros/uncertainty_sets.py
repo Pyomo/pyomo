@@ -799,7 +799,11 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 if not index[idx][i]:
                     bounds.append(None)
                     continue
-                bounds.append(self._solve_exact_bounds_optimization(bounding_model, idx, sense, solver))
+                bounds.append(
+                    self._solve_exact_bounds_optimization(
+                        bounding_model, idx, sense, solver
+                    )
+                )
 
             # add parameter bounds for current dimension
             param_bounds.append(tuple(bounds))
@@ -847,7 +851,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         # for either `maximize` UB or `minimize` LB if they exist
         if (index, sense) in self._cache:
             return self._cache[index, sense]
-        
+
         # select objective corresponding to specified index
         obj = bounding_model.param_var_objectives[index]
         obj.activate()
