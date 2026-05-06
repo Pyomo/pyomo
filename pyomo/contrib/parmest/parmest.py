@@ -1098,7 +1098,8 @@ class Estimator:
             for obj in block.component_objects(pyo.Objective):
                 obj.deactivate()
 
-        # Make an objective that sums over all scenario blocks and divides by number of experiments
+        # Make an objective that sums over all scenario blocks and
+        # divides by number of experiments
         def total_obj(m):
             return (
                 sum(
@@ -1150,10 +1151,6 @@ class Estimator:
             Default is None.
         solver : str, optional
             Solver to use for optimization. Default is "ef_ipopt".
-        calc_cov : bool, optional
-            If True, calculate covariance matrix of estimated parameters. Default is NOTSET.
-        cov_n : int, optional
-            Number of data points to use for covariance calculation. Required if calc_cov is True. Default is NOTSET.
         fix_theta : bool, optional
             If True, fix the theta values in the model. If False, leave them free.
             Default is False.
