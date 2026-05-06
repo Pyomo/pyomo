@@ -7,7 +7,10 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+import io
+import logging
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 import pyomo.environ as pyo
 from pyomo.common.tempfiles import TempfileManager
 
@@ -39,6 +42,11 @@ from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
 )
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
+from pyomo.contrib.pynumero.examples.external_grey_box.react_example.reactor_model_outputs import (
+    ReactorConcentrationsOutputModel,
+)
 
 if cyipopt_available:
     # We don't raise unittest.SkipTest if not cyipopt_available as there is a
@@ -207,7 +215,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         nlp.set_duals(y_sol)
         self.assertAlmostEqual(nlp.evaluate_objective(), -428.6362455416348, places=5)
-        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
+        self.assertTrue(np.allclose(info["mult_g"], y_sol, rtol=1e-4))
 
     def test_model1_with_scaling(self):
         m = create_model1()
@@ -219,35 +227,35 @@ class TestCyIpoptSolver(unittest.TestCase):
 
         with TempfileManager.new_context() as temp:
             cynlp = CyIpoptNLP(PyomoNLP(m))
-            logfile = temp.create_tempfile('_cyipopt-scaling.log')
+            logfile = temp.create_tempfile("_cyipopt-scaling.log")
             options = {
-                'nlp_scaling_method': 'user-scaling',
-                'output_file': logfile,
-                'file_print_level': 10,
-                'max_iter': 0,
+                "nlp_scaling_method": "user-scaling",
+                "output_file": logfile,
+                "file_print_level": 10,
+                "max_iter": 0,
             }
             solver = CyIpoptSolver(cynlp, options=options)
             x, info = solver.solve()
             cynlp.close()
 
-            with open(logfile, 'r') as fd:
+            with open(logfile, "r") as fd:
                 solver_trace = fd.read()
 
         # check for the following strings in the log
-        self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
+        self.assertIn("nlp_scaling_method = user-scaling", solver_trace)
         self.assertIn(f"output_file = {logfile}", solver_trace)
-        self.assertIn('objective scaling factor = 1e-06', solver_trace)
-        self.assertIn('x scaling provided', solver_trace)
-        self.assertIn('c scaling provided', solver_trace)
-        self.assertIn('d scaling provided', solver_trace)
+        self.assertIn("objective scaling factor = 1e-06", solver_trace)
+        self.assertIn("x scaling provided", solver_trace)
+        self.assertIn("c scaling provided", solver_trace)
+        self.assertIn("d scaling provided", solver_trace)
         self.assertIn('DenseVector "x scaling vector" with 3 elements:', solver_trace)
-        self.assertIn('x scaling vector[    1]= 1.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    2]= 1.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    3]= 4.0000000000000000e+00', solver_trace)
+        self.assertIn("x scaling vector[    1]= 1.0000000000000000e+00", solver_trace)
+        self.assertIn("x scaling vector[    2]= 1.0000000000000000e+00", solver_trace)
+        self.assertIn("x scaling vector[    3]= 4.0000000000000000e+00", solver_trace)
         self.assertIn('DenseVector "c scaling vector" with 1 elements:', solver_trace)
-        self.assertIn('c scaling vector[    1]= 2.0000000000000000e+00', solver_trace)
+        self.assertIn("c scaling vector[    1]= 2.0000000000000000e+00", solver_trace)
         self.assertIn('DenseVector "d scaling vector" with 1 elements:', solver_trace)
-        self.assertIn('d scaling vector[    1]= 3.0000000000000000e+00', solver_trace)
+        self.assertIn("d scaling vector[    1]= 3.0000000000000000e+00", solver_trace)
 
     def test_model2(self):
         model = create_model2()
@@ -260,7 +268,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         nlp.set_duals(y_sol)
         self.assertAlmostEqual(nlp.evaluate_objective(), -31.000000057167462, places=5)
-        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
+        self.assertTrue(np.allclose(info["mult_g"], y_sol, rtol=1e-4))
 
     def test_model3(self):
         G = np.array([[6, 2, 1], [2, 5, 2], [1, 2, 4]])
@@ -278,12 +286,12 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp.set_primals(x)
         nlp.set_duals(y_sol)
         self.assertAlmostEqual(nlp.evaluate_objective(), -3.5, places=5)
-        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
+        self.assertTrue(np.allclose(info["mult_g"], y_sol, rtol=1e-4))
 
     def test_options(self):
         model = create_model1()
         nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(CyIpoptNLP(nlp), options={'max_iter': 1})
+        solver = CyIpoptSolver(CyIpoptNLP(nlp), options={"max_iter": 1})
         x, info = solver.solve(tee=False)
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e02, places=5)
@@ -414,3 +422,71 @@ class TestCyIpoptSolver(unittest.TestCase):
         x, y = iterate_data[-1]
         self.assertTrue(np.allclose(x_sol, x))
         self.assertTrue(np.allclose(y_sol, y))
+
+
+@unittest.skipUnless(cyipopt_available, "cyipopt is not available")
+class TestCyIpoptGreyBox(unittest.TestCase):
+    """Most of the grey-box functionality is tested elsewhere. Here we just
+    need to test that we correctly override the hessian_approximation option
+    when Hessians aren't supported.
+    """
+
+    def test_solve_hessian_not_supported(self):
+        m = pyo.ConcreteModel()
+        m.reactor = ExternalGreyBoxBlock(
+            external_model=ReactorConcentrationsOutputModel()
+        )
+        m.k1con = pyo.Constraint(expr=m.reactor.inputs["k1"] == 5 / 6)
+        m.k2con = pyo.Constraint(expr=m.reactor.inputs["k2"] == 5 / 3)
+        m.k3con = pyo.Constraint(expr=m.reactor.inputs["k3"] == 1 / 6000)
+        m.cafcon = pyo.Constraint(expr=m.reactor.inputs["caf"] == 10000)
+        m.obj = pyo.Objective(expr=m.reactor.outputs["cb"], sense=pyo.maximize)
+        solver = pyo.SolverFactory("cyipopt")
+        results = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(results)
+        self.assertNotIn("hessian_approximation", solver.config.options)
+        self.assertAlmostEqual(pyo.value(m.reactor.inputs["sv"]), 1.34381, places=3)
+        self.assertAlmostEqual(pyo.value(m.reactor.outputs["cb"]), 1072.4372, places=2)
+
+    def test_solve_hessian_not_supported_override_user_option(self):
+        """Make sure we do this even when the user says to use an exact Hessian"""
+        m = pyo.ConcreteModel()
+        m.reactor = ExternalGreyBoxBlock(
+            external_model=ReactorConcentrationsOutputModel()
+        )
+        m.k1con = pyo.Constraint(expr=m.reactor.inputs["k1"] == 5 / 6)
+        m.k2con = pyo.Constraint(expr=m.reactor.inputs["k2"] == 5 / 3)
+        m.k3con = pyo.Constraint(expr=m.reactor.inputs["k3"] == 1 / 6000)
+        m.cafcon = pyo.Constraint(expr=m.reactor.inputs["caf"] == 10000)
+        m.obj = pyo.Objective(expr=m.reactor.outputs["cb"], sense=pyo.maximize)
+        solver = pyo.SolverFactory("cyipopt")
+        solver.config.options["hessian_approximation"] = "exact"
+        buf = io.StringIO()
+        with LoggingIntercept(buf, "pyomo.contrib.pynumero", logging.WARNING):
+            results = solver.solve(m, tee=True)
+        msg = "at least one grey box model does not support Hessians"
+        self.assertIn(msg, buf.getvalue())
+        pyo.assert_optimal_termination(results)
+        self.assertEqual(solver.config.options["hessian_approximation"], "exact")
+        self.assertAlmostEqual(pyo.value(m.reactor.inputs["sv"]), 1.34381, places=3)
+        self.assertAlmostEqual(pyo.value(m.reactor.outputs["cb"]), 1072.4372, places=2)
+
+    def test_hessian_supported_no_override(self):
+        """Make sure we didn't accidentally override the hessian_approximation
+        option when Hessian *is* supported.
+        """
+        m = pyo.ConcreteModel()
+        external_model = ex_models.PressureDropSingleOutputWithHessian()
+        m.x = pyo.Var(range(external_model.n_inputs()))
+        m.eq = pyo.Constraint(expr=sum(m.x.values()) == 1)
+        solver = pyo.SolverFactory("cyipopt")
+        with TempfileManager.new_context() as temp:
+            logfile = temp.create_tempfile("hessian-no-override.log")
+            options = dict(output_file=logfile, max_iter=0, print_user_options="yes")
+            solver.config.options.update(options)
+            _, cynlp = solver.solve(m, tee=True, return_nlp=True)
+            # IIRC this may be necessary to avoid file IO race condition
+            # cynlp.close()
+            with open(logfile, "r") as fd:
+                solver_trace = fd.read()
+        self.assertNotIn("hessian_approximation", solver_trace)

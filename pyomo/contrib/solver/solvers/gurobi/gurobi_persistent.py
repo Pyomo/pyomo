@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 import logging
-from typing import Dict, List, Optional, Sequence, Mapping
+from typing import Sequence, Mapping
 from collections.abc import Iterable
 
 from pyomo.common.collections import ComponentSet, OrderedSet, ComponentMap
@@ -47,8 +47,8 @@ logger = logging.getLogger(__name__)
 
 
 class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
-    def __init__(self, solver_model, var_map, con_map) -> None:
-        super().__init__(solver_model)
+    def __init__(self, solver_model, pyomo_model, var_map, con_map) -> None:
+        super().__init__(solver_model, pyomo_model)
         self._var_map = var_map
         self._con_map = con_map
         self._valid = True
@@ -69,21 +69,19 @@ class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
         if not self._valid:
             raise RuntimeError('The results in the solver are no longer valid.')
 
-    def load_vars(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
-    ) -> None:
+    def load_vars(self, vars_to_load: Sequence[VarData] | None = None) -> None:
         self._assert_solution_still_valid()
-        return super().load_vars(vars_to_load, solution_id)
+        return super().load_vars(vars_to_load)
 
-    def get_primals(
-        self, vars_to_load: Sequence[VarData] | None = None, solution_id=0
+    def get_vars(
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
-        return super().get_primals(vars_to_load, solution_id)
+        return super().get_vars(vars_to_load)
 
     def get_duals(
         self, cons_to_load: Sequence[ConstraintData] | None = None
-    ) -> Dict[ConstraintData, float]:
+    ) -> dict[ConstraintData, float]:
         self._assert_solution_still_valid()
         return super().get_duals(cons_to_load)
 
@@ -92,6 +90,18 @@ class GurobiPersistentSolutionLoader(GurobiDirectSolutionLoaderBase):
     ) -> Mapping[VarData, float]:
         self._assert_solution_still_valid()
         return super().get_reduced_costs(vars_to_load)
+
+    def get_number_of_solutions(self) -> int:
+        self._assert_solution_still_valid()
+        return super().get_number_of_solutions()
+
+    def get_solution_ids(self) -> list:
+        self._assert_solution_still_valid()
+        return super().get_solution_ids()
+
+    def load_import_suffixes(self):
+        self._assert_solution_still_valid()
+        super().load_import_suffixes()
 
 
 class _MutableLowerBound:
@@ -254,9 +264,9 @@ class _MutableObjective:
     def __init__(self, gurobi_model, constant, linear_coefs, quadratic_coefs):
         self.gurobi_model = gurobi_model
         self.constant: _MutableConstant = constant
-        self.linear_coefs: List[_MutableLinearCoefficient] = linear_coefs
-        self.quadratic_coefs: List[_MutableQuadraticCoefficient] = quadratic_coefs
-        self.last_quadratic_coef_values: List[float] = [
+        self.linear_coefs: list[_MutableLinearCoefficient] = linear_coefs
+        self.quadratic_coefs: list[_MutableQuadraticCoefficient] = quadratic_coefs
+        self.last_quadratic_coef_values: list[float] = [
             value(i.expr) for i in self.quadratic_coefs
         ]
 
@@ -342,7 +352,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         self._callback_func = None
         self._constraints_added_since_update = OrderedSet()
         self._vars_added_since_update = ComponentSet()
-        self._last_results_object: Optional[Results] = None
+        self._last_results_object: Results | None = None
         self._change_detector = None
         self._constraint_ndx = 0
         self._disallow_set_var_attr = {'lb', 'ub', 'vtype', 'varname'}
@@ -379,6 +389,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
 
         solution_loader = GurobiPersistentSolutionLoader(
             solver_model=self._solver_model,
+            pyomo_model=pyomo_model,
             var_map=self._pyomo_var_to_solver_var_map,
             con_map=self._pyomo_con_to_solver_con_map,
         )
@@ -432,7 +443,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             self._mutable_bounds[id(var), 'ub'] = (var, mutable_ub)
         return lb, ub, vtype
 
-    def _add_variables(self, variables: List[VarData]):
+    def _add_variables(self, variables: list[VarData]):
         self._invalidate_last_results()
         vtypes = []
         lbs = []
@@ -503,7 +514,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
 
         return new_expr
 
-    def _add_constraints(self, cons: List[ConstraintData]):
+    def _add_constraints(self, cons: list[ConstraintData]):
         self._invalidate_last_results()
         gurobi_expr_list = []
         for ndx, con in enumerate(cons):
@@ -609,7 +620,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         self._constraints_added_since_update.update(cons)
         self._needs_updated = True
 
-    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
+    def _add_sos_constraints(self, cons: list[SOSConstraintData]):
         self._invalidate_last_results()
         for con in cons:
             level = con.level
@@ -634,7 +645,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         self._constraints_added_since_update.update(cons)
         self._needs_updated = True
 
-    def _remove_objectives(self, objs: List[ObjectiveData]):
+    def _remove_objectives(self, objs: list[ObjectiveData]):
         for obj in objs:
             if obj is not self._objective:
                 raise RuntimeError(
@@ -649,7 +660,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
                 self._objective = None
                 self._needs_updated = False
 
-    def _add_objectives(self, objs: List[ObjectiveData]):
+    def _add_objectives(self, objs: list[ObjectiveData]):
         if len(objs) > 1:
             raise NotImplementedError(
                 'the persistent interface to gurobi currently '
@@ -720,7 +731,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
         self._vars_added_since_update = ComponentSet()
         self._needs_updated = False
 
-    def _remove_constraints(self, cons: List[ConstraintData]):
+    def _remove_constraints(self, cons: list[ConstraintData]):
         self._invalidate_last_results()
         for con in cons:
             if con in self._constraints_added_since_update:
@@ -732,7 +743,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             self._mutable_quadratic_helpers.pop(con, None)
         self._needs_updated = True
 
-    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: list[SOSConstraintData]):
         self._invalidate_last_results()
         for con in cons:
             if con in self._constraints_added_since_update:
@@ -742,7 +753,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             del self._pyomo_sos_to_solver_sos_map[con]
         self._needs_updated = True
 
-    def _remove_variables(self, variables: List[VarData]):
+    def _remove_variables(self, variables: list[VarData]):
         self._invalidate_last_results()
         for var in variables:
             v_id = id(var)
