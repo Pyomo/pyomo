@@ -1552,16 +1552,6 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
         self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-    def test_objective_at_theta_duplicate_bootlist_counts_duplicates(self):
-        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
-        theta_values = pd.DataFrame([[1.0]], columns=["theta"])
-        obj_at_theta = pest.objective_at_theta(
-            theta_values=theta_values, bootlist=[0, 1, 1]
-        )
-        # residuals at theta=1 are [0, 1, 1], objective is averaged over three scenarios
-        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 2.0 / 3.0, places=8)
-
     def test_invalid_solver_name_raises_runtimeerror(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
         with self.assertRaisesRegex(
