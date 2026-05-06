@@ -25,11 +25,10 @@
 # ____________________________________________________________________________________
 
 from enum import Enum
-from itertools import permutations, product, combinations as _combinations
+from itertools import permutations, product, combinations
 import json
 import logging
 import math
-import time
 import warnings
 
 from pyomo.common.dependencies import (
@@ -1791,7 +1790,7 @@ class DesignOfExperiments:
         best_combo = None
         _score_obj = DesignOfExperiments._evaluate_objective_for_option
 
-        for combo in _combinations(range(n_candidates), n_exp):
+        for combo in combinations(range(n_candidates), n_exp):
             if n_exp == 2:
                 i, j = combo
                 fim_total = prior + candidate_fims[i] + candidate_fims[j]
