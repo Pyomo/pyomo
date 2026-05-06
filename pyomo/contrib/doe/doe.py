@@ -1648,7 +1648,7 @@ class DesignOfExperiments:
         Use per-dimension Latin Hypercube Sampling to identify a good initial
         experiment design for ``optimize_experiments``.
         """
-        t_start = time.perf_counter()
+        sampling_timer = TicTocTimer()
 
         # 1.  Get experiment-input bounds from the already-built model
         first_exp_block = self.model.param_scenario_blocks[0].exp_blocks[0]
@@ -1682,7 +1682,7 @@ class DesignOfExperiments:
             per_dim_samples.append(s_scaled.tolist())
 
         candidate_points = tuple(product(*per_dim_samples))
-        t_after_sampling = time.perf_counter()
+        sampling_time = sampling_timer.toc(None)
         n_candidates = len(candidate_points)
 
         if n_candidates > 10_000:
@@ -1721,18 +1721,15 @@ class DesignOfExperiments:
 
         # 3.  Evaluate FIM at every candidate design
         candidate_fims = [None] * n_candidates
+        fim_timer = TicTocTimer()
         for pt_idx, pt in enumerate(candidate_points):
             fim = self._compute_fim_at_point_no_prior(
                 experiment_index=0, input_values=list(pt)
             )
             candidate_fims[pt_idx] = fim
             if (pt_idx + 1) % max(1, n_candidates // 10) == 0:
-                elapsed = time.perf_counter() - t_start
-                frac_done = (pt_idx + 1) / n_candidates
-                est_total = elapsed / frac_done if frac_done > 0 else 0
                 self.logger.info(
-                    f"  LHS FIM eval: {pt_idx + 1}/{n_candidates} "
-                    f"({elapsed:.1f}s elapsed, ~{est_total:.1f}s total)"
+                    f"  LHS FIM eval: {pt_idx + 1}/{n_candidates}"
                 )
 
         computed_pairs = [
@@ -1768,8 +1765,7 @@ class DesignOfExperiments:
             candidate_fims = tuple(_fims)
             n_candidates = len(candidate_points)
 
-        t_after_fim = time.perf_counter()
-        fim_eval_time = t_after_fim - t_after_sampling
+        fim_eval_time = fim_timer.toc(None)
         self.logger.info(f"LHS: completed FIM evaluations in {fim_eval_time:.1f}s.")
 
         # 4.  Enumerate combinations and score
@@ -1783,6 +1779,7 @@ class DesignOfExperiments:
                 "This may be slow. Consider reducing ``lhs_n_samples``."
             )
 
+        combo_timer = TicTocTimer()
         prior = self.prior_FIM.copy()
         _obj_option = self.objective_option
         is_maximize = _obj_option in self._MAXIMIZE_OBJECTIVES
@@ -1808,8 +1805,7 @@ class DesignOfExperiments:
                     best_obj = obj_val
                     best_combo = combo
 
-        t_after_combo = time.perf_counter()
-        combo_time = t_after_combo - t_after_fim
+        combo_time = combo_timer.toc(None)
 
         if best_combo is None:
             self.logger.warning(
@@ -1847,10 +1843,10 @@ class DesignOfExperiments:
             "combo_mode": "serial",
             "n_candidates": n_candidates,
             "n_combinations": n_combinations,
-            "elapsed_sampling_s": t_after_sampling - t_start,
+            "elapsed_sampling_s": sampling_time,
             "elapsed_fim_eval_s": fim_eval_time,
             "elapsed_combo_scoring_s": combo_time,
-            "elapsed_total_s": t_after_combo - t_start,
+            "elapsed_total_s": sampling_time + fim_eval_time + combo_time,
             "timed_out": timed_out,
             "best_obj": best_obj,
             "best_obj_log10": best_obj_log10,

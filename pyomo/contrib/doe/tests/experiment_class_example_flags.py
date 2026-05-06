@@ -94,7 +94,10 @@ class RooneyBieglerMultiExperiment(RooneyBieglerExperiment):
         m.hour.setlb(hour_lb)
         m.hour.setub(hour_ub)
 
-        m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        if hasattr(m, "sym_break_cons"):
+            m.sym_break_cons.clear()
+        else:
+            m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.sym_break_cons[m.hour] = None
         return m
 
