@@ -3228,6 +3228,35 @@ class CustomUncertaintySet(UncertaintySet):
     def parameter_bounds(self, val):
         self._parameter_bounds = val
 
+class CustomDomainUncertaintySet(CustomUncertaintySet):
+    """
+    Test simple custom uncertainty set with specified uncertain parameter domains.
+    """
+    def __init__(self, dim):
+        self._dim = dim
+        self._parameter_bounds = [(0, 1)] * self.dim
+
+    def set_as_constraint(self, uncertain_params=None, block=None):
+        blk, param_var_list, conlist, aux_vars = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
+            )
+        )
+        conlist.add(sum(param_var_list) <= 1)
+        for var in param_var_list:
+            conlist.add(0 <= var)
+            var.domain = UnitInterval
+
+        return UncertaintyQuantification(
+            block=blk,
+            uncertainty_cons=list(conlist.values()),
+            uncertain_param_vars=param_var_list,
+            auxiliary_vars=aux_vars,
+        )
+
 
 class TestCustomUncertaintySet(unittest.TestCase):
     """
@@ -3349,6 +3378,17 @@ class TestCustomUncertaintySet(unittest.TestCase):
         exc_str = r"Could not successfully solve feasibility problem. .*"
         with self.assertRaisesRegex(ValueError, exc_str):
             custom_set.is_nonempty(config=CONFIG)
+
+    def test_fbbt_values(self):
+        """
+        Test that `_fbbt_parameter_bounds` returns correct values.
+        """
+        CONFIG = pyros_config()
+        custom_set = CustomDomainUncertaintySet(dim=2)
+
+        self.assertEqual(
+            custom_set._fbbt_parameter_bounds(config=CONFIG), [(0, 1)] * 2
+        )
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):
