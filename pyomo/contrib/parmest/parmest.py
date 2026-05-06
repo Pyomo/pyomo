@@ -1042,9 +1042,7 @@ class Estimator:
                 parent_theta_var.unfix()
 
         # Set the number of experiments to use, either from bootlist or all experiments
-        scenario_numbers = (
-            list(bootlist) if bootlist is not None else list(range(len(self.exp_list)))
-        )
+        scenario_numbers = bootlist if bootlist is not None else list(range(len(self.exp_list)))
         self.obj_probability_constant = len(scenario_numbers)
         if self.obj_probability_constant <= 0:
             raise ValueError("At least one scenario is required to build the EF model.")
