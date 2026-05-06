@@ -1211,7 +1211,8 @@ class Estimator:
                 termination_condition == pyo.TerminationCondition.infeasible
                 or len(solve_result.solution) == 0
             ):
-                return None, {}, termination_condition
+                theta_payload = dict(theta_vals) if theta_vals is not None else {}
+                return None, theta_payload, termination_condition
             model.solutions.load_from(solve_result)
 
         # Extract objective value

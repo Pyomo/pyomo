@@ -1558,9 +1558,15 @@ class TestParmestBlockEF(unittest.TestCase):
 
         with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
             with mock.patch.object(parmest, "SolverFactory", return_value=solver):
-                pest._Q_opt()
+                with mock.patch.object(
+                    parmest, "assert_optimal_termination"
+                ) as assert_mock:
+                    with mock.patch.object(model.solutions, "load_from") as load_mock:
+                        pest._Q_opt()
 
         solver.solve.assert_called_once_with(model, tee=pest.tee, load_solutions=False)
+        assert_mock.assert_called_once_with(solve_result)
+        load_mock.assert_called_once_with(solve_result)
 
     def test_q_opt_nonfixed_asserts_before_loading_and_preserves_returns(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
@@ -1644,22 +1650,33 @@ class TestParmestBlockEF(unittest.TestCase):
 
         load_mock.assert_not_called()
         self.assertIsNone(obj)
-        self.assertEqual(theta, {})
+        self.assertEqual(theta, {"theta": 9.0})
         self.assertEqual(status, pyo.TerminationCondition.infeasible)
 
     def test_objective_at_theta_omits_infeasible_fixed_theta_rows(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
         theta_values = pd.DataFrame([[1.0], [9.0]], columns=["theta"])
 
-        with mock.patch.object(
-            pest,
-            "_Q_opt",
-            side_effect=[
-                (0.5, {"theta": 1.0}, pyo.TerminationCondition.optimal),
-                (None, {}, pyo.TerminationCondition.infeasible),
-            ],
-        ):
-            obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
+        class _FakeTaskManager:
+            def __init__(self, num_tasks):
+                self.num_tasks = num_tasks
+
+            def global_to_local_data(self, global_data):
+                return list(global_data)
+
+            def allgather_global_data(self, local_data):
+                return list(local_data)
+
+        with mock.patch.object(parmest.utils, "ParallelTaskManager", _FakeTaskManager):
+            with mock.patch.object(
+                pest,
+                "_Q_opt",
+                side_effect=[
+                    (0.5, {"theta": 1.0}, pyo.TerminationCondition.optimal),
+                    (None, {"theta": 9.0}, pyo.TerminationCondition.infeasible),
+                ],
+            ):
+                obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
 
         self.assertEqual(len(obj_at_theta), 1)
         self.assertEqual(list(obj_at_theta.columns), ["theta", "obj"])
