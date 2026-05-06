@@ -1959,7 +1959,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             x = float(input_values[0])
             return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
 
-        with patch("pyomo.contrib.doe.doe.LatinHypercube", _FakeLHS):
+        with patch("pyomo.contrib.doe.doe.scipy.stats.qmc.LatinHypercube", _FakeLHS):
             with patch("pyomo.contrib.doe.doe._combinations", return_value=iter(())):
                 with patch.object(
                     doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim
@@ -2118,7 +2118,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             x = float(input_values[0])
             return np.array([[x + 1.0, 0.0], [0.0, 2.0 * x + 1.0]])
 
-        with patch("pyomo.contrib.doe.doe.LatinHypercube", _FakeLHS):
+        with patch("pyomo.contrib.doe.doe.scipy.stats.qmc.LatinHypercube", _FakeLHS):
             with patch.object(
                 doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim
             ):

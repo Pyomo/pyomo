@@ -46,6 +46,7 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pathlib,
     matplotlib as plt,
+    scipy,
     scipy_available,
 )
 
@@ -53,12 +54,6 @@ from pyomo.common.errors import DeveloperError
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
-
-if numpy_available and scipy_available:
-    from pyomo.contrib.doe.grey_box_utilities import FIMExternalGreyBox
-
-    from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
-    from scipy.stats.qmc import LatinHypercube
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
@@ -1813,7 +1808,7 @@ class DesignOfExperiments:
         per_dim_samples = []
         for i in range(n_inputs):
             dim_seed = int(rng.integers(0, 2**31))
-            sampler = LatinHypercube(d=1, seed=dim_seed)
+            sampler = scipy.stats.qmc.LatinHypercube(d=1, seed=dim_seed)
             s_unit = sampler.random(n=lhs_n_samples).flatten()
             s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
             per_dim_samples.append(s_scaled.tolist())
@@ -3790,6 +3785,11 @@ class DesignOfExperiments:
         so each scenario contributes its aggregated FIM metric to the outer
         objective sum.
         """
+        from pyomo.contrib.doe.grey_box_utilities import FIMExternalGreyBox
+        from pyomo.contrib.pynumero.interfaces.external_grey_box import (
+            ExternalGreyBoxBlock,
+        )
+
         # Add external grey box block to a block named ``obj_cons`` to
         # reuse material for initializing the objective-free square model
         if model is None:
