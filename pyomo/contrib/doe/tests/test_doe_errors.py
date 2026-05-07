@@ -1223,7 +1223,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             with warnings.catch_warnings(record=True) as warn_cm:
                 warnings.simplefilter("always")
                 with patch(
-                    "pyomo.contrib.doe.doe._combinations", return_value=iter([(0, 1)])
+                    "pyomo.contrib.doe.doe.combinations", return_value=iter([(0, 1)])
                 ):
                     with patch.object(
                         doe_obj,
