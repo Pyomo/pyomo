@@ -1592,9 +1592,9 @@ class Estimator:
                     attempts += 1
                     if attempts > num_samples:  # arbitrary timeout limit
                         raise RuntimeError(
-                            """Internal error: timeout constructing
-                                           a sample, the dim of theta may be too
-                                           close to the samplesize"""
+                            "Internal error: timeout constructing "
+                            "a sample, the dim of theta may be too "
+                            "close to the samplesize"
                         )
 
                 samplelist.append((i, sample))
@@ -2801,9 +2801,9 @@ class _DeprecatedEstimator:
                     attempts += 1
                     if attempts > num_samples:  # arbitrary timeout limit
                         raise RuntimeError(
-                            """Internal error: timeout constructing
-                                           a sample, the dim of theta may be too
-                                           close to the samplesize"""
+                            "Internal error: timeout constructing "
+                            "a sample, the dim of theta may be too "
+                            "close to the samplesize"
                         )
 
                 samplelist.append((i, sample))
