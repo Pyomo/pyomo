@@ -345,28 +345,49 @@ def _get_labeled_model(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
+def _check_index_is_scalar_or_local(index):
+    """
+    Checks if experiment outputs are not indexed or their indices
+    are strings, e.g., `m.y1`, `m.y2`, `m.C["A"]`, `m.C["B"]`
+    """
+    return index is None or isinstance(index, str)
+
+
+def _format_outputs_index_as_tuple(index):
+    """
+    Formats the indices of indexed experiment outputs
+    (e.g., `m.CA[t]`, `m.CB[t]`, `m.C[t, "A"]`, `m.C[t, "B"]`) as a
+    tuple
+    """
+    if isinstance(index, tuple):
+        return index
+    return (index,)
+
+
 def _count_total_experiments(experiment_list):
     """
     Counts the number of data points in the list of experiments
 
-    Assumptions made:
+    This function has been updated to avoid double counting data points in
+    cases where the "experiment_outputs" suffix contain keys that belong
+    to different output variables (e.g., `m.y1`, `m.y2`) which are measured at
+    the same data point
 
-    Currently assumes the number of data points in each experiment is equal to the
-    number of keys in the "experiment_outputs" suffix that belong to the same parent
-    component, which is the case for the example models in the documentation.
+    Assumptions:
 
-    This is to avoid double counting data points in cases where the "experiment_outputs"
-    suffix contains keys that belong to different parent components, e.g., when there are
-    multiple measured variables with different time points.
+    Experiment outputs can be scaler or local variables
+    (e.g., `m.y1`, `m.y2`, `m.C["A"]`)
 
-    Also assumes that the variables are indexed either by a single index or by a tuple
-    where the time information is stored in the first index. Within each experiment,
-    the output families are expected to share the same time points. Across experiments,
-    the output families are expected to contain the same number of time points.
+    Experiment output variables can be indexed by a single index
+    (e.g., `m.CA[t]`, `m.CB[t]`) or by two or more indices
+    (e.g., `m.C[t, "A"]`, `m.C[t, "B"]`). In both cases, the data-point variable
+    (e.g., `t` as in time) is stored in the first index. Within each experiment,
+    the output families are expected to share the same time points. Across
+    experiments, the output families are expected to contain the same number of
+    time points.
 
     Future versions will allow for heterogeneity in the number of data points across
     experiments and will require changes to this function.
-
 
     Parameters
     ----------
@@ -380,56 +401,50 @@ def _count_total_experiments(experiment_list):
         The total number of data points in the list of experiments
     """
 
-    def _get_alignment_index(output_var):
-        var_index = output_var.index()
-        if isinstance(var_index, tuple):
-            return var_index[0]
-        return var_index
-
     total_data_points = 0
-    expected_points_per_experiment = None
+
     for experiment in experiment_list:
         output_vars = experiment.get_labeled_model().experiment_outputs
-        output_var_keys = list(output_vars.keys())
-        assert (
-            output_var_keys
-        ), "Experiment output suffix must contain at least one key."
 
-        grouped_output_vars = {}
-        for output_var in output_var_keys:
-            # Use component name as a stable, hashable key for ScalarVar/IndexedVar.
-            parent_name = output_var.parent_component().name
-            grouped_output_vars.setdefault(parent_name, []).append(output_var)
+        # store the indices of the experiment outputs
+        indices = []
 
-        first_parent_indices = next(iter(grouped_output_vars.values()))
-        first_parent_alignment = [
-            _get_alignment_index(output_var) for output_var in first_parent_indices
-        ]
+        for output_var in output_vars.keys():
+            index = output_var.index()
+            indices.append(index)
 
-        # All output families in one experiment must align on the same index points.
-        for parent_indices in grouped_output_vars.values():
-            assert len(parent_indices) == len(first_parent_indices), (
-                "Experiment output families must have the same number of labeled "
-                "points within each experiment."
-            )
-            assert [
-                _get_alignment_index(output_var) for output_var in parent_indices
-            ] == first_parent_alignment, (
-                "Experiment output families must share the same time/alignment "
-                "points within each experiment, with time information provided by "
-                "the single index or the first element of a tuple index."
-            )
+        # Case 1 and 2:
+        # scalar outputs such as m.y1, m.y2
+        # local outputs such as m.C["A"], m.C["B"]
+        # each experiment object represents one data point
+        if all(_check_index_is_scalar_or_local(index) for index in indices):
+            total_data_points += 1
+            continue
 
-        points_in_experiment = len(first_parent_indices)
-        if expected_points_per_experiment is None:
-            expected_points_per_experiment = points_in_experiment
+        # Case 3:
+        # one index time-series outputs such as m.CA[t], m.CB[t],...
+        # two index time-series outputs such as m.C[t, "A"], m.C[t, "B"],...
+        # first index must be the data-point axis
+        # count unique time/sample indices within this experiment.
+        experiment_data_points = set()
+
+        for index in indices:
+            if _check_index_is_scalar_or_local(index):
+                continue
+
+            index_tuple = _format_outputs_index_as_tuple(index)
+
+            # if index is scalar, this gives index itself
+            # if index is tuple-like, assume first entry is the data-point variable
+            data_point = index_tuple[0]
+
+            experiment_data_points.add(data_point)
+
+        # If no usable indexed outputs were found, default to one data point
+        if len(experiment_data_points) == 0:
+            total_data_points += 1
         else:
-            assert points_in_experiment == expected_points_per_experiment, (
-                "Experiments in experiment_list must contain the same number of "
-                "labeled points."
-            )
-
-        total_data_points += points_in_experiment
+            total_data_points += len(experiment_data_points)
 
     return total_data_points
 
@@ -1576,9 +1591,11 @@ class Estimator:
 
                     attempts += 1
                     if attempts > num_samples:  # arbitrary timeout limit
-                        raise RuntimeError("""Internal error: timeout constructing
+                        raise RuntimeError(
+                            """Internal error: timeout constructing
                                            a sample, the dim of theta may be too
-                                           close to the samplesize""")
+                                           close to the samplesize"""
+                        )
 
                 samplelist.append((i, sample))
 
@@ -2783,9 +2800,11 @@ class _DeprecatedEstimator:
 
                     attempts += 1
                     if attempts > num_samples:  # arbitrary timeout limit
-                        raise RuntimeError("""Internal error: timeout constructing
+                        raise RuntimeError(
+                            """Internal error: timeout constructing
                                            a sample, the dim of theta may be too
-                                           close to the samplesize""")
+                                           close to the samplesize"""
+                        )
 
                 samplelist.append((i, sample))
 
