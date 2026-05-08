@@ -1780,7 +1780,9 @@ class TestParmestBlockEF(unittest.TestCase):
             )
         ]
         with self.assertRaisesRegex(
-            AssertionError, "Experiment outputs must have the same number of indices"
+            AssertionError,
+            "Experiment output variables must have the same "
+            "number of indices (data points)",
         ):
             parmest._count_total_experiments(exp_list)
 
@@ -1791,7 +1793,20 @@ class TestParmestBlockEF(unittest.TestCase):
             )
         ]
         with self.assertRaisesRegex(
-            AssertionError, "Experiment outputs must share the same indices"
+            AssertionError,
+            "Experiment output variables must share the same indices (data points)",
+        ):
+            parmest._count_total_experiments(exp_list)
+
+    def test_count_total_experiments_rejects_time_not_in_first_index(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[("A", 0.0), ("A", 1.0)]
+            )
+        ]
+        with self.assertRaisesRegex(
+            AssertionError,
+            "The first index of experiment output variables must be the data point",
         ):
             parmest._count_total_experiments(exp_list)
 

@@ -383,8 +383,27 @@ def validate_experiment_outputs(output_vars):
 
     # group indices by parent component
     for comp in output_vars:
+        index = comp.index()
+
+        # check if the output variable is a scalar (e.g., m.y1, m.y2)
+        # or has a local index (e.g., m.C["A"], m.C["B"])
+        if _check_index_is_scalar_or_local(index):
+            pass
+        else:
+            # format the indices of output variables
+            # (e.g., m.CA[t], m.CB[t], m.C[t, "A"], m.C[t, "B"]) as a tuple
+            index_tuple = _format_outputs_index_as_tuple(index)
+
+            # get the data-point index which is assumed to be at the first position
+            data_point = index_tuple[0]
+
+            assert isinstance(data_point, (int, float)), (
+                "The first index of experiment output variables "
+                "must be the data point"
+            )
+
         parent = comp.parent_component().name
-        grouped_indices[parent].append(comp.index())
+        grouped_indices[parent].append(index)
 
     # convert to a sorted unique tuples
     grouped_indices = {
@@ -394,21 +413,25 @@ def validate_experiment_outputs(output_vars):
     # reference index set
     names = list(grouped_indices.keys())
 
-    if len(names) <= 1:  # scalar output variable
+    if len(names) <= 1:  # only one output variable exist
         pass
+    else:
+        ref_name = names[0]
+        ref_indices = grouped_indices[ref_name]
 
-    ref_name = names[0]
-    ref_indices = grouped_indices[ref_name]
+        for name in names[1:]:
+            print(f"Length of {name}:", len(grouped_indices[name]))
+            print(f"Length of {ref_name}:", len(ref_indices))
 
-    for name in names[1:]:
+            assert len(grouped_indices[name]) == len(ref_indices), (
+                "Experiment output variables must have the same "
+                "number of indices (data points)"
+            )
 
-        assert len(grouped_indices[name]) == len(ref_indices), (
-            "Experiment outputs must have the same " "number of indices"
-        )
-
-        assert (
-            grouped_indices[name] == ref_indices
-        ), "Experiment outputs must share the same indices"
+            assert grouped_indices[name] == ref_indices, (
+                "Experiment output variables must share the same "
+                "indices (data points)"
+            )
 
 
 def _count_total_experiments(experiment_list):
@@ -423,7 +446,7 @@ def _count_total_experiments(experiment_list):
     Assumptions:
 
     Experiment outputs can be scaler or local variables
-    (e.g., `m.y1`, `m.y2`, `m.C["A"]`)
+    (e.g., `m.y1`, `m.y2`, `m.C["A"]`, `m.C["B"]`)
 
     Experiment output variables can be indexed by a single index
     (e.g., `m.CA[t]`, `m.CB[t]`) or by two or more indices
@@ -464,8 +487,8 @@ def _count_total_experiments(experiment_list):
             indices.append(index)
 
         # Case 1 and 2:
-        # scalar outputs such as m.y1, m.y2
-        # local outputs such as m.C["A"], m.C["B"]
+        # scalar outputs such as m.y1, m.y2,...
+        # local outputs such as m.C["A"], m.C["B"],...
         # each experiment object represents one data point
         if all(_check_index_is_scalar_or_local(index) for index in indices):
             total_data_points += 1
@@ -479,9 +502,6 @@ def _count_total_experiments(experiment_list):
         experiment_data_points = set()
 
         for index in indices:
-            if _check_index_is_scalar_or_local(index):
-                continue
-
             index_tuple = _format_outputs_index_as_tuple(index)
 
             # if index is scalar, this gives index itself
@@ -1112,23 +1132,24 @@ class Estimator:
     def _create_scenario_blocks(self, bootlist=None, theta_vals=None, fix_theta=False):
         """
         Create scenario blocks for parameter estimation
+
         Parameters
         ----------
         bootlist : list, optional
-            List of bootstrap experiment numbers to use. If None, use all experiments in exp_list.
-            Default is None.
+            List of bootstrap experiment numbers to use. If None, use all experiments in
+            exp_list. Default is None.
         theta_vals : dict, optional
-            Dictionary of theta values to set in the model. If None, use default values from experiment class.
-            Default is None.
+            Dictionary of theta values to set in the model. If None, use default values
+            from experiment class. Default is None.
         fix_theta : bool, optional
             If True, fix the theta values in the model. If False, leave them free.
             Default is False.
+
         Returns
         -------
         model : ConcreteModel
-            Pyomo model with scenario blocks for parameter estimation. Contains indexed block for
-            each experiment in exp_list or bootlist.
-
+            Pyomo model with scenario blocks for parameter estimation. Contains indexed
+            block for each experiment in exp_list or bootlist.
         """
         # Build a clean parent EF container and attach one scenario model per block.
         model = pyo.ConcreteModel()
