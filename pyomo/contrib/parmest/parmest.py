@@ -397,10 +397,9 @@ def validate_experiment_outputs(output_vars):
             # get the data-point index which is assumed to be at the first position
             data_point = index_tuple[0]
 
-            assert isinstance(data_point, (int, float)), (
-                "The first index of experiment output variables "
-                "must be the data point"
-            )
+            assert isinstance(
+                data_point, (int, float)
+            ), "The first index of experiment outputs must be the data point"
 
         parent = comp.parent_component().name
         grouped_indices[parent].append(index)
@@ -423,15 +422,13 @@ def validate_experiment_outputs(output_vars):
             print(f"Length of {name}:", len(grouped_indices[name]))
             print(f"Length of {ref_name}:", len(ref_indices))
 
-            assert len(grouped_indices[name]) == len(ref_indices), (
-                "Experiment output variables must have the same "
-                "number of indices (data points)"
-            )
+            assert len(grouped_indices[name]) == len(
+                ref_indices
+            ), "Experiment outputs must have the same number of indices (data points)"
 
-            assert grouped_indices[name] == ref_indices, (
-                "Experiment output variables must share the same "
-                "indices (data points)"
-            )
+            assert (
+                grouped_indices[name] == ref_indices
+            ), "Experiment outputs must share the same indices (data points)"
 
 
 def _count_total_experiments(experiment_list):
