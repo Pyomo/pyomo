@@ -45,6 +45,7 @@ import json
 from collections.abc import Callable
 from itertools import combinations
 from functools import singledispatchmethod
+from collections import defaultdict
 
 from pyomo.common.dependencies import (
     attempt_import,
@@ -364,6 +365,54 @@ def _format_outputs_index_as_tuple(index):
     return (index,)
 
 
+def validate_experiment_outputs(output_vars):
+    """
+    Checks that:
+    1. All variables in the `experiment_outputs` attribute have the same
+    number of indices
+    2. All variables in the `experiment_outputs` attribute share the same
+    index set
+
+    Parameters
+    ----------
+    output_vars : pyomo.core.base.suffix.Suffix
+        Experiment output variables
+    """
+
+    grouped_indices = defaultdict(list)
+
+    # group indices by parent component
+    for comp in output_vars:
+        parent = comp.parent_component().name
+        grouped_indices[parent].append(comp.index())
+
+    # convert to a sorted unique tuples
+    grouped_indices = {
+        name: tuple(sorted(indices))
+        for name, indices in grouped_indices.items()
+    }
+
+    # reference index set
+    names = list(grouped_indices.keys())
+
+    if len(names) <= 1: # scalar output variable
+        pass
+
+    ref_name = names[0]
+    ref_indices = grouped_indices[ref_name]
+
+    for name in names[1:]:
+
+        assert len(grouped_indices[name]) == len(ref_indices), (
+            "Experiment outputs must have the same "
+            "number of indices"
+        )
+
+        assert grouped_indices[name] == ref_indices, (
+            "Experiment outputs must share the same indices"
+        )
+
+
 def _count_total_experiments(experiment_list):
     """
     Counts the number of data points in the list of experiments
@@ -406,6 +455,8 @@ def _count_total_experiments(experiment_list):
     for experiment in experiment_list:
         output_vars = experiment.get_labeled_model().experiment_outputs
 
+        # validate_experiment_outputs(output_vars)
+
         # store the indices of the experiment outputs
         indices = []
 
@@ -422,10 +473,10 @@ def _count_total_experiments(experiment_list):
             continue
 
         # Case 3:
-        # one index time-series outputs such as m.CA[t], m.CB[t],...
-        # two index time-series outputs such as m.C[t, "A"], m.C[t, "B"],...
-        # first index must be the data-point axis
-        # count unique time/sample indices within this experiment.
+        # one index outputs such as m.CA[t], m.CB[t],...
+        # two index outputs such as m.C[t, "A"], m.C[t, "B"],...
+        # first index must be the data-point variable
+        # count unique time/sample indices within this experiment
         experiment_data_points = set()
 
         for index in indices:
@@ -440,7 +491,7 @@ def _count_total_experiments(experiment_list):
 
             experiment_data_points.add(data_point)
 
-        # If no usable indexed outputs were found, default to one data point
+        # if no usable indexed outputs were found, default to one data point
         if len(experiment_data_points) == 0:
             total_data_points += 1
         else:

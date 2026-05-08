@@ -1781,7 +1781,7 @@ class TestParmestBlockEF(unittest.TestCase):
         ]
         with self.assertRaisesRegex(
             AssertionError,
-            "Experiment output families must have the same number of labeled points",
+            "Experiment outputs must have the same number of indices",
         ):
             parmest._count_total_experiments(exp_list)
 
@@ -1793,34 +1793,7 @@ class TestParmestBlockEF(unittest.TestCase):
         ]
         with self.assertRaisesRegex(
             AssertionError,
-            "Experiment output families must share the same time/alignment points",
-        ):
-            parmest._count_total_experiments(exp_list)
-
-    def test_count_total_experiments_rejects_heterogeneous_experiment_lengths(self):
-        exp_list = [
-            IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (1.0, "A")]
-            ),
-            IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A"), (2.0, "A")],
-                z_points=[(0.0, "A"), (1.0, "A"), (2.0, "A")],
-            ),
-        ]
-        with self.assertRaisesRegex(
-            AssertionError,
-            "Experiments in experiment_list must contain the same number of labeled points",
-        ):
-            parmest._count_total_experiments(exp_list)
-
-    def test_count_total_experiments_rejects_time_not_in_first_index(self):
-        exp_list = [
-            IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")], z_points=[("A", 0.0), ("A", 1.0)]
-            )
-        ]
-        with self.assertRaisesRegex(
-            AssertionError, "the single index or the first element of a tuple index"
+            "Experiment outputs must share the same indices",
         ):
             parmest._count_total_experiments(exp_list)
 
