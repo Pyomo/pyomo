@@ -388,14 +388,13 @@ def validate_experiment_outputs(output_vars):
 
     # convert to a sorted unique tuples
     grouped_indices = {
-        name: tuple(sorted(indices))
-        for name, indices in grouped_indices.items()
+        name: tuple(sorted(indices)) for name, indices in grouped_indices.items()
     }
 
     # reference index set
     names = list(grouped_indices.keys())
 
-    if len(names) <= 1: # scalar output variable
+    if len(names) <= 1:  # scalar output variable
         pass
 
     ref_name = names[0]
@@ -404,13 +403,12 @@ def validate_experiment_outputs(output_vars):
     for name in names[1:]:
 
         assert len(grouped_indices[name]) == len(ref_indices), (
-            "Experiment outputs must have the same "
-            "number of indices"
+            "Experiment outputs must have the same " "number of indices"
         )
 
-        assert grouped_indices[name] == ref_indices, (
-            "Experiment outputs must share the same indices"
-        )
+        assert (
+            grouped_indices[name] == ref_indices
+        ), "Experiment outputs must share the same indices"
 
 
 def _count_total_experiments(experiment_list):
@@ -455,7 +453,8 @@ def _count_total_experiments(experiment_list):
     for experiment in experiment_list:
         output_vars = experiment.get_labeled_model().experiment_outputs
 
-        # validate_experiment_outputs(output_vars)
+        # check if the experiment outputs are defined correctly
+        validate_experiment_outputs(output_vars)
 
         # store the indices of the experiment outputs
         indices = []

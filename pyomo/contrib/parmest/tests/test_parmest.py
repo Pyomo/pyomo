@@ -1780,8 +1780,7 @@ class TestParmestBlockEF(unittest.TestCase):
             )
         ]
         with self.assertRaisesRegex(
-            AssertionError,
-            "Experiment outputs must have the same number of indices",
+            AssertionError, "Experiment outputs must have the same number of indices"
         ):
             parmest._count_total_experiments(exp_list)
 
@@ -1792,8 +1791,7 @@ class TestParmestBlockEF(unittest.TestCase):
             )
         ]
         with self.assertRaisesRegex(
-            AssertionError,
-            "Experiment outputs must share the same indices",
+            AssertionError, "Experiment outputs must share the same indices"
         ):
             parmest._count_total_experiments(exp_list)
 
