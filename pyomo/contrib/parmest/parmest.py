@@ -424,11 +424,11 @@ def validate_experiment_outputs(output_vars):
 
             assert len(grouped_indices[name]) == len(
                 ref_indices
-            ), "Experiment outputs must have the same number of indices (data points)"
+            ), "Experiment outputs must have the same number of indices or data points"
 
             assert (
                 grouped_indices[name] == ref_indices
-            ), "Experiment outputs must share the same indices (data points)"
+            ), "Experiment outputs must share the same indices or data points"
 
 
 def _count_total_experiments(experiment_list):
