@@ -6,9 +6,9 @@ gain from experiments by directly using science-based models with physically mea
 parameters. It is one key component in the model calibration and uncertainty
 quantification workflow shown below:
 
-.. figure:: pyomo_workflow_new.png
+.. image:: pyomo_workflow_new.png
   :align: center
-  :scale: 90 %
+  :width: 90 %
 
 The parameter estimation, uncertainty analysis, and MBDoE are
 combined into an iterative framework to select, refine, and calibrate science-based
