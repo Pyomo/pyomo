@@ -12,7 +12,7 @@ Covariance Matrix Estimation
 ----------------------------
 
 The uncertainty in estimated model parameters can be quantified by computing the covariance matrix.
-The diagonal of this covariance matrix contains the variance of the estimated parameters which is used to
+The diagonal of this covariance matrix contains the variance of the estimated parameters, which is used to
 calculate their uncertainty. Assuming Gaussian independent and identically distributed measurement errors,
 the covariance matrix of the estimated parameters can be computed using the following methods which have been
 implemented in parmest.
