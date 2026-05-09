@@ -3,7 +3,7 @@
 Quick Start Guide
 =================
 
-To use Pyomo.DoE, a user must implement a subclass of the :ref:`Parmest <parmest>` ``Experiment`` class.
+To use Pyomo.DoE, a user must implement a subclass of the :ref:`Parmest <parmest>` :class:`Experiment` class.
 The subclass must have a ``get_labeled_model`` method which returns a Pyomo :class:`ConcreteModel`
 containing four Pyomo :class:`Suffix` components identifying the parts of the model used in
 MBDoE analysis. This is in line with the convention used in the parameter estimation tool,
