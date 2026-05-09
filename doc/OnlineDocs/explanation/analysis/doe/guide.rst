@@ -94,7 +94,7 @@ the class. This step is required before the model can be labeled.
 Step 3: Label the information needed for DoE analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We label the four important groups as Pyomo Suffix components as mentioned before by
+We label the four important groups using Pyomo :class:`Suffix` components as mentioned before by
 adding a ``label_experiment`` method. This method is required by Pyomo.DoE to identify
 the design variables (experimental inputs), measurements, measurement errors, and
 unknown parameters in the model.
