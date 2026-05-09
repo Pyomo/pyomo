@@ -116,7 +116,7 @@ to perform optimal experimental design.
 Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-After creating the subclass of the ``Experiment`` class, exploratory analysis is
+After creating the subclass of the :class:`Experiment` class, exploratory analysis is
 suggested to enumerate the design space to check if the problem is identifiable,
 i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and
 Modified E-optimality is not a big number.
