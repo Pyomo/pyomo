@@ -14,7 +14,7 @@ MBDoE analysis. This is in line with the convention used in the parameter estima
 * ``measurement_error`` - The error associated with individual values measured during the experiment. It is passed as a standard deviation or square root of the diagonal elements of the observation error covariance matrix. Pyomo.DoE currently assumes that the observation errors are Gaussain and independent both in time and across measurements.
 * ``unknown_parameters`` - Those parameters in the model that are estimated using the measured values during the experiment
 
-An example of the subclassed ``Experiment`` object that builds and labels the model is shown in the next few sections.
+An example of the subclassed :class:`Experiment` object that builds and labels the model is shown in the next few sections.
 
 This guide illustrates the use of Pyomo.DoE using a reaction kinetics example (Wang and Dowling, 2022).
 
