@@ -3,8 +3,9 @@
 Uncertainty Quantification
 ==========================
 The goal of parameter estimation (see :ref:`driversection` Section) is to estimate unknown model parameters
-from experimental data. Uncertainty quantification is required to ensure that the estimates of the parameters are
-close to their true values. This parameter uncertainty can be computed using four methods in parmest:
+from experimental data. Uncertainty quantification then aims to characterize
+how close the parameter estimates are to their true (unknown) values. 
+This parameter uncertainty can be computed using four methods in parmest:
 covariance matrix, likelihood ratio test, bootstrapping, and leave-N-out.
 
 Covariance Matrix Estimation
