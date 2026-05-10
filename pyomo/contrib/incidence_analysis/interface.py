@@ -36,7 +36,9 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     RowPartition,
     ColPartition,
 )
-from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
+from pyomo.contrib.incidence_analysis.incidence import (
+    get_variables_incident_to_constraint,
+)
 from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
@@ -103,7 +105,7 @@ def get_bipartite_incidence_graph(variables, constraints, **kwds):
     graph.add_nodes_from(range(M, M + N), bipartite=1)
     var_node_map = ComponentMap((v, M + i) for i, v in enumerate(variables))
     for i, con in enumerate(constraints):
-        for var in get_incident_variables(con.body, **config):
+        for var in get_variables_incident_to_constraint(con, **config):
             if var in var_node_map:
                 graph.add_edge(i, var_node_map[var])
     return graph
@@ -167,7 +169,7 @@ def _generate_variables_in_constraints(constraints, **kwds):
     config = get_config_from_kwds(**kwds)
     known_vars = ComponentSet()
     for con in constraints:
-        for var in get_incident_variables(con.body, **config):
+        for var in get_variables_incident_to_constraint(con, **config):
             if var not in known_vars:
                 known_vars.add(var)
                 yield var
@@ -201,7 +203,7 @@ def get_structural_incidence_matrix(variables, constraints, **kwds):
     for i, con in enumerate(constraints):
         cols.extend(
             var_idx_map[v]
-            for v in get_incident_variables(con.body, **config)
+            for v in get_variables_incident_to_constraint(con, **config)
             if v in var_idx_map
         )
         rows.extend([i] * (len(cols) - len(rows)))
