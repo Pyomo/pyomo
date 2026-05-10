@@ -52,6 +52,7 @@ if pyomo_nlp_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
         PyomoNLPWithGreyBoxBlocks,
     )
+# Note that this flag is only used in test_interface.py
 asl_available = pyomo_nlp_available & AmplInterface.available()
 
 
