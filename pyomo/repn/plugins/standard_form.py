@@ -86,13 +86,14 @@ class LinearStandardFormInfo:
         == 2``, only produced when ``keep_range_constraints=True``),
         this holds the adjusted *upper* bound ``ub - offset``.
 
-    rhs_range : numpy.ndarray
+    rhs_range : numpy.ndarray or None
 
-        Range widths for range rows: ``rhs_range[i] = ub - lb``.  For
-        all other row types the value is ``0.0``.  When
-        ``keep_range_constraints=False`` (the default) this array
-        contains only zeros.  The adjusted lower bound for a range row
-        can be recovered as ``rhs[i] - rhs_range[i]``.
+        Range widths for range rows: ``rhs_range[i] = ub - lb`` for
+        ``bound_type == 2`` rows.  ``None`` when
+        ``keep_range_constraints=False`` (the default) or when the
+        model contains no range constraints.  When not ``None``, the
+        adjusted lower bound for a range row can be recovered as
+        ``rhs[i] - rhs_range[i]``.
 
     rows : List[Tuple[ConstraintData, int]]
 
@@ -452,7 +453,7 @@ class _LinearStandardFormCompiler_impl:
             )
         rows = []
         rhs = []
-        rhs_range = []
+        rhs_range = [] if keep_range_constraints else None
         con_nnz = 0
         con_data = []
         con_index = []
@@ -510,7 +511,8 @@ class _LinearStandardFormCompiler_impl:
                     con_nnz += N
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
-                    rhs_range.append(0.0)
+                    if keep_range_constraints:
+                        rhs_range.append(0.0)
                     con_data.append(linear_data)
                     con_index.append(linear_index)
                     con_index_ptr.append(con_nnz)
@@ -531,7 +533,8 @@ class _LinearStandardFormCompiler_impl:
                         con_nnz += N
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
-                        rhs_range.append(0.0)
+                        if keep_range_constraints:
+                            rhs_range.append(0.0)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
@@ -539,7 +542,8 @@ class _LinearStandardFormCompiler_impl:
                         con_nnz += N
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
-                        rhs_range.append(0.0)
+                        if keep_range_constraints:
+                            rhs_range.append(0.0)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
@@ -570,7 +574,6 @@ class _LinearStandardFormCompiler_impl:
                     linear_index.append(slack_col)
                 con_nnz += N
                 rows.append(RowEntry(con, 1))
-                rhs_range.append(0.0)
                 con_data.append(linear_data)
                 con_index.append(linear_index)
                 con_index_ptr.append(con_nnz)
@@ -592,7 +595,8 @@ class _LinearStandardFormCompiler_impl:
                         con_nnz += N
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
-                        rhs_range.append(0.0)
+                        if keep_range_constraints:
+                            rhs_range.append(0.0)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
@@ -600,7 +604,8 @@ class _LinearStandardFormCompiler_impl:
                         con_nnz += N
                         rows.append(RowEntry(con, -1))
                         rhs.append(offset - lb)
-                        rhs_range.append(0.0)
+                        if keep_range_constraints:
+                            rhs_range.append(0.0)
                         con_data.append(-np.array(list(linear_data)))
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
@@ -681,7 +686,7 @@ class _LinearStandardFormCompiler_impl:
             obj_offset,
             A,
             rhs,
-            np.array(rhs_range),
+            np.array(rhs_range) if keep_range_constraints else None,
             rows,
             columns,
             objectives,
