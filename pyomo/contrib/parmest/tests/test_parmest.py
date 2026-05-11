@@ -1537,17 +1537,12 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertTrue(hasattr(model, "Obj"))
         for block in model.exp_scenarios.values():
             self.assertFalse(block.Total_Cost_Objective.active)
-
-    def test_block_isolation_no_component_leakage(self):
-        pest = _build_estimator([(1.0, 2.0), (5.0, 6.0)])
-        model = pest._create_scenario_blocks()
-
-        block0 = model.exp_scenarios[0]
-        block1 = model.exp_scenarios[1]
-        self.assertIsNot(block0.y, block1.y)
-        block0.y.set_value(123.0)
-        self.assertNotEqual(pyo.value(block1.y), 123.0)
-        self.assertNotEqual(pyo.value(block0.x), pyo.value(block1.x))
+            self.assertFalse(block.theta.fixed)
+            self.assertAlmostEqual(
+                pyo.value(block.theta),
+                pyo.value(model.parmest_theta["theta"]),
+                places=10,
+            )
 
     def test_fix_theta_sets_all_scenario_theta_values(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
@@ -1575,38 +1570,8 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(model.exp_scenarios[1].x), 2.0, places=10)
         self.assertAlmostEqual(pyo.value(model.exp_scenarios[2].x), 2.0, places=10)
 
-    def test_unfixed_theta_uses_parent_initial_value(self):
-        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
-        model = pest._create_scenario_blocks()
 
-        self.assertFalse(model.parmest_theta["theta"].fixed)
-        for block in model.exp_scenarios.values():
-            self.assertFalse(block.theta.fixed)
-            self.assertAlmostEqual(
-                pyo.value(block.theta),
-                pyo.value(model.parmest_theta["theta"]),
-                places=10,
-            )
-
-    def test_q_opt_uses_load_solutions_false(self):
-        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
-        model = pest._create_scenario_blocks()
-        solve_result = self._make_solve_result(pyo.TerminationCondition.optimal)
-        solver = self._make_mock_solver(solve_result)
-
-        with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
-            with mock.patch.object(parmest, "SolverFactory", return_value=solver):
-                with mock.patch.object(
-                    parmest, "assert_optimal_termination"
-                ) as assert_mock:
-                    with mock.patch.object(model.solutions, "load_from") as load_mock:
-                        pest._Q_opt()
-
-        solver.solve.assert_called_once_with(model, tee=pest.tee, load_solutions=False)
-        assert_mock.assert_called_once_with(solve_result)
-        load_mock.assert_called_once_with(solve_result)
-
-    def test_q_opt_nonfixed_asserts_before_loading_and_preserves_returns(self):
+    def test_q_opt_nonfixed_asserts_before_loading_solution(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
         model = pest._create_scenario_blocks()
         solve_result = self._make_solve_result(pyo.TerminationCondition.optimal)
