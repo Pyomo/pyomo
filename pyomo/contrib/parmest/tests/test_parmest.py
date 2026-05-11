@@ -1570,7 +1570,6 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(model.exp_scenarios[1].x), 2.0, places=10)
         self.assertAlmostEqual(pyo.value(model.exp_scenarios[2].x), 2.0, places=10)
 
-
     def test_q_opt_nonfixed_asserts_before_loading_solution(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
         model = pest._create_scenario_blocks()
