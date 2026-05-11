@@ -12,6 +12,7 @@ from math import copysign
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import document_kwargs_from_configdict
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
@@ -84,6 +85,43 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     @staticmethod
     def _quadratic_curvature(expr):
         repn = generate_standard_repn(expr, quadratic=True)
+        if not repn.quadratic_coefs:
+            return 0
+
+        if numpy_available:
+            var_to_idx = ComponentMap()
+            for _coef, (v1, v2) in zip(repn.quadratic_coefs, repn.quadratic_vars):
+                if v1 not in var_to_idx:
+                    var_to_idx[v1] = len(var_to_idx)
+                if v2 not in var_to_idx:
+                    var_to_idx[v2] = len(var_to_idx)
+
+            q_matrix = np.zeros((len(var_to_idx), len(var_to_idx)))
+            for coef, (v1, v2) in zip(repn.quadratic_coefs, repn.quadratic_vars):
+                coef_val = value(coef, exception=False)
+                if coef_val is None:
+                    return None
+                idx1 = var_to_idx[v1]
+                idx2 = var_to_idx[v2]
+                if v1 is v2:
+                    q_matrix[idx1, idx1] += coef_val
+                else:
+                    half_coef = 0.5 * coef_val
+                    q_matrix[idx1, idx2] += half_coef
+                    q_matrix[idx2, idx1] += half_coef
+
+            eigenvalue_tolerance = 1e-10
+            eigenvalues = np.linalg.eigvalsh(q_matrix)
+            is_psd = not np.any(eigenvalues < -eigenvalue_tolerance)
+            is_nsd = not np.any(eigenvalues > eigenvalue_tolerance)
+            if is_psd and is_nsd:
+                return 0
+            if is_psd:
+                return 1
+            if is_nsd:
+                return -1
+            return None
+
         curvature = 0
         for coef, (v1, v2) in zip(repn.quadratic_coefs, repn.quadratic_vars):
             if v1 is not v2:
