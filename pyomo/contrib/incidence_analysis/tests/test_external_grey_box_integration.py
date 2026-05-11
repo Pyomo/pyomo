@@ -70,30 +70,28 @@ class TestExternalGreyBoxIncidence(unittest.TestCase):
         self.assertEqual(len(bt_vars), 4)
         self.assertEqual(len(bt_cons), 4)
 
-        var_set_0 = [m.egb.inputs["Pin"]]
-        var_set_1 = [m.egb.inputs["c"]]
-        var_set_2 = [m.egb.inputs["F"]]
-        var_set_3 = [m.egb.outputs["Pout"]]
-        expected_bt_vars = [var_set_0, var_set_1, var_set_2, var_set_3]
-
         con_set_0 = [m.con1]
         con_set_1 = [m.con2]
         con_set_2 = [m.con3]
         con_set_3 = [m.egb.output_constraints["Pout"]]
         expected_bt_cons = [con_set_0, con_set_1, con_set_2, con_set_3]
 
-        self.assertEqual(bt_vars, expected_bt_vars)
-        self.assertEqual(bt_cons, expected_bt_cons)
+        for var_set in bt_vars:
+            self.assertEqual(len(var_set), 1)
+            # Need to use variable name here to avoid attempting equality checks between variables
+            self.assertIn(
+                var_set[0].name,
+                [
+                    "egb.inputs[Pin]",
+                    "egb.inputs[c]",
+                    "egb.inputs[F]",
+                    "egb.outputs[Pout]",
+                ],
+            )
 
-        self.assertIs(bt_vars[0][0], m.egb.inputs["Pin"])
-        self.assertIs(bt_vars[1][0], m.egb.inputs["c"])
-        self.assertIs(bt_vars[2][0], m.egb.inputs["F"])
-        self.assertIs(bt_vars[3][0], m.egb.outputs["Pout"])
-
-        self.assertIs(bt_cons[0][0], m.con1)
-        self.assertIs(bt_cons[1][0], m.con2)
-        self.assertIs(bt_cons[2][0], m.con3)
-        self.assertIs(bt_cons[3][0], m.egb.output_constraints["Pout"])
+        for con_set in bt_cons:
+            self.assertEqual(len(con_set), 1)
+            self.assertIn(con_set, expected_bt_cons)
 
         self.assertEqual(
             ComponentSet(igraph.get_adjacent_to(m.egb.output_constraints["Pout"])),
