@@ -1148,6 +1148,65 @@ class TestSolvers(unittest.TestCase):
                 res.solution_loader.get_reduced_costs()
 
     @mark_parameterized.expand(input=_load_tests(all_solvers))
+    def test_trivial_constraints(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x)
+        m.c3 = pyo.Constraint(expr=m.x >= 0)
+
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 0)
+
+        # trivially feasible constraint
+        m.x.fix(1)
+        opt.config.tee = True
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 1)
+        self.assertAlmostEqual(m.y.value, 1)
+
+        # trivially infeasible constraint
+        m.x.fix(-1)
+        with self.assertRaises(NoOptimalSolutionError):
+            res = opt.solve(m)
+
+        opt.config.raise_exception_on_nonoptimal_result = False
+        # FIXME: this should be consistent across solvers.
+        # See: https://github.com/Pyomo/pyomo/issues/3931
+        with self.assertRaises((NoSolutionError, NoFeasibleSolutionError)):
+            res = opt.solve(m)
+
+        opt.config.load_solutions = False
+        res = opt.solve(m)
+        self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
+        if isinstance(opt, Ipopt):
+            acceptable_termination_conditions = {
+                TerminationCondition.locallyInfeasible,
+                TerminationCondition.unbounded,
+                TerminationCondition.provenInfeasible,
+            }
+        else:
+            acceptable_termination_conditions = {
+                TerminationCondition.provenInfeasible,
+                TerminationCondition.infeasibleOrUnbounded,
+            }
+        self.assertIn(res.termination_condition, acceptable_termination_conditions)
+        self.assertIsNone(res.incumbent_objective)
+
+    @mark_parameterized.expand(input=_load_tests(all_solvers))
     def test_duals(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
