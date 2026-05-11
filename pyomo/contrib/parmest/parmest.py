@@ -81,6 +81,7 @@ inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
 
 logger = logging.getLogger(__name__)
 
+
 def SSE(model):
     """
     Returns an expression that is used to compute the sum of squared errors
@@ -2123,6 +2124,7 @@ class Estimator:
 # deprecated functions/classes #
 ################################
 
+
 # Only used in the deprecatedEstimator class after 6.10.1dev0
 def ef_nonants(ef):
     # Wrapper to call someone's ef_nonants
@@ -2131,6 +2133,7 @@ def ef_nonants(ef):
         return sputils.ef_nonants(ef)
     else:
         return local_ef.ef_nonants(ef)
+
 
 # Only used in the deprecatedEstimator class
 def _experiment_instance_creation_callback(
@@ -2272,6 +2275,7 @@ def _experiment_instance_creation_callback(
                 theta_object.unfix()
 
     return instance
+
 
 @deprecated(version='6.7.2')
 def group_data(data, groupby_column_name, use_mean=None):
