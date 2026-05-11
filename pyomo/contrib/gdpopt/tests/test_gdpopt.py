@@ -312,6 +312,41 @@ class TestGDPoptUnit(unittest.TestCase):
         self.assertEqual(c2.lower, 0)
         self.assertIsNone(c2.upper)
 
+    @unittest.skipIf(not mcpp_available(), "MC++ is not available")
+    def test_gloa_affine_cut_uses_convex_slope_for_upper_cut(self):
+        m = ConcreteModel()
+        m.P = Var(bounds=(0, 10), initialize=0.05)
+        m.Q = Var(bounds=(1, 10), initialize=1.000002190520329)
+        m.F = Var(bounds=(0, 10), initialize=0.050000453446344)
+        m.QP = Var(bounds=(0, 10), initialize=1.0)
+        m.c = Constraint(expr=m.P * m.Q - m.F * m.QP == 0)
+
+        m.GDPopt_utils = Block()
+        util_block = m.GDPopt_utils
+        util_block.algebraic_variable_list = [m.P, m.Q, m.F, m.QP]
+        util_block.global_constraint_list = [m.c]
+        util_block.constraints_by_disjunct = {}
+
+        config = Bunch(
+            logger=logging.getLogger('pyomo.contrib.gdpopt.tests'),
+            integer_tolerance=1e-6,
+            constraint_tolerance=1e-6,
+        )
+
+        SolverFactory('gdpopt.gloa')._add_cuts_to_discrete_problem(
+            util_block, util_block, None, config, Bunch()
+        )
+
+        feasible_point = [(m.P, 0.05), (m.Q, 1.1), (m.F, 0.055), (m.QP, 1.0)]
+        for var, val in feasible_point:
+            var.set_value(val)
+
+        aff_cuts = m.GDPopt_aff.GDPopt_aff_cons
+        self.assertEqual(len(aff_cuts), 2)
+        convex_cut = aff_cuts[1]
+        self.assertLessEqual(value(convex_cut.body), value(convex_cut.upper) + 1e-12)
+        self.assertAlmostEqual(value(convex_cut.body), -0.5)
+
     def test_complain_when_no_algorithm_specified(self):
         m = self.get_GDP_on_block()
         with self.assertRaisesRegex(
