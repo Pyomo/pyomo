@@ -408,6 +408,49 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
                 m, slack_form=True, keep_range_constraints=True
             )
 
+    def test_kernel_inf_bounds_normalized(self):
+        """Kernel constraints returning ±inf bounds are treated as unbounded (None).
+
+        pyomo.kernel constraints store ±inf explicitly rather than None for
+        unbounded sides.  LinearStandardFormCompiler must normalize these so
+        that a one-sided constraint is not misclassified as a range constraint.
+        """
+        import pyomo.kernel as pmo
+
+        m = pmo.block()
+        m.x = pmo.variable()
+        # lb=-inf (unbounded below) → should become a pure ≤ row, not a range row
+        m.c_ub = pmo.constraint(ub=2.0, body=m.x)
+        # ub=+inf (unbounded above) → should become a pure ≥ row, not a range row
+        m.c_lb = pmo.constraint(lb=-3.0, body=m.x)
+        # Explicit finite range → should still be a range row
+        m.c_rng = pmo.constraint((-1.0, m.x, 4.0))
+
+        repn = LinearStandardFormCompiler().write(
+            m, mixed_form=True, keep_range_constraints=True
+        )
+
+        by_con = {r.constraint: r.bound_type for r in repn.rows}
+        # ub-only: bound_type=1 (≤), not 2 (range)
+        self.assertEqual(by_con[m.c_ub], 1)
+        # lb-only: bound_type=-1 (≥), not 2 (range)
+        self.assertEqual(by_con[m.c_lb], -1)
+        # Finite range: bound_type=2
+        self.assertEqual(by_con[m.c_rng], 2)
+
+        # Verify rhs values
+        rhs_map = {r.constraint: repn.rhs[i] for i, r in enumerate(repn.rows)}
+        self.assertEqual(rhs_map[m.c_ub], 2.0)
+        self.assertEqual(rhs_map[m.c_lb], -3.0)
+        self.assertEqual(rhs_map[m.c_rng], 4.0)  # ub of range row
+
+        # rhs_range: only c_rng is a range row; range = 4 - (-1) = 5
+        rhs_range_map = {
+            r.constraint: repn.rhs_range[i] for i, r in enumerate(repn.rows)
+        }
+        self.assertEqual(rhs_range_map[m.c_ub], 0.0)
+        self.assertEqual(rhs_range_map[m.c_lb], 0.0)
+        self.assertEqual(rhs_range_map[m.c_rng], 5.0)
 
 class TestTemplatedLinearStandardFormCompiler(TestLinearStandardFormCompiler):
     def setUp(self):
