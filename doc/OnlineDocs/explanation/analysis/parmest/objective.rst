@@ -1,4 +1,4 @@
-.. _objectivesection:
+.. parmest_objective_section:
 
 Objective Options
 =================

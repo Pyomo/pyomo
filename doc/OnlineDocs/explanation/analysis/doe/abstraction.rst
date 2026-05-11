@@ -1,4 +1,4 @@
-.. _abstractexp:
+.. doe_abstract_exp:
 
 Experiment Abstraction
 ======================

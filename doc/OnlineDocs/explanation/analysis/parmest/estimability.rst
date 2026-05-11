@@ -1,12 +1,12 @@
-.. _estimabilitysection:
+.. parmest_estimability_section:
 
 Estimability Analysis
 =====================
 
 After estimating the model parameters with their associated uncertainty, as demonstrated in the
-:ref:`driversection` and :ref:`covariancesection` Sections, estimability analysis is required to identify
+:ref:`driversection` and :ref:`parmest_covariance_section` Sections, estimability analysis is required to identify
 parameters that cannot be reliably estimated from the available data due to limitations in the mathematical
-model structure. If such parameters are identified, the model may need to be reformulated, replaced with an
+model structure. If such parameters exist, the model may need to be reformulated, replaced with an
 alternative structure, or augmented with additional prior information. In parmest, estimability analysis can
 be performed using eigen-decomposition of the parameter covariance matrix, profile likelihood methods, or
 multi-start initialization routines.

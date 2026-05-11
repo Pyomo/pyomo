@@ -1,4 +1,4 @@
-.. _multexperiments:
+.. doe_multexperiments:
 
 Multiple Experiments
 ====================

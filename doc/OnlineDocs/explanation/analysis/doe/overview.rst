@@ -17,15 +17,14 @@ increasing parameter precision.
 
 Pyomo.DoE provides the exploratory analysis and MBDoE capabilities to the
 Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
-the allowable design spaces for design variables, and the assumed observation error model.
-During exploratory analysis, Pyomo.DoE checks if the model parameters can be
-inferred from the postulated measurements or preliminary data.
-MBDoE then recommends optimized experimental conditions for collecting more data.
+the allowable design spaces for design variables, and the postulated observation error model.
+During exploratory analysis, Pyomo.DoE checks experimental design conditions that will provide
+the most informative experimental outputs (i.e., data) to estimate the model parameters.
 Parameter estimation packages such as :ref:`Parmest <parmest>` can perform
 parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
-If the parameter uncertainties are sufficiently small, the workflow terminates
-and returns the final model with quantified parametric uncertainty.
+If the parameter uncertainties are sufficiently small (i.e., at a level acceptable to the user),
+the workflow terminates and returns the final model with quantified parametric uncertainty.
 If not, MBDoE recommends optimized experimental conditions to generate new data
 that will maximize information gain and eventually reduce parameter uncertainty.
 
@@ -57,7 +56,7 @@ where:
 *  :math:`\mathbf{z} \subseteq \mathcal{Z}` are algebraic state variables, :math:`\mathcal{Z} \in \mathbb{R}^{N_z \times N_t}`.
 *  :math:`\mathbf{u} \subseteq \mathcal{U}` are time-varying decision variables,  :math:`\mathcal{U} \in \mathbb{R}^{N_u \times N_t}`.
 *  :math:`\overline{\mathbf{w}} \in \mathbb{R}^{N_w}` are time-invariant decision variables.
-*  :math:`\mathbf{y} \subseteq \mathcal{Y}` are measurement response variables,   :math:`\mathcal{Y} \in \mathbb{R}^{N_r \times N_t}`.
+*  :math:`\mathbf{y} \subseteq \mathcal{Y}` are measured variables (i.e., experimental outputs), :math:`\mathcal{Y} \in \mathbb{R}^{N_r \times N_t}`.
 *  :math:`\mathbf{f}(\cdot)` are differential equations.
 *  :math:`\mathbf{g}(\cdot)` are algebraic equations.
 *  :math:`\mathbf{h}(\cdot)` are measurement functions.

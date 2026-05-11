@@ -1,4 +1,4 @@
-.. _startguide:
+.. doe_start_guide:
 
 Quick Start Guide
 =================
@@ -10,9 +10,9 @@ MBDoE analysis. This is in line with the convention used in the parameter estima
 :ref:`Parmest <parmest>`. The four Pyomo :class:`Suffix` components are:
 
 * ``experiment_inputs`` - The experimental design decisions
-* ``experiment_outputs`` - The values measured during the experiment
-* ``measurement_error`` - The error associated with individual values measured during the experiment. It is passed as a standard deviation or square root of the diagonal elements of the observation error covariance matrix. Pyomo.DoE currently assumes that the observation errors are Gaussain and independent both in time and across measurements.
-* ``unknown_parameters`` - Those parameters in the model that are estimated using the measured values during the experiment
+* ``experiment_outputs`` - The variables that are being measured
+* ``measurement_error`` - The error associated with the measured value of the experimental outputs. It is passed as a standard deviation or square root of the diagonal elements of the observation (measurement) error covariance matrix. Pyomo.DoE currently assumes that the observation errors are Gaussian and independent both in time and across measurements.
+* ``unknown_parameters`` - Those parameters in the model that are estimated from the experimental outputs
 
 An example of the subclassed :class:`Experiment` object that builds and labels the model is shown in the next few sections.
 
@@ -84,8 +84,8 @@ the model without any data or discretization.
 Step 2: Finalize the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here, we add data to the model and finalize the discretization using a new method to
-the class. This step is required before the model can be labeled.
+Here, we add data to the model and discretize it. This step is required before
+the model can be labeled.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End equation definition
@@ -94,10 +94,10 @@ the class. This step is required before the model can be labeled.
 Step 3: Label the information needed for DoE analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We label the four important groups using Pyomo :class:`Suffix` components as mentioned before by
-adding a ``label_experiment`` method. This method is required by Pyomo.DoE to identify
-the design variables (experimental inputs), measurements, measurement errors, and
-unknown parameters in the model.
+This step formally labels the Pyomo model with the experimental inputs (design variables),
+experimental outputs (measurements), measurement errors, and unknown parameters. The labeling
+of these four important groups is performed using Pyomo :class:`Suffix` components
+(as discussed earlier) by defining a ``label_experiment`` method.
 
 .. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End model finalization
@@ -171,11 +171,13 @@ five optimality criteria using  the ``compute_FIM_full_factorial`` and
 .. |plot5| image:: example_reactor_compute_FIM_ME_opt.png
    :width: 48 %
 
-The heatmaps show the values of the objective functions, a.k.a. the
-experimental information content, in the design space. Horizontal
-and vertical axes are the two experimental design variables, while
-the color of each grid shows the experimental information content.
-For example, the D-optimality (upper left subplot) heatmap figure shows that the
+The heatmaps show the variation of a FIM-based objective function
+(specified by the user) over a grid of the experimental design space.
+Therefore, the heatmaps are a representation of the experimental
+information of various design conditions. Horizontal and vertical axes
+are the two experimental design variables, while the color of each
+grid shows the experimental information content. For example,
+the D-optimality (upper left subplot) heatmap figure shows that the
 most informative region is around :math:`C_{A0}=5.0` M, :math:`T=500.0` K with
 a :math:`\log_{10}` determinant of FIM being around 19,
 while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=300.0` K,
