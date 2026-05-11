@@ -408,49 +408,58 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
                 m, slack_form=True, keep_range_constraints=True
             )
 
-    def test_kernel_inf_bounds_normalized(self):
-        """Kernel constraints returning ±inf bounds are treated as unbounded (None).
+    def test_inf_bounds_normalized(self):
+        """Constraints returning ±inf bounds are treated as unbounded (None).
 
-        pyomo.kernel constraints store ±inf explicitly rather than None for
-        unbounded sides.  LinearStandardFormCompiler must normalize these so
-        that a one-sided constraint is not misclassified as a range constraint.
+        Both pyomo.kernel and AML constraints can return ±inf from
+        to_bounded_expression() when the user explicitly passes float('inf').
+        LinearStandardFormCompiler must normalize these so that a one-sided
+        constraint is not misclassified as a range constraint, and a fully
+        unbounded constraint is skipped rather than emitted as a range row.
         """
         import pyomo.kernel as pmo
 
-        m = pmo.block()
-        m.x = pmo.variable()
+        # --- kernel ---
+        mk = pmo.block()
+        mk.x = pmo.variable()
         # lb=-inf (unbounded below) → should become a pure ≤ row, not a range row
-        m.c_ub = pmo.constraint(ub=2.0, body=m.x)
+        mk.c_ub = pmo.constraint(ub=2.0, body=mk.x)
         # ub=+inf (unbounded above) → should become a pure ≥ row, not a range row
-        m.c_lb = pmo.constraint(lb=-3.0, body=m.x)
+        mk.c_lb = pmo.constraint(lb=-3.0, body=mk.x)
         # Explicit finite range → should still be a range row
-        m.c_rng = pmo.constraint((-1.0, m.x, 4.0))
+        mk.c_rng = pmo.constraint((-1.0, mk.x, 4.0))
 
         repn = LinearStandardFormCompiler().write(
+            mk, mixed_form=True, keep_range_constraints=True
+        )
+        by_con = {r.constraint: r.bound_type for r in repn.rows}
+        self.assertEqual(by_con[mk.c_ub], 1)  # ≤, not range
+        self.assertEqual(by_con[mk.c_lb], -1)  # ≥, not range
+        self.assertEqual(by_con[mk.c_rng], 2)  # finite range
+        rhs_map = {r.constraint: repn.rhs[i] for i, r in enumerate(repn.rows)}
+        self.assertEqual(rhs_map[mk.c_ub], 2.0)
+        self.assertEqual(rhs_map[mk.c_lb], -3.0)
+        self.assertEqual(rhs_map[mk.c_rng], 4.0)  # ub of range row
+        rr_map = {r.constraint: repn.rhs_range[i] for i, r in enumerate(repn.rows)}
+        self.assertEqual(rr_map[mk.c_ub], 0.0)
+        self.assertEqual(rr_map[mk.c_lb], 0.0)
+        self.assertEqual(rr_map[mk.c_rng], 5.0)  # 4 - (-1)
+
+        # --- AML: explicit float('inf') in RangedExpression ---
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        # One-sided: (-inf, x, 5) — lb should be treated as unbounded
+        m.c_ub = pyo.Constraint(rule=lambda m: (float('-inf'), m.x, 5))
+        # Fully unbounded: (-inf, x, inf) — should be skipped entirely
+        m.c_skip = pyo.Constraint(rule=lambda m: (float('-inf'), m.x, float('inf')))
+
+        repn2 = LinearStandardFormCompiler().write(
             m, mixed_form=True, keep_range_constraints=True
         )
+        by_con2 = {r.constraint: r.bound_type for r in repn2.rows}
+        self.assertEqual(by_con2[m.c_ub], 1)  # ≤, not range
+        self.assertNotIn(m.c_skip, by_con2)  # fully unbounded: skipped
 
-        by_con = {r.constraint: r.bound_type for r in repn.rows}
-        # ub-only: bound_type=1 (≤), not 2 (range)
-        self.assertEqual(by_con[m.c_ub], 1)
-        # lb-only: bound_type=-1 (≥), not 2 (range)
-        self.assertEqual(by_con[m.c_lb], -1)
-        # Finite range: bound_type=2
-        self.assertEqual(by_con[m.c_rng], 2)
-
-        # Verify rhs values
-        rhs_map = {r.constraint: repn.rhs[i] for i, r in enumerate(repn.rows)}
-        self.assertEqual(rhs_map[m.c_ub], 2.0)
-        self.assertEqual(rhs_map[m.c_lb], -3.0)
-        self.assertEqual(rhs_map[m.c_rng], 4.0)  # ub of range row
-
-        # rhs_range: only c_rng is a range row; range = 4 - (-1) = 5
-        rhs_range_map = {
-            r.constraint: repn.rhs_range[i] for i, r in enumerate(repn.rows)
-        }
-        self.assertEqual(rhs_range_map[m.c_ub], 0.0)
-        self.assertEqual(rhs_range_map[m.c_lb], 0.0)
-        self.assertEqual(rhs_range_map[m.c_rng], 5.0)
 
 class TestTemplatedLinearStandardFormCompiler(TestLinearStandardFormCompiler):
     def setUp(self):
