@@ -12,7 +12,9 @@ from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver.common.solution_loader import (
     SolutionLoader,
     PersistentSolutionLoader,
+    NoSolutionSolutionLoader,
 )
+from pyomo.contrib.solver.common.util import NoSolutionError
 
 import pyomo.environ as pyo
 
@@ -391,3 +393,38 @@ class TestSolutionLoaderView(unittest.TestCase):
         self.assertEqual(m.b.dual, ref)
         self.assertEqual(m.b.b.rc, ref)
         self.assertEqual(m.c.rc, ref)
+
+
+class TestNoSolutionSolutionLoader(unittest.TestCase):
+    def test_core_API(self):
+        model = pyo.ConcreteModel()
+        loader = NoSolutionSolutionLoader(model, "error message")
+
+        self.assertEqual(loader.get_number_of_solutions(), 0)
+        self.assertEqual(loader.get_solution_ids(), [])
+        with self.assertRaisesRegex(NoSolutionError, "^error message$"):
+            loader.get_vars()
+        with self.assertRaisesRegex(NoSolutionError, "^error message$"):
+            loader.get_duals()
+        with self.assertRaisesRegex(NoSolutionError, "^error message$"):
+            loader.get_reduced_costs()
+        with self.assertRaisesRegex(NoSolutionError, "^error message$"):
+            loader.load_solution()
+        with self.assertRaisesRegex(NoSolutionError, "^error message$"):
+            loader.load_vars()
+        # If there are no suffixes declared on the model, then there
+        # should be no error (because there is nothing to import)
+        self.assertEqual(loader.load_import_suffixes(), None)
+        # non-standard suffixes are ignored
+        # TODO: is this "good" behavior??
+        model.my_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        self.assertEqual(loader.load_import_suffixes(), None)
+        # but duals / rc will generate an exception
+        model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        with self.assertRaisesRegex(NoSolutionError, "^error message$"):
+            loader.load_import_suffixes()
+        # but duals / rc will generate an exception
+        del model.dual
+        model.rc = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        with self.assertRaisesRegex(NoSolutionError, "^error message$"):
+            loader.load_import_suffixes()

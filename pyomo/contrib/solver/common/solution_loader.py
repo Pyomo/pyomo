@@ -19,6 +19,7 @@ from pyomo.core.base.enums import TraversalStrategy
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.base.suffix import Suffix
+from .util import NoSolutionError
 
 
 class SolutionLoader:
@@ -329,6 +330,30 @@ class SolutionLoaderView:
     def load_import_suffixes(self):
         with self if self._previous_id is NOTSET else nullcontext:
             return self._loader.load_import_suffixes()
+
+
+class NoSolutionSolutionLoader(SolutionLoader):
+    def __init__(self, model, err_msg: str) -> None:
+        self._pyomo_model = model
+        self.err_msg = err_msg
+
+    def get_number_of_solutions(self) -> int:
+        return 0
+
+    def get_vars(
+        self, vars_to_load: Sequence[VarData] | None = None
+    ) -> Mapping[VarData, float]:
+        raise NoSolutionError(self.err_msg)
+
+    def get_duals(
+        self, cons_to_load: Sequence[ConstraintData] | None = None
+    ) -> dict[ConstraintData, float]:
+        raise NoSolutionError(self.err_msg)
+
+    def get_reduced_costs(
+        self, vars_to_load: Sequence[VarData] | None = None
+    ) -> Mapping[VarData, float]:
+        raise NoSolutionError(self.err_msg)
 
 
 class PersistentSolutionLoader(SolutionLoader):
