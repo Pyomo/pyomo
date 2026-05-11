@@ -1951,10 +1951,7 @@ class Estimator:
                     theta_vals=Theta, fix_theta=True
                 )
 
-                if (
-                    worststatus == pyo.TerminationCondition.infeasible
-                    or obj is None
-                ):
+                if worststatus == pyo.TerminationCondition.infeasible or obj is None:
                     all_obj.append(None)
                 else:
                     all_obj.append([Theta[name] for name in theta_names] + [obj])
@@ -1962,10 +1959,7 @@ class Estimator:
         else:
             obj, thetvals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
 
-            if (
-                worststatus == pyo.TerminationCondition.infeasible
-                or obj is None
-            ):
+            if worststatus == pyo.TerminationCondition.infeasible or obj is None:
                 all_obj.append(None)
             else:
                 all_obj.append([thetvals[name] for name in theta_names] + [obj])

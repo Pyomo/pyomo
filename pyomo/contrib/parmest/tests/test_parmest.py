@@ -1474,20 +1474,13 @@ class IndexedThetaExperiment(Experiment):
 
         m.theta_index = pyo.Set(initialize=["a", "b"])
         m.theta = pyo.Var(
-            m.theta_index,
-            initialize={
-                "a": 0.0,
-                "b": 1.0,
-            },
-            bounds=(-10.0, 10.0),
+            m.theta_index, initialize={"a": 0.0, "b": 1.0}, bounds=(-10.0, 10.0)
         )
 
         m.x = pyo.Param(initialize=float(self.x_data), mutable=False)
         m.y = pyo.Var(initialize=float(self.y_data))
 
-        m.y_link = pyo.Constraint(
-            expr=m.y == m.theta["a"] + m.theta["b"] * m.x
-        )
+        m.y_link = pyo.Constraint(expr=m.y == m.theta["a"] + m.theta["b"] * m.x)
 
         self.model = m
 
@@ -1573,13 +1566,11 @@ class IndexedOutputExperiment(Experiment):
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
         m.experiment_outputs.update(
-            (m.y[idx], float(i))
-            for i, idx in enumerate(self.y_points, start=1)
+            (m.y[idx], float(i)) for i, idx in enumerate(self.y_points, start=1)
         )
 
         m.experiment_outputs.update(
-            (m.z[idx], float(i))
-            for i, idx in enumerate(self.z_points, start=1)
+            (m.z[idx], float(i)) for i, idx in enumerate(self.z_points, start=1)
         )
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
@@ -1598,11 +1589,7 @@ class IndexedOutputExperiment(Experiment):
 
 def _build_estimator(data, include_second_output=False):
     exp_list = [
-        LinearThetaExperiment(
-            x=x,
-            y=y,
-            include_second_output=include_second_output,
-        )
+        LinearThetaExperiment(x=x, y=y, include_second_output=include_second_output)
         for x, y in data
     ]
 
@@ -1610,21 +1597,16 @@ def _build_estimator(data, include_second_output=False):
 
 
 def _build_indexed_theta_estimator(data):
-    exp_list = [
-        IndexedThetaExperiment(x=x, y=y)
-        for x, y in data
-    ]
+    exp_list = [IndexedThetaExperiment(x=x, y=y) for x, y in data]
 
     return parmest.Estimator(exp_list, obj_function="SSE")
 
 
 def _build_bounded_estimator(data):
-    exp_list = [
-        BoundedLinearThetaExperiment(x=x, y=y)
-        for x, y in data
-    ]
+    exp_list = [BoundedLinearThetaExperiment(x=x, y=y) for x, y in data]
 
     return parmest.Estimator(exp_list, obj_function="SSE")
+
 
 @unittest.skipIf(
     not parmest.parmest_available,
@@ -1687,17 +1669,10 @@ class TestParmestBlockEF(unittest.TestCase):
         pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
 
         model = pest._create_scenario_blocks(
-            theta_vals={
-                "theta[a]": 1.0,
-                "theta[b]": 2.0,
-            },
-            fix_theta=True,
+            theta_vals={"theta[a]": 1.0, "theta[b]": 2.0}, fix_theta=True
         )
 
-        self.assertEqual(
-            list(model._parmest_theta_names),
-            ["theta[a]", "theta[b]"],
-        )
+        self.assertEqual(list(model._parmest_theta_names), ["theta[a]", "theta[b]"])
         self.assertEqual(len(model.theta_link_constraints), 0)
 
         for block in model.exp_scenarios.values():
@@ -1732,10 +1707,7 @@ class TestParmestBlockEF(unittest.TestCase):
     def test_q_opt_fixed_theta_returns_objective_theta_and_status(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
 
-        obj, theta, status = pest._Q_opt(
-            theta_vals={"theta": 1.0},
-            fix_theta=True,
-        )
+        obj, theta, status = pest._Q_opt(theta_vals={"theta": 1.0}, fix_theta=True)
 
         self.assertEqual(status, pyo.TerminationCondition.optimal)
         self.assertEqual(theta, {"theta": 1.0})
@@ -1745,10 +1717,7 @@ class TestParmestBlockEF(unittest.TestCase):
     def test_q_opt_fixed_theta_infeasible_returns_none(self):
         pest = _build_bounded_estimator([(1.0, 2.0), (2.0, 3.0)])
 
-        obj, theta, status = pest._Q_opt(
-            theta_vals={"theta": 2.0},
-            fix_theta=True,
-        )
+        obj, theta, status = pest._Q_opt(theta_vals={"theta": 2.0}, fix_theta=True)
 
         self.assertIsNone(obj)
         self.assertEqual(theta, {"theta": 2.0})
@@ -1776,10 +1745,7 @@ class TestParmestBlockEF(unittest.TestCase):
     def test_objective_at_theta_omits_infeasible_rows(self):
         pest = _build_bounded_estimator([(1.0, 2.0), (2.0, 3.0)])
 
-        theta_values = pd.DataFrame(
-            [[0.0], [2.0]],
-            columns=["theta"],
-        )
+        theta_values = pd.DataFrame([[0.0], [2.0]], columns=["theta"])
 
         obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
 
@@ -1792,8 +1758,7 @@ class TestParmestBlockEF(unittest.TestCase):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Unknown solver in Q_Opt=not_a_solver",
+            RuntimeError, "Unknown solver in Q_Opt=not_a_solver"
         ):
             pest.theta_est(solver="not_a_solver")
 
@@ -1803,8 +1768,7 @@ class TestParmestBlockEF(unittest.TestCase):
         duplicate_cols = pd.DataFrame([[1.0, 2.0]], columns=["theta", "theta"])
 
         with self.assertRaisesRegex(
-            ValueError,
-            "Duplicate theta names are not allowed",
+            ValueError, "Duplicate theta names are not allowed"
         ):
             pest.objective_at_theta(theta_values=duplicate_cols)
 
@@ -1828,12 +1792,10 @@ class TestCountTotalExperiments(unittest.TestCase):
     def test_count_total_experiments_tuple_index_multi_output(self):
         exp_list = [
             IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")],
-                z_points=[(0.0, "A"), (1.0, "A")],
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (1.0, "A")]
             ),
             IndexedOutputExperiment(
-                y_points=[(0.5, "A"), (1.5, "A")],
-                z_points=[(0.5, "A"), (1.5, "A")],
+                y_points=[(0.5, "A"), (1.5, "A")], z_points=[(0.5, "A"), (1.5, "A")]
             ),
         ]
 
@@ -1844,8 +1806,7 @@ class TestCountTotalExperiments(unittest.TestCase):
     def test_count_total_experiments_rejects_mismatched_output_lengths(self):
         exp_list = [
             IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")],
-                z_points=[(0.0, "A")],
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A")]
             )
         ]
 
@@ -1858,8 +1819,7 @@ class TestCountTotalExperiments(unittest.TestCase):
     def test_count_total_experiments_rejects_mismatched_time_points(self):
         exp_list = [
             IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")],
-                z_points=[(0.0, "A"), (2.0, "A")],
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (2.0, "A")]
             )
         ]
 
@@ -1872,8 +1832,7 @@ class TestCountTotalExperiments(unittest.TestCase):
     def test_count_total_experiments_rejects_time_not_in_first_index(self):
         exp_list = [
             IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")],
-                z_points=[("A", 0.0), ("A", 1.0)],
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[("A", 0.0), ("A", 1.0)]
             )
         ]
 
@@ -1882,7 +1841,8 @@ class TestCountTotalExperiments(unittest.TestCase):
             "The first index of experiment outputs must be the data point",
         ):
             parmest._count_total_experiments(exp_list)
-            
+
+
 ###########################
 # tests for deprecated UI #
 ###########################
