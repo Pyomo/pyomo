@@ -18,7 +18,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigValue
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
-from pyomo.common.errors import ApplicationError
+from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -34,10 +34,12 @@ from pyomo.contrib.solver.common.util import (
     NoReducedCostsError,
     NoSolutionError,
 )
+from pyomo.contrib.solver.common.solution_loader import NoSolutionSolutionLoader
 from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
     TerminationCondition,
+    get_infeasible_results,
 )
 from pyomo.contrib.solver.common.solution_loader import SolutionLoader
 import time
@@ -374,6 +376,14 @@ class GurobiDirectBase(SolverBase):
                 solution_loader=solution_loader,
                 has_obj=has_obj,
                 config=config,
+            )
+        except InfeasibleConstraintException as err:
+            err_msg = (
+                'The problem was proven to be infeasible during compilation:\n'
+                f'\t{str(err)}'
+            )
+            res = get_infeasible_results(
+                model=model, solver=self, config=config, err_msg=err_msg
             )
         finally:
             os.chdir(orig_cwd)

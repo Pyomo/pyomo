@@ -504,7 +504,13 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
             vlist = [self._pyomo_var_to_solver_var_map[v] for v in repn.linear_vars]
             new_expr = gurobipy.LinExpr(coef_list, vlist)
         else:
-            new_expr = 0.0
+            # this still needs to be an expression object so that
+            # we don't generate a bool if both the body and
+            # the bounds are floats (i.e., a trivially feasible or
+            # trivially infeasible constraint). We don't want a bool
+            # because the constraint could swap between feasible and
+            # infeasible if the bounds are mutable.
+            new_expr = gurobipy.LinExpr()
 
         if len(repn.quadratic_vars) > 0:
             for coef, (x, y) in zip(repn.quadratic_coefs, repn.quadratic_vars):
@@ -535,7 +541,7 @@ class GurobiPersistent(GurobiDirectBase, PersistentSolverBase, Observer):
                     )
             elif ub is None:
                 rhs_expr = lb - repn.constant
-                gurobi_expr_list.append(float(value(rhs_expr)) <= gurobi_expr)
+                gurobi_expr_list.append(gurobi_expr >= float(value(rhs_expr)))
                 if not is_constant(rhs_expr):
                     mutable_constant = _MutableConstant(
                         rhs_expr, con, self._pyomo_con_to_solver_con_map
