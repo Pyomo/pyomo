@@ -41,6 +41,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
 import pyomo.core.base.var
 import pyomo.core.base.sos
+import pyomo.core.base.constraint
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -1216,6 +1217,18 @@ class XpressDirect(DirectSolver):
             self._add_constraint(con)
         if repn.nonlinear_objectives:
             self._set_objective(repn.nonlinear_objectives[0])
+
+        # LSFC silently skips trivially feasible constant constraints (e.g.,
+        # `0 <= 1 <= 3`).  When _skip_trivial_constraints is False we must
+        # still register them so they appear in the symbol map.
+        if not self._skip_trivial_constraints:
+            for con in model.component_data_objects(
+                pyomo.core.base.constraint.Constraint, active=True, descend_into=True
+            ):
+                if con not in self._pyomo_con_to_solver_con_map and (
+                    con.has_lb() or con.has_ub()
+                ):
+                    self._add_constraint(con)
 
     def _add_constraint(self, con):
         if not con.active:
