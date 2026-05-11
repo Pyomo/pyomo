@@ -12,6 +12,7 @@
 from contextlib import redirect_stdout
 from io import StringIO
 import logging
+from pyomo.common.timing import default_timer
 from math import fabs
 from os.path import join, normpath
 
@@ -20,6 +21,8 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
+from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
+from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block,
     add_disjunct_list,
@@ -44,13 +47,14 @@ from pyomo.environ import (
     RangeSet,
     TransformationFactory,
     SolverFactory,
+    sin,
     sqrt,
     value,
     Var,
 )
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests import models
-from pyomo.opt import TerminationCondition
+from pyomo.opt import SolverResults, TerminationCondition
 
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
@@ -77,6 +81,74 @@ gurobi_available = (
 
 class TestGDPoptUnit(unittest.TestCase):
     """Real unit tests for GDPopt"""
+
+    def _setup_crossed_bound_state(self, solver, sense=maximize):
+        solver.pyomo_results = SolverResults()
+        solver.pyomo_results.problem.sense = sense
+        solver.LB = 1011.6577899409375
+        solver.UB = 1000.0
+        solver.iteration = 1
+        solver._nonrigorous_dual_bound_possible = True
+        solver.timing.main_timer_start_time = default_timer()
+        solver.timing.total = 0.0
+
+        config = solver.CONFIG()
+        config.bound_tolerance = 1e-6
+        config.logger = logging.getLogger(__name__)
+        return config
+
+    def test_loa_crossed_bounds_are_not_reported_as_global_optimal(self):
+        solver = GDP_LOA_Solver()
+        config = self._setup_crossed_bound_state(solver)
+
+        self.assertTrue(solver.bounds_converged(config))
+        results = solver._get_final_pyomo_results_object()
+
+        self.assertIs(
+            results.solver.termination_condition, TerminationCondition.feasible
+        )
+        self.assertEqual(results.problem.lower_bound, 1011.6577899409375)
+        self.assertEqual(results.problem.upper_bound, float('inf'))
+
+    def test_loa_nonpolynomial_model_may_have_nonrigorous_dual_bound(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 4), initialize=0.2)
+        m.y = Var(bounds=(-2, 2), initialize=0)
+        m.nonconvex = Constraint(expr=m.y <= sin(3 * m.x) + 0.2 * m.x)
+        m.choose_region = Disjunction(expr=[[m.x <= 2], [m.x >= 2]], xor=True)
+        m.obj = Objective(expr=m.y, sense=maximize)
+
+        self.assertTrue(GDP_LOA_Solver()._problem_may_have_nonrigorous_dual_bound(m))
+
+    def test_loa_distinguishes_basic_quadratic_convexity(self):
+        convex = ConcreteModel()
+        convex.x = Var(bounds=(-2, 2))
+        convex.y = Var(bounds=(-2, 2))
+        convex.c = Constraint(expr=convex.x**2 + convex.y**2 <= 1)
+        convex.obj = Objective(expr=convex.x**2 + convex.y)
+
+        nonconvex = ConcreteModel()
+        nonconvex.x = Var(bounds=(-2, 2))
+        nonconvex.y = Var(bounds=(-2, 2))
+        nonconvex.c = Constraint(expr=nonconvex.x * nonconvex.y <= 1)
+        nonconvex.obj = Objective(expr=nonconvex.y)
+
+        solver = GDP_LOA_Solver()
+        self.assertFalse(solver._problem_may_have_nonrigorous_dual_bound(convex))
+        self.assertTrue(solver._problem_may_have_nonrigorous_dual_bound(nonconvex))
+
+    def test_gloa_crossed_bounds_preserve_certified_optimal_behavior(self):
+        solver = GDP_GLOA_Solver()
+        config = self._setup_crossed_bound_state(solver)
+
+        self.assertTrue(solver.bounds_converged(config))
+        results = solver._get_final_pyomo_results_object()
+
+        self.assertIs(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
+        self.assertEqual(results.problem.lower_bound, 1011.6577899409375)
+        self.assertEqual(results.problem.upper_bound, 1011.6577899409375)
 
     @unittest.skipUnless(
         SolverFactory(mip_solver).available(), "MIP solver not available"

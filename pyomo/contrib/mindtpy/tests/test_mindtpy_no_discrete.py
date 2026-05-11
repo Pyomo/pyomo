@@ -8,9 +8,11 @@
 # ____________________________________________________________________________________
 
 
+import logging
 from unittest.mock import MagicMock, patch
 
-from pyomo.opt import TerminationCondition as tc, SolverStatus
+from pyomo.common.collections import Bunch
+from pyomo.opt import SolverResults, TerminationCondition as tc, SolverStatus
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
@@ -262,6 +264,38 @@ class _SimpleNamespace:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             object.__setattr__(self, k, v)
+
+
+class TestMindtPyGOAResults(unittest.TestCase):
+    def test_goa_crossed_bounds_are_not_reported_as_global_optimal(self):
+        from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
+
+        solver = MindtPy_GOA_Solver()
+        solver.config = solver.CONFIG()
+        solver.config.absolute_bound_tolerance = 1e-6
+        solver.config.relative_bound_tolerance = 1e-6
+        solver.config.logger = logging.getLogger(__name__)
+        solver.results = SolverResults()
+        solver.objective_sense = maximize
+        solver.primal_bound = 1011.6577899409375
+        solver.dual_bound = 1000.0
+        solver.best_solution_found = object()
+        solver.update_gap()
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.feasible)
+
+        solver.timing = Bunch(total=0.0)
+        solver.mip_iter = 1
+        solver.nlp_infeasible_counter = 0
+        solver.best_solution_found_time = None
+        solver.primal_integral = 0.0
+        solver.dual_integral = 0.0
+        solver.primal_dual_gap_integral = 0.0
+        solver.update_result()
+
+        self.assertEqual(solver.results.problem.lower_bound, 1011.6577899409375)
+        self.assertEqual(solver.results.problem.upper_bound, float('inf'))
 
 
 class TestMirrorDirectSolveResults(unittest.TestCase):

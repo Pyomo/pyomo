@@ -35,6 +35,7 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
     """
 
     CONFIG = _get_MindtPy_GOA_config()
+    _crossed_bounds_are_certified = False
 
     def check_config(self):
         config = self.config

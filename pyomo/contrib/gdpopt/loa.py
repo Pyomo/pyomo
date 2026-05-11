@@ -74,11 +74,63 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     _add_tolerance_configs(CONFIG)
 
     algorithm = 'LOA'
+    _crossed_bounds_are_certified = False
 
     # Override solve() to customize the docstring for this solver
     @document_kwargs_from_configdict(CONFIG, doc=_GDPoptAlgorithm.solve.__doc__)
     def solve(self, model, **kwds):
         return super().solve(model, **kwds)
+
+    @staticmethod
+    def _quadratic_curvature(expr):
+        repn = generate_standard_repn(expr, quadratic=True)
+        curvature = 0
+        for coef, (v1, v2) in zip(repn.quadratic_coefs, repn.quadratic_vars):
+            if v1 is not v2:
+                return None
+            coef_val = value(coef, exception=False)
+            if coef_val is None:
+                return None
+            if coef_val > 0:
+                if curvature < 0:
+                    return None
+                curvature = 1
+            elif coef_val < 0:
+                if curvature > 0:
+                    return None
+                curvature = -1
+        return curvature
+
+    def _problem_may_have_nonrigorous_dual_bound(self, model):
+        for obj in model.component_data_objects(
+            Objective, active=True, descend_into=True
+        ):
+            degree = obj.expr.polynomial_degree()
+            if degree is None or degree not in (0, 1, 2):
+                return True
+            if degree == 2:
+                curvature = self._quadratic_curvature(obj.expr)
+                if obj.sense is minimize and curvature not in (0, 1):
+                    return True
+                elif obj.sense is not minimize and curvature not in (0, -1):
+                    return True
+
+        for constr in model.component_data_objects(
+            Constraint, active=True, descend_into=(Block, Disjunct)
+        ):
+            degree = constr.body.polynomial_degree()
+            if degree in (0, 1):
+                continue
+            if degree is None or degree not in (2,):
+                return True
+            if constr.equality:
+                return True
+            curvature = self._quadratic_curvature(constr.body)
+            if constr.has_ub() and curvature not in (0, 1):
+                return True
+            if constr.has_lb() and curvature not in (0, -1):
+                return True
+        return False
 
     def _log_citation(self, config):
         config.logger.info("\n" + """- LOA algorithm:
