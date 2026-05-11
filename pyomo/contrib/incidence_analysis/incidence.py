@@ -191,6 +191,7 @@ def get_incident_variables(expr, **kwds):
             f" variables. See the IncidenceMethod enum for valid methods."
         )
 
+
 def get_variables_incident_to_constraint(constraint, **kwds):
     """Get variables that participate in a constraint
 

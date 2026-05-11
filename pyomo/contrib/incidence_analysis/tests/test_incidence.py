@@ -264,7 +264,7 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
     def test_explicit_constraint(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
-        m.eq = pyo.Constraint(expr=m.x[1] + m.x[3]**3 == 1)
+        m.eq = pyo.Constraint(expr=m.x[1] + m.x[3] ** 3 == 1)
         incident_vars = get_variables_incident_to_constraint(m.eq)
         self.assertEqual(ComponentSet(incident_vars), ComponentSet([m.x[1], m.x[3]]))
 
@@ -273,7 +273,9 @@ class TestGetVariablesIncidentToConstraint(unittest.TestCase):
         m.egb = ExternalGreyBoxBlock()
         gbm = ex_models.PressureDropSingleOutput()
         m.egb.set_external_model(gbm)
-        incident_vars = get_variables_incident_to_constraint(m.egb.output_constraints["Pout"])
+        incident_vars = get_variables_incident_to_constraint(
+            m.egb.output_constraints["Pout"]
+        )
         expected = [
             m.egb.inputs["Pin"],
             m.egb.inputs["c"],
