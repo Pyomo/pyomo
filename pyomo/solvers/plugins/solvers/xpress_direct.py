@@ -313,7 +313,7 @@ def _finalize_xpress_import(xpress, avail):
             self, prob, rowtype, rhs, start, colind, rowcoef, rhsrange=None, names=None
         ):
             first_row_ind = prob.attributes.rows
-            prob.addRows(rowtype, rhs, start, colind, rowcoef, range=rhsrange)
+            prob.addRows(rowtype, rhs, start, colind, rowcoef, rhsrange)
             last_row_ind = prob.attributes.rows - 1
             if names is not None:
                 prob.addNames(xp.Namespaces.ROW, names, first_row_ind, last_row_ind)
