@@ -63,6 +63,16 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         self._solver_model.delSOS(solver_sos_con)
 
     def _remove_var(self, solver_var):
+        # Keep _template_var_map in sync: removing a column shifts all
+        # subsequent Xpress column indices down by one.  Deleting the entry
+        # from the ordered dict has exactly the same effect on the remaining
+        # vars' positions (from enumerate), so their indices stay correct
+        # after the visitor is rebuilt.  Reset _template_visitor so
+        # TemplateVarRecorder.var_order is recomputed on next use.
+        pyomo_var = self._solver_var_to_pyomo_var_map.get(solver_var)
+        if pyomo_var is not None:
+            self._template_var_map.pop(id(pyomo_var), None)
+        self._template_visitor = None
         self._solver_model.delVariable(solver_var)
 
     def _warm_start(self):
@@ -162,6 +172,10 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var
         self._referenced_variables[var] = len(coefficients)
+        # Append to _template_var_map in column order (new column is last)
+        # and invalidate any cached template visitor.
+        self._template_var_map[id(var)] = var
+        self._template_visitor = None
 
     def get_xpress_attribute(self, *args):
         """

@@ -14,14 +14,21 @@ import sys
 import time
 
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
-from pyomo.common.dependencies import attempt_import
-from pyomo.common.errors import ApplicationError
+from pyomo.common.dependencies import attempt_import, numpy as np
+from pyomo.common.errors import ApplicationError, InvalidExpressionError
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
+from pyomo.repn.linear_template import LinearTemplateRepnVisitor
+from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
+from pyomo.repn.util import (
+    FileDeterminism,
+    FileDeterminism_to_SortComponents,
+    TemplateVarRecorder,
+)
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
@@ -33,6 +40,7 @@ from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
 import pyomo.core.base.var
+import pyomo.core.base.sos
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -922,6 +930,14 @@ class XpressDirect(DirectSolver):
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var
         self._referenced_variables[var] = 0
+        # Keep the template var_map in column order so that the
+        # LinearTemplateRepnVisitor produces Xpress column indices directly.
+        self._template_var_map[id(var)] = var
+        # Invalidate any cached template visitor (its var_recorder's var_order
+        # is derived lazily from _template_var_map, so new variables are picked
+        # up automatically; but the expanded_templates cache may reference stale
+        # column indices if the problem is rebuilt, so reset on structural change).
+        self._template_visitor = None
 
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
@@ -938,6 +954,14 @@ class XpressDirect(DirectSolver):
         self._con_insertion_counter = 0
         self._con_name_to_counter = {}
         self._deleted_counters = []
+        # var_map used by the template visitor: maps id(var) -> var in Xpress
+        # column order so that template-compiled column indices equal Xpress
+        # column indices.  Reset here; populated in _add_var and
+        # _load_linear_problem.
+        self._template_var_map = {}
+        # Lazily constructed LinearTemplateRepnVisitor; created on first use
+        # of a templated constraint in _add_constraint.
+        self._template_visitor = None
         try:
             if model.name is not None:
                 self._solver_model = xpress.problem(name=model.name)
@@ -955,6 +979,18 @@ class XpressDirect(DirectSolver):
 
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
+
+    def _get_template_visitor(self):
+        """Return (creating if needed) a LinearTemplateRepnVisitor seeded with
+        the current variable ordering so its column indices equal Xpress column
+        positions."""
+        if self._template_visitor is None:
+            sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
+            var_recorder = TemplateVarRecorder(self._template_var_map, sorter)
+            self._template_visitor = LinearTemplateRepnVisitor(
+                {}, var_recorder=var_recorder
+            )
+        return self._template_visitor
 
     def _load_linear_problem(self, model):
         """Fast path for models with linear or mixed linear/nonlinear structure.
@@ -976,10 +1012,6 @@ class XpressDirect(DirectSolver):
         ----------
         model : Pyomo ConcreteModel
         """
-        from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
-        from pyomo.common.dependencies import numpy as np
-        import pyomo.core.base.sos
-
         # Compile: mixed_form preserves <=, >=, == direction;
         # keep_range_constraints emits range rows as a single 'R' entry.
         # set_sense=None keeps objective coefficients as-is so we can set
@@ -993,6 +1025,7 @@ class XpressDirect(DirectSolver):
             keep_range_constraints=True,
             set_sense=None,
             allow_nonlinear=True,
+            extra_valid_ctypes=[pyomo.core.base.sos.SOSConstraint],
         )
 
         if len(repn.objectives) + len(repn.nonlinear_objectives) > 1:
@@ -1108,6 +1141,23 @@ class XpressDirect(DirectSolver):
             self._solver_var_to_pyomo_var_map[xv] = var
             self._referenced_variables[var] = 0
 
+        # Build _template_var_map in Xpress column order so the
+        # LinearTemplateRepnVisitor produces column indices that directly
+        # correspond to Xpress column positions.
+        self._template_var_map = {id(var): var for var in repn.columns}
+        self._template_visitor = None
+
+        # LSFC only includes variables that appear in linear constraints or
+        # objectives.  Variables that are unreferenced or appear only in SOS
+        # constraints must still be added to Xpress so the solver model is
+        # complete.  We detect them by checking against _pyomo_var_to_solver_var_map
+        # and fall back to _add_var for each missing one.
+        for var in model.component_data_objects(
+            pyomo.core.base.var.Var, active=True, descend_into=True
+        ):
+            if var not in self._pyomo_var_to_solver_var_map:
+                self._add_var(var)
+
         # ------------------------------------------------------------------
         # Populate constraint maps and O(log M) row-index counters
         # ------------------------------------------------------------------
@@ -1187,6 +1237,77 @@ class XpressDirect(DirectSolver):
                     "Upper bound of constraint {0} is not constant.".format(con)
                 )
 
+        # ------------------------------------------------------------------
+        # Fast path: templated linear constraint
+        # ------------------------------------------------------------------
+        # TemplateConstraintData objects carry a pre-compiled body lambda.
+        # Evaluating it is much cheaper than walking the expression tree via
+        # generate_standard_repn, and the column indices it returns are
+        # exactly the Xpress column positions (because _template_var_map is
+        # kept in column order).
+        if hasattr(con, 'template_expr'):
+            try:
+                tv = self._get_template_visitor()
+                offset, col_indices, coeffs, lb, ub = tv.expand_expression(
+                    con, con.template_expr()
+                )
+            except InvalidExpressionError:
+                pass  # nonlinear template — fall through to generate_standard_repn
+            else:
+                n = len(col_indices)
+                referenced_vars = ComponentSet(
+                    tv.var_recorder.var_list[i] for i in col_indices
+                )
+                coeffs = [float(c) for c in coeffs]
+                const = float(offset)
+
+                if lb == ub and lb is not None:
+                    rowtype = ['E']
+                    rhs = [lb - const]
+                    rhsrange = None
+                elif lb is not None and ub is not None:
+                    ub_val = ub - const
+                    lb_val = lb - const
+                    rowtype = ['R']
+                    rhs = [ub_val]
+                    rhsrange = [ub_val - lb_val]
+                    self._range_constraints.add(conname)
+                elif lb is not None:
+                    rowtype = ['G']
+                    rhs = [lb - const]
+                    rhsrange = None
+                elif ub is not None:
+                    rowtype = ['L']
+                    rhs = [ub - const]
+                    rhsrange = None
+                else:
+                    raise ValueError(
+                        "Constraint does not have a lower "
+                        "or an upper bound: {0} \n".format(con)
+                    )
+
+                self._addRows(
+                    self._solver_model,
+                    rowtype,
+                    rhs,
+                    [0, n],
+                    col_indices,
+                    coeffs,
+                    rhsrange=rhsrange,
+                    names=[conname],
+                )
+                for var in referenced_vars:
+                    self._referenced_variables[var] += 1
+                self._vars_referenced_by_con[con] = referenced_vars
+                self._pyomo_con_to_solver_con_map[con] = conname
+                self._solver_con_to_pyomo_con_map[conname] = con
+                self._con_name_to_counter[conname] = self._con_insertion_counter
+                self._con_insertion_counter += 1
+                return
+
+        # ------------------------------------------------------------------
+        # General path: generate_standard_repn (linear, quadratic, nonlinear)
+        # ------------------------------------------------------------------
         if con._linear_canonical_form:
             repn = con.canonical_form()
         else:
