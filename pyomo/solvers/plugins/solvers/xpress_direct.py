@@ -1058,10 +1058,7 @@ class XpressDirect(DirectSolver):
             )
 
         rhs = repn.rhs
-        # rhs_range is all-zeros when keep_range_constraints produced no range
-        # rows; pass None in that case (loadproblem ignores non-'R' rng values
-        # but we avoid passing a useless array).
-        rng = repn.rhs_range if np.any(repn.rhs_range != 0) else None
+        rng = repn.rhs_range
 
         # ------------------------------------------------------------------
         # CSC coefficient matrix
