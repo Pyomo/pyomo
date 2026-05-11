@@ -1051,20 +1051,30 @@ class Estimator:
                 # default theta_names, created when Estimator object is created
                 return self.estimator_theta_names
 
-    def _expand_indexed_unknowns(self, model_temp):
+    def _expanded_theta_info(self, model):
         """
-        Expand indexed variables to get full list of thetas
-        """
+        Return scalar theta names and ComponentUIDs for all unknown parameters.
 
-        model_theta_list = []
-        for c in model_temp.unknown_parameters.keys():
+        The unknown_parameters suffix may contain either scalar ComponentData
+        objects or indexed components. Indexed components are expanded to their
+        scalar data objects.
+
+        Names are intended for user-facing labels and DataFrame columns.
+        ComponentUIDs are intended for locating equivalent theta components on
+        cloned/transferred models.
+        """
+        theta_components = []
+
+        for c in model.unknown_parameters:
             if c.is_indexed():
-                for _, ci in c.items():
-                    model_theta_list.append(ci.name)
+                theta_components.extend(c.values())
             else:
-                model_theta_list.append(c.name)
+                theta_components.append(c)
 
-        return model_theta_list
+        theta_names = tuple(c.name for c in theta_components)
+        theta_cuids = tuple(pyo.ComponentUID(c) for c in theta_components)
+
+        return theta_names, theta_cuids
 
     def _create_parmest_model(self, experiment_number):
         """
@@ -1128,55 +1138,57 @@ class Estimator:
 
     def _create_scenario_blocks(self, bootlist=None, theta_vals=None, fix_theta=False):
         """
-        Create scenario blocks for parameter estimation
-
-        Parameters
-        ----------
-        bootlist : list, optional
-            List of bootstrap experiment numbers to use. If None, use all experiments in
-            exp_list. Default is None.
-        theta_vals : dict, optional
-            Dictionary of theta values to set in the model. If None, use default values
-            from experiment class. Default is None.
-        fix_theta : bool, optional
-            If True, fix the theta values in the model. If False, leave them free.
-            Default is False.
-
-        Returns
-        -------
-        model : ConcreteModel
-            Pyomo model with scenario blocks for parameter estimation. Contains indexed
-            block for each experiment in exp_list or bootlist.
+        Create scenario blocks for parameter estimation.
         """
-        # Build a clean parent EF container and attach one scenario model per block.
         model = pyo.ConcreteModel()
+
         template_model = self._create_parmest_model(0)
-        expanded_theta_names = self._expand_indexed_unknowns(template_model)
+        expanded_theta_names, expanded_theta_cuids = self._expanded_theta_info(
+            template_model
+        )
+
         model._parmest_theta_names = tuple(expanded_theta_names)
+        model._parmest_theta_cuids = tuple(expanded_theta_cuids)
+
+        # Parent/global EF theta variables. These are indexed by names because
+        # they serve as user-facing labels and result keys.
         model.parmest_theta = pyo.Var(model._parmest_theta_names)
 
-        for name in expanded_theta_names:
-            template_theta_var = template_model.find_component(name)
+        # Initialize parent/global theta values from the template model.
+        for name, cuid in zip(expanded_theta_names, expanded_theta_cuids):
+            template_theta_var = cuid.find_component_on(template_model)
+
+            if template_theta_var is None:
+                raise RuntimeError(
+                    f"Could not find theta variable for CUID {cuid} "
+                    "in the template model."
+                )
+
             parent_theta_var = model.parmest_theta[name]
-            parent_theta_var.set_value(pyo.value(template_theta_var))
+
             if theta_vals is not None and name in theta_vals:
                 parent_theta_var.set_value(theta_vals[name])
+            else:
+                parent_theta_var.set_value(pyo.value(template_theta_var))
+
             if fix_theta:
                 parent_theta_var.fix()
             else:
                 parent_theta_var.unfix()
 
-        # Set the number of experiments to use, either from bootlist or all experiments
         scenario_numbers = (
             bootlist if bootlist is not None else list(range(len(self.exp_list)))
         )
+
         self.obj_probability_constant = len(scenario_numbers)
+
         if self.obj_probability_constant <= 0:
             raise ValueError("At least one scenario is required to build the EF model.")
 
-        # Index EF blocks by scenario position, not by experiment number.  This
-        # preserves duplicate entries in bootstrap samples such as [0, 1, 1].
+        # Index scenario blocks by position, not experiment number, so bootstrap
+        # samples with repeated experiments are preserved.
         model.scenario_indices = pyo.RangeSet(0, self.obj_probability_constant - 1)
+
         model.scenario_number = pyo.Param(
             model.scenario_indices,
             initialize={
@@ -1187,30 +1199,33 @@ class Estimator:
             mutable=False,
         )
 
-        # Build and copy scenario models into blocks, then link the theta
-        # variables across blocks
         model.exp_scenarios = pyo.Block(model.scenario_indices)
+
         for i in model.scenario_indices:
             experiment_number = pyo.value(model.scenario_number[i])
             parmest_model = self._create_parmest_model(experiment_number)
             model.exp_scenarios[i].transfer_attributes_from(parmest_model)
 
         model.theta_link_constraints = pyo.ConstraintList()
-        for name in expanded_theta_names:
-            parent_theta_var = model.parmest_theta[name]
-            if theta_vals is not None and name in theta_vals:
-                theta_value = theta_vals[name]
-            else:
-                theta_value = pyo.value(parent_theta_var)
 
-            # Initialize the copied theta variable in every
-            # scenario block from either user-supplied theta values or the
-            # parent EF theta variable.  Only add linking constraints when
-            # theta is free; in the fixed-theta case the block copy is fixed
-            # directly and the ConstraintList intentionally remains empty.
+        # Link scenario-local theta variables to the parent/global EF theta vars.
+        # CUIDs are used for component lookup. Names are only used to index the
+        # parent EF theta variable.
+        for name, cuid in zip(expanded_theta_names, expanded_theta_cuids):
+            parent_theta_var = model.parmest_theta[name]
+            theta_value = pyo.value(parent_theta_var)
+
             for i in model.scenario_indices:
-                child_theta_var = model.exp_scenarios[i].find_component(name)
+                child_theta_var = cuid.find_component_on(model.exp_scenarios[i])
+
+                if child_theta_var is None:
+                    raise RuntimeError(
+                        f"Could not find theta variable for CUID {cuid} "
+                        f"in scenario block {i}."
+                    )
+
                 child_theta_var.set_value(theta_value)
+
                 if fix_theta:
                     child_theta_var.fix()
                 else:
@@ -1223,8 +1238,6 @@ class Estimator:
             for obj in block.component_objects(pyo.Objective):
                 obj.deactivate()
 
-        # Make an objective that sums over all scenario blocks and
-        # divides by number of experiments
         def total_obj(m):
             return (
                 sum(
@@ -1235,6 +1248,7 @@ class Estimator:
             )
 
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
+
         self.ef_instance = model
         return model
 
@@ -1995,30 +2009,69 @@ class Estimator:
 
         return results
 
-    # Updated version that uses _Q_opt
+    def _normalize_theta_dataframe(self, theta_values):
+        """
+        Validate and normalize user-provided theta_values columns.
+
+        Returns a copy whose columns are the canonical expanded theta names from
+        the model.
+
+        This allows quote-insensitive matching while preserving canonical model
+        names internally.
+        """
+        assert isinstance(theta_values, pd.DataFrame)
+
+        template_model = self._create_parmest_model(0)
+        expected_theta_names, _ = self._expanded_theta_info(template_model)
+        expected_theta_names = list(expected_theta_names)
+
+        def clean(name):
+            return str(name).replace("'", "")
+
+        provided_theta_names = list(theta_values.columns)
+
+        clean_provided = [clean(name) for name in provided_theta_names]
+        clean_expected = [clean(name) for name in expected_theta_names]
+
+        if len(clean_provided) != len(set(clean_provided)):
+            raise ValueError(
+                f"Duplicate theta names are not allowed: {clean_provided}"
+            )
+
+        if len(clean_expected) != len(set(clean_expected)):
+            raise RuntimeError(
+                "Quote-insensitive theta names are ambiguous. "
+                f"Expanded theta names are {expected_theta_names}."
+            )
+
+        if set(clean_provided) != set(clean_expected):
+            raise ValueError(
+                f"Provided theta values {clean_provided} do not match "
+                f"expected theta names {clean_expected}."
+            )
+
+        canonical_name_by_clean_name = {
+            clean_name: canonical_name
+            for clean_name, canonical_name in zip(clean_expected, expected_theta_names)
+        }
+
+        canonical_columns = [
+            canonical_name_by_clean_name[clean_name]
+            for clean_name in clean_provided
+        ]
+
+        theta_values = theta_values.copy()
+        theta_values.columns = canonical_columns
+
+        # Put columns in model order.
+        return theta_values[expected_theta_names]
+
     def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
         """
         Objective value for each theta, solving extensive form problem with
         fixed theta values.
-
-        Parameters
-        ----------
-        theta_values: pd.DataFrame, columns=theta_names
-            Values of theta used to compute the objective
-
-        initialize_parmest_model: boolean
-            If True: Solve square problem instance, build extensive form
-            of the model for parameter estimation, and set flag
-            model_initialized to True. Default is False.
-
-        Returns
-        -------
-        obj_at_theta: pd.DataFrame
-            Objective value for each theta (infeasible solutions are
-            omitted).
         """
 
-        # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return self.pest_deprecated.objective_at_theta(
                 theta_values=theta_values,
@@ -2026,83 +2079,65 @@ class Estimator:
             )
 
         if initialize_parmest_model:
-            # Print deprecation warning, that this option will be removed in
-            # future releases.
             deprecation_warning(
                 "The `initialize_parmest_model` option in `objective_at_theta()` is "
-                "deprecated and will be removed in future releases. Please ensure the"
+                "deprecated and will be removed in future releases. Please ensure the "
                 "model is initialized within the Experiment class definition.",
                 version="6.10.1.dev0",
             )
 
         if theta_values is None:
-            all_thetas = {}  # dictionary to store fitted variables
-            # use appropriate theta names member
-            # Get theta names from fresh parmest model, assuming this can be called
-            # directly after creating Estimator.
-            theta_names = self._expand_indexed_unknowns(self._create_parmest_model(0))
+            template_model = self._create_parmest_model(0)
+            theta_names, _ = self._expanded_theta_info(template_model)
+            theta_names = list(theta_names)
+            all_thetas = []
         else:
-            assert isinstance(theta_values, pd.DataFrame)
-            # for parallel code we need to use lists and dicts in the loop
-            theta_names = theta_values.columns
-            # # check if theta_names are in model
-            # Clean names, ignore quotes, and compare sets
-            clean_provided = [t.replace("'", "") for t in theta_names]
-            if len(clean_provided) != len(set(clean_provided)):
-                raise ValueError(
-                    f"Duplicate theta names are not allowed: {clean_provided}"
-                )
-            clean_expected = [
-                t.replace("'", "")
-                for t in self._expand_indexed_unknowns(self._create_parmest_model(0))
-            ]
-            # If they do not match, raise error
-            if (len(clean_provided) != len(clean_expected)) or (
-                set(clean_provided) != set(clean_expected)
-            ):
-                raise ValueError(
-                    f"Provided theta values {clean_provided} do not match expected theta names {clean_expected}."
-                )
-            # Rename columns using cleaned names
-            if list(clean_provided) != list(theta_names):
-                theta_values = theta_values.copy()
-                theta_values.columns = clean_provided
+            theta_values = self._normalize_theta_dataframe(theta_values)
+            theta_names = list(theta_values.columns)
+            all_thetas = theta_values.to_dict("records")
 
-            # Convert to list of dicts for parallel processing
-            all_thetas = theta_values.to_dict('records')
-
-        # Initialize task manager
         num_tasks = len(all_thetas) if all_thetas else 1
         task_mgr = utils.ParallelTaskManager(num_tasks)
 
-        # Use local theta values for each task if all_thetas is provided, else empty list
-        if all_thetas:
-            local_thetas = task_mgr.global_to_local_data(all_thetas)
-        elif initialize_parmest_model:
-            local_thetas = []
+        local_thetas = (
+            task_mgr.global_to_local_data(all_thetas)
+            if all_thetas
+            else []
+        )
 
-        # walk over the mesh, return objective function
-        all_obj = list()
-        if len(all_thetas) > 0:
-            for Theta in local_thetas:
-                obj, thetvals, worststatus = self._Q_opt(
-                    theta_vals=Theta, fix_theta=True
+        all_obj = []
+
+        if all_thetas:
+            for theta in local_thetas:
+                obj, thetavals, worststatus = self._Q_opt(
+                    theta_vals=theta,
+                    fix_theta=True,
                 )
+
                 if (
                     worststatus != pyo.TerminationCondition.infeasible
                     and obj is not None
                 ):
-                    all_obj.append(list(Theta.values()) + [obj])
+                    all_obj.append([theta[name] for name in theta_names] + [obj])
+
         else:
-            obj, thetvals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
-            if worststatus != pyo.TerminationCondition.infeasible and obj is not None:
-                all_obj.append(list(thetvals.values()) + [obj])
+            obj, thetavals, worststatus = self._Q_opt(
+                theta_vals=None,
+                fix_theta=True,
+            )
+
+            if (
+                worststatus != pyo.TerminationCondition.infeasible
+                and obj is not None
+            ):
+                all_obj.append([thetavals[name] for name in theta_names] + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
-        dfcols = list(theta_names) + ['obj']
-        obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
-        return obj_at_theta
 
+        return pd.DataFrame(
+            data=global_all_obj,
+            columns=theta_names + ["obj"],
+        )
     def likelihood_ratio_test(
         self, obj_at_theta, obj_value, alphas, return_thresholds=False
     ):
