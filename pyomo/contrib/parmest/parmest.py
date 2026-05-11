@@ -419,9 +419,6 @@ def validate_experiment_outputs(output_vars):
         ref_indices = grouped_indices[ref_name]
 
         for name in names[1:]:
-            print(f"Length of {name}:", len(grouped_indices[name]))
-            print(f"Length of {ref_name}:", len(ref_indices))
-
             assert len(grouped_indices[name]) == len(
                 ref_indices
             ), "Experiment outputs must have the same number of indices or data points"
