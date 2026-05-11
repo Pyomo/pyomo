@@ -1311,9 +1311,9 @@ class TestReactorDesign_DAE(unittest.TestCase):
         )
 
         # Number of datapoints.
-        # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
-        # In this example, this is the number of data points in data_df, but that's
-        # only because the data is indexed by time and contains no additional information.
+        # In this example, there are 20 time points and 1 experiment = 20 data points
+        # The data is indexed by time, so we do not consider the number of experimental
+        # outputs.
         n = 20
 
         # Compute covariance using parmest
