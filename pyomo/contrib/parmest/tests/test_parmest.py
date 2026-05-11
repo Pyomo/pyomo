@@ -11,7 +11,6 @@ import sys
 import os
 import subprocess
 from itertools import product
-from unittest import mock
 from pyomo.common.unittest import pytest
 from parameterized import parameterized, parameterized_class
 import pyomo.common.unittest as unittest
