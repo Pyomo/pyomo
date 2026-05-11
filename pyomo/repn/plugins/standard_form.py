@@ -168,8 +168,12 @@ class LinearStandardFormInfo:
         self.columns = columns
         self.objectives = objectives
         self.eliminated_vars = eliminated_vars
-        self.nonlinear_constraints = nonlinear_constraints if nonlinear_constraints is not None else []
-        self.nonlinear_objectives = nonlinear_objectives if nonlinear_objectives is not None else []
+        self.nonlinear_constraints = (
+            nonlinear_constraints if nonlinear_constraints is not None else []
+        )
+        self.nonlinear_objectives = (
+            nonlinear_objectives if nonlinear_objectives is not None else []
+        )
 
     @property
     def x(self):
@@ -462,7 +466,9 @@ class _LinearStandardFormCompiler_impl:
                     except InvalidExpressionError:
                         nonlinear_objectives.append(obj)
                         if with_debug_timing:
-                            timer.toc('Objective %s (nonlinear)', obj, level=logging.DEBUG)
+                            timer.toc(
+                                'Objective %s (nonlinear)', obj, level=logging.DEBUG
+                            )
                         continue
                 else:
                     offset, linear_index, linear_data, lb, ub = (
@@ -481,7 +487,9 @@ class _LinearStandardFormCompiler_impl:
                     if allow_nonlinear:
                         nonlinear_objectives.append(obj)
                         if with_debug_timing:
-                            timer.toc('Objective %s (nonlinear)', obj, level=logging.DEBUG)
+                            timer.toc(
+                                'Objective %s (nonlinear)', obj, level=logging.DEBUG
+                            )
                         continue
                     raise InvalidExpressionError(
                         f"Model objective ({obj.name}) contains nonlinear terms that "
