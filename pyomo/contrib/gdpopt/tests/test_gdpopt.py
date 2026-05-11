@@ -137,6 +137,15 @@ class TestGDPoptUnit(unittest.TestCase):
         self.assertFalse(solver._problem_may_have_nonrigorous_dual_bound(convex))
         self.assertTrue(solver._problem_may_have_nonrigorous_dual_bound(nonconvex))
 
+    def test_loa_certifies_psd_quadratic_cross_terms(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-2, 2))
+        m.y = Var(bounds=(-2, 2))
+        m.c = Constraint(expr=m.x**2 + m.x * m.y + m.y**2 <= 4)
+        m.obj = Objective(expr=m.x)
+
+        self.assertFalse(GDP_LOA_Solver()._problem_may_have_nonrigorous_dual_bound(m))
+
     def test_gloa_crossed_bounds_preserve_certified_optimal_behavior(self):
         solver = GDP_GLOA_Solver()
         config = self._setup_crossed_bound_state(solver)
