@@ -14,11 +14,11 @@
 # ____________________________________________________________________________________
 
 import logging
-from io import StringIO
 import sys
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 from pyomo.contrib.trustregion.examples import example1, example2
 from pyomo.environ import SolverFactory
 
@@ -30,14 +30,13 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 )
 class TestTrustRegionMethod(unittest.TestCase):
     def test_example1(self):
-        # Check the log contents
-        log_OUTPUT = StringIO()
-        # Check the printed contents
-        print_OUTPUT = StringIO()
-        sys.stdout = print_OUTPUT
-        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+        with (
+            capture_output() as print_OUTPUT,
+            LoggingIntercept(
+                None, 'pyomo.contrib.trustregion', logging.INFO
+            ) as log_OUTPUT,
+        ):
             example1.main()
-        sys.stdout = sys.__stdout__
         # Check number of iterations - which should be 4 total
         self.assertIn('Iteration 0', log_OUTPUT.getvalue())
         self.assertIn('Iteration 4', log_OUTPUT.getvalue())
@@ -58,14 +57,13 @@ class TestTrustRegionMethod(unittest.TestCase):
         self.assertIn('None :   True : 0.2770447887637415', print_OUTPUT.getvalue())
 
     def test_example2(self):
-        # Check the log contents
-        log_OUTPUT = StringIO()
-        # Check the printed contents
-        print_OUTPUT = StringIO()
-        sys.stdout = print_OUTPUT
-        with LoggingIntercept(log_OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+        with (
+            capture_output() as print_OUTPUT,
+            LoggingIntercept(
+                None, 'pyomo.contrib.trustregion', logging.INFO
+            ) as log_OUTPUT,
+        ):
             example2.main()
-        sys.stdout = sys.__stdout__
         # Check the number of iterations - which should be 70ish, but not 80
         self.assertIn('Iteration 0', log_OUTPUT.getvalue())
         self.assertIn('Iteration 70', log_OUTPUT.getvalue())

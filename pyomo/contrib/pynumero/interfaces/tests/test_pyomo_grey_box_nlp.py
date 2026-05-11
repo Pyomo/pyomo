@@ -2586,6 +2586,28 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
         self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
 
+    def test_has_hessian_support_false(self):
+        external_model = ex_models.PressureDropSingleOutput()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(external_model.n_inputs()))
+        m.gb = ExternalGreyBoxBlock()
+        m.gb.set_external_model(external_model, inputs=list(m.x.values()))
+        # Some random constraint to let us construct the NLP...
+        m.eq = pyo.Constraint(expr=sum(m.x.values()) == 1)
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        self.assertFalse(nlp.has_hessian_support())
+
+    def test_has_hessian_support_true(self):
+        external_model = ex_models.PressureDropSingleOutputWithHessian()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(external_model.n_inputs()))
+        m.gb = ExternalGreyBoxBlock()
+        m.gb.set_external_model(external_model, inputs=list(m.x.values()))
+        # Some random constraint to let us construct the NLP...
+        m.eq = pyo.Constraint(expr=sum(m.x.values()) == 1)
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        self.assertTrue(nlp.has_hessian_support())
+
 
 class TestGreyBoxObjectives(unittest.TestCase):
     @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
