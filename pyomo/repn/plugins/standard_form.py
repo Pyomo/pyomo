@@ -398,7 +398,8 @@ class _LinearStandardFormCompiler_impl:
                 RangeSet,
                 Port,
                 # TODO: Piecewise, Complementarity
-            } | set(self.config.extra_valid_ctypes),
+            }
+            | set(self.config.extra_valid_ctypes),
             targets={Suffix, Objective},
         )
         if unknown:
