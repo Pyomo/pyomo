@@ -591,14 +591,32 @@ class _ExternalGreyBoxAsNLP(NLP):
             for k in self._block.outputs
         )
 
-        # Collect implicit constraints.
-        self._constraint_names = []
-        self._constraint_datas = []
-        for c in self._block.component_data_objects(
-            ExternalGreyBoxConstraint, active=True, descend_into=False
-        ):
-            self._constraint_names.append(c.getname(fully_qualified=True))
-            self._constraint_datas.append(c)
+        n_primals = len(self._primals_names)
+
+        prefix = self._block.getname(fully_qualified=True)
+        self._constraint_names = [
+            '{}.{}'.format(prefix, nm)
+            for nm in self._ex_model.equality_constraint_names()
+        ]
+        output_var_names = [
+            self._block.outputs[k].getname(fully_qualified=False)
+            for k in self._block.outputs
+        ]
+        self._constraint_names.extend(
+            [
+                '{}.output_constraints[{}]'.format(prefix, nm)
+                for nm in self._ex_model.output_names()
+            ]
+        )
+
+        # # Collect implicit constraints.
+        # self._constraint_names = []
+        # self._constraint_datas = []
+        # for c in self._block.component_data_objects(
+        #     ExternalGreyBoxConstraint, active=True, descend_into=False
+        # ):
+        #     self._constraint_names.append(c.getname(fully_qualified=True))
+        #     self._constraint_datas.append(c)
 
         # create the numpy arrays of bounds on the primals
         self._primals_lb = BlockVector(2)

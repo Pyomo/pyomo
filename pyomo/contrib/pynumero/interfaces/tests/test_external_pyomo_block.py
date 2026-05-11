@@ -792,8 +792,8 @@ class TestPyomoNLPWithGreyBoxBlocks(unittest.TestCase):
             "linking_constraint[0]",
             "linking_constraint[1]",
             "linking_constraint[2]",
-            "ex_block.eq_constraints[residual_0]",
-            "ex_block.eq_constraints[residual_1]",
+            "ex_block.residual_0",
+            "ex_block.residual_1",
         ]
         self.assertEqual(constraint_names, nlp.constraint_names())
         residuals = np.array(
