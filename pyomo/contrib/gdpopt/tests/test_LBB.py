@@ -18,11 +18,26 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import import_file
 from pyomo.common.log import LoggingIntercept
+import pyomo.contrib.gdpopt.branch_and_bound as bb
 import pyomo.contrib.gdpopt.tests.common_tests as ct
+from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
+from pyomo.contrib.gdpopt.create_oa_subproblems import (
+    add_algebraic_variable_list,
+    add_util_block,
+)
 from pyomo.contrib.satsolver.satsolver import z3_available
-from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective, maximize
+from pyomo.environ import (
+    Binary,
+    SolverFactory,
+    value,
+    ConcreteModel,
+    Var,
+    Objective,
+    maximize,
+    minimize,
+)
 from pyomo.gdp import Disjunction
-from pyomo.opt import TerminationCondition
+from pyomo.opt import SolverResults, SolverStatus, TerminationCondition
 
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
@@ -33,6 +48,120 @@ solver_available = SolverFactory(minlp_solver).available()
 license_available = (
     SolverFactory(minlp_solver).license_is_valid() if solver_available else False
 )
+
+
+class _RecordingSolver:
+    def __init__(self, name, calls):
+        self.name = name
+        self.calls = calls
+
+    def solve(self, model, **kwds):
+        has_unfixed_discrete = any(
+            (v.is_binary() or v.is_integer()) and not v.fixed
+            for v in model.component_data_objects(Var, descend_into=True)
+        )
+        self.calls.append((self.name, has_unfixed_discrete, kwds))
+
+        results = SolverResults()
+        results.solver.status = SolverStatus.ok
+        results.solver.termination_condition = TerminationCondition.optimal
+        results.problem.lower_bound = 0
+        results.problem.upper_bound = 0
+        return results
+
+
+class TestGDPoptLBBNodeSolverDispatch(unittest.TestCase):
+    def _make_lbb_solver(self, model):
+        solver = GDP_LBB_Solver()
+        solver.pyomo_results = SolverResults()
+        solver.pyomo_results.problem.sense = minimize
+        solver.original_util_block = add_util_block(model)
+        add_algebraic_variable_list(solver.original_util_block)
+        return solver
+
+    def _make_config(self, solver, relaxed_nlp_solver=None):
+        config = solver.CONFIG()
+        config.minlp_solver = 'sentinel_minlp'
+        config.nlp_solver = 'sentinel_nlp'
+        config.local_minlp_solver = 'sentinel_local_minlp'
+        config.minlp_solver_args['role'] = 'minlp'
+        config.nlp_solver_args['role'] = 'nlp'
+        config.local_minlp_solver_args['role'] = 'local_minlp'
+        config.relaxed_nlp_solver = relaxed_nlp_solver
+        if relaxed_nlp_solver is not None:
+            config.relaxed_nlp_solver_args['role'] = 'relaxed_nlp'
+        config.integer_tolerance = 1e-5
+        config.time_limit = None
+        return config
+
+    def _record_solver_calls(self, method_name, model, relaxed_nlp_solver=None):
+        calls = []
+        original_solver_factory = bb.SolverFactory
+        bb.SolverFactory = lambda name: _RecordingSolver(name, calls)
+        try:
+            solver = self._make_lbb_solver(model)
+            config = self._make_config(solver, relaxed_nlp_solver)
+            getattr(solver, method_name)(model, config)
+        finally:
+            bb.SolverFactory = original_solver_factory
+        return calls
+
+    def test_continuous_node_subproblem_uses_relaxed_nlp_solver(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+
+        calls = self._record_solver_calls(
+            '_solve_rnGDP_subproblem', m, relaxed_nlp_solver='sentinel_relaxed_nlp'
+        )
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], 'sentinel_relaxed_nlp')
+        self.assertFalse(calls[0][1])
+        self.assertEqual(calls[0][2]['role'], 'relaxed_nlp')
+
+    def test_continuous_node_subproblem_defaults_to_minlp_solver(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+
+        calls = self._record_solver_calls('_solve_rnGDP_subproblem', m)
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], 'sentinel_minlp')
+        self.assertFalse(calls[0][1])
+        self.assertEqual(calls[0][2]['role'], 'minlp')
+
+    def test_mixed_integer_node_subproblem_uses_minlp_solver(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.y = Var(domain=Binary)
+        m.obj = Objective(expr=m.x + m.y)
+
+        calls = self._record_solver_calls(
+            '_solve_rnGDP_subproblem', m, relaxed_nlp_solver='sentinel_relaxed_nlp'
+        )
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], 'sentinel_minlp')
+        self.assertTrue(calls[0][1])
+        self.assertEqual(calls[0][2]['role'], 'minlp')
+
+    def test_continuous_local_node_subproblem_uses_relaxed_nlp_solver(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+
+        calls = self._record_solver_calls(
+            '_solve_local_rnGDP_subproblem',
+            m,
+            relaxed_nlp_solver='sentinel_relaxed_nlp',
+        )
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], 'sentinel_relaxed_nlp')
+        self.assertFalse(calls[0][1])
+        self.assertEqual(calls[0][2]['role'], 'relaxed_nlp')
 
 
 @unittest.skipUnless(
