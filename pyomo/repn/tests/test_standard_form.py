@@ -377,7 +377,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.A.toarray() == ref_A))
         # m.e: rhs = ub - offset = 7 - 1 = 6
         self.assertTrue(np.all(repn.rhs == np.array([3, 5, 6, 8])))
-        # rhs_range: only m.e is nonzero; range = 7 - (-2) = 9
+        # rhs_range: only m.e is a range row; range = 7 - (-2) = 9
         self.assertTrue(np.all(repn.rhs_range == np.array([0.0, 0.0, 9.0, 0.0])))
 
         # --- default form + keep_range_constraints ---
@@ -399,8 +399,8 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
             (r.constraint, r.bound_type) for r in repn3.rows if r.constraint is m.e
         ]
         self.assertEqual(e_rows, [(m.e, 1), (m.e, -1)])
-        # rhs_range is all-zeros when keep_range_constraints=False
-        self.assertTrue(np.all(repn3.rhs_range == 0.0))
+        # rhs_range is None when keep_range_constraints=False
+        self.assertIsNone(repn3.rhs_range)
 
         # --- slack_form + keep_range_constraints must raise ---
         with self.assertRaises(ValueError):
