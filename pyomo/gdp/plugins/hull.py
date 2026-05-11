@@ -496,8 +496,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         orig_values = ComponentMap()
         orig_fixed = ComponentMap()
         for x in itertools.chain(regular_vars, fallback_vars):
-            x0_map[x] = 0  # ZeroConstant?
-            orig_values[x] = value(x, exception=False)
+            x0_map[x] = 0
+            orig_values[x] = x.value
             orig_fixed[x] = x.fixed
         # Outer try-finally to ensure we always restore orig_values and
         # orig_fixed on exit (even if we or the solver throw an exception)
@@ -510,9 +510,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 )
                 if math.isfinite(val):
                     return x0_map, ComponentSet()
-            except ValueError:  # ('math domain error')
-                pass
-            except ZeroDivisionError:
+            except (ValueError, ZeroDivisionError):  # ('math domain error')
                 pass
             except Exception as e:  # can anything else be thrown here?
                 logger.error(
@@ -1941,13 +1939,18 @@ def _handleDivisionExpression(node):
 def _handleUnaryFunctionExpression(node):
     arg = node.args[0]
     if (
-        arg.__class__ in EXPR.native_types
+        node.name in _unary_functions_unrestricted
+        or arg.__class__ in EXPR.native_types
         or not arg.is_potentially_variable()
-        or node.name not in _unary_function_handlers
     ):
         return ()
-    else:
+    elif node.name in _unary_function_handlers:
         return _unary_function_handlers[node.name](arg)
+    else:
+        raise GDP_Error(
+            "Hull transformation base point heuristic: no domain "
+            f"information available for unfamiliar unary function {node.name}"
+        )
 
 
 # Unary function handlers
@@ -2009,4 +2012,20 @@ _unary_function_handlers = {
     'tan': _handle_tan,
     'acosh': _handle_acosh,
     'atanh': _handle_atanh,
+}
+
+# Unary functions that can never be ill-defined:
+_unary_functions_unrestricted = {
+    # Being a subclass of UnaryFunctionExpression, 'abs' does not end up here - this
+    # error check is available only for direct users of UnaryFunctionExpression.
+    'ceil',
+    'floor',
+    'exp',
+    'sin',
+    'cos',
+    'sinh',
+    'cosh',
+    'tanh',
+    'atan',
+    'asinh',
 }

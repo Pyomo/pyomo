@@ -38,7 +38,16 @@ from pyomo.environ import (
     acosh,
     atanh,
     tan,
+    ceil,
+    floor,
     sin,
+    exp,
+    cos,
+    sinh,
+    cosh,
+    tanh,
+    atan,
+    asinh,
     ConcreteModel,
     Any,
     Suffix,
@@ -3026,6 +3035,18 @@ class WellDefinedConstraintWalkerTest(unittest.TestCase):
             + tan(m.x + 6)
             + acosh(m.x + 7)
             + atanh(m.x + 8)
+            # no constraints added by these
+            + abs(m.x)
+            + ceil(m.x)
+            + floor(m.x)
+            + exp(m.x)
+            + sin(m.x)
+            + cos(m.x)
+            + sinh(m.x)
+            + cosh(m.x)
+            + tanh(m.x)
+            + atan(m.x)
+            + asinh(m.x)
             >= 0
         )
         m.cons = ConstraintList()
@@ -3033,6 +3054,7 @@ class WellDefinedConstraintWalkerTest(unittest.TestCase):
         walker.walk_expression(m.hard.body)
         walker.walk_expression(m.several.body)
         walker_eps = 1e-4
+        self.assertEqual(len(m.cons), 16)
         for con, expected_con in zip(
             m.cons.values(),
             [
