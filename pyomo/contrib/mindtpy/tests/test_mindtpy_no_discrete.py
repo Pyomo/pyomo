@@ -10,7 +10,8 @@
 
 from unittest.mock import MagicMock, patch
 
-from pyomo.opt import TerminationCondition as tc, SolverStatus
+from pyomo.common import timing
+from pyomo.opt import TerminationCondition as tc, SolverStatus, SolverResults
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
@@ -453,6 +454,25 @@ class TestMirrorDirectSolveResults(unittest.TestCase):
         self.assertEqual(algo.results.solver.status, SolverStatus.ok)
         self.assertEqual(algo.results.solver.termination_condition, tc.optimal)
         self.assertEqual(algo.results.solver.message, "All good")
+
+
+class TestMindtPyGOATimeLimit(unittest.TestCase):
+    def test_goa_time_limit_sets_solver_results_condition(self):
+        from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
+
+        solver = MindtPy_GOA_Solver()
+        solver.config = _SimpleNamespace(
+            logger=MagicMock(), single_tree=False, time_limit=1
+        )
+        solver.results = SolverResults()
+        solver.timing = _SimpleNamespace(
+            main_timer_start_time=timing.default_timer() - 2
+        )
+        solver.primal_bound = float('inf')
+        solver.dual_bound = float('-inf')
+
+        self.assertTrue(solver.reached_time_limit())
+        self.assertEqual(solver.results.solver.termination_condition, tc.maxTimeLimit)
 
 
 class _FakeLegacyMIPSolver:
