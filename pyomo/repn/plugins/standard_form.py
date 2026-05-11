@@ -18,8 +18,10 @@ from pyomo.common.config import (
     InEnum,
     document_kwargs_from_configdict,
 )
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.common.dependencies import scipy, numpy as np
 from pyomo.common.enums import ObjectiveSense
+from pyomo.common.errors import InvalidConstraintError, InvalidExpressionError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import native_types, value
 from pyomo.common.timing import TicTocTimer
@@ -376,9 +378,10 @@ class _LinearStandardFormCompiler_impl:
         obj_index_ptr = [0]
         for obj in objectives:
             if hasattr(obj, 'template_expr'):
-                offset, linear_index, linear_data, _, _ = (
+                offset, linear_index, linear_data, lb, ub = (
                     template_visitor.expand_expression(obj, obj.template_expr())
                 )
+                assert lb is None and ub is None
                 N = len(linear_index)
                 obj_index.append(linear_index)
                 obj_data.append(linear_data)
@@ -391,7 +394,7 @@ class _LinearStandardFormCompiler_impl:
                 obj_offset.append(repn.constant)
 
                 if repn.nonlinear is not None:
-                    raise ValueError(
+                    raise InvalidExpressionError(
                         f"Model objective ({obj.name}) contains nonlinear terms that "
                         "cannot be compiled to standard (linear) form."
                     )
@@ -430,7 +433,8 @@ class _LinearStandardFormCompiler_impl:
                 )
                 N = len(linear_data)
             else:
-                # Note: lb and ub could be a number, expression, or None
+                # Note: lb and ub could be a number, expression, or None.
+                # Non-fixed expressions will raise an InvalidConstraintError.
                 lb, body, ub = con.to_bounded_expression()
                 if lb.__class__ not in native_types:
                     lb = value(lb)
@@ -438,7 +442,7 @@ class _LinearStandardFormCompiler_impl:
                     ub = value(ub)
                 repn = visitor.walk_expression(body)
                 if repn.nonlinear is not None:
-                    raise ValueError(
+                    raise InvalidConstraintError(
                         f"Model constraint ({con.name}) contains nonlinear terms that "
                         "cannot be compiled to standard (linear) form."
                     )
@@ -460,7 +464,7 @@ class _LinearStandardFormCompiler_impl:
                 # TODO: add a (configurable) feasibility tolerance
                 if (lb is None or lb <= offset) and (ub is None or ub >= offset):
                     continue
-                raise InfeasibleError(
+                raise InfeasibleConstraintException(
                     f"model contains a trivially infeasible constraint, '{con.name}'"
                 )
 
