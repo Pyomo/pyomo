@@ -20,8 +20,17 @@ from pyomo.common.fileutils import import_file
 from pyomo.common.log import LoggingIntercept
 import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.satsolver.satsolver import z3_available
-from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective, maximize
-from pyomo.gdp import Disjunction
+from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
+from pyomo.environ import (
+    SolverFactory,
+    value,
+    ConcreteModel,
+    Constraint,
+    Var,
+    Objective,
+    maximize,
+)
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import TerminationCondition
 
 currdir = dirname(abspath(__file__))
@@ -33,6 +42,40 @@ solver_available = SolverFactory(minlp_solver).available()
 license_available = (
     SolverFactory(minlp_solver).license_is_valid() if solver_available else False
 )
+
+
+class TestGDPopt_LBB_TimeLimit(unittest.TestCase):
+    """Tests for solver-independent LBB termination paths."""
+
+    def test_time_limit_returns_pyomo_results_object(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d1.c = Constraint(expr=m.x <= 0.5)
+        m.d2.c = Constraint(expr=m.x >= 1.5)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m.obj = Objective(expr=m.x)
+
+        orig_reached_time_limit = GDP_LBB_Solver.reached_time_limit
+
+        def force_time_limit(solver, config):
+            solver.pyomo_results.solver.termination_condition = (
+                TerminationCondition.maxTimeLimit
+            )
+            return True
+
+        GDP_LBB_Solver.reached_time_limit = force_time_limit
+        try:
+            results = SolverFactory('gdpopt.lbb').solve(m, time_limit=1, tee=False)
+        finally:
+            GDP_LBB_Solver.reached_time_limit = orig_reached_time_limit
+
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxTimeLimit
+        )
+        self.assertEqual(results.problem.lower_bound, float('-inf'))
+        self.assertEqual(results.problem.upper_bound, float('inf'))
 
 
 @unittest.skipUnless(
