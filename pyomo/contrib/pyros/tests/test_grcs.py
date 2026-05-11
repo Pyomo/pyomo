@@ -5227,7 +5227,7 @@ class CustomExactBoundsUncertaintySet(BoxSet):
         return bounds
 
 
-@unittest.skipUnless(baron_available, "BARON not available.")
+@unittest.skipUnless(ipopt_available, "IPOPT is not available.")
 class TestPyROSCache(unittest.TestCase):
     """
     Test PyROS cache creation and clearing.
@@ -5248,12 +5248,11 @@ class TestPyROSCache(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        # the error solver will cause the first separation problem to fail
-        local_subsolver = SolverFactory("baron")
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory("ipopt")
+        global_subsolver = SolverFactory("ipopt")
 
-        # check cache has not been created
-        self.assertFalse(hasattr(interval, "_cache"))
+        # check cache exists
+        self.assertTrue(hasattr(interval, "_cache"))
 
         # Call the PyROS solver
         results = pyros_solver.solve(
@@ -5270,9 +5269,6 @@ class TestPyROSCache(unittest.TestCase):
             },
         )
 
-        # check cache has been created
-        self.assertTrue(hasattr(interval, "_cache"))
-
         # check cache has been cleared after solve
         self.assertTrue(hasattr(interval, "_cache"))
         self.assertEqual(
@@ -5287,19 +5283,18 @@ class TestPyROSCache(unittest.TestCase):
 
         # Define the uncertainty set
         interval_cache = CustomExactBoundsUncertaintySet(
-            bounds=[(0.25, 2)], sleep_time=0.5, cache=True
+            bounds=[(0.25, 2)], sleep_time=0.1, cache=True
         )
         interval_no_cache = CustomExactBoundsUncertaintySet(
-            bounds=[(0.25, 2)], sleep_time=0.5, cache=False
+            bounds=[(0.25, 2)], sleep_time=0.1, cache=False
         )
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        # the error solver will cause the first separation problem to fail
-        local_subsolver = SolverFactory("baron")
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory("ipopt")
+        global_subsolver = SolverFactory("ipopt")
 
         # Call the PyROS solver
         results_cache = pyros_solver.solve(
@@ -5354,9 +5349,8 @@ class TestPyROSCache(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        # the error solver will cause the first separation problem to fail
-        local_subsolver = SolverFactory("baron")
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory("ipopt")
+        global_subsolver = SolverFactory("ipopt")
 
         # Solve with PyROS
         results = pyros_solver.solve(

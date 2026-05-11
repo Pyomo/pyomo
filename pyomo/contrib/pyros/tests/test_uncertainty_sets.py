@@ -3300,8 +3300,8 @@ class TestCustomUncertaintySet(unittest.TestCase):
         baron = SolverFactory("baron")
         custom_set = CustomUncertaintySet(dim=2)
 
-        # check cache does not exist
-        self.assertFalse(hasattr(custom_set, "_cache"))
+        # check cache exists
+        self.assertTrue(hasattr(custom_set, "_cache"))
 
         # check bounds calculation
         self.assertEqual(
@@ -3310,9 +3310,6 @@ class TestCustomUncertaintySet(unittest.TestCase):
             ),
             -1.0,
         )
-
-        # check cache creation
-        self.assertTrue(hasattr(custom_set, "_cache"))
 
         # check cache access
         self.assertIs(
