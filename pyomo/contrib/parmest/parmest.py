@@ -1943,29 +1943,39 @@ class Estimator:
 
         local_thetas = task_mgr.global_to_local_data(all_thetas) if all_thetas else []
 
-        all_obj = []
+        all_obj = list()
 
-        if all_thetas:
-            for theta in local_thetas:
-                obj, thetavals, worststatus = self._Q_opt(
-                    theta_vals=theta, fix_theta=True
+        if len(all_thetas) > 0:
+            for Theta in local_thetas:
+                obj, thetvals, worststatus = self._Q_opt(
+                    theta_vals=Theta, fix_theta=True
                 )
 
                 if (
-                    worststatus != pyo.TerminationCondition.infeasible
-                    and obj is not None
+                    worststatus == pyo.TerminationCondition.infeasible
+                    or obj is None
                 ):
-                    all_obj.append([theta[name] for name in theta_names] + [obj])
+                    all_obj.append(None)
+                else:
+                    all_obj.append([Theta[name] for name in theta_names] + [obj])
 
         else:
-            obj, thetavals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
+            obj, thetvals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
 
-            if worststatus != pyo.TerminationCondition.infeasible and obj is not None:
-                all_obj.append([thetavals[name] for name in theta_names] + [obj])
+            if (
+                worststatus == pyo.TerminationCondition.infeasible
+                or obj is None
+            ):
+                all_obj.append(None)
+            else:
+                all_obj.append([thetvals[name] for name in theta_names] + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
+        global_all_obj = [row for row in global_all_obj if row is not None]
 
-        return pd.DataFrame(data=global_all_obj, columns=theta_names + ["obj"])
+        dfcols = list(theta_names) + ['obj']
+        obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
+        return obj_at_theta
 
     def likelihood_ratio_test(
         self, obj_at_theta, obj_value, alphas, return_thresholds=False

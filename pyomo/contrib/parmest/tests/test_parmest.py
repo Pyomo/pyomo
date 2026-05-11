@@ -1426,19 +1426,25 @@ class LinearThetaExperiment(Experiment):
 
     def create_model(self):
         m = pyo.ConcreteModel()
+
         m.theta = pyo.Var(initialize=0.0, bounds=(-10.0, 10.0))
         m.x = pyo.Param(initialize=float(self.x_data), mutable=False)
         m.y = pyo.Var(initialize=float(self.y_data))
+
         m.y_link = pyo.Constraint(expr=m.y == m.theta + m.x)
+
         if self.include_second_output:
-            m.z = pyo.Var(initialize=2.0 * self.y_data)
+            m.z = pyo.Var(initialize=2.0 * float(self.y_data))
             m.z_link = pyo.Constraint(expr=m.z == 2.0 * m.theta + m.x)
+
         self.model = m
 
     def label_model(self):
         m = self.model
+
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_outputs.update([(m.y, float(self.y_data))])
+
         if self.include_second_output:
             m.experiment_outputs.update([(m.z, float(2.0 * self.y_data))])
 
@@ -1447,8 +1453,94 @@ class LinearThetaExperiment(Experiment):
 
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.measurement_error.update([(m.y, None)])
+
         if self.include_second_output:
             m.measurement_error.update([(m.z, None)])
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        return self.model
+
+
+class IndexedThetaExperiment(Experiment):
+    def __init__(self, x, y):
+        self.x_data = x
+        self.y_data = y
+        self.model = None
+
+    def create_model(self):
+        m = pyo.ConcreteModel()
+
+        m.theta_index = pyo.Set(initialize=["a", "b"])
+        m.theta = pyo.Var(
+            m.theta_index,
+            initialize={
+                "a": 0.0,
+                "b": 1.0,
+            },
+            bounds=(-10.0, 10.0),
+        )
+
+        m.x = pyo.Param(initialize=float(self.x_data), mutable=False)
+        m.y = pyo.Var(initialize=float(self.y_data))
+
+        m.y_link = pyo.Constraint(
+            expr=m.y == m.theta["a"] + m.theta["b"] * m.x
+        )
+
+        self.model = m
+
+    def label_model(self):
+        m = self.model
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.y, float(self.y_data))])
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, None)])
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        return self.model
+
+
+class BoundedLinearThetaExperiment(Experiment):
+    def __init__(self, x, y):
+        self.x_data = x
+        self.y_data = y
+        self.model = None
+
+    def create_model(self):
+        m = pyo.ConcreteModel()
+
+        m.theta = pyo.Var(initialize=0.0, bounds=(-10.0, 10.0))
+        m.x = pyo.Param(initialize=float(self.x_data), mutable=False)
+        m.y = pyo.Var(initialize=float(self.y_data))
+
+        m.y_link = pyo.Constraint(expr=m.y == m.theta + m.x)
+
+        # This allows fixed-theta tests to create a real infeasible model.
+        # For example, theta=2 and x=1 implies y=3, violating y <= 2.
+        m.upper_limit = pyo.Constraint(expr=m.y <= 2.0)
+
+        self.model = m
+
+    def label_model(self):
+        m = self.model
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.y, float(self.y_data))])
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, None)])
 
     def get_labeled_model(self):
         self.create_model()
@@ -1464,27 +1556,37 @@ class IndexedOutputExperiment(Experiment):
 
     def create_model(self):
         m = pyo.ConcreteModel()
+
         m.theta = pyo.Var(initialize=0.0, bounds=(-10.0, 10.0))
+
         m.y_index = pyo.Set(dimen=2, ordered=True, initialize=self.y_points)
         m.z_index = pyo.Set(dimen=2, ordered=True, initialize=self.z_points)
+
         m.y = pyo.Var(m.y_index, initialize=0.0)
         m.z = pyo.Var(m.z_index, initialize=0.0)
+
         self.model = m
 
     def label_model(self):
         m = self.model
+
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
         m.experiment_outputs.update(
-            (m.y[idx], float(i)) for i, idx in enumerate(self.y_points, start=1)
+            (m.y[idx], float(i))
+            for i, idx in enumerate(self.y_points, start=1)
         )
+
         m.experiment_outputs.update(
-            (m.z[idx], float(i)) for i, idx in enumerate(self.z_points, start=1)
+            (m.z[idx], float(i))
+            for i, idx in enumerate(self.z_points, start=1)
         )
 
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
 
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
         m.measurement_error.update((m.y[idx], None) for idx in self.y_points)
         m.measurement_error.update((m.z[idx], None) for idx in self.z_points)
 
@@ -1496,29 +1598,39 @@ class IndexedOutputExperiment(Experiment):
 
 def _build_estimator(data, include_second_output=False):
     exp_list = [
-        LinearThetaExperiment(x=x, y=y, include_second_output=include_second_output)
+        LinearThetaExperiment(
+            x=x,
+            y=y,
+            include_second_output=include_second_output,
+        )
         for x, y in data
     ]
+
     return parmest.Estimator(exp_list, obj_function="SSE")
 
+
+def _build_indexed_theta_estimator(data):
+    exp_list = [
+        IndexedThetaExperiment(x=x, y=y)
+        for x, y in data
+    ]
+
+    return parmest.Estimator(exp_list, obj_function="SSE")
+
+
+def _build_bounded_estimator(data):
+    exp_list = [
+        BoundedLinearThetaExperiment(x=x, y=y)
+        for x, y in data
+    ]
+
+    return parmest.Estimator(exp_list, obj_function="SSE")
 
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
 )
 class TestParmestBlockEF(unittest.TestCase):
-    def _make_solve_result(self, termination_condition, has_solution=True):
-        result = mock.Mock()
-        result.solver = mock.Mock()
-        result.solver.termination_condition = termination_condition
-        result.solution = [object()] if has_solution else []
-        return result
-
-    def _make_mock_solver(self, solve_result):
-        solver = mock.Mock()
-        solver.options = {}
-        solver.solve.return_value = solve_result
-        return solver
 
     def test_block_ef_structure_counts(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
@@ -1534,6 +1646,7 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertEqual(len(list(model.exp_scenarios.keys())), 2)
         self.assertEqual(len(model.theta_link_constraints), 2 * len(theta_names))
         self.assertTrue(hasattr(model, "Obj"))
+
         for block in model.exp_scenarios.values():
             self.assertFalse(block.Total_Cost_Objective.active)
             self.assertFalse(block.theta.fixed)
@@ -1550,6 +1663,7 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertTrue(model.parmest_theta["theta"].fixed)
         self.assertAlmostEqual(pyo.value(model.parmest_theta["theta"]), 1.0, places=10)
         self.assertEqual(len(model.theta_link_constraints), 0)
+
         for block in model.exp_scenarios.values():
             self.assertTrue(block.theta.fixed)
             self.assertAlmostEqual(pyo.value(block.theta), 1.0, places=10)
@@ -1569,179 +1683,172 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(model.exp_scenarios[1].x), 2.0, places=10)
         self.assertAlmostEqual(pyo.value(model.exp_scenarios[2].x), 2.0, places=10)
 
-    def test_q_opt_nonfixed_asserts_before_loading_solution(self):
-        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
-        model = pest._create_scenario_blocks()
-        solve_result = self._make_solve_result(pyo.TerminationCondition.optimal)
-        solver = self._make_mock_solver(solve_result)
-        events = []
+    def test_indexed_unknown_parameters_are_expanded_and_fixed(self):
+        pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
 
-        with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
-            with mock.patch.object(parmest, "SolverFactory", return_value=solver):
-                with mock.patch.object(
-                    parmest,
-                    "assert_optimal_termination",
-                    side_effect=lambda result: events.append(
-                        ("assert", result.solver.termination_condition)
-                    ),
-                ) as assert_mock:
-                    with mock.patch.object(
-                        model.solutions,
-                        "load_from",
-                        side_effect=lambda result: events.append(
-                            ("load", result.solver.termination_condition)
-                        ),
-                    ) as load_mock:
-                        obj, theta = pest._Q_opt()
-                        obj_with_vars, theta_with_vars, var_values = pest._Q_opt(
-                            return_values=["y"]
-                        )
-
-        self.assertEqual(events[0][0], "assert")
-        self.assertEqual(events[1][0], "load")
-        self.assertEqual(events[2][0], "assert")
-        self.assertEqual(events[3][0], "load")
-        self.assertEqual(assert_mock.call_count, 2)
-        self.assertEqual(load_mock.call_count, 2)
-        self.assertIsInstance(obj, float)
-        self.assertIsInstance(theta, dict)
-        self.assertIsInstance(obj_with_vars, float)
-        self.assertIsInstance(theta_with_vars, dict)
-        self.assertIsInstance(var_values, pd.DataFrame)
-
-    def test_q_opt_fixed_theta_returns_direct_termination_condition(self):
-        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
-        model = pest._create_scenario_blocks(theta_vals={"theta": 1.0}, fix_theta=True)
-        solve_result = self._make_solve_result(pyo.TerminationCondition.maxIterations)
-        solver = self._make_mock_solver(solve_result)
-
-        with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
-            with mock.patch.object(parmest, "SolverFactory", return_value=solver):
-                with mock.patch.object(model.solutions, "load_from") as load_mock:
-                    obj, theta, status = pest._Q_opt(
-                        theta_vals={"theta": 1.0}, fix_theta=True
-                    )
-
-        load_mock.assert_called_once_with(solve_result)
-        self.assertEqual(status, pyo.TerminationCondition.maxIterations)
-        self.assertIsInstance(obj, float)
-        self.assertEqual(theta, {"theta": 1.0})
-
-    def test_q_opt_fixed_theta_infeasible_returns_without_loading_or_evaluating(self):
-        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
-        model = pest._create_scenario_blocks(theta_vals={"theta": 9.0}, fix_theta=True)
-        solve_result = self._make_solve_result(
-            pyo.TerminationCondition.infeasible, has_solution=False
+        model = pest._create_scenario_blocks(
+            theta_vals={
+                "theta[a]": 1.0,
+                "theta[b]": 2.0,
+            },
+            fix_theta=True,
         )
-        solver = self._make_mock_solver(solve_result)
 
-        with mock.patch.object(pest, "_create_scenario_blocks", return_value=model):
-            with mock.patch.object(parmest, "SolverFactory", return_value=solver):
-                with mock.patch.object(model.solutions, "load_from") as load_mock:
-                    with mock.patch.object(
-                        parmest.pyo,
-                        "value",
-                        side_effect=AssertionError(
-                            "pyo.value should not be called for infeasible fixed theta"
-                        ),
-                    ):
-                        obj, theta, status = pest._Q_opt(
-                            theta_vals={"theta": 9.0}, fix_theta=True
-                        )
+        self.assertEqual(
+            list(model._parmest_theta_names),
+            ["theta[a]", "theta[b]"],
+        )
+        self.assertEqual(len(model.theta_link_constraints), 0)
 
-        load_mock.assert_not_called()
-        self.assertIsNone(obj)
-        self.assertEqual(theta, {"theta": 9.0})
-        self.assertEqual(status, pyo.TerminationCondition.infeasible)
+        for block in model.exp_scenarios.values():
+            self.assertTrue(block.theta["a"].fixed)
+            self.assertTrue(block.theta["b"].fixed)
+            self.assertAlmostEqual(pyo.value(block.theta["a"]), 1.0, places=10)
+            self.assertAlmostEqual(pyo.value(block.theta["b"]), 2.0, places=10)
 
-    def test_objective_at_theta_omits_infeasible_fixed_theta_rows(self):
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_q_opt_solves_block_ef_and_returns_theta(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
-        theta_values = pd.DataFrame([[1.0], [9.0]], columns=["theta"])
 
-        class _FakeTaskManager:
-            def __init__(self, num_tasks):
-                self.num_tasks = num_tasks
+        obj, theta = pest._Q_opt()
 
-            def global_to_local_data(self, global_data):
-                return list(global_data)
+        self.assertAlmostEqual(theta["theta"], 1.5, places=7)
+        self.assertAlmostEqual(obj, 0.25, places=7)
 
-            def allgather_global_data(self, local_data):
-                return list(local_data)
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_q_opt_returns_requested_values(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
 
-        with mock.patch.object(parmest.utils, "ParallelTaskManager", _FakeTaskManager):
-            with mock.patch.object(
-                pest,
-                "_Q_opt",
-                side_effect=[
-                    (0.5, {"theta": 1.0}, pyo.TerminationCondition.optimal),
-                    (None, {"theta": 9.0}, pyo.TerminationCondition.infeasible),
-                ],
-            ):
-                obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
+        obj, theta, var_values = pest._Q_opt(return_values=["y"])
 
-        self.assertEqual(len(obj_at_theta), 1)
-        self.assertEqual(list(obj_at_theta.columns), ["theta", "obj"])
-        self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 1.0, places=8)
-        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
+        self.assertAlmostEqual(theta["theta"], 1.5, places=7)
+        self.assertIsInstance(var_values, pd.DataFrame)
+        self.assertEqual(list(var_values.columns), ["y"])
+        self.assertEqual(len(var_values), 2)
+        self.assertAlmostEqual(var_values.loc[0, "y"], 2.5, places=7)
+        self.assertAlmostEqual(var_values.loc[1, "y"], 3.5, places=7)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_q_opt_fixed_theta_returns_objective_theta_and_status(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        obj, theta, status = pest._Q_opt(
+            theta_vals={"theta": 1.0},
+            fix_theta=True,
+        )
+
+        self.assertEqual(status, pyo.TerminationCondition.optimal)
+        self.assertEqual(theta, {"theta": 1.0})
+        self.assertAlmostEqual(obj, 0.5, places=8)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_q_opt_fixed_theta_infeasible_returns_none(self):
+        pest = _build_bounded_estimator([(1.0, 2.0), (2.0, 3.0)])
+
+        obj, theta, status = pest._Q_opt(
+            theta_vals={"theta": 2.0},
+            fix_theta=True,
+        )
+
+        self.assertIsNone(obj)
+        self.assertEqual(theta, {"theta": 2.0})
+        self.assertEqual(status, pyo.TerminationCondition.infeasible)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_objective_at_theta_fixed_value(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
         theta_values = pd.DataFrame([[1.0]], columns=["theta"])
         obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
-        # residuals at theta=1 are [0, 1], objective is averaged over two scenarios
+
         self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_objective_at_theta_none_uses_initial_theta(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 3.0)])
+
         obj_at_theta = pest.objective_at_theta()
-        # with theta initialized to 0, predictions are [1,2], residuals [1,1], avg objective 1
+
         self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
         self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_objective_at_theta_omits_infeasible_rows(self):
+        pest = _build_bounded_estimator([(1.0, 2.0), (2.0, 3.0)])
+
+        theta_values = pd.DataFrame(
+            [[0.0], [2.0]],
+            columns=["theta"],
+        )
+
+        obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
+
+        self.assertEqual(len(obj_at_theta), 1)
+        self.assertEqual(list(obj_at_theta.columns), ["theta", "obj"])
+        self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
+
     def test_invalid_solver_name_raises_runtimeerror(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
         with self.assertRaisesRegex(
-            RuntimeError, "Unknown solver in Q_Opt=not_a_solver"
+            RuntimeError,
+            "Unknown solver in Q_Opt=not_a_solver",
         ):
             pest.theta_est(solver="not_a_solver")
 
     def test_theta_values_duplicate_columns_rejected(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
         duplicate_cols = pd.DataFrame([[1.0, 2.0]], columns=["theta", "theta"])
+
         with self.assertRaisesRegex(
-            ValueError, "Duplicate theta names are not allowed"
+            ValueError,
+            "Duplicate theta names are not allowed",
         ):
             pest.objective_at_theta(theta_values=duplicate_cols)
 
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
+class TestCountTotalExperiments(unittest.TestCase):
     def test_count_total_experiments_multi_output(self):
         exp_list = [
             LinearThetaExperiment(1.0, 2.0, include_second_output=True),
             LinearThetaExperiment(2.0, 4.0, include_second_output=True),
         ]
+
         total_points = parmest._count_total_experiments(exp_list)
+
         # The current parmest convention counts datapoints for one output family.
         self.assertEqual(total_points, 2)
 
     def test_count_total_experiments_tuple_index_multi_output(self):
         exp_list = [
             IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (1.0, "A")]
+                y_points=[(0.0, "A"), (1.0, "A")],
+                z_points=[(0.0, "A"), (1.0, "A")],
             ),
             IndexedOutputExperiment(
-                y_points=[(0.5, "A"), (1.5, "A")], z_points=[(0.5, "A"), (1.5, "A")]
+                y_points=[(0.5, "A"), (1.5, "A")],
+                z_points=[(0.5, "A"), (1.5, "A")],
             ),
         ]
+
         total_points = parmest._count_total_experiments(exp_list)
+
         self.assertEqual(total_points, 4)
 
     def test_count_total_experiments_rejects_mismatched_output_lengths(self):
         exp_list = [
             IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A")]
+                y_points=[(0.0, "A"), (1.0, "A")],
+                z_points=[(0.0, "A")],
             )
         ]
+
         with self.assertRaisesRegex(
             AssertionError,
             "Experiment outputs must have the same number of indices or data points",
@@ -1751,9 +1858,11 @@ class TestParmestBlockEF(unittest.TestCase):
     def test_count_total_experiments_rejects_mismatched_time_points(self):
         exp_list = [
             IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (2.0, "A")]
+                y_points=[(0.0, "A"), (1.0, "A")],
+                z_points=[(0.0, "A"), (2.0, "A")],
             )
         ]
+
         with self.assertRaisesRegex(
             AssertionError,
             "Experiment outputs must share the same indices or data points",
@@ -1763,16 +1872,17 @@ class TestParmestBlockEF(unittest.TestCase):
     def test_count_total_experiments_rejects_time_not_in_first_index(self):
         exp_list = [
             IndexedOutputExperiment(
-                y_points=[(0.0, "A"), (1.0, "A")], z_points=[("A", 0.0), ("A", 1.0)]
+                y_points=[(0.0, "A"), (1.0, "A")],
+                z_points=[("A", 0.0), ("A", 1.0)],
             )
         ]
+
         with self.assertRaisesRegex(
             AssertionError,
             "The first index of experiment outputs must be the data point",
         ):
             parmest._count_total_experiments(exp_list)
-
-
+            
 ###########################
 # tests for deprecated UI #
 ###########################
