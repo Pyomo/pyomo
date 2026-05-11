@@ -1167,7 +1167,7 @@ class XpressDirect(DirectSolver):
             self._solver_con_to_pyomo_con_map[conname] = con
             self._con_name_to_counter[conname] = i
             if row_entry.bound_type == 2:
-                self._range_constraints.add(con)
+                self._range_constraints.add(conname)
         self._con_insertion_counter = len(repn.rows)
 
         # ------------------------------------------------------------------
