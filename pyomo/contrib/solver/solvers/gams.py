@@ -19,6 +19,7 @@ import re
 import pathlib
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.common.fileutils import Executable, ExecutableData
 from pyomo.common.config import (
     ConfigValue,
@@ -37,6 +38,7 @@ from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
     TerminationCondition,
+    get_infeasible_results,
 )
 from pyomo.contrib.solver.solvers.gms_sol_reader import GMSSolutionLoader
 
@@ -308,11 +310,27 @@ class GAMS(SolverBase):
             lst_filename = os.path.join(dname, lst)
 
             timer.start(f'write_gms_file')
-            with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
-                gms_info = GAMSWriter().write(
-                    model, gms_file, config=config.writer_config
+            try:
+                with open(
+                    output_filename, 'w', newline='\n', encoding='utf-8'
+                ) as gms_file:
+                    gms_info = GAMSWriter().write(
+                        model, gms_file, config=config.writer_config
+                    )
+            except InfeasibleConstraintException as err:
+                timer.stop(f'write_gms_file')
+                err_msg = (
+                    'The problem was proven to be infeasible during compilation:\n'
+                    f'\t{str(err)}'
                 )
-                # NOTE: omit InfeasibleConstraintException for now
+                results = get_infeasible_results(
+                    model=model, solver=self, config=config, err_msg=err_msg
+                )
+                tock = time.perf_counter()
+                results.timing_info.start_timestamp = start_timestamp
+                results.timing_info.wall_time = tock - tick
+                results.timing_info.timer = timer
+                return results
             timer.stop(f'write_gms_file')
 
             if config.writer_config.put_results_format == 'gdx':
@@ -431,7 +449,7 @@ class GAMS(SolverBase):
         results.solution_status = solution_status
 
         # replaced below, if solution should be loaded
-        results.solution_loader = GMSSolutionLoader(None, None)
+        results.solution_loader = GMSSolutionLoader(model, None, None)
 
         if solvestat == 1:
             results.termination_condition = model_term
@@ -453,7 +471,7 @@ class GAMS(SolverBase):
 
         if results.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
             results.solution_loader = GMSSolutionLoader(
-                gdx_data=model_soln, gms_info=gms_info
+                pyomo_model=model, gdx_data=model_soln, gms_info=gms_info
             )
 
             if config.load_solutions:
@@ -481,7 +499,7 @@ class GAMS(SolverBase):
                         obj[0].expr,
                         substitution_map={
                             id(v): val
-                            for v, val in results.solution_loader.get_primals().items()
+                            for v, val in results.solution_loader.get_vars().items()
                         },
                         descend_into_named_expressions=True,
                         remove_named_expressions=True,
