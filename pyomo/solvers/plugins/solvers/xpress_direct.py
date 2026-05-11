@@ -951,40 +951,26 @@ class XpressDirect(DirectSolver):
                 "bindings for Xpress?\n\n\t" + "Error message: {0}".format(e)
             )
             raise Exception(msg)
-        # Try the fast linear path first; fall back to the general path if the
-        # model contains nonlinear expressions.
-        try:
-            self._load_linear_problem(model)
-        except Exception:
-            self._solver_model.reset()
-            self._pyomo_con_to_solver_con_map = dict()
-            self._solver_con_to_pyomo_con_map = ComponentMap()
-            self._pyomo_var_to_solver_var_map = ComponentMap()
-            self._solver_var_to_pyomo_var_map = ComponentMap()
-            self._con_insertion_counter = 0
-            self._con_name_to_counter = {}
-            self._deleted_counters = []
-            self._range_constraints = set()
-            self._add_block(model)
+        self._load_linear_problem(model)
 
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
 
     def _load_linear_problem(self, model):
-        """Fast path for purely linear/MIP models.
+        """Fast path for models with linear or mixed linear/nonlinear structure.
 
         Uses :class:`~pyomo.repn.plugins.standard_form.LinearStandardFormCompiler`
-        to build the full coefficient matrix and then loads the entire problem
-        into Xpress in a single ``loadproblem()`` call, bypassing the
-        per-constraint Python overhead of ``_add_block``.
+        to build the full coefficient matrix for all linear constraints and
+        loads them into Xpress in a single ``loadproblem()`` call, bypassing
+        the per-constraint Python overhead of ``_add_block``.
 
-        All solver maps are populated from the compiled representation so that
-        the persistent interface (``add_constraint``, ``remove_constraint``,
-        ``add_var``, etc.) continues to work normally after this fast path.
+        Any nonlinear constraints or objectives identified by the compiler are
+        added afterwards via the standard ``_add_constraint`` / ``_set_objective``
+        per-expression path.
 
-        If the model contains nonlinear expressions the compiler will raise an
-        exception; ``_set_instance`` catches that and falls back to
-        ``_add_block``.
+        All solver maps are populated so the persistent interface
+        (``add_constraint``, ``remove_constraint``, ``add_var``, etc.) continues
+        to work normally after this fast path.
 
         Parameters
         ----------
@@ -998,11 +984,18 @@ class XpressDirect(DirectSolver):
         # keep_range_constraints emits range rows as a single 'R' entry.
         # set_sense=None keeps objective coefficients as-is so we can set
         # the sense ourselves via chgobjsense after loadproblem.
+        # allow_nonlinear=True: collect nonlinear constraints/objectives into
+        # repn.nonlinear_constraints / repn.nonlinear_objectives rather than
+        # raising; we handle them below via _add_constraint / _set_objective.
         repn = LinearStandardFormCompiler().write(
-            model, mixed_form=True, keep_range_constraints=True, set_sense=None
+            model,
+            mixed_form=True,
+            keep_range_constraints=True,
+            set_sense=None,
+            allow_nonlinear=True,
         )
 
-        if len(repn.objectives) > 1:
+        if len(repn.objectives) + len(repn.nonlinear_objectives) > 1:
             raise ValueError("Solver interface does not support multiple objectives.")
 
         xprob = self._solver_model
@@ -1165,6 +1158,17 @@ class XpressDirect(DirectSolver):
                 sort=True,
             ):
                 self._add_sos_constraint(sos_con)
+
+        # ------------------------------------------------------------------
+        # Nonlinear constraints and objectives
+        # ------------------------------------------------------------------
+        # Any constraints/objectives the LSFC could not linearize are added
+        # via the standard per-expression path, which supports quadratic and
+        # general nonlinear expressions through Xpress' expression-tree API.
+        for con in repn.nonlinear_constraints:
+            self._add_constraint(con)
+        if repn.nonlinear_objectives:
+            self._set_objective(repn.nonlinear_objectives[0])
 
     def _add_constraint(self, con):
         if not con.active:
