@@ -266,6 +266,18 @@ class LinearStandardFormCompiler:
         ),
     )
     CONFIG.declare(
+        'extra_valid_ctypes',
+        ConfigValue(
+            default=[],
+            description='Additional component types that are permitted to appear '
+            'in the model without causing an error, but that are not processed by '
+            'the compiler.  Use this when the model contains component types '
+            '(e.g., :class:`~pyomo.core.base.sos.SOSConstraint`) that are valid '
+            'for the calling solver but that the standard-form compiler does not '
+            'know how to handle.',
+        ),
+    )
+    CONFIG.declare(
         'show_section_timing',
         ConfigValue(
             default=False,
@@ -386,7 +398,7 @@ class _LinearStandardFormCompiler_impl:
                 RangeSet,
                 Port,
                 # TODO: Piecewise, Complementarity
-            },
+            } | set(self.config.extra_valid_ctypes),
             targets={Suffix, Objective},
         )
         if unknown:
