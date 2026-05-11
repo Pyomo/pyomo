@@ -460,6 +460,15 @@ def validate_array(
         )
 
 
+class ContextDict(dict):
+    def __enter__(self):
+        self.clear()
+        return self
+
+    def __exit__(self, et, e, tb):
+        self.clear()
+
+
 class Geometry(Enum):
     """
     Geometry classifications for PyROS uncertainty set objects.
@@ -523,6 +532,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             Otherwise, the list should be empty.
         """
         raise NotImplementedError
+
+    @property
+    def _cache(self):
+        try:
+            return self.__cache
+        except AttributeError:
+            self.__cache = ContextDict()
+            return self.__cache
 
     def _create_bounding_model(self):
         """
@@ -843,10 +860,6 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             If solver failed to compute a bound for a
             coordinate.
         """
-        # cache initialization
-        if not hasattr(self, "_cache"):
-            self._cache = {}
-
         # we use saved optimization results for a given index
         # for either `maximize` UB or `minimize` LB if they exist
         if (index, sense) in self._cache:
