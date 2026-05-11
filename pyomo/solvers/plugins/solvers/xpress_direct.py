@@ -925,7 +925,6 @@ class XpressDirect(DirectSolver):
 
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
-        linear_only = kwds.pop('linear_only', False)
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         self._pyomo_con_to_solver_con_map = dict()
         self._solver_con_to_pyomo_con_map = ComponentMap()
@@ -952,9 +951,20 @@ class XpressDirect(DirectSolver):
                 "bindings for Xpress?\n\n\t" + "Error message: {0}".format(e)
             )
             raise Exception(msg)
-        if linear_only:
+        # Try the fast linear path first; fall back to the general path if the
+        # model contains nonlinear expressions.
+        try:
             self._load_linear_problem(model)
-        else:
+        except Exception:
+            self._solver_model.reset()
+            self._pyomo_con_to_solver_con_map = dict()
+            self._solver_con_to_pyomo_con_map = ComponentMap()
+            self._pyomo_var_to_solver_var_map = ComponentMap()
+            self._solver_var_to_pyomo_var_map = ComponentMap()
+            self._con_insertion_counter = 0
+            self._con_name_to_counter = {}
+            self._deleted_counters = []
+            self._range_constraints = set()
             self._add_block(model)
 
     def _add_block(self, block):
@@ -972,11 +982,13 @@ class XpressDirect(DirectSolver):
         the persistent interface (``add_constraint``, ``remove_constraint``,
         ``add_var``, etc.) continues to work normally after this fast path.
 
+        If the model contains nonlinear expressions the compiler will raise an
+        exception; ``_set_instance`` catches that and falls back to
+        ``_add_block``.
+
         Parameters
         ----------
         model : Pyomo ConcreteModel
-            Must contain only linear constraints and objectives.  Nonlinear
-            expressions will raise an error inside the compiler.
         """
         from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
         from pyomo.common.dependencies import numpy as np
