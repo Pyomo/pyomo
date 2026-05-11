@@ -6,9 +6,6 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-#
-#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
-#  ___________________________________________________________________________________
 """Functionality for identifying variables that participate in expressions"""
 
 from contextlib import nullcontext
@@ -22,7 +19,7 @@ from pyomo.contrib.incidence_analysis.config import (
     get_config_from_kwds,
 )
 from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
-    EGBConstraintBody,
+    ExternalGreyBoxConstraint,
 )
 
 
@@ -175,48 +172,7 @@ def get_incident_variables(expr, **kwds):
         # Developer error, this should never happen!
         raise RuntimeError("_ampl_repn_visitor must be provided when using ampl_repn")
 
-    return get_variables_incident_to_constraint(
-        expr, method, include_fixed, linear_only, amplrepnvisitor
-    )
-
-
-def get_variables_incident_to_constraint(
-    expr,
-    method: IncidenceMethod,
-    include_fixed: bool = False,
-    linear_only: bool = False,
-    amplrepnvisitor=None,
-):
-    """
-    Helper function to identify variables that are incident on an expression, based on the type of the expression and the method specified.
-
-    Parameters
-    ----------
-    expr: NumericExpression
-        The expression to analyze for incident variables.
-    method: IncidenceMethod
-        The method to use for identifying incident variables (not used with EGBConstraintBody).
-    include_fixed: bool, optional
-        Whether to include fixed variables in the result.
-    linear_only: bool, optional
-        Whether to include only linear variables in the result.
-    amplrepnvisitor: optional
-        The AMPL representation visitor, required if using the AMPL representation method.
-
-    Returns
-    -------
-    list of VarData
-        List containing the variables that are incident on the expression.
-
-    Raises
-    ------
-    ValueError
-        If an unrecognized method is specified for identifying incident variables.
-    """
     # Dispatch to correct method
-    if isinstance(expr, EGBConstraintBody):
-        # If the expression is the body of an implicit constraint, we need to use the get_incident_variables method defined on EGBConstraintBody
-        return expr.get_incident_variables()
     if method is IncidenceMethod.identify_variables:
         return _get_incident_via_identify_variables(expr, include_fixed)
     elif method is IncidenceMethod.standard_repn:
@@ -234,3 +190,23 @@ def get_variables_incident_to_constraint(
             f"Unrecognized value {method} for the method used to identify incident"
             f" variables. See the IncidenceMethod enum for valid methods."
         )
+
+def get_variables_incident_to_constraint(constraint, **kwds):
+    """Get variables that participate in a constraint
+
+    Keyword arguments must be valid options for ``IncidenceConfig``
+
+    Parameters
+    ----------
+    constraint: ``ConstraintData``
+
+    Returns
+    -------
+    list of VarData
+        List containing the variables that participate in the expression
+
+    """
+    if constraint.ctype is ExternalGreyBoxConstraint:
+        return constraint.body.get_incident_variables()
+    else:
+        return get_incident_variables(constraint.body, **kwds)
