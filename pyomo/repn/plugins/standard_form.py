@@ -129,19 +129,19 @@ class LinearStandardFormInfo:
         all variables appearing in the expression must either have
         appeared in the standard form, or appear *earlier* in this list.
 
-    nonlinear_constraints : List[ConstraintData]
+    nonlinear_constraints : List[ConstraintData] or None
 
-        Constraints skipped because they contain nonlinear terms.  Only
-        populated when ``allow_nonlinear=True`` is passed to
-        :meth:`~LinearStandardFormCompiler.write`; otherwise an
-        exception is raised for such constraints.
+        Constraints skipped because they contain nonlinear terms.  ``None``
+        when ``allow_nonlinear=False`` (the default).  When
+        ``allow_nonlinear=True``, holds the list of constraints with nonlinear
+        terms that were omitted from the compiled matrices (may be empty).
 
-    nonlinear_objectives : List[ObjectiveData]
+    nonlinear_objectives : List[ObjectiveData] or None
 
-        Objectives skipped because they contain nonlinear terms.  Only
-        populated when ``allow_nonlinear=True`` is passed to
-        :meth:`~LinearStandardFormCompiler.write`; otherwise an
-        exception is raised for such objectives.
+        Objectives skipped because they contain nonlinear terms.  ``None``
+        when ``allow_nonlinear=False`` (the default).  When
+        ``allow_nonlinear=True``, holds the list of objectives with nonlinear
+        terms that were omitted from the compiled matrices (may be empty).
 
     """
 
@@ -168,12 +168,8 @@ class LinearStandardFormInfo:
         self.columns = columns
         self.objectives = objectives
         self.eliminated_vars = eliminated_vars
-        self.nonlinear_constraints = (
-            nonlinear_constraints if nonlinear_constraints is not None else []
-        )
-        self.nonlinear_objectives = (
-            nonlinear_objectives if nonlinear_objectives is not None else []
-        )
+        self.nonlinear_constraints = nonlinear_constraints
+        self.nonlinear_objectives = nonlinear_objectives
 
     @property
     def x(self):
@@ -805,8 +801,8 @@ class _LinearStandardFormCompiler_impl:
             columns,
             objectives,
             eliminated_vars,
-            nonlinear_constraints=nonlinear_constraints,
-            nonlinear_objectives=nonlinear_objectives,
+            nonlinear_constraints=nonlinear_constraints if allow_nonlinear else None,
+            nonlinear_objectives=nonlinear_objectives if allow_nonlinear else None,
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
