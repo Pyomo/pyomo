@@ -2034,9 +2034,7 @@ class Estimator:
         clean_expected = [clean(name) for name in expected_theta_names]
 
         if len(clean_provided) != len(set(clean_provided)):
-            raise ValueError(
-                f"Duplicate theta names are not allowed: {clean_provided}"
-            )
+            raise ValueError(f"Duplicate theta names are not allowed: {clean_provided}")
 
         if len(clean_expected) != len(set(clean_expected)):
             raise RuntimeError(
@@ -2056,8 +2054,7 @@ class Estimator:
         }
 
         canonical_columns = [
-            canonical_name_by_clean_name[clean_name]
-            for clean_name in clean_provided
+            canonical_name_by_clean_name[clean_name] for clean_name in clean_provided
         ]
 
         theta_values = theta_values.copy()
@@ -2099,19 +2096,14 @@ class Estimator:
         num_tasks = len(all_thetas) if all_thetas else 1
         task_mgr = utils.ParallelTaskManager(num_tasks)
 
-        local_thetas = (
-            task_mgr.global_to_local_data(all_thetas)
-            if all_thetas
-            else []
-        )
+        local_thetas = task_mgr.global_to_local_data(all_thetas) if all_thetas else []
 
         all_obj = []
 
         if all_thetas:
             for theta in local_thetas:
                 obj, thetavals, worststatus = self._Q_opt(
-                    theta_vals=theta,
-                    fix_theta=True,
+                    theta_vals=theta, fix_theta=True
                 )
 
                 if (
@@ -2121,23 +2113,15 @@ class Estimator:
                     all_obj.append([theta[name] for name in theta_names] + [obj])
 
         else:
-            obj, thetavals, worststatus = self._Q_opt(
-                theta_vals=None,
-                fix_theta=True,
-            )
+            obj, thetavals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
 
-            if (
-                worststatus != pyo.TerminationCondition.infeasible
-                and obj is not None
-            ):
+            if worststatus != pyo.TerminationCondition.infeasible and obj is not None:
                 all_obj.append([thetavals[name] for name in theta_names] + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
 
-        return pd.DataFrame(
-            data=global_all_obj,
-            columns=theta_names + ["obj"],
-        )
+        return pd.DataFrame(data=global_all_obj, columns=theta_names + ["obj"])
+
     def likelihood_ratio_test(
         self, obj_at_theta, obj_value, alphas, return_thresholds=False
     ):
