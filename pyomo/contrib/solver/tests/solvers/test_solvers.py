@@ -1214,8 +1214,13 @@ class TestSolvers(unittest.TestCase):
         with self.assertRaises(NoOptimalSolutionError):
             res = opt.solve(m)
 
-        opt.config.load_solutions = False
         opt.config.raise_exception_on_nonoptimal_result = False
+        # FIXME: this should be consistent across solvers.
+        # See: https://github.com/Pyomo/pyomo/issues/3931
+        with self.assertRaises((NoSolutionError, NoFeasibleSolutionError)):
+            res = opt.solve(m)
+
+        opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
         if isinstance(opt, Ipopt):

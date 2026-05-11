@@ -391,12 +391,7 @@ class _GMSWriter_impl(object):
                     raise InfeasibleConstraintException(
                         f'detected a trivially infeasible constraint: {con}'
                     )
-                if (
-                    # skip_trivial_constraints
-                    # and (lb is None or lb <= offset)
-                    (lb is None or lb <= offset)
-                    and (ub is None or ub >= offset)
-                ):
+                if skip_trivial_constraints:
                     continue
 
             con_symbol = con_labeler(con)
@@ -644,14 +639,20 @@ class _GMSWriter_impl(object):
         getSymbol = self.var_symbol_map.getSymbol
         getVarOrder = self.var_order.__getitem__
         getVar = self.var_map.__getitem__
-        expr_str = ''
         if expr.linear:
-            for vid, coef in sorted(
-                expr.linear.items(), key=lambda x: getVarOrder(x[0])
-            ):
-                if coef < 0:
-                    expr_str += f'{coef!s}*{getSymbol(getVar(vid))} \n'
-                else:
-                    expr_str += f'+ {coef!s} * {getSymbol(getVar(vid))} \n'
+            expr_str = '\n'.join(
+                f'{coef:+}*{getSymbol(getVar(vid))}'
+                for vid, coef in sorted(
+                    expr.linear.items(), key=lambda x: getVarOrder(x[0])
+                )
+            )
+        else:
+            # If this is a constant, we need to make sure we still emit
+            # the +0 (the non-zero constant has been moved to the other
+            # side of the expression).
+            #
+            # Note the "+" is needed for objectives, where the constant
+            # is added to the magic GAMS_OBJECTIVE variable
+            expr_str = "+0"
 
         return expr_str
