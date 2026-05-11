@@ -1281,18 +1281,19 @@ class Estimator:
             Default is False.
         Returns
         -------
-        If fix_theta is False:
-            obj_value : float
-                Objective value at optimal parameter estimates.
-            theta_estimates : pd.Series
-                Series of estimated parameter values.
-        If fix_theta is True:
-            obj_value : float
-                Objective value at fixed parameter values.
-            theta_estimates : dict
-                Dictionary of fixed parameter values.
-            termination_condition : TerminationCondition
-                Solver termination condition.
+        obj_value : float
+            Objective value of the solved model.
+            If fix_theta is True, this is the value of the objective at the fixed theta values.
+            If fix_theta is False, this is the optimal value of the objective.
+        theta_estimates : dict
+            Dictionary of estimated theta values. If fix_theta is True, this will be the same as
+            the input theta_vals (or default values if theta_vals is None). If fix_theta is False, 
+            this will be the estimated parameter values that optimize the objective.
+        var_values : pd.DataFrame, optional
+            DataFrame of variable values for the variables specified in return_values. 
+            Only returned if return_values is not None and contains valid variable names. 
+            The DataFrame will have one row per scenario block (experiment) and columns 
+            corresponding to the variable names in return_values.
 
         """
         # Create extended form model with scenario blocks
@@ -1353,9 +1354,6 @@ class Estimator:
         # If fixing theta, return objective value, theta estimates, and solver status
         if fix_theta:
             return obj_value, theta_estimates, termination_condition
-
-        # Return theta estimates as a pandas Series
-        theta_estimates = pd.Series(theta_estimates)
 
         # Extract return values if requested
         # Assumes the model components are named the same in each block, and are pyo.Vars.

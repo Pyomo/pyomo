@@ -1641,9 +1641,9 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertEqual(assert_mock.call_count, 2)
         self.assertEqual(load_mock.call_count, 2)
         self.assertIsInstance(obj, float)
-        self.assertIsInstance(theta, pd.Series)
+        self.assertIsInstance(theta, dict)
         self.assertIsInstance(obj_with_vars, float)
-        self.assertIsInstance(theta_with_vars, pd.Series)
+        self.assertIsInstance(theta_with_vars, dict)
         self.assertIsInstance(var_values, pd.DataFrame)
 
     def test_q_opt_fixed_theta_returns_direct_termination_condition(self):
