@@ -577,6 +577,12 @@ class _LinearStandardFormCompiler_impl:
                     lb = value(lb)
                 if ub.__class__ not in native_types:
                     ub = value(ub)
+                # Normalize ±inf to None: kernel constraints may return
+                # ±inf instead of None for unbounded sides.
+                if lb == -float('inf'):
+                    lb = None
+                if ub == float('inf'):
+                    ub = None
                 repn = visitor.walk_expression(body)
                 if repn.nonlinear is not None:
                     if allow_nonlinear:
