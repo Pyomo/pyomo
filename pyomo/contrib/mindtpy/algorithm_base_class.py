@@ -84,6 +84,8 @@ egb, egb_available = attempt_import(
 
 
 class _MindtPyAlgorithm:
+    _crossed_bounds_are_certified = True
+
     def __init__(self, **kwds):
         """
         This is a common init method for all the MindtPy algorithms, so that we
@@ -104,6 +106,7 @@ class _MindtPyAlgorithm:
         self.timing = Bunch()
         self.curr_int_sol = []
         self.should_terminate = False
+        self._nonrigorous_crossed_bounds = False
         self.integer_list = []
         # Dictionary {integer solution (tuple): [cuts begin index, cuts end index] (list)}
         self.integer_solution_to_cuts_index = dict()
@@ -2451,7 +2454,14 @@ class _MindtPyAlgorithm:
             )
 
     def update_result(self):
-        if self.objective_sense == minimize:
+        if self._nonrigorous_crossed_bounds:
+            if self.objective_sense == minimize:
+                self.results.problem.lower_bound = float('-inf')
+                self.results.problem.upper_bound = self.primal_bound
+            else:
+                self.results.problem.lower_bound = self.primal_bound
+                self.results.problem.upper_bound = float('inf')
+        elif self.objective_sense == minimize:
             self.results.problem.lower_bound = self.dual_bound
             self.results.problem.upper_bound = self.primal_bound
         else:
@@ -3032,6 +3042,7 @@ class _MindtPyAlgorithm:
             kwds.pop('options', {}), preserve_implicit=True
         )
         config.set_value(kwds)
+        self._nonrigorous_crossed_bounds = False
         self.set_up_logger()
         new_logging_level = logging.INFO if config.tee else None
         with lower_logger_level_to(config.logger, new_logging_level):
@@ -3349,6 +3360,13 @@ class _MindtPyAlgorithm:
 
     def bounds_converged(self):
         # Check bound convergence
+        if self.abs_gap < 0 and not self._crossed_bounds_are_certified:
+            self._nonrigorous_crossed_bounds = True
+            self.config.logger.info(
+                'MindtPy exiting on crossed bounds without a certified dual bound.'
+            )
+            self.results.solver.termination_condition = tc.feasible
+            return True
         if self.abs_gap <= self.config.absolute_bound_tolerance:
             self.config.logger.info(
                 'MindtPy exiting on bound convergence. '
