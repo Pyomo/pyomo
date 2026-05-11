@@ -298,7 +298,7 @@ class _MindtPyAlgorithm:
 
         This method performs a structural check on the working model.
         It determines if the problem is a true Mixed-Integer program.
-        If no discrete variables are present, it serves as a short-circuit.
+        If no unfixed discrete variables are present, it serves as a short-circuit.
         In short-circuit cases, the problem is solved immediately with the
         configured MIP or NLP subsolver.
 
@@ -314,11 +314,12 @@ class _MindtPyAlgorithm:
 
         1. Discrete Variable Presence
         The method first inspects ``MindtPy.discrete_variable_list``.
-        If this list is not empty, the function implicitly returns True.
+        If this list contains any unfixed variables, the function implicitly
+        returns True.
         This indicates the model is a valid MINLP for decomposition.
 
         2. Continuous Model Handling (The "False" cases)
-        If the discrete variable list is empty, the model is "invalid" for
+        If there are no unfixed discrete variables, the model is "invalid" for
         MINLP. The method then classifies the continuous model as LP, QP, QCP,
         or NLP and routes it directly to the configured MIP or NLP subsolver.
 
@@ -342,8 +343,8 @@ class _MindtPyAlgorithm:
 
         # Handle purely continuous models by short-circuiting to a direct solve
         prob = self.results.problem
-        if len(MindtPy.discrete_variable_list) == 0:
-            config.logger.info('Problem has no discrete decisions.')
+        if not any(not v.fixed for v in MindtPy.discrete_variable_list):
+            config.logger.info('Problem has no unfixed discrete decisions.')
 
             original_obj = next(
                 self.original_model.component_data_objects(ctype=Objective, active=True)

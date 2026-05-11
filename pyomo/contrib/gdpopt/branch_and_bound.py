@@ -12,7 +12,11 @@ from heapq import heappush, heappop
 import traceback
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import document_kwargs_from_configdict
+from pyomo.common.config import (
+    ConfigBlock,
+    ConfigValue,
+    document_kwargs_from_configdict,
+)
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
@@ -32,6 +36,7 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_nlp_solve_configs,
 )
 from pyomo.contrib.gdpopt.nlp_initialization import restore_vars_to_original_values
+from pyomo.contrib.gdpopt.solve_subproblem import detect_unfixed_discrete_vars
 from pyomo.contrib.gdpopt.util import (
     copy_var_list_values,
     SuppressInfeasibleWarning,
@@ -76,6 +81,26 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
+    CONFIG.declare(
+        "relaxed_nlp_solver",
+        ConfigValue(
+            default=None,
+            description="""
+            Continuous nonlinear solver to use for transformed LBB node
+            subproblems with no unfixed discrete variables. If unset, LBB uses
+            the relevant mixed-integer node solver to preserve existing global
+            bounding behavior.""",
+        ),
+    )
+    CONFIG.declare(
+        "relaxed_nlp_solver_args",
+        ConfigBlock(
+            description="""
+            Keyword arguments to send to the relaxed NLP subsolver solve()
+            invocation.""",
+            implicit=True,
+        ),
+    )
     _add_nlp_solve_configs(
         CONFIG, default_nlp_init_method=restore_vars_to_original_values
     )
@@ -413,6 +438,40 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         )
         return new_node_data
 
+    def _get_rnGDP_subproblem_solver(self, subproblem, config, discrete_solver_name):
+        unfixed_discrete_vars = detect_unfixed_discrete_vars(subproblem)
+        discrete_solver = getattr(config, discrete_solver_name)
+        discrete_solver_args_name = discrete_solver_name + "_args"
+        discrete_solver_args = dict(getattr(config, discrete_solver_args_name))
+        if len(unfixed_discrete_vars) == 0:
+            if config.relaxed_nlp_solver is not None:
+                config.logger.debug(
+                    "Transformed node subproblem has no unfixed discrete variables. "
+                    "Solving with relaxed NLP solver %s." % config.relaxed_nlp_solver
+                )
+                return config.relaxed_nlp_solver, dict(config.relaxed_nlp_solver_args)
+            else:
+                config.logger.debug(
+                    "Transformed node subproblem has no unfixed discrete variables, "
+                    "but relaxed_nlp_solver is not specified. Solving with "
+                    "mixed-integer solver %s." % discrete_solver
+                )
+                return discrete_solver, discrete_solver_args
+        else:
+            config.logger.debug(
+                "Transformed node subproblem has unfixed discrete variables: %s. "
+                "Solving with mixed-integer solver %s."
+                % (", ".join(v.name for v in unfixed_discrete_vars), discrete_solver)
+            )
+            return discrete_solver, discrete_solver_args
+
+    def _apply_rnGDP_subproblem_time_limit(self, solver_name, solver_args, config):
+        if config.time_limit is not None and solver_name == 'gams':
+            elapsed = get_main_elapsed_time(self.timing)
+            remaining = max(config.time_limit - elapsed, 1)
+            solver_args['add_options'] = solver_args.get('add_options', [])
+            solver_args['add_options'].append('option reslim=%s;' % remaining)
+
     def _solve_rnGDP_subproblem(self, model, config):
         subproblem = TransformationFactory('gdp.bigm').create_using(model)
         obj_sense_correction = self.objective_sense != minimize
@@ -432,15 +491,13 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                         ignore_integrality=True,
                     )
                     return float('inf'), float('inf')
-                minlp_args = dict(config.minlp_solver_args)
-                if config.time_limit is not None and config.minlp_solver == 'gams':
-                    elapsed = get_main_elapsed_time(self.timing)
-                    remaining = max(config.time_limit - elapsed, 1)
-                    minlp_args['add_options'] = minlp_args.get('add_options', [])
-                    minlp_args['add_options'].append('option reslim=%s;' % remaining)
-                result = SolverFactory(config.minlp_solver).solve(
-                    subproblem, **minlp_args
+                solver_name, solver_args = self._get_rnGDP_subproblem_solver(
+                    subproblem, config, 'minlp_solver'
                 )
+                self._apply_rnGDP_subproblem_time_limit(
+                    solver_name, solver_args, config
+                )
+                result = SolverFactory(solver_name).solve(subproblem, **solver_args)
         except RuntimeError as e:
             config.logger.warning(
                 "Solver encountered RuntimeError. Treating as infeasible. "
@@ -533,9 +590,13 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
 
         try:
             with SuppressInfeasibleWarning():
-                result = SolverFactory(config.local_minlp_solver).solve(
-                    subproblem, **config.local_minlp_solver_args
+                solver_name, solver_args = self._get_rnGDP_subproblem_solver(
+                    subproblem, config, 'local_minlp_solver'
                 )
+                self._apply_rnGDP_subproblem_time_limit(
+                    solver_name, solver_args, config
+                )
+                result = SolverFactory(solver_name).solve(subproblem, **solver_args)
         except RuntimeError as e:
             config.logger.warning(
                 "Solver encountered RuntimeError. Treating as infeasible. "
