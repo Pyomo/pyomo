@@ -878,6 +878,23 @@ class TestRepnUtils(unittest.TestCase):
             vr.var_order,
         )
 
+    def test_TemplateVarRecorder_kernel_variable(self):
+        """TemplateVarRecorder.add() must handle kernel variables, which do
+        not have a parent_component() method."""
+        from pyomo.core.kernel.variable import variable
+
+        v1 = variable()
+        v2 = variable()
+
+        vm = {}
+        vr = TemplateVarRecorder(vm, SortComponents.deterministic)
+        vr.add(v1)
+        self.assertIn(id(v1), vm)
+        vr.add(v2)
+        self.assertIn(id(v2), vm)
+        self.assertEqual(len(vm), 2)
+        self.assertEqual({id(v1): 0, id(v2): 1}, vr.var_order)
+
 
 if __name__ == "__main__":
     unittest.main()
