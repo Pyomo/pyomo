@@ -408,6 +408,16 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
                 m, slack_form=True, keep_range_constraints=True
             )
 
+    def test_nonlinear_fields_none_when_not_allowed(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x <= 1)
+        m.o = pyo.Objective(expr=m.x)
+
+        repn = LinearStandardFormCompiler().write(m, mixed_form=True)
+        self.assertIsNone(repn.nonlinear_constraints)
+        self.assertIsNone(repn.nonlinear_objectives)
+
     def test_allow_nonlinear_constraints(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
