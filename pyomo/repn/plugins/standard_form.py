@@ -577,12 +577,6 @@ class _LinearStandardFormCompiler_impl:
                     lb = value(lb)
                 if ub.__class__ not in native_types:
                     ub = value(ub)
-                # Normalize ±inf to None: kernel constraints may return
-                # ±inf instead of None for unbounded sides.
-                if lb == -float('inf'):
-                    lb = None
-                if ub == float('inf'):
-                    ub = None
                 repn = visitor.walk_expression(body)
                 if repn.nonlinear is not None:
                     if allow_nonlinear:
@@ -602,6 +596,14 @@ class _LinearStandardFormCompiler_impl:
                 offset = repn.constant
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
+
+            # Normalize ±inf to None: both kernel constraints and AML
+            # RangedExpressions can return ±inf instead of None for unbounded
+            # sides (e.g., `(-inf, x, 5)`).  Treat them as unbounded.
+            if lb == -float('inf'):
+                lb = None
+            if ub == float('inf'):
+                ub = None
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
