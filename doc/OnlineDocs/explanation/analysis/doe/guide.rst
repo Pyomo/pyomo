@@ -16,7 +16,7 @@ MBDoE analysis. This is in line with the convention used in the parameter estima
 
 An example of the subclassed :class:`Experiment` object that builds and labels the model is shown in the next few sections.
 
-This guide illustrates the use of Pyomo.DoE using a reaction kinetics example (Wang and Dowling, 2022).
+This guide illustrates the use of Pyomo.DoE using a reaction kinetics example ([WD22]_).
 
 .. math::
    :nowrap:
@@ -117,17 +117,17 @@ Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 After creating the subclass of the :class:`Experiment` class, exploratory analysis is
-suggested to enumerate the design space to check if the problem is identifiable,
-i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and
-Modified E-optimality is not a big number.
+suggested to systematically enumerate the experimental design space and identify regions
+that provide high information content about the model parameters, as quantified by
+the A-, D-, E-, and ME-optimality criteria.
 Additionally, it helps to initialize the model for the optimal experimental design step.
 
-Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` method.
-The ``compute_FIM_full_factorial`` method generates a grid over the design space as specified by the user.
-Each grid point represents an MBDoE problem solved using the ``compute_FIM`` method.
+Pyomo.DoE can perform exploratory sensitivity analysis with the :meth:`compute_FIM_full_factorial` method.
+The :meth:`compute_FIM_full_factorial` method generates a grid over the design space as specified by the user.
+Each grid point represents an MBDoE problem solved using the :meth:`compute_FIM` method.
 In this way, sensitivity of the FIM over the design space can be evaluated.
-Pyomo.DoE supports plotting the results from the ``compute_FIM_full_factorial`` method
-with the ``draw_factorial_figure`` method.
+Pyomo.DoE supports plotting the results from the :meth:`compute_FIM_full_factorial` method
+with the :meth:`draw_factorial_figure` method.
 
 The following code defines the ``run_reactor_doe`` function. This function encapsulates
 the workflow for both sensitivity analysis (Step 5) and optimal design (Step 6).
