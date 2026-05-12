@@ -181,5 +181,5 @@ Bibliography
    optimization. New York, NY: Springer New York, 1999.
 
 .. [WD22] Wang, Jialu, and Alexander W. Dowling. "Pyomo.DOE: An open‐source
-   package for model‐based design of experiments in Python." *AIChE Journal*,
+   package for model‐based design of experiments in Python", *AIChE Journal*,
    68(12), e17813. 2022. DOI `10.1002/aic.17813Y <https://doi.org/10.1002/aic.17813Y>`_
