@@ -1,4 +1,4 @@
-.. doe_objectives:
+.. _doe_objectives:
 
 Objective Options
 =================

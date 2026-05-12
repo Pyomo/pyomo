@@ -1,4 +1,4 @@
-.. parmest_covariance_section:
+.. _parmest_covariance_section:
 
 Uncertainty Quantification
 ==========================

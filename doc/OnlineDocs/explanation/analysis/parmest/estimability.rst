@@ -1,4 +1,4 @@
-.. parmest_estimability_section:
+.. _parmest_estimability_section:
 
 Estimability Analysis
 =====================

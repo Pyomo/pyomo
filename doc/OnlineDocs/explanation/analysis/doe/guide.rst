@@ -1,4 +1,4 @@
-.. doe_start_guide:
+.. _doe_start_guide:
 
 Quick Start Guide
 =================

@@ -1,4 +1,4 @@
-.. doe_param_uncertainty:
+.. _doe_param_uncertainty:
 
 Parameter Uncertainty
 =====================
