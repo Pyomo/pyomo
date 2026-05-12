@@ -1267,17 +1267,19 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertFalse(diag["timed_out"])
 
     def test_lhs_combo_serial_minimize_objective_update(self):
-        doe = self._make_template_doe("trace")
-        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+        # Rooney-Biegler integration check for the LHS combination scorer on a
+        # minimize objective (trace/A-opt). Verify that optimize_experiments()
+        # picks the same initial-design pair as an exhaustive reference over
+        # the generated candidates.
+        n_exp = 2
         lhs_n_samples = 4
         lhs_seed = 61
 
-        def _fake_fim(experiment_index, input_values):
-            x = float(input_values[0])
-            return np.array([[x + 0.25, 0.0], [0.0, 2.5 * x + 0.25]])
+        doe_ref = self._make_template_doe("trace")
+        self._build_template_model_for_multi_experiment(doe_ref, n_exp=n_exp)
 
-        first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
-        exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
+        first_exp_block = doe_ref.model.param_scenario_blocks[0].exp_blocks[0]
+        exp_input_vars = doe_ref._get_experiment_input_vars(first_exp_block)
         lb_vals = np.array([v.lb for v in exp_input_vars])
         ub_vals = np.array([v.ub for v in exp_input_vars])
 
@@ -1292,22 +1294,29 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
             per_dim_samples.append(s_scaled.tolist())
         candidate_points = list(product(*per_dim_samples))
-        candidate_fims = [_fake_fim(0, pt) for pt in candidate_points]
+        candidate_fims = [
+            doe_ref._compute_fim_at_point_no_prior(0, list(pt))
+            for pt in candidate_points
+        ]
 
         best_combo = None
         best_obj = np.inf
-        for combo in combinations(range(len(candidate_points)), 2):
+        for combo in combinations(range(len(candidate_points)), n_exp):
             fim_total = sum((candidate_fims[idx] for idx in combo), np.zeros((2, 2)))
-            obj_val = doe._evaluate_objective_from_fim(fim_total)
+            obj_val = doe_ref._evaluate_objective_from_fim(fim_total)
             if obj_val < best_obj:
                 best_obj = obj_val
                 best_combo = combo
         expected_points = [list(candidate_points[i]) for i in best_combo]
 
-        doe._compute_fim_at_point_no_prior = _fake_fim
-        got_points, _ = doe._lhs_initialize_experiments(
-            lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=2
+        doe = self._make_template_doe("trace")
+        doe.optimize_experiments(
+            n_exp=n_exp,
+            init_method="lhs",
+            init_n_samples=lhs_n_samples,
+            init_seed=lhs_seed,
         )
+        got_points = doe.results["initialization"]["selected_initial_designs"]
 
         # Normalize (round + sort) so we compare selected points robustly
         # despite floating-point noise and ordering differences.
@@ -1365,21 +1374,18 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
 
     def test_lhs_combo_scoring_n_exp_3_matches_exhaustive_reference(self):
-        doe = self._make_template_doe("pseudo_trace")
+        n_exp = 3
+        doe_ref = self._make_template_doe("pseudo_trace")
         # Keep n_exp=3 to exercise the general combination-scoring path
         # (different from the optimized n_exp==2 branch).
-        self._build_template_model_for_multi_experiment(doe, n_exp=3)
+        self._build_template_model_for_multi_experiment(doe_ref, n_exp=n_exp)
         lhs_n_samples = 5
         lhs_seed = 2
 
-        def _fake_fim(experiment_index, input_values):
-            x = float(input_values[0])
-            return np.array([[x + 1.0, 0.0], [0.0, 2.0 * x + 0.5]])
-
         # Recreate the exact candidate points from LHS generation and compute
         # an independent exhaustive reference for combination scoring.
-        first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
-        exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
+        first_exp_block = doe_ref.model.param_scenario_blocks[0].exp_blocks[0]
+        exp_input_vars = doe_ref._get_experiment_input_vars(first_exp_block)
         lb_vals = np.array([v.lb for v in exp_input_vars])
         ub_vals = np.array([v.ub for v in exp_input_vars])
         rng = np.random.default_rng(lhs_seed)
@@ -1395,22 +1401,31 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         candidate_points = list(product(*per_dim_samples))
 
         # Exhaustive reference over all combinations of size 3.
-        fims = [_fake_fim(0, pt) for pt in candidate_points]
+        fims = [
+            doe_ref._compute_fim_at_point_no_prior(0, list(pt))
+            for pt in candidate_points
+        ]
         best_obj = -np.inf
         best_combo = None
-        for combo in combinations(range(len(candidate_points)), 3):
+        for combo in combinations(range(len(candidate_points)), n_exp):
             fim_total = sum((fims[i] for i in combo), np.zeros((2, 2)))
-            obj = float(np.trace(fim_total))
+            obj = doe_ref._evaluate_objective_from_fim(fim_total)
             if obj > best_obj:
                 best_obj = obj
                 best_combo = combo
         expected_points = [list(candidate_points[i]) for i in best_combo]
 
-        with patch.object(doe, "_compute_fim_at_point_no_prior", side_effect=_fake_fim):
-            got_points, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=3
-            )
+        doe = self._make_template_doe("pseudo_trace")
+        doe.optimize_experiments(
+            n_exp=n_exp,
+            init_method="lhs",
+            init_n_samples=lhs_n_samples,
+            init_seed=lhs_seed,
+        )
+        got_points = doe.results["initialization"]["selected_initial_designs"]
 
+        # Normalize (round + sort) so we compare selected points robustly
+        # despite floating-point noise and ordering differences.
         got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
         exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
         self.assertEqual(got_norm, exp_norm)

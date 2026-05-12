@@ -748,7 +748,9 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
         # The exact number of initialization solves is implementation-dependent,
         # but they must all occur before the one final main-solver call.
-        self.assertGreaterEqual(init_solver.calls, 1)  # At least one initialization solve
+        self.assertGreaterEqual(
+            init_solver.calls, 1
+        )  # At least one initialization solve
         self.assertEqual(main_solver.calls, 1)  # Exactly one main optimization solve
         self.assertEqual(call_order[-1], "main")
         self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
@@ -1054,10 +1056,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         lhs_init = doe_obj.results["initialization"]
 
         self.assertEqual(lhs_init["method"], "lhs")
-        self.assertEqual(
-            len(lhs_init["selected_initial_designs"]),
-            n_exp,
-        )
+        self.assertEqual(len(lhs_init["selected_initial_designs"]), n_exp)
         for point in lhs_init["selected_initial_designs"]:
             self.assertEqual(len(point), 1)
             self.assertGreaterEqual(point[0], 1.0)
@@ -1067,6 +1066,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # n_candidates = lhs_n_samples^1 and n_combinations = C(n_candidates, n_exp).
         self.assertEqual(lhs_init["number_of_candidate_designs"], lhs_n_samples)
         self.assertEqual(lhs_init["number_of_design_combinations"], 3)
+
 
 class TestDoeResultsSerialization(unittest.TestCase):
     """Coverage for DoE results payload serialization helpers."""

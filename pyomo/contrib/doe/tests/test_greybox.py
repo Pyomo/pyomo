@@ -369,6 +369,29 @@ class _MockGreyBoxSolver:
         return _MockResults()
 
 
+class _TrackingSolverWrapper:
+    """Proxy solver that records solve routing while delegating real solves."""
+
+    def __init__(self, solver, phase_tag, call_order, forbid=False):
+        self._solver = solver
+        self._phase_tag = phase_tag
+        self._call_order = call_order
+        self._forbid = forbid
+        self.solve_calls_count = 0
+
+    def solve(self, *args, **kwargs):
+        self.solve_calls_count += 1
+        self._call_order.append(self._phase_tag)
+        if self._forbid:
+            raise AssertionError(
+                "Primary solver should not be used in greybox optimize_experiments()."
+            )
+        return self._solver.solve(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._solver, name)
+
+
 def _make_ipopt_solver():
     solver = SolverFactory("ipopt")
     solver.options["linear_solver"] = "ma57"
@@ -454,12 +477,7 @@ def _reconstruct_fim_from_egb_inputs(egb_block, parameter_names):
     return fim
 
 
-def _spd_hour_fim_oracle(experiment_index, input_values):
-    hour = float(input_values[0])
-    return np.array([[hour + 2.0, 0.2 * hour], [0.2 * hour, 14.0 - hour]])
-
-
-def _diagonal_hour_fim_oracle(experiment_index, input_values):
+def _diagonal_hour_fim_reference(experiment_index, input_values):
     hour = float(input_values[0])
     return np.eye(2) * (hour + 1.0)
 
@@ -1464,10 +1482,27 @@ class TestMultiexperimentBuild(unittest.TestCase):
     ):
         # Initialization should use init_solver; the greybox solver should be
         # reserved for the final optimize_experiments NLP solve.
-        main_solver = _make_ipopt_solver()
-        init_solver = _make_ipopt_solver()
-        init_solver.options["max_iter"] = 123
-        grey_box_solver = _MockGreyBoxSolver()
+        # Capture phase labels in solve-call order so we can assert that all
+        # initialization solves happen before the single final greybox solve.
+        solve_phase_order = []
+        main_solver_inner = _make_ipopt_solver()
+        init_solver_inner = _make_ipopt_solver()
+        init_solver_inner.options["max_iter"] = 123
+        grey_box_solver_inner = _MockGreyBoxSolver()
+        main_solver = _TrackingSolverWrapper(
+            solver=main_solver_inner,
+            phase_tag="main",
+            call_order=solve_phase_order,
+            forbid=True,
+        )
+        init_solver = _TrackingSolverWrapper(
+            solver=init_solver_inner, phase_tag="init", call_order=solve_phase_order
+        )
+        grey_box_solver = _TrackingSolverWrapper(
+            solver=grey_box_solver_inner,
+            phase_tag="greybox",
+            call_order=solve_phase_order,
+        )
 
         doe_obj = DesignOfExperiments(
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
@@ -1478,44 +1513,18 @@ class TestMultiexperimentBuild(unittest.TestCase):
             grey_box_solver=grey_box_solver,
         )
 
-        init_calls = 0
-        call_order = []
-        original_init_solve = init_solver.solve
-        original_grey_box_solve = grey_box_solver.solve
+        doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
-        def _init_solve(*args, **kwargs):
-            nonlocal init_calls
-            init_calls += 1
-            call_order.append("init")
-            return original_init_solve(*args, **kwargs)
-
-        def _grey_box_solve(*args, **kwargs):
-            call_order.append("greybox")
-            return original_grey_box_solve(*args, **kwargs)
-
-        with (
-            patch.object(
-                main_solver,
-                "solve",
-                side_effect=AssertionError(
-                    "Primary solver should not be used in greybox optimize_experiments()."
-                ),
-            ),
-            patch.object(init_solver, "solve", side_effect=_init_solve),
-            patch.object(grey_box_solver, "solve", side_effect=_grey_box_solve),
-        ):
-            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
-
-        self.assertGreaterEqual(init_calls, 1)
-        self.assertEqual(len(grey_box_solver.calls), 1)
-        self.assertEqual(call_order[-1], "greybox")
-        self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
+        self.assertGreaterEqual(init_solver.solve_calls_count, 1)
+        self.assertEqual(len(grey_box_solver_inner.calls), 1)
+        self.assertEqual(solve_phase_order[-1], "greybox")
+        self.assertTrue(all(tag == "init" for tag in solve_phase_order[:-1]))
         self.assertEqual(
             doe_obj.results["initialization"]["solver"],
             getattr(init_solver, "name", str(init_solver)),
         )
         self.assertEqual(
-            doe_obj.results["optimization_solve"]["solver"], grey_box_solver.name
+            doe_obj.results["optimization_solve"]["solver"], grey_box_solver_inner.name
         )
 
     def test_optimize_experiments_greybox_is_reentrant_on_same_object(self):
@@ -1573,10 +1582,10 @@ class TestMultiexperimentBuild(unittest.TestCase):
     def test_optimize_experiments_greybox_lhs_initialization_scores_e_opt_and_me_opt(
         self,
     ):
-        # This checks the LHS candidate-combination scorer for the greybox-only
-        # E-opt and ME-opt objectives. The patched oracle maps the single
-        # Rooney-Biegler design input (hour) to a positive-definite 2x2 FIM so
-        # the best combination can be computed independently and deterministically.
+        # Rooney-Biegler integration check for the LHS candidate-combination
+        # scorer on greybox-only objectives (E-opt and ME-opt). Compare the
+        # selected initial designs against an independent exhaustive reference
+        # built from real candidate FIM evaluations.
         lhs_n_samples = 4
         lhs_seed = 19
 
@@ -1588,17 +1597,12 @@ class TestMultiexperimentBuild(unittest.TestCase):
                     grey_box_solver=_MockGreyBoxSolver(name=f"mock-{objective_option}"),
                 )
 
-                with patch.object(
-                    doe_obj,
-                    "_compute_fim_at_point_no_prior",
-                    side_effect=_spd_hour_fim_oracle,
-                ):
-                    doe_obj.optimize_experiments(
-                        n_exp=2,
-                        init_method="lhs",
-                        init_n_samples=lhs_n_samples,
-                        init_seed=lhs_seed,
-                    )
+                doe_obj.optimize_experiments(
+                    n_exp=2,
+                    init_method="lhs",
+                    init_n_samples=lhs_n_samples,
+                    init_seed=lhs_seed,
+                )
 
                 lhs_init = doe_obj.results["initialization"]
                 lhs_diag = {
@@ -1627,20 +1631,24 @@ class TestMultiexperimentBuild(unittest.TestCase):
                     best_obj = np.inf
                     is_better = lambda new, best: new < best
 
+                # Build exhaustive reference over all candidate pairs.
+                candidate_fims = [
+                    doe_obj._compute_fim_at_point_no_prior(0, list(point))
+                    for point in candidate_points
+                ]
                 for combo in itertools.combinations(range(len(candidate_points)), 2):
                     fim_total = sum(
-                        (
-                            _spd_hour_fim_oracle(0, candidate_points[idx])
-                            for idx in combo
-                        ),
-                        np.zeros((2, 2)),
+                        (candidate_fims[idx] for idx in combo), np.zeros((2, 2))
                     )
                     obj_val = doe_obj._evaluate_objective_from_fim(fim_total)
                     if is_better(obj_val, best_obj):
                         best_obj = obj_val
 
                 actual_fim_total = sum(
-                    (_spd_hour_fim_oracle(0, point) for point in actual_points),
+                    (
+                        doe_obj._compute_fim_at_point_no_prior(0, list(point))
+                        for point in actual_points
+                    ),
                     np.zeros((2, 2)),
                 )
                 actual_obj = doe_obj._evaluate_objective_from_fim(actual_fim_total)
@@ -1675,7 +1683,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
             patch.object(
                 doe_obj,
                 "_compute_fim_at_point_no_prior",
-                side_effect=_diagonal_hour_fim_oracle,
+                side_effect=_diagonal_hour_fim_reference,
             ),
             patch.object(
                 doe_obj, "_initialize_grey_box_block", side_effect=_capture_initialize
