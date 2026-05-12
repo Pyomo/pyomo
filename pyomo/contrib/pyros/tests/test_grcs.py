@@ -69,6 +69,8 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     _setup_standard_uncertainty_set_constraint_block,
     AxisAlignedEllipsoidalSet,
     BoxSet,
+    CardinalitySet,
+    CartesianProductSet,
     DiscreteScenarioSet,
     FactorModelSet,
     Geometry,
@@ -458,6 +460,90 @@ class TestPyROSSolveDiscreteSet(unittest.TestCase):
                 "robust optimality"
             ),
         )
+
+
+@unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+class TestPyROSSolveCartesianProductSet(unittest.TestCase):
+    """
+    Test PyROS successfully solves model with cartesian product uncertainty.
+    """
+
+    def build_model(self):
+        m = ConcreteModel()
+        m.q = Param(range(4), initialize=0, mutable=True)
+        m.x = Var(initialize=0, bounds=(0, 100))
+        m.obj = Objective(expr=m.x, sense=minimize)
+        m.con = Constraint(expr=m.x >= sum(m.q.values()))
+        return m
+
+    def test_solve_with_cartesian_product_set(self):
+        """
+        Test solve with cartesian product uncertainty.
+        """
+        m = self.build_model()
+        cpset = CartesianProductSet(
+            [
+                BoxSet([[0, 1]]),
+                FactorModelSet(
+                    origin=[0, 0], number_of_factors=1, beta=1, psi_mat=[[1], [3]]
+                ),
+                CardinalitySet(origin=[0], positive_deviation=[0.5], gamma=1),
+            ]
+        )
+        results = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cpset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # check successful termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance.",
+        )
+        # need only 2 iterations:
+        # - first gives nominally optimal x, which is robust infeasible
+        # - second gives robust optimal x
+        self.assertEqual(results.iterations, 2)
+        # final objective is just sum of the parameter values
+        # that cause maximal violation of the inequality constraint
+        self.assertAlmostEqual(results.final_objective_value, 5.5, places=6)
+        self.assertAlmostEqual(m.x.value, 5.5, places=6)
+
+    def test_solve_invalid_cartesian_product_set(self):
+        """
+        Test PyROS solver cartesian product set validation failure.
+        """
+        m = self.build_model()
+        cpset = CartesianProductSet(
+            [BoxSet([[0, 1]]), DiscreteScenarioSet([(0, 1, 3), (0, 0, 0)])]
+        )
+        # exception raised during set validation due to involvement
+        # of discrete uncertainty in the cartesian product
+        disc_exc_str = r"CartesianProductSet.*entry.*with a discrete geometry"
+        with self.assertRaisesRegex(ValueError, disc_exc_str):
+            SolverFactory("pyros").solve(
+                model=m,
+                first_stage_variables=[m.x],
+                second_stage_variables=[],
+                uncertain_params=m.q,
+                uncertainty_set=cpset,
+                local_solver=SolverFactory("ipopt"),
+                global_solver=SolverFactory("ipopt"),
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                },
+            )
 
 
 class TestPyROSRobustInfeasible(unittest.TestCase):

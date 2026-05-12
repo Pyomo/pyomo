@@ -22,7 +22,7 @@ import functools
 import itertools
 from numbers import Integral
 from collections import namedtuple
-from collections.abc import Iterable, MutableSequence
+from collections.abc import Iterable, MutableSequence, Sequence
 from enum import Enum
 
 from pyomo.common.dependencies import numpy as np, scipy as sp
@@ -756,7 +756,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def _compute_exact_parameter_bounds(self, solver, index=None):
         """
-        Compute lower and upper coordinate value bounds
+        Compute specified tight lower and upper coordinate value bounds
         for every dimension of `self` by solving a bounding model.
 
         Parameters
@@ -774,10 +774,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        param_bounds : list of tuple of float
-            Each entry of the list is a 2-tuple
-            containing the lower and upper bound for
-            the corresponding dimension.
+        param_bounds : list of tuple
+            Every entry of the list is a 2-tuple,
+            each member of which is the corresponding dimension's
+            lower/upper bound
+            (if the corresponding entry of `index` is True)
+            or None (if the corresponding entry of `index` is False).
 
         Raises
         ------
@@ -971,7 +973,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         config : ConfigDict
             PyROS solver options. Should at least contain attribute
             `global_solver`.
-        index : iterable of int, optional
+        index : Sequence[int] | None
             Positional indices of the coordinates to check.
             If `None` is passed, then `index` is set to
             ``list(range(self.dim))``, so that all coordinates
@@ -3849,3 +3851,300 @@ class IntersectionSet(UncertaintySet):
 
         # check boundedness and nonemptiness of intersected set
         super().validate(config)
+
+
+class CartesianProductSet(UncertaintySet):
+    """
+    A Cartesian product of uncertainty sets.
+
+    The order and identities of the uncertainty sets
+    involved in the Cartesian product are immutable,
+    and all sets in the product should be non-discrete.
+
+    Parameters
+    ----------
+    all_sets : Sequence[UncertaintySet]
+        Uncertainty sets of which the product is to be taken.
+
+    Raises
+    ------
+    TypeError
+        If any entry of ``all_sets`` is not of type `UncertaintySet`.
+
+    Notes
+    -----
+    Given uncertainty sets
+    :math:`\\mathcal{Q}_1 \\in \\mathbb{R}^{n_1}`,
+    :math:`\\mathcal{Q}_2 \\in \\mathbb{R}^{n_2}`,
+    :math:`\\dots`,
+    :math:`\\mathcal{Q}_m \\in \\mathbb{R}^{n_m}`,
+    collectively represented by the argument ``all_sets``,
+    the :math:`(n_1 + n_2 + \\dots + n_m)`-dimensional
+    Cartesian product set is defined by
+
+    .. math::
+
+        \\mathcal{Q}_1 \\times \\mathcal{Q}_2 \\times \\cdots
+            \\times \\mathcal{Q}_m.
+
+    Examples
+    --------
+    Cartesian product of 1D box/interval and 2D
+    hypersphere (circle):
+
+    >>> from pyomo.contrib.pyros import (
+    ...     BoxSet, AxisAlignedEllipsoidalSet, CartesianProductSet,
+    ... )
+    >>> interval = BoxSet(bounds=[[-1.5, 1.5]])
+    >>> circle = AxisAlignedEllipsoidalSet(
+    ...     center=[0, 0],
+    ...     half_lengths=[2, 2],
+    ... )
+    >>> cartesian_product = CartesianProductSet([interval, circle])
+    """
+
+    def __init__(self, all_sets):
+        """Initialize self (see class docstring)."""
+        if not isinstance(all_sets, Sequence):
+            raise TypeError(
+                f"Argument `all_sets` should be a {Sequence.__name__}-type "
+                f"iterable, but is of type {type(all_sets).__name__}."
+            )
+        all_sets = tuple(all_sets)
+        for val in all_sets:
+            if not isinstance(val, UncertaintySet):
+                raise TypeError(
+                    f"{type(self).__name__} has an entry of value {val!r} "
+                    "that is not of type "
+                    f"{UncertaintySet.__name__}. "
+                    "Ensure that all entries are of type "
+                    f"{UncertaintySet.__name__}."
+                )
+
+        # protect this attribute to make the Cartesian product set,
+        # and thus the set's dimension, effectively immutable, as
+        # instances of the other (pre-implemented) uncertainty set
+        # types are also of immutable dimension
+        self._all_sets = all_sets
+
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "cartesian_product"
+
+    @property
+    def dim(self):
+        """
+        int : Dimension of the cartesian product set.
+        """
+        return sum(uset.dim for uset in self._all_sets)
+
+    @property
+    def geometry(self):
+        """
+        Geometry : Geometry of the Cartesian product set,
+        assuming that there are no discrete sets.
+        See the `Geometry` class documentation.
+        """
+        return Geometry(max(uset.geometry.value for uset in self._all_sets))
+
+    @property
+    def _PARAMETER_BOUNDS_EXACT(self):
+        """
+        bool : True if the coordinate value bounds returned by
+        ``self.parameter_bounds`` are exact
+        (i.e., specify the minimum bounding box),
+        False otherwise.
+
+        For the cartesian product set, parameter bounds are exact iff
+        the parameter bounds for each multiplicand are exact.
+        """
+        return all(uset._PARAMETER_BOUNDS_EXACT for uset in self._all_sets)
+
+    @property
+    def parameter_bounds(self):
+        """
+        Bounds for the value of each uncertain parameter constrained
+        by the set (i.e. bounds for each set dimension).
+
+        Returns
+        -------
+        list[tuple[numbers.Real, numbers.Real]]
+            If the ``parameter_bounds`` method returns a nonempty
+            list for all sets involved in the Cartesian product,
+            then this list is of length ``self.dim`` and contain the
+            (lower, upper) bound pairs. Otherwise, the list is empty.
+        """
+        parameter_bounds = []
+        for uset in self._all_sets:
+            # NOTE: by assumption, the list of parameter bounds for
+            #       `uset` is either empty or of length equal to
+            #       ``uset.dim``.
+            uset_bounds = uset.parameter_bounds
+            if uset_bounds:
+                parameter_bounds.extend(uset_bounds)
+            else:
+                return []
+        return parameter_bounds
+
+    def _iterate_over_all_sets(self):
+        """
+        Iterate over the sets contained in `self`.
+
+        Yields
+        ------
+        start_dim : int
+            Positional index for the first dimension of the
+            multiplicand set iterate.
+        stop_dim : int
+            One plus the positional index for the last dimension of the
+            multiplicand set iterate.
+        uset : UncertaintySet
+            The multiplicand set iterate.
+        """
+        starting_dim = 0
+        for uset in self._all_sets:
+            yield starting_dim, starting_dim + uset.dim, uset
+            starting_dim += uset.dim
+
+    @copy_docstring(UncertaintySet.point_in_set)
+    def point_in_set(self, point):
+        for start_dim, stop_dim, uset in self._iterate_over_all_sets():
+            in_uset = uset.point_in_set(point[start_dim:stop_dim])
+            if not in_uset:
+                return False
+        return True
+
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        validate_array(
+            arr=point,
+            arr_name="point",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="numeric type",
+            required_shape=[self.dim],
+            required_shape_qual="to match the set dimension",
+        )
+
+        aux_vals = []
+        for start_dim, stop_dim, uset in self._iterate_over_all_sets():
+            uset_pt = point[start_dim:stop_dim]
+            aux_vals.extend(
+                uset.compute_auxiliary_uncertain_param_vals(uset_pt, solver=solver)
+            )
+
+        return np.array(aux_vals)
+
+    @copy_docstring(UncertaintySet.set_as_constraint)
+    def set_as_constraint(self, uncertain_params=None, block=None):
+        block, param_var_data_list, uncertainty_conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
+            )
+        )
+
+        all_cons, all_aux_vars = [], []
+        for idx, (start_dim, stop_dim, uset) in enumerate(
+            self._iterate_over_all_sets()
+        ):
+            sub_block = Block()
+            block.add_component(
+                unique_component_name(block, f"sub_block_{idx}"), sub_block
+            )
+            set_quantification = uset.set_as_constraint(
+                block=sub_block,
+                uncertain_params=param_var_data_list[start_dim:stop_dim],
+            )
+            all_cons.extend(set_quantification.uncertainty_cons)
+            all_aux_vars.extend(set_quantification.auxiliary_vars)
+
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=param_var_data_list,
+            uncertainty_cons=all_cons,
+            auxiliary_vars=all_aux_vars,
+        )
+
+    def _compute_exact_parameter_bounds(self, solver, index=None):
+        """
+        Compute specified tight lower and upper coordinate value bounds
+        for every dimension of `self` by solving a bounding model.
+
+        Parameters
+        ----------
+        solver : Pyomo solver type
+            Optimizer to invoke on the bounding problems.
+        index : list of 2-tuple of bool, optional
+            A list of tuples for each index of the coordinates for
+            which to compute bounds. A lower or upper bound is
+            computed for any value that is True, while False
+            indicates that the bound should be skipped.
+            If None is passed, then the argument is set to
+            ``[(True, True)]*self.dim``, so that the bounds
+            for all coordinates are computed.
+
+        Returns
+        -------
+        param_bounds : list of tuple
+            Every entry of the list is a 2-tuple,
+            each member of which is the corresponding dimension's
+            lower/upper bound
+            (if the corresponding entry of `index` is True)
+            or None (if the corresponding entry of `index` is False).
+        """
+        if index is None:
+            index = [(True, True)] * self.dim
+        param_bounds = [(None, None)] * self.dim
+        for start_dim, stop_dim, uset in self._iterate_over_all_sets():
+            param_bounds[start_dim:stop_dim] = uset._compute_exact_parameter_bounds(
+                solver, index=index[start_dim:stop_dim]
+            )
+        return param_bounds
+
+    def validate(self, config):
+        """
+        Validate the Cartesian product set instance.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Raises
+        ------
+        ValueError
+            If any set involved in the product has a discrete geometry.
+        """
+
+        full_nom_param_vals = config.nominal_uncertain_param_vals
+        for start_dim, stop_dim, uset in self._iterate_over_all_sets():
+            # ensure there are no discrete sets
+            if uset.geometry == Geometry.DISCRETE_SCENARIOS:
+                raise ValueError(
+                    f"{type(self).__name__} has an entry {uset!r} "
+                    "with a discrete geometry. "
+                    "Ensure that all entries do not have discrete geometries."
+                )
+
+            # instead of using the default validation method
+            # on `self` (generally slow), we are going to separately
+            # validate each set in the product (possibly fast).
+            # as the check for each set may require the nominal values
+            # of the set's corresponding uncertain parameters, we
+            # need to temporarily update the appropriate config attribute
+            if full_nom_param_vals:
+                config.nominal_uncertain_param_vals = full_nom_param_vals[
+                    start_dim:stop_dim
+                ]
+
+            try:
+                uset.validate(config)
+            finally:
+                # ensure the config's state ultimately remains unchanged
+                config.nominal_uncertain_param_vals = full_nom_param_vals
