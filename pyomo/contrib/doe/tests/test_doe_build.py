@@ -11,7 +11,6 @@ import os
 import os.path
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 from pyomo.common.dependencies import (
     numpy as np,
