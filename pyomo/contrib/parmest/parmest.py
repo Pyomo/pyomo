@@ -194,10 +194,10 @@ def _get_labeled_model(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
-def _check_index_is_scalar_or_local(index):
+def _check_index_is_none_or_local(index):
     """
-    Checks if experiment outputs are not indexed or their indices
-    are strings, e.g., `m.y1`, `m.y2`, `m.C["A"]`, `m.C["B"]`
+    Checks if experiment outputs are scalars (i.e., not indexed) or their indices
+    are local (i.e., strings), e.g., `m.y1`, `m.y2`, `m.C["A"]`, `m.C["B"]`
     """
     return index is None or isinstance(index, str)
 
@@ -235,14 +235,14 @@ def validate_experiment_outputs(output_vars):
 
         # check if the output variable is a scalar (e.g., m.y1, m.y2)
         # or has a local index (e.g., m.C["A"], m.C["B"])
-        if _check_index_is_scalar_or_local(index):
+        if _check_index_is_none_or_local(index):
             pass
         else:
             # format the indices of output variables
             # (e.g., m.CA[t], m.CB[t], m.C[t, "A"], m.C[t, "B"]) as a tuple
             index_tuple = _format_outputs_index_as_tuple(index)
 
-            # get the data-point index which is assumed to be at the first position
+            # get the data-point index which is assumed to be the first entry
             data_point = index_tuple[0]
 
             assert isinstance(
@@ -332,28 +332,27 @@ def _count_total_experiments(experiment_list):
         # Case 1 and 2:
         # scalar outputs such as m.y1, m.y2,...
         # local outputs such as m.C["A"], m.C["B"],...
-        if all(_check_index_is_scalar_or_local(index) for index in indices):
+        if all(_check_index_is_none_or_local(index) for index in indices):
             total_data_points += 1
-            continue
+        else:
+            # Case 3:
+            # outputs with one index, e.g., m.CA[t], m.CB[t],...
+            # outputs with two or more indices, e.g., m.C[t, "A"], m.C[t, "B"],...
+            # first index must be the data-point variable
+            # count unique time/sample indices within this experiment
+            experiment_data_points = set()
 
-        # Case 3:
-        # outputs with one index, e.g., m.CA[t], m.CB[t],...
-        # outputs with two or more indices, e.g., m.C[t, "A"], m.C[t, "B"],...
-        # first index must be the data-point variable
-        # count unique time/sample indices within this experiment
-        experiment_data_points = set()
+            for index in indices:
+                index_tuple = _format_outputs_index_as_tuple(index)
 
-        for index in indices:
-            index_tuple = _format_outputs_index_as_tuple(index)
+                # if the output has one index, this gives index itself
+                # if the output has two or more index, assume that the first
+                # entry is the data-point variable
+                data_point = index_tuple[0]
 
-            # if the output has one index, this gives index itself
-            # if the output has two or more index, assume first entry is the
-            # data-point variable
-            data_point = index_tuple[0]
+                experiment_data_points.add(data_point)
 
-            experiment_data_points.add(data_point)
-
-        total_data_points += len(experiment_data_points)
+            total_data_points += len(experiment_data_points)
 
     return total_data_points
 
