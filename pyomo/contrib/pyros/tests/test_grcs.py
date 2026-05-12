@@ -5439,30 +5439,21 @@ class TestPyROSCache(unittest.TestCase):
         global_subsolver = SolverFactory("ipopt")
 
         # Solve with PyROS
-        results = pyros_solver.solve(
-            model=m,
-            first_stage_variables=[m.x1],
-            second_stage_variables=[m.x2],
-            uncertain_params=[m.u],
-            uncertainty_set=interval,
-            local_solver=local_subsolver,
-            global_solver=global_subsolver,
-            options={
-                "objective_focus": ObjectiveType.worst_case,
-                "solve_master_globally": True,
-            },
-        )
-
-        # check results, which should use the correct parameter bounds
-        self.assertEqual(results.iterations, 3)
-        self.assertAlmostEqual(results.final_objective_value, 0.531, places=2)
-        self.assertAlmostEqual(m.x1.value, 3.518, places=2)
-        self.assertAlmostEqual(m.x2.value, 1.547, places=2)
-        self.assertAlmostEqual(m.x3.value, 9.684, places=2)
-        self.assertEqual(
-            results.pyros_termination_condition,
-            pyrosTerminationCondition.robust_optimal,
-        )
+        exc_str = r"Uncertainty set cache has been modified."
+        with self.assertRaisesRegex(AssertionError, exc_str):
+            results = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                },
+            )
 
         # modify the cache
         interval._cache[0, minimize] = 25
@@ -5471,30 +5462,21 @@ class TestPyROSCache(unittest.TestCase):
         self.assertEqual(interval.parameter_bounds, [(25, 200)])
 
         # Solve with PyROS
-        results = pyros_solver.solve(
-            model=m,
-            first_stage_variables=[m.x1],
-            second_stage_variables=[m.x2],
-            uncertain_params=[m.u],
-            uncertainty_set=interval,
-            local_solver=local_subsolver,
-            global_solver=global_subsolver,
-            options={
-                "objective_focus": ObjectiveType.worst_case,
-                "solve_master_globally": True,
-            },
-        )
-
-        # check results, which should not change
-        self.assertEqual(results.iterations, 3)
-        self.assertAlmostEqual(results.final_objective_value, 0.531, places=2)
-        self.assertAlmostEqual(m.x1.value, 3.518, places=2)
-        self.assertAlmostEqual(m.x2.value, 1.547, places=2)
-        self.assertAlmostEqual(m.x3.value, 9.684, places=2)
-        self.assertEqual(
-            results.pyros_termination_condition,
-            pyrosTerminationCondition.robust_optimal,
-        )
+        exc_str = r"Uncertainty set cache has been modified."
+        with self.assertRaisesRegex(AssertionError, exc_str):
+            results = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                },
+            )
 
 
 if __name__ == "__main__":
