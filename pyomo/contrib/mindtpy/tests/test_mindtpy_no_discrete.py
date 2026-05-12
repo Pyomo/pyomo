@@ -11,6 +11,7 @@
 from unittest.mock import MagicMock, patch
 
 from pyomo.common import timing
+from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
 from pyomo.opt import TerminationCondition as tc, SolverStatus, SolverResults
 import pyomo.common.unittest as unittest
 
@@ -458,8 +459,6 @@ class TestMirrorDirectSolveResults(unittest.TestCase):
 
 class TestMindtPyGOATimeLimit(unittest.TestCase):
     def test_goa_time_limit_sets_solver_results_condition(self):
-        from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
-
         solver = MindtPy_GOA_Solver()
         solver.config = _SimpleNamespace(
             logger=MagicMock(), single_tree=False, time_limit=1
