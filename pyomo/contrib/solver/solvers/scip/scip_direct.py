@@ -581,11 +581,12 @@ class ScipDirect(SolverBase):
         self._pyomo_param_to_solver_param_map[p] = scip_var
         return scip_var
 
-    def __del__(self):
-        """Frees SCIP resources used by this solver instance."""
-        if self._solver_model is not None:
-            self._solver_model.freeProb()
-            self._solver_model = None
+    # causing segfaults?
+    # def __del__(self):
+    #     """Frees SCIP resources used by this solver instance."""
+    #     if self._solver_model is not None:
+    #         self._solver_model.freeProb()
+    #         self._solver_model = None
 
     def _add_constraints(self, cons: List[ConstraintData]):
         for con in cons:
