@@ -927,10 +927,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 f"{fbbt_infeasible_con_exception!r}"
             )
 
-        param_bounds = [
-            (var.lb, var.ub)
-            for var in bounding_model.param_vars.values()
-        ]
+        param_bounds = [(var.lb, var.ub) for var in bounding_model.param_vars.values()]
 
         return param_bounds
 
