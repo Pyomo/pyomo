@@ -346,9 +346,35 @@ class TestRooneyBiegler(unittest.TestCase):
         ):
             cov = self.pest.cov_est()
 
-    def test_parmest_exception(self):
+    def test_k_aug_solver_exception(self):
         """
-        Test the exception raised by parmest when the "experiment_outputs"
+        Tests the error message raised when a user passes
+        the solver option as "k_aug"
+        """
+
+        # estimate the parameters
+        with pytest.raises(
+                RuntimeError,
+                match=r"k_aug no longer supported.",
+        ):
+            obj_val, theta_vals = self.pest.theta_est(solver="k_aug")
+
+    def test_unknown_solver_exception(self):
+        """
+        Tests the error message raised when a user passes an
+        unsupported solver option
+        """
+
+        # estimate the parameters
+        with pytest.raises(
+                RuntimeError,
+                match=r"Unknown solver in Q_Opt=random",
+        ):
+            obj_val, theta_vals = self.pest.theta_est(solver="random")
+
+    def test_exp_outputs_exception(self):
+        """
+        Tests the exception raised by parmest when the "experiment_outputs"
         attribute is not defined in the model
         """
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
@@ -1259,7 +1285,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.exp_list_df_no_params = exp_list_df_no_params
         self.exp_list_dict_no_params = exp_list_dict_no_params
 
-    def test_parmest_exception(self):
+    def test_unknown_parameters_exception(self):
         """
         Test the exception raised by parmest when the "unknown_parameters"
         attribute is not defined in the model

@@ -316,7 +316,8 @@ def _count_total_experiments(experiment_list):
     total_data_points = 0
 
     for experiment in experiment_list:
-        output_vars = experiment.get_labeled_model().experiment_outputs
+        model = _get_labeled_model(experiment)
+        output_vars = model.experiment_outputs
 
         # check if the experiment outputs are defined correctly
         validate_experiment_outputs(output_vars)
@@ -331,14 +332,13 @@ def _count_total_experiments(experiment_list):
         # Case 1 and 2:
         # scalar outputs such as m.y1, m.y2,...
         # local outputs such as m.C["A"], m.C["B"],...
-        # each experiment object represents one data point
         if all(_check_index_is_scalar_or_local(index) for index in indices):
             total_data_points += 1
             continue
 
         # Case 3:
-        # one index outputs such as m.CA[t], m.CB[t],...
-        # two index outputs such as m.C[t, "A"], m.C[t, "B"],...
+        # outputs with one index, e.g., m.CA[t], m.CB[t],...
+        # outputs with two or more indices, e.g., m.C[t, "A"], m.C[t, "B"],...
         # first index must be the data-point variable
         # count unique time/sample indices within this experiment
         experiment_data_points = set()
@@ -346,17 +346,14 @@ def _count_total_experiments(experiment_list):
         for index in indices:
             index_tuple = _format_outputs_index_as_tuple(index)
 
-            # if index is scalar, this gives index itself
-            # if index is tuple-like, assume first entry is the data-point variable
+            # if the output has one index, this gives index itself
+            # if the output has two or more index, assume first entry is the
+            # data-point variable
             data_point = index_tuple[0]
 
             experiment_data_points.add(data_point)
 
-        # if no usable indexed outputs were found, default to one data point
-        if len(experiment_data_points) == 0:
-            total_data_points += 1
-        else:
-            total_data_points += len(experiment_data_points)
+        total_data_points += len(experiment_data_points)
 
     return total_data_points
 
@@ -1025,10 +1022,10 @@ class Estimator:
             bootlist if bootlist is not None else list(range(len(self.exp_list)))
         )
 
+        # get the probability constant that is applied to the objective function
+        # parmest solves the estimation problem by applying equal probabilities to
+        # the objective function of all the scenarios from the experiment list
         self.obj_probability_constant = len(scenario_numbers)
-
-        if self.obj_probability_constant <= 0:
-            raise ValueError("At least one scenario is required to build the EF model.")
 
         # Index scenario blocks by position, not experiment number, so bootstrap
         # samples with repeated experiments are preserved.
@@ -1468,16 +1465,6 @@ class Estimator:
                             solver=solver,
                             tee=self.tee,
                         )
-                else:
-                    raise ValueError(
-                        'One or more values of the measurement errors have not been '
-                        'supplied. All values of the measurement errors are required '
-                        'for the "SSE_weighted" objective.'
-                    )
-            else:
-                raise AttributeError(
-                    'Experiment model does not have suffix "measurement_error".'
-                )
         else:
             raise ValueError(
                 f"Invalid objective function for covariance calculation. "
