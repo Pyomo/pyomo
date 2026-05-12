@@ -22,6 +22,7 @@ from pyomo.common.collections import Bunch
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
+import pyomo.contrib.gdpopt.loa as loa_module
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block,
@@ -145,6 +146,31 @@ class TestGDPoptUnit(unittest.TestCase):
         m.obj = Objective(expr=m.x)
 
         self.assertFalse(GDP_LOA_Solver()._problem_may_have_nonrigorous_dual_bound(m))
+
+    def test_loa_certifies_psd_quadratic_cross_terms_without_numpy(self):
+        convex = ConcreteModel()
+        convex.x = Var(bounds=(-2, 2))
+        convex.y = Var(bounds=(-2, 2))
+        convex.c = Constraint(expr=convex.x**2 + convex.x * convex.y + convex.y**2 <= 4)
+        convex.obj = Objective(expr=convex.x)
+
+        nonconvex = ConcreteModel()
+        nonconvex.x = Var(bounds=(-2, 2))
+        nonconvex.y = Var(bounds=(-2, 2))
+        nonconvex.c = Constraint(expr=nonconvex.x * nonconvex.y <= 1)
+        nonconvex.obj = Objective(expr=nonconvex.y)
+
+        original_numpy_available = loa_module.numpy_available
+        loa_module.numpy_available = False
+        try:
+            self.assertFalse(
+                GDP_LOA_Solver()._problem_may_have_nonrigorous_dual_bound(convex)
+            )
+            self.assertTrue(
+                GDP_LOA_Solver()._problem_may_have_nonrigorous_dual_bound(nonconvex)
+            )
+        finally:
+            loa_module.numpy_available = original_numpy_available
 
     def test_gloa_crossed_bounds_preserve_certified_optimal_behavior(self):
         solver = GDP_GLOA_Solver()
