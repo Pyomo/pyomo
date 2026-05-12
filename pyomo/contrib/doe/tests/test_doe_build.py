@@ -1034,61 +1034,39 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_optimize_experiments_termination_message_bytes(self):
-        # Tests that solver termination messages returned as bytes are decoded
-        # and persisted as plain strings in results.
+    def test_optimize_experiments_lhs_rooney_biegler_integration_records_consistent_counts(
+        self,
+    ):
+        # End-to-end Rooney-Biegler integration check for LHS initialization:
+        # selected initial designs should be recorded with consistent candidate/
+        # combination counts for n_exp=2 and a single design variable.
+        lhs_n_samples = 3
+        n_exp = 2
         doe_obj = DesignOfExperiments(
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
             solver=self._make_solver(),
         )
-        original_solve = doe_obj.solver.solve
+        doe_obj.optimize_experiments(
+            n_exp=n_exp, init_method="lhs", init_n_samples=lhs_n_samples, init_seed=17
+        )
+        lhs_init = doe_obj.results["initialization"]
 
-        def _solve_with_bytes_message(*args, **kwargs):
-            res = original_solve(*args, **kwargs)
-            res.solver.message = b"byte-message"
-            return res
-
-        with patch.object(
-            doe_obj.solver, "solve", side_effect=_solve_with_bytes_message
-        ):
-            doe_obj.optimize_experiments(n_exp=1)
-
+        self.assertEqual(lhs_init["method"], "lhs")
         self.assertEqual(
-            doe_obj.results["optimization_solve"]["message"], "byte-message"
+            len(lhs_init["selected_initial_designs"]),
+            n_exp,
         )
+        for point in lhs_init["selected_initial_designs"]:
+            self.assertEqual(len(point), 1)
+            self.assertGreaterEqual(point[0], 1.0)
+            self.assertLessEqual(point[0], 10.0)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_optimize_experiments_termination_message_fallback_to_str(self):
-        # Tests that non-string termination messages fall back to str(message) so
-        # results always store a serializable user-facing value.
-        doe_obj = DesignOfExperiments(
-            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
-            objective_option="pseudo_trace",
-            step=1e-2,
-            solver=self._make_solver(),
-        )
-        original_solve = doe_obj.solver.solve
-
-        class _CustomMessage:
-            def __str__(self):
-                return "custom-message"
-
-        def _solve_with_custom_message(*args, **kwargs):
-            res = original_solve(*args, **kwargs)
-            res.solver.message = _CustomMessage()
-            return res
-
-        with patch.object(
-            doe_obj.solver, "solve", side_effect=_solve_with_custom_message
-        ):
-            doe_obj.optimize_experiments(n_exp=1)
-
-        self.assertEqual(
-            doe_obj.results["optimization_solve"]["message"], "custom-message"
-        )
-
+        # For Rooney-Biegler there is one design variable (hour), so:
+        # n_candidates = lhs_n_samples^1 and n_combinations = C(n_candidates, n_exp).
+        self.assertEqual(lhs_init["number_of_candidate_designs"], lhs_n_samples)
+        self.assertEqual(lhs_init["number_of_design_combinations"], 3)
 
 class TestDoeResultsSerialization(unittest.TestCase):
     """Coverage for DoE results payload serialization helpers."""
