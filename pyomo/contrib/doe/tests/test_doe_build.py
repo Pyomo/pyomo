@@ -11,7 +11,6 @@ import os
 import os.path
 import tempfile
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from pyomo.common.dependencies import (
@@ -55,6 +54,26 @@ with open(file_path) as f:
     data_ex = json.load(f)
 
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
+
+
+class _TrackingSolver:
+    """Proxy solver that records solve-call metadata while running real solves."""
+
+    def __init__(self, solver, phase_tag, call_order):
+        self._solver = solver
+        self._phase_tag = phase_tag
+        self._call_order = call_order
+        self.calls = 0
+        self.option_markers = []
+
+    def solve(self, *args, **kwargs):
+        self.calls += 1
+        self._call_order.append(self._phase_tag)
+        self.option_markers.append(self._solver.options.get("max_iter"))
+        return self._solver.solve(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._solver, name)
 
 
 def get_rooney_biegler_experiment():
@@ -702,22 +721,22 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         solver.options["max_iter"] = 3000
         return solver
 
-    def _mock_solver_results(self, message):
-        return SimpleNamespace(
-            solver=SimpleNamespace(
-                status="ok", termination_condition="optimal", message=message
-            )
-        )
-
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_init_solver_used_for_initialization_only(self):
         # Tests that all pre-final solves use init_solver while the final
         # optimization solve still uses the primary solver.
-        main_solver = self._make_solver()
-        init_solver = self._make_solver()
+        main_solver_inner = self._make_solver()
+        init_solver_inner = self._make_solver()
         # Use distinct option values so each solver path can be identified.
-        main_solver.options["max_iter"] = 321
-        init_solver.options["max_iter"] = 123
+        main_solver_inner.options["max_iter"] = 321
+        init_solver_inner.options["max_iter"] = 123
+        call_order = []
+        main_solver = _TrackingSolver(
+            solver=main_solver_inner, phase_tag="main", call_order=call_order
+        )
+        init_solver = _TrackingSolver(
+            solver=init_solver_inner, phase_tag="init", call_order=call_order
+        )
         doe_obj = DesignOfExperiments(
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
@@ -725,54 +744,21 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=main_solver,
         )
 
-        # Track both how many times each solver is called and the chronological
-        # order of those calls. The optimize_experiments() contract is that all
-        # setup solves run first on init_solver and the final NLP solve runs last
-        # on the primary solver.
-        main_calls = 0
-        init_calls = 0
-        call_order = []
-        # Record an option value on each solve so the test can verify that the
-        # call really went through the expected solver object, not just the
-        # expected phase label.
-        option_markers = []
-        original_main_solve = main_solver.solve
-        original_init_solve = init_solver.solve
-
-        def _main_solve(*args, **kwargs):
-            nonlocal main_calls
-            main_calls += 1
-            call_order.append("main")
-            option_markers.append(main_solver.options.get("max_iter"))
-            return original_main_solve(*args, **kwargs)
-
-        def _init_solve(*args, **kwargs):
-            nonlocal init_calls
-            init_calls += 1
-            call_order.append("init")
-            option_markers.append(init_solver.options.get("max_iter"))
-            return original_init_solve(*args, **kwargs)
-
-        # Patch both solver objects in place so the real solves still run while
-        # we collect lightweight diagnostics about solver routing.
-        with (
-            patch.object(main_solver, "solve", side_effect=_main_solve),
-            patch.object(init_solver, "solve", side_effect=_init_solve),
-        ):
-            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+        doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
         # The exact number of initialization solves is implementation-dependent,
         # but they must all occur before the one final main-solver call.
-        self.assertGreaterEqual(init_calls, 1)  # At least one initialization solve
-        self.assertEqual(main_calls, 1)  # Exactly one main optimization solve
+        self.assertGreaterEqual(init_solver.calls, 1)  # At least one initialization solve
+        self.assertEqual(main_solver.calls, 1)  # Exactly one main optimization solve
         self.assertEqual(call_order[-1], "main")
         self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
         # Distinct option markers provide a second check that solver routing
         # matches the expected init-versus-final phase split.
+        option_markers = init_solver.option_markers + main_solver.option_markers
         self.assertTrue(all(marker == 123 for marker in option_markers[:-1]))
         self.assertEqual(option_markers[-1], 321)
         # Result payloads should report the same phase-specific solver names that
-        # were observed through the patched solve() calls above.
+        # were observed through the tracked solve() calls above.
         self.assertEqual(
             doe_obj.results["initialization"]["solver"],
             getattr(init_solver, "name", str(init_solver)),
@@ -928,21 +914,15 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             step=1e-2,
             solver=self._make_solver(),
         )
-        final_calls = {"n": 0}
-
-        def _mock_final_solve(*args, **kwargs):
-            final_calls["n"] += 1
-            return self._mock_solver_results("mock-zero-final")
-
-        with patch.object(doe_obj.solver, "solve", side_effect=_mock_final_solve):
-            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+        doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
         scenario = doe_obj.model.param_scenario_blocks[0]
         self.assertFalse(hasattr(scenario, "obj_cons"))
-        self.assertEqual(final_calls["n"], 1)
-        self.assertEqual(doe_obj.results["optimization_solve"]["status"], "ok")
-        self.assertEqual(
-            doe_obj.results["optimization_solve"]["message"], "mock-zero-final"
+        self.assertIn(
+            doe_obj.results["optimization_solve"]["status"], {"ok", "warning"}
+        )
+        self.assertTrue(
+            isinstance(doe_obj.results["optimization_solve"]["message"], str)
         )
         self.assertEqual(
             len(doe_obj.results["solution"]["param_scenarios"][0]["experiments"]), 2
@@ -951,9 +931,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_trace_roundoff_flag_builds_extra_constraints(self):
         # The multi-experiment trace path optionally adds extra Cholesky/FIM
-        # diagonal constraints to reduce roundoff drift. Keep the square-solve
-        # build real, but mock the final NLP solve because this test is only
-        # checking that the additional constraints were created.
+        # diagonal constraints to reduce roundoff drift.
         init_solver = self._make_solver()
         doe_obj = DesignOfExperiments(
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
@@ -962,19 +940,14 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=self._make_solver(),
             improve_cholesky_roundoff_error=True,
         )
-        final_calls = {"n": 0}
-
-        def _mock_final_solve(*args, **kwargs):
-            final_calls["n"] += 1
-            return self._mock_solver_results("mock-trace-roundoff-final")
-
-        with patch.object(doe_obj.solver, "solve", side_effect=_mock_final_solve):
-            doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
+        doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
         scenario = doe_obj.model.param_scenario_blocks[0]
         parameter_names = list(scenario.exp_blocks[0].parameter_names)
 
-        self.assertEqual(final_calls["n"], 1)
+        self.assertIn(
+            doe_obj.results["optimization_solve"]["status"], {"ok", "warning"}
+        )
         self.assertTrue(hasattr(scenario.obj_cons, "cholesky_fim_diag_cons"))
         self.assertTrue(hasattr(scenario.obj_cons, "cholesky_fim_inv_diag_cons"))
         self.assertEqual(
@@ -982,10 +955,6 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         )
         self.assertEqual(
             len(scenario.obj_cons.cholesky_fim_inv_diag_cons), len(parameter_names) ** 2
-        )
-        self.assertEqual(
-            doe_obj.results["optimization_solve"]["message"],
-            "mock-trace-roundoff-final",
         )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
