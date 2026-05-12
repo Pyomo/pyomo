@@ -30,10 +30,10 @@ class _MutatingRecordingSolver:
     """
     Fake solver that perturbs FIM during dummy-objective initialization solve.
 
-    This emulates a realistic DoE square-initialization behavior where the
-    solve updates FIM values. It is used to verify that post-solve
-    re-synchronization of ``L``, ``L_inv``, ``fim_inv``, and ``cov_trace``
-    is performed correctly.
+    The key behavior we want to exercise is not optimization success, but the
+    fact that the square initialization solve can change the FIM after the
+    object has already created Cholesky-related variables. That is exactly the
+    bug this regression test protects.
     """
 
     def __init__(self):
@@ -59,6 +59,11 @@ class _MutatingRecordingSolver:
 class _TwoParamExperiment:
     """
     Minimal two-parameter experiment fixture for trace/Cholesky tests.
+
+    Two parameters is the smallest useful case here because it creates a real
+    matrix-valued FIM while still keeping the expected values easy to reason
+    about by hand. That makes it a good target for the initialization
+    synchronization regression.
     """
 
     def get_labeled_model(self):
@@ -88,7 +93,13 @@ class _TwoParamExperiment:
 
 
 def _make_trace_doe_object():
-    """Build a trace-objective DoE object with a FIM-mutating fake solver."""
+    """
+    Build a trace-objective DoE object with a FIM-mutating fake solver.
+
+    The trace objective is the path that introduces ``L``, ``L_inv``,
+    ``fim_inv``, and ``cov_trace``, so it is the right place to check that the
+    helper re-synchronizes all of those values after the init solve.
+    """
     return DesignOfExperiments(
         experiment=_TwoParamExperiment(),
         fd_formula="central",
@@ -101,10 +112,16 @@ def _make_trace_doe_object():
 
 @unittest.skipIf(not (numpy_available and scipy_available), "Pyomo.DoE needs scipy and numpy to run tests")
 class TestCholeskyInitialization(unittest.TestCase):
-    """Tests for Cholesky/FIM initialization helper behavior."""
+    """Regression tests for DoE initialization and Cholesky sync."""
 
     def test_compute_cholesky_jitter_raises_negative_eigenvalue(self):
-        """Negative minimum eigenvalue should produce positive corrective jitter."""
+        """
+        Negative minimum eigenvalue should produce positive corrective jitter.
+
+        This is a direct unit test for the helper used by the initialization
+        sync path, so we can catch arithmetic regressions independently of the
+        solver/modeled example below.
+        """
         doe_obj = _make_trace_doe_object()
         min_eig = -1.0e-3
         jitter = doe_obj._compute_cholesky_jitter(min_eig)
@@ -113,7 +130,13 @@ class TestCholeskyInitialization(unittest.TestCase):
         )
 
     def test_compute_cholesky_jitter_zero_when_not_needed(self):
-        """Positive minimum eigenvalue above tolerance should yield zero jitter."""
+        """
+        Positive minimum eigenvalue above tolerance should yield zero jitter.
+
+        We keep this separate from the negative-eigenvalue case because it
+        verifies the helper does not add unnecessary regularization when the
+        FIM is already well-conditioned.
+        """
         doe_obj = _make_trace_doe_object()
         min_eig = 1.0e-2
         jitter = doe_obj._compute_cholesky_jitter(min_eig)
@@ -121,7 +144,15 @@ class TestCholeskyInitialization(unittest.TestCase):
 
     def test_trace_initialization_resynchronizes_fim_inverse_variables(self):
         """
-        Verify trace-mode initialization re-synchronizes inverse-related variables.
+        Verify trace-mode initialization re-synchronizes inverse-related vars.
+
+        The fake solver mutates the FIM during the square solve. After that
+        solve, the DoE code should rebuild the dependent quantities from the
+        updated FIM so that:
+        - ``L`` matches the Cholesky factor of the current FIM,
+        - ``L_inv`` is the inverse of that Cholesky factor,
+        - ``fim_inv`` matches the inverse FIM, and
+        - ``cov_trace`` matches the trace of the inverse FIM.
         """
         doe_obj = _make_trace_doe_object()
         doe_obj.run_doe()
