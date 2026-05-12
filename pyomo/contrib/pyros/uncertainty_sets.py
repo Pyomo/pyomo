@@ -462,7 +462,7 @@ def validate_array(
 
 class ContextDict(dict):
     def __enter__(self):
-        self.clear()
+        assert not self, "Uncertainty set cache has been modified."
         return self
 
     def __exit__(self, et, e, tb):
