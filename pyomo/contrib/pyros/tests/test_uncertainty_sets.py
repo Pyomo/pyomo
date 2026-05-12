@@ -32,6 +32,7 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     AxisAlignedEllipsoidalSet,
     BoxSet,
     BudgetSet,
+    CartesianProductSet,
     CardinalitySet,
     DiscreteScenarioSet,
     EllipsoidalSet,
@@ -3176,6 +3177,512 @@ class TestPolyhedralSet(unittest.TestCase):
         baron = SolverFactory("baron")
         self.assertEqual(
             pset._is_coordinate_fixed(config=Bunch(global_solver=baron)), [False, True]
+        )
+
+
+class TestCartesianProductSet(unittest.TestCase):
+    """
+    Tests for CartesianProductSet.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test CartesianProductSet constructor works as expected.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0, 0, 0], [1, 1, 1, 1])
+
+        cpset = CartesianProductSet([bset, aset])
+        self.assertIs(
+            bset,
+            cpset._all_sets[0],
+            msg=(
+                "CartesianProductSet 'all_sets' attribute does not "
+                "contain expected BoxSet"
+            ),
+        )
+        self.assertIs(
+            aset,
+            cpset._all_sets[1],
+            msg=(
+                "CartesianProductSet 'all_sets' attribute does not "
+                "contain expected AxisAlignedEllipsoidalSet"
+            ),
+        )
+        # check defined attributes/methods inherited from base class
+        self.assertIs(cpset.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(cpset.type, "cartesian_product")
+        self.assertEqual(cpset.dim, 6)
+
+        exc_str = (
+            r"CartesianProductSet has an entry.*1 that is not of type UncertaintySet"
+        )
+        with self.assertRaisesRegex(TypeError, exc_str):
+            CartesianProductSet([BoxSet([[0, 1]]), 1])
+
+        # iterable should be a sequence, and the constructor performs
+        # the iterable type check before doing anything else
+        iter_exc_str = r"`all_sets`.*Sequence.*but is of type set"
+        with self.assertRaisesRegex(TypeError, iter_exc_str):
+            CartesianProductSet({BoxSet([[0, 1]]), 1})
+
+    def test_set_as_constraint(self):
+        """
+        Test method for setting up Cartesian product constraints
+        works correctly.
+        """
+        m = ConcreteModel()
+        m.v = Var(range(8), initialize=0)
+        cpset = CartesianProductSet(
+            [
+                BoxSet([(-0.5, 0.5)]),
+                FactorModelSet(
+                    origin=[0, 1], number_of_factors=1, beta=0.75, psi_mat=[[1], [3]]
+                ),
+                CardinalitySet([-0.5, -0.5], [2, 2], 2),
+                AxisAlignedEllipsoidalSet([0, 0, 0], [0.25, 0.25, 0.25]),
+            ]
+        )
+
+        uq = cpset.set_as_constraint(uncertain_params=m.v, block=m)
+
+        self.assertIs(uq.block, m)
+        self.assertEqual(uq.uncertain_param_vars, list(m.v.values()))
+        self.assertEqual(len(uq.auxiliary_vars), 3)
+        self.assertEqual(len(uq.uncertainty_cons), 8)
+
+        # box constraint
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[0].expr,
+            RangedExpression((np.float64(-0.5), m.v[0], np.float64(0.5)), False),
+        )
+
+        # factor model constraints
+        aux_vars = uq.auxiliary_vars
+        assertExpressionsEqual(self, uq.uncertainty_cons[1].expr, aux_vars[0] == m.v[1])
+        assertExpressionsEqual(
+            self, uq.uncertainty_cons[2].expr, 1 + 3 * aux_vars[0] == m.v[2]
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[3].expr,
+            RangedExpression((-0.75, aux_vars[0], 0.75), False),
+        )
+        self.assertEqual(aux_vars[0].bounds, (-1, 1))
+
+        # cardinality set constraints
+        assertExpressionsEqual(
+            self, uq.uncertainty_cons[4].expr, -0.5 + 2 * aux_vars[1] == m.v[3]
+        )
+        assertExpressionsEqual(
+            self, uq.uncertainty_cons[5].expr, -0.5 + 2 * aux_vars[2] == m.v[4]
+        )
+        assertExpressionsEqual(
+            self, uq.uncertainty_cons[6].expr, sum(aux_vars[1:3]) <= 2
+        )
+        self.assertEqual(aux_vars[1].bounds, (0, 1))
+        self.assertEqual(aux_vars[2].bounds, (0, 1))
+
+        # axis-aligned ellipsoid constraint
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[7].expr,
+            (
+                m.v[5] ** 2 / np.float64(0.0625)
+                + m.v[6] ** 2 / np.float64(0.0625)
+                + m.v[7] ** 2 / np.float64(0.0625)
+                <= 1
+            ),
+        )
+
+    def test_set_as_constraint_dim_mismatch(self):
+        """
+        Check exception raised when writing Cartesian product constraints
+        if number of uncertain parameters does not match the dimension.
+        """
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0)
+        m.v2 = Var(initialize=0)
+        cpset = CartesianProductSet(
+            [BoxSet(bounds=[[1, 2], [3, 4]]), AxisAlignedEllipsoidalSet([0, 1], [5, 5])]
+        )
+        with self.assertRaisesRegex(ValueError, ".*dimension"):
+            cpset.set_as_constraint(uncertain_params=[m.v1, m.v2], block=m)
+
+    def test_set_as_constraint_type_mismatch(self):
+        """
+        Check exception raised in Cartesian product set constraint
+        building if uncertain parameter variables are of invalid type.
+        """
+        m = ConcreteModel()
+        m.p1 = Param([0, 1], initialize=0, mutable=True)
+        cpset = CartesianProductSet(
+            [BoxSet(bounds=[[1, 2], [3, 4]]), AxisAlignedEllipsoidalSet([0, 1], [5, 5])]
+        )
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            cpset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
+
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            cpset.set_as_constraint(uncertain_params=m.p1, block=m)
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_compute_exact_parameter_bounds(self):
+        """
+        Test Cartesian product set exact parameter bounds
+        computations give expected results.
+        """
+        cpset = CartesianProductSet(
+            [
+                BoxSet([(-0.5, 0.5)]),
+                FactorModelSet(
+                    origin=[0, 0],
+                    number_of_factors=2,
+                    beta=0.75,
+                    psi_mat=[[1, 1], [1, 2]],
+                ),
+                CardinalitySet([-0.5, -0.5], [2, 2], 2),
+                AxisAlignedEllipsoidalSet([0, 0, 1], [0.25, 0.8, 0.25]),
+            ]
+        )
+
+        computed_bounds = cpset._compute_exact_parameter_bounds(SolverFactory("baron"))
+        np.testing.assert_allclose(
+            computed_bounds,
+            [
+                # box bounds
+                [-0.5, 0.5],
+                # factor model bounds
+                [-1.5, 1.5],
+                [-2.5, 2.5],
+                # cardinality bounds
+                [-0.5, 1.5],
+                [-0.5, 1.5],
+                # ellipsoid bounds
+                [-0.25, 0.25],
+                [-0.8, 0.8],
+                [0.75, 1.25],
+            ],
+        )
+        # since all sets in the product allow for quick bounds,
+        # also check for parity
+        np.testing.assert_allclose(cpset.parameter_bounds, computed_bounds)
+
+        # check that response to `index` argument is as expected
+        partial_index = [
+            (True, False),
+            (False, True),
+            (False, False),
+            (True, True),
+            (False, False),
+            (True, False),
+            (False, True),
+            (True, True),
+        ]
+        partial_computed_bounds = cpset._compute_exact_parameter_bounds(
+            SolverFactory("baron"), index=partial_index
+        )
+        partial_index_arr = np.array(partial_index)
+        for idx1, idx2 in zip(*np.where(partial_index_arr)):
+            self.assertAlmostEqual(
+                partial_computed_bounds[idx1][idx2],
+                computed_bounds[idx1][idx2],
+                msg=(
+                    f"Bound for index {idx1, idx2} should be "
+                    f"{computed_bounds[idx1][idx2]}, "
+                    f"instead got {partial_computed_bounds[idx1][idx2]}"
+                ),
+            )
+        for idx1, idx2 in zip(*np.where(~partial_index_arr)):
+            self.assertIsNone(
+                partial_computed_bounds[idx1][idx2],
+                msg=(
+                    f"Bound for index {idx1, idx2} should be None, "
+                    f"instead got {partial_computed_bounds[idx1][idx2]}"
+                ),
+            )
+
+    def test_parameter_bounds(self):
+        """
+        Test CartesianProductSet `parameter_bounds` method works
+        as expected.
+        """
+        cpset = CartesianProductSet(
+            [
+                BoxSet([(-0.5, 0.5)]),
+                CardinalitySet([-0.5, -0.5], [2, 2], 2),
+                AxisAlignedEllipsoidalSet([0, 0, 1], [0.25, 0.8, 0.25]),
+            ]
+        )
+        self.assertTrue(cpset._PARAMETER_BOUNDS_EXACT)
+        np.testing.assert_allclose(
+            cpset.parameter_bounds,
+            [
+                # box bounds
+                [-0.5, 0.5],
+                # cardinality bounds
+                [-0.5, 1.5],
+                [-0.5, 1.5],
+                # ellipsoid bounds
+                [-0.25, 0.25],
+                [-0.8, 0.8],
+                [0.75, 1.25],
+            ],
+        )
+
+        # polyhedral set doesn't provide parameter bounds,
+        # so neither should cartesian product
+        cpset2 = CartesianProductSet(
+            [BoxSet([(0, 1)]), PolyhedralSet([[1, 1], [1, 1]], [1, 1])]
+        )
+        self.assertFalse(cpset2.parameter_bounds)
+        self.assertFalse(cpset2._PARAMETER_BOUNDS_EXACT)
+
+        # polyhedral set doesn't provide parameter bounds,
+        # so neither should cartesian product
+        cpset3 = CartesianProductSet(
+            [
+                BoxSet([(0, 1)]),
+                IntersectionSet(
+                    set1=BoxSet([[-1, 1], [-1, 1]]),
+                    set2=AxisAlignedEllipsoidalSet([0, 0], [1, 1]),
+                ),
+            ]
+        )
+        self.assertFalse(cpset3.parameter_bounds)
+        self.assertFalse(cpset3._PARAMETER_BOUNDS_EXACT)
+
+    def test_point_in_set(self):
+        """
+        Test Cartesian product set membership check.
+        """
+        cpset = CartesianProductSet(
+            [BoxSet([(-0.5, 0.5)]), AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25])]
+        )
+
+        # in both sets
+        self.assertTrue(cpset.point_in_set([-0.5] + [0, -0.25]))
+        self.assertTrue(cpset.point_in_set([-0.5] + [0, 0.25]))
+        self.assertTrue(cpset.point_in_set([-0.5] + [-0.25, 0]))
+        self.assertTrue(cpset.point_in_set([-0.5] + [0.25, 0]))
+        self.assertTrue(cpset.point_in_set([-0.5] + [0, 0]))
+        self.assertTrue(cpset.point_in_set([0.5] + [0, -0.25]))
+        self.assertTrue(cpset.point_in_set([0.5] + [0, 0.25]))
+        self.assertTrue(cpset.point_in_set([0.5] + [-0.25, 0]))
+        self.assertTrue(cpset.point_in_set([0.5] + [0.25, 0]))
+        self.assertTrue(cpset.point_in_set([0.5] + [0, 0]))
+
+        # in box set, outside ellipsoid
+        self.assertFalse(cpset.point_in_set([-0.5] + [-0.25, -0.25]))
+        self.assertFalse(cpset.point_in_set([-0.5] + [-0.25, 0.25]))
+        self.assertFalse(cpset.point_in_set([-0.5] + [0.25, -0.25]))
+        self.assertFalse(cpset.point_in_set([-0.5] + [0.25, 0.25]))
+        self.assertFalse(cpset.point_in_set([0.5] + [-0.25, -0.25]))
+        self.assertFalse(cpset.point_in_set([0.5] + [-0.25, 0.25]))
+        self.assertFalse(cpset.point_in_set([0.5] + [0.25, -0.25]))
+        self.assertFalse(cpset.point_in_set([0.5] + [0.25, 0.25]))
+
+        # outside box, in ellipsoid
+        self.assertFalse(cpset.point_in_set([-0.6] + [0, -0.25]))
+        self.assertFalse(cpset.point_in_set([-0.6] + [0, 0.25]))
+        self.assertFalse(cpset.point_in_set([-0.6] + [-0.25, 0]))
+        self.assertFalse(cpset.point_in_set([-0.6] + [0.25, 0]))
+        self.assertFalse(cpset.point_in_set([-0.6] + [0, 0]))
+
+        # outside both sets
+        self.assertFalse(cpset.point_in_set([-0.6] + [-0.25, -0.25]))
+        self.assertFalse(cpset.point_in_set([-0.6] + [-0.25, 0.25]))
+        self.assertFalse(cpset.point_in_set([-0.6] + [0.25, -0.25]))
+        self.assertFalse(cpset.point_in_set([-0.6] + [0.25, 0.25]))
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.uncertain_param_vars = Var(range(6), initialize=0)
+        cpset = CartesianProductSet(
+            [
+                BoxSet([(-0.5, 0.5)]),
+                CardinalitySet([-0.5, -0.5], [2, 2], 2),
+                AxisAlignedEllipsoidalSet([0, 0, 1], [0.25, 0.8, 0.25]),
+            ]
+        )
+        cpset._add_bounds_on_uncertain_parameters(
+            uncertain_param_vars=m.uncertain_param_vars
+        )
+
+        # check bounds
+        np.testing.assert_allclose(m.uncertain_param_vars[0].bounds, (-0.5, 0.5))
+        np.testing.assert_allclose(m.uncertain_param_vars[1].bounds, (-0.5, 1.5))
+        np.testing.assert_allclose(m.uncertain_param_vars[2].bounds, (-0.5, 1.5))
+        np.testing.assert_allclose(m.uncertain_param_vars[3].bounds, (-0.25, 0.25))
+        np.testing.assert_allclose(m.uncertain_param_vars[4].bounds, (-0.8, 0.8))
+        np.testing.assert_allclose(m.uncertain_param_vars[5].bounds, (0.75, 1.25))
+
+        # check exception raised if there is dimension mismatch
+        exc_str = r"Passed 2 VarData objects representing.* but.*of dimension 6."
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cpset._add_bounds_on_uncertain_parameters(
+                uncertain_param_vars=[
+                    m.uncertain_param_vars[0],
+                    m.uncertain_param_vars[1],
+                ]
+            )
+
+    def test_validate(self):
+        """
+        Test Cartesian product set validation methods work as expected.
+        """
+        CONFIG = pyros_config()
+
+        # works if all sets are valid and none are discrete
+        bset = BoxSet(bounds=[[-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+        CartesianProductSet([bset, aset]).validate(CONFIG)
+
+        # works if otherwise valid and nominal values provided
+        CONFIG.nominal_uncertain_param_vals = [0, 0.5, 0.5, 0.5]
+        CartesianProductSet([bset, aset]).validate(CONFIG)
+        # check that state of CONFIG is unchanged
+        self.assertEqual(CONFIG.nominal_uncertain_param_vals, [0, 0.5, 0.5, 0.5])
+
+        # allow repeated sets (set powers)
+        CONFIG.nominal_uncertain_param_vals = None
+        CartesianProductSet([bset, bset]).validate(CONFIG)
+
+        # fails if a discrete set is involved in the product
+        disc_exc_str = r"CartesianProductSet.*entry.*with a discrete geometry"
+        with self.assertRaisesRegex(ValueError, disc_exc_str):
+            CartesianProductSet([bset, DiscreteScenarioSet([(0,), (1,)])]).validate(
+                CONFIG
+            )
+        with self.assertRaisesRegex(ValueError, disc_exc_str):
+            CartesianProductSet(
+                [
+                    bset,
+                    IntersectionSet(
+                        set1=DiscreteScenarioSet([(0, 0), (0, 1)]),
+                        set2=BoxSet([[0, 1]] * 2),
+                    ),
+                ]
+            ).validate(CONFIG)
+
+        # fails if at least one set is invalid
+        exc_str = "Lower bound.*exceeds upper bound"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            # second box set invalid due to failed bounds
+            CartesianProductSet([bset, BoxSet([[1, 0], [0, 0]])]).validate(CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON not available")
+    def test_is_coordinate_fixed(self):
+        """
+        Test Cartesian product set method for checking whether
+        there are coordinates constrained to a single value.
+        """
+        bset = BoxSet([[0, 0], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [1, 0])
+        self.assertEqual(
+            CartesianProductSet([bset, aset])._is_coordinate_fixed(
+                # don't need a global solver, since exact bounds
+                # are given by the `parameter_bounds` method
+                config=Bunch()
+            ),
+            [True, False, False, True],
+        )
+
+        iset = IntersectionSet(set1=aset, set2=BoxSet([(0, 1), (0, 1)]))
+        self.assertEqual(
+            CartesianProductSet([bset, iset])._is_coordinate_fixed(
+                # need global solver to compute intersection set bounds
+                config=Bunch(global_solver=SolverFactory("baron"))
+            ),
+            [True, False, False, True],
+        )
+
+    @unittest.skipUnless(baron_available, "BARON not available")
+    def test_compute_auxiliary_param_vals(self):
+        """
+        Test computations of Cartesian product set
+        auxiliary uncertain parameter values.
+        """
+        # for case where all sets do not use auxiliary parameters,
+        # the return value should just be an empty 1D array
+        self.assertEqual(
+            CartesianProductSet(
+                [BoxSet([[0, 1]]), AxisAlignedEllipsoidalSet([0, 0], [1, 1])]
+            )
+            .compute_auxiliary_uncertain_param_vals([0, 0, 0])
+            .shape,
+            (0,),
+        )
+
+        # product of sets involving cardinality and factor model:
+        # should just reduce to concatenation of individual
+        # set calculations
+        cpset = CartesianProductSet(
+            [
+                BoxSet([(-0.5, 0.5)]),
+                FactorModelSet(
+                    origin=[0, 1], number_of_factors=1, beta=0.75, psi_mat=[[1], [4]]
+                ),
+                CardinalitySet([-0.5, -0.5], [2, 2], 1),
+                AxisAlignedEllipsoidalSet([0, 0, 0], [0.25, 0.25, 0.25]),
+            ]
+        )
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [0, 1] + [-0.5, -0.5] + [0, 0, 0]
+            ),
+            [0, 0, 0],
+        )
+        # deviations from factor model origin
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [0.75, 4] + [-0.5, -0.5] + [0, 0, 0]
+            ),
+            [0.75, 0, 0],
+        )
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [-0.75, -2] + [-0.5, -0.5] + [0, 0, 0]
+            ),
+            [-0.75, 0, 0],
+        )
+        # deviations from cardinality origin
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [0, 1] + [1.5, -0.5] + [0, 0, 0]
+            ),
+            [0, 1, 0],
+        )
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [0, 1] + [-0.5, 1.5] + [0, 0, 0]
+            ),
+            [0, 0, 1],
+        )
+        # deviations from cardinality and factor model origins
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [0.75, 4] + [-0.5, 1.5] + [0, 0, 0]
+            ),
+            [0.75, 0, 1],
+        )
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [-0.75, -2] + [-0.5, 1.5] + [0, 0, 0]
+            ),
+            [-0.75, 0, 1],
+        )
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [0.75, 4] + [1.5, -0.5] + [0, 0, 0]
+            ),
+            [0.75, 1, 0],
+        )
+        np.testing.assert_allclose(
+            cpset.compute_auxiliary_uncertain_param_vals(
+                [0.5] + [-0.75, -2] + [1.5, -0.5] + [0, 0, 0]
+            ),
+            [-0.75, 1, 0],
         )
 
 
