@@ -353,10 +353,7 @@ class TestRooneyBiegler(unittest.TestCase):
         """
 
         # estimate the parameters
-        with pytest.raises(
-                RuntimeError,
-                match=r"k_aug no longer supported.",
-        ):
+        with pytest.raises(RuntimeError, match=r"k_aug no longer supported."):
             obj_val, theta_vals = self.pest.theta_est(solver="k_aug")
 
     def test_unknown_solver_exception(self):
@@ -366,10 +363,7 @@ class TestRooneyBiegler(unittest.TestCase):
         """
 
         # estimate the parameters
-        with pytest.raises(
-                RuntimeError,
-                match=r"Unknown solver in Q_Opt=random",
-        ):
+        with pytest.raises(RuntimeError, match=r"Unknown solver in Q_Opt=random"):
             obj_val, theta_vals = self.pest.theta_est(solver="random")
 
     def test_exp_outputs_exception(self):
