@@ -598,9 +598,12 @@ jobs:
         $IPOPT_DIR/ipopt -v
 
     - name: Install GAMS
-      if: ${{ ! matrix.slim }}
+      if: ${{ ! matrix.slim && matrix.TARGET != 'osx' }}
       # - We install using Powershell because the GAMS installer hangs
       #   when launched from bash on Windows
+      # - We no longer install on OSX because GAMS no longer distributes
+      #   self extracting ZIP for OSX and the package is difficult [for JDS]
+      #   to install in GHA
       shell: pwsh
       run: |
         $GAMS_DIR = "${env:TPL_DIR}/gams"
