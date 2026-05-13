@@ -363,6 +363,8 @@ jobs:
         python --version
         # We need setuptools so we can run Pyomo's setup.py
         conda install setuptools
+        # Make sure pip is installed for dependencies not available through conda
+        conda install pip
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
