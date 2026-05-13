@@ -142,7 +142,7 @@ jobs:
           PACKAGES: cython
 
         - os: windows-latest
-          python: '3.11'
+          python: '3.10'
           other: /pip
           TARGET: win
           PYENV: pip

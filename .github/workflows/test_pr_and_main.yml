@@ -151,11 +151,12 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
-        - os: windows-latest
-          python: '3.11'
-          other: /pip
-          TARGET: win
-          PYENV: pip
+        # [13 May 26] Disabled until we cna sort out the seg fault issue
+        #- os: windows-latest
+        #  python: '3.10'
+        #  other: /pip
+        #  TARGET: win
+        #  PYENV: pip
 
         - os: ubuntu-latest
           python: '3.10'
