@@ -110,7 +110,10 @@ def _make_trace_doe_object():
     )
 
 
-@unittest.skipIf(not (numpy_available and scipy_available), "Pyomo.DoE needs scipy and numpy to run tests")
+@unittest.skipIf(
+    not (numpy_available and scipy_available),
+    "Pyomo.DoE needs scipy and numpy to run tests",
+)
 class TestCholeskyInitialization(unittest.TestCase):
     """Regression tests for DoE initialization and Cholesky sync."""
 
@@ -160,8 +163,7 @@ class TestCholeskyInitialization(unittest.TestCase):
         model = doe_obj.model
         params = list(model.parameter_names)
         fim = np.array(
-            [[pyo.value(model.fim[i, j]) for j in params] for i in params],
-            dtype=float,
+            [[pyo.value(model.fim[i, j]) for j in params] for i in params], dtype=float
         )
         L = np.array([[pyo.value(model.L[i, j]) for j in params] for i in params])
         L_inv = np.array(
