@@ -151,7 +151,7 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
-        # [13 May 26] Disabled until we cna sort out the seg fault issue
+        # [13 May 26] Disabled until we can sort out the seg fault issue
         #- os: windows-latest
         #  python: '3.10'
         #  other: /pip
