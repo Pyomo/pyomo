@@ -677,9 +677,9 @@ jobs:
             cd gjh_asl_json-master/Thirdparty
             # Patch get.ASL to use curl
             URL="http://www.ampl.com/netlib/ampl/solvers.tgz"
-            sed -i "s|wget |curl -o solvers.tgz --insecure |" get.ASL
-            cat get.ASL
-            ./get.ASL
+            sed "s|wget |curl -o solvers.tgz |" get.ASL > get.ASL.patched
+            cat get.ASL.patched
+            bash ./get.ASL.patched
             cd ..
             make
             mv bin "$INSTALL_DIR/bin"
