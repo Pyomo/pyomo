@@ -3011,6 +3011,28 @@ class DomainRestrictionTest(unittest.TestCase):
         self.assertEqual(value(m.y), -1)
         self.assertTrue(m.y.fixed)
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_ignoring_bounds(self):
+        # These should work without throwing and restore the bounds
+        # afterwards
+        m = ConcreteModel()
+        m.x = Var(bounds=(2.9, 4))
+        m.y = Var(bounds=(-10, 10))
+        m.z = Var(bounds=(-3, -1))
+        # Possible to find a well-defined point, but not while keeping x in its bounds
+        m.d1 = Disjunct()
+        m.d1.c1 = Constraint(expr=log(1 - (m.x - 2) ** 2 - m.y**2) >= 1)
+        m.d1.c2 = Constraint(expr=1 / m.z <= 1)
+        m.d2 = Disjunct()
+        m.d2.c3 = Constraint(expr=log(1 - (m.x - 2) ** 2 - (m.y - 1) ** 2) >= 1)
+        m.d = Disjunction(expr=[m.d1, m.d2])
+        TransformationFactory('gdp.hull').apply_to(m)
+        m_pts = TransformationFactory('gdp.hull').get_well_defined_points_map(m)
+        self.assertNotEqual(m_pts, {})
+        self.assertEqual(m.x.bounds, (2.9, 4))
+        self.assertEqual(m.y.bounds, (-10, 10))
+        self.assertEqual(m.z.bounds, (-3, -1))
+
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class NestedDisjunctsInFlatGDP(unittest.TestCase):

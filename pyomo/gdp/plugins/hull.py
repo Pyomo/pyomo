@@ -495,12 +495,16 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         x0_map = ComponentMap()
         orig_values = ComponentMap()
         orig_fixed = ComponentMap()
+        orig_bounds = ComponentMap()
         for x in itertools.chain(regular_vars, fallback_vars):
             x0_map[x] = 0
             orig_values[x] = x.value
             orig_fixed[x] = x.fixed
-        # Outer try-finally to ensure we always restore orig_values and
-        # orig_fixed on exit (even if we or the solver throw an exception)
+            orig_bounds[x] = x.bounds
+            x.bounds = (None, None)
+        # Outer try-finally to ensure we always restore variable values,
+        # bounds, and fixed statuses on exit (even if we or the solver
+        # throw an exception)
         try:
             try:
                 val = value(
@@ -522,7 +526,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             for x in fallback_vars:
                 x.fix(0)
             for x in regular_vars:
-                x.set_value(0)
+                x.value = 0
                 x.unfix()
             test_model = ConcreteModel()
             test_model.test_expr = Expression(expr=test_expr)
@@ -561,8 +565,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             return x0_map, used_vars
         finally:
             for x in itertools.chain(regular_vars, fallback_vars):
-                x.set_value(orig_values[x])
+                x.value = orig_values[x]
                 x.fixed = orig_fixed[x]
+                x.bounds = orig_bounds[x]
 
     # Use gurobi_direct_minlp for the heuristic for now. It needs to be
     # a nonlinear solver.
