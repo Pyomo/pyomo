@@ -177,11 +177,16 @@ class TestCholeskyInitialization(unittest.TestCase):
         expected_fim_inv = np.linalg.inv(expected_fim)
         expected_L = np.linalg.cholesky(expected_fim)
         expected_L_inv = np.linalg.inv(expected_L)
+        fim_sym = fim + fim.T - np.diag(np.diag(fim))
+        fim_inv_sym = fim_inv + fim_inv.T - np.diag(np.diag(fim_inv))
 
-        self.assertTrue(np.allclose(fim, expected_fim))
+        # The model stores only the lower triangle when only_compute_fim_lower=True.
+        # Reconstruct the symmetric FIM before checking the initialization math,
+        # because Cholesky and inverse quantities are defined on the full matrix.
+        self.assertTrue(np.allclose(fim_sym, expected_fim))
         self.assertTrue(np.allclose(L, expected_L))
         self.assertTrue(np.allclose(L @ L_inv, np.eye(len(params)), atol=1e-8))
-        self.assertTrue(np.allclose(fim_inv, expected_fim_inv))
+        self.assertTrue(np.allclose(fim_inv_sym, expected_fim_inv))
         self.assertTrue(np.allclose(L_inv, expected_L_inv))
         self.assertAlmostEqual(
             pyo.value(model.cov_trace), float(np.trace(expected_fim_inv)), places=10
