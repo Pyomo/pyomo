@@ -23,7 +23,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v260304.0
+  CACHE_VER: v260512.3
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: branch
@@ -145,6 +145,13 @@ jobs:
           python: '3.10'
           other: /pip
           TARGET: win
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: '3.10'
+          other: /slim
+          slim: 1
+          TARGET: linux
           PYENV: pip
 
     steps:
@@ -362,6 +369,8 @@ jobs:
         python --version
         # We need setuptools so we can run Pyomo's setup.py
         conda install setuptools
+        # Make sure pip is installed for dependencies not available through conda
+        conda install pip
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -572,7 +581,7 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
         # Demo licenses are included for 5mo from the newest release
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/52.5.0"
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/latest"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
@@ -686,9 +695,9 @@ jobs:
             cd gjh_asl_json-master/Thirdparty
             # Patch get.ASL to use curl
             URL="http://www.ampl.com/netlib/ampl/solvers.tgz"
-            sed -i "s|wget |curl -o solvers.tgz |" get.ASL
-            cat get.ASL
-            ./get.ASL
+            sed "s|wget |curl -o solvers.tgz |" get.ASL > get.ASL.patched
+            cat get.ASL.patched
+            bash ./get.ASL.patched
             cd ..
             make
             mv bin "$INSTALL_DIR/bin"
