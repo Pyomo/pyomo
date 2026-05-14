@@ -1601,10 +1601,8 @@ class LegacySolverInterface:
         symbol_map.bySymbol = dict(self.symbol_map.bySymbol)
         symbol_map.aliases = dict(self.symbol_map.aliases)
         symbol_map.default_labeler = self.symbol_map.default_labeler
-        model.solutions.add_symbol_map(symbol_map)
-        legacy_results._smap_id = id(symbol_map)
+        legacy_results._smap_id = None
 
-        delete_legacy_soln = True
         if load_solutions:
             if hasattr(model, 'dual') and model.dual.import_enabled():
                 for c, val in results.solution_loader.get_duals().items():
@@ -1616,7 +1614,6 @@ class LegacySolverInterface:
                 for v, val in results.solution_loader.get_reduced_costs().items():
                     model.rc[v] = val
         elif results.best_feasible_objective is not None:
-            delete_legacy_soln = False
             for v, val in results.solution_loader.get_primals().items():
                 legacy_soln.variable[symbol_map.getSymbol(v)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
@@ -1631,9 +1628,9 @@ class LegacySolverInterface:
                 for v, val in results.solution_loader.get_reduced_costs().items():
                     legacy_soln.variable['Rc'] = val
 
-        legacy_results.solution.insert(legacy_soln)
-        if delete_legacy_soln:
-            legacy_results.solution.delete(0)
+            legacy_results.solution.insert(legacy_soln)
+            legacy_results._smap = symbol_map
+            legacy_results._smap_id = id(symbol_map)
 
         self.config = original_config
         self.options = original_options
