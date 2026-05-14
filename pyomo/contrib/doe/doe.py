@@ -2058,12 +2058,12 @@ class DesignOfExperiments:
             identify those components on a compatible model). Variables not
             included are fixed at their model values.
         abs_step : list, optional
-            Absolute change for each design variable. Used only when
+            Absolute step for each design variable. Used only when
             ``design_vals`` and ``n_design_points`` are not provided. Length must
             match the number of design variables in ``model.experiment_inputs``.
             If provided without ``rel_step``, ``rel_step`` is treated as zeros.
         rel_step : list, optional
-            Relative change for each design variable. Used only when
+            Relative step for each design variable. Used only when
             ``design_vals`` and ``n_design_points`` are not provided. Length must
             match the number of design variables in ``model.experiment_inputs``.
             If provided without ``abs_step``, ``abs_step`` is treated as zeros.

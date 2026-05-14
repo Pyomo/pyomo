@@ -800,8 +800,8 @@ class TestDoe(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         factorial_results = doe_obj.compute_FIM_factorial(
-            abs_change=[2.0],
-            rel_change=[0.1],
+            abs_step=[2.0],
+            rel_step=[0.1],
             method="sequential",
             return_df=False,
             traversal_scheme="nested_for_loop",
