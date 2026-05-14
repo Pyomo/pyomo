@@ -2037,7 +2037,7 @@ class DesignOfExperiments:
         Exactly one design-space specification mode must be provided:
 
         1. ``design_vals``:
-            Explicit values for selected design variables (string names).
+            Explicit values for selected design variables (component keys).
         2. ``n_design_points``:
             Uniform ``np.linspace(lb, ub, n_design_points)`` values for each design
             variable using model bounds.
@@ -2052,10 +2052,11 @@ class DesignOfExperiments:
             Reserved for API compatibility. A fresh labeled model clone is built
             internally for the factorial exploration.
         design_vals : dict, optional
-            Mapping of design variable names (strings) to 1D array-like values:
-            ``{"var_name": [values...]}``. Keys must be a subset of
-            ``model.experiment_inputs`` names. Variables not included are fixed at
-            their model values.
+            Mapping of design variable components to 1D array-like values:
+            ``{component: [values...]}``. Keys should be a subset of
+            ``model.experiment_inputs`` keys (or ``ComponentUID`` objects that
+            identify those components on a compatible model). Variables not
+            included are fixed at their model values.
         abs_change : list, optional
             Absolute change for each design variable. Used only when
             ``design_vals`` and ``n_design_points`` are not provided. Length must
@@ -2076,11 +2077,11 @@ class DesignOfExperiments:
             If ``True``, print results as a pandas DataFrame.
         traversal_scheme : str, optional
             Which scheme to use for initializing the design variables.
-            Options are ``"snake_traversal"`` and ``"nested_for_loop"``.
-            If ``"snake_traversal"`` is used, the design variables will be initialized in a
-            snake-like pattern where only one design variables change at a time.
-            If ``"nested_for_loop"`` is used, the design variables will be initialized using a
-            nested for loop. Default: "snake_traversal"
+            Options are ``snake_traversal`` and ``nested_for_loop``.
+            If ``snake_traversal`` is used, the design variables will be initialized
+            in a snake-like pattern where only one design variables change at a time.
+            If ``nested_for_loop`` is used, the design variables will be initialized
+            using a nested for loop. Default: "snake_traversal"
         file_name : str, optional
             If provided, save results to ``<file_name>.json``.
 
@@ -2120,48 +2121,65 @@ class DesignOfExperiments:
 
         # Group the mutually exclusive arguments for passing design values
         # abs_change, and rel_change can be provided together or separately
-        num_des_provided = (
+        num_des_args_provided = (
             (design_vals is not None)
             + (n_design_points is not None)
             + (abs_change is not None or rel_change is not None)
         )
 
         # Check the count and raise an error if more than one was provided
-        if num_des_provided > 1:
+        if num_des_args_provided > 1:
             raise ValueError(
-                "Please provide only one of the following arguments: "
-                "`design_vals`, `n_design_points`, or `abs_change` and/or `rel_change`."
+                "design_vals, n_design_points, and abs_step/rel_step are "
+                "mutually exclusive."
             )
 
-        # Optional: Check if at least one was provided, if that's a requirement
-        if num_des_provided == 0:
+        # Check if at least one was provided
+        if num_des_args_provided == 0:
             raise ValueError(
-                "At least one of the following arguments: "
-                "`design_vals`, `n_design_points`, or `abs_change` and/or `rel_change`"
-                " must be provided."
+                "Missing required argument: specify one of design_vals, "
+                "n_design_points, or abs_step/rel_step."
             )
 
         if design_vals is not None:
-            # Check whether the design_ranges keys are in the experiment_inputs
-            design_keys = set(design_vals.keys())
-            map_keys = set([k.name for k in model.experiment_inputs.keys()])
-            if not design_keys.issubset(map_keys):
-                incorrect_given_keys = design_keys - map_keys
-                suggested_keys = map_keys - design_keys
+            # Normalize design_vals keys to components on the cloned model.
+            # Preferred API uses component keys (like experiment_inputs).
+            design_name_map = {k.name: k for k in model.experiment_inputs.keys()}
+            normalized_design_vals = pyo.ComponentMap()
+            invalid_keys = []
+            for key, val in design_vals.items():
+                if isinstance(key, str):
+                    mapped_key = None
+                elif isinstance(key, pyo.ComponentUID):
+                    mapped_key = key.find_component_on(model)
+                else:
+                    try:
+                        mapped_key = pyo.ComponentUID(key).find_component_on(model)
+                    except Exception:
+                        mapped_key = None
+
+                if mapped_key is None or mapped_key not in model.experiment_inputs:
+                    invalid_keys.append(key)
+                    continue
+                normalized_design_vals[mapped_key] = val
+
+            if invalid_keys:
                 raise ValueError(
-                    f"design_values keys: {incorrect_given_keys} are incorrect."
-                    f"The keys should be from the following keys: {suggested_keys}."
+                    "design_vals keys must identify components in "
+                    f"`model.experiment_inputs`. Invalid keys: {invalid_keys}. "
+                    "Pass experiment input components (or ComponentUIDs), not names. "
+                    "Valid experiment_inputs are: "
+                    f"{list(design_name_map.keys())}."
                 )
 
-            # Get the design map keys that match the design_values keys
+            # Get the design map keys that match the normalized design_values keys.
             design_map_keys = [
-                k
-                for k in model.experiment_inputs.keys()
-                if k.name in design_vals.keys()
+                k for k in model.experiment_inputs.keys() if k in normalized_design_vals
             ]
-            # This ensures that the order of the design_values keys matches the order of the
-            # design_map_keys so that design_point can be constructed correctly in the loop.
-            design_values = [design_vals[k.name] for k in design_map_keys]
+            # This ensures that the order of the design_values keys matches the order
+            # of the design_map_keys so that design_point can be constructed correctly
+            # in the loop.
+            design_values = [normalized_design_vals[k] for k in design_map_keys]
 
             # Create a temporary suffix to pass in `update_model_from_suffix`
             design_suff = pyo.Suffix(direction=pyo.Suffix.LOCAL)

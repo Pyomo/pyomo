@@ -44,7 +44,7 @@ if scipy_available:
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
-from pyomo.contrib.doe.utils import rescale_FIM
+from pyomo.contrib.doe.utils import rescale_FIM, compute_FIM_metrics
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 
 import pyomo.environ as pyo
@@ -648,6 +648,147 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(ff_results["eigval_max"], eigval_max_expected)
         self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
         self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
+
+    def test_compute_fim_factorial_matches_pointwise_compute_fim(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["logger_level"] = logging.ERROR
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        base_model = experiment.get_labeled_model()
+        design_var = next(iter(base_model.experiment_inputs.keys()))
+        design_points = [1.0, 5.0, 9.0]
+        design_vals = pyo.ComponentMap(((design_var, design_points),))
+
+        factorial_results = doe_obj.compute_FIM_factorial(
+            design_vals=design_vals,
+            method="sequential",
+            return_df=False,
+            traversal_scheme="nested_for_loop",
+        )
+
+        self.assertEqual(factorial_results["total_points"], len(design_points))
+        self.assertEqual(factorial_results["success_count"], len(design_points))
+        self.assertEqual(factorial_results["failure_count"], 0)
+
+        for idx, design_point in enumerate(design_points):
+            point_model = experiment.get_labeled_model().clone()
+            point_var = pyo.ComponentUID(design_var).find_component_on(point_model)
+            point_var.fix(design_point)
+
+            point_fim = doe_obj.compute_FIM(model=point_model, method="sequential")
+            factorial_fim = np.array(factorial_results["FIM_all"][idx])
+
+            self.assertTrue(
+                np.allclose(factorial_fim, point_fim, rtol=1e-7, atol=1e-7)
+            )
+
+            (
+                det_FIM,
+                trace_cov,
+                trace_FIM,
+                E_vals,
+                _,
+                D_opt,
+                A_opt,
+                pseudo_A_opt,
+                E_opt,
+                ME_opt,
+            ) = compute_FIM_metrics(point_fim)
+
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["log10 D-opt"][idx],
+                    D_opt,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["log10 A-opt"][idx],
+                    A_opt,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["log10 pseudo A-opt"][idx],
+                    pseudo_A_opt,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["log10 E-opt"][idx],
+                    E_opt,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["log10 ME-opt"][idx],
+                    ME_opt,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["eigval_min"][idx],
+                    np.min(E_vals),
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["eigval_max"][idx],
+                    np.max(E_vals),
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["det_FIM"][idx],
+                    det_FIM,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["trace_cov"][idx],
+                    trace_cov,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
+            self.assertTrue(
+                np.isclose(
+                    factorial_results["trace_FIM"][idx],
+                    trace_FIM,
+                    rtol=1e-7,
+                    atol=1e-7,
+                    equal_nan=True,
+                )
+            )
 
     @unittest.skipUnless(pandas_available, "test requires pandas")
     def test_doe_A_optimality(self):

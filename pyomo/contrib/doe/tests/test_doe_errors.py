@@ -33,6 +33,7 @@ if scipy_available:
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ipopt_available = SolverFactory("ipopt").available()
 
@@ -779,6 +780,67 @@ class TestDoEErrors(unittest.TestCase):
             "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
         ):
             doe_obj.create_objective_function()
+
+    def test_compute_fim_factorial_component_keys_processed_before_traversal_validation(
+        self,
+    ):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment_flag()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        model = experiment.get_labeled_model()
+        design_var = next(iter(model.experiment_inputs.keys()))
+        # Use a valid component-keyed design map, then force a traversal error to
+        # confirm design_vals key normalization succeeds before traversal checks.
+        design_vals = pyo.ComponentMap(((design_var, [1.0, 2.0]),))
+
+        with self.assertRaisesRegex(
+            ValueError, "traversal_scheme='bad_traversal' is not recognized."
+        ):
+            doe_obj.compute_FIM_factorial(
+                design_vals=design_vals,
+                traversal_scheme="bad_traversal",
+            )
+
+    def test_compute_fim_factorial_design_vals_invalid_component_key(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment_flag()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        model = experiment.get_labeled_model()
+        # unknown_parameters are valid model components, but are not experiment
+        # inputs and should be rejected for design_vals.
+        invalid_key = next(iter(model.unknown_parameters.keys()))
+        design_vals = pyo.ComponentMap(((invalid_key, [1.0, 2.0]),))
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "design_vals keys must identify components in "
+            "`model.experiment_inputs`.",
+        ):
+            doe_obj.compute_FIM_factorial(design_vals=design_vals)
+
+    def test_compute_fim_factorial_design_vals_rejects_string_keys(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment_flag()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        # String names are intentionally rejected; API expects component keys or
+        # ComponentUIDs that identify experiment_inputs.
+        with self.assertRaisesRegex(
+            ValueError,
+            "Pass experiment input components",
+        ):
+            doe_obj.compute_FIM_factorial(design_vals={"hour": [1.0, 2.0]})
 
 
 if __name__ == "__main__":
