@@ -35,6 +35,9 @@ from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
     DomainPartitioningMethod,
     NonlinearToPWL,
 )
+from pyomo.contrib.piecewise.transform.factorable import (
+    UnivariateNonlinearDecompositionTransformation,
+)
 from pyomo.contrib.piecewise.transform.nested_inner_repn import (
     NestedInnerRepresentationGDPTransformation,
 )
