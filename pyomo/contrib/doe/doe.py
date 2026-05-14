@@ -2232,10 +2232,7 @@ class DesignOfExperiments:
                             f"Design variable {comp.name} has non-positive step in value - "
                             "check abs_step and rel_step values."
                         )
-                    val = lb
-                    while val <= ub:
-                        des_val.append(val)
-                        val += del_val
+                    des_val = list(range(lb, ub, del_val))
 
                 design_values.append(des_val)
 
