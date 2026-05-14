@@ -233,12 +233,9 @@ def validate_experiment_outputs(output_vars):
             # (e.g., m.CA[t], m.CB[t], m.C[t, "A"], m.C[t, "B"]) as a tuple
             index_tuple = _format_outputs_index_as_tuple(index)
 
-            # get the first entry of the tuple
-            data_point = index_tuple[0]
-
-            # check if the first entry is the data index
+            # check if the first indexing is the data index
             assert isinstance(
-                data_point, (int, float)
+                index_tuple[0], (int, float)
             ), "The first index of experiment outputs must be the data point"
 
         parent = comp.parent_component().name
