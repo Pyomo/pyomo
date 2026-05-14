@@ -2067,11 +2067,11 @@ class DesignOfExperiments:
             match the number of design variables in ``model.experiment_inputs``.
             If provided without ``abs_change``, ``abs_change`` is treated as zeros.
         n_design_points : int, optional
-            Number of equally spaced points per design variable generated from
-            bounds via ``np.linspace``. Requires finite lower and upper bounds.
+            Number of equally-spaced points per design variable generated from
+            bounds via :func:`np.linspace`. Requires finite lower and upper bounds.
         method : str, optional
-            Method used for FIM computation. Options: ``"kaug"`` and
-            ``"sequential"``. Default: ``"sequential"``.
+            Method used for FIM computation. Options: ``kaug`` and
+            ``sequential``. Default: ``sequential``.
         return_df : bool, optional
             If ``True``, print results as a pandas DataFrame.
         traversal_scheme : str, optional
