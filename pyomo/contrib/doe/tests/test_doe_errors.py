@@ -801,8 +801,7 @@ class TestDoEErrors(unittest.TestCase):
             ValueError, "traversal_scheme='bad_traversal' is not recognized."
         ):
             doe_obj.compute_FIM_factorial(
-                design_vals=design_vals,
-                traversal_scheme="bad_traversal",
+                design_vals=design_vals, traversal_scheme="bad_traversal"
             )
 
     def test_compute_fim_factorial_design_vals_invalid_component_key(self):
@@ -836,10 +835,7 @@ class TestDoEErrors(unittest.TestCase):
 
         # String names are intentionally rejected; API expects component keys or
         # ComponentUIDs that identify experiment_inputs.
-        with self.assertRaisesRegex(
-            ValueError,
-            "Pass experiment input components",
-        ):
+        with self.assertRaisesRegex(ValueError, "Pass experiment input components"):
             doe_obj.compute_FIM_factorial(design_vals={"hour": [1.0, 2.0]})
 
 

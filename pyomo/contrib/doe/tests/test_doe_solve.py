@@ -682,9 +682,7 @@ class TestDoe(unittest.TestCase):
             point_fim = doe_obj.compute_FIM(model=point_model, method="sequential")
             factorial_fim = np.array(factorial_results["FIM_all"][idx])
 
-            self.assertTrue(
-                np.allclose(factorial_fim, point_fim, rtol=1e-7, atol=1e-7)
-            )
+            self.assertTrue(np.allclose(factorial_fim, point_fim, rtol=1e-7, atol=1e-7))
 
             (
                 det_FIM,

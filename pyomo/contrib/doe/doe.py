@@ -30,6 +30,7 @@ from itertools import permutations, product
 import json
 import logging
 import math
+import sys
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -1971,12 +1972,15 @@ class DesignOfExperiments:
                         2,
                     ),
                 )
-            except:
+            except Exception as err:
                 self.logger.warning(
-                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
+                    "Cannot converge this run during FIM computation: %s", err
+                )
+                self.logger.debug(
+                    "Traceback for failed FIM full-factorial run:", exc_info=True
                 )
                 failures += 1
-                self.logger.warning("failed count:", failures)
+                self.logger.warning("failed count: %s", failures)
 
                 self._computed_FIM = np.zeros(self.prior_FIM.shape)
 
@@ -1985,33 +1989,22 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            (
-                det_FIM,
-                trace_cov,
-                trace_FIM,
-                E_vals,
-                E_vecs,
-                D_opt,
-                A_opt,
-                pseudo_A_opt,
-                E_opt,
-                ME_opt,
-            ) = compute_FIM_metrics(FIM)
+            fim_metrics = compute_FIM_metrics(FIM)
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
                 fim_factorial_results[k.name].append(pyo.value(k))
 
-            fim_factorial_results["log10 D-opt"].append(D_opt)
-            fim_factorial_results["log10 A-opt"].append(A_opt)
-            fim_factorial_results["log10 pseudo A-opt"].append(pseudo_A_opt)
-            fim_factorial_results["log10 E-opt"].append(E_opt)
-            fim_factorial_results["log10 ME-opt"].append(ME_opt)
-            fim_factorial_results["eigval_min"].append(E_vals.min())
-            fim_factorial_results["eigval_max"].append(E_vals.max())
-            fim_factorial_results["det_FIM"].append(det_FIM)
-            fim_factorial_results["trace_cov"].append(trace_cov)
-            fim_factorial_results["trace_FIM"].append(trace_FIM)
+            fim_factorial_results["log10 D-opt"].append(fim_metrics.D_opt)
+            fim_factorial_results["log10 A-opt"].append(fim_metrics.A_opt)
+            fim_factorial_results["log10 pseudo A-opt"].append(fim_metrics.pseudo_A_opt)
+            fim_factorial_results["log10 E-opt"].append(fim_metrics.E_opt)
+            fim_factorial_results["log10 ME-opt"].append(fim_metrics.ME_opt)
+            fim_factorial_results["eigval_min"].append(fim_metrics.E_vals.min())
+            fim_factorial_results["eigval_max"].append(fim_metrics.E_vals.max())
+            fim_factorial_results["det_FIM"].append(fim_metrics.det_FIM)
+            fim_factorial_results["trace_cov"].append(fim_metrics.trace_cov)
+            fim_factorial_results["trace_FIM"].append(fim_metrics.trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
         self.fim_factorial_results = fim_factorial_results
@@ -2224,15 +2217,19 @@ class DesignOfExperiments:
                 # using the formula:
                 # step_change = (upper_bound - lower_bound) * rel_step + abs_step
                 else:
-                    des_val = []
                     # Calculate the step change in value, delta value
-                    del_val = (comp.ub - comp.lb) * rel_step[i] + abs_step[i]
+                    span = ub - lb
+                    del_val = span * rel_step[i] + abs_step[i]
                     if del_val <= 0:
                         raise ValueError(
-                            f"Design variable {comp.name} has non-positive step in value - "
-                            "check abs_step and rel_step values."
+                            f"Design variable {comp.name} has non-positive step "
+                            "in value - check abs_step and rel_step values."
                         )
-                    des_val = list(range(lb, ub, del_val))
+                    span = ub - lb
+                    # Build points by count to avoid float drift from iterative
+                    # addition. Keep compatibility with lb > ub behavior.
+                    n_steps = max(0, int(np.floor(span / del_val + 1e-12)) + 1)
+                    des_val = lb + del_val * np.arange(n_steps)
 
                 design_values.append(des_val)
 
@@ -2317,12 +2314,15 @@ class DesignOfExperiments:
                         2,
                     ),
                 )
-            except:
+            except Exception as err:
                 self.logger.warning(
-                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
+                    "Cannot converge this run during FIM computation: %s", err
+                )
+                self.logger.debug(
+                    "Traceback for failed FIM factorial run:", exc_info=True
                 )
                 failure_count += 1
-                self.logger.warning("failed count:", failure_count)
+                self.logger.warning("failed count: %s", failure_count)
 
                 self._computed_FIM = np.zeros(self.prior_FIM.shape)
 
@@ -2335,32 +2335,21 @@ class DesignOfExperiments:
             FIM_all[curr_point - 1, :, :] = FIM
 
             # Compute and record metrics on FIM
-            (
-                det_FIM,
-                trace_cov,
-                trace_FIM,
-                E_vals,
-                _,
-                D_opt,
-                A_opt,
-                pseudo_A_opt,
-                E_opt,
-                ME_opt,
-            ) = compute_FIM_metrics(FIM)
+            fim_metrics = compute_FIM_metrics(FIM)
 
             for k in model.experiment_inputs.keys():
                 factorial_results[k.name].append(pyo.value(k))
 
-            factorial_results["log10 D-opt"].append(D_opt)
-            factorial_results["log10 A-opt"].append(A_opt)
-            factorial_results["log10 pseudo A-opt"].append(pseudo_A_opt)
-            factorial_results["log10 E-opt"].append(E_opt)
-            factorial_results["log10 ME-opt"].append(ME_opt)
-            factorial_results["eigval_min"].append(np.min(E_vals))
-            factorial_results["eigval_max"].append(np.max(E_vals))
-            factorial_results["det_FIM"].append(det_FIM)
-            factorial_results["trace_cov"].append(trace_cov)
-            factorial_results["trace_FIM"].append(trace_FIM)
+            factorial_results["log10 D-opt"].append(fim_metrics.D_opt)
+            factorial_results["log10 A-opt"].append(fim_metrics.A_opt)
+            factorial_results["log10 pseudo A-opt"].append(fim_metrics.pseudo_A_opt)
+            factorial_results["log10 E-opt"].append(fim_metrics.E_opt)
+            factorial_results["log10 ME-opt"].append(fim_metrics.ME_opt)
+            factorial_results["eigval_min"].append(np.min(fim_metrics.E_vals))
+            factorial_results["eigval_max"].append(np.max(fim_metrics.E_vals))
+            factorial_results["det_FIM"].append(fim_metrics.det_FIM)
+            factorial_results["trace_cov"].append(fim_metrics.trace_cov)
+            factorial_results["trace_FIM"].append(fim_metrics.trace_FIM)
             factorial_results["solve_time"].append(time_set[-1])
 
         factorial_results.update(
@@ -2381,12 +2370,11 @@ class DesignOfExperiments:
                 k: v for k, v in factorial_results.items() if k not in exclude_keys
             }
             res_df = pd.DataFrame(dict_for_df)
-            print("\n\n=========Factorial results===========")
-            print("Total points:", total_points)
-            print("Success count:", success_count)
-            print("Failure count:", failure_count)
-            print("\n")
-            print(res_df)
+            sys.stdout.write("\n\n=========Factorial results===========\n")
+            sys.stdout.write(f"Total points: {total_points}\n")
+            sys.stdout.write(f"Success count: {success_count}\n")
+            sys.stdout.write(f"Failure count: {failure_count}\n\n")
+            sys.stdout.write(f"{res_df}\n")
 
         # Save the results to a json file based on the file_name provided
         if file_name is not None:

@@ -37,8 +37,27 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
 
 import logging
+from collections import namedtuple
 
 logger = logging.getLogger(__name__)
+
+# Named tuple to store FIM metrics in a structured way.
+# This allows for easy access to individual metrics
+FIMMetrics = namedtuple(
+    "FIMMetrics",
+    [
+        "det_FIM",
+        "trace_cov",
+        "trace_FIM",
+        "E_vals",
+        "E_vecs",
+        "D_opt",
+        "A_opt",
+        "pseudo_A_opt",
+        "E_opt",
+        "ME_opt",
+    ],
+)
 
 # This small and positive tolerance is used when checking
 # if the prior is negative definite or approximately
@@ -143,7 +162,8 @@ def compute_FIM_metrics(FIM):
 
     Returns
     -------
-    Returns the following metrics as a tuple in the order shown below:
+    FIMMetrics
+        Named tuple with the following fields:
 
     det_FIM : float
         Determinant of the FIM.
@@ -199,17 +219,17 @@ def compute_FIM_metrics(FIM):
 
     ME_opt = np.log10(np.linalg.cond(FIM))
 
-    return (
-        det_FIM,
-        trace_cov,
-        trace_FIM,
-        E_vals,
-        E_vecs,
-        D_opt,
-        A_opt,
-        pseudo_A_opt,
-        E_opt,
-        ME_opt,
+    return FIMMetrics(
+        det_FIM=det_FIM,
+        trace_cov=trace_cov,
+        trace_FIM=trace_FIM,
+        E_vals=E_vals,
+        E_vecs=E_vecs,
+        D_opt=D_opt,
+        A_opt=A_opt,
+        pseudo_A_opt=pseudo_A_opt,
+        E_opt=E_opt,
+        ME_opt=ME_opt,
     )
 
 
