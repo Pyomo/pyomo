@@ -2022,8 +2022,8 @@ class DesignOfExperiments:
         self,
         model=None,
         design_vals: dict = None,
-        abs_change: list = None,
-        rel_change: list = None,
+        abs_step: list = None,
+        rel_step: list = None,
         n_design_points: int = None,
         method="sequential",
         return_df=True,
@@ -2041,9 +2041,9 @@ class DesignOfExperiments:
         2. ``n_design_points``:
             Uniform ``np.linspace(lb, ub, n_design_points)`` values for each design
             variable using model bounds.
-        3. ``abs_change`` and/or ``rel_change``:
+        3. ``abs_step`` and/or ``rel_step``:
             Step-based values for each design variable using model bounds and:
-            ``delta_i = lb_i * rel_change[i] + abs_change[i]``.
+            ``delta_i = (ub_i - lb_i) * rel_step[i] + abs_step[i]``.
             Values are generated from lower to upper bound in steps of ``delta_i``.
 
         Parameters
@@ -2057,16 +2057,16 @@ class DesignOfExperiments:
             ``model.experiment_inputs`` keys (or ``ComponentUID`` objects that
             identify those components on a compatible model). Variables not
             included are fixed at their model values.
-        abs_change : list, optional
+        abs_step : list, optional
             Absolute change for each design variable. Used only when
             ``design_vals`` and ``n_design_points`` are not provided. Length must
             match the number of design variables in ``model.experiment_inputs``.
-            If provided without ``rel_change``, ``rel_change`` is treated as zeros.
-        rel_change : list, optional
+            If provided without ``rel_step``, ``rel_step`` is treated as zeros.
+        rel_step : list, optional
             Relative change for each design variable. Used only when
             ``design_vals`` and ``n_design_points`` are not provided. Length must
             match the number of design variables in ``model.experiment_inputs``.
-            If provided without ``abs_change``, ``abs_change`` is treated as zeros.
+            If provided without ``abs_step``, ``abs_step`` is treated as zeros.
         n_design_points : int, optional
             Number of equally-spaced points per design variable generated from
             bounds via :func:`np.linspace`. Requires finite lower and upper bounds.
@@ -2120,11 +2120,11 @@ class DesignOfExperiments:
         model = self.factorial_model
 
         # Group the mutually exclusive arguments for passing design values
-        # abs_change, and rel_change can be provided together or separately
+        # abs_step, and rel_step can be provided together or separately
         num_des_args_provided = (
             (design_vals is not None)
             + (n_design_points is not None)
-            + (abs_change is not None or rel_change is not None)
+            + (abs_step is not None or rel_step is not None)
         )
 
         # Check the count and raise an error if more than one was provided
@@ -2187,27 +2187,24 @@ class DesignOfExperiments:
 
         else:
             design_keys = [k for k in model.experiment_inputs.keys()]
-            if abs_change:
-                if len(abs_change) != len(design_keys):
+            use_step_changes = (abs_step is not None) or (rel_step is not None)
+            if use_step_changes:
+                # Missing absolute/relative inputs default to zero steps.
+                if abs_step is None:
+                    abs_step = [0.0] * len(design_keys)
+                if rel_step is None:
+                    rel_step = [0.0] * len(design_keys)
+
+                if len(abs_step) != len(design_keys):
                     raise ValueError(
-                        "`abs_change` must have the same length of "
+                        "`abs_step` must have the same length of "
                         f"`{len(design_keys)}` as `design_keys`."
                     )
-
-            if rel_change:
-                if len(rel_change) != len(design_keys):
+                if len(rel_step) != len(design_keys):
                     raise ValueError(
-                        "`rel_change` must have the same length of "
+                        "`rel_step` must have the same length of "
                         f"`{len(design_keys)}` as `design_keys`."
                     )
-
-            # if either abs_change or rel_change is not provided, set it to list of
-            # zeros
-            if abs_change or rel_change:
-                if not abs_change:
-                    abs_change = [0] * len(design_keys)
-                elif not rel_change:
-                    rel_change = [0] * len(design_keys)
 
             design_values = []
             # loop over design keys and generate design values
@@ -2220,31 +2217,25 @@ class DesignOfExperiments:
                         f"{comp.name} does not have a lower or upper bound."
                     )
 
-                if abs_change is None and rel_change is None:
+                if not use_step_changes:
                     des_val = np.linspace(lb, ub, n_design_points)
 
-                # if abs_change and/or rel_change is provided, generate design values
+                # If abs_step and/or rel_step is provided, generate design values
                 # using the formula:
-                # change_in_value = lower_bound * rel_change + abs_change
-                elif abs_change or rel_change:
+                # change_in_value = (upper_bound - lower_bound) * rel_step + abs_step
+                else:
                     des_val = []
                     # Calculate the change in value, delta value
-                    del_val = comp.lb * rel_change[i] + abs_change[i]
-                    if del_val == 0:
+                    del_val = (comp.ub - comp.lb) * rel_step[i] + abs_step[i]
+                    if del_val <= 0:
                         raise ValueError(
-                            f"Design variable {comp.name} has no change in value - "
-                            "check abs_change and rel_change values."
+                            f"Design variable {comp.name} has non-positive change in value - "
+                            "check abs_step and rel_step values."
                         )
                     val = lb
                     while val <= ub:
                         des_val.append(val)
                         val += del_val
-
-                else:
-                    raise ValueError(
-                        "Unexpected error in generating design values. Please check the"
-                        " input parameters."
-                    )
 
                 design_values.append(des_val)
 

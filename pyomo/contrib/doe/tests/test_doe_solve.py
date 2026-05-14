@@ -790,6 +790,31 @@ class TestDoe(unittest.TestCase):
                 )
             )
 
+    def test_compute_fim_factorial_step_formula_uses_design_span(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["logger_level"] = logging.ERROR
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        factorial_results = doe_obj.compute_FIM_factorial(
+            abs_change=[2.0],
+            rel_change=[0.1],
+            method="sequential",
+            return_df=False,
+            traversal_scheme="nested_for_loop",
+        )
+
+        # Rooney-Biegler hour bounds are [0, 10], so:
+        # delta = (ub - lb) * rel_change + abs_change = 10*0.1 + 2 = 3
+        expected_hour_points = [0.0, 3.0, 6.0, 9.0]
+        self.assertStructuredAlmostEqual(
+            factorial_results["hour"], expected_hour_points, abstol=1e-8, reltol=1e-8
+        )
+        self.assertEqual(factorial_results["total_points"], len(expected_hour_points))
+
     @unittest.skipUnless(pandas_available, "test requires pandas")
     def test_doe_A_optimality(self):
         A_opt_value_expected = -2.2364242059539663
