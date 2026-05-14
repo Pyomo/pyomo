@@ -810,7 +810,7 @@ class Estimator:
         # boolean to indicate if model is initialized using a square solve
         self.model_initialized = False
 
-        # If self.diagnostic mode is true, then set the logging level to INFO to print
+        # If self.diagnostic mode is true, then set the logging level to DEBUG to print
         # diagnostics from the solver
         if self.diagnostic_mode:
             logger.setLevel(logging.DEBUG)
@@ -965,6 +965,23 @@ class Estimator:
     def _create_scenario_blocks(self, bootlist=None, theta_vals=None, fix_theta=False):
         """
         Create scenario blocks for parameter estimation.
+
+        Parameters
+        ----------
+        bootlist : list, optional
+            List of bootstrap experiment numbers to use. If None, use all experiments in exp_list.
+            Default is None.
+        theta_vals : dict, optional
+            Dictionary of theta values to set in the model. If None, use default values from experiment class.
+            Default is None.
+        fix_theta : bool, optional
+            If True, fix the theta values in the model. If False, leave them free.
+            Default is False.
+        Returns
+        -------
+        model : ConcreteModel
+            Pyomo model with scenario blocks for parameter estimation. Contains indexed block for
+            each experiment in exp_list or bootlist.
         """
         model = pyo.ConcreteModel()
 
@@ -1087,7 +1104,7 @@ class Estimator:
         fix_theta=False,
     ):
         """
-        _Q_opt method for parameter estimation using an extended form
+        _Q_opt method for parameter estimation using an extensive form
         optimization problem with scenario blocks for each experiment.
 
         Scenario blocks are created by cloning the original model for
@@ -1167,19 +1184,21 @@ class Estimator:
         solve_result = sol.solve(model, tee=self.tee, load_solutions=False)
         termination_condition = solve_result.solver.termination_condition
 
-        # Separate handling of termination conditions for _Q_at_theta vs _Q_opt
-        # If not fixing theta, ensure optimal termination before loading the result.
+        if fix_theta and (
+            len(solve_result.solution) == 0
+            or termination_condition == pyo.TerminationCondition.infeasible
+        ):
+            theta_estimates = {
+                name: pyo.value(model.parmest_theta[name])
+                for name in expanded_theta_names
+            }
+            obj_value = None
+            return obj_value, theta_estimates, termination_condition
+
         if not fix_theta:
             assert_optimal_termination(solve_result)
-            model.solutions.load_from(solve_result)
-        else:
-            if (
-                termination_condition == pyo.TerminationCondition.infeasible
-                or len(solve_result.solution) == 0
-            ):
-                theta_payload = dict(theta_vals) if theta_vals is not None else {}
-                return None, theta_payload, termination_condition
-            model.solutions.load_from(solve_result)
+
+        model.solutions.load_from(solve_result)
 
         # Extract objective value
         obj_value = pyo.value(model.Obj)
