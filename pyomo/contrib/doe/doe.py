@@ -2222,14 +2222,14 @@ class DesignOfExperiments:
 
                 # If abs_step and/or rel_step is provided, generate design values
                 # using the formula:
-                # change_in_value = (upper_bound - lower_bound) * rel_step + abs_step
+                # step_change = (upper_bound - lower_bound) * rel_step + abs_step
                 else:
                     des_val = []
-                    # Calculate the change in value, delta value
+                    # Calculate the step change in value, delta value
                     del_val = (comp.ub - comp.lb) * rel_step[i] + abs_step[i]
                     if del_val <= 0:
                         raise ValueError(
-                            f"Design variable {comp.name} has non-positive change in value - "
+                            f"Design variable {comp.name} has non-positive step in value - "
                             "check abs_step and rel_step values."
                         )
                     val = lb
