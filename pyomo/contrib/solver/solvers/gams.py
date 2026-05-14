@@ -19,6 +19,7 @@ import re
 import pathlib
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.common.fileutils import Executable, ExecutableData
 from pyomo.common.config import (
     ConfigValue,
@@ -37,6 +38,7 @@ from pyomo.contrib.solver.common.results import (
     Results,
     SolutionStatus,
     TerminationCondition,
+    get_infeasible_results,
 )
 from pyomo.contrib.solver.solvers.gms_sol_reader import GMSSolutionLoader
 
@@ -308,11 +310,27 @@ class GAMS(SolverBase):
             lst_filename = os.path.join(dname, lst)
 
             timer.start(f'write_gms_file')
-            with open(output_filename, 'w', newline='\n', encoding='utf-8') as gms_file:
-                gms_info = GAMSWriter().write(
-                    model, gms_file, config=config.writer_config
+            try:
+                with open(
+                    output_filename, 'w', newline='\n', encoding='utf-8'
+                ) as gms_file:
+                    gms_info = GAMSWriter().write(
+                        model, gms_file, config=config.writer_config
+                    )
+            except InfeasibleConstraintException as err:
+                timer.stop(f'write_gms_file')
+                err_msg = (
+                    'The problem was proven to be infeasible during compilation:\n'
+                    f'\t{str(err)}'
                 )
-                # NOTE: omit InfeasibleConstraintException for now
+                results = get_infeasible_results(
+                    model=model, solver=self, config=config, err_msg=err_msg
+                )
+                tock = time.perf_counter()
+                results.timing_info.start_timestamp = start_timestamp
+                results.timing_info.wall_time = tock - tick
+                results.timing_info.timer = timer
+                return results
             timer.stop(f'write_gms_file')
 
             if config.writer_config.put_results_format == 'gdx':
