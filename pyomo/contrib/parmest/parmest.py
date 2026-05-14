@@ -194,14 +194,6 @@ def _get_labeled_model(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
-def _check_index_is_none_or_local(index):
-    """
-    Checks if experiment outputs are scalars (i.e., not indexed) or their indices
-    are local (i.e., strings), e.g., `m.y1`, `m.y2`, `m.C["A"]`, `m.C["B"]`
-    """
-    return index is None or isinstance(index, str)
-
-
 def _format_outputs_index_as_tuple(index):
     """
     Formats the indices of indexed experiment outputs
@@ -234,17 +226,17 @@ def validate_experiment_outputs(output_vars):
         index = comp.index()
 
         # check if the output variable is a scalar (e.g., m.y1, m.y2)
-        # or has a local index (e.g., m.C["A"], m.C["B"])
-        if _check_index_is_none_or_local(index):
+        if index is None:
             pass
         else:
-            # format the indices of output variables
+            # format the index of output variables
             # (e.g., m.CA[t], m.CB[t], m.C[t, "A"], m.C[t, "B"]) as a tuple
             index_tuple = _format_outputs_index_as_tuple(index)
 
-            # get the data-point index which is assumed to be the first entry
+            # get the first entry of the tuple
             data_point = index_tuple[0]
 
+            # check if the first entry is the data index
             assert isinstance(
                 data_point, (int, float)
             ), "The first index of experiment outputs must be the data point"
@@ -287,19 +279,16 @@ def _count_total_experiments(experiment_list):
 
     Assumptions:
 
-    Experiment outputs can be scaler or local variables
-    (e.g., `m.y1`, `m.y2`, `m.C["A"]`, `m.C["B"]`)
+    Experiment outputs can be scaler variables (e.g., `m.y1`, `m.y2`)
+    or
+    Experiment outputs can be indexed variables (e.g., `m.CA[t]`, `m.CB[t]`,
+    `m.C[t, "A"]`, `m.C[t, "B"]`). The data-point variable (e.g., `t`) must
+    be the first index. Within each experiment, the output families are
+    expected to share the same time points. Across experiments, the output
+    families are expected to contain the same number of time points.
 
-    Experiment output variables can be indexed by a single index
-    (e.g., `m.CA[t]`, `m.CB[t]`) or by two or more indices
-    (e.g., `m.C[t, "A"]`, `m.C[t, "B"]`). In both cases, the data-point variable
-    (e.g., `t` as in time) is stored in the first index. Within each experiment,
-    the output families are expected to share the same time points. Across
-    experiments, the output families are expected to contain the same number of
-    time points.
-
-    Future versions will allow for heterogeneity in the number of data points across
-    experiments and will require changes to this function.
+    Future versions will allow for heterogeneity in the number of data points
+    across experiments and will require changes to this function.
 
     Parameters
     ----------
@@ -329,13 +318,12 @@ def _count_total_experiments(experiment_list):
             index = output_var.index()
             indices.append(index)
 
-        # Case 1 and 2:
+        # Case 1
         # scalar outputs such as m.y1, m.y2,...
-        # local outputs such as m.C["A"], m.C["B"],...
-        if all(_check_index_is_none_or_local(index) for index in indices):
+        if all(index is None for index in indices):
             total_data_points += 1
         else:
-            # Case 3:
+            # Case 2:
             # outputs with one index, e.g., m.CA[t], m.CB[t],...
             # outputs with two or more indices, e.g., m.C[t, "A"], m.C[t, "B"],...
             # first index must be the data-point variable
@@ -346,8 +334,8 @@ def _count_total_experiments(experiment_list):
                 index_tuple = _format_outputs_index_as_tuple(index)
 
                 # if the output has one index, this gives index itself
-                # if the output has two or more index, assume that the first
-                # entry is the data-point variable
+                # if the output has two or more index, the first
+                # indexing must be the data index
                 data_point = index_tuple[0]
 
                 experiment_data_points.add(data_point)
