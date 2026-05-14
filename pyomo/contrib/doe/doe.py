@@ -2217,10 +2217,7 @@ class DesignOfExperiments:
                             f"Design variable {comp.name} has no change in value - "
                             "check abs_change and rel_change values."
                         )
-                    val = lb
-                    while val <= ub:
-                        des_val.append(val)
-                        val += del_val
+                    des_val = list(range(lb, ub, del_val))
 
                 else:
                     raise ValueError(
