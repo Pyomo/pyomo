@@ -45,6 +45,7 @@ import json
 from collections.abc import Callable
 from itertools import combinations
 from functools import singledispatchmethod
+from collections import defaultdict
 
 from pyomo.common.dependencies import (
     attempt_import,
@@ -79,158 +80,6 @@ inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
 )
 
 logger = logging.getLogger(__name__)
-
-
-# Only used in the deprecatedEstimator class
-def ef_nonants(ef):
-    # Wrapper to call someone's ef_nonants
-    # (the function being called is very short, but it might be changed)
-    if use_mpisppy:
-        return sputils.ef_nonants(ef)
-    else:
-        return local_ef.ef_nonants(ef)
-
-
-# Only used in the deprecatedEstimator class
-def _experiment_instance_creation_callback(
-    scenario_name, node_names=None, cb_data=None
-):
-    """
-    This is going to be called by mpi-sppy or the local EF and it will call into
-    the user's model's callback.
-
-    Parameters:
-    -----------
-    scenario_name: `str` Scenario name should end with a number
-    node_names: `None` ( Not used here )
-    cb_data : dict with ["callback"], ["BootList"],
-              ["theta_names"], ["cb_data"], etc.
-              "cb_data" is passed through to user's callback function
-                        that is the "callback" value.
-              "BootList" is None or bootstrap experiment number list.
-                       (called cb_data by mpisppy)
-
-
-    Returns:
-    --------
-    instance: `ConcreteModel`
-        instantiated scenario
-
-    Note:
-    ----
-    There is flexibility both in how the function is passed and its signature.
-    """
-    assert cb_data is not None
-    outer_cb_data = cb_data
-    scen_num_str = re.compile(r'(\d+)$').search(scenario_name).group(1)
-    scen_num = int(scen_num_str)
-    basename = scenario_name[: -len(scen_num_str)]  # to reconstruct name
-
-    CallbackFunction = outer_cb_data["callback"]
-
-    if callable(CallbackFunction):
-        callback = CallbackFunction
-    else:
-        cb_name = CallbackFunction
-
-        if "CallbackModule" not in outer_cb_data:
-            raise RuntimeError(
-                "Internal Error: need CallbackModule in parmest callback"
-            )
-        else:
-            modname = outer_cb_data["CallbackModule"]
-
-        if isinstance(modname, str):
-            cb_module = im.import_module(modname, package=None)
-        elif isinstance(modname, types.ModuleType):
-            cb_module = modname
-        else:
-            print("Internal Error: bad CallbackModule")
-            raise
-
-        try:
-            callback = getattr(cb_module, cb_name)
-        except:
-            print("Error getting function=" + cb_name + " from module=" + str(modname))
-            raise
-
-    if "BootList" in outer_cb_data:
-        bootlist = outer_cb_data["BootList"]
-        # print("debug in callback: using bootlist=",str(bootlist))
-        # assuming bootlist itself is zero based
-        exp_num = bootlist[scen_num]
-    else:
-        exp_num = scen_num
-
-    scen_name = basename + str(exp_num)
-
-    cb_data = outer_cb_data["cb_data"]  # cb_data might be None.
-
-    # at least three signatures are supported. The first is preferred
-    try:
-        instance = callback(experiment_number=exp_num, cb_data=cb_data)
-    except TypeError:
-        raise RuntimeError(
-            "Only one callback signature is supported: "
-            "callback(experiment_number, cb_data) "
-        )
-        """
-        try:
-            instance = callback(scenario_tree_model, scen_name, node_names)
-        except TypeError:  # deprecated signature?
-            try:
-                instance = callback(scen_name, node_names)
-            except:
-                print("Failed to create instance using callback; TypeError+")
-                raise
-        except:
-            print("Failed to create instance using callback.")
-            raise
-        """
-    if hasattr(instance, "_mpisppy_node_list"):
-        raise RuntimeError(f"scenario for experiment {exp_num} has _mpisppy_node_list")
-    nonant_list = [
-        instance.find_component(vstr) for vstr in outer_cb_data["theta_names"]
-    ]
-    if use_mpisppy:
-        instance._mpisppy_node_list = [
-            scenario_tree.ScenarioNode(
-                name="ROOT",
-                cond_prob=1.0,
-                stage=1,
-                cost_expression=instance.FirstStageCost,
-                nonant_list=nonant_list,
-                scen_model=instance,
-            )
-        ]
-    else:
-        instance._mpisppy_node_list = [
-            scenario_tree.ScenarioNode(
-                name="ROOT",
-                cond_prob=1.0,
-                stage=1,
-                cost_expression=instance.FirstStageCost,
-                scen_name_list=None,
-                nonant_list=nonant_list,
-                scen_model=instance,
-            )
-        ]
-
-    if "ThetaVals" in outer_cb_data:
-        thetavals = outer_cb_data["ThetaVals"]
-
-        # dlw august 2018: see mea code for more general theta
-        for name, val in thetavals.items():
-            theta_cuid = ComponentUID(name)
-            theta_object = theta_cuid.find_component_on(instance)
-            if val is not None:
-                # print("Fixing",vstr,"at",str(thetavals[vstr]))
-                theta_object.fix(val)
-            else:
-                # print("Freeing",vstr)
-                theta_object.unfix()
-
-    return instance
 
 
 def SSE(model):
@@ -345,9 +194,98 @@ def _get_labeled_model(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
+def _format_outputs_index_as_tuple(index):
+    """
+    Formats the indices of indexed experiment outputs
+    (e.g., `m.CA[t]`, `m.CB[t]`, `m.C[t, "A"]`, `m.C[t, "B"]`) as a
+    tuple
+    """
+    if isinstance(index, tuple):
+        return index
+    return (index,)
+
+
+def validate_experiment_outputs(output_vars):
+    """
+    Checks that:
+    1. All variables in the `experiment_outputs` attribute have the same
+    number of indices
+    2. All variables in the `experiment_outputs` attribute share the same
+    index set
+
+    Parameters
+    ----------
+    output_vars : pyomo.core.base.suffix.Suffix
+        Experiment output variables
+    """
+
+    grouped_indices = defaultdict(list)
+
+    # group indices by parent component
+    for comp in output_vars:
+        index = comp.index()
+
+        # check if the output variable is a scalar (e.g., m.y1, m.y2)
+        if index is None:
+            pass
+        else:
+            # format the index of output variables
+            # (e.g., m.CA[t], m.CB[t], m.C[t, "A"], m.C[t, "B"]) as a tuple
+            index_tuple = _format_outputs_index_as_tuple(index)
+
+            # check if the first indexing is the data index
+            assert isinstance(
+                index_tuple[0], (int, float)
+            ), "The first index of experiment outputs must be the data point"
+
+        parent = comp.parent_component().name
+        grouped_indices[parent].append(index)
+
+    # convert to a sorted unique tuples
+    grouped_indices = {
+        name: tuple(sorted(indices)) for name, indices in grouped_indices.items()
+    }
+
+    # reference index set
+    names = list(grouped_indices.keys())
+
+    if len(names) <= 1:  # only one output variable exist
+        pass
+    else:
+        ref_name = names[0]
+        ref_indices = grouped_indices[ref_name]
+
+        for name in names[1:]:
+            assert len(grouped_indices[name]) == len(
+                ref_indices
+            ), "Experiment outputs must have the same number of indices or data points"
+
+            assert (
+                grouped_indices[name] == ref_indices
+            ), "Experiment outputs must share the same indices or data points"
+
+
 def _count_total_experiments(experiment_list):
     """
     Counts the number of data points in the list of experiments
+
+    This function has been updated to avoid double counting data points in
+    cases where the "experiment_outputs" suffix contain keys that belong
+    to different output variables (e.g., `m.y1`, `m.y2`) which are measured at
+    the same data point
+
+    Assumptions:
+
+    Experiment outputs can be scaler variables (e.g., `m.y1`, `m.y2`)
+    or
+    Experiment outputs can be indexed variables (e.g., `m.CA[t]`, `m.CB[t]`,
+    `m.C[t, "A"]`, `m.C[t, "B"]`). The data-point variable (e.g., `t`) must
+    be the first index. Within each experiment, the output families are
+    expected to share the same time points. Across experiments, the output
+    families are expected to contain the same number of time points.
+
+    Future versions will allow for heterogeneity in the number of data points
+    across experiments and will require changes to this function.
 
     Parameters
     ----------
@@ -360,19 +298,46 @@ def _count_total_experiments(experiment_list):
     total_data_points : int
         The total number of data points in the list of experiments
     """
-    total_data_points = 0
-    for experiment in experiment_list:
-        # 1. Identify the first parent component of the experiment outputs
-        output_vars = experiment.get_labeled_model().experiment_outputs
 
-        # 1. Identify the first parent component
-        first_var_key = list(output_vars.keys())[0]
-        first_parent = first_var_key.parent_component()
-        # 2. Count only the keys that belong to this specific parent
-        first_parent_indices = [
-            v for v in output_vars.keys() if v.parent_component() is first_parent
-        ]
-        total_data_points += len(first_parent_indices)
+    total_data_points = 0
+
+    for experiment in experiment_list:
+        model = _get_labeled_model(experiment)
+        output_vars = model.experiment_outputs
+
+        # check if the experiment outputs are defined correctly
+        validate_experiment_outputs(output_vars)
+
+        # store the indices of the experiment outputs
+        indices = []
+
+        for output_var in output_vars.keys():
+            index = output_var.index()
+            indices.append(index)
+
+        # Case 1
+        # scalar outputs such as m.y1, m.y2,...
+        if all(index is None for index in indices):
+            total_data_points += 1
+        else:
+            # Case 2:
+            # outputs with one index, e.g., m.CA[t], m.CB[t],...
+            # outputs with two or more indices, e.g., m.C[t, "A"], m.C[t, "B"],...
+            # first index must be the data-point variable
+            # count unique time/sample indices within this experiment
+            experiment_data_points = set()
+
+            for index in indices:
+                index_tuple = _format_outputs_index_as_tuple(index)
+
+                # if the output has one index, this gives index itself
+                # if the output has two or more index, the first
+                # indexing must be the data index
+                data_point = index_tuple[0]
+
+                experiment_data_points.add(data_point)
+
+            total_data_points += len(experiment_data_points)
 
     return total_data_points
 
@@ -845,6 +810,11 @@ class Estimator:
         # boolean to indicate if model is initialized using a square solve
         self.model_initialized = False
 
+        # If self.diagnostic mode is true, then set the logging level to DEBUG to print
+        # diagnostics from the solver
+        if self.diagnostic_mode:
+            logger.setLevel(logging.DEBUG)
+
     # The deprecated Estimator constructor
     # This works by checking the type of the first argument passed to
     # the class constructor. If it matches the old interface (i.e. is
@@ -907,20 +877,30 @@ class Estimator:
                 # default theta_names, created when Estimator object is created
                 return self.estimator_theta_names
 
-    def _expand_indexed_unknowns(self, model_temp):
+    def _expanded_theta_info(self, model):
         """
-        Expand indexed variables to get full list of thetas
-        """
+        Return scalar theta names and ComponentUIDs for all unknown parameters.
 
-        model_theta_list = []
-        for c in model_temp.unknown_parameters.keys():
+        The unknown_parameters suffix may contain either scalar ComponentData
+        objects or indexed components. Indexed components are expanded to their
+        scalar data objects.
+
+        Names are intended for user-facing labels and DataFrame columns.
+        ComponentUIDs are intended for locating equivalent theta components on
+        cloned/transferred models.
+        """
+        theta_components = []
+
+        for c in model.unknown_parameters:
             if c.is_indexed():
-                for _, ci in c.items():
-                    model_theta_list.append(ci.name)
+                theta_components.extend(c.values())
             else:
-                model_theta_list.append(c.name)
+                theta_components.append(c)
 
-        return model_theta_list
+        theta_names = tuple(c.name for c in theta_components)
+        theta_cuids = tuple(pyo.ComponentUID(c) for c in theta_components)
+
+        return theta_names, theta_cuids
 
     def _create_parmest_model(self, experiment_number):
         """
@@ -1023,6 +1003,8 @@ class Estimator:
         model state before rebuilding each scenario so per-start initializations
         are applied to the model that is actually solved.
 
+        Create scenario blocks for parameter estimation.
+
         Parameters
         ----------
         bootlist : list, optional
@@ -1041,75 +1023,115 @@ class Estimator:
 
         Returns
         -------
-        ConcreteModel
-            EF model used by parmest solve routines.
-
-        Raises
-        ------
-        ValueError
-            If the selected scenario set is empty.
+        model : ConcreteModel
+            Pyomo model with scenario blocks for parameter estimation. Contains indexed block for
+            each experiment in exp_list or bootlist.
         """
-        # Build a clean parent EF container and attach one scenario model per block.
         model = pyo.ConcreteModel()
-        if multistart:
-            template_experiment = self.exp_list[0]
-            if theta_vals is not None and hasattr(template_experiment, "theta_initial"):
-                template_experiment.theta_initial = dict(theta_vals)
-            if hasattr(template_experiment, "model"):
-                template_experiment.model = None
+        # if multistart:
+        #     template_experiment = self.exp_list[0]
+        #     if theta_vals is not None and hasattr(template_experiment, "theta_initial"):
+        #         template_experiment.theta_initial = dict(theta_vals)
+        #     if hasattr(template_experiment, "model"):
+        #         template_experiment.model = None
+
         template_model = self._create_parmest_model(0)
-        expanded_theta_names = self._expand_indexed_unknowns(template_model)
+        expanded_theta_names, expanded_theta_cuids = self._expanded_theta_info(
+            template_model
+        )
+
         model._parmest_theta_names = tuple(expanded_theta_names)
+        model._parmest_theta_cuids = tuple(expanded_theta_cuids)
+
+        # Parent/global EF theta variables. These are indexed by names because
+        # they serve as user-facing labels and result keys.
         model.parmest_theta = pyo.Var(model._parmest_theta_names)
 
-        for name in expanded_theta_names:
-            template_theta_var = template_model.find_component(name)
+        # Initialize parent/global theta values from the template model.
+        for name, cuid in zip(expanded_theta_names, expanded_theta_cuids):
+            template_theta_var = cuid.find_component_on(template_model)
+
+            if template_theta_var is None:
+                raise RuntimeError(
+                    f"Could not find theta variable for CUID {cuid} "
+                    "in the template model."
+                )
+
             parent_theta_var = model.parmest_theta[name]
-            parent_theta_var.set_value(pyo.value(template_theta_var))
+
             if theta_vals is not None and name in theta_vals:
                 parent_theta_var.set_value(theta_vals[name])
+            else:
+                parent_theta_var.set_value(pyo.value(template_theta_var))
+
             if fix_theta:
                 parent_theta_var.fix()
             else:
                 parent_theta_var.unfix()
 
-        # Set the number of experiments to use, either from bootlist or all experiments
         scenario_numbers = (
-            list(bootlist) if bootlist is not None else list(range(len(self.exp_list)))
+            bootlist if bootlist is not None else list(range(len(self.exp_list)))
         )
-        self.obj_probability_constant = len(scenario_numbers)
-        if self.obj_probability_constant <= 0:
-            raise ValueError("At least one scenario is required to build the EF model.")
 
-        # Create indexed block for holding scenario models
-        model.exp_scenarios = pyo.Block(range(self.obj_probability_constant))
-        for i, experiment_number in enumerate(scenario_numbers):
-            if multistart:
-                experiment = self.exp_list[experiment_number]
-                if theta_vals is not None and hasattr(experiment, "theta_initial"):
-                    experiment.theta_initial = dict(theta_vals)
-                if hasattr(experiment, "model"):
-                    experiment.model = None
+        # # Create indexed block for holding scenario models
+        # model.exp_scenarios = pyo.Block(range(self.obj_probability_constant))
+        # for i, experiment_number in enumerate(scenario_numbers):
+        #     if multistart:
+        #         experiment = self.exp_list[experiment_number]
+        #         if theta_vals is not None and hasattr(experiment, "theta_initial"):
+        #             experiment.theta_initial = dict(theta_vals)
+        #         if hasattr(experiment, "model"):
+        #             experiment.model = None
+        # get the probability constant that is applied to the objective function
+        # parmest solves the estimation problem by applying equal probabilities to
+        # the objective function of all the scenarios from the experiment list
+        self.obj_probability_constant = len(scenario_numbers)
+
+        # Index scenario blocks by position, not experiment number, so bootstrap
+        # samples with repeated experiments are preserved.
+        model.scenario_indices = pyo.RangeSet(0, self.obj_probability_constant - 1)
+
+        model.scenario_number = pyo.Param(
+            model.scenario_indices,
+            initialize={
+                i: experiment_number
+                for i, experiment_number in enumerate(scenario_numbers)
+            },
+            within=pyo.NonNegativeIntegers,
+            mutable=False,
+        )
+
+        model.exp_scenarios = pyo.Block(model.scenario_indices)
+
+        for i in model.scenario_indices:
+            experiment_number = pyo.value(model.scenario_number[i])
             parmest_model = self._create_parmest_model(experiment_number)
-            for name in expanded_theta_names:
-                child_theta_var = parmest_model.find_component(name)
-                parent_theta_var = model.parmest_theta[name]
-                if theta_vals is not None and name in theta_vals:
-                    child_theta_var.set_value(theta_vals[name])
-                else:
-                    child_theta_var.set_value(pyo.value(parent_theta_var))
+            model.exp_scenarios[i].transfer_attributes_from(parmest_model)
+
+        model.theta_link_constraints = pyo.ConstraintList()
+
+        # Link scenario-local theta variables to the parent/global EF theta vars.
+        # CUIDs are used for component lookup. Names are only used to index the
+        # parent EF theta variable.
+        for name, cuid in zip(expanded_theta_names, expanded_theta_cuids):
+            parent_theta_var = model.parmest_theta[name]
+            theta_value = pyo.value(parent_theta_var)
+
+            for i in model.scenario_indices:
+                child_theta_var = cuid.find_component_on(model.exp_scenarios[i])
+
+                if child_theta_var is None:
+                    raise RuntimeError(
+                        f"Could not find theta variable for CUID {cuid} "
+                        f"in scenario block {i}."
+                    )
+
+                child_theta_var.set_value(theta_value)
+
                 if fix_theta:
                     child_theta_var.fix()
                 else:
                     child_theta_var.unfix()
-            model.exp_scenarios[i].transfer_attributes_from(parmest_model)
-
-        model.theta_link_constraints = pyo.ConstraintList()
-        if not fix_theta:
-            for name in expanded_theta_names:
-                parent_theta_var = model.parmest_theta[name]
-                for i in range(self.obj_probability_constant):
-                    child_theta_var = model.exp_scenarios[i].find_component(name)
                     model.theta_link_constraints.add(
                         child_theta_var == parent_theta_var
                     )
@@ -1118,7 +1140,6 @@ class Estimator:
             for obj in block.component_objects(pyo.Objective):
                 obj.deactivate()
 
-        # Make an objective that sums over all scenario blocks and divides by number of experiments
         def total_obj(m):
             return (
                 sum(
@@ -1129,6 +1150,7 @@ class Estimator:
             )
 
         model.Obj = pyo.Objective(rule=total_obj, sense=pyo.minimize)
+
         self.ef_instance = model
         return model
 
@@ -1314,8 +1336,6 @@ class Estimator:
 
         return df_multistart
 
-    # Redesigned _Q_opt method using scenario blocks, and combined with
-    # _Q_at_theta structure.
     def _Q_opt(
         self,
         return_values=None,
@@ -1326,12 +1346,22 @@ class Estimator:
         multistart=False,
     ):
         """
-        Solve the EF parameter-estimation problem and return objective/theta data.
+        _Q_opt method for parameter estimation using an extensive form
+        optimization problem with scenario blocks for each experiment.
 
-        This routine creates the EF model via ``_create_scenario_blocks``,
-        solves it with the requested solver, and returns objective value plus
-        theta estimates. Depending on mode, it can also return variable values
-        and covariance estimates.
+        Scenario blocks are created by cloning the original model for
+        each experiment and linking the parameter variables across blocks.
+        The objective is defined as the average of the individual scenario
+        objectives, which allows for simultaneous optimization across
+        all experiments.
+
+
+        Steps:
+        1. Load model - parmest model should be labeled
+        2. Create scenario blocks - clone model to have one per experiment
+        3. Define objective and constraints for the block
+        4. Solve the block as a single problem
+        5. Analyze results and extract parameter estimates
 
         Parameters
         ----------
@@ -1345,10 +1375,6 @@ class Estimator:
             Default is None.
         solver : str, optional
             Solver to use for optimization. Default is "ef_ipopt".
-        calc_cov : bool, optional
-            If True, calculate covariance matrix of estimated parameters. Default is NOTSET.
-        cov_n : int, optional
-            Number of data points to use for covariance calculation. Required if calc_cov is True. Default is NOTSET.
         fix_theta : bool, optional
             If True, fix the theta values in the model. If False, leave them free.
             Default is False.
@@ -1358,13 +1384,20 @@ class Estimator:
 
         Returns
         -------
-        tuple
-            Return shape depends on mode:
-            1. Standard solve: ``(obj_value, theta_series)``
-            2. Standard + return values: ``(obj_value, theta_series, var_values)``
-            3. Standard + covariance: ``(obj_value, theta_series, cov)`` or
-               ``(obj_value, theta_series, var_values, cov)``
-            4. Fixed-theta or multistart: ``(obj_value, theta_dict, worst_status)``
+        obj_value : float
+            Objective value of the solved model.
+            If fix_theta is True, this is the value of the objective at the fixed theta values.
+            If fix_theta is False, this is the optimal value of the objective.
+        theta_estimates : dict
+            Dictionary of estimated theta values. If fix_theta is True, this will be the same as
+            the input theta_vals (or default values if theta_vals is None). If fix_theta is False,
+            this will be the estimated parameter values that optimize the objective.
+        var_values : pd.DataFrame, optional
+            DataFrame of variable values for the variables specified in return_values.
+            Only returned if return_values is not None and contains valid variable names.
+            The DataFrame will have one row per scenario block (experiment) and columns
+            corresponding to the variable names in return_values.
+
         """
         # Create extended form model with scenario blocks
         model = self._create_scenario_blocks(
@@ -1375,9 +1408,9 @@ class Estimator:
         )
         expanded_theta_names = list(model._parmest_theta_names)
 
-        # Print model if in diagnostic mode
-        if self.diagnostic_mode:
-            print("Parmest _Q_opt model with scenario blocks:")
+        logger.debug("Parmest _Q_opt model with scenario blocks:")
+
+        if logger.isEnabledFor(logging.DEBUG):
             model.pprint()
 
         # Check solver and set options
@@ -1395,31 +1428,29 @@ class Estimator:
             for key in self.solver_options:
                 sol.options[key] = self.solver_options[key]
 
-        # Solve model
-        solve_result = sol.solve(model, tee=self.tee)
+        # Solve model without loading solution values until the termination
+        # condition has been checked.
+        solve_result = sol.solve(model, tee=self.tee, load_solutions=False)
+        termination_condition = solve_result.solver.termination_condition
+
+        if fix_theta and (
+            len(solve_result.solution) == 0
+            or termination_condition == pyo.TerminationCondition.infeasible
+        ):
+            theta_estimates = {
+                name: pyo.value(model.parmest_theta[name])
+                for name in expanded_theta_names
+            }
+            obj_value = None
+            return obj_value, theta_estimates, termination_condition
 
         # Separate handling of termination conditions for _Q_at_theta vs _Q_opt
         # If not fixing theta, ensure optimal termination of the solve to return result
         if not fix_theta and not multistart:
             # Ensure optimal termination
             assert_optimal_termination(solve_result)
-        # If fixing theta, capture termination condition if not optimal unless infeasible
-        else:
-            # Initialize worst_status to optimal, update if not optimal
-            worst_status = pyo.TerminationCondition.optimal
-            # Get termination condition from solve result
-            status = solve_result.solver.termination_condition
 
-            # In case of fixing theta, just log a warning if not optimal
-            if status != pyo.TerminationCondition.optimal:
-                # logger.warning(
-                #     "Solver did not terminate optimally when thetas were fixed. "
-                #     "Termination condition: %s",
-                #     str(status),
-                # )
-                # Unless infeasible, update worst_status
-                if worst_status != pyo.TerminationCondition.infeasible:
-                    worst_status = status
+        model.solutions.load_from(solve_result)
 
         # Extract objective value
         obj_value = pyo.value(model.Obj)
@@ -1431,19 +1462,22 @@ class Estimator:
         self.obj_value = obj_value
         self.estimated_theta = theta_estimates
 
-        # If fixing theta, return objective value, theta estimates, and worst status
-        if fix_theta or multistart:
-            return obj_value, theta_estimates, worst_status
+        # # If fixing theta, return objective value, theta estimates, and worst status
+        # if fix_theta or multistart:
+        #     return obj_value, theta_estimates, worst_status
 
-        # Return theta estimates as a pandas Series
-        theta_estimates = pd.Series(theta_estimates)
+        # # Return theta estimates as a pandas Series
+        # theta_estimates = pd.Series(theta_estimates)
+        # If fixing theta, return objective value, theta estimates, and solver status
+        if fix_theta:
+            return obj_value, theta_estimates, termination_condition
 
         # Extract return values if requested
         # Assumes the model components are named the same in each block, and are pyo.Vars.
         if return_values is not None and len(return_values) > 0:
             var_values = []
             # In the scenario blocks structure, exp_scenarios is an IndexedBlock
-            exp_blocks = self.ef_instance.exp_scenarios.values()
+            exp_blocks = model.exp_scenarios.values()
             # Loop over each experiment block and extract requested variable values
             for exp_i in exp_blocks:
                 # In each block, extract requested variables
@@ -1474,8 +1508,6 @@ class Estimator:
         else:
             return obj_value, theta_estimates
 
-    # Removed old _Q_opt function
-
     def _cov_at_theta(self, method, solver, step):
         """
         Covariance matrix calculation using all scenarios in the data
@@ -1497,18 +1529,20 @@ class Estimator:
             Covariance matrix of the estimated parameters
         """
         if hasattr(self.ef_instance, "exp_scenarios"):
-            ref_model = self.ef_instance.exp_scenarios[0]
+            # The EF now indexes scenario blocks by scenario position.  Pull the
+            # first position from the model metadata instead of hard-coding 0 so
+            # future indexing changes stay localized to scenario_indices.
+            scenario_index = next(iter(self.ef_instance.scenario_indices))
+            ref_model = self.ef_instance.exp_scenarios[scenario_index]
         else:
             ref_model = self.ef_instance
 
         if method == CovarianceMethod.reduced_hessian.value:
             # compute the inverse reduced hessian to be used
             # in the "reduced_hessian" method
+
             # retrieve the independent variables (i.e., estimated parameters)
-            ind_vars = []
-            for name in self.ef_instance._parmest_theta_names:
-                var = self.ef_instance.parmest_theta[name]
-                ind_vars.append(var)
+            ind_vars = list(self.ef_instance.parmest_theta.values())
 
             solve_result, inv_red_hes = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
@@ -1692,16 +1726,6 @@ class Estimator:
                             solver=solver,
                             tee=self.tee,
                         )
-                else:
-                    raise ValueError(
-                        'One or more values of the measurement errors have not been '
-                        'supplied. All values of the measurement errors are required '
-                        'for the "SSE_weighted" objective.'
-                    )
-            else:
-                raise AttributeError(
-                    'Experiment model does not have suffix "measurement_error".'
-                )
         else:
             raise ValueError(
                 f"Invalid objective function for covariance calculation. "
@@ -1740,9 +1764,11 @@ class Estimator:
 
                     attempts += 1
                     if attempts > num_samples:  # arbitrary timeout limit
-                        raise RuntimeError("""Internal error: timeout constructing
-                                           a sample, the dim of theta may be too
-                                           close to the samplesize""")
+                        raise RuntimeError(
+                            "Internal error: timeout constructing "
+                            "a sample, the dim of theta may be too "
+                            "close to the samplesize"
+                        )
 
                 samplelist.append((i, sample))
 
@@ -2229,29 +2255,66 @@ class Estimator:
         return results_df, best_theta, best_obj
 
     # Updated version that uses _Q_opt
+    def _normalize_theta_dataframe(self, theta_values):
+        """
+        Validate and normalize user-provided theta_values columns.
+
+        Returns a copy whose columns are the canonical expanded theta names from
+        the model.
+
+        This allows quote-insensitive matching while preserving canonical model
+        names internally.
+        """
+        assert isinstance(theta_values, pd.DataFrame)
+
+        template_model = self._create_parmest_model(0)
+        expected_theta_names, _ = self._expanded_theta_info(template_model)
+        expected_theta_names = list(expected_theta_names)
+
+        def clean(name):
+            return str(name).replace("'", "")
+
+        provided_theta_names = list(theta_values.columns)
+
+        clean_provided = [clean(name) for name in provided_theta_names]
+        clean_expected = [clean(name) for name in expected_theta_names]
+
+        if len(clean_provided) != len(set(clean_provided)):
+            raise ValueError(f"Duplicate theta names are not allowed: {clean_provided}")
+
+        if len(clean_expected) != len(set(clean_expected)):
+            raise RuntimeError(
+                "Quote-insensitive theta names are ambiguous. "
+                f"Expanded theta names are {expected_theta_names}."
+            )
+
+        if set(clean_provided) != set(clean_expected):
+            raise ValueError(
+                f"Provided theta values {clean_provided} do not match "
+                f"expected theta names {clean_expected}."
+            )
+
+        canonical_name_by_clean_name = {
+            clean_name: canonical_name
+            for clean_name, canonical_name in zip(clean_expected, expected_theta_names)
+        }
+
+        canonical_columns = [
+            canonical_name_by_clean_name[clean_name] for clean_name in clean_provided
+        ]
+
+        theta_values = theta_values.copy()
+        theta_values.columns = canonical_columns
+
+        # Put columns in model order.
+        return theta_values[expected_theta_names]
+
     def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
         """
         Objective value for each theta, solving extensive form problem with
         fixed theta values.
-
-        Parameters
-        ----------
-        theta_values: pd.DataFrame, columns=theta_names
-            Values of theta used to compute the objective
-
-        initialize_parmest_model: boolean
-            If True: Solve square problem instance, build extensive form
-            of the model for parameter estimation, and set flag
-            model_initialized to True. Default is False.
-
-        Returns
-        -------
-        obj_at_theta: pd.DataFrame
-            Objective value for each theta (infeasible solutions are
-            omitted).
         """
 
-        # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return self.pest_deprecated.objective_at_theta(
                 theta_values=theta_values,
@@ -2259,76 +2322,52 @@ class Estimator:
             )
 
         if initialize_parmest_model:
-            # Print deprecation warning, that this option will be removed in
-            # future releases.
             deprecation_warning(
                 "The `initialize_parmest_model` option in `objective_at_theta()` is "
-                "deprecated and will be removed in future releases. Please ensure the"
+                "deprecated and will be removed in future releases. Please ensure the "
                 "model is initialized within the Experiment class definition.",
-                version="6.9.5",
+                version="6.10.1.dev0",
             )
 
         if theta_values is None:
-            all_thetas = {}  # dictionary to store fitted variables
-            # use appropriate theta names member
-            # Get theta names from fresh parmest model, assuming this can be called
-            # directly after creating Estimator.
-            theta_names = self._expand_indexed_unknowns(self._create_parmest_model(0))
+            template_model = self._create_parmest_model(0)
+            theta_names, _ = self._expanded_theta_info(template_model)
+            theta_names = list(theta_names)
+            all_thetas = []
         else:
-            assert isinstance(theta_values, pd.DataFrame)
-            # for parallel code we need to use lists and dicts in the loop
-            theta_names = theta_values.columns
-            # # check if theta_names are in model
-            # Clean names, ignore quotes, and compare sets
-            clean_provided = [t.replace("'", "") for t in theta_names]
-            if len(clean_provided) != len(set(clean_provided)):
-                raise ValueError(
-                    f"Duplicate theta names are not allowed: {clean_provided}"
-                )
-            clean_expected = [
-                t.replace("'", "")
-                for t in self._expand_indexed_unknowns(self._create_parmest_model(0))
-            ]
-            # If they do not match, raise error
-            if (len(clean_provided) != len(clean_expected)) or (
-                set(clean_provided) != set(clean_expected)
-            ):
-                raise ValueError(
-                    f"Provided theta values {clean_provided} do not match expected theta names {clean_expected}."
-                )
-            # Rename columns using cleaned names
-            if list(clean_provided) != list(theta_names):
-                theta_values = theta_values.copy()
-                theta_values.columns = clean_provided
+            theta_values = self._normalize_theta_dataframe(theta_values)
+            theta_names = list(theta_values.columns)
+            all_thetas = theta_values.to_dict("records")
 
-            # Convert to list of dicts for parallel processing
-            all_thetas = theta_values.to_dict('records')
-
-        # Initialize task manager
         num_tasks = len(all_thetas) if all_thetas else 1
         task_mgr = utils.ParallelTaskManager(num_tasks)
 
-        # Use local theta values for each task if all_thetas is provided, else empty list
-        if all_thetas:
-            local_thetas = task_mgr.global_to_local_data(all_thetas)
-        elif initialize_parmest_model:
-            local_thetas = []
+        local_thetas = task_mgr.global_to_local_data(all_thetas) if all_thetas else []
 
-        # walk over the mesh, return objective function
         all_obj = list()
+
         if len(all_thetas) > 0:
             for Theta in local_thetas:
                 obj, thetvals, worststatus = self._Q_opt(
                     theta_vals=Theta, fix_theta=True
                 )
-                if worststatus != pyo.TerminationCondition.infeasible:
-                    all_obj.append(list(Theta.values()) + [obj])
+
+                if worststatus == pyo.TerminationCondition.infeasible or obj is None:
+                    all_obj.append(None)
+                else:
+                    all_obj.append([Theta[name] for name in theta_names] + [obj])
+
         else:
             obj, thetvals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
-            if worststatus != pyo.TerminationCondition.infeasible:
-                all_obj.append(list(thetvals.values()) + [obj])
+
+            if worststatus == pyo.TerminationCondition.infeasible or obj is None:
+                all_obj.append(None)
+            else:
+                all_obj.append([thetvals[name] for name in theta_names] + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
+        global_all_obj = [row for row in global_all_obj if row is not None]
+
         dfcols = list(theta_names) + ['obj']
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_theta
@@ -2489,6 +2528,158 @@ class Estimator:
 ################################
 # deprecated functions/classes #
 ################################
+
+
+# Only used in the deprecatedEstimator class after 6.10.1dev0
+def ef_nonants(ef):
+    # Wrapper to call someone's ef_nonants
+    # (the function being called is very short, but it might be changed)
+    if use_mpisppy:
+        return sputils.ef_nonants(ef)
+    else:
+        return local_ef.ef_nonants(ef)
+
+
+# Only used in the deprecatedEstimator class
+def _experiment_instance_creation_callback(
+    scenario_name, node_names=None, cb_data=None
+):
+    """
+    This is going to be called by mpi-sppy or the local EF and it will call into
+    the user's model's callback.
+
+    Parameters:
+    -----------
+    scenario_name: `str` Scenario name should end with a number
+    node_names: `None` ( Not used here )
+    cb_data : dict with ["callback"], ["BootList"],
+              ["theta_names"], ["cb_data"], etc.
+              "cb_data" is passed through to user's callback function
+                        that is the "callback" value.
+              "BootList" is None or bootstrap experiment number list.
+                       (called cb_data by mpisppy)
+
+
+    Returns:
+    --------
+    instance: `ConcreteModel`
+        instantiated scenario
+
+    Note:
+    ----
+    There is flexibility both in how the function is passed and its signature.
+    """
+    assert cb_data is not None
+    outer_cb_data = cb_data
+    scen_num_str = re.compile(r'(\d+)$').search(scenario_name).group(1)
+    scen_num = int(scen_num_str)
+    basename = scenario_name[: -len(scen_num_str)]  # to reconstruct name
+
+    CallbackFunction = outer_cb_data["callback"]
+
+    if callable(CallbackFunction):
+        callback = CallbackFunction
+    else:
+        cb_name = CallbackFunction
+
+        if "CallbackModule" not in outer_cb_data:
+            raise RuntimeError(
+                "Internal Error: need CallbackModule in parmest callback"
+            )
+        else:
+            modname = outer_cb_data["CallbackModule"]
+
+        if isinstance(modname, str):
+            cb_module = im.import_module(modname, package=None)
+        elif isinstance(modname, types.ModuleType):
+            cb_module = modname
+        else:
+            print("Internal Error: bad CallbackModule")
+            raise
+
+        try:
+            callback = getattr(cb_module, cb_name)
+        except:
+            print("Error getting function=" + cb_name + " from module=" + str(modname))
+            raise
+
+    if "BootList" in outer_cb_data:
+        bootlist = outer_cb_data["BootList"]
+        # print("debug in callback: using bootlist=",str(bootlist))
+        # assuming bootlist itself is zero based
+        exp_num = bootlist[scen_num]
+    else:
+        exp_num = scen_num
+
+    scen_name = basename + str(exp_num)
+
+    cb_data = outer_cb_data["cb_data"]  # cb_data might be None.
+
+    # at least three signatures are supported. The first is preferred
+    try:
+        instance = callback(experiment_number=exp_num, cb_data=cb_data)
+    except TypeError:
+        raise RuntimeError(
+            "Only one callback signature is supported: "
+            "callback(experiment_number, cb_data) "
+        )
+        """
+        try:
+            instance = callback(scenario_tree_model, scen_name, node_names)
+        except TypeError:  # deprecated signature?
+            try:
+                instance = callback(scen_name, node_names)
+            except:
+                print("Failed to create instance using callback; TypeError+")
+                raise
+        except:
+            print("Failed to create instance using callback.")
+            raise
+        """
+    if hasattr(instance, "_mpisppy_node_list"):
+        raise RuntimeError(f"scenario for experiment {exp_num} has _mpisppy_node_list")
+    nonant_list = [
+        instance.find_component(vstr) for vstr in outer_cb_data["theta_names"]
+    ]
+    if use_mpisppy:
+        instance._mpisppy_node_list = [
+            scenario_tree.ScenarioNode(
+                name="ROOT",
+                cond_prob=1.0,
+                stage=1,
+                cost_expression=instance.FirstStageCost,
+                nonant_list=nonant_list,
+                scen_model=instance,
+            )
+        ]
+    else:
+        instance._mpisppy_node_list = [
+            scenario_tree.ScenarioNode(
+                name="ROOT",
+                cond_prob=1.0,
+                stage=1,
+                cost_expression=instance.FirstStageCost,
+                scen_name_list=None,
+                nonant_list=nonant_list,
+                scen_model=instance,
+            )
+        ]
+
+    if "ThetaVals" in outer_cb_data:
+        thetavals = outer_cb_data["ThetaVals"]
+
+        # dlw august 2018: see mea code for more general theta
+        for name, val in thetavals.items():
+            theta_cuid = ComponentUID(name)
+            theta_object = theta_cuid.find_component_on(instance)
+            if val is not None:
+                # print("Fixing",vstr,"at",str(thetavals[vstr]))
+                theta_object.fix(val)
+            else:
+                # print("Freeing",vstr)
+                theta_object.unfix()
+
+    return instance
 
 
 @deprecated(version='6.7.2')
@@ -3096,9 +3287,11 @@ class _DeprecatedEstimator:
 
                     attempts += 1
                     if attempts > num_samples:  # arbitrary timeout limit
-                        raise RuntimeError("""Internal error: timeout constructing
-                                           a sample, the dim of theta may be too
-                                           close to the samplesize""")
+                        raise RuntimeError(
+                            "Internal error: timeout constructing "
+                            "a sample, the dim of theta may be too "
+                            "close to the samplesize"
+                        )
 
                 samplelist.append((i, sample))
 
