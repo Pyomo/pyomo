@@ -1320,6 +1320,46 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     @unittest.skipIf(
         not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
     )
+    def test_solve_pseudo_A_optimality_trace(self):
+        """
+        Solve Rooney-Biegler pseudo-A-opt design and verify the expected basin.
+
+        GreyBox exposes pseudo-A-opt as the raw trace(FIM), so this regression
+        ensures the full GreyBox solve path still converges to the same optimum.
+        """
+        objective_option = "pseudo_trace"
+        doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
+            objective_option=objective_option
+        )
+
+        # Set to use the grey box objective
+        doe_object.use_grey_box = True
+
+        # Solve the model
+        doe_object.run_doe()
+
+        self.assertEqual(doe_object.results["Solver Status"], "ok")
+
+        optimal_time_val = doe_object.results["Experiment Design"][0]
+        optimal_obj_val = doe_object.model.objective()
+
+        optimal_design_np_array = np.array([optimal_time_val, optimal_obj_val])
+        optimal_experimental_design = np.array([10.00, 812.9024487361])
+
+        self.assertTrue(
+            np.all(
+                np.isclose(optimal_design_np_array, optimal_experimental_design, 1e-1)
+            )
+        )
+        self.assertAlmostEqual(
+            doe_object.results["log10 pseudo A-opt"],
+            np.log10(optimal_obj_val),
+            places=6,
+        )
+
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_E_optimality_minimum_eigenvalue(self):
         """
