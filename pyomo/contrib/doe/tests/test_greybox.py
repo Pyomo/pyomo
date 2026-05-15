@@ -492,6 +492,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             objective_option=objective_option
         )
 
+        # Pseudo A-opt
+        objective_option = "pseudo_trace"
+        doe_obj_P, grey_box_object_P = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
         # D-opt
         objective_option = "determinant"
         doe_obj_D, grey_box_object_D = make_greybox_and_doe_objects(
@@ -513,11 +519,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Hard-coded names of the outputs
         # There is one element per
         # objective type
-        output_names = ['A-opt', 'log-D-opt', 'E-opt', 'ME-opt']
+        output_names = ['A-opt', 'pseudo-A-opt', 'log-D-opt', 'E-opt', 'ME-opt']
 
         # Grabbing input names from grey box object
         output_names_gb = []
         output_names_gb.extend(grey_box_object_A.output_names())
+        output_names_gb.extend(grey_box_object_P.output_names())
         output_names_gb.extend(grey_box_object_D.output_names())
         output_names_gb.extend(grey_box_object_E.output_names())
         output_names_gb.extend(grey_box_object_ME.output_names())
@@ -540,6 +547,22 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         A_opt = np.trace(np.linalg.inv(testing_matrix))
 
         self.assertTrue(np.isclose(grey_box_A_opt, A_opt))
+
+    def test_outputs_pseudo_A_opt(self):
+        """Check pseudo-A-opt output equals trace of the FIM itself."""
+        objective_option = "pseudo_trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        grey_box_pseudo_A_opt = grey_box_object.evaluate_outputs()
+
+        pseudo_A_opt = np.trace(testing_matrix)
+
+        self.assertTrue(np.isclose(grey_box_pseudo_A_opt, pseudo_A_opt))
 
     def test_outputs_D_opt(self):
         """Check D-opt output equals log-determinant of FIM."""
@@ -617,6 +640,29 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
+    def test_jacobian_pseudo_A_opt(self):
+        """Pseudo-A-opt is linear, so its Jacobian should be the identity."""
+        objective_option = "pseudo_trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Jacobian values
+        utri_vals_jac = grey_box_object.evaluate_jacobian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        jac = np.zeros_like(grey_box_object._get_FIM())
+        jac[np.triu_indices_from(jac)] = utri_vals_jac
+        jac += jac.transpose()
+        jac = jac / 2
+
+        # For pseudo-trace, the objective is trace(FIM), so the full Jacobian
+        # is exactly the identity matrix.
+        self.assertTrue(np.allclose(jac, np.eye(jac.shape[0])))
+
     def test_jacobian_D_opt(self):
         """Compare D-opt Jacobian against finite-difference derivatives."""
         objective_option = "determinant"
@@ -692,6 +738,26 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
+    def test_hessian_pseudo_A_opt(self):
+        """Pseudo-A-opt is linear, so its Hessian should be identically zero."""
+        objective_option = "pseudo_trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Hessian values
+        hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
+
+        # Recover the Hessian in Matrix Form
+        hess_gb = hess_vals_from_gb
+        hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
+
+        # Pseudo-trace is linear in the FIM, so the second derivative is zero.
+        self.assertTrue(np.allclose(hess_gb, np.zeros_like(hess_gb)))
+
     # Testing Hessian Computation
     def test_hessian_A_opt(self):
         """Compare A-opt Hessian against finite-difference second derivatives."""
@@ -715,6 +781,29 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
+
+    def test_pseudo_A_opt_greybox_build(self):
+        """Validate pseudo-A-opt grey-box wiring and initialized values."""
+        objective_option = "pseudo_trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Build the greybox objective block on the DoE object
+        doe_obj.create_grey_box_objective_function()
+
+        # Pseudo-trace uses the trace of the FIM itself, so the initial value
+        # should match the current symmetric FIM rather than its inverse.
+        pseudo_A_opt_val = np.trace(testing_matrix + np.eye(4))
+
+        self.assertTrue(hasattr(doe_obj.model.obj_cons, "egb_fim_block"))
+        self.assertIn("pseudo-A-opt", grey_box_object.output_names())
+        self.assertIsInstance(doe_obj.model.objective, pyo.Objective)
+        self.assertEqual(doe_obj.model.objective.sense, pyo.maximize)
+        self.assertAlmostEqual(
+            doe_obj.model.obj_cons.egb_fim_block.outputs["pseudo-A-opt"].value,
+            pseudo_A_opt_val,
+        )
 
     def test_hessian_D_opt(self):
         """Compare D-opt Hessian against finite-difference second derivatives."""

@@ -7,7 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available
+from pyomo.common.dependencies import numpy as np, numpy_available
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
@@ -110,10 +110,7 @@ def _make_trace_doe_object():
     )
 
 
-@unittest.skipIf(
-    not (numpy_available and scipy_available),
-    "Pyomo.DoE needs scipy and numpy to run tests",
-)
+@unittest.skipIf(not numpy_available, "Pyomo.DoE needs numpy to run tests")
 class TestCholeskyInitialization(unittest.TestCase):
     """Regression tests for DoE initialization and Cholesky sync."""
 

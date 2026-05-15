@@ -573,7 +573,12 @@ class DesignOfExperiments:
                         model.L_inv[c, d].value = 0.0
 
         if hasattr(model, "fim_inv"):
-            fim_inv_vals = np.linalg.inv(fim_pd)
+            # Use the pseudo-inverse here rather than the strict inverse.
+            # The jittered matrix should be positive definite, but ``pinv``
+            # is safer for borderline ill-conditioned cases and matches the
+            # defensive approach already used when initializing ``fim_inv``
+            # from user-provided starting values.
+            fim_inv_vals = np.linalg.pinv(fim_pd)
             for i, c in enumerate(model.parameter_names):
                 for j, d in enumerate(model.parameter_names):
                     if self.only_compute_fim_lower and i < j:
@@ -582,8 +587,7 @@ class DesignOfExperiments:
                         model.fim_inv[c, d].value = fim_inv_vals[i, j]
 
         if hasattr(model, "cov_trace"):
-            fim_inv_np = np.linalg.inv(fim_pd)
-            model.cov_trace.value = np.trace(fim_inv_np)
+            model.cov_trace.value = np.trace(fim_inv_vals)
 
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
