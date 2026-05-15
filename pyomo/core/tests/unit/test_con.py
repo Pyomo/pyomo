@@ -190,15 +190,28 @@ class TestConstraintCreation(unittest.TestCase):
     def test_tuple_construct_unbounded_inequality(self):
         model = self.create_model()
 
+        # Note: inequality with only a single non-None returns the non-None value
+
         def rule(model):
             return (None, model.y, None)
 
-        model.c = Constraint(rule=rule)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Constraint 'c' does not have a proper value. Found ScalarVar 'y'",
+        ):
+            model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c.equality, False)
-        self.assertEqual(model.c.lower, None)
-        self.assertIs(model.c.body, model.y)
-        self.assertEqual(model.c.upper, None)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Constraint 'c' does not have a proper value. Found ScalarVar 'y'",
+        ):
+            model.c = (model.y, None, None)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Constraint 'c' does not have a proper value. Found ScalarVar 'y'",
+        ):
+            model.c = (None, None, model.y)
 
         model = self.create_model()
 
@@ -253,6 +266,44 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertEqual(model.c.lower, 0)
         self.assertIs(model.c.body, model.y)
         self.assertEqual(model.c.upper, 1)
+
+        def rule(model):
+            return (float(0), model.y, float(0))
+
+        model.d = Constraint(rule=rule)
+
+        self.assertEqual(model.d.equality, True)
+        self.assertEqual(model.d.lower, 0)
+        self.assertIs(model.d.body, model.y)
+        self.assertEqual(model.d.upper, 0)
+
+        model.p = Param(mutable=True)
+        e = model.p * 2 + 1
+
+        def rule(model):
+            return (e, model.y, e)
+
+        model.e = Constraint(rule=rule)
+
+        self.assertEqual(model.e.equality, True)
+        self.assertIs(model.e.lower, e)
+        self.assertIs(model.e.body, model.y)
+        self.assertIs(model.e.upper, e)
+
+        #
+        # Note: because we do not test for symbolic equivalence, the
+        # following will be seen as a ranged inequality and not an
+        # equality:
+        #
+        def rule(model):
+            return (e, model.y, model.p * 2 + 1)
+
+        model.f = Constraint(rule=rule)
+
+        self.assertEqual(model.f.equality, False)
+        self.assertIs(model.f.lower, e)
+        self.assertIs(model.f.body, model.y)
+        self.assertIsNot(model.f.upper, e)
 
     def test_tuple_construct_invalid_2sided_inequality(self):
         model = self.create_model(abstract=True)
@@ -1374,16 +1425,24 @@ class Test2DArrayCon(unittest.TestCase):
 class MiscConTests(unittest.TestCase):
     def test_infeasible(self):
         m = ConcreteModel()
+        m.x = Var()
         m.c = Constraint(expr=Constraint.Infeasible)
         self.assertIn(None, m.c._data)
         self.assertEqual(m.c.lb, None)
         self.assertEqual(m.c.body, 1)
         self.assertEqual(m.c.ub, 0)
 
-        m.c = (0, 1, 2)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Invalid constraint expression. The constraint expression resolved "
+            r"to a trivial Boolean \(True\) instead of a Pyomo object.",
+        ):
+            m.c = (0, 1, 2)
+
+        m.c = (0, m.x, 2)
         self.assertIn(None, m.c._data)
         self.assertEqual(m.c.lb, 0)
-        self.assertEqual(m.c.body, 1)
+        self.assertEqual(m.c.body, m.x)
         self.assertEqual(m.c.ub, 2)
 
         m.c = Constraint.Infeasible
@@ -1394,16 +1453,24 @@ class MiscConTests(unittest.TestCase):
 
     def test_feasible(self):
         m = ConcreteModel()
+        m.x = Var()
         m.c = Constraint(expr=Constraint.Feasible)
         self.assertIn(None, m.c._data)
         self.assertEqual(m.c.lb, None)
         self.assertEqual(m.c.body, 0)
         self.assertEqual(m.c.ub, 0)
 
-        m.c = (0, 1, 2)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Invalid constraint expression. The constraint expression resolved "
+            r"to a trivial Boolean \(True\) instead of a Pyomo object.",
+        ):
+            m.c = (0, 1, 2)
+
+        m.c = (0, m.x, 2)
         self.assertIn(None, m.c._data)
         self.assertEqual(m.c.lb, 0)
-        self.assertEqual(m.c.body, 1)
+        self.assertEqual(m.c.body, m.x)
         self.assertEqual(m.c.ub, 2)
 
         m.c = Constraint.Feasible
@@ -1806,7 +1873,11 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.L = Param(initialize=0)
         model.U = Param(initialize=1)
-        model.o = Constraint(rule=rule1)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"The constraint expression resolved to a trivial Boolean \(False\)",
+        ):
+            model.o = Constraint(rule=rule1)
 
         #
         def rule1(model):
@@ -2019,9 +2090,8 @@ class MiscConTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Constraint 'c' does not have a proper value. "
-            "Equality Constraints expressed as 2-tuples cannot "
-            "contain None",
+            "Cannot create EqualityExpression from argument types "
+            "'ScalarVar' and 'NoneType'",
         ):
             m.c = (m.x, None)
 
