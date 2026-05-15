@@ -5316,9 +5316,10 @@ class CustomExactBoundsUncertaintySet(BoxSet):
 
 
 @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
-class TestPyROSCache(unittest.TestCase):
+class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
     """
-    Test PyROS cache creation and clearing.
+    Test behavior of PyROS solver with respect to caching of
+    an uncertainty set's exact coordinate value bounds.
     """
 
     def test_pyros_cache_creation(self):
