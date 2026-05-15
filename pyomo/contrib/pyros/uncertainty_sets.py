@@ -847,7 +847,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Compute an exact lower or upper bound for a specified
         coordinate of the points contained in `self`, by solving
         a bounding model.
-        
+
         For efficiency, the result is cached if the bounding model
         is solved successfully. Further, if the cache already contains
         an entry corresponding to the coordinate bound of interest,
