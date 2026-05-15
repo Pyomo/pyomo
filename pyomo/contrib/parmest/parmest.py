@@ -1384,19 +1384,30 @@ class Estimator:
 
         Returns
         -------
-        obj_value : float
+        obj_value : float or None
             Objective value of the solved model.
-            If fix_theta is True, this is the value of the objective at the fixed theta values.
-            If fix_theta is False, this is the optimal value of the objective.
+
+            If fix_theta is False, this is the optimal objective value.
+
+            If fix_theta is True, this is the objective value at the fixed
+            theta values. If the fixed-theta problem does not return a
+            solution, obj_value is None.
         theta_estimates : dict
-            Dictionary of estimated theta values. If fix_theta is True, this will be the same as
-            the input theta_vals (or default values if theta_vals is None). If fix_theta is False,
-            this will be the estimated parameter values that optimize the objective.
+            Dictionary of theta values keyed by theta name.
+
+            If fix_theta is False, this contains the estimated parameter values
+            that optimize the objective.
+
+            If fix_theta is True, this contains the fixed theta values used in
+            the model.
         var_values : pd.DataFrame, optional
-            DataFrame of variable values for the variables specified in return_values.
-            Only returned if return_values is not None and contains valid variable names.
-            The DataFrame will have one row per scenario block (experiment) and columns
+            DataFrame of variable values for the variables specified in
+            return_values. Only returned when fix_theta is False and
+            return_values is not None and contains at least one valid variable
+            name. The DataFrame has one row per scenario block and columns
             corresponding to the variable names in return_values.
+        termination_condition : pyomo.opt.TerminationCondition, optional
+            Solver termination condition. Only returned when fix_theta is True.
 
         """
         # Create extended form model with scenario blocks
