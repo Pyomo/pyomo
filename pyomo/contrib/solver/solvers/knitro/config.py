@@ -34,7 +34,7 @@ class KnitroConfig(SolverConfig):
                 domain=Bool,
                 default=False,
                 doc=(
-                    "If True, KNITRO solver will use the the current values "
+                    "If True, KNITRO solver will use the current values "
                     "of variables as starting points for the optimization."
                 ),
             ),
