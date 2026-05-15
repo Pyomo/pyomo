@@ -28,8 +28,8 @@ class KnitroConfig(SolverConfig):
             visibility=visibility,
         )
 
-        self.use_start: bool = self.declare(
-            "use_start",
+        self.knitro_warm_start: bool = self.declare(
+            "knitro_warm_start",
             ConfigValue(
                 domain=Bool,
                 default=False,
