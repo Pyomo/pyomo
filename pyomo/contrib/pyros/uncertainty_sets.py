@@ -4088,7 +4088,7 @@ class CartesianProductSet(UncertaintySet):
                 stack.enter_context(uset._cache_manager())
             yield self
             # This will re-enter when this context manager is exited,
-            # which will exit the stack context, trriggering all the
+            # which will exit the stack context, triggering all the
             # context managers entered above to exit.
 
     def _iterate_over_all_sets(self):
