@@ -2015,7 +2015,8 @@ class BudgetSet(UncertaintySet):
         Each row corresponds to a single budget constraint,
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
-        All entries should be of value 0 or 1.
+        All entries should be of value 0 or 1,
+        and no row or column should be all zeros.
     rhs_vec : (L,) array_like
         Budget limits (upper bounds) with respect to
         the origin of the set.
@@ -2129,7 +2130,8 @@ class BudgetSet(UncertaintySet):
         constraints.  Each row corresponds to a single budget
         constraint and defines which uncertain parameters
         participate in that row's constraint.
-        All entries should be of value 0 or 1.
+        All entries should be of value 0 or 1,
+        and no row or column should be all zeros.
         """
         return self._budget_membership_mat
 
