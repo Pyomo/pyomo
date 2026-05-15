@@ -17,6 +17,7 @@ literature.
 """
 
 import abc
+import contextlib
 import math
 import functools
 import itertools
@@ -460,15 +461,6 @@ def validate_array(
         )
 
 
-class ContextDict(dict):
-    def __enter__(self):
-        assert not self, "Nonempty cache for uncertainty set's exact parameter bounds."
-        return self
-
-    def __exit__(self, et, e, tb):
-        self.clear()
-
-
 class Geometry(Enum):
     """
     Geometry classifications for PyROS uncertainty set objects.
@@ -547,8 +539,16 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         try:
             return self.__cache
         except AttributeError:
-            self.__cache = ContextDict()
+            self.__cache = {}
             return self.__cache
+
+    @contextlib.contextmanager
+    def _cache_manager(self):
+        assert (
+            not self._cache
+        ), f"Nonempty cache for {self.__class__.__name__} exact parameter bounds."
+        yield self
+        self._cache.clear()
 
     def _create_bounding_model(self):
         """
@@ -4077,6 +4077,19 @@ class CartesianProductSet(UncertaintySet):
             else:
                 return []
         return parameter_bounds
+
+    @contextlib.contextmanager
+    def _cache_manager(self):
+        with contextlib.ExitStack() as stack:
+            # Verify this (CartesianProductSet's) cache is empty
+            stack.enter_context(super()._cache_manager())
+            for uset in self._all_sets:
+                # Verify all component caches are empty
+                stack.enter_context(uset._cache_manager())
+            yield self
+            # This will re-enter when this context manager is exited,
+            # which will exit the stack context, trriggering all the
+            # context managers entered above to exit.
 
     def _iterate_over_all_sets(self):
         """

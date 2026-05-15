@@ -5446,7 +5446,10 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         global_subsolver = SolverFactory("ipopt")
 
         # Solve with PyROS
-        exc_str = r"Nonempty cache for uncertainty set's exact parameter bounds."
+        exc_str = (
+            r"Nonempty cache for CustomExactBoundsUncertaintySet "
+            r"exact parameter bounds."
+        )
         with self.assertRaisesRegex(AssertionError, exc_str):
             pyros_solver.solve(
                 model=m,
