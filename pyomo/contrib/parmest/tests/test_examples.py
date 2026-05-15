@@ -8,7 +8,6 @@
 # ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-import math
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.graphics import matplotlib_available, seaborn_available
 from pyomo.contrib.pynumero.asl import AmplInterface
