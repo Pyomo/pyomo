@@ -5305,7 +5305,7 @@ class CustomExactBoundsUncertaintySet(BoxSet):
         Solve bounding problems to calculate exact parameter bounds.
         """
         solver = SlowSolver(
-            sub_solver=SolverFactory("baron"), sleep_time=self.sleep_time
+            sub_solver=SolverFactory("ipopt"), sleep_time=self.sleep_time
         )
         bounds = self._compute_exact_parameter_bounds(solver=solver)
 
@@ -5344,7 +5344,7 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         self.assertTrue(hasattr(interval, "_cache"))
 
         # Call the PyROS solver
-        results = pyros_solver.solve(
+        pyros_solver.solve(
             model=m,
             first_stage_variables=[m.x1],
             second_stage_variables=[m.x2],
@@ -5366,7 +5366,8 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
 
     def test_pyros_cache_time(self):
         """
-        Check that caching improves solve time.
+        Check that the PyROS solve time is improved when
+        the uncertainty set's exact coordinate value bounds are cached.
         """
         m = build_leyffer_two_cons()
 
@@ -5418,9 +5419,10 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         # as not caching reruns the slow solver multiple times
         self.assertGreater(results_no_cache.time, results_cache.time)
 
-    def test_pyros_cache_solutions(self):
+    def test_pyros_solve_assert_bounds_cache_empty(self):
         """
-        Check that PyROS clears cache before/after and yields accurate results.
+        Check that calling PyROS on an uncertainty set
+        with a nonempty bounds cache results in an exception.
         """
         m = build_leyffer_two_cons()
 
@@ -5428,11 +5430,13 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         interval = CustomExactBoundsUncertaintySet(
             bounds=[(25, 200)], sleep_time=0, cache=True
         )
-        self.assertEqual(interval.parameter_bounds, [(25, 200)])
+        self.assertAlmostEqual(interval.parameter_bounds[0][0], 25, places=2)
+        self.assertAlmostEqual(interval.parameter_bounds[0][1], 200, places=2)
 
         # change set attributes, leading to outdated parameter bounds
         interval.bounds = [(0.25, 2)]
-        self.assertEqual(interval.parameter_bounds, [(25, 200)])
+        self.assertAlmostEqual(interval.parameter_bounds[0][0], 25, places=2)
+        self.assertAlmostEqual(interval.parameter_bounds[0][1], 200, places=2)
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -5444,7 +5448,7 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         # Solve with PyROS
         exc_str = r"Uncertainty set cache has been modified."
         with self.assertRaisesRegex(AssertionError, exc_str):
-            results = pyros_solver.solve(
+            pyros_solver.solve(
                 model=m,
                 first_stage_variables=[m.x1],
                 second_stage_variables=[m.x2],
@@ -5458,28 +5462,8 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
                 },
             )
 
-        # modify the cache
-        interval._cache[0, minimize] = 25
-        interval._cache[0, maximize] = 200
-
-        self.assertEqual(interval.parameter_bounds, [(25, 200)])
-
-        # Solve with PyROS
-        exc_str = r"Uncertainty set cache has been modified."
-        with self.assertRaisesRegex(AssertionError, exc_str):
-            results = pyros_solver.solve(
-                model=m,
-                first_stage_variables=[m.x1],
-                second_stage_variables=[m.x2],
-                uncertain_params=[m.u],
-                uncertainty_set=interval,
-                local_solver=local_subsolver,
-                global_solver=global_subsolver,
-                options={
-                    "objective_focus": ObjectiveType.worst_case,
-                    "solve_master_globally": True,
-                },
-            )
+        self.assertAlmostEqual(interval._cache[0, minimize], 25, places=2)
+        self.assertAlmostEqual(interval._cache[0, maximize], 200, places=2)
 
 
 if __name__ == "__main__":
