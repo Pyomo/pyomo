@@ -5289,7 +5289,9 @@ class SlowSolver:
 
 class CustomExactBoundsUncertaintySet(BoxSet):
     """
-    Custom uncertainty set that always solves optimization bounding problems.
+    A box set, modified such that the `parameter_bounds`
+    attribute calculation involves globally solving the coordinate
+    value bounding problems.
     """
 
     def __init__(self, bounds, sleep_time, cache):
