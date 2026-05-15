@@ -1513,7 +1513,7 @@ class TestRegularizationCore(unittest.TestCase):
         )
 
         sse_expected = 9.0
-        l2_expected = 27.0
+        l2_expected = 54.0
         expected = sse_expected + weight * l2_expected
 
         self.assertAlmostEqual(pyo.value(expr), expected)
@@ -1539,7 +1539,7 @@ class TestRegularizationCore(unittest.TestCase):
         )
 
         obj_val = self._obj_at_theta(pest, 0.0, 1.0)
-        self.assertAlmostEqual(obj_val, 1.0)
+        self.assertAlmostEqual(obj_val, 2.0)
 
     def test_regularization_requires_explicit_option_when_prior_supplied(self):
         # Guardrail: passing prior/FIM arguments without selecting a
@@ -1615,7 +1615,7 @@ class TestRegularizationCore(unittest.TestCase):
 
         obj_base_theta1 = self._obj_at_theta(pest_base, theta0=0.0, theta1=1.0)
         obj_l2_theta1 = self._obj_at_theta(pest_l2, theta0=0.0, theta1=1.0)
-        expected_penalty = 0.5 * 4.0 * (1.0**2)
+        expected_penalty = 4.0 * (1.0**2)
         self.assertAlmostEqual(obj_l2_theta1 - obj_base_theta1, expected_penalty)
 
     def test_negative_regularization_weight_raises(self):

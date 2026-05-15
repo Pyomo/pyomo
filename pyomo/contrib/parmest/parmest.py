@@ -433,8 +433,6 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
 
     # Compute the quadratic form: delta^T * FIM * delta
     l2_term = delta_params.T @ sub_FIM.values @ delta_params
-    l2_term *= 0.5  # apply the 0.5 convention for quadratic regularization
-
     return l2_term
 
 
@@ -559,7 +557,7 @@ class RegularizationType(Enum):
 
 
 # Compute the Jacobian matrix of measured variables with respect to the parameters
-def _compute_jacobian(experiment, theta_vals, step, solver, tee):
+def _compute_jacobian(experiment, theta_vals, step, solver, tee, solver_options):
     """
     Computes the Jacobian matrix of the measured variables with respect to the
     parameters using the central finite difference scheme
@@ -578,6 +576,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
         Solver name specified by the user, e.g., 'ipopt'
     tee : bool
         Boolean solver option to be passed for verbose output
+    solver_options: dict
+        Dictionary of solver options to be passed for the finite difference calculations
 
     Returns
     -------
@@ -593,6 +593,11 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
 
     # re-solve the model with the estimated parameters
     solver = pyo.SolverFactory(solver)
+
+    if solver_options is not None:
+        for key in solver_options:
+            solver.options[key] = solver_options[key]
+
     results = solver.solve(model, tee=tee)
     assert_optimal_termination(results)
 
@@ -659,6 +664,7 @@ def compute_covariance_matrix(
     estimated_var=None,
     prior_FIM=None,
     regularization_weight=1.0,
+    solver_options=None,
 ):
     """
     Computes the covariance matrix of the estimated parameters using
@@ -694,6 +700,8 @@ def compute_covariance_matrix(
         row and column labels.
     regularization_weight: float, optional
         Weighting factor for the regularization term. Default is 1.0.
+    solver_options: dict, optional
+        Dictionary of solver options to be passed for the finite difference calculations
     Returns
     -------
     cov : pd.DataFrame
@@ -713,6 +721,7 @@ def compute_covariance_matrix(
                     solver=solver,
                     tee=tee,
                     estimated_var=estimated_var,
+                    solver_options=solver_options,
                 )
             )
     elif method == CovarianceMethod.automatic_differentiation_kaug.value:
@@ -726,6 +735,7 @@ def compute_covariance_matrix(
                     solver=solver,
                     tee=tee,
                     estimated_var=estimated_var,
+                    solver_options=solver_options,
                 )
             )
 
@@ -747,6 +757,12 @@ def compute_covariance_matrix(
             raise ValueError(
                 "The shape of the prior FIM must be the same as the shape of the FIM."
             )
+
+        if obj_function == ObjectiveType.SSE_weighted.value:
+            expanded_prior_FIM *= (
+                0.5  # apply the 0.5 convention for weighted SSE regularization
+            )
+
         FIM += expanded_prior_FIM * regularization_weight
 
     # calculate the covariance matrix
@@ -764,7 +780,7 @@ def compute_covariance_matrix(
 # compute the Fisher information matrix of the estimated parameters using
 # 'finite_difference'
 def _finite_difference_FIM(
-    experiment, theta_vals, step, solver, tee, estimated_var=None
+    experiment, theta_vals, step, solver, tee, estimated_var=None, solver_options=None
 ):
     """
     Computes the Fisher information matrix from 'finite_difference' Jacobian matrix
@@ -788,6 +804,8 @@ def _finite_difference_FIM(
         Value of the estimated variance of the measurement error
         in cases where the user does not supply the
         measurement error standard deviation
+    solver_options: dict, optional
+        Dictionary of solver options to be passed for the finite difference calculations
 
     Returns
     -------
@@ -795,7 +813,7 @@ def _finite_difference_FIM(
         Fisher information matrix of the estimated parameters
     """
     # compute the Jacobian matrix using finite difference
-    J = _compute_jacobian(experiment, theta_vals, step, solver, tee)
+    J = _compute_jacobian(experiment, theta_vals, step, solver, tee, solver_options)
 
     # computing the condition number of the Jacobian matrix
     cond_number_jac = np.linalg.cond(J)
@@ -840,7 +858,15 @@ def _finite_difference_FIM(
 
 # compute the Fisher information matrix of the estimated parameters using
 # 'automatic_differentiation_kaug'
-def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=None):
+def _kaug_FIM(
+    experiment,
+    obj_function,
+    theta_vals,
+    solver,
+    tee,
+    estimated_var=None,
+    solver_options=None,
+):
     """
     Computes the FIM using 'automatic_differentiation_kaug', a sensitivity-based
     approach that uses the annotated Pyomo model optimality condition and
@@ -865,6 +891,8 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
         Value of the estimated variance of the measurement error
         in cases where the user does not supply the
         measurement error standard deviation
+    solver_options: dict, optional
+        Dictionary of solver options to be passed for the finite difference calculations
 
     Returns
     -------
@@ -886,6 +914,9 @@ def _kaug_FIM(experiment, obj_function, theta_vals, solver, tee, estimated_var=N
         param.fix(theta_vals[param.name])
 
     solver = pyo.SolverFactory(solver)
+    if solver_options is not None:
+        for key in solver_options:
+            solver.options[key] = solver_options[key]
     results = solver.solve(model, tee=tee)
     assert_optimal_termination(results)
 
@@ -1011,7 +1042,6 @@ class Estimator:
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute).
         Default is None.
-        Added keyword arguments for objective regularization:
     regularization: string, optional
         Built-in regularization type ("L2"). If no regularization is
         specified, no regularization term is added to the objective.
@@ -1230,63 +1260,6 @@ class Estimator:
                 model_theta_list.append(c.name)
 
         return model_theta_list
-
-    # Reviewers: Put in architecture to calculate a regularization weight based on the current parameter values and the prior FIM.
-    # However, if the prior_FIM is properly defined, this should not be necessary. Are there any use cases for this where we should give
-    # the user a scaling option, or remove and trust the prior_FIM to be properly scaled?
-
-    # def _calc_regularization_weight(self, solver='ipopt'):
-    #     """
-    #     Calculate regularization weight as the ratio of the objective value to the L2 term value at the current parameter values to balance their magnitudes.
-    #     """
-    #     # Solve the model at the current parameter values to get the objective function value
-    #     sse_vals = []
-    #     for experiment in self.exp_list:
-    #         model = _get_labeled_model(experiment)
-
-    #         # fix the value of the unknown parameters to the estimated values
-    #         for param in model.unknown_parameters:
-    #             param.fix(pyo.value(param))
-
-    #         # re-solve the model with the estimated parameters
-    #         results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
-    #         assert_optimal_termination(results)
-
-    #         # choose and evaluate the sum of squared errors expression
-    #         if self.obj_function == ObjectiveType.SSE:
-    #             sse_expr = SSE(model)
-    #         elif self.obj_function == ObjectiveType.SSE_weighted:
-    #             sse_expr = SSE_weighted(model)
-    #         else:
-    #             raise ValueError(
-    #                 f"Invalid objective function for covariance calculation. "
-    #                 f"The covariance matrix can only be calculated using the built-in "
-    #                 f"objective functions: {[e.value for e in ObjectiveType]}. Supply "
-    #                 f"the Estimator object one of these built-in objectives and "
-    #                 f"re-run the code."
-    #             )
-    #         l2_expr = _calculate_L2_penalty(model, self.prior_FIM, self.theta_ref)
-
-    #         # evaluate the numerical SSE and store it
-    #         sse_val = pyo.value(sse_expr)
-    #         sse_vals.append(sse_val)
-
-    #     sse = sum(sse_vals)
-
-    #     if l2_expr is None:
-    #         l2_value = 0
-    #     else:
-    #         l2_value = pyo.value(l2_expr)
-
-    #     if l2_value == 0:
-    #         logger.warning(
-    #             "L2 penalty is zero at the current parameter values. Regularization weight set to 1.0 by default."
-    #         )
-    #         return 1.0
-
-    #     reg_weight = float(pyo.value(sse) / (pyo.value(l2_value)))
-    #     logger.info(f"Calculated regularization weight: {reg_weight}")
-    #     return reg_weight
 
     def _create_parmest_model(self, experiment_number):
         """
@@ -1710,6 +1683,7 @@ class Estimator:
                             step=step,
                             tee=self.tee,
                             estimated_var=measurement_var,
+                            solver_options=self.solver_options,
                         )
                 elif all(item is not None for item in meas_error):
                     if cov_method == CovarianceMethod.reduced_hessian:
@@ -1738,6 +1712,7 @@ class Estimator:
                             tee=self.tee,
                             prior_FIM=cov_prior_FIM,
                             regularization_weight=cov_regularization_weight,
+                            solver_options=self.solver_options,
                         )
 
                 else:
@@ -1782,6 +1757,7 @@ class Estimator:
                             step=step,
                             solver=solver,
                             tee=self.tee,
+                            solver_options=self.solver_options,
                         )
                 else:
                     raise ValueError(
