@@ -199,7 +199,8 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
     prior_FIM : pd.DataFrame
         Prior Fisher Information Matrix from previous experimental design
     theta_ref: pd.Series, optional
-        Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
+        Reference parameter values used in regularization.
+        If None, defaults to the current parameter values in the model.
     Returns
     -------
     expr : Pyomo expression
@@ -222,12 +223,13 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
     if len(common_params) == 0:
 
         logger.warning(
-            "Warning: No matching parameters found between Model and Prior FIM. Returning standard objective."
+            "Warning: No matching parameters found between Model and Prior FIM. "
+            "Returning standard objective."
         )
 
         return 0.0  # No regularization if no common parameters
 
-    elif len(common_params) < len(set(prior_FIM.columns).union(set(prior_FIM.index))):
+    elif len(common_params) < len(set(prior_FIM.columns)):
 
         logger.warning(
             "Warning: Only a subset of parameters in the Prior FIM match the Model parameters. "
@@ -236,13 +238,15 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
     else:
 
         logger.info(
-            "All parameters in the Prior FIM match the Model parameters. Regularization will be applied to all parameters."
+            "All parameters in the Prior FIM match the Model parameters. "
+            "Regularization will be applied to all parameters."
         )
 
     # Slice the dataframes to ONLY the common subset
     sub_FIM = prior_FIM.loc[common_params, common_params]
 
-    # For the reference theta, we also subset to the common parameters. If theta_ref is None, we create a zero vector of the right size.
+    # For the reference theta, we also subset to the common parameters.
+    # If theta_ref is None, we create a zero vector of the right size.
     if theta_ref is not None:
         if not isinstance(theta_ref, pd.Series):
             theta_ref = pd.Series(theta_ref)
@@ -257,7 +261,8 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
     else:
         sub_theta = pd.Series(0, index=common_params)
 
-        # Fill the sub_theta with the initialized model parameter values (or zeros if not initialized)
+        # Fill the sub_theta with the initialized model parameter values
+        # (or zeros if not initialized)
         for param in common_params:
             sub_theta.loc[param] = pyo.value(param_map[param])
         logger.info(
@@ -265,19 +270,6 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
         )
 
     # Construct the Quadratic Form (The L2 term)
-    # @Reviewers: This can be calculated in a loop or in a vector form.
-    # Are there any issues with the vectorized form that we should be aware of for Pyomo expressions?
-    # The loop form is more transparent but the vectorized form is more efficient and concise.
-
-    #   l2_expr = 0.0
-    #     for i in common_params:
-    #         di = name_to_var[i] - float(theta0.loc[i])
-    #         for j in common_params:
-    #             qij = float(sub_FIM.loc[i, j])
-    #             if qij != 0.0:
-    #                 dj = name_to_var[j] - float(theta0.loc[j])
-    #                 l2_expr += qij * di * dj
-
     # Create the (theta - theta_ref) vector, ensuring alignment by parameter name
     delta_params = np.array(
         [param_map[p] - sub_theta.loc[p] for p in common_params]
@@ -302,7 +294,8 @@ def L2_regularized_objective(
     prior_FIM : pd.DataFrame
         Prior Fisher Information Matrix from previous experimental design
     theta_ref: pd.Series, optional
-        Reference parameter values used in regularization. If None, defaults to the current parameter values in the model.
+        Reference parameter values used in regularization.
+        If None, defaults to the current parameter values in the model.
     regularization_weight: float, optional
         Weighting factor for the regularization term. Default is 1.0.
     obj_function: callable, optional
@@ -1052,7 +1045,6 @@ class Estimator:
         prior_FIM=None,
         theta_ref=None,
         regularization_weight=None,
-        regularization_epsilon=None,
         tee=False,
         diagnostic_mode=False,
         solver_options=None,
@@ -1111,16 +1103,14 @@ class Estimator:
                 prior_FIM is not None
                 or theta_ref is not None
                 or regularization_weight is not None
-                or regularization_epsilon is not None
             ):
                 raise ValueError(
                     "regularization must be set when supplying prior_FIM, theta_ref, "
-                    "regularization_weight, or regularization_epsilon."
+                    "regularization_weight."
                 )
             self.prior_FIM = None
             self.theta_ref = None
             self.regularization_weight = None
-            self.regularization_epsilon = None
         elif self.regularization == RegularizationType.L2:
             if prior_FIM is None:
                 raise ValueError("prior_FIM must be provided when regularization='L2'.")
@@ -1136,7 +1126,6 @@ class Estimator:
             self.prior_FIM = prior_FIM
             self.theta_ref = theta_ref
             self.regularization_weight = regularization_weight
-            self.regularization_epsilon = None
 
         else:
             raise ValueError(
