@@ -28,7 +28,7 @@ def main():
 
     # Rooney & Biegler Reference Values
     # a = 19.14, b = 0.53
-    theta_ref = pd.Series({'asymptote': 20.0, 'rate_constant': 0.8})
+    theta_ref = pd.Series({'asymptote': 19.14, 'rate_constant': 0.53})
 
     # L2 setup: create a 'Stiff' Prior for 'asymptote' but leave 'rate_constant' flexible.
     prior_FIM_l2 = pd.DataFrame(
@@ -76,10 +76,10 @@ def main():
         )
 
     # Assert statements compare parameter estimation (theta) to an expected value
-    # relative_error = abs(theta['asymptote'] - 19.1426) / 19.1426
-    # assert relative_error < 0.01
-    # relative_error = abs(theta['rate_constant'] - 0.5311) / 0.5311
-    # assert relative_error < 0.01
+    relative_error = abs(theta_l2['asymptote'] - 19.1426) / 19.1426
+    assert relative_error < 0.01
+    relative_error = abs(theta_l2['rate_constant'] - 0.5311) / 0.5311
+    assert relative_error < 0.01
 
     return {"L2": (obj_l2, theta_l2, cov_l2)}
 

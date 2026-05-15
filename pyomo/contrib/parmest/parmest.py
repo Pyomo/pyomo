@@ -313,6 +313,13 @@ def L2_regularized_objective(
     # Combine with objective
     object_expr = obj_function(model)
 
+    if obj_function is SSE_weighted:
+        # current implementation of SSE weighted includes a
+        # 1/2 in front of the sum of squared errors to cancel out the 2 in the gradient,
+        # so we apply the same factor to the regularization term for consistency
+        # SSE does not have a 1/2 in front, so no additional factor is needed in that case
+        l2_term *= 0.5
+
     # Calculate the regularized objective
     l2reg_objective = object_expr + (regularization_weight * l2_term)
 
@@ -729,10 +736,13 @@ def compute_covariance_matrix(
                 "The shape of the prior FIM must be the same as the shape of the FIM."
             )
 
-        if obj_function == ObjectiveType.SSE_weighted.value:
-            expanded_prior_FIM *= (
-                0.5  # apply the 0.5 convention for weighted SSE regularization
-            )
+        if obj_function is SSE:
+            # The unweighted SSE objective is sum(r**2), without the 1/2
+            # used by SSE_weighted. Its objective Hessian is therefore
+            # 2 * J.T @ W @ J, so add the prior information with the same
+            # objective-Hessian scaling.
+
+            expanded_prior_FIM *= 2
 
         FIM += expanded_prior_FIM * regularization_weight
 
@@ -1041,13 +1051,13 @@ class Estimator:
         self,
         experiment_list,
         obj_function=None,
+        tee=False,
+        diagnostic_mode=False,
+        solver_options=None,
         regularization=None,
         prior_FIM=None,
         theta_ref=None,
         regularization_weight=None,
-        tee=False,
-        diagnostic_mode=False,
-        solver_options=None,
     ):
 
         # check that we have a (non-empty) list of experiments
@@ -1775,11 +1785,11 @@ class Estimator:
                             method,
                             obj_function=self.covariance_objective,
                             theta_vals=self.estimated_theta,
-                            prior_FIM=cov_prior_FIM,
-                            regularization_weight=cov_regularization_weight,
                             solver=solver,
                             step=step,
                             tee=self.tee,
+                            prior_FIM=cov_prior_FIM,
+                            regularization_weight=cov_regularization_weight,
                             estimated_var=measurement_var,
                             solver_options=self.solver_options,
                         )

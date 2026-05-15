@@ -1692,21 +1692,22 @@ class TestRegularizationCore(unittest.TestCase):
                 exp_list, obj_function="SSE", regularization="L2", prior_FIM=non_psd
             )
 
-    def test_compute_covariance_matrix_adds_prior_fim_weighted(self):
-        exp_list = [self.DummyExperiment(), self.DummyExperiment()]
+    def test_compute_covariance_matrix_adds_twice_weighted_prior_fim_for_sse(self):
+        exp_list = [self.DummyExperiment()]
+
+        data_fim = np.array([[5.0, 1.0], [1.0, 4.0]])
 
         def fake_finite_difference_FIM(*args, **kwargs):
-            return np.eye(2)
+            return data_fim
 
         prior_fim = pd.DataFrame(
-            [[1.0, 0.0], [0.0, 3.0]],
+            [[2.0, 0.5], [0.5, 3.0]],
             index=["theta0", "theta1"],
             columns=["theta0", "theta1"],
         )
         theta_vals = {"theta0": 0.0, "theta1": 0.0}
+        regularization_weight = 0.25
 
-        # Replace finite-difference FIM with identity so this test isolates
-        # only the prior_FIM + regularization_weight addition path.
         original_finite_difference_FIM = parmest._finite_difference_FIM
         try:
             parmest._finite_difference_FIM = fake_finite_difference_FIM
@@ -1719,16 +1720,97 @@ class TestRegularizationCore(unittest.TestCase):
                 solver="ipopt",
                 tee=False,
                 prior_FIM=prior_fim,
-                regularization_weight=2.0,
+                regularization_weight=regularization_weight,
             )
         finally:
-            # Always restore global function to avoid cross-test contamination.
             parmest._finite_difference_FIM = original_finite_difference_FIM
 
-        self.assertAlmostEqual(cov.loc["theta0", "theta0"], 0.25)
-        self.assertAlmostEqual(cov.loc["theta1", "theta1"], 0.125)
-        self.assertAlmostEqual(cov.loc["theta0", "theta1"], 0.0)
-        self.assertAlmostEqual(cov.loc["theta1", "theta0"], 0.0)
+        expected_fim = data_fim + 2.0 * regularization_weight * prior_fim.values
+        expected_cov = np.linalg.inv(expected_fim)
+
+        np.testing.assert_allclose(
+            cov.loc[["theta0", "theta1"], ["theta0", "theta1"]].values,
+            expected_cov,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
+    def test_compute_covariance_matrix_adds_once_weighted_prior_fim_for_sse_weighted(
+        self,
+    ):
+        exp_list = [self.DummyExperiment()]
+
+        data_fim = np.array([[5.0, 1.0], [1.0, 4.0]])
+
+        def fake_finite_difference_FIM(*args, **kwargs):
+            return data_fim
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.5], [0.5, 3.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_vals = {"theta0": 0.0, "theta1": 0.0}
+        regularization_weight = 0.25
+
+        original_finite_difference_FIM = parmest._finite_difference_FIM
+        try:
+            parmest._finite_difference_FIM = fake_finite_difference_FIM
+            cov = parmest.compute_covariance_matrix(
+                experiment_list=exp_list,
+                method=parmest.CovarianceMethod.finite_difference.value,
+                obj_function=parmest.SSE_weighted,
+                theta_vals=theta_vals,
+                step=1e-3,
+                solver="ipopt",
+                tee=False,
+                prior_FIM=prior_fim,
+                regularization_weight=regularization_weight,
+            )
+        finally:
+            parmest._finite_difference_FIM = original_finite_difference_FIM
+
+        expected_fim = data_fim + regularization_weight * prior_fim.values
+        expected_cov = np.linalg.inv(expected_fim)
+
+        np.testing.assert_allclose(
+            cov.loc[["theta0", "theta1"], ["theta0", "theta1"]].values,
+            expected_cov,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
+    def test_l2_weighted_objective_applies_half_regularization_factor(self):
+        m = self._make_var_labeled_model(y_obs=5.0)
+        m.theta0.set_value(4.0)
+        m.theta1.set_value(-1.0)
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.pred, 1.0)])
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 4.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = pd.Series({"theta0": 1.0, "theta1": 2.0})
+        weight = 3.0
+
+        expr = parmest.L2_regularized_objective(
+            m,
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=weight,
+            obj_function=parmest.SSE_weighted,
+        )
+
+        # pred = 4 + 2*(-1) = 2, residual = 5 - 2 = 3
+        # WSSE = 0.5 * 3**2 = 4.5
+        # raw L2 = [3, -3]^T diag(2, 4) [3, -3] = 54
+        # weighted objective should use 0.5 * raw L2
+        expected = 4.5 + weight * 0.5 * 54.0
+
+        self.assertAlmostEqual(pyo.value(expr), expected)
 
 
 class LinearThetaExperiment(Experiment):
