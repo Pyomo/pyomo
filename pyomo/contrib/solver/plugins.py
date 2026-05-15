@@ -14,7 +14,8 @@ from .solvers.gurobi.gurobi_direct import GurobiDirect
 from .solvers.gurobi.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
 from .solvers.highs import Highs
-from .solvers.scip.scip_direct import ScipDirect, ScipPersistent
+from .solvers.scip.scip_direct import ScipDirect
+from .solvers.scip.scip_persistent import ScipPersistent
 from .solvers.gams import GAMS
 from .solvers.knitro.direct import KnitroDirectSolver
 

@@ -25,7 +25,8 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect, ScipPersistent
+from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect
+from pyomo.contrib.solver.solvers.scip.scip_persistent import ScipPersistent
 from pyomo.contrib.solver.common.util import (
     NoDualsError,
     NoReducedCostsError,
