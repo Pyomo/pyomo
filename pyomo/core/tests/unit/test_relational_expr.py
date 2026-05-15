@@ -197,17 +197,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         # self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, False)
 
-        try:
-            inequality(None, None)
-            self.fail("expected invalid inequality error.")
-        except ValueError:
-            pass
-
-        try:
-            inequality(m.a, None)
-            self.fail("expected invalid inequality error.")
-        except ValueError:
-            pass
+        # Trivial cases that do not result in inequalities...
+        self.assertEqual(inequality(m.a, None, None), m.a)
+        self.assertEqual(inequality(None, m.a, None), m.a)
+        self.assertEqual(inequality(None, None, m.a), m.a)
+        self.assertEqual(inequality(None, None, None), None)
 
 
 class TestGenerate_RangedExpression(unittest.TestCase):
@@ -230,7 +224,7 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         #     <   c
         #    / \
         #   a   b
-        e = inequality(m.a, m.b, m.c, strict=True)
+        e = (m.a < m.b) < m.c
         self.assertIs(type(e), RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.a)
@@ -245,7 +239,7 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         #     <=  c
         #    / \
         #   a   b
-        e = inequality(m.a, m.b, m.c)
+        e = (m.a <= m.b) <= m.c
         self.assertIs(type(e), RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.a)
@@ -260,37 +254,29 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         #     >   c
         #    / \
         #   a   b
-        e = inequality(upper=m.c, body=m.b, lower=m.a, strict=True)
+        e = (m.a > m.b) > m.c
         self.assertIs(type(e), RangedExpression)
         self.assertEqual(e.nargs(), 3)
-        self.assertIs(e.arg(2), m.c)
-        self.assertIs(e.arg(1), m.b)
-        self.assertIs(e.arg(0), m.a)
-        # self.assertEqual(len(e._strict), 2)
-        self.assertEqual(e._strict[0], True)
-        self.assertEqual(e._strict[1], True)
+        self.assertEqual(e.args, (m.c, m.b, m.a))
+        self.assertEqual(e.strict, (True, True))
 
         #       >=
         #      / \
         #     >=  c
         #    / \
         #   a   b
-        e = inequality(upper=m.c, body=m.b, lower=m.a)
+        e = (m.a >= m.b) >= m.c
         self.assertIs(type(e), RangedExpression)
         self.assertEqual(e.nargs(), 3)
-        self.assertIs(e.arg(2), m.c)
-        self.assertIs(e.arg(1), m.b)
-        self.assertIs(e.arg(0), m.a)
-        # self.assertEqual(len(e._strict), 2)
-        self.assertEqual(e._strict[0], False)
-        self.assertEqual(e._strict[1], False)
+        self.assertEqual(e.args, (m.c, m.b, m.a))
+        self.assertEqual(e.strict, (False, False))
 
         #       <=
         #      / \
         #     <=  0
         #    / \
         #   0   a
-        e = inequality(0, m.a, 0)
+        e = (0 <= m.a) <= 0
         self.assertIs(type(e), RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(2), 0)
@@ -305,15 +291,126 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         #     <  0
         #    / \
         #   0   a
-        e = inequality(0, m.a, 0, True)
+        e = (0 < m.a) < 0
+        self.assertIs(e, False)
+
+    def test_inequality_fcn(self):
+        m = self.m
+
+        self.assertEqual(inequality(None, None, None), None)
+
+        self.assertEqual(inequality(0, None, None), 0)
+        self.assertEqual(inequality(None, 0, None), 0)
+        self.assertEqual(inequality(None, None, 0), 0)
+
+        self.assertEqual(inequality(m.a, None, None), m.a)
+        self.assertEqual(inequality(None, m.a, None), m.a)
+        self.assertEqual(inequality(None, None, m.a), m.a)
+
+        self.assertEqual(inequality(None, 0, 0), True)
+        self.assertEqual(inequality(0, None, 0), True)
+        self.assertEqual(inequality(0, 0, None), True)
+        self.assertEqual(inequality(None, 0, 1), True)
+        self.assertEqual(inequality(0, None, 1), True)
+        self.assertEqual(inequality(0, 1, None), True)
+        self.assertEqual(inequality(None, 1, 0), False)
+        self.assertEqual(inequality(1, None, 0), False)
+        self.assertEqual(inequality(1, 0, None), False)
+
+        self.assertEqual(inequality(0, 0, 0), True)
+        self.assertEqual(inequality(0, 1, 2), True)
+
+        e = inequality(m.a, 0, 1)
+        self.assertIs(type(e), InequalityExpression)
+        self.assertEqual(e.args, (m.a, 0))
+        self.assertEqual(e.strict, False)
+
+        e = inequality(0, m.a, 1)
         self.assertIs(type(e), RangedExpression)
-        self.assertEqual(e.nargs(), 3)
-        self.assertIs(e.arg(2), 0)
-        self.assertIs(e.arg(1), m.a)
-        self.assertIs(e.arg(0), 0)
-        # self.assertEqual(len(e._strict), 2)
-        self.assertEqual(e._strict[0], True)
-        self.assertEqual(e._strict[1], True)
+        self.assertEqual(e.args, (0, m.a, 1))
+        self.assertEqual(e.strict, (False, False))
+
+        e = inequality(0, 1, m.a)
+        self.assertIs(type(e), InequalityExpression)
+        self.assertEqual(e.args, (1, m.a))
+        self.assertEqual(e.strict, False)
+
+        e = inequality(m.a, 0, 0)
+        self.assertIs(type(e), InequalityExpression)
+        self.assertEqual(e.args, (m.a, 0))
+        self.assertEqual(e.strict, False)
+
+        e = inequality(0, m.a, 0)
+        self.assertIs(type(e), RangedExpression)
+        self.assertEqual(e.args, (0, m.a, 0))
+        self.assertEqual(e.strict, (False, False))
+
+        e = inequality(0, 0, m.a)
+        self.assertIs(type(e), InequalityExpression)
+        self.assertEqual(e.args, (0, m.a))
+        self.assertEqual(e.strict, False)
+
+        self.assertEqual(inequality(m.a, 1, 0), False)
+        self.assertEqual(inequality(1, m.a, 0), False)
+        self.assertEqual(inequality(1, 0, m.a), False)
+
+        e = inequality(m.a, m.b, m.c)
+        self.assertIs(type(e), RangedExpression)
+        self.assertEqual(e.args, (m.a, m.b, m.c))
+        self.assertEqual(e.strict, (False, False))
+
+    def test_strict_inequality_fcn(self):
+        m = self.m
+
+        self.assertEqual(inequality(None, None, None, True), None)
+
+        self.assertEqual(inequality(0, None, None, True), 0)
+        self.assertEqual(inequality(None, 0, None, True), 0)
+        self.assertEqual(inequality(None, None, 0, True), 0)
+
+        self.assertEqual(inequality(m.a, None, None, True), m.a)
+        self.assertEqual(inequality(None, m.a, None, True), m.a)
+        self.assertEqual(inequality(None, None, m.a, True), m.a)
+
+        self.assertEqual(inequality(None, 0, 0, True), False)
+        self.assertEqual(inequality(0, None, 0, True), False)
+        self.assertEqual(inequality(0, 0, None, True), False)
+        self.assertEqual(inequality(None, 0, 1, True), True)
+        self.assertEqual(inequality(0, None, 1, True), True)
+        self.assertEqual(inequality(0, 1, None, True), True)
+        self.assertEqual(inequality(None, 1, 0, True), False)
+        self.assertEqual(inequality(1, None, 0, True), False)
+        self.assertEqual(inequality(1, 0, None, True), False)
+
+        self.assertEqual(inequality(0, 0, 0, True), False)
+        self.assertEqual(inequality(0, 1, 2, True), True)
+
+        e = inequality(m.a, 0, 1, True)
+        self.assertIs(type(e), InequalityExpression)
+        self.assertEqual(e.args, (m.a, 0))
+        self.assertEqual(e.strict, True)
+
+        e = inequality(0, m.a, 1, True)
+        self.assertIs(type(e), RangedExpression)
+        self.assertEqual(e.args, (0, m.a, 1))
+        self.assertEqual(e.strict, (True, True))
+
+        e = inequality(0, 1, m.a, True)
+        self.assertIs(type(e), InequalityExpression)
+        self.assertEqual(e.args, (1, m.a))
+        self.assertEqual(e.strict, True)
+
+        self.assertEqual(inequality(m.a, 0, 0, True), False)
+        self.assertEqual(inequality(0, m.a, 0, True), False)
+        self.assertEqual(inequality(0, 0, m.a, True), False)
+        self.assertEqual(inequality(m.a, 1, 0, True), False)
+        self.assertEqual(inequality(1, m.a, 0, True), False)
+        self.assertEqual(inequality(1, 0, m.a, True), False)
+
+        e = inequality(m.a, m.b, m.c, True)
+        self.assertIs(type(e), RangedExpression)
+        self.assertEqual(e.args, (m.a, m.b, m.c))
+        self.assertEqual(e.strict, (True, True))
 
     def test_val1(self):
         m = ConcreteModel()

@@ -249,16 +249,18 @@ class CUOPTDirect(DirectSolver):
         is_mip = solution.get_problem_category()
 
         # Termination Status
-        # 0 - CUOPT_TERIMINATION_STATUS_NO_TERMINATION
-        # 1 - CUOPT_TERIMINATION_STATUS_OPTIMAL
-        # 2 - CUOPT_TERIMINATION_STATUS_INFEASIBLE
-        # 3 - CUOPT_TERIMINATION_STATUS_UNBOUNDED
-        # 4 - CUOPT_TERIMINATION_STATUS_ITERATION_LIMIT
-        # 5 - CUOPT_TERIMINATION_STATUS_TIME_LIMIT
-        # 6 - CUOPT_TERIMINATION_STATUS_NUMERICAL_ERROR
-        # 7 - CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE
-        # 8 - CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND
-        # 9 - CUOPT_TERIMINATION_STATUS_CONCURRENT_LIMIT
+        #  0 - CUOPT_TERIMINATION_STATUS_NO_TERMINATION
+        #  1 - CUOPT_TERIMINATION_STATUS_OPTIMAL
+        #  2 - CUOPT_TERIMINATION_STATUS_INFEASIBLE
+        #  3 - CUOPT_TERIMINATION_STATUS_UNBOUNDED
+        #  4 - CUOPT_TERIMINATION_STATUS_ITERATION_LIMIT
+        #  5 - CUOPT_TERIMINATION_STATUS_TIME_LIMIT
+        #  6 - CUOPT_TERIMINATION_STATUS_NUMERICAL_ERROR
+        #  7 - CUOPT_TERIMINATION_STATUS_PRIMAL_FEASIBLE
+        #  8 - CUOPT_TERIMINATION_STATUS_FEASIBLE_FOUND
+        #  9 - CUOPT_TERIMINATION_STATUS_CONCURRENT_LIMIT
+        # 10 - CUOPT_TERIMINATION_STATUS_WORK_LIMIT
+        # 11 - CUOPT_TERIMINATION_STATUS_UNBOUNDED_OR_INFEASIBLE
 
         if status == 1:
             self.results.solver.status = SolverStatus.ok
@@ -292,6 +294,12 @@ class CUOPTDirect(DirectSolver):
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.other
             soln.status = SolutionStatus.other
+        elif status == 11:
+            self.results.solver.status = SolverStatus.warning
+            self.results.solver.termination_condition = (
+                TerminationCondition.infeasibleOrUnbounded
+            )
+            soln.status = SolutionStatus.unsure
         else:
             self.results.solver.status = SolverStatus.error
             self.results.solver.termination_condition = TerminationCondition.error
