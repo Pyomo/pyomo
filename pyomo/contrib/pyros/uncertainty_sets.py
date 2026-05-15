@@ -462,7 +462,7 @@ def validate_array(
 
 class ContextDict(dict):
     def __enter__(self):
-        assert not self, "Uncertainty set cache has been modified."
+        assert not self, "Nonempty cache for uncertainty set's exact parameter bounds."
         return self
 
     def __exit__(self, et, e, tb):
@@ -535,6 +535,15 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     @property
     def _cache(self):
+        """
+        dict : Cache for the bounds defining the minimum bounding box
+        of `self`. Each key is a 2-tuple containing the positional
+        index of a coordinate and an
+        :class:`~pyomo.common.enums.ObjectiveSense` object
+        indicating the type of bound (`minimize` for a lower bound,
+        `maximize for an upper bound) being specified for the
+        coordinate.
+        """
         try:
             return self.__cache
         except AttributeError:
@@ -818,6 +827,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 if not index[idx][i]:
                     bounds.append(None)
                     continue
+                # NOTE: variables are not initialized for the first
+                # exact bounds optimization, and are initialized to
+                # the solution of the most recent iteration at each
+                # subsequent evaluation.
                 bounds.append(
                     self._solve_exact_bounds_optimization(
                         bounding_model, idx, sense, solver
@@ -831,9 +844,15 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def _solve_exact_bounds_optimization(self, bounding_model, index, sense, solver):
         """
-        Compute value of bounds for a single parameter
-        of `self` at a specified index by solving a bounding model.
-        Results are cached as efficiency.
+        Compute an exact lower or upper bound for a specified
+        coordinate of the points contained in `self`, by solving
+        a bounding model.
+        
+        For efficiency, the result is cached if the bounding model
+        is solved successfully. Further, if the cache already contains
+        an entry corresponding to the coordinate bound of interest,
+        then that entry is returned and solution of the bounding model
+        is skipped.
 
         Parameters
         ----------
@@ -842,13 +861,15 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             Objective with name 'param_var_objectives' consisting
             of `N` entries, all of which have been deactivated.
         index : int
-            The index of the parameter to solve for bounds.
+            The positional index for the coordinate of interest.
         sense : ~pyomo.common.ObjectiveSense
-            A Pyomo objective sense to optimize for the bounding model.
-            `maximize` solves for an upper bound and
-            `minimize` solves for a lower bound.
+            Optimization sense for the bounding model objective.
+            This also indicates the type of bound (lower or upper)
+            to be computed.
+            Select `minimize` to compute the lower bound or
+            `maximize` to compute the upper bound.
         solver : ~pyomo.opt.base.solvers.OptSolver
-            Optimizer to invoke on the bounding problems.
+            Optimizer to invoke on the bounding model.
 
         Returns
         -------
@@ -859,8 +880,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Raises
         ------
         ValueError
-            If solver failed to compute a bound for a
-            coordinate.
+            If there was an unsuccessful attempt to solve
+            the bounding model.
         """
         # we use saved optimization results for a given index
         # for either `maximize` UB or `minimize` LB if they exist
