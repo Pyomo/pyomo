@@ -36,16 +36,16 @@ class TestKnitroDirectSolverConfig(unittest.TestCase):
         self.assertIsNone(config.timer)
         self.assertIsNone(config.threads)
         self.assertIsNone(config.time_limit)
-        self.assertFalse(config.use_start)
+        self.assertFalse(config.knitro_warm_start)
 
     def test_custom_instantiation(self):
         config = KnitroConfig(description="A description")
         config.tee = True
-        config.use_start = True
+        config.knitro_warm_start = True
         self.assertTrue(config.tee)
         self.assertEqual(config._description, "A description")
         self.assertIsNone(config.time_limit)
-        self.assertTrue(config.use_start)
+        self.assertTrue(config.knitro_warm_start)
 
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
@@ -493,7 +493,7 @@ class TestKnitroDirectSolver(unittest.TestCase):
 
 @unittest.skipIf(not avail, "KNITRO solver is not available")
 class TestKnitroWarmStart(unittest.TestCase):
-    """Test cases for KNITRO warm start (use_start) functionality."""
+    """Test cases for KNITRO warm start (knitro_warm_start) functionality."""
 
     def setUp(self):
         self.opt = KnitroDirectSolver()
@@ -509,12 +509,12 @@ class TestKnitroWarmStart(unittest.TestCase):
 
         m.x.set_value(None)
         m.y.set_value(None)
-        res_no_start = self.opt.solve(m, use_start=False)
+        res_no_start = self.opt.solve(m, knitro_warm_start=False)
         iters_no_start = res_no_start.extra_info.number_iters
 
         m.x.set_value(0.9)
         m.y.set_value(0.9)
-        res_with_start = self.opt.solve(m, use_start=True)
+        res_with_start = self.opt.solve(m, knitro_warm_start=True)
         iters_with_start = res_with_start.extra_info.number_iters
 
         self.assertAlmostEqual(pyo.value(m.x), 1.0, 3)
@@ -530,7 +530,7 @@ class TestKnitroWarmStart(unittest.TestCase):
         m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
         m.x.set_value(3.0)
         m.y.set_value(4.0)
-        res = self.opt.solve(m, use_start=True)
+        res = self.opt.solve(m, knitro_warm_start=True)
         self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
         self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
         self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
@@ -544,20 +544,20 @@ class TestKnitroWarmStart(unittest.TestCase):
         m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
         m.x.set_value(3.0)
         m.y.set_value(None)
-        res = self.opt.solve(m, use_start=True)
+        res = self.opt.solve(m, knitro_warm_start=True)
         self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
         self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
         self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
 
     def test_warm_start_disabled(self):
-        """Test that use_start=False disables warm start."""
+        """Test that knitro_warm_start=False disables warm start."""
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(0, 10))
         m.y = pyo.Var(bounds=(0, 10))
         m.obj = pyo.Objective(expr=(m.x - 3) ** 2 + (m.y - 4) ** 2, sense=pyo.minimize)
         m.x.set_value(3.0)
         m.y.set_value(4.0)
-        res = self.opt.solve(m, use_start=False)
+        res = self.opt.solve(m, knitro_warm_start=False)
         self.assertAlmostEqual(pyo.value(m.x), 3.0, 5)
         self.assertAlmostEqual(pyo.value(m.y), 4.0, 5)
         self.assertAlmostEqual(res.incumbent_objective, 0.0, 5)
@@ -572,6 +572,6 @@ class TestKnitroWarmStart(unittest.TestCase):
         m.c2 = pyo.Constraint(expr=2 * m.x + m.y >= 4)
         m.x.set_value(1.3)
         m.y.set_value(1.3)
-        self.opt.solve(m, use_start=True)
+        self.opt.solve(m, knitro_warm_start=True)
         self.assertAlmostEqual(pyo.value(m.x), 4.0 / 3.0, 3)
         self.assertAlmostEqual(pyo.value(m.y), 4.0 / 3.0, 3)
