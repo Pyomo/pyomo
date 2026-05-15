@@ -522,6 +522,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     f"{e.__class__.__name__} (was prepared for success or a ValueError)."
                 )
                 raise
+            logger.info(
+                "A constraint function on a disjunct couldn't be evaluated at "
+                "zero. Trying a solver-based heuristic to find a point that "
+                "makes the constraints well-defined, which is necessary for "
+                "hull. Note that the exact formulation obtained may not be "
+                "fully deterministic, as it depend's on the solver's solution. "
+                "If this is problematic, you can override using the "
+                "`well_defined_points` option."
+            )
             # Second, try making it well-defined by editing only the regular vars
             for x in fallback_vars:
                 x.fix(0)
