@@ -13,6 +13,7 @@ from pyomo.contrib.doe.utils import (
     check_FIM,
     compute_FIM_metrics,
     get_FIM_metrics,
+    rescale_FIM,
     _SMALL_TOLERANCE_DEFINITENESS,
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
@@ -59,6 +60,30 @@ class TestUtilsFIM(unittest.TestCase):
             ),
         ):
             check_FIM(FIM)
+
+    def test_rescale_FIM_bad_type(self):
+        """Reject scalar input because `param_vals` must be a list or array."""
+        FIM = np.array([[4, 1], [1, 3]])
+
+        # Keep this focused on the public input contract, not the numerical result.
+        with self.assertRaisesRegex(
+            ValueError,
+            "param_vals should be a list or numpy array of dimensions: 1 by `n_params`",
+        ):
+            rescale_FIM(FIM, 1.0)
+
+    def test_rescale_FIM_bad_shape(self):
+        """Reject multi-row arrays because scaling needs a single parameter row."""
+        FIM = np.array([[4, 1], [1, 3]])
+        param_vals = np.ones((2, 2))
+
+        # A 2x2 input would silently broadcast the wrong way if we did not check it.
+        with self.assertRaisesRegex(
+            ValueError,
+            r"param_vals should be a vector of dimensions: 1 by `n_params`\. "
+            r"The shape you provided is \(2, 2\)\.",
+        ):
+            rescale_FIM(FIM, param_vals)
 
     ### Helper methods for test cases
     # Sample FIM for testing

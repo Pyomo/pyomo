@@ -781,6 +781,25 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_objective_function()
 
+    def test_invalid_determinant_without_cholesky(self):
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = get_rooney_biegler_experiment_flag()
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        DoE_args["_Cholesky_option"] = False
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        # The explicit determinant formulation needs the full FIM, so we keep
+        # this regression test focused on the early validation guard.
+        with self.assertRaisesRegex(
+            ValueError,
+            "Cannot compute determinant with explicit formula if only_compute_fim_lower is True.",
+        ):
+            doe_obj.create_doe_model()
+
 
 if __name__ == "__main__":
     unittest.main()
