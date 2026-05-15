@@ -1729,6 +1729,8 @@ class TestRegularizationCore(unittest.TestCase):
         self.assertAlmostEqual(cov.loc["theta1", "theta1"], 0.125)
         self.assertAlmostEqual(cov.loc["theta0", "theta1"], 0.0)
         self.assertAlmostEqual(cov.loc["theta1", "theta0"], 0.0)
+
+
 class LinearThetaExperiment(Experiment):
     def __init__(self, x, y, include_second_output=False):
         self.x_data = x
