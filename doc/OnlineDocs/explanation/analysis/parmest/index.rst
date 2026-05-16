@@ -27,4 +27,6 @@ Index of parmest documentation
    graphics.rst
    examples.rst
    parallel.rst
+   objective.rst
+   estimability.rst
    api.rst
