@@ -1812,6 +1812,28 @@ class TestRegularizationCore(unittest.TestCase):
 
         self.assertAlmostEqual(pyo.value(expr), expected)
 
+    def test_indexed_unknown_parameters_regularization_uses_scalar_theta_names(self):
+        exp_list = [IndexedThetaExperiment(2.0, 5.0)]
+        prior_fim = pd.DataFrame(
+            [[3.0, 0.0], [0.0, 4.0]],
+            index=["theta[a]", "theta[b]"],
+            columns=["theta[a]", "theta[b]"],
+        )
+        theta_ref = pd.Series({"theta[a]": 0.0, "theta[b]": 1.0})
+
+        pest = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+        )
+
+        theta_values = pd.DataFrame([[1.0, 2.0]], columns=["theta[a]", "theta[b]"])
+        obj_val = pest.objective_at_theta(theta_values=theta_values).iloc[0]["obj"]
+
+        self.assertAlmostEqual(obj_val, 7.0)
+
 
 class LinearThetaExperiment(Experiment):
     def __init__(self, x, y, include_second_output=False):
@@ -2076,6 +2098,20 @@ class TestParmestBlockEF(unittest.TestCase):
             self.assertTrue(block.theta["b"].fixed)
             self.assertAlmostEqual(pyo.value(block.theta["a"]), 1.0, places=10)
             self.assertAlmostEqual(pyo.value(block.theta["b"]), 2.0, places=10)
+
+    def test_indexed_unknown_parameter_names_are_expanded_consistently(self):
+        pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        self.assertEqual(pest._return_theta_names(), ["theta[a]", "theta[b]"])
+
+    def test_cov_est_counts_expanded_indexed_unknown_parameters(self):
+        pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        with self.assertRaisesRegex(
+            AssertionError,
+            "The number of datapoints must be greater than the number of parameters to estimate.",
+        ):
+            pest.cov_est()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_q_opt_solves_block_ef_and_returns_theta(self):

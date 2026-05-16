@@ -187,6 +187,28 @@ def _validate_prior_FIM(prior_FIM, require_psd=True):
             raise ValueError("prior_FIM must be positive semi-definite.")
 
 
+def _expanded_unknown_parameter_info(model):
+    """
+    Return scalar unknown parameter components, names, and ComponentUIDs.
+
+    The unknown_parameters suffix may contain either scalar ComponentData
+    objects or indexed components. Indexed components are expanded to their
+    scalar data objects.
+    """
+    theta_components = []
+
+    for c in model.unknown_parameters:
+        if c.is_indexed():
+            theta_components.extend(c.values())
+        else:
+            theta_components.append(c)
+
+    theta_names = tuple(c.name for c in theta_components)
+    theta_cuids = tuple(pyo.ComponentUID(c) for c in theta_components)
+
+    return theta_components, theta_names, theta_cuids
+
+
 def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
     """
     Calculates (theta - theta_ref)^T * prior_FIM * (theta - theta_ref)
@@ -209,9 +231,8 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
     _validate_prior_FIM(prior_FIM, require_psd=True)
 
     # Get current model parameters
-    # We assume model.unknown_parameters is a list of Pyomo Var objects
-    current_param_names = [p.name for p in model.unknown_parameters]
-    param_map = {p.name: p for p in model.unknown_parameters}
+    theta_components, current_param_names, _ = _expanded_unknown_parameter_info(model)
+    param_map = {p.name: p for p in theta_components}
 
     # Confirm all matching parameters in both prior_FIM index and columns
     common_params = [
@@ -988,7 +1009,7 @@ def _expand_prior_FIM(experiment, prior_FIM):
     model = _get_labeled_model(experiment)
 
     # Extract parameter names from the Pyomo model
-    param_names = [param.name for param in model.unknown_parameters]
+    _, param_names, _ = _expanded_unknown_parameter_info(model)
 
     # 1. Expand Prior FIM
     # We reindex to match param_names. Parameters not in prior_FIM
@@ -1151,7 +1172,8 @@ class Estimator:
         theta_names = []
         for experiment in self.exp_list:
             model = _get_labeled_model(experiment)
-            theta_names.extend([k.name for k, v in model.unknown_parameters.items()])
+            _, expanded_theta_names, _ = _expanded_unknown_parameter_info(model)
+            theta_names.extend(expanded_theta_names)
         # Utilize list(dict.fromkeys(theta_names)) to preserve parameter
         # order compared with list(set(theta_names)), which had
         # nondeterministic ordering of parameters
@@ -1240,17 +1262,7 @@ class Estimator:
         ComponentUIDs are intended for locating equivalent theta components on
         cloned/transferred models.
         """
-        theta_components = []
-
-        for c in model.unknown_parameters:
-            if c.is_indexed():
-                theta_components.extend(c.values())
-            else:
-                theta_components.append(c)
-
-        theta_names = tuple(c.name for c in theta_components)
-        theta_cuids = tuple(pyo.ComponentUID(c) for c in theta_components)
-
+        _, theta_names, theta_cuids = _expanded_unknown_parameter_info(model)
         return theta_names, theta_cuids
 
     def _create_parmest_model(self, experiment_number):
@@ -2018,7 +2030,7 @@ class Estimator:
         # number of unknown parameters
         num_unknowns = max(
             [
-                len(experiment.get_labeled_model().unknown_parameters)
+                len(_expanded_unknown_parameter_info(experiment.get_labeled_model())[0])
                 for experiment in self.exp_list
             ]
         )
