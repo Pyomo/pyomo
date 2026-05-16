@@ -16,6 +16,7 @@ from .solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
 from .solvers.highs import Highs
 from .solvers.gams import GAMS
 from .solvers.knitro.direct import KnitroDirectSolver
+from .solvers.knitro.persistent import KnitroPersistentSolver
 
 
 def load():
@@ -33,9 +34,9 @@ def load():
         doc="Direct (scipy-based) interface to Gurobi",
     )(GurobiDirect)
     SolverFactory.register(
-        name='gurobi_direct_minlp',
-        legacy_name='gurobi_direct_minlp',
-        doc='Direct interface to Gurobi accommodating general MINLP',
+        name="gurobi_direct_minlp",
+        legacy_name="gurobi_direct_minlp",
+        doc="Direct interface to Gurobi accommodating general MINLP",
     )(GurobiDirectMINLP)
     SolverFactory.register(
         name="highs", legacy_name="highs", doc="Persistent interface to HiGHS"
@@ -48,3 +49,8 @@ def load():
         legacy_name="knitro_direct",
         doc="Direct interface to KNITRO solver",
     )(KnitroDirectSolver)
+    SolverFactory.register(
+        name="knitro_persistent",
+        legacy_name="knitro_persistent",
+        doc="Persistent interface to KNITRO solver",
+    )(KnitroPersistentSolver)
