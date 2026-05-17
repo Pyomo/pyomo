@@ -75,6 +75,7 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     FactorModelSet,
     Geometry,
     IntersectionSet,
+    PolyhedralSet,
     UncertaintyQuantification,
     UncertaintySet,
 )
@@ -5467,6 +5468,71 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
 
         self.assertAlmostEqual(interval._cache[0, minimize], 25, places=2)
         self.assertAlmostEqual(interval._cache[0, maximize], 200, places=2)
+
+    def test_solve_cartesian_product_set_bounds_cache(self):
+        """
+        Test management of uncertainty set bounds caches
+        is carried out as expected in the context of a PyROS solve.
+        """
+        # deterministic model
+        m = ConcreteModel()
+        m.q = Param(range(4), initialize=0, mutable=True)
+        m.x = Var(initialize=0, bounds=(0, 100))
+        m.obj = Objective(expr=m.x, sense=minimize)
+        m.con = Constraint(expr=m.x >= sum(m.q.values()))
+
+        # uncertainty set(s)
+        poly_set = PolyhedralSet(
+            # this is just the cube [-1, 1]^3
+            lhs_coefficients_mat=np.vstack([np.eye(3), -np.eye(3)]),
+            rhs_vec=[1] * 6,
+        )
+        # inclusion of PolyhedralSet means bounds caching takes place
+        cpset = CartesianProductSet([BoxSet([[0, 1]]), poly_set])
+        res1 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cpset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+
+        # check caches cleared
+        self.assertEqual(cpset._cache, {})
+        self.assertEqual(cpset._all_sets[0]._cache, {})
+        self.assertEqual(cpset._all_sets[1]._cache, {})
+        # check results: worst case objective is just sum of the
+        #                uncertainty set upper bounds
+        self.assertEqual(res1.iterations, 2)
+        self.assertAlmostEqual(res1.final_objective_value, 4.0, places=6)
+        self.assertAlmostEqual(m.x.value, 4.0, places=6)
+
+        # expand the polyhedralset to the cube [-2, 2]^3
+        poly_set.rhs_vec = [2] * 6
+        # solve again. since caches cleared, PyROS should work normally
+        res2 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cpset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+        # check caches cleared
+        self.assertEqual(cpset._cache, {})
+        self.assertEqual(cpset._all_sets[0]._cache, {})
+        self.assertEqual(cpset._all_sets[1]._cache, {})
+        # results have changed, since the polyhedral set was expanded
+        self.assertEqual(res2.iterations, 2)
+        self.assertAlmostEqual(res2.final_objective_value, 7.0, places=6)
+        self.assertAlmostEqual(m.x.value, 7.0, places=6)
 
 
 if __name__ == "__main__":
