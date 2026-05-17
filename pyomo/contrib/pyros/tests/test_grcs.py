@@ -5469,7 +5469,7 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         self.assertAlmostEqual(interval._cache[0, minimize], 25, places=2)
         self.assertAlmostEqual(interval._cache[0, maximize], 200, places=2)
 
-    def test_solve_cartesian_product_set_bounds_cache(self):
+    def test_solve_cartesian_product_and_intersection_set_bounds_cache(self):
         """
         Test management of uncertainty set bounds caches
         is carried out as expected in the context of a PyROS solve.
@@ -5533,6 +5533,58 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         self.assertEqual(res2.iterations, 2)
         self.assertAlmostEqual(res2.final_objective_value, 7.0, places=6)
         self.assertAlmostEqual(m.x.value, 7.0, places=6)
+
+        # repeat above checks for intersection set
+        # update poly_set
+        poly_set = PolyhedralSet(
+            # this is just the cube [-1, 1]^4
+            lhs_coefficients_mat=np.vstack([np.eye(4), -np.eye(4)]),
+            rhs_vec=[2] * 8,
+        )
+        iset = IntersectionSet(set1=BoxSet([[-3, 3]] * 4), set2=poly_set)
+        res3 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=iset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+        # check caches cleared
+        self.assertEqual(iset._cache, {})
+        self.assertEqual(iset._all_sets[0]._cache, {})
+        self.assertEqual(iset._all_sets[1]._cache, {})
+        # check results: worst case objective is just sum of the
+        #                poly_set upper bounds
+        self.assertEqual(res3.iterations, 2)
+        self.assertAlmostEqual(res3.final_objective_value, 8.0, places=6)
+        self.assertAlmostEqual(m.x.value, 8.0, places=6)
+
+        # shrink the polyhedralset to the cube [-1, 1]^4
+        poly_set.rhs_vec = [1] * 8
+        res4 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=iset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+
+        # check caches cleared
+        self.assertEqual(iset._cache, {})
+        self.assertEqual(iset._all_sets[0]._cache, {})
+        self.assertEqual(iset._all_sets[1]._cache, {})
+        # results have changed, since the polyhedral set was shrunk
+        self.assertEqual(res4.iterations, 2)
+        self.assertAlmostEqual(res4.final_objective_value, 4.0, places=6)
+        self.assertAlmostEqual(m.x.value, 4.0, places=6)
 
 
 if __name__ == "__main__":

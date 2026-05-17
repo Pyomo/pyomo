@@ -3831,6 +3831,19 @@ class IntersectionSet(UncertaintySet):
 
         return []
 
+    @contextlib.contextmanager
+    def _cache_manager(self):
+        with contextlib.ExitStack() as stack:
+            # Verify this (IntersectionSet's) cache is empty
+            stack.enter_context(super()._cache_manager())
+            for uset in self.all_sets:
+                # Verify all component caches are empty
+                stack.enter_context(uset._cache_manager())
+            yield self
+            # This will re-enter when this context manager is exited,
+            # which will exit the stack context, triggering all the
+            # context managers entered above to exit.
+
     def point_in_set(self, point):
         """
         Determine whether a given point lies in the intersection set.
