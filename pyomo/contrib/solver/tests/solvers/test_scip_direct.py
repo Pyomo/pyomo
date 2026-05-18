@@ -23,6 +23,7 @@ from pyomo.contrib.solver.common.util import (
 )
 from pyomo.contrib.solver.solvers.scip.base import ScipConfig
 from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect
+from pyomo.contrib.solver.tests.solvers.test_gurobi_persistent import create_pmedian_model
 
 scip_available = ScipDirect().available()
 
@@ -307,3 +308,44 @@ class TestScipDirect(unittest.TestCase):
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 1)
+
+    def test_multiple_solutions(self):
+        m = create_pmedian_model()
+
+        # The solutions found by scip may change from version to version.
+        # Let's warmstart scip with a suboptimal solution to ensure we
+        # have at least 2 solutions.
+
+        init_sol = {1, 2, 3}
+        for k, y in m.y.items():
+            if k in init_sol:
+                y.value = 1
+            else:
+                y.value = 0
+
+        opt = ScipDirect()
+        opt.config.warmstart_discrete_vars = True
+        opt.config.solver_options['limits/maxsol'] = 100000
+        opt.config.solver_options['heuristics/completesol/maxunknownrate'] = 1.0
+        res = opt.solve(m, load_solutions=True)
+        num_solutions = res.solution_loader.get_number_of_solutions()
+        self.assertGreaterEqual(num_solutions, 2)
+
+        # the best solution
+        self.assertAlmostEqual(pyo.value(m.obj.expr), 6.431184939357673)
+        sol = {3, 6, 9}
+        for k, v in m.y.items():
+            if k in sol:
+                self.assertAlmostEqual(v.value, 1)
+            else:
+                self.assertAlmostEqual(v.value, 0)
+
+        # the worst solution that we used to warmstart
+        res.solution_loader.solution(num_solutions - 1).load_vars()
+        self.assertAlmostEqual(pyo.value(m.obj.expr), 7.607295680844689)
+        sol = {1, 2, 3}
+        for k, v in m.y.items():
+            if k in sol:
+                self.assertAlmostEqual(v.value, 1)
+            else:
+                self.assertAlmostEqual(v.value, 0)
