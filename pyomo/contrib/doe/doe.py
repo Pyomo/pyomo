@@ -85,6 +85,12 @@ class DesignSpaceTraversal(Enum):
     nested_for_loop = "nested_for_loop"
 
 
+class FactorialDesignMode(Enum):
+    design_vals = "design_vals"
+    linspace = "linspace"
+    step = "step"
+
+
 class DesignOfExperiments:
     def __init__(
         self,
@@ -2011,6 +2017,273 @@ class DesignOfExperiments:
 
         return self.fim_factorial_results
 
+    def _resolve_factorial_design_mode(
+        self, design_vals=None, n_design_points=None, abs_step=None, rel_step=None
+    ):
+        """Resolve and validate mutually-exclusive design-space specification mode."""
+        num_des_args_provided = (
+            (design_vals is not None)
+            + (n_design_points is not None)
+            + (abs_step is not None or rel_step is not None)
+        )
+
+        if num_des_args_provided > 1:
+            raise ValueError(
+                "design_vals, n_design_points, and abs_step/rel_step are "
+                "mutually exclusive."
+            )
+
+        if num_des_args_provided == 0:
+            raise ValueError(
+                "Missing required argument: specify one of design_vals, "
+                "n_design_points, or abs_step/rel_step."
+            )
+
+        if design_vals is not None:
+            return FactorialDesignMode.design_vals
+        if n_design_points is not None:
+            return FactorialDesignMode.linspace
+        return FactorialDesignMode.step
+
+    def _normalize_factorial_design_vals(self, model, design_vals):
+        """Normalize design_vals keys to experiment-input components on model."""
+        design_name_map = {k.name: k for k in model.experiment_inputs.keys()}
+        normalized_design_vals = pyo.ComponentMap()
+        invalid_keys = []
+        for key, val in design_vals.items():
+            if isinstance(key, str):
+                mapped_key = None
+            elif isinstance(key, pyo.ComponentUID):
+                mapped_key = key.find_component_on(model)
+            else:
+                try:
+                    mapped_key = pyo.ComponentUID(key).find_component_on(model)
+                except Exception:
+                    mapped_key = None
+
+            if mapped_key is None or mapped_key not in model.experiment_inputs:
+                invalid_keys.append(key)
+                continue
+
+            if mapped_key in normalized_design_vals:
+                raise ValueError(
+                    "design_vals contains multiple keys that resolve to the "
+                    f"same experiment input component: {mapped_key.name}."
+                )
+
+            try:
+                val_array = np.asarray(list(val))
+            except TypeError:
+                raise TypeError("design_vals values must be 1D array-like iterables.")
+            if val_array.ndim != 1:
+                raise ValueError("design_vals values must be 1D array-like.")
+
+            normalized_design_vals[mapped_key] = val_array
+
+        if invalid_keys:
+            raise ValueError(
+                "design_vals keys must identify components in "
+                f"`model.experiment_inputs`. Invalid keys: {invalid_keys}. "
+                "Pass experiment input components (or ComponentUIDs), not names. "
+                "Valid experiment_inputs are: "
+                f"{list(design_name_map.keys())}."
+            )
+
+        design_map_keys = [
+            k for k in model.experiment_inputs.keys() if k in normalized_design_vals
+        ]
+        design_values = [normalized_design_vals[k] for k in design_map_keys]
+
+        design_suff = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        design_suff.update((k, None) for k in design_map_keys)
+        return design_values, design_suff
+
+    def _generate_factorial_design_values_from_bounds(
+        self, model, mode, n_design_points=None, abs_step=None, rel_step=None
+    ):
+        """Build per-variable design values from bounds for linspace/step modes."""
+        design_keys = [k for k in model.experiment_inputs.keys()]
+        use_step_changes = mode is FactorialDesignMode.step
+        if use_step_changes:
+            # Missing absolute/relative inputs default to zero steps.
+            if abs_step is None:
+                abs_step = [0.0] * len(design_keys)
+            if rel_step is None:
+                rel_step = [0.0] * len(design_keys)
+
+            if len(abs_step) != len(design_keys):
+                raise ValueError(
+                    "`abs_step` must have the same length of "
+                    f"`{len(design_keys)}` as `design_keys`."
+                )
+            if len(rel_step) != len(design_keys):
+                raise ValueError(
+                    "`rel_step` must have the same length of "
+                    f"`{len(design_keys)}` as `design_keys`."
+                )
+
+        design_values = []
+        for i, comp in enumerate(design_keys):
+            lb = comp.lb
+            ub = comp.ub
+            if lb is None or ub is None:
+                raise ValueError(f"{comp.name} does not have a lower or upper bound.")
+
+            if not use_step_changes:
+                des_val = np.linspace(lb, ub, n_design_points)
+            else:
+                # step_change = (upper_bound - lower_bound) * rel_step + abs_step
+                span = ub - lb
+                delta_val = span * rel_step[i] + abs_step[i]
+                if delta_val <= 0:
+                    raise ValueError(
+                        f"Design variable {comp.name} has non-positive step "
+                        "in value - check abs_step and rel_step values."
+                    )
+                # Build points by count to avoid float drift from iterative
+                # addition. Keep compatibility with lb > ub behavior.
+                n_steps = max(0, int(np.floor(span / delta_val + 1e-12)) + 1)
+                des_val = lb + delta_val * np.arange(n_steps)
+
+            design_values.append(des_val)
+        return design_values
+
+    def _materialize_factorial_points(self, design_values, traversal_scheme):
+        """Generate concrete factorial design points from design values."""
+        try:
+            scheme_enum = DesignSpaceTraversal(traversal_scheme)
+        except ValueError:
+            raise ValueError(
+                f"{traversal_scheme=} is not recognized. "
+                "Please use one of the following: "
+                f"{[e.value for e in DesignSpaceTraversal]}"
+            )
+
+        if scheme_enum == DesignSpaceTraversal.snake_traversal:
+            factorial_points = snake_traversal_grid_sampling(*design_values)
+        elif scheme_enum == DesignSpaceTraversal.nested_for_loop:
+            factorial_points = product(*design_values)
+        else:
+            raise ValueError(
+                f"{traversal_scheme=} is not recognized. "
+                "Please use one of the following: "
+                f"{[e.value for e in DesignSpaceTraversal]}"
+            )
+        return list(factorial_points)
+
+    def _run_factorial_sweep(
+        self, model, factorial_points_list, method="sequential", design_suff=None
+    ):
+        """Run FIM sweep over materialized factorial points and collect results."""
+        factorial_results = {k.name: [] for k in model.experiment_inputs.keys()}
+        factorial_results.update(
+            {
+                "log10 D-opt": [],
+                "log10 A-opt": [],
+                "log10 pseudo A-opt": [],
+                "log10 E-opt": [],
+                "log10 ME-opt": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_cov": [],
+                "trace_FIM": [],
+                "solve_time": [],
+            }
+        )
+
+        success_count = 0
+        failure_count = 0
+        total_points = len(factorial_points_list)
+
+        self.n_parameters = len(model.unknown_parameters)
+        FIM_all = np.zeros((total_points, self.n_parameters, self.n_parameters))
+
+        time_set = []
+        curr_point = 1
+        for design_point in factorial_points_list:
+            if design_suff is not None:
+                update_model_from_suffix(design_suff, design_point)
+            else:
+                update_model_from_suffix(model.experiment_inputs, design_point)
+
+            self.logger.info(f"=======Iteration Number: {curr_point} =======")
+            iter_timer = TicTocTimer()
+            iter_timer.tic(msg=None)
+
+            try:
+                curr_point = success_count + failure_count + 1
+                self.logger.info(f"This is run {curr_point} out of {total_points}.")
+                self.compute_FIM(model=model, method=method)
+                success_count += 1
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+                self.logger.info(
+                    f"The code has run for {round(sum(time_set), 2)} seconds."
+                )
+                self.logger.info(
+                    "Estimated remaining time:  %s seconds",
+                    round(
+                        sum(time_set) / (curr_point) * (total_points - curr_point + 1),
+                        2,
+                    ),
+                )
+            except Exception as err:
+                self.logger.warning(
+                    "Cannot converge this run during FIM computation: %s", err
+                )
+                self.logger.debug(
+                    "Traceback for failed FIM factorial run:", exc_info=True
+                )
+                failure_count += 1
+                self.logger.warning("failed count: %s", failure_count)
+
+                self._computed_FIM = np.zeros(self.prior_FIM.shape)
+
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+            FIM = self._computed_FIM
+            FIM_all[curr_point - 1, :, :] = FIM
+
+            fim_metrics = compute_FIM_metrics(FIM)
+            for k in model.experiment_inputs.keys():
+                factorial_results[k.name].append(pyo.value(k))
+
+            factorial_results["log10 D-opt"].append(fim_metrics.D_opt)
+            factorial_results["log10 A-opt"].append(fim_metrics.A_opt)
+            factorial_results["log10 pseudo A-opt"].append(fim_metrics.pseudo_A_opt)
+            factorial_results["log10 E-opt"].append(fim_metrics.E_opt)
+            factorial_results["log10 ME-opt"].append(fim_metrics.ME_opt)
+            factorial_results["eigval_min"].append(np.min(fim_metrics.E_vals))
+            factorial_results["eigval_max"].append(np.max(fim_metrics.E_vals))
+            factorial_results["det_FIM"].append(fim_metrics.det_FIM)
+            factorial_results["trace_cov"].append(fim_metrics.trace_cov)
+            factorial_results["trace_FIM"].append(fim_metrics.trace_FIM)
+            factorial_results["solve_time"].append(time_set[-1])
+
+        factorial_results.update(
+            {
+                "total_points": total_points,
+                "success_count": success_count,
+                "failure_count": failure_count,
+                "FIM_all": FIM_all.tolist(),
+            }
+        )
+        return factorial_results
+
+    def _write_factorial_dataframe(self, factorial_results):
+        """Write user-requested factorial tabular output to stdout."""
+        exclude_keys = {"total_points", "success_count", "failure_count", "FIM_all"}
+        dict_for_df = {k: v for k, v in factorial_results.items() if k not in exclude_keys}
+        res_df = pd.DataFrame(dict_for_df)
+        sys.stdout.write("\n\n=========Factorial results===========\n")
+        sys.stdout.write(f"Total points: {factorial_results['total_points']}\n")
+        sys.stdout.write(f"Success count: {factorial_results['success_count']}\n")
+        sys.stdout.write(f"Failure count: {factorial_results['failure_count']}\n\n")
+        sys.stdout.write(f"{res_df}\n")
+
     def compute_FIM_factorial(
         self,
         model=None,
@@ -2101,297 +2374,52 @@ class DesignOfExperiments:
             - "FIM_all": list of all FIMs computed for each point in the factorial
         """
 
-        # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
         self.logger.info("Beginning Factorial Design.")
 
-        # Make new model for factorial design
         self.factorial_model = self.experiment.get_labeled_model(
             **self.get_labeled_model_args
         ).clone()
         model = self.factorial_model
 
-        # Group the mutually exclusive arguments for passing design values
-        # abs_step, and rel_step can be provided together or separately
-        num_des_args_provided = (
-            (design_vals is not None)
-            + (n_design_points is not None)
-            + (abs_step is not None or rel_step is not None)
+        mode = self._resolve_factorial_design_mode(
+            design_vals=design_vals,
+            n_design_points=n_design_points,
+            abs_step=abs_step,
+            rel_step=rel_step,
         )
 
-        # Check the count and raise an error if more than one was provided
-        if num_des_args_provided > 1:
-            raise ValueError(
-                "design_vals, n_design_points, and abs_step/rel_step are "
-                "mutually exclusive."
+        design_suff = None
+        if mode is FactorialDesignMode.design_vals:
+            design_values, design_suff = self._normalize_factorial_design_vals(
+                model=model,
+                design_vals=design_vals,
             )
-
-        # Check if at least one was provided
-        if num_des_args_provided == 0:
-            raise ValueError(
-                "Missing required argument: specify one of design_vals, "
-                "n_design_points, or abs_step/rel_step."
-            )
-
-        if design_vals is not None:
-            # Normalize design_vals keys to components on the cloned model.
-            # Preferred API uses component keys (like experiment_inputs).
-            design_name_map = {k.name: k for k in model.experiment_inputs.keys()}
-            normalized_design_vals = pyo.ComponentMap()
-            invalid_keys = []
-            for key, val in design_vals.items():
-                if isinstance(key, str):
-                    mapped_key = None
-                elif isinstance(key, pyo.ComponentUID):
-                    mapped_key = key.find_component_on(model)
-                else:
-                    try:
-                        mapped_key = pyo.ComponentUID(key).find_component_on(model)
-                    except Exception:
-                        mapped_key = None
-
-                if mapped_key is None or mapped_key not in model.experiment_inputs:
-                    invalid_keys.append(key)
-                    continue
-
-                if mapped_key in normalized_design_vals:
-                    raise ValueError(
-                        "design_vals contains multiple keys that resolve to the "
-                        f"same experiment input component: {mapped_key.name}."
-                    )
-
-                try:
-                    val_array = np.asarray(list(val))
-                except TypeError:
-                    raise TypeError(
-                        "design_vals values must be 1D array-like iterables."
-                    )
-                if val_array.ndim != 1:
-                    raise ValueError("design_vals values must be 1D array-like.")
-
-                normalized_design_vals[mapped_key] = val_array
-
-            if invalid_keys:
-                raise ValueError(
-                    "design_vals keys must identify components in "
-                    f"`model.experiment_inputs`. Invalid keys: {invalid_keys}. "
-                    "Pass experiment input components (or ComponentUIDs), not names. "
-                    "Valid experiment_inputs are: "
-                    f"{list(design_name_map.keys())}."
-                )
-
-            # Get the design map keys that match the normalized design_values keys.
-            design_map_keys = [
-                k for k in model.experiment_inputs.keys() if k in normalized_design_vals
-            ]
-            # This ensures that the order of the design_values keys matches the order
-            # of the design_map_keys so that design_point can be constructed correctly
-            # in the loop.
-            design_values = [normalized_design_vals[k] for k in design_map_keys]
-
-            # Create a temporary suffix to pass in `update_model_from_suffix`
-            design_suff = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-            design_suff.update((k, None) for k in design_map_keys)
-
         else:
-            design_keys = [k for k in model.experiment_inputs.keys()]
-            use_step_changes = (abs_step is not None) or (rel_step is not None)
-            if use_step_changes:
-                # Missing absolute/relative inputs default to zero steps.
-                if abs_step is None:
-                    abs_step = [0.0] * len(design_keys)
-                if rel_step is None:
-                    rel_step = [0.0] * len(design_keys)
-
-                if len(abs_step) != len(design_keys):
-                    raise ValueError(
-                        "`abs_step` must have the same length of "
-                        f"`{len(design_keys)}` as `design_keys`."
-                    )
-                if len(rel_step) != len(design_keys):
-                    raise ValueError(
-                        "`rel_step` must have the same length of "
-                        f"`{len(design_keys)}` as `design_keys`."
-                    )
-
-            design_values = []
-            # loop over design keys and generate design values
-            for i, comp in enumerate(design_keys):
-                lb = comp.lb
-                ub = comp.ub
-                # Check if the component has finite lower and upper bounds
-                if lb is None or ub is None:
-                    raise ValueError(
-                        f"{comp.name} does not have a lower or upper bound."
-                    )
-
-                if not use_step_changes:
-                    des_val = np.linspace(lb, ub, n_design_points)
-
-                # If abs_step and/or rel_step is provided, generate design values
-                # using the formula:
-                # step_change = (upper_bound - lower_bound) * rel_step + abs_step
-                else:
-                    # Calculate the step change in value, delta value
-                    span = ub - lb
-                    del_val = span * rel_step[i] + abs_step[i]
-                    if del_val <= 0:
-                        raise ValueError(
-                            f"Design variable {comp.name} has non-positive step "
-                            "in value - check abs_step and rel_step values."
-                        )
-                    # Build points by count to avoid float drift from iterative
-                    # addition. Keep compatibility with lb > ub behavior.
-                    n_steps = max(0, int(np.floor(span / del_val + 1e-12)) + 1)
-                    des_val = lb + del_val * np.arange(n_steps)
-
-                design_values.append(des_val)
-
-        # generate the factorial points based on the initialization scheme
-        try:
-            scheme_enum = DesignSpaceTraversal(traversal_scheme)
-        except ValueError:
-            raise ValueError(
-                f"{traversal_scheme=} is not recognized. "
-                "Please use one of the following: "
-                f"{[e.value for e in DesignSpaceTraversal]}"
+            design_values = self._generate_factorial_design_values_from_bounds(
+                model=model,
+                mode=mode,
+                n_design_points=n_design_points,
+                abs_step=abs_step,
+                rel_step=rel_step,
             )
 
-        if scheme_enum == DesignSpaceTraversal.snake_traversal:
-            factorial_points = snake_traversal_grid_sampling(*design_values)
-        elif scheme_enum == DesignSpaceTraversal.nested_for_loop:
-            factorial_points = product(*design_values)
-        else:
-            raise ValueError(
-                f"{traversal_scheme=} is not recognized. "
-                "Please use one of the following: "
-                f"{[e.value for e in DesignSpaceTraversal]}"
-            )
-
-        factorial_points_list = list(factorial_points)
-
-        factorial_results = {k.name: [] for k in model.experiment_inputs.keys()}
-        factorial_results.update(
-            {
-                "log10 D-opt": [],
-                "log10 A-opt": [],
-                "log10 pseudo A-opt": [],
-                "log10 E-opt": [],
-                "log10 ME-opt": [],
-                "eigval_min": [],
-                "eigval_max": [],
-                "det_FIM": [],
-                "trace_cov": [],
-                "trace_FIM": [],
-                "solve_time": [],
-            }
+        factorial_points_list = self._materialize_factorial_points(
+            design_values=design_values,
+            traversal_scheme=traversal_scheme,
         )
 
-        success_count = 0
-        failure_count = 0
-        total_points = len(factorial_points_list)
-
-        # save the FIM for each point in the factorial design
-        self.n_parameters = len(model.unknown_parameters)
-        FIM_all = np.zeros((total_points, self.n_parameters, self.n_parameters))
-
-        time_set = []
-        curr_point = 1  # Initial current point
-        for design_point in factorial_points_list:
-            if design_vals is not None:
-                update_model_from_suffix(design_suff, design_point)
-            else:
-                update_model_from_suffix(model.experiment_inputs, design_point)
-
-            # Timing and logging objects
-            self.logger.info(f"=======Iteration Number: {curr_point} =======")
-            iter_timer = TicTocTimer()
-            iter_timer.tic(msg=None)
-
-            try:
-                curr_point = success_count + failure_count + 1
-                self.logger.info(f"This is run {curr_point} out of {total_points}.")
-                self.compute_FIM(model=model, method=method)
-                success_count += 1
-                # iteration time
-                iter_t = iter_timer.toc(msg=None)
-                time_set.append(iter_t)
-
-                # More logging
-                self.logger.info(
-                    f"The code has run for {round(sum(time_set), 2)} seconds."
-                )
-                self.logger.info(
-                    "Estimated remaining time:  %s seconds",
-                    round(
-                        sum(time_set) / (curr_point) * (total_points - curr_point + 1),
-                        2,
-                    ),
-                )
-            except Exception as err:
-                self.logger.warning(
-                    "Cannot converge this run during FIM computation: %s", err
-                )
-                self.logger.debug(
-                    "Traceback for failed FIM factorial run:", exc_info=True
-                )
-                failure_count += 1
-                self.logger.warning("failed count: %s", failure_count)
-
-                self._computed_FIM = np.zeros(self.prior_FIM.shape)
-
-                iter_t = iter_timer.toc(msg=None)
-                time_set.append(iter_t)
-
-            FIM = self._computed_FIM
-
-            # Save FIM for the current design point
-            FIM_all[curr_point - 1, :, :] = FIM
-
-            # Compute and record metrics on FIM
-            fim_metrics = compute_FIM_metrics(FIM)
-
-            for k in model.experiment_inputs.keys():
-                factorial_results[k.name].append(pyo.value(k))
-
-            factorial_results["log10 D-opt"].append(fim_metrics.D_opt)
-            factorial_results["log10 A-opt"].append(fim_metrics.A_opt)
-            factorial_results["log10 pseudo A-opt"].append(fim_metrics.pseudo_A_opt)
-            factorial_results["log10 E-opt"].append(fim_metrics.E_opt)
-            factorial_results["log10 ME-opt"].append(fim_metrics.ME_opt)
-            factorial_results["eigval_min"].append(np.min(fim_metrics.E_vals))
-            factorial_results["eigval_max"].append(np.max(fim_metrics.E_vals))
-            factorial_results["det_FIM"].append(fim_metrics.det_FIM)
-            factorial_results["trace_cov"].append(fim_metrics.trace_cov)
-            factorial_results["trace_FIM"].append(fim_metrics.trace_FIM)
-            factorial_results["solve_time"].append(time_set[-1])
-
-        factorial_results.update(
-            {
-                "total_points": total_points,
-                "success_count": success_count,
-                "failure_count": failure_count,
-                "FIM_all": FIM_all.tolist(),  # Save all FIMs
-            }
+        self.factorial_results = self._run_factorial_sweep(
+            model=model,
+            factorial_points_list=factorial_points_list,
+            method=method,
+            design_suff=design_suff,
         )
-        self.factorial_results = factorial_results
 
-        # Set pandas DataFrame options
         if return_df:
-            # exclude matrix-like entries, and unchanging results from the DataFrame
-            exclude_keys = {"total_points", "success_count", "failure_count", "FIM_all"}
-            dict_for_df = {
-                k: v for k, v in factorial_results.items() if k not in exclude_keys
-            }
-            res_df = pd.DataFrame(dict_for_df)
-            sys.stdout.write("\n\n=========Factorial results===========\n")
-            sys.stdout.write(f"Total points: {total_points}\n")
-            sys.stdout.write(f"Success count: {success_count}\n")
-            sys.stdout.write(f"Failure count: {failure_count}\n\n")
-            sys.stdout.write(f"{res_df}\n")
+            self._write_factorial_dataframe(self.factorial_results)
 
-        # Save the results to a json file based on the file_name provided
         if file_name is not None:
             with open(file_name + ".json", "w") as f:
                 json.dump(self.factorial_results, f, indent=4)
