@@ -5537,11 +5537,16 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         # repeat above checks for intersection set
         # update poly_set
         poly_set = PolyhedralSet(
-            # this is just the cube [-1, 1]^4
+            # this is just the 4-cube [-1, 1]^4
             lhs_coefficients_mat=np.vstack([np.eye(4), -np.eye(4)]),
             rhs_vec=[2] * 8,
         )
-        iset = IntersectionSet(set1=BoxSet([[-3, 3]] * 4), set2=poly_set)
+        iset = IntersectionSet(
+            set1=CustomExactBoundsUncertaintySet(
+                bounds=[[-3, 3]] * 4, sleep_time=0, cache=True
+            ),
+            set2=poly_set,
+        )
         res3 = SolverFactory("pyros").solve(
             model=m,
             first_stage_variables=m.x,
@@ -5563,7 +5568,7 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         self.assertAlmostEqual(res3.final_objective_value, 8.0, places=6)
         self.assertAlmostEqual(m.x.value, 8.0, places=6)
 
-        # shrink the polyhedralset to the cube [-1, 1]^4
+        # shrink the polyhedralset to the 4-cube [-1, 1]^4
         poly_set.rhs_vec = [1] * 8
         res4 = SolverFactory("pyros").solve(
             model=m,
