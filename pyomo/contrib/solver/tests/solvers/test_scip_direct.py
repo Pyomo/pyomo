@@ -23,7 +23,9 @@ from pyomo.contrib.solver.common.util import (
 )
 from pyomo.contrib.solver.solvers.scip.base import ScipConfig
 from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect
-from pyomo.contrib.solver.tests.solvers.test_gurobi_persistent import create_pmedian_model
+from pyomo.contrib.solver.tests.solvers.test_gurobi_persistent import (
+    create_pmedian_model,
+)
 
 scip_available = ScipDirect().available()
 
