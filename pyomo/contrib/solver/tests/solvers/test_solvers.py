@@ -122,6 +122,11 @@ dual_solvers = [
     ('ipopt', Ipopt),
     ('highs', Highs),
 ]
+sos_solvers = [
+    ('gurobi_persistent', GurobiPersistent),
+    ('scip_direct', ScipDirect),
+    ('scip_persistent', ScipPersistent),
+]
 
 
 def _load_tests(solver_list):
@@ -2413,6 +2418,43 @@ class TestSolvers(unittest.TestCase):
         model.o = pyo.Objective(expr=model.z_func(model.x))
         res = opt.solve(model)
         self.assertAlmostEqual(pyo.value(model.o), 0.885603194411, 7)
+
+    @mark_parameterized.expand(input=_load_tests(sos_solvers))
+    def test_sos(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+
+        m = pyo.ConcreteModel()
+        m.a = pyo.Set(initialize=[0, 1, 2, 3])
+        m.x = pyo.Var(m.a, within=pyo.Binary)
+        m.obj = pyo.Objective(expr=sum((i+1) * m.x[i] for i in range(4)), sense=pyo.maximize)
+        m.c = pyo.SOSConstraint(var=m.x, sos=1)
+
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(res.incumbent_objective, 4)
+        for i in range(3):
+            self.assertAlmostEqual(m.x[i].value, 0)
+        self.assertAlmostEqual(m.x[3].value, 1)
+
+        del m.c
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(res.incumbent_objective, 10)
+        for i in range(4):
+            self.assertAlmostEqual(m.x[i].value, 1)
+
+        m.c = pyo.SOSConstraint(var=m.x, sos=2)
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(res.incumbent_objective, 7)
+        for i in range(2):
+            self.assertAlmostEqual(m.x[i].value, 0)
+        self.assertAlmostEqual(m.x[2].value, 1)
+        self.assertAlmostEqual(m.x[3].value, 1)
 
 
 class TestLegacySolverInterface(unittest.TestCase):
