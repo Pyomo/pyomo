@@ -1521,7 +1521,7 @@ class TestRegularizationCore(unittest.TestCase):
             index=["theta0", "theta1"],
             columns=["theta0", "theta1"],
         )
-        theta_ref = pd.Series({"theta0": 1.0, "theta1": 2.0})
+        theta_ref = {"theta0": 1.0, "theta1": 2.0}
         weight = 3.0
 
         expr = parmest.L2_regularized_objective(
@@ -1547,7 +1547,7 @@ class TestRegularizationCore(unittest.TestCase):
             index=["theta0", "theta1"],
             columns=["theta0", "theta1"],
         )
-        theta_ref = pd.Series({"theta0": 0.0, "theta1": 0.0})
+        theta_ref = {"theta0": 0.0, "theta1": 0.0}
 
         pest = parmest.Estimator(
             exp_list,
@@ -1597,7 +1597,7 @@ class TestRegularizationCore(unittest.TestCase):
             index=["theta0", "theta1"],
             columns=["theta0", "theta1"],
         )
-        theta_ref = pd.Series({"theta0": 0.0, "theta1": 0.0})
+        theta_ref = {"theta0": 0.0, "theta1": 0.0}
 
         pest_base = parmest.Estimator(exp_list, obj_function="SSE")
         pest_l2_zero = parmest.Estimator(
@@ -1625,7 +1625,7 @@ class TestRegularizationCore(unittest.TestCase):
             obj_function="SSE",
             regularization="L2",
             prior_FIM=prior_fim,
-            theta_ref=pd.Series({"theta1": 0.0}),
+            theta_ref={"theta1": 0.0},
             regularization_weight=1.0,
         )
 
@@ -1657,6 +1657,27 @@ class TestRegularizationCore(unittest.TestCase):
                 regularization_weight=-1.0,
             )
 
+    def test_non_dict_theta_ref_raises_type_error(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(
+            TypeError,
+            match="theta_ref must be a dict mapping parameter names to reference values.",
+        ):
+            parmest.Estimator(
+                exp_list,
+                obj_function="SSE",
+                regularization="L2",
+                prior_FIM=prior_fim,
+                theta_ref=pd.Series({"theta0": 0.0, "theta1": 0.0}),
+                regularization_weight=1.0,
+            )
+
     def test_missing_theta_ref_entries_raise_clear_error(self):
         exp_list = [self.LinearExperiment(1.0, 1.0)]
         prior_fim = pd.DataFrame(
@@ -1670,7 +1691,7 @@ class TestRegularizationCore(unittest.TestCase):
             obj_function="SSE",
             regularization="L2",
             prior_FIM=prior_fim,
-            theta_ref=pd.Series({"theta0": 0.0}),
+            theta_ref={"theta0": 0.0},
             regularization_weight=1.0,
         )
 
@@ -1793,7 +1814,7 @@ class TestRegularizationCore(unittest.TestCase):
             index=["theta0", "theta1"],
             columns=["theta0", "theta1"],
         )
-        theta_ref = pd.Series({"theta0": 1.0, "theta1": 2.0})
+        theta_ref = {"theta0": 1.0, "theta1": 2.0}
         weight = 3.0
 
         expr = parmest.L2_regularized_objective(
@@ -1819,7 +1840,7 @@ class TestRegularizationCore(unittest.TestCase):
             index=["theta[a]", "theta[b]"],
             columns=["theta[a]", "theta[b]"],
         )
-        theta_ref = pd.Series({"theta[a]": 0.0, "theta[b]": 1.0})
+        theta_ref = {"theta[a]": 0.0, "theta[b]": 1.0}
 
         pest = parmest.Estimator(
             exp_list,

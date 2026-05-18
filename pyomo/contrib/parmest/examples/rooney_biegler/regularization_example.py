@@ -28,7 +28,7 @@ def main():
 
     # Rooney & Biegler Reference Values
     # a = 19.14, b = 0.53
-    theta_ref = pd.Series({'asymptote': 19.14, 'rate_constant': 0.53})
+    theta_ref = {'asymptote': 19.14, 'rate_constant': 0.53}
 
     # L2 setup: create a 'Stiff' Prior for 'asymptote' but leave 'rate_constant' flexible.
     prior_FIM_l2 = pd.DataFrame(

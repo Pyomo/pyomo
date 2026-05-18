@@ -220,7 +220,7 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
         Annotated Pyomo model
     prior_FIM : pd.DataFrame
         Prior Fisher Information Matrix from previous experimental design
-    theta_ref: pd.Series, optional
+    theta_ref: dict, optional
         Reference parameter values used in regularization.
         If None, defaults to the current parameter values in the model.
     Returns
@@ -267,33 +267,24 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
     sub_FIM = prior_FIM.loc[common_params, common_params]
 
     # For the reference theta, we also subset to the common parameters.
-    # If theta_ref is None, we create a zero vector of the right size.
     if theta_ref is not None:
-        if not isinstance(theta_ref, pd.Series):
-            theta_ref = pd.Series(theta_ref)
-
-        missing_ref = [p for p in common_params if p not in theta_ref.index]
+        missing_ref = [p for p in common_params if p not in theta_ref]
         if missing_ref:
             raise ValueError(
                 "theta_ref is missing values for parameter(s): "
                 + ", ".join(missing_ref)
             )
-        sub_theta = theta_ref.loc[common_params]
     else:
-        sub_theta = pd.Series(0, index=common_params)
-
-        # Fill the sub_theta with the initialized model parameter values
-        # (or zeros if not initialized)
-        for param in common_params:
-            sub_theta.loc[param] = pyo.value(param_map[param])
+        sub_theta = {param: pyo.value(param_map[param]) for param in common_params}
         logger.info(
             "theta_ref is None. Using initialized parameter values as reference."
         )
+        theta_ref = sub_theta
 
     # Construct the Quadratic Form (The L2 term)
     # Create the (theta - theta_ref) vector, ensuring alignment by parameter name
     delta_params = np.array(
-        [param_map[p] - sub_theta.loc[p] for p in common_params]
+        [param_map[p] - theta_ref[p] for p in common_params]
     )  # (theta - theta_ref) vector
 
     # Compute the quadratic form: delta^T * FIM * delta
@@ -314,7 +305,7 @@ def L2_regularized_objective(
         Annotated Pyomo model
     prior_FIM : pd.DataFrame
         Prior Fisher Information Matrix from previous experimental design
-    theta_ref: pd.Series, optional
+    theta_ref: dict, optional
         Reference parameter values used in regularization.
         If None, defaults to the current parameter values in the model.
     regularization_weight: float, optional
@@ -1053,7 +1044,7 @@ class Estimator:
         to be added to the FIM of the current experiments for regularization.
         The prior_FIM should be a square matrix with parameter names as both
         row and column labels.
-    theta_ref: pd.Series, optional
+    theta_ref: dict, optional
         Reference parameter values used in regularization.
         If None, defaults to the current parameter values in the model.
     regularization_weight: float, optional
@@ -1146,8 +1137,10 @@ class Estimator:
             if prior_FIM is None:
                 raise ValueError("prior_FIM must be provided when regularization='L2'.")
             _validate_prior_FIM(prior_FIM, require_psd=True)
-            if theta_ref is not None and not isinstance(theta_ref, pd.Series):
-                theta_ref = pd.Series(theta_ref)
+            if theta_ref is not None and not isinstance(theta_ref, dict):
+                raise TypeError(
+                    "theta_ref must be a dict mapping parameter names to reference values."
+                )
 
             if regularization_weight is None:
                 regularization_weight = 1.0
