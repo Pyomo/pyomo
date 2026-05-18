@@ -22,12 +22,7 @@ import sys
 import threading
 import time
 
-# Note: multiprocessing is very slow to import, but we need to make sure
-# that the startup_shutdown Lock is created *before* the user spawns any
-# subprocesses.  Therefore, we will bite the bullet and import it so
-# we can create the Lock immediately when we import this module.
-from pyomo.common.dependencies import multiprocessing
-
+import pyomo.common.dependencies as dependencies
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
 from pyomo.common.shutdown import python_is_shutting_down
@@ -305,8 +300,6 @@ class capture_output:
 
     """
 
-    startup_shutdown = multiprocessing.Lock()
-
     def __init__(self, output=None, capture_fd=False):
         self.output = output
         self.output_stream = None
@@ -352,7 +345,7 @@ class capture_output:
         return FAIL
 
     def __enter__(self):
-        if not capture_output.startup_shutdown.acquire(timeout=_threading_deadlock):
+        if not dependencies.capture_output_lock.acquire(timeout=_threading_deadlock):
             # This situation *shouldn't* happen.  If it does, it is
             # unlikely that the user can fix it (or even debug it).
             # Instead they should report it back to us.
@@ -370,17 +363,17 @@ class capture_output:
         try:
             return self._enter_impl()
         finally:
-            capture_output.startup_shutdown.release()
+            dependencies.capture_output_lock.release()
 
     def __exit__(self, et, ev, tb):
-        if not capture_output.startup_shutdown.acquire(timeout=_threading_deadlock):
+        if not dependencies.capture_output_lock.acquire(timeout=_threading_deadlock):
             # See comments & breadcrumbs in __enter__() above.
             if not python_is_shutting_down():
                 raise DeveloperError("Deadlock closing capture_output")
         try:
             return self._exit_impl(et, ev, tb)
         finally:
-            capture_output.startup_shutdown.release()
+            dependencies.capture_output_lock.release()
 
     def _enter_impl(self):
         self.old = (sys.stdout, sys.stderr)

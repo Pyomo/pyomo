@@ -945,6 +945,16 @@ class declare_modules_as_importable:
 # Common optional dependencies used throughout Pyomo
 #
 
+
+class _DummyLock:
+    def acquire(self, timeout):
+        return True
+
+    def release(self):
+        pass
+
+
+capture_output_lock = _DummyLock()
 yaml_load_args = {}
 
 
@@ -959,6 +969,18 @@ def _finalize_ctypes(module, available):
     # ctypes.util must be explicitly imported (and fileutils assumes
     # this has already happened)
     import ctypes.util
+
+
+def _finalize_multiprocessing(module, available):
+    # Note: multiprocessing is very slow to import, but we need to make
+    # sure that the capture_output_lock Lock is created *before* the
+    # user spawns any subprocesses.  tee.capture_output will look here
+    # for the lock, which will start out as a "dummy" lock, and then
+    # will be updated to a multiprocessing.Lock when the forst module
+    # triggers the multiprocessing import.
+
+    global capture_output_lock
+    capture_output_lock = module.Lock()
 
 
 def _finalize_scipy(module, available):
@@ -1091,13 +1113,14 @@ with declare_modules_as_importable(globals()):
         import cPickle as pickle
     except ImportError:
         import pickle
-    # multiprocessing is unconditionally needed by capture_output
-    import multiprocessing
 
     # Standard libraries that are slower to import and not strictly required
     # on all platforms / situations.
     ctypes, _ = attempt_import(
         'ctypes', deferred_submodules=['util'], callback=_finalize_ctypes
+    )
+    multiprocessing, _ = attempt_import(
+        'multiprocessing', callback=_finalize_multiprocessing
     )
     random, _ = attempt_import('random')
 

@@ -21,6 +21,7 @@ from io import StringIO, BytesIO
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
 from pyomo.common.tempfiles import TempfileManager
+import pyomo.common.dependencies as deps
 import pyomo.common.tee as tee
 import pyomo.common.unittest as unittest
 
@@ -584,21 +585,24 @@ class TestCapture(unittest.TestCase):
         save_poll = tee._threading_deadlock
         tee._threading_deadlock = 0.01
 
+        # Ensure multiprocessing is loaded:
+        deps.multiprocessing.Lock
+
         co = tee.capture_output()
         try:
-            tee.capture_output.startup_shutdown.acquire()
+            deps.capture_output_lock.acquire()
             with self.assertRaisesRegex(
                 DeveloperError, "Deadlock starting capture_output"
             ):
                 with tee.capture_output():
                     pass
-            tee.capture_output.startup_shutdown.release()
+            deps.capture_output_lock.release()
 
             with self.assertRaisesRegex(
                 DeveloperError, "Deadlock closing capture_output"
             ):
                 with co:
-                    tee.capture_output.startup_shutdown.acquire()
+                    deps.capture_output_lock.acquire()
         finally:
             tee._threading_deadlock = save_poll
             # We would like to just test if out Lock was acquired and
@@ -607,9 +611,9 @@ class TestCapture(unittest.TestCase):
             # just catch and eat the error for releasing an unlocked
             # lock.
             #
-            ## if tee.capture_output.startup_shutdown.locked():
+            ## if deps.capture_output_lock.locked():
             try:
-                tee.capture_output.startup_shutdown.release()
+                deps.capture_output_lock.release()
             except ValueError:
                 pass
             co.reset()

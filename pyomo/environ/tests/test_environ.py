@@ -180,10 +180,15 @@ class TestPyomoEnviron(unittest.TestCase):
     def test_tpl_import_time(self):
         data = collect_import_time(
             'pyomo.environ',
-            # pre-load and pre-start multiprocessing so that the
+            # We used to pre-load and pre-start multiprocessing so that the
             # asynchronous task triggered by creating a Lock will not be
-            # interleaved in the importtime report
-            'import time, multiprocessing; multiprocessing.Lock(); time.sleep(0.25)',
+            # interleaved in the importtime report:
+            #
+            ##'import time, multiprocessing; multiprocessing.Lock(); time.sleep(0.25)',
+            #
+            # This is no longer needed as we have removed
+            # multiprocessing from the list of required modules for
+            # pyomo.environ.
         )
         python_time, module_tpl_time, pyomo_time, tpl_by_time = summarize_import_time(
             'pyomo.environ', data
@@ -217,7 +222,6 @@ class TestPyomoEnviron(unittest.TestCase):
             'json',  # Imported on Windows
             'locale',  # Added in Python 3.9
             'logging',
-            'multiprocessing',  # capture_output requires multiprocessing.Lock
             'pickle',
             'platform',
             'shlex',
