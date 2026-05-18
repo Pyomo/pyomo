@@ -30,7 +30,12 @@ from .numvalue import (
     value,
     is_potentially_variable,
 )
-from .base import ExpressionBase
+from .base import (
+    ExpressionBase,
+    UnaryExpression_Mixin,
+    BinaryExpression_Mixin,
+    NaryExpression_Mixin,
+)
 from .boolean_value import BooleanValue, BooleanConstant
 from .expr_common import _and, _or, _equiv, _inv, _xor, _impl, ExpressionType
 from .numeric_expr import NumericExpression
@@ -107,22 +112,9 @@ class BooleanExpression(ExpressionBase, BooleanValue):
         args (list or tuple): Children of this node.
     """
 
-    __slots__ = ('_args_',)
+    __slots__ = ()
     EXPRESSION_SYSTEM = ExpressionType.LOGICAL
     PRECEDENCE = 0
-
-    def __init__(self, args):
-        self._args_ = args
-
-    @property
-    def args(self):
-        """
-        Return the child nodes
-
-        Returns: Either a list or tuple (depending on the node storage
-            model) containing only the child nodes of this node
-        """
-        return self._args_[: self.nargs()]
 
 
 class BooleanExpressionBase(metaclass=RenamedClass):
@@ -312,6 +304,8 @@ class UnaryBooleanExpression(BooleanExpression):
     Abstract class for single-argument logical expressions.
     """
 
+    __slots__ = ()
+
     def nargs(self):
         """
         Returns number of arguments in expression
@@ -319,10 +313,12 @@ class UnaryBooleanExpression(BooleanExpression):
         return 1
 
 
-class NotExpression(UnaryBooleanExpression):
+class NotExpression(UnaryExpression_Mixin, BooleanExpression):
     """
     This is the node for a NotExpression, this node should have exactly one child
     """
+
+    __slots__ = ('_arg',)
 
     PRECEDENCE = 2
 
@@ -341,6 +337,8 @@ class BinaryBooleanExpression(BooleanExpression):
     Abstract class for binary logical expressions.
     """
 
+    __slots__ = ()
+
     def nargs(self):
         """
         Return the number of argument the expression has
@@ -348,13 +346,13 @@ class BinaryBooleanExpression(BooleanExpression):
         return 2
 
 
-class EquivalenceExpression(BinaryBooleanExpression):
+class EquivalenceExpression(BinaryExpression_Mixin, BooleanExpression):
     """
     Logical equivalence statement: Y_1 iff Y_2.
 
     """
 
-    __slots__ = ()
+    __slots__ = ('_larg', '_rarg')
 
     PRECEDENCE = 6
 
@@ -368,12 +366,12 @@ class EquivalenceExpression(BinaryBooleanExpression):
         return result[0] == result[1]
 
 
-class XorExpression(BinaryBooleanExpression):
+class XorExpression(BinaryExpression_Mixin, BooleanExpression):
     """
     Logical Exclusive OR statement: Y_1 ⊻ Y_2
     """
 
-    __slots__ = ()
+    __slots__ = ('_larg', '_rarg')
 
     PRECEDENCE = 4
 
@@ -387,12 +385,12 @@ class XorExpression(BinaryBooleanExpression):
         return operator.xor(result[0], result[1])
 
 
-class ImplicationExpression(BinaryBooleanExpression):
+class ImplicationExpression(BinaryExpression_Mixin, BooleanExpression):
     """
     Logical Implication statement: Y_1 --> Y_2.
     """
 
-    __slots__ = ()
+    __slots__ = ('_larg', '_rarg')
 
     PRECEDENCE = 6
 
@@ -413,17 +411,16 @@ class NaryBooleanExpression(BooleanExpression):
     This class should never be initialized.
     """
 
-    __slots__ = ('_nargs',)
+    __slots__ = ('_args',)
 
     def __init__(self, args):
-        self._args_ = args
-        self._nargs = len(self._args_)
+        self._args = args
 
     def nargs(self):
         """
         Return the number of expression arguments
         """
-        return self._nargs
+        return len(self._args)
 
     def getname(self, *arg, **kwd):
         return 'NaryBooleanExpression'
@@ -446,16 +443,15 @@ def _add_to_and_or_expression(orig_expr, new_arg):
 
     # TODO set up id()-based scheme for avoiding duplicate entries
 
-    new_expr._nargs = len(new_expr._args_)
     return new_expr
 
 
-class AndExpression(NaryBooleanExpression):
+class AndExpression(NaryExpression_Mixin, BooleanExpression):
     """
     This is the node for AndExpression.
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     PRECEDENCE = 3
 
@@ -480,12 +476,12 @@ class AndExpression(NaryBooleanExpression):
         return _add_to_and_or_expression(self, new_arg)
 
 
-class OrExpression(NaryBooleanExpression):
+class OrExpression(NaryExpression_Mixin, BooleanExpression):
     """
     This is the node for OrExpression.
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     PRECEDENCE = 5
 
@@ -510,7 +506,7 @@ class OrExpression(NaryBooleanExpression):
         return _add_to_and_or_expression(self, new_arg)
 
 
-class ExactlyExpression(NaryBooleanExpression):
+class ExactlyExpression(NaryExpression_Mixin, BooleanExpression):
     """
     Logical constraint that exactly N child statements are True.
 
@@ -521,7 +517,7 @@ class ExactlyExpression(NaryBooleanExpression):
 
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     PRECEDENCE = 9
 
@@ -535,7 +531,7 @@ class ExactlyExpression(NaryBooleanExpression):
         return sum(result[1:]) == result[0]
 
 
-class AtMostExpression(NaryBooleanExpression):
+class AtMostExpression(NaryExpression_Mixin, BooleanExpression):
     """
     Logical constraint that at most N child statements are True.
 
@@ -546,7 +542,7 @@ class AtMostExpression(NaryBooleanExpression):
 
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     PRECEDENCE = 9
 
@@ -560,7 +556,7 @@ class AtMostExpression(NaryBooleanExpression):
         return sum(result[1:]) <= result[0]
 
 
-class AtLeastExpression(NaryBooleanExpression):
+class AtLeastExpression(NaryExpression_Mixin, BooleanExpression):
     """
     Logical constraint that at least N child statements are True.
 
@@ -571,7 +567,7 @@ class AtLeastExpression(NaryBooleanExpression):
 
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     PRECEDENCE = 9
 
@@ -585,13 +581,13 @@ class AtLeastExpression(NaryBooleanExpression):
         return sum(result[1:]) >= result[0]
 
 
-class AllDifferentExpression(NaryBooleanExpression):
+class AllDifferentExpression(NaryExpression_Mixin, BooleanExpression):
     """
     Logical expression that all of the N child statements have different values.
     All arguments are expected to be discrete-valued.
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     PRECEDENCE = None
 
@@ -612,18 +608,14 @@ class AllDifferentExpression(NaryBooleanExpression):
         return True
 
 
-class CountIfExpression(NumericExpression):
+class CountIfExpression(NaryExpression_Mixin, NumericExpression):
     """
     Logical expression that returns the number of True child statements.
     All arguments are expected to be Boolean-valued.
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
     PRECEDENCE = None
-
-    # NumericExpression assumes binary operator, so we have to override.
-    def nargs(self):
-        return len(self._args_)
 
     def getname(self, *arg, **kwd):
         return 'count_if'

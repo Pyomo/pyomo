@@ -964,13 +964,14 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         # The following are performance optimizations for common
         # situations (Monomial terms and Linear expressions)
         #
-        arg1, arg2 = child._args_
+        arg1 = child._larg
         if arg1.__class__ not in native_types:
             try:
                 arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
             except (ValueError, ArithmeticError):
                 return True, None
 
+        arg2 = child._rarg
         # Trap multiplication by 0 and nan.
         if not arg1:
             if arg2.fixed:
@@ -1007,13 +1008,14 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
         linear = {}
         for arg in child.args:
             if arg.__class__ is MonomialTermExpression:
-                arg1, arg2 = arg._args_
+                arg1 = arg._larg
                 if arg1.__class__ not in native_types:
                     try:
                         arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
                     except (ValueError, ArithmeticError):
                         return True, None
 
+                arg2 = arg._rarg
                 # Trap multiplication by 0 and nan.
                 if not arg1:
                     if arg2.fixed:

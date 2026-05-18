@@ -24,6 +24,7 @@ from pyomo.core.expr import (
     DivisionExpression,
     NPV_DivisionExpression,
 )
+from pyomo.core.expr.base import BinaryExpression_Mixin
 from pyomo.environ import (
     ConcreteModel,
     Block,
@@ -709,8 +710,8 @@ class TestRepnUtils(unittest.TestCase):
         self.assertEqual(len(end), 8)
         self.assertIn(NewProductExpression, end)
 
-        class UnknownExpression(NumericExpression):
-            pass
+        class UnknownExpression(BinaryExpression_Mixin, NumericExpression):
+            __slots__ = ('_larg', '_rarg')
 
         node = UnknownExpression((6, 7))
         with self.assertRaisesRegex(

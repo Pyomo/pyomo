@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.numeric_types import native_types
 from pyomo.common.modeling import NOTSET
 from pyomo.core.pyomoobject import PyomoObject
@@ -69,15 +70,11 @@ class ExpressionBase(PyomoObject):
         Returns: The i-th child node.
 
         """
-        if i < 0:
-            i += self.nargs()
-            if i < 0:
-                raise KeyError(
-                    "Invalid index for expression argument: %d" % i - self.nargs()
-                )
-        elif i >= self.nargs():
-            raise KeyError("Invalid index for expression argument: %d" % i)
-        return self._args_[i]
+        # FIXME: we are mapping the exception for backwards compatibility
+        try:
+            return self.args[i]
+        except IndexError as e:
+            raise KeyError(str(e)) from None
 
     @property
     def args(self):
@@ -424,27 +421,48 @@ class NPV_Mixin:
         return cls[0]
 
 
-class ExpressionArgs_Mixin:
-    __slots__ = ('_args_',)
+class UnaryExpression_Mixin:
+    __slots__ = ()
 
     def __init__(self, args):
-        self._args_ = args
+        (self._arg,) = args
 
     def nargs(self):
-        return len(self._args_)
+        return 1
 
     @property
     def args(self):
-        """
-        Return the child nodes
+        return (self._arg,)
 
-        Returns
-        -------
-        list or tuple:
-            Sequence containing only the child nodes of this node.  The
-            return type depends on the node storage model.  Users are
-            not permitted to change the returned data (even for the case
-            of data returned as a list), as that breaks the promise of
-            tree immutability.
-        """
-        return self._args_
+
+class BinaryExpression_Mixin:
+    __slots__ = ()
+
+    def __init__(self, args):
+        self._larg, self._rarg = args
+
+    def nargs(self):
+        return 2
+
+    @property
+    def args(self):
+        return self._larg, self._rarg
+
+
+class NaryExpression_Mixin:
+    __slots__ = ()
+
+    def __init__(self, args):
+        self._args = args
+
+    def nargs(self):
+        return len(self._args)
+
+    @property
+    def args(self):
+        return self._args
+
+
+class ExpressionArgs_Mixin(metaclass=RenamedClass):
+    __renamed__new_class__ = NaryExpression_Mixin
+    __renamed__version__ = '6.10.1.dev0'

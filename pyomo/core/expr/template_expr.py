@@ -17,7 +17,13 @@ from pyomo.common.collections import MutableMapping
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.gc_manager import PauseGC
-from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
+from pyomo.core.expr.base import (
+    ExpressionBase,
+    ExpressionArgs_Mixin,
+    NPV_Mixin,
+    BinaryExpression_Mixin,
+    NaryExpression_Mixin,
+)
 from pyomo.core.expr.logical_expr import BooleanExpression
 from pyomo.core.expr.numeric_expr import (
     ARG_TYPE,
@@ -106,12 +112,12 @@ class _NotSpecified:
     pass
 
 
-class GetItemExpression(ExpressionBase):
+class GetItemExpression(NaryExpression_Mixin, ExpressionBase):
     """
     Expression to call :func:`__getitem__` on the base object.
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
     PRECEDENCE = 1
 
     def __new__(cls, args=()):
@@ -157,10 +163,7 @@ class GetItemExpression(ExpressionBase):
         return len(value(self))
 
     def getname(self, *args, **kwds):
-        return self._args_[0].getname(*args, **kwds)
-
-    def nargs(self):
-        return len(self._args_)
+        return self._args[0].getname(*args, **kwds)
 
     def _is_fixed(self, values):
         if not all(values[1:]):
@@ -183,9 +186,6 @@ class GetItemExpression(ExpressionBase):
 
 class Numeric_GetItemExpression(GetItemExpression, NumericExpression):
     __slots__ = ()
-
-    def nargs(self):
-        return len(self._args_)
 
     def _compute_polynomial_degree(self, result):
         if any(x != 0 for x in result[1:]):
@@ -216,7 +216,7 @@ class NPV_Boolean_GetItemExpression(NPV_Mixin, Boolean_GetItemExpression):
     __slots__ = ()
 
 
-class Structural_GetItemExpression(ExpressionArgs_Mixin, GetItemExpression):
+class Structural_GetItemExpression(GetItemExpression):
     __slots__ = ()
 
 
@@ -224,12 +224,12 @@ class NPV_Structural_GetItemExpression(NPV_Mixin, Structural_GetItemExpression):
     __slots__ = ()
 
 
-class GetAttrExpression(ExpressionBase):
+class GetAttrExpression(BinaryExpression_Mixin, ExpressionBase):
     """
     Expression to call :func:`__getattr__` on the base object.
     """
 
-    __slots__ = ()
+    __slots__ = ('_larg', '_rarg')
     PRECEDENCE = 1
 
     def __new__(cls, args=()):
@@ -310,9 +310,6 @@ class GetAttrExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'getattr'
 
-    def nargs(self):
-        return 2
-
     def _apply_operation(self, result):
         obj, attr = result
         return getattr(obj, attr)
@@ -353,7 +350,7 @@ class NPV_Boolean_GetAttrExpression(NPV_Mixin, Boolean_GetAttrExpression):
     __slots__ = ()
 
 
-class Structural_GetAttrExpression(ExpressionArgs_Mixin, GetAttrExpression):
+class Structural_GetAttrExpression(GetAttrExpression):
     __slots__ = ()
 
 
@@ -361,20 +358,17 @@ class NPV_Structural_GetAttrExpression(NPV_Mixin, Structural_GetAttrExpression):
     __slots__ = ()
 
 
-class CallExpression(NumericExpression):
+class CallExpression(NaryExpression_Mixin, NumericExpression):
     """
     Expression to call :func:`__call__` on the base object.
     """
 
-    __slots__ = ('_kwds',)
+    __slots__ = ('_args', '_kwds')
     PRECEDENCE = None
 
     def __init__(self, args, kwargs):
-        self._args_ = tuple(args) + tuple(kwargs.values())
+        self._args = tuple(args) + tuple(kwargs.values())
         self._kwds = tuple(kwargs.keys())
-
-    def nargs(self):
-        return len(self._args_)
 
     def __getattr__(self, attr):
         if attr.startswith('__') and attr.endswith('__'):
@@ -397,11 +391,11 @@ class CallExpression(NumericExpression):
         return None
 
     def _apply_operation(self, result):
-        na = len(self._args_) - len(self._kwds)
+        na = self.nargs() - len(self._kwds)
         return result[0](*result[1:na], **dict(zip(self._kwds, result[na:])))
 
     def _to_string(self, values, verbose, smap):
-        na = len(self._args_) - len(self._kwds)
+        na = self.nargs() - len(self._kwds)
         args = ', '.join(values[1:na])
         if self._kwds:
             if na > 1:
@@ -457,7 +451,7 @@ class _TemplateSumExpression_argList:
             self._set_iter_vals(self._iter[i])
         else:
             self._set_iter_vals(self._iter[i])
-        return self._tse._local_args_[0]
+        return self._tse._local_args[0]
 
     def __enter__(self):
         self._lock = self
@@ -499,12 +493,12 @@ class TemplateSumExpression(NumericExpression):
     Expression to represent an unexpanded sum over one or more sets.
     """
 
-    __slots__ = ('_iters', '_local_args_')
+    __slots__ = ('_iters', '_local_args')
     PRECEDENCE = 1
 
     def __init__(self, args, _iters):
         assert len(args) == 1
-        self._args_ = args
+        self._local_args = args
         self._iters = _iters
 
     def nargs(self):
@@ -519,16 +513,8 @@ class TemplateSumExpression(NumericExpression):
     def args(self):
         return _TemplateSumExpression_argList(self)
 
-    @property
-    def _args_(self):
-        return _TemplateSumExpression_argList(self)
-
-    @_args_.setter
-    def _args_(self, args):
-        self._local_args_ = args
-
     def template_args(self):
-        ans = list(self._local_args_)
+        ans = list(self._local_args)
         for itergroup in self._iters:
             ans.append(itergroup[0]._set)
         return tuple(ans)
@@ -545,7 +531,7 @@ class TemplateSumExpression(NumericExpression):
     def is_potentially_variable(self):
         if any(
             arg.is_potentially_variable()
-            for arg in self._local_args_
+            for arg in self._local_args
             if arg.__class__ not in nonpyomo_leaf_types
         ):
             return True
@@ -564,8 +550,8 @@ class TemplateSumExpression(NumericExpression):
 
     def to_string(self, verbose=None, smap=None):
         ans = ''
-        assert len(self._local_args_) == 1
-        val = expression_to_string(self._local_args_[0], verbose=verbose, smap=smap)
+        assert len(self._local_args) == 1
+        val = expression_to_string(self._local_args[0], verbose=verbose, smap=smap)
         if val[0] == '(' and val[-1] == ')' and _balanced_parens(val[1:-1]):
             val = val[1:-1]
         iterStrGenerator = (

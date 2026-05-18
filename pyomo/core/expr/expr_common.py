@@ -109,7 +109,7 @@ def _recast_mutable(expr):
     elif not expr._nargs:
         return 0
     else:
-        return expr._args_[0]
+        return expr._args[0]
 
 
 def _unary_op_dispatcher_type_mapping(dispatcher, updates, TYPES=NUMERIC_ARG_TYPE):

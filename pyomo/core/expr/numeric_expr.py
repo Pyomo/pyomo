@@ -39,7 +39,14 @@ from pyomo.core.expr.expr_common import (
 )
 
 # Note: pyggyback on expr.base's use of attempt_import(visitor)
-from pyomo.core.expr.base import ExpressionBase, NPV_Mixin, visitor
+from pyomo.core.expr.base import (
+    ExpressionBase,
+    NPV_Mixin,
+    UnaryExpression_Mixin,
+    BinaryExpression_Mixin,
+    NaryExpression_Mixin,
+    visitor,
+)
 
 # Note: There is a circular dependency between relational_expr and this
 # module: relational_expr would like to reuse/build on
@@ -697,40 +704,15 @@ class NumericExpression(ExpressionBase, NumericValue):
     This class is used to define nodes in a numeric expression
     tree.
 
-    Args:
-        args (list or tuple): Children of this node.
+    Parameters
+    ----------
+    args: list | tuple
+        Children of this node.
     """
 
-    # Previously, we used _args to define expression class arguments.
-    # Here, we use _args_ to force errors for code that was referencing this
-    # data.  There are now accessor methods, so in most cases users
-    # and developers should not directly access the _args_ data values.
-    __slots__ = ('_args_',)
+    __slots__ = ()
     EXPRESSION_SYSTEM = ExpressionType.NUMERIC
     PRECEDENCE = 0
-
-    def __init__(self, args):
-        self._args_ = args
-
-    def nargs(self):
-        # by default, Pyomo numeric operators are binary operators
-        return 2
-
-    @property
-    def args(self):
-        """
-        Return the child nodes
-
-        Returns
-        -------
-        list or tuple:
-            Sequence containing only the child nodes of this node.  The
-            return type depends on the node storage model.  Users are
-            not permitted to change the returned data (even for the case
-            of data returned as a list), as that breaks the promise of
-            tree immutability.
-        """
-        return self._args_
 
     @deprecated(
         'The implicit recasting of a "not potentially variable" '
@@ -818,19 +800,16 @@ class Numeric_NPV_Mixin(NPV_Mixin):
         return NPV_AbsExpression((self,))
 
 
-class NegationExpression(NumericExpression):
+class NegationExpression(UnaryExpression_Mixin, NumericExpression):
     """
     Negation expressions::
 
         - x
     """
 
-    __slots__ = ()
+    __slots__ = ('_arg',)
 
     PRECEDENCE = 4
-
-    def nargs(self):
-        return 1
 
     def getname(self, *args, **kwds):
         return 'neg'
@@ -851,7 +830,7 @@ class NegationExpression(NumericExpression):
         return -result[0]
 
     def __neg__(self):
-        return self._args_[0]
+        return self._arg
 
 
 class NPV_NegationExpression(Numeric_NPV_Mixin, NegationExpression):
@@ -859,10 +838,10 @@ class NPV_NegationExpression(Numeric_NPV_Mixin, NegationExpression):
 
     # Because NPV also defines __neg__ we need to override it here, too
     def __neg__(self):
-        return self._args_[0]
+        return self._arg
 
 
-class ExternalFunctionExpression(NumericExpression):
+class ExternalFunctionExpression(NaryExpression_Mixin, NumericExpression):
     """
     External function expressions
 
@@ -878,17 +857,14 @@ class ExternalFunctionExpression(NumericExpression):
         fcn: a class that defines this external function
     """
 
-    __slots__ = ('_fcn',)
+    __slots__ = ('_args', '_fcn')
 
     # This operator does not have an infix representation
     PRECEDENCE = None
 
     def __init__(self, args, fcn=None):
-        self._args_ = args
+        self._args = args
         self._fcn = fcn
-
-    def nargs(self):
-        return len(self._args_)
 
     def create_node_with_local_data(self, args, classtype=None):
         if classtype is None:
@@ -917,14 +893,14 @@ class NPV_ExternalFunctionExpression(Numeric_NPV_Mixin, ExternalFunctionExpressi
     __slots__ = ()
 
 
-class PowExpression(NumericExpression):
+class PowExpression(BinaryExpression_Mixin, NumericExpression):
     """
     Power expressions::
 
         x**y
     """
 
-    __slots__ = ()
+    __slots__ = ('_larg', '_rarg')
     PRECEDENCE = 2
 
     # "**" is right-to-left associative in Python (so this should
@@ -945,7 +921,7 @@ class PowExpression(NumericExpression):
             # NOTE: use value before int() so that we don't
             #       run into the disabled __int__ method on
             #       NumericValue
-            exp = value(self._args_[1], exception=False)
+            exp = value(self._rarg, exception=False)
             if exp is None:
                 return None
             if exp == int(exp):
@@ -958,7 +934,7 @@ class PowExpression(NumericExpression):
     def _is_fixed(self, args):
         if not args[1]:
             return False
-        return args[0] or value(self._args_[1], exception=False) == 0
+        return args[0] or value(self._rarg, exception=False) == 0
 
     def _apply_operation(self, result):
         _l, _r = result
@@ -977,20 +953,17 @@ class NPV_PowExpression(Numeric_NPV_Mixin, PowExpression):
     __slots__ = ()
 
 
-class MaxExpression(NumericExpression):
+class MaxExpression(NaryExpression_Mixin, NumericExpression):
     """
     Maximum expressions::
 
         max(x, y, ...)
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     # This operator does not have an infix representation
     PRECEDENCE = None
-
-    def nargs(self):
-        return len(self._args_)
 
     def _apply_operation(self, result):
         return max(result)
@@ -1006,20 +979,17 @@ class NPV_MaxExpression(Numeric_NPV_Mixin, MaxExpression):
     __slots__ = ()
 
 
-class MinExpression(NumericExpression):
+class MinExpression(NaryExpression_Mixin, NumericExpression):
     """
     Minimum expressions::
 
         min(x, y, ...)
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     # This operator does not have an infix representation
     PRECEDENCE = None
-
-    def nargs(self):
-        return len(self._args_)
 
     def _apply_operation(self, result):
         return min(result)
@@ -1035,14 +1005,14 @@ class NPV_MinExpression(Numeric_NPV_Mixin, MinExpression):
     __slots__ = ()
 
 
-class ProductExpression(NumericExpression):
+class ProductExpression(BinaryExpression_Mixin, NumericExpression):
     """
     Product expressions::
 
         x*y
     """
 
-    __slots__ = ()
+    __slots__ = ('_larg', '_rarg')
     PRECEDENCE = 4
 
     def _compute_polynomial_degree(self, result):
@@ -1050,9 +1020,9 @@ class ProductExpression(NumericExpression):
         # overrides a numeric value (and sum() just ignores it - or
         # errors in py3k)
         a, b = result
-        if a == 0 and value(self._args_[0], exception=False) == 0:
+        if a == 0 and value(self._larg, exception=False) == 0:
             return 0
-        if b == 0 and value(self._args_[1], exception=False) == 0:
+        if b == 0 and value(self._rarg, exception=False) == 0:
             return 0
         if a is None or b is None:
             return None
@@ -1067,9 +1037,10 @@ class ProductExpression(NumericExpression):
         # fixed and has a value of 0, then this expression is fixed
         if all(args):
             return True
-        for i in (0, 1):
-            if args[i] and value(self._args_[i], exception=False) == 0:
-                return True
+        if args[0] and value(self._larg, exception=False) == 0:
+            return True
+        if args[1] and value(self._rarg, exception=False) == 0:
+            return True
         return False
 
     def _apply_operation(self, result):
@@ -1110,14 +1081,14 @@ class MonomialTermExpression(ProductExpression):
         return classtype(args)
 
 
-class DivisionExpression(NumericExpression):
+class DivisionExpression(BinaryExpression_Mixin, NumericExpression):
     """
     Division expressions::
 
         x/y
     """
 
-    __slots__ = ()
+    __slots__ = ('_larg', '_rarg')
     PRECEDENCE = 4
 
     def _compute_polynomial_degree(self, result):
@@ -1154,14 +1125,14 @@ class SumExpression(NumericExpression):
 
     """
 
-    __slots__ = ('_nargs',)
+    __slots__ = ('_nargs', '_args')
     PRECEDENCE = 6
 
     def __init__(self, args):
         # unlike other expressions, we expect (require) args to be a list
         if args.__class__ is not list:
             args = list(args)
-        self._args_ = args
+        self._args = args
         self._nargs = len(args)
 
     def nargs(self):
@@ -1171,26 +1142,26 @@ class SumExpression(NumericExpression):
     def args(self):
         # We unconditionally make a copy of the args to isolate the user
         # from future possible updates to the underlying list
-        return self._args_[: self._nargs]
+        return self._args[: self._nargs]
 
     def getname(self, *args, **kwds):
         return 'sum'
 
     def _trunc_append(self, other):
-        _args = self._args_
+        _args = self._args
         if len(_args) > self._nargs:
             _args = _args[: self._nargs]
         _args.append(other)
         return self.__class__(_args)
 
     def _trunc_extend(self, other):
-        _args = self._args_
+        _args = self._args
         if len(_args) > self._nargs:
             _args = _args[: self._nargs]
-        if len(other._args_) == other._nargs:
-            _args.extend(other._args_)
+        if len(other._args) == other._nargs:
+            _args.extend(other._args)
         else:
-            _args.extend(other._args_[: other._nargs])
+            _args.extend(other._args[: other._nargs])
         return self.__class__(_args)
 
     def _apply_operation(self, result):
@@ -1292,23 +1263,23 @@ class LinearExpression(SumExpression):
             # unlike other expressions, we expect (require) args to be a list
             if args.__class__ is not list:
                 args = list(args)
-            self._args_ = args
+            self._args = args
         else:
-            self._args_ = []
+            self._args = []
             if constant is not None:
                 # Filter 0, but only if it is a native type
                 if constant.__class__ not in native_types or constant:
-                    self._args_.append(constant)
+                    self._args.append(constant)
             if linear_vars is not None:
                 if linear_coefs is None or len(linear_vars) != len(linear_coefs):
                     raise ValueError(
                         f"linear_vars ({tostr(linear_vars)}) is not compatible "
                         f"with linear_coefs ({tostr(linear_coefs)})"
                     )
-                self._args_.extend(
+                self._args.extend(
                     map(MonomialTermExpression, zip(linear_coefs, linear_vars))
                 )
-        self._nargs = len(self._args_)
+        self._nargs = len(self._args)
 
     def _build_cache(self):
         const = 0
@@ -1316,8 +1287,8 @@ class LinearExpression(SumExpression):
         var = []
         for arg in self.args:
             if arg.__class__ is MonomialTermExpression:
-                coef.append(arg._args_[0])
-                var.append(arg._args_[1])
+                coef.append(arg._larg)
+                var.append(arg._rarg)
             elif arg.__class__ in native_numeric_types:
                 const += arg
             elif not arg.is_potentially_variable():
@@ -1386,7 +1357,7 @@ class _MutableSumExpression(SumExpression):
 
     The :func:`add` method is slightly different in that it
     does not create a new sum expression, but modifies the
-    :attr:`_args_` data in place.
+    :attr:`_args` data in place.
     """
 
     __slots__ = ()
@@ -1428,7 +1399,7 @@ class Expr_ifExpression(NumericExpression):
 
     """
 
-    __slots__ = ()
+    __slots__ = ('_if', '_then', '_else')
 
     # This operator does not have an infix representation
     PRECEDENCE = None
@@ -1437,15 +1408,22 @@ class Expr_ifExpression(NumericExpression):
     #           on a number of occasions. It is important that
     #           one uses __call__ for value() and NOT bool().
 
+    def __init__(self, args):
+        self._if, self._then, self._else = args
+
     def nargs(self):
         return 3
+
+    @property
+    def args(self):
+        return self._if, self._then, self._else
 
     def getname(self, *args, **kwds):
         return "Expr_if"
 
     def _is_fixed(self, args):
         if args[0]:  # if.is_fixed():
-            if value(self._args_[0]):
+            if value(self._if):
                 return args[1]  # then.is_fixed()
             else:
                 return args[2]  # else.is_fixed()
@@ -1458,7 +1436,7 @@ class Expr_ifExpression(NumericExpression):
             if _then == _else:
                 # It doesn't matter which branch is active
                 return _then
-            val = value(self.arg(0), exception=False)
+            val = value(self._if, exception=False)
             if val is not None:
                 return _then if val else _else
         return None
@@ -1478,7 +1456,7 @@ class NPV_Expr_ifExpression(Numeric_NPV_Mixin, Expr_ifExpression):
     __slots__ = ()
 
 
-class UnaryFunctionExpression(NumericExpression):
+class UnaryFunctionExpression(UnaryExpression_Mixin, NumericExpression):
     """
     An expression object for intrinsic (math) functions (e.g. sin, cos, tan).
 
@@ -1488,18 +1466,15 @@ class UnaryFunctionExpression(NumericExpression):
         fcn: The function that is used to evaluate this expression
     """
 
-    __slots__ = ('_fcn', '_name')
+    __slots__ = ('_arg', '_fcn', '_name')
 
     # This operator does not have an infix representation
     PRECEDENCE = None
 
     def __init__(self, args, name=None, fcn=None):
-        self._args_ = args
+        (self._arg,) = args
         self._name = name
         self._fcn = fcn
-
-    def nargs(self):
-        return 1
 
     def create_node_with_local_data(self, args, classtype=None):
         if classtype is None:
@@ -1612,41 +1587,35 @@ def _decompose_linear_terms(expr, multiplier=1):
     elif expr.is_variable_type():
         yield (multiplier, expr)
     elif expr.__class__ is MonomialTermExpression:
-        yield (multiplier * expr._args_[0], expr._args_[1])
+        yield (multiplier * expr._larg, expr._rarg)
     elif expr.__class__ is ProductExpression:
         if (
-            expr._args_[0].__class__ in native_numeric_types
-            or not expr._args_[0].is_potentially_variable()
+            expr._larg.__class__ in native_numeric_types
+            or not expr._larg.is_potentially_variable()
         ):
-            yield from _decompose_linear_terms(
-                expr._args_[1], multiplier * expr._args_[0]
-            )
+            yield from _decompose_linear_terms(expr._rarg, multiplier * expr._larg)
         elif (
-            expr._args_[1].__class__ in native_numeric_types
-            or not expr._args_[1].is_potentially_variable()
+            expr._rarg.__class__ in native_numeric_types
+            or not expr._rarg.is_potentially_variable()
         ):
-            yield from _decompose_linear_terms(
-                expr._args_[0], multiplier * expr._args_[1]
-            )
+            yield from _decompose_linear_terms(expr._larg, multiplier * expr._rarg)
         else:
             raise LinearDecompositionError(
                 "Quadratic terms exist in a product expression."
             )
     elif expr.__class__ is DivisionExpression:
         if (
-            expr._args_[1].__class__ in native_numeric_types
-            or not expr._args_[1].is_potentially_variable()
+            expr._rarg.__class__ in native_numeric_types
+            or not expr._rarg.is_potentially_variable()
         ):
-            yield from _decompose_linear_terms(
-                expr._args_[0], multiplier / expr._args_[1]
-            )
+            yield from _decompose_linear_terms(expr._larg, multiplier / expr._rarg)
         else:
             raise LinearDecompositionError("Unexpected nonlinear term (division)")
     elif isinstance(expr, SumExpression):
         for arg in expr.args:
             yield from _decompose_linear_terms(arg, multiplier)
     elif expr.__class__ is NegationExpression:
-        yield from _decompose_linear_terms(expr._args_[0], -multiplier)
+        yield from _decompose_linear_terms(expr._arg, -multiplier)
     else:
         raise LinearDecompositionError("Unexpected nonlinear term")
 
@@ -2208,16 +2177,16 @@ def _iadd_mutablenpvsum_mutable(a, b):
 def _iadd_mutablenpvsum_native(a, b):
     if not b:
         return a
-    if a._args_ and a._args_[-1].__class__ in native_numeric_types:
-        a._args_[-1] += b
+    if a._args and a._args[-1].__class__ in native_numeric_types:
+        a._args[-1] += b
     else:
-        a._args_.append(b)
+        a._args.append(b)
         a._nargs += 1
     return a
 
 
 def _iadd_mutablenpvsum_npv(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
@@ -2225,7 +2194,7 @@ def _iadd_mutablenpvsum_npv(a, b):
 def _iadd_mutablenpvsum_param(a, b):
     if b.is_constant():
         return _iadd_mutablesum_native(a, b.value)
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
@@ -2305,16 +2274,16 @@ def _iadd_mutablelinear_mutable(a, b):
 def _iadd_mutablelinear_native(a, b):
     if not b:
         return a
-    if a._args_ and a._args_[-1].__class__ in native_numeric_types:
-        a._args_[-1] += b
+    if a._args and a._args[-1].__class__ in native_numeric_types:
+        a._args[-1] += b
     else:
-        a._args_.append(b)
+        a._args.append(b)
         a._nargs += 1
     return a
 
 
 def _iadd_mutablelinear_npv(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
@@ -2322,25 +2291,25 @@ def _iadd_mutablelinear_npv(a, b):
 def _iadd_mutablelinear_param(a, b):
     if b.is_constant():
         return _iadd_mutablesum_native(a, b.value)
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
 
 def _iadd_mutablelinear_var(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
 
 def _iadd_mutablelinear_monomial(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
 
 def _iadd_mutablelinear_linear(a, b):
-    a._args_.extend(b.args)
+    a._args.extend(b.args)
     a._nargs += b.nargs()
     return a
 
@@ -2405,16 +2374,16 @@ def _iadd_mutablesum_mutable(a, b):
 def _iadd_mutablesum_native(a, b):
     if not b:
         return a
-    if a._args_ and a._args_[-1].__class__ in native_numeric_types:
-        a._args_[-1] += b
+    if a._args and a._args[-1].__class__ in native_numeric_types:
+        a._args[-1] += b
     else:
-        a._args_.append(b)
+        a._args.append(b)
         a._nargs += 1
     return a
 
 
 def _iadd_mutablesum_npv(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
@@ -2422,37 +2391,37 @@ def _iadd_mutablesum_npv(a, b):
 def _iadd_mutablesum_param(a, b):
     if b.is_constant():
         return _iadd_mutablesum_native(a, b.value)
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
 
 def _iadd_mutablesum_var(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
 
 def _iadd_mutablesum_monomial(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
 
 def _iadd_mutablesum_linear(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
 
 def _iadd_mutablesum_sum(a, b):
-    a._args_.extend(b.args)
+    a._args.extend(b.args)
     a._nargs += b.nargs()
     return a
 
 
 def _iadd_mutablesum_other(a, b):
-    a._args_.append(b)
+    a._args.append(b)
     a._nargs += 1
     return a
 
@@ -2590,7 +2559,7 @@ def _mul_native_var(a, b):
 def _mul_native_monomial(a, b):
     if a in _zero_one_optimizations:
         return b if a else 0
-    return MonomialTermExpression((a * b._args_[0], b._args_[1]))
+    return MonomialTermExpression((a * b._larg, b._rarg))
 
 
 def _mul_native_linear(a, b):
@@ -2639,9 +2608,7 @@ def _mul_npv_var(a, b):
 
 
 def _mul_npv_monomial(a, b):
-    return MonomialTermExpression(
-        (NPV_ProductExpression((a, b._args_[0])), b._args_[1])
-    )
+    return MonomialTermExpression((NPV_ProductExpression((a, b._larg)), b._rarg))
 
 
 def _mul_npv_linear(a, b):
@@ -2704,7 +2671,7 @@ def _mul_param_monomial(a, b):
         a = a.value
         if a in _zero_one_optimizations:
             return b if a else 0
-    return MonomialTermExpression((a * b._args_[0], b._args_[1]))
+    return MonomialTermExpression((a * b._larg, b._rarg))
 
 
 def _mul_param_linear(a, b):
@@ -2782,13 +2749,11 @@ def _mul_var_other(a, b):
 def _mul_monomial_native(a, b):
     if b in _zero_one_optimizations:
         return a if b else 0
-    return MonomialTermExpression((a._args_[0] * b, a._args_[1]))
+    return MonomialTermExpression((a._larg * b, a._rarg))
 
 
 def _mul_monomial_npv(a, b):
-    return MonomialTermExpression(
-        (NPV_ProductExpression((a._args_[0], b)), a._args_[1])
-    )
+    return MonomialTermExpression((NPV_ProductExpression((a._larg, b)), a._rarg))
 
 
 def _mul_monomial_param(a, b):
@@ -2796,7 +2761,7 @@ def _mul_monomial_param(a, b):
         b = b.value
         if b in _zero_one_optimizations:
             return a if b else 0
-    return MonomialTermExpression((a._args_[0] * b, a._args_[1]))
+    return MonomialTermExpression((a._larg * b, a._rarg))
 
 
 def _mul_monomial_var(a, b):
@@ -3265,13 +3230,11 @@ def _div_var_other(a, b):
 def _div_monomial_native(a, b):
     if b in _zero_one_optimizations and b:
         return a
-    return MonomialTermExpression((a._args_[0] / b, a._args_[1]))
+    return MonomialTermExpression((a._larg / b, a._rarg))
 
 
 def _div_monomial_npv(a, b):
-    return MonomialTermExpression(
-        (NPV_DivisionExpression((a._args_[0], b)), a._args_[1])
-    )
+    return MonomialTermExpression((NPV_DivisionExpression((a._larg, b)), a._rarg))
 
 
 def _div_monomial_param(a, b):
@@ -3279,10 +3242,8 @@ def _div_monomial_param(a, b):
         b = b.value
         if b in _zero_one_optimizations and b:
             return a
-        return MonomialTermExpression((a._args_[0] / b, a._args_[1]))
-    return MonomialTermExpression(
-        (NPV_DivisionExpression((a._args_[0], b)), a._args_[1])
-    )
+        return MonomialTermExpression((a._larg / b, a._rarg))
+    return MonomialTermExpression((NPV_DivisionExpression((a._larg, b)), a._rarg))
 
 
 def _div_monomial_var(a, b):

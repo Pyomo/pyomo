@@ -671,13 +671,14 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         # The following are performance optimizations for common
         # situations (Monomial terms and Linear expressions)
         #
-        arg1, arg2 = child._args_
+        arg1 = child._larg
         if arg1.__class__ not in native_types:
             try:
                 arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
             except (ValueError, ArithmeticError):
                 return True, None
 
+        arg2 = child._rarg
         # We want to check / update the var_map before processing "0"
         # coefficients so that we are consistent with what gets added to the
         # var_map (e.g., 0*x*y: y is processed by _before_var and will
@@ -718,13 +719,14 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         linear = ans.linear
         for arg in child.args:
             if arg.__class__ is MonomialTermExpression:
-                arg1, arg2 = arg._args_
+                arg1 = arg._larg
                 if arg1.__class__ not in native_types:
                     try:
                         arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
                     except (ValueError, ArithmeticError):
                         return True, None
 
+                arg2 = arg._rarg
                 # Trap multiplication by 0 and nan.  Note that arg1 was
                 # reduced to a numeric value at the beginning of this
                 # method.

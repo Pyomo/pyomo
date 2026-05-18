@@ -28,7 +28,7 @@ from pyomo.common.numeric_types import (
 # been declared.
 import pyomo.core.expr.numeric_expr as numeric_expr
 
-from pyomo.core.expr.base import ExpressionBase
+from pyomo.core.expr.base import ExpressionBase, BinaryExpression_Mixin
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.expr_common import (
     ExpressionType,
@@ -75,12 +75,9 @@ def _categorize_relational_arg_types(*args):
 
 
 class RelationalExpression(ExpressionBase, BooleanValue):
-    __slots__ = ('_args_',)
+    __slots__ = ()
 
     EXPRESSION_SYSTEM = ExpressionType.RELATIONAL
-
-    def __init__(self, args):
-        self._args_ = args
 
     def __bool__(self):
         if self.is_constant():
@@ -99,16 +96,6 @@ and
     ...     pass
 would both cause this exception.""".strip() % (self,))
 
-    @property
-    def args(self):
-        """
-        Return the child nodes
-
-        Returns: Either a list or tuple (depending on the node storage
-            model) containing only the child nodes of this node
-        """
-        return self._args_[: self.nargs()]
-
     @deprecated(
         "is_relational() is deprecated in favor of "
         "is_expression_type(ExpressionType.RELATIONAL)",
@@ -120,7 +107,7 @@ would both cause this exception.""".strip() % (self,))
     def is_potentially_variable(self):
         return any(
             arg.__class__ not in native_numeric_types and arg.is_potentially_variable()
-            for arg in self._args_
+            for arg in self.args
         )
 
     def polynomial_degree(self):
@@ -212,7 +199,7 @@ class RangedExpression(RelationalExpression):
         strict (tuple): flags that indicate whether the inequalities are strict
     """
 
-    __slots__ = ('_strict',)
+    __slots__ = ('_strict', '_lhs', '_body', '_rhs')
     PRECEDENCE = 9
 
     # Shared tuples for the most common RangedExpression objects encountered
@@ -227,11 +214,15 @@ class RangedExpression(RelationalExpression):
     }
 
     def __init__(self, args, strict):
-        super(RangedExpression, self).__init__(args)
+        self._lhs, self._body, self._rhs = args
         self._strict = RangedExpression.STRICT[strict]
 
     def nargs(self):
         return 3
+
+    @property
+    def args(self):
+        return self._lhs, self._body, self._rhs
 
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._strict)
@@ -262,7 +253,7 @@ class RangedExpression(RelationalExpression):
         return self._strict
 
 
-class InequalityExpression(RelationalExpression):
+class InequalityExpression(BinaryExpression_Mixin, RelationalExpression):
     """
     Inequality expressions, which define less-than or
     less-than-or-equal relations::
@@ -275,15 +266,12 @@ class InequalityExpression(RelationalExpression):
         strict (bool): a flag that indicates whether the inequality is strict
     """
 
-    __slots__ = ('_strict',)
+    __slots__ = ('_larg', '_rarg', '_strict')
     PRECEDENCE = 9
 
     def __init__(self, args, strict):
-        super().__init__(args)
+        self._larg, self._rarg = args
         self._strict = strict
-
-    def nargs(self):
-        return 2
 
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._strict)
@@ -333,7 +321,7 @@ class TrivialRelationalExpression(InequalityExpression):
         return self
 
     def __reduce__(self):
-        return self.__class__, (self._name, self._args_)
+        return self.__class__, (self._name, self.args)
 
     def _to_string(self, values, verbose, smap):
         return self._name
@@ -452,18 +440,15 @@ def inequality(lower=None, body=None, upper=None, strict=False):
     return expr
 
 
-class EqualityExpression(RelationalExpression):
+class EqualityExpression(BinaryExpression_Mixin, RelationalExpression):
     """
     Equality expression::
 
         x == y
     """
 
-    __slots__ = ()
+    __slots__ = ('_larg', '_rarg')
     PRECEDENCE = 9
-
-    def nargs(self):
-        return 2
 
     def __bool__(self):
         lhs, rhs = self.args
@@ -479,17 +464,14 @@ class EqualityExpression(RelationalExpression):
         return "%s  ==  %s" % (values[0], values[1])
 
 
-class NotEqualExpression(RelationalExpression):
+class NotEqualExpression(BinaryExpression_Mixin, RelationalExpression):
     """
     Not-equal expression::
 
         x != y
     """
 
-    __slots__ = ()
-
-    def nargs(self):
-        return 2
+    __slots__ = ('_larg', '_rarg')
 
     def __bool__(self):
         lhs, rhs = self.args
@@ -654,7 +636,7 @@ def _le_expr(a, b):
 
 
 def _le_expr_ineq(a, b):
-    return RangedExpression((a,) + b.args, (False, b._strict))
+    return RangedExpression((a, b._larg, b._rarg), (False, b._strict))
 
 
 def _le_native_ineq(a, b):
@@ -679,11 +661,11 @@ def _le_native_ineq(a, b):
 def _le_param_ineq(a, b):
     if a.is_constant():
         return _le_native_ineq(a.value, b)
-    return RangedExpression((a,) + b.args, (False, b._strict))
+    return RangedExpression((a, b._larg, b._rarg), (False, b._strict))
 
 
 def _le_ineq_expr(a, b):
-    return RangedExpression(a.args + (b,), (a._strict, False))
+    return RangedExpression((a._larg, a._rarg, b), (a._strict, False))
 
 
 def _le_ineq_native(a, b):
@@ -708,7 +690,7 @@ def _le_ineq_native(a, b):
 def _le_ineq_param(a, b):
     if b.is_constant():
         return _le_ineq_native(a, b.value)
-    return RangedExpression(a.args + (b,), (a._strict, False))
+    return RangedExpression((a._larg, a._rarg, b), (a._strict, False))
 
 
 def _le_param_param(a, b):
@@ -790,7 +772,7 @@ def _lt_expr(a, b):
 
 
 def _lt_expr_ineq(a, b):
-    return RangedExpression((a,) + b.args, (True, b._strict))
+    return RangedExpression((a, b._larg, b._rarg), (True, b._strict))
 
 
 def _lt_native_ineq(a, b):
@@ -813,11 +795,11 @@ def _lt_native_ineq(a, b):
 def _lt_param_ineq(a, b):
     if a.is_constant():
         return _lt_native_ineq(a.value, b)
-    return RangedExpression((a,) + b.args, (True, b._strict))
+    return RangedExpression((a, b._larg, b._rarg), (True, b._strict))
 
 
 def _lt_ineq_expr(a, b):
-    return RangedExpression(a.args + (b,), (a._strict, True))
+    return RangedExpression((a._larg, a._rarg, b), (a._strict, True))
 
 
 def _lt_ineq_native(a, b):
@@ -840,7 +822,7 @@ def _lt_ineq_native(a, b):
 def _lt_ineq_param(a, b):
     if b.is_constant():
         return _lt_ineq_native(a, b.value)
-    return RangedExpression(a.args + (b,), (a._strict, True))
+    return RangedExpression((a._larg, a._rarg, b), (a._strict, True))
 
 
 def _lt_param_param(a, b):

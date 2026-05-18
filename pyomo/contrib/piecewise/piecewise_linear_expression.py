@@ -26,7 +26,7 @@ class PiecewiseLinearExpression(NumericExpression):
         Piece-wise linear function of which this node is an instance.
     """
 
-    __slots__ = ('_pw_linear_function',)
+    __slots__ = ('_args_', '_pw_linear_function')
     __autoslot_mappers__ = {'_pw_linear_function': AutoSlots.weakref_mapper}
 
     def __init__(self, args, pw_linear_function):

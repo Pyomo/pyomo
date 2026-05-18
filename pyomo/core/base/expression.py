@@ -33,34 +33,46 @@ from pyomo.core.base.indexed_component import (
     UnindexedComponent_set,
     IndexedComponent_NDArrayMixin,
 )
+from pyomo.core.expr.base import UnaryExpression_Mixin
 from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')
 
 
-class NamedExpressionData(numeric_expr.NumericValue):
+class NamedExpressionData(UnaryExpression_Mixin, numeric_expr.NumericValue):
     """An object that defines a generic "named expression".
 
     This is the base class for both :class:`ExpressionData` and
     :class:`ObjectiveData`.
     """
 
-    # Note: derived classes are expected to declare the _args_ slot
     __slots__ = ()
 
     EXPRESSION_SYSTEM = EXPR.ExpressionType.NUMERIC
     PRECEDENCE = 0
     ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
 
+    def arg(self, i):
+        """Return the i-th child node.
+
+        Parameters
+        ----------
+        i: int
+            Index of the child argument to return
+
+        Returns: The i-th child node.
+
+        """
+        return self.args[i]
+
     def __call__(self, exception=NOTSET):
         """Compute the value of this expression."""
         exception = _type_check_exception_arg(self, exception)
-        (arg,) = self.args
-        if arg.__class__ in native_types:
+        if self._arg.__class__ in native_types:
             # Note: native_types includes NoneType
-            return arg
-        return arg(exception=exception)
+            return self._arg
+        return self._arg(exception=exception)
 
     def create_node_with_local_data(self, values, classtype=None):
         """
@@ -73,7 +85,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
         if classtype is None:
             classtype = self.parent_component()._ComponentDataClass
         obj = classtype()
-        obj._args_ = values
+        (obj._arg,) = values
         return obj
 
     def is_named_expression_type(self):
@@ -83,18 +95,6 @@ class NamedExpressionData(numeric_expr.NumericValue):
     def is_expression_type(self, expression_system=None):
         """A boolean indicating whether this in an expression."""
         return expression_system is None or expression_system == self.EXPRESSION_SYSTEM
-
-    def arg(self, index):
-        if index != 0:
-            raise KeyError("Invalid index for expression argument: %d" % index)
-        return self.args[0]
-
-    @property
-    def args(self):
-        return self._args_
-
-    def nargs(self):
-        return 1
 
     def _to_string(self, values, verbose, smap):
         if verbose:
@@ -143,15 +143,15 @@ class NamedExpressionData(numeric_expr.NumericValue):
     def set_value(self, expr):
         """Set the expression on this expression."""
         if expr is None or expr.__class__ in native_numeric_types:
-            self._args_ = (expr,)
+            self._arg = expr
             return
         try:
             if expr.is_numeric_type():
-                self._args_ = (expr,)
+                self._arg = expr
                 return
         except AttributeError:
             if check_if_numeric_type(expr):
-                self._args_ = (expr,)
+                self._arg = expr
                 return
         raise ValueError(
             f"Cannot assign {expr.__class__.__name__} to "
@@ -221,10 +221,10 @@ class ExpressionData(NamedExpressionData, ComponentData):
 
     """
 
-    __slots__ = ('_args_',)
+    __slots__ = ('_arg',)
 
     def __init__(self, expr=None, component=None):
-        self._args_ = (expr,)
+        self._arg = expr
         self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
 
