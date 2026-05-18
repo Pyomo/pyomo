@@ -12,6 +12,7 @@ import importlib
 import importlib.util
 import logging
 import sys
+import threading
 import warnings
 
 from collections.abc import Mapping
@@ -945,16 +946,11 @@ class declare_modules_as_importable:
 # Common optional dependencies used throughout Pyomo
 #
 
-
-class _DummyLock:
-    def acquire(self, timeout):
-        return True
-
-    def release(self):
-        pass
-
-
-capture_output_lock = _DummyLock()
+#: lock for deconflicting access to capturing the process file
+#: descriptors.  This starts as a threading.Lock, unless the environment
+#: imports multiprocessing, in which case, it is upgraded to a
+#: multiprocessing lock.
+capture_output_lock = threading.Lock()
 yaml_load_args = {}
 
 
