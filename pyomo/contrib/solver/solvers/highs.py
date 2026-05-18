@@ -686,7 +686,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         results.timing_info.highs_time = highs.getRunTime()
 
         self._sol = highs.getSolution()
-        has_feasible_solution = self._sol.value_valid
+        info = highs.getInfo()
+        # 0: None, 1: Infeasible, 2: Feasible
+        has_feasible_solution = info.primal_solution_status == 2
         if status == highspy.HighsModelStatus.kOptimal:
             results.solution_status = SolutionStatus.optimal
         elif has_feasible_solution:
@@ -744,12 +746,15 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         results.incumbent_objective = None
         results.objective_bound = None
-        info = highs.getInfo()
         if self._objective is not None:
             if has_feasible_solution:
                 results.incumbent_objective = info.objective_function_value
             if info.mip_node_count == -1:
-                if has_feasible_solution:
+                if (
+                    has_feasible_solution
+                    and results.termination_condition
+                    == TerminationCondition.convergenceCriteriaSatisfied
+                ):
                     results.objective_bound = info.objective_function_value
                 else:
                     results.objective_bound = None
