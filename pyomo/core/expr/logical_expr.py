@@ -227,7 +227,7 @@ def land(*args):
     """
     Construct an AndExpression between passed arguments.
     """
-    result = AndExpression([])
+    result = AndExpression(())
     for argdata in _flattened_boolean_args(args):
         result = result.add(argdata)
     return result
@@ -237,7 +237,7 @@ def lor(*args):
     """
     Construct an OrExpression between passed arguments.
     """
-    result = OrExpression([])
+    result = OrExpression(())
     for argdata in _flattened_boolean_args(args):
         result = result.add(argdata)
     return result
@@ -251,7 +251,7 @@ def exactly(n, *args):
     Usage: exactly(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = ExactlyExpression([n] + list(_flattened_boolean_args(args)))
+    result = ExactlyExpression((n,) + tuple(_flattened_boolean_args(args)))
     return result
 
 
@@ -263,7 +263,7 @@ def atmost(n, *args):
     Usage: atmost(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtMostExpression([n] + list(_flattened_boolean_args(args)))
+    result = AtMostExpression((n,) + tuple(_flattened_boolean_args(args)))
     return result
 
 
@@ -275,7 +275,7 @@ def atleast(n, *args):
     Usage: atleast(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtLeastExpression([n] + list(_flattened_boolean_args(args)))
+    result = AtLeastExpression((n,) + tuple(_flattened_boolean_args(args)))
     return result
 
 
@@ -286,7 +286,7 @@ def all_different(*args):
 
     Usage: all_different(m.X1, m.X2, ...)
     """
-    return AllDifferentExpression(list(_flattened_numeric_args(args)))
+    return AllDifferentExpression(tuple(_flattened_numeric_args(args)))
 
 
 def count_if(*args):
@@ -296,7 +296,7 @@ def count_if(*args):
 
     Usage: count_if(m.Y1, m.Y2, ...)
     """
-    return CountIfExpression(list(_flattened_boolean_args(args)))
+    return CountIfExpression(tuple(_flattened_boolean_args(args)))
 
 
 class UnaryBooleanExpression(BooleanExpression):
@@ -434,12 +434,10 @@ def _add_to_and_or_expression(orig_expr, new_arg):
     # Clone 'self', because AndExpression/OrExpression are immutable
     if new_arg.__class__ is orig_expr.__class__:
         # adding new AndExpression/OrExpression on the right
-        new_expr = orig_expr.__class__(orig_expr._args_)
-        new_expr._args_.extend(islice(new_arg._args_, new_arg._nargs))
+        new_expr = orig_expr.__class__(orig_expr.args + new_arg.args)
     else:
         # adding new singleton on the right
-        new_expr = orig_expr.__class__(orig_expr._args_)
-        new_expr._args_.append(new_arg)
+        new_expr = orig_expr.__class__(orig_expr.args + (new_arg,))
 
     # TODO set up id()-based scheme for avoiding duplicate entries
 
