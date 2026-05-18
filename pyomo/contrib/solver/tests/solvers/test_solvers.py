@@ -2420,9 +2420,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(model.o), 0.885603194411, 7)
 
     @mark_parameterized.expand(input=_load_tests(sos_solvers))
-    def test_sos(
-        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
-    ):
+    def test_sos(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -2430,7 +2428,9 @@ class TestSolvers(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.a = pyo.Set(initialize=[0, 1, 2, 3])
         m.x = pyo.Var(m.a, within=pyo.Binary)
-        m.obj = pyo.Objective(expr=sum((i+1) * m.x[i] for i in range(4)), sense=pyo.maximize)
+        m.obj = pyo.Objective(
+            expr=sum((i + 1) * m.x[i] for i in range(4)), sense=pyo.maximize
+        )
         m.c = pyo.SOSConstraint(var=m.x, sos=1)
 
         res = opt.solve(m)

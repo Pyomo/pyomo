@@ -112,9 +112,7 @@ class ScipDirect(SolverBase):
 
         ostreams = [io.StringIO()] + config.tee
 
-        scip_model, solution_loader, has_obj = self._create_solver_model(
-            model, config
-        )
+        scip_model, solution_loader, has_obj = self._create_solver_model(model, config)
 
         scip_model.hideOutput(quiet=False)
         if config.threads is not None:
@@ -137,9 +135,7 @@ class ScipDirect(SolverBase):
             scip_model.optimize()
         timer.stop('optimize')
 
-        results = self._populate_results(
-            scip_model, solution_loader, has_obj, config
-        )
+        results = self._populate_results(scip_model, solution_loader, has_obj, config)
 
         results.solver_log = ostreams[0].getvalue()
         end_timestamp = datetime.datetime.now(datetime.timezone.utc)
