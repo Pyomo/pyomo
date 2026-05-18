@@ -1713,6 +1713,104 @@ class TestRegularizationCore(unittest.TestCase):
                 exp_list, obj_function="SSE", regularization="L2", prior_FIM=non_psd
             )
 
+    def test_prior_fim_must_be_dataframe(self):
+        with pytest.raises(TypeError, match="prior_FIM must be a pandas DataFrame."):
+            parmest._validate_prior_FIM([[1.0, 0.0], [0.0, 1.0]])
+
+    def test_prior_fim_row_and_column_labels_must_match(self):
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta2"],
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="prior_FIM row and column labels must match the same parameter names.",
+        ):
+            parmest._validate_prior_FIM(prior_fim)
+
+    def test_prior_fim_entries_must_be_numeric(self):
+        prior_fim = pd.DataFrame(
+            [["a", 0.0], [0.0, "b"]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(TypeError, match="prior_FIM entries must be numeric."):
+            parmest._validate_prior_FIM(prior_fim)
+
+    def test_prior_fim_entries_must_be_finite(self):
+        prior_fim = pd.DataFrame(
+            [[1.0, np.nan], [np.nan, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(ValueError, match="prior_FIM entries must be finite."):
+            parmest._validate_prior_FIM(prior_fim)
+
+    def test_prior_fim_must_be_symmetric(self):
+        prior_fim = pd.DataFrame(
+            [[1.0, 2.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(ValueError, match="prior_FIM must be symmetric."):
+            parmest._validate_prior_FIM(prior_fim)
+
+    def test_prior_fim_can_skip_psd_check(self):
+        prior_fim = pd.DataFrame(
+            [[1.0, 2.0], [2.0, -1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        parmest._validate_prior_FIM(prior_fim, require_psd=False)
+
+    def test_l2_penalty_with_missing_theta_ref_uses_model_reference(self):
+        m = self._make_var_labeled_model(y_obs=5.0)
+        m.theta0.set_value(4.0)
+        m.theta1.set_value(-1.0)
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 4.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with self.assertLogs(parmest.logger.name, level="INFO") as logs:
+            penalty = parmest._calculate_L2_penalty(
+                m, prior_FIM=prior_fim, theta_ref=None
+            )
+
+        self.assertAlmostEqual(pyo.value(penalty), 0.0)
+        self.assertTrue(
+            any(
+                "theta_ref is None. Using initialized parameter values as reference."
+                in msg
+                for msg in logs.output
+            )
+        )
+
+    def test_l2_penalty_returns_zero_when_prior_has_no_matching_parameters(self):
+        m = self._make_var_labeled_model(y_obs=5.0)
+        prior_fim = pd.DataFrame([[1.0]], index=["alpha"], columns=["alpha"])
+
+        with self.assertLogs(parmest.logger.name, level="WARNING") as logs:
+            penalty = parmest._calculate_L2_penalty(
+                m, prior_FIM=prior_fim, theta_ref=None
+            )
+
+        self.assertEqual(penalty, 0.0)
+        self.assertTrue(
+            any(
+                "No matching parameters found between Model and Prior FIM" in msg
+                for msg in logs.output
+            )
+        )
+
     def test_compute_covariance_matrix_adds_twice_weighted_prior_fim_for_sse(self):
         exp_list = [self.DummyExperiment()]
 
@@ -1747,6 +1845,50 @@ class TestRegularizationCore(unittest.TestCase):
             parmest._finite_difference_FIM = original_finite_difference_FIM
 
         expected_fim = data_fim + 2.0 * regularization_weight * prior_fim.values
+        expected_cov = np.linalg.inv(expected_fim)
+
+        np.testing.assert_allclose(
+            cov.loc[["theta0", "theta1"], ["theta0", "theta1"]].values,
+            expected_cov,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
+    def test_compute_covariance_matrix_reorders_prior_fim_by_parameter_name(self):
+        exp_list = [self.DummyExperiment()]
+
+        data_fim = np.array([[5.0, 1.0], [1.0, 4.0]])
+
+        def fake_finite_difference_FIM(*args, **kwargs):
+            return data_fim
+
+        prior_fim = pd.DataFrame(
+            [[3.0, 0.5], [0.5, 2.0]],
+            index=["theta1", "theta0"],
+            columns=["theta1", "theta0"],
+        )
+        theta_vals = {"theta0": 0.0, "theta1": 0.0}
+        regularization_weight = 0.25
+
+        original_finite_difference_FIM = parmest._finite_difference_FIM
+        try:
+            parmest._finite_difference_FIM = fake_finite_difference_FIM
+            cov = parmest.compute_covariance_matrix(
+                experiment_list=exp_list,
+                method=parmest.CovarianceMethod.finite_difference.value,
+                obj_function=parmest.SSE_weighted,
+                theta_vals=theta_vals,
+                step=1e-3,
+                solver="ipopt",
+                tee=False,
+                prior_FIM=prior_fim,
+                regularization_weight=regularization_weight,
+            )
+        finally:
+            parmest._finite_difference_FIM = original_finite_difference_FIM
+
+        expected_prior_fim = np.array([[2.0, 0.5], [0.5, 3.0]])
+        expected_fim = data_fim + regularization_weight * expected_prior_fim
         expected_cov = np.linalg.inv(expected_fim)
 
         np.testing.assert_allclose(

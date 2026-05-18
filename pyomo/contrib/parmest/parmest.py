@@ -164,9 +164,6 @@ def _validate_prior_FIM(prior_FIM, require_psd=True):
     if not isinstance(prior_FIM, pd.DataFrame):
         raise TypeError("prior_FIM must be a pandas DataFrame.")
 
-    if prior_FIM.shape[0] != prior_FIM.shape[1]:
-        raise ValueError("prior_FIM must be square.")
-
     if set(prior_FIM.index) != set(prior_FIM.columns):
         raise ValueError(
             "prior_FIM row and column labels must match the same parameter names."
@@ -235,11 +232,7 @@ def _calculate_L2_penalty(model, prior_FIM, theta_ref=None):
     param_map = {p.name: p for p in theta_components}
 
     # Confirm all matching parameters in both prior_FIM index and columns
-    common_params = [
-        p
-        for p in current_param_names
-        if p in prior_FIM.columns and p in prior_FIM.index
-    ]
+    common_params = [p for p in current_param_names if p in prior_FIM.columns]
 
     if len(common_params) == 0:
 
