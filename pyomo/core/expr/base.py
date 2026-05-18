@@ -82,7 +82,7 @@ class ExpressionBase(PyomoObject):
 
         Returns
         -------
-        list or tuple:
+        list | tuple:
             Sequence containing only the child nodes of this node.  The
             return type depends on the node storage model.  Users are
             not permitted to change the returned data (even for the case
@@ -220,7 +220,7 @@ class ExpressionBase(PyomoObject):
             tree, which are numeric constants and variables.
             It only clones the interior nodes, and
             expression leaf nodes like
-            :class:`_MutableLinearExpression<pyomo.core.expr.current._MutableLinearExpression>`.
+            :class:`~pyomo.core.expr.current._MutableLinearExpression`.
             However, named expressions are treated like
             leaves, and they are not cloned.
 
