@@ -972,7 +972,7 @@ def _finalize_multiprocessing(module, available):
     # sure that the capture_output_lock Lock is created *before* the
     # user spawns any subprocesses.  tee.capture_output will look here
     # for the lock, which will start out as a "dummy" lock, and then
-    # will be updated to a multiprocessing.Lock when the forst module
+    # will be updated to a multiprocessing.Lock when the first module
     # triggers the multiprocessing import.
 
     global capture_output_lock
