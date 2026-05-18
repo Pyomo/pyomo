@@ -15,7 +15,7 @@ from pyomo.common.dependencies import (
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.utils import (
-    check_matrix,
+    assert_symmetric_positive_definite,
     compute_FIM_metrics,
     get_FIM_metrics,
     snake_traversal_grid_sampling,
@@ -29,26 +29,26 @@ from pyomo.contrib.doe.utils import (
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not pandas_available, "Pandas is not available")
 class TestUtilsFIM(unittest.TestCase):
-    """Test the check_matrix() from utils.py."""
+    """Test matrix assertion utilities from utils.py."""
 
-    # TODO: add tests when `check_pos_def = False` is used in check_matrix()
-    def test_check_matrix_valid(self):
+    # TODO: add tests when `check_pos_def = False` is used in matrix assertions
+    def test_assert_symmetric_positive_definite_valid(self):
         """Test case where the FIM is valid (square, positive definite, symmetric)."""
         FIM = np.array([[4, 1], [1, 3]])
         try:
-            check_matrix(FIM)
+            assert_symmetric_positive_definite(FIM)
         except ValueError as e:
             self.fail(f"Unexpected error: {e}")
 
-    def test_check_matrix_non_square(self):
+    def test_assert_symmetric_positive_definite_non_square(self):
         """Test case where the FIM is not square."""
         FIM = np.array([[4, 1], [1, 3], [2, 1]])
         with self.assertRaisesRegex(
             ValueError, "argument mat must be a 2D square matrix"
         ):
-            check_matrix(FIM)
+            assert_symmetric_positive_definite(FIM)
 
-    def test_check_matrix_non_positive_definite(self):
+    def test_assert_symmetric_positive_definite_non_positive_definite(self):
         """Test case where the FIM is not positive definite."""
         FIM = np.array([[1, 0], [0, -2]])
         with self.assertRaisesRegex(
@@ -58,9 +58,9 @@ class TestUtilsFIM(unittest.TestCase):
                 _SMALL_TOLERANCE_DEFINITENESS
             ),
         ):
-            check_matrix(FIM)
+            assert_symmetric_positive_definite(FIM)
 
-    def test_check_matrix_non_symmetric(self):
+    def test_assert_symmetric_positive_definite_non_symmetric(self):
         """Test case where the FIM is not symmetric."""
         FIM = np.array([[4, 1], [0, 3]])
         with self.assertRaisesRegex(
@@ -69,7 +69,7 @@ class TestUtilsFIM(unittest.TestCase):
                 _SMALL_TOLERANCE_SYMMETRY
             ),
         ):
-            check_matrix(FIM)
+            assert_symmetric_positive_definite(FIM)
 
     """Test the compute_FIM_metrics() from utils.py."""
 

@@ -41,7 +41,7 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, ApplicationError
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
@@ -53,7 +53,7 @@ if numpy_available and scipy_available:
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
-    check_matrix,
+    assert_symmetric_positive_definite,
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
     snake_traversal_grid_sampling,
@@ -1764,7 +1764,7 @@ class DesignOfExperiments:
             )
 
         # Check FIM is positive definite and symmetric
-        check_matrix(FIM)
+        assert_symmetric_positive_definite(FIM)
 
         self.logger.info(
             "FIM provided matches expected dimensions from model "
@@ -2154,7 +2154,23 @@ class DesignOfExperiments:
                 if mapped_key is None or mapped_key not in model.experiment_inputs:
                     invalid_keys.append(key)
                     continue
-                normalized_design_vals[mapped_key] = val
+
+                if mapped_key in normalized_design_vals:
+                    raise ValueError(
+                        "design_vals contains multiple keys that resolve to the "
+                        f"same experiment input component: {mapped_key.name}."
+                    )
+
+                try:
+                    val_array = np.asarray(list(val))
+                except TypeError:
+                    raise TypeError(
+                        "design_vals values must be 1D array-like iterables."
+                    )
+                if val_array.ndim != 1:
+                    raise ValueError("design_vals values must be 1D array-like.")
+
+                normalized_design_vals[mapped_key] = val_array
 
             if invalid_keys:
                 raise ValueError(
@@ -2225,7 +2241,6 @@ class DesignOfExperiments:
                             f"Design variable {comp.name} has non-positive step "
                             "in value - check abs_step and rel_step values."
                         )
-                    span = ub - lb
                     # Build points by count to avoid float drift from iterative
                     # addition. Keep compatibility with lb > ub behavior.
                     n_steps = max(0, int(np.floor(span / del_val + 1e-12)) + 1)
@@ -2478,19 +2493,22 @@ class DesignOfExperiments:
                     "``sensitivity_design_variables`` must be an iterable of strings."
                 )
 
-        if any(not isinstance(name, str) for name in sensitivity_design_variables):
-            raise ValueError("Sensitivity design variable names must be strings.")
-
-        if len(set(sensitivity_design_variables)) != len(sensitivity_design_variables):
+        try:
+            sens_name_set = set(sensitivity_design_variables)
+        except TypeError:
+            raise TypeError(
+                "``sensitivity_design_variables`` entries must be hashable."
+            )
+        if len(sens_name_set) != len(sensitivity_design_variables):
             raise ValueError(
                 "Sensitivity design variables contain duplicates. Please provide "
                 "unique design variable names."
             )
 
-        if not isinstance(fixed_design_variables, dict):
-            raise ValueError("``fixed_design_variables`` must be a dictionary.")
-        if any(not isinstance(name, str) for name in fixed_design_variables.keys()):
-            raise ValueError("Fixed design variable names must be strings.")
+        try:
+            fixed_design_variables = dict(fixed_design_variables)
+        except (TypeError, ValueError):
+            raise TypeError("``fixed_design_variables`` must be mapping-like.")
 
         des_name_set = set(des_names)
         missing_from_results = des_name_set - set(results.keys())
@@ -2551,19 +2569,11 @@ class DesignOfExperiments:
         # filter the results of the DOF needed.
         # an example filter: (self.store_all_results_dataframe["CA0"]==5).
         if len(fixed_design_variables.keys()) != 0:
-            filter = ""
-            i = 0
-            for k, v in fixed_design_variables.items():
-                filter += "(results_pd['"
-                filter += str(k)
-                filter += "']=="
-                filter += str(v)
-                filter += ")"
-                if i < (len(fixed_design_variables.keys()) - 1):
-                    filter += "&"
-                i += 1
             # extract results with other dimensions fixed
-            figure_result_data = results_pd.loc[eval(filter)]
+            mask = pd.Series(True, index=results_pd.index)
+            for k, v in fixed_design_variables.items():
+                mask &= results_pd[k] == v
+            figure_result_data = results_pd.loc[mask]
 
         # if there is no other fixed dimensions
         else:

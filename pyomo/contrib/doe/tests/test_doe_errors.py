@@ -838,6 +838,24 @@ class TestDoEErrors(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Pass experiment input components"):
             doe_obj.compute_FIM_factorial(design_vals={"hour": [1.0, 2.0]})
 
+    def test_compute_fim_factorial_design_vals_rejects_scalar_values(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment_flag()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        model = experiment.get_labeled_model()
+        design_var = next(iter(model.experiment_inputs.keys()))
+        design_vals = pyo.ComponentMap(((design_var, 1.0),))
+
+        with self.assertRaisesRegex(
+            TypeError,
+            "design_vals values must be 1D array-like iterables.",
+        ):
+            doe_obj.compute_FIM_factorial(design_vals=design_vals)
+
 
 if __name__ == "__main__":
     unittest.main()

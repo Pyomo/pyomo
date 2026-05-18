@@ -115,37 +115,52 @@ def rescale_FIM(FIM, param_vals):
     return scaled_FIM
 
 
-def check_matrix(mat):
+def assert_symmetric_positive_definite(
+    mat, pos_def_tol: float = None, symmetry_tol: float = None
+):
     """
-    Checks that the matrix is square, positive definite, and symmetric.
+    Assert that the matrix is square, positive definite, and symmetric.
 
     Parameters
     ----------
     mat: 2D numpy array representing the matrix
+    pos_def_tol: float, optional
+        Tolerance for positive definiteness assertion. If the minimum eigenvalue is
+        less than -pos_def_tol, the matrix is considered not positive definite.
+    symmetry_tol: float, optional
+        Tolerance for symmetry assertion. If the matrix is not symmetric within
+        this absolute tolerance, it is considered not symmetric.
 
     Returns
     -------
     None, but will raise error messages as needed
     """
+
     # Check that the matrix is a square matrix
     if mat.ndim != 2 or mat.shape[0] != mat.shape[1]:
         raise ValueError("argument mat must be a 2D square matrix")
+
+    # Set default tolerances if not provided
+    if pos_def_tol is None:
+        pos_def_tol = _SMALL_TOLERANCE_DEFINITENESS
+    if symmetry_tol is None:
+        symmetry_tol = _SMALL_TOLERANCE_SYMMETRY
 
     # Compute the eigenvalues of the matrix
     evals = np.linalg.eigvals(mat)
 
     # Check if the matrix is positive definite
-    if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
+    if np.min(evals) < -pos_def_tol:
         raise ValueError(
             "Matrix provided is not positive definite. It has one or more negative "
-            + "eigenvalue(s) less than -{:.1e}".format(_SMALL_TOLERANCE_DEFINITENESS)
+            + "eigenvalue(s) less than -{:.1e}".format(pos_def_tol)
         )
 
     # Check if the matrix is symmetric
-    if not np.allclose(mat, mat.T, atol=_SMALL_TOLERANCE_SYMMETRY):
+    if not np.allclose(mat, mat.T, atol=symmetry_tol):
         raise ValueError(
             "Matrix provided is not symmetric using absolute tolerance {}".format(
-                _SMALL_TOLERANCE_SYMMETRY
+                symmetry_tol
             )
         )
 
@@ -188,7 +203,7 @@ def compute_FIM_metrics(FIM):
     """
 
     # Check whether the FIM is square, positive definite, and symmetric
-    check_matrix(FIM)
+    assert_symmetric_positive_definite(FIM)
 
     # Compute FIM metrics
     det_FIM = np.linalg.det(FIM)
@@ -297,9 +312,10 @@ def get_FIM_metrics(FIM):
 
 def snake_traversal_grid_sampling(*array_like_args):
     """
-    Generates a multi-dimensional pattern for an arbitrary number of 1D array-like arguments.
-    This pattern is useful for generating patterns for sensitivity analysis when we want
-    to change one variable at a time. This function uses recursion and acts as a generator.
+    Generates a multi-dimensional pattern for an arbitrary number of 1D array-like
+    arguments. This pattern is useful for generating patterns for sensitivity
+    analysis when we want to change one variable at a time. This function uses
+    recursion and acts as a generator.
 
     Parameters
     ----------
@@ -371,9 +387,9 @@ def compute_correlation_matrix(
     Returns
     -------
     pandas.DataFrame/numpy.ndarray
-        If `var_name` is provided, returns a pandas DataFrame with the correlation matrix
-        and the specified variable names as both index and columns. If `var_name` is not
-        provided, returns:
+        If `var_name` is provided, returns a pandas DataFrame with the correlation
+        matrix and the specified variable names as both index and columns.
+        If `var_name` is not provided, returns:
         - a pandas DataFrame when the covariance input is a DataFrame,
         - a numpy array when the covariance input is a NumPy array.
     """
@@ -397,7 +413,7 @@ def compute_correlation_matrix(
         cov_columns = None
 
     # Check if covariance matrix is symmetric and square
-    check_matrix(covariance_matrix_np)
+    assert_symmetric_positive_definite(covariance_matrix_np)
 
     if var_name is not None:
         if isinstance(var_name, str):
