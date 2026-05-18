@@ -102,47 +102,44 @@ class ScipDirect(SolverBase):
 
     def solve(self, model: BlockData, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        try:
-            config = self.config(value=kwds, preserve_implicit=True)
+        config = self.config(value=kwds, preserve_implicit=True)
 
-            StaleFlagManager.mark_all_as_stale()
+        StaleFlagManager.mark_all_as_stale()
 
-            if config.timer is None:
-                config.timer = HierarchicalTimer()
-            timer = config.timer
+        if config.timer is None:
+            config.timer = HierarchicalTimer()
+        timer = config.timer
 
-            ostreams = [io.StringIO()] + config.tee
+        ostreams = [io.StringIO()] + config.tee
 
-            scip_model, solution_loader, has_obj = self._create_solver_model(
-                model, config
-            )
+        scip_model, solution_loader, has_obj = self._create_solver_model(
+            model, config
+        )
 
-            scip_model.hideOutput(quiet=False)
-            if config.threads is not None:
-                scip_model.setParam('lp/threads', config.threads)
-            if config.time_limit is not None:
-                scip_model.setParam('limits/time', config.time_limit)
-            if config.rel_gap is not None:
-                scip_model.setParam('limits/gap', config.rel_gap)
-            if config.abs_gap is not None:
-                scip_model.setParam('limits/absgap', config.abs_gap)
+        scip_model.hideOutput(quiet=False)
+        if config.threads is not None:
+            scip_model.setParam('lp/threads', config.threads)
+        if config.time_limit is not None:
+            scip_model.setParam('limits/time', config.time_limit)
+        if config.rel_gap is not None:
+            scip_model.setParam('limits/gap', config.rel_gap)
+        if config.abs_gap is not None:
+            scip_model.setParam('limits/absgap', config.abs_gap)
 
-            if config.warmstart_discrete_vars:
-                self._mipstart()
+        if config.warmstart_discrete_vars:
+            self._mipstart()
 
-            for key, option in config.solver_options.items():
-                scip_model.setParam(key, option)
+        for key, option in config.solver_options.items():
+            scip_model.setParam(key, option)
 
-            timer.start('optimize')
-            with capture_output(TeeStream(*ostreams), capture_fd=True):
-                scip_model.optimize()
-            timer.stop('optimize')
+        timer.start('optimize')
+        with capture_output(TeeStream(*ostreams), capture_fd=True):
+            scip_model.optimize()
+        timer.stop('optimize')
 
-            results = self._populate_results(
-                scip_model, solution_loader, has_obj, config
-            )
-        except InfeasibleConstraintException:
-            results = self._get_infeasible_results()
+        results = self._populate_results(
+            scip_model, solution_loader, has_obj, config
+        )
 
         results.solver_log = ostreams[0].getvalue()
         end_timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -177,24 +174,6 @@ class ScipDirect(SolverBase):
                 "terminate": tc.unknown,
             }
         return ScipDirect._tc_map
-
-    def _get_infeasible_results(self):
-        res = Results()
-        res.solution_loader = NoSolutionSolutionLoader()
-        res.solution_status = SolutionStatus.noSolution
-        res.termination_condition = TerminationCondition.provenInfeasible
-        res.incumbent_objective = None
-        res.objective_bound = None
-        res.iteration_count = None
-        res.timing_info.scip_time = None
-        res.solver_config = self.config
-        res.solver_name = self.name
-        res.solver_version = self.version()
-        if self.config.raise_exception_on_nonoptimal_result:
-            raise NoOptimalSolutionError()
-        if self.config.load_solutions:
-            raise NoFeasibleSolutionError()
-        return res
 
     def _scip_lb_ub_from_var(self, var):
         if var.is_fixed():
