@@ -18,12 +18,12 @@ from pyomo.common.dependencies import (
 
 from pyomo.common.errors import DeveloperError
 import pyomo.common.unittest as unittest
-from unittest.mock import patch
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
 from pyomo.contrib.doe import DesignOfExperiments
+import pyomo.contrib.doe.doe as doe_module
 from pyomo.contrib.doe.doe import InitializationMethod, _DoEResultsJSONEncoder
 from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     BadExperiment,
@@ -826,17 +826,12 @@ class TestDoEErrors(unittest.TestCase):
         ]
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        def _fake_sequential(*args, **kwargs):
-            # This is only used if execution reaches the FIM solve call.
-            doe_obj.seq_FIM = np.eye(2)
-
-        with patch.object(doe_obj, "_sequential_FIM", side_effect=_fake_sequential):
-            # The mismatch is detected before the second experiment solve,
-            # when compute_FIM validates unknown parameter values.
-            with self.assertRaisesRegex(
-                ValueError, "must share the same unknown parameter values"
-            ):
-                doe_obj.compute_FIM(method="sequential")
+        # The mismatch is detected before the second experiment solve, when
+        # compute_FIM validates unknown parameter values across experiments.
+        with self.assertRaisesRegex(
+            ValueError, "must share the same unknown parameter values"
+        ):
+            doe_obj.compute_FIM(method="sequential")
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_invalid_trace_without_cholesky(self):
@@ -853,7 +848,8 @@ class TestDoEErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
+            "objective_option='trace' currently only implemented with "
+            "``_Cholesky option=True``.",
         ):
             doe_obj.create_objective_function()
 
@@ -906,7 +902,8 @@ class TestDoEErrors(unittest.TestCase):
                     doe_obj.optimize_experiments(**kwargs)
 
     def test_optimize_experiments_lhs_requires_template_mode(self):
-        # Tests that LHS initialization is disallowed in user-initialized multi-experiment mode.
+        # Tests that LHS initialization is disallowed in user-initialized
+        # multi-experiment mode.
         doe_obj = DesignOfExperiments(
             experiment=[_DummyExperiment(), _DummyExperiment()],
             objective_option="pseudo_trace",
@@ -922,11 +919,15 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(
             experiment=[_DummyExperiment()], objective_option="pseudo_trace"
         )
-        with patch("pyomo.contrib.doe.doe.scipy_available", False):
+        old_scipy_available = doe_module.scipy_available
+        doe_module.scipy_available = False
+        try:
             with self.assertRaisesRegex(
                 ImportError, r"LHS initialization requires scipy"
             ):
                 doe_obj.optimize_experiments(init_method="lhs")
+        finally:
+            doe_module.scipy_available = old_scipy_available
 
     def test_optimize_experiments_general_argument_validation_cases(self):
         # These are the remaining lightweight API validations whose only
@@ -937,7 +938,8 @@ class TestDoEErrors(unittest.TestCase):
                 2,
                 {"n_exp": 2},
                 ValueError,
-                r"``n_exp`` must not be set when the experiment list contains more than one experiment",
+                r"``n_exp`` must not be set when the experiment list contains more "
+                "than one experiment",
             ),
             (
                 "n_exp must be positive",
@@ -958,7 +960,8 @@ class TestDoEErrors(unittest.TestCase):
                 1,
                 {"init_solver": object()},
                 ValueError,
-                r"``init_solver`` must be None or a solver object with a 'solve' method.",
+                r"``init_solver`` must be None or a solver object with a 'solve' "
+                "method.",
             ),
         ]
 
@@ -1161,18 +1164,18 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
                 return None
             return original_find(cuid, block)
 
-        with patch(
-            "pyomo.contrib.doe.doe.pyo.ComponentUID.find_component_on",
-            autospec=True,
-            side_effect=_fail_only_symmetry_mapping,
-        ):
+        pyo.ComponentUID.find_component_on = _fail_only_symmetry_mapping
+        try:
             with self.assertRaisesRegex(
                 RuntimeError, "Failed to map symmetry breaking variable"
             ):
                 doe_obj.optimize_experiments(n_exp=2)
+        finally:
+            pyo.ComponentUID.find_component_on = original_find
 
     def test_optimize_experiments_symmetry_breaking_default_variable_warning(self):
-        # Tests that missing explicit symmetry marker triggers warning and default choice.
+        # Tests that missing explicit symmetry marker triggers warning and default
+        # choice.
         doe_obj = DesignOfExperiments(
             experiment=[
                 RooneyBieglerMultiInputExperimentFlag(hour=2.0, sym_break_flag=0),
@@ -1222,20 +1225,24 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
         with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
             with warnings.catch_warnings(record=True) as warn_cm:
                 warnings.simplefilter("always")
-                with patch(
-                    "pyomo.contrib.doe.doe.combinations", return_value=iter([(0, 1)])
-                ):
-                    with patch.object(
-                        doe_obj,
-                        "_compute_fim_at_point_no_prior",
-                        return_value=np.eye(2),
-                    ):
-                        doe_obj.optimize_experiments(
-                            n_exp=2,
-                            init_method="lhs",
-                            init_n_samples=10001,
-                            init_seed=11,
-                        )
+                # Keep this warning-path test fast and deterministic: with
+                # init_n_samples=10001 and n_exp=2, the real path would do
+                # 10,001 candidate FIM evaluations and score
+                # C(10,001, 2)=50,005,000 combinations, which is too expensive
+                # for a unit test. We only need to verify warning contracts.
+                original_combinations = doe_module.combinations
+                original_compute_fim = doe_obj._compute_fim_at_point_no_prior
+                doe_module.combinations = lambda *_args, **_kwargs: iter([(0, 1)])
+                doe_obj._compute_fim_at_point_no_prior = lambda *args, **kwargs: np.eye(
+                    2
+                )
+                try:
+                    doe_obj.optimize_experiments(
+                        n_exp=2, init_method="lhs", init_n_samples=10001, init_seed=11
+                    )
+                finally:
+                    doe_module.combinations = original_combinations
+                    doe_obj._compute_fim_at_point_no_prior = original_compute_fim
 
         self.assertTrue(
             any("candidate experiment designs" in str(w.message) for w in warn_cm)
@@ -1252,7 +1259,8 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
         )
         with self.assertRaisesRegex(
             ValueError,
-            r"LHS initialization requires explicit lower and upper bounds on all experiment input variables",
+            r"LHS initialization requires explicit lower and upper bounds on all "
+            "experiment input variables",
         ):
             doe_obj.optimize_experiments(init_method="lhs", init_n_samples=2)
 

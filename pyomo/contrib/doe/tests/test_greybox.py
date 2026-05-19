@@ -10,7 +10,6 @@ import copy
 import itertools
 import json
 import os.path
-from unittest.mock import patch
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -1670,31 +1669,29 @@ class TestMultiexperimentBuild(unittest.TestCase):
             prior_FIM=np.zeros((2, 2)),
             grey_box_solver=_MockGreyBoxSolver(),
         )
-        original_initialize = doe_obj._initialize_grey_box_block
+        original_initialize_impl = doe_obj._initialize_grey_box_block
 
         def _capture_initialize(egb_block, fim_np, parameter_names):
             captured["before"] = _reconstruct_fim_from_egb_inputs(
                 egb_block, parameter_names
             )
             captured["refreshed"] = np.array(fim_np, copy=True)
-            return original_initialize(egb_block, fim_np, parameter_names)
+            return original_initialize_impl(egb_block, fim_np, parameter_names)
 
-        with (
-            patch.object(
-                doe_obj,
-                "_compute_fim_at_point_no_prior",
-                side_effect=_diagonal_hour_fim_reference,
-            ),
-            patch.object(
-                doe_obj, "_initialize_grey_box_block", side_effect=_capture_initialize
-            ),
-        ):
+        original_compute_fim = doe_obj._compute_fim_at_point_no_prior
+        original_initialize_for_restore = doe_obj._initialize_grey_box_block
+        doe_obj._compute_fim_at_point_no_prior = _diagonal_hour_fim_reference
+        doe_obj._initialize_grey_box_block = _capture_initialize
+        try:
             doe_obj.optimize_experiments(
                 n_exp=1,
                 init_method="lhs",
                 init_n_samples=lhs_n_samples,
                 init_seed=lhs_seed,
             )
+        finally:
+            doe_obj._compute_fim_at_point_no_prior = original_compute_fim
+            doe_obj._initialize_grey_box_block = original_initialize_for_restore
 
         scenario, total_fim, parameter_names = _get_multiexperiment_scenario_data(
             doe_obj

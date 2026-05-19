@@ -9,11 +9,8 @@
 import json
 import logging
 import os, os.path
-import subprocess
-import time
 from itertools import combinations, product
 from glob import glob
-from unittest.mock import patch
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -397,8 +394,6 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        fim_exp1 = np.array([[12.0, 3.0], [3.0, 8.0]])
-        fim_exp2 = np.array([[5.0, 2.0], [2.0, 4.0]])
         prior_fim = np.array([[1.5, 0.1], [0.1, 0.5]])
 
         multi_args = get_standard_args(
@@ -411,31 +406,19 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         multi_args["prior_FIM"] = prior_fim
         doe_multi = DesignOfExperiments(**multi_args)
 
-        def _fake_sequential_fim(*args, **kwargs):
-            # Return deterministic per-experiment FIMs keyed by the fixed
-            # experiment input so the aggregation can be asserted exactly.
-            model = kwargs.get("model")
-            hour = float(pyo.value(model.hour))
-            if np.isclose(hour, 1.5):
-                doe_multi.seq_FIM = fim_exp1.copy()
-            elif np.isclose(hour, 3.5):
-                doe_multi.seq_FIM = fim_exp2.copy()
-            else:
-                raise RuntimeError(f"Unexpected hour value in mocked test: {hour}")
+        fim_total = doe_multi.compute_FIM(method="sequential")
 
-        with patch.object(
-            doe_multi, "_sequential_FIM", side_effect=_fake_sequential_fim
-        ):
-            fim_total = doe_multi.compute_FIM(method="sequential")
-
-        fim_expected = fim_exp1 + fim_exp2 + prior_fim
-        self.assertTrue(np.allclose(fim_total, fim_expected, atol=1e-12))
         self.assertEqual(len(doe_multi._computed_FIM_by_experiment), 2)
+        fim_expected = prior_fim.copy()
+        for fim_exp in doe_multi._computed_FIM_by_experiment:
+            fim_expected = fim_expected + np.array(fim_exp)
+
+        self.assertTrue(np.allclose(fim_total, fim_expected, atol=1e-8))
         self.assertTrue(
-            np.allclose(doe_multi._computed_FIM_by_experiment[0], fim_exp1, atol=1e-12)
+            np.all(np.isfinite(np.array(doe_multi._computed_FIM_by_experiment[0])))
         )
         self.assertTrue(
-            np.allclose(doe_multi._computed_FIM_by_experiment[1], fim_exp2, atol=1e-12)
+            np.all(np.isfinite(np.array(doe_multi._computed_FIM_by_experiment[1])))
         )
 
     # This test ensure that compute FIM runs without error using the
