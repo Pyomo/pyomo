@@ -336,7 +336,8 @@ class SolutionLoaderView:
 
 
 class NoSolutionSolutionLoader(SolutionLoader):
-    def __init__(self, err_msg: str) -> None:
+    def __init__(self, model, err_msg: str) -> None:
+        self._pyomo_model = model
         self.err_msg = err_msg
 
     def get_number_of_solutions(self) -> int:

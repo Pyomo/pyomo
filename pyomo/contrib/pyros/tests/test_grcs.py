@@ -69,10 +69,13 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     _setup_standard_uncertainty_set_constraint_block,
     AxisAlignedEllipsoidalSet,
     BoxSet,
+    CardinalitySet,
+    CartesianProductSet,
     DiscreteScenarioSet,
     FactorModelSet,
     Geometry,
     IntersectionSet,
+    PolyhedralSet,
     UncertaintyQuantification,
     UncertaintySet,
 )
@@ -458,6 +461,90 @@ class TestPyROSSolveDiscreteSet(unittest.TestCase):
                 "robust optimality"
             ),
         )
+
+
+@unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+class TestPyROSSolveCartesianProductSet(unittest.TestCase):
+    """
+    Test PyROS successfully solves model with cartesian product uncertainty.
+    """
+
+    def build_model(self):
+        m = ConcreteModel()
+        m.q = Param(range(4), initialize=0, mutable=True)
+        m.x = Var(initialize=0, bounds=(0, 100))
+        m.obj = Objective(expr=m.x, sense=minimize)
+        m.con = Constraint(expr=m.x >= sum(m.q.values()))
+        return m
+
+    def test_solve_with_cartesian_product_set(self):
+        """
+        Test solve with cartesian product uncertainty.
+        """
+        m = self.build_model()
+        cpset = CartesianProductSet(
+            [
+                BoxSet([[0, 1]]),
+                FactorModelSet(
+                    origin=[0, 0], number_of_factors=1, beta=1, psi_mat=[[1], [3]]
+                ),
+                CardinalitySet(origin=[0], positive_deviation=[0.5], gamma=1),
+            ]
+        )
+        results = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cpset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # check successful termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance.",
+        )
+        # need only 2 iterations:
+        # - first gives nominally optimal x, which is robust infeasible
+        # - second gives robust optimal x
+        self.assertEqual(results.iterations, 2)
+        # final objective is just sum of the parameter values
+        # that cause maximal violation of the inequality constraint
+        self.assertAlmostEqual(results.final_objective_value, 5.5, places=6)
+        self.assertAlmostEqual(m.x.value, 5.5, places=6)
+
+    def test_solve_invalid_cartesian_product_set(self):
+        """
+        Test PyROS solver cartesian product set validation failure.
+        """
+        m = self.build_model()
+        cpset = CartesianProductSet(
+            [BoxSet([[0, 1]]), DiscreteScenarioSet([(0, 1, 3), (0, 0, 0)])]
+        )
+        # exception raised during set validation due to involvement
+        # of discrete uncertainty in the cartesian product
+        disc_exc_str = r"CartesianProductSet.*entry.*with a discrete geometry"
+        with self.assertRaisesRegex(ValueError, disc_exc_str):
+            SolverFactory("pyros").solve(
+                model=m,
+                first_stage_variables=[m.x],
+                second_stage_variables=[],
+                uncertain_params=m.q,
+                uncertainty_set=cpset,
+                local_solver=SolverFactory("ipopt"),
+                global_solver=SolverFactory("ipopt"),
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                },
+            )
 
 
 class TestPyROSRobustInfeasible(unittest.TestCase):
@@ -3899,7 +3986,7 @@ class UnavailableSolver:
 
 class TestPyROSUnavailableSubsolvers(unittest.TestCase):
     """
-    Check that appropriate exceptionsa are raised if
+    Check that appropriate exceptions are raised if
     PyROS is invoked with unavailable subsolvers.
     """
 
@@ -5144,6 +5231,365 @@ class TestPyROSSubsolverErrorEfficiency(unittest.TestCase):
                 pyrosTerminationCondition.subsolver_error,
                 msg="Did not report subsolver error to problem instance.",
             )
+
+
+# @SolverFactory.register("slow_solver")
+class SlowSolver:
+    """
+    Solver which sleeps for a specified time before solving.
+    """
+
+    def __init__(self, sleep_time, sub_solver):
+        self.sleep_time = sleep_time
+        self.sub_solver = sub_solver
+
+        self.options = Bunch()
+
+    def available(self, exception_flag=True):
+        return True
+
+    def license_is_valid(self):
+        return True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, et, ev, tb):
+        pass
+
+    def solve(self, model, **kwargs):
+        """
+        Sleep, then solve a model.
+
+        Parameters
+        ----------
+        model : ConcreteModel
+            Model of interest.
+
+        Returns
+        -------
+        results : SolverResults
+            Solver results.
+        """
+
+        # ensure only one active objective
+        active_objs = [
+            obj for obj in model.component_data_objects(Objective, active=True)
+        ]
+        assert len(active_objs) == 1
+
+        # sleep for specified time
+        time.sleep(self.sleep_time)
+
+        print("I slept. Now, I will solve.")
+        # invoke subsolver
+        results = self.sub_solver.solve(model, **kwargs)
+
+        return results
+
+
+class CustomExactBoundsUncertaintySet(BoxSet):
+    """
+    A box set, modified such that the `parameter_bounds`
+    attribute calculation involves globally solving the coordinate
+    value bounding problems.
+    """
+
+    def __init__(self, bounds, sleep_time, cache):
+        super().__init__(bounds)
+        self.sleep_time = sleep_time
+        self.cache = cache
+
+    @property
+    def parameter_bounds(self):
+        """
+        Solve bounding problems to calculate exact parameter bounds.
+        """
+        solver = SlowSolver(
+            sub_solver=SolverFactory("ipopt"), sleep_time=self.sleep_time
+        )
+        bounds = self._compute_exact_parameter_bounds(solver=solver)
+
+        if not self.cache:
+            self._cache.clear()
+
+        return bounds
+
+
+@unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
+    """
+    Test behavior of PyROS solver with respect to caching of
+    an uncertainty set's exact coordinate value bounds.
+    """
+
+    def test_pyros_cache_creation(self):
+        """
+        Check that PyROS creates a cache for storing computed exact parameter bounds.
+        """
+        m = build_leyffer_two_cons()
+
+        # Define the uncertainty set
+        interval = CustomExactBoundsUncertaintySet(
+            bounds=[(0.25, 2)], sleep_time=0, cache=True
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory("ipopt")
+        global_subsolver = SolverFactory("ipopt")
+
+        # check cache exists
+        self.assertTrue(hasattr(interval, "_cache"))
+
+        # Call the PyROS solver
+        pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # check cache has been cleared after solve
+        self.assertTrue(hasattr(interval, "_cache"))
+        self.assertEqual(
+            interval._cache, {}, msg="Did not clear uncertainty set cache after solve."
+        )
+
+    def test_pyros_cache_time(self):
+        """
+        Check that the PyROS solve time is improved when
+        the uncertainty set's exact coordinate value bounds are cached.
+        """
+        m = build_leyffer_two_cons()
+
+        # Define the uncertainty set
+        interval_cache = CustomExactBoundsUncertaintySet(
+            bounds=[(0.25, 2)], sleep_time=0.1, cache=True
+        )
+        interval_no_cache = CustomExactBoundsUncertaintySet(
+            bounds=[(0.25, 2)], sleep_time=0.1, cache=False
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory("ipopt")
+        global_subsolver = SolverFactory("ipopt")
+
+        # Call the PyROS solver
+        results_cache = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval_cache,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        results_no_cache = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval_no_cache,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # caching should always result in less time,
+        # as not caching reruns the slow solver multiple times
+        self.assertGreater(results_no_cache.time, results_cache.time)
+
+    def test_pyros_solve_assert_bounds_cache_empty(self):
+        """
+        Check that calling PyROS on an uncertainty set
+        with a nonempty bounds cache results in an exception.
+        """
+        m = build_leyffer_two_cons()
+
+        # Define the uncertainty set
+        interval = CustomExactBoundsUncertaintySet(
+            bounds=[(25, 200)], sleep_time=0, cache=True
+        )
+        self.assertAlmostEqual(interval.parameter_bounds[0][0], 25, places=2)
+        self.assertAlmostEqual(interval.parameter_bounds[0][1], 200, places=2)
+
+        # change set attributes, leading to outdated parameter bounds
+        interval.bounds = [(0.25, 2)]
+        self.assertAlmostEqual(interval.parameter_bounds[0][0], 25, places=2)
+        self.assertAlmostEqual(interval.parameter_bounds[0][1], 200, places=2)
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory("ipopt")
+        global_subsolver = SolverFactory("ipopt")
+
+        # Solve with PyROS
+        exc_str = (
+            r"Nonempty cache for CustomExactBoundsUncertaintySet "
+            r"exact parameter bounds."
+        )
+        with self.assertRaisesRegex(AssertionError, exc_str):
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                },
+            )
+
+        self.assertAlmostEqual(interval._cache[0, minimize], 25, places=2)
+        self.assertAlmostEqual(interval._cache[0, maximize], 200, places=2)
+
+    def test_solve_cartesian_product_and_intersection_set_bounds_cache(self):
+        """
+        Test management of uncertainty set bounds caches
+        is carried out as expected in the context of a PyROS solve.
+        """
+        # deterministic model
+        m = ConcreteModel()
+        m.q = Param(range(4), initialize=0, mutable=True)
+        m.x = Var(initialize=0, bounds=(0, 100))
+        m.obj = Objective(expr=m.x, sense=minimize)
+        m.con = Constraint(expr=m.x >= sum(m.q.values()))
+
+        # uncertainty set(s)
+        poly_set = PolyhedralSet(
+            # this is just the cube [-1, 1]^3
+            lhs_coefficients_mat=np.vstack([np.eye(3), -np.eye(3)]),
+            rhs_vec=[1] * 6,
+        )
+        # inclusion of PolyhedralSet means bounds caching takes place
+        cpset = CartesianProductSet([BoxSet([[0, 1]]), poly_set])
+        res1 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cpset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+
+        # check caches cleared
+        self.assertEqual(cpset._cache, {})
+        self.assertEqual(cpset._all_sets[0]._cache, {})
+        self.assertEqual(cpset._all_sets[1]._cache, {})
+        # check results: worst case objective is just sum of the
+        #                uncertainty set upper bounds
+        self.assertEqual(res1.iterations, 2)
+        self.assertAlmostEqual(res1.final_objective_value, 4.0, places=6)
+        self.assertAlmostEqual(m.x.value, 4.0, places=6)
+
+        # expand the polyhedralset to the cube [-2, 2]^3
+        poly_set.rhs_vec = [2] * 6
+        # solve again. since caches cleared, PyROS should work normally
+        res2 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cpset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+        # check caches cleared
+        self.assertEqual(cpset._cache, {})
+        self.assertEqual(cpset._all_sets[0]._cache, {})
+        self.assertEqual(cpset._all_sets[1]._cache, {})
+        # results have changed, since the polyhedral set was expanded
+        self.assertEqual(res2.iterations, 2)
+        self.assertAlmostEqual(res2.final_objective_value, 7.0, places=6)
+        self.assertAlmostEqual(m.x.value, 7.0, places=6)
+
+        # repeat above checks for intersection set
+        # update poly_set
+        poly_set = PolyhedralSet(
+            # this is just the 4-cube [-1, 1]^4
+            lhs_coefficients_mat=np.vstack([np.eye(4), -np.eye(4)]),
+            rhs_vec=[2] * 8,
+        )
+        iset = IntersectionSet(
+            set1=CustomExactBoundsUncertaintySet(
+                bounds=[[-3, 3]] * 4, sleep_time=0, cache=True
+            ),
+            set2=poly_set,
+        )
+        res3 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=iset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+        # check caches cleared
+        self.assertEqual(iset._cache, {})
+        self.assertEqual(iset._all_sets[0]._cache, {})
+        self.assertEqual(iset._all_sets[1]._cache, {})
+        # check results: worst case objective is just sum of the
+        #                poly_set upper bounds
+        self.assertEqual(res3.iterations, 2)
+        self.assertAlmostEqual(res3.final_objective_value, 8.0, places=6)
+        self.assertAlmostEqual(m.x.value, 8.0, places=6)
+
+        # shrink the polyhedralset to the 4-cube [-1, 1]^4
+        poly_set.rhs_vec = [1] * 8
+        res4 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=iset,
+            local_solver=SolverFactory("ipopt"),
+            global_solver=SolverFactory("ipopt"),
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+
+        # check caches cleared
+        self.assertEqual(iset._cache, {})
+        self.assertEqual(iset._all_sets[0]._cache, {})
+        self.assertEqual(iset._all_sets[1]._cache, {})
+        # results have changed, since the polyhedral set was shrunk
+        self.assertEqual(res4.iterations, 2)
+        self.assertAlmostEqual(res4.final_objective_value, 4.0, places=6)
+        self.assertAlmostEqual(m.x.value, 4.0, places=6)
 
 
 if __name__ == "__main__":
