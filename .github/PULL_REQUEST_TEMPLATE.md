@@ -21,21 +21,22 @@
 ## AI-Use Disclosure
 <!-- Contributors must disclose whether and how AI tools were used and highlight any areas of uncertainty or where they want focused reviewer feedback -->
 
-[ ] AI tools were NOT used during the preparation of this PR
+- [ ] AI tools were NOT used during the preparation of this PR
 
 or
 
-[ ] AI tools contributed to the development of this PR
-    [ ] AI tools generated documentation (including the PR description/comments, code comments, and/or Sphnix documentation)
-    [ ] AI tools generated tests (baselines, examples, and/or code)
-    [ ] AI tools generated code (apart from tests)
+- [ ] AI tools contributed to the development of this PR
+    - [ ] AI tools generated documentation (including the PR description/comments, code comments, and/or Sphinx documentation)
+    - [ ] AI tools generated tests (baselines, examples, and/or code)
+    - [ ] AI tools generated code (apart from tests)
     
-Review process:
-    [ ] ALL AI-generated content was rewritten by the PR author
-    [ ] ALL AI-generated content was thoroughly reviewed and verified by the PR author
-    [ ] AI-generated content was contributed directly to the repository
+    Review process:
+    - [ ] ALL AI-generated content was rewritten by the PR author
+    - [ ] ALL AI-generated content was thoroughly reviewed and verified by the PR author
+    - [ ] AI-generated content was contributed directly to the repository
     
  Details / discussion:
+
 ### Legal Acknowledgement
 
 By contributing to this software project, I have read the [contribution guide](https://pyomo.readthedocs.io/en/stable/contribution_guide.html) and agree to the following terms and conditions for my contribution:
