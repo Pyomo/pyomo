@@ -709,6 +709,7 @@ class TestDoEObjectiveOptions(unittest.TestCase):
                 self.assertAlmostEqual(val, expected, places=4)
 
 
+@unittest.skipIf(not pandas_available, "pandas is not available")
 class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
     """Coverage for optimize_experiments() build, output, and diagnostics behavior."""
 
@@ -1067,6 +1068,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertEqual(lhs_init["number_of_design_combinations"], 3)
 
 
+@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestDoeResultsSerialization(unittest.TestCase):
     """Coverage for DoE results payload serialization helpers."""
 
@@ -1086,6 +1088,7 @@ class TestDoeResultsSerialization(unittest.TestCase):
         self.assertEqual(decoded["objective"], str(ObjectiveLib.trace))
 
 
+@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestDoeBuildHelpers(unittest.TestCase):
     """Coverage for small matrix helpers used by build/solve paths."""
 

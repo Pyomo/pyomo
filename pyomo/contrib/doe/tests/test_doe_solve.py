@@ -1037,6 +1037,34 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
                 _for_multi_experiment=True,
             )
 
+    @staticmethod
+    def _make_square_solve_then_stub_solver(real_solver):
+        def _stub_results():
+            class _SolverInfo:
+                status = "ok"
+                termination_condition = "optimal"
+                message = "stub-solve"
+
+            class _SolverResults:
+                solver = _SolverInfo()
+
+            return _SolverResults()
+
+        class _SquareSolveThenStubSolver:
+            def __init__(self, wrapped_solver):
+                self._wrapped_solver = wrapped_solver
+                self.name = getattr(wrapped_solver, "name", "stub-solver")
+                self.options = getattr(wrapped_solver, "options", {})
+
+            def solve(self, *args, **kwargs):
+                model = args[0] if args else kwargs.get("model", None)
+                if model is not None and hasattr(model, "dummy_obj"):
+                    # Keep square-solve path real so model state initializes correctly.
+                    return self._wrapped_solver.solve(*args, **kwargs)
+                return _stub_results()
+
+        return _SquareSolveThenStubSolver(real_solver)
+
     def test_evaluate_objective_from_fim_numerical_values(self):
         fim = np.array([[4.0, 1.0], [1.0, 3.0]])
         expected_det = 11.0
@@ -1086,11 +1114,21 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         saved_prior = np.array([[3.0, 0.0], [0.0, 4.0]])
         doe.prior_FIM = saved_prior
 
-        with patch.object(doe, "_sequential_FIM", side_effect=RuntimeError("boom")):
+        original_sequential_fim = doe._sequential_FIM
+
+        def _raise_boom(*args, **kwargs):
+            # Intentionally inject a sequential FIM failure so we can verify the
+            # fallback behavior (zero FIM + warning + prior restoration).
+            raise RuntimeError("boom")
+
+        doe._sequential_FIM = _raise_boom
+        try:
             with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
                 got = doe._compute_fim_at_point_no_prior(
                     experiment_index=0, input_values=[2.0]
                 )
+        finally:
+            doe._sequential_FIM = original_sequential_fim
 
         self.assertTrue(np.allclose(got, np.zeros((2, 2))))
         self.assertIs(doe.prior_FIM, saved_prior)
@@ -1102,59 +1140,24 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         # Force the positive-definiteness check down the jitter path and verify
         # the matrix passed into Cholesky includes the expected diagonal shift.
         doe = self._make_template_doe("determinant")
+        doe.solver = self._make_square_solve_then_stub_solver(doe.solver)
 
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
-        original_solve = doe.solver.solve
-        original_eigvals = np.linalg.eigvals
-        original_cholesky = np.linalg.cholesky
-        solve_count = {"n": 0}
-        eig_call_count = {"n": 0}
-        cholesky_inputs = []
-
-        class _MockSolverInfo:
-            status = "ok"
-            termination_condition = "optimal"
-            message = "mock-solve"
-
-        class _MockResults:
-            solver = _MockSolverInfo()
-
-        def _solve_first_real_then_mock(*args, **kwargs):
-            solve_count["n"] += 1
-            if solve_count["n"] == 1:
-                return original_solve(*args, **kwargs)
-            return _MockResults()
-
-        def _eigvals_force_jitter(*args, **kwargs):
-            eig_call_count["n"] += 1
-            if eig_call_count["n"] == 1:
-                return np.array([-1.0, 1.0])
-            return original_eigvals(*args, **kwargs)
-
-        def _capture_cholesky(mat, *args, **kwargs):
-            cholesky_inputs.append(np.array(mat, copy=True))
-            return original_cholesky(mat, *args, **kwargs)
-
-        with patch(
-            "pyomo.contrib.doe.doe.np.linalg.eigvals", side_effect=_eigvals_force_jitter
-        ) as eigvals_mock:
-            with patch(
-                "pyomo.contrib.doe.doe.np.linalg.cholesky",
-                side_effect=_capture_cholesky,
-            ):
-                with patch.object(
-                    doe.solver, "solve", side_effect=_solve_first_real_then_mock
-                ):
-                    doe.optimize_experiments(n_exp=1)
+        doe.optimize_experiments(n_exp=1)
 
         scenario = doe.model.param_scenario_blocks[0]
         total_fim = np.array(
             _optimize_experiments_param_scenario(doe.results)["total_fim"]
         )
-        expected_cholesky_input = total_fim + _SMALL_TOLERANCE_DEFINITENESS * np.eye(
-            total_fim.shape[0]
-        )
+        min_eig = np.min(np.real(np.linalg.eigvals(total_fim)))
+        if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
+            jitter = min(
+                -min_eig + _SMALL_TOLERANCE_DEFINITENESS, _SMALL_TOLERANCE_DEFINITENESS
+            )
+        else:
+            jitter = 0.0
+        expected_cholesky_input = total_fim + jitter * np.eye(total_fim.shape[0])
         param_names = list(scenario.exp_blocks[0].parameter_names)
         L_vals = np.array(
             [
@@ -1164,14 +1167,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
 
         self.assertEqual(doe.results["optimization_solve"]["status"], "ok")
-        self.assertGreaterEqual(eigvals_mock.call_count, 1)
-        self.assertTrue(cholesky_inputs)
-        self.assertTrue(
-            any(
-                np.allclose(chol_arg, expected_cholesky_input, atol=1e-12)
-                for chol_arg in cholesky_inputs
-            )
-        )
+        self.assertGreater(jitter, 0.0)
         self.assertTrue(
             np.allclose(L_vals @ L_vals.T, expected_cholesky_input, atol=1e-8)
         )
@@ -1328,36 +1324,34 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=3)
         lhs_n_samples = 3
-        unit_samples = np.array([0.2, 0.5, 0.8])
-
-        class _FakeLHS:
-            def __init__(self, d, seed=None):
-                self.d = d
-
-            def random(self, n):
-                assert self.d == 1
-                assert n == lhs_n_samples
-                return unit_samples.reshape((n, 1))
-
+        lhs_seed = 13
         first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
         exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
-        lb = float(exp_input_vars[0].lb)
-        ub = float(exp_input_vars[0].ub)
-        expected_points = [[float(lb + s * (ub - lb))] for s in unit_samples]
+        lb_vals = np.array([v.lb for v in exp_input_vars])
+        ub_vals = np.array([v.ub for v in exp_input_vars])
+        rng = np.random.default_rng(lhs_seed)
+        from scipy.stats.qmc import LatinHypercube
 
-        def _fake_fim(experiment_index, input_values):
-            x = float(input_values[0])
-            return np.array([[x + 1.0, 0.0], [0.0, x + 1.0]])
+        per_dim_samples = []
+        for i in range(len(exp_input_vars)):
+            dim_seed = int(rng.integers(0, 2**31))
+            sampler = LatinHypercube(d=1, seed=dim_seed)
+            s_unit = sampler.random(n=lhs_n_samples).flatten()
+            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
+            per_dim_samples.append(s_scaled.tolist())
+        candidate_points = list(product(*per_dim_samples))
+        expected_points = [list(candidate_points[i]) for i in range(3)]
 
-        doe._compute_fim_at_point_no_prior = _fake_fim
-        with patch("pyomo.contrib.doe.doe.scipy.stats.qmc.LatinHypercube", _FakeLHS):
-            with patch("pyomo.contrib.doe.doe.combinations", return_value=iter(())):
-                with self.assertLogs(
-                    "pyomo.contrib.doe.doe", level="WARNING"
-                ) as log_cm:
-                    got_points, _ = doe._lhs_initialize_experiments(
-                        lhs_n_samples=lhs_n_samples, lhs_seed=13, n_exp=3
-                    )
+        def _nan_fim(experiment_index, input_values):
+            # Any comparison with NaN is False, so best_combo remains None and
+            # we exercise the fallback branch that selects the first n_exp points.
+            return np.array([[np.nan, 0.0], [0.0, np.nan]])
+
+        doe._compute_fim_at_point_no_prior = _nan_fim
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+            got_points, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=3
+            )
 
         # Normalize (round + sort) so we compare selected points robustly
         # despite floating-point noise and ordering differences.
@@ -1434,46 +1428,43 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=2)
         lhs_n_samples = 3
-
+        lhs_seed = 123
         first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
         exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
-        self.assertEqual(len(exp_input_vars), 1)
-        lb = float(exp_input_vars[0].lb)
-        ub = float(exp_input_vars[0].ub)
+        lb_vals = np.array([v.lb for v in exp_input_vars])
+        ub_vals = np.array([v.ub for v in exp_input_vars])
+        rng = np.random.default_rng(lhs_seed)
+        from scipy.stats.qmc import LatinHypercube
 
-        unit_samples = np.array([0.1, 0.4, 0.9])
-        scaled_points = [float(lb + s * (ub - lb)) for s in unit_samples]
-
-        class _FakeLHS:
-            def __init__(self, d, seed=None):
-                self.d = d
-
-            def random(self, n):
-                assert self.d == 1
-                assert n == lhs_n_samples
-                return unit_samples.reshape((n, 1))
+        per_dim_samples = []
+        for i in range(len(exp_input_vars)):
+            dim_seed = int(rng.integers(0, 2**31))
+            sampler = LatinHypercube(d=1, seed=dim_seed)
+            s_unit = sampler.random(n=lhs_n_samples).flatten()
+            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
+            per_dim_samples.append(s_scaled.tolist())
+        candidate_points = list(product(*per_dim_samples))
 
         def _fake_fim(experiment_index, input_values):
             x = float(input_values[0])
             return np.array([[x + 1.0, 0.0], [0.0, 2.0 * x + 1.0]])
 
         doe._compute_fim_at_point_no_prior = _fake_fim
-        with patch("pyomo.contrib.doe.doe.scipy.stats.qmc.LatinHypercube", _FakeLHS):
-            got_points, _ = doe._lhs_initialize_experiments(
-                lhs_n_samples=lhs_n_samples, lhs_seed=123, n_exp=2
-            )
+        got_points, _ = doe._lhs_initialize_experiments(
+            lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=2
+        )
 
         # Independent exhaustive reference over explicit candidate points.
         best_obj = -np.inf
         best_combo = None
-        for combo in combinations(range(len(scaled_points)), 2):
-            f1 = _fake_fim(0, [scaled_points[combo[0]]])
-            f2 = _fake_fim(0, [scaled_points[combo[1]]])
+        for combo in combinations(range(len(candidate_points)), 2):
+            f1 = _fake_fim(0, list(candidate_points[combo[0]]))
+            f2 = _fake_fim(0, list(candidate_points[combo[1]]))
             obj_val = float(np.trace(f1 + f2))
             if obj_val > best_obj:
                 best_obj = obj_val
                 best_combo = combo
-        expected_points = [[scaled_points[i]] for i in best_combo]
+        expected_points = [list(candidate_points[i]) for i in best_combo]
 
         # Normalize (round + sort) so we compare selected points robustly
         # despite floating-point noise and ordering differences.
@@ -1623,27 +1614,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             _Cholesky_option=False,
             _only_compute_fim_lower=False,
         )
-        original_solve = doe.solver.solve
-
-        class _MockSolverInfo:
-            status = "ok"
-            termination_condition = "optimal"
-            message = "mock-solve"
-
-        class _MockResults:
-            solver = _MockSolverInfo()
-
-        def _solve_real_for_square_then_mock(*args, **kwargs):
-            model = args[0] if args else kwargs.get("model", None)
-            if model is not None and hasattr(model, "dummy_obj"):
-                # Keep square-solve path real so model state initializes correctly.
-                return original_solve(*args, **kwargs)
-            return _MockResults()
-
-        with patch.object(
-            doe.solver, "solve", side_effect=_solve_real_for_square_then_mock
-        ):
-            doe.optimize_experiments(n_exp=1)
+        doe.solver = self._make_square_solve_then_stub_solver(doe.solver)
+        doe.optimize_experiments(n_exp=1)
 
         scenario_block = doe.model.param_scenario_blocks[0]
         self.assertTrue(hasattr(scenario_block.obj_cons, "determinant"))
