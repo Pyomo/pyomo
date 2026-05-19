@@ -1929,8 +1929,6 @@ class Estimator:
 
         return samplelist
 
-    # @Reviewers: Currently regularization chosen with objective at Estimator initialization,
-    # Would it be preferable to have regularization choice as an argument in the theta_est function instead?
     def theta_est(
         self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
     ):

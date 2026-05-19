@@ -1369,7 +1369,8 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
             RooneyBieglerExperiment,
         )
 
-        # Note, the data used in this test has been corrected to use data.loc[5,'hour'] = 7 (instead of 6)
+        # Note, the data used in this test has been corrected to use
+        # data.loc[5,'hour'] = 7 (instead of 6)
         data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=["hour", "y"],
