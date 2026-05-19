@@ -18,6 +18,9 @@
 -
 -
 
+## AI-Use Disclosure
+<!-- Contributors must disclose whether and how AI tools were used and highlight any areas of uncertainty or where they want focused reviewer feedback -->
+
 ### Legal Acknowledgement
 
 By contributing to this software project, I have read the [contribution guide](https://pyomo.readthedocs.io/en/stable/contribution_guide.html) and agree to the following terms and conditions for my contribution:

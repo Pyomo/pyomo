@@ -158,7 +158,39 @@ For example, assume Python 3.A is declared end-of-life while Pyomo is on
 version 6.3.Y. After the release of Pyomo 6.3.(Y+1), Python 3.A will be removed,
 and the next Pyomo release will be 6.4.0.
 
+Use of Generative AI
+++++++++++++++++++++
 
+Pyomo contributors are welcome to use AI-assisted coding tools (e.g., Copilot/Codex) to
+draft code, tests, documentation, and commit messages. However, the author remains fully
+responsible for the correctness, security, licensing compliance, and maintainability of
+every changed line and must be prepared to explain design choices and review changed
+code personally before submitting. The use of PR and issue templates is mandatory and
+contributions that do not use the templates will be closed.
+
+PRs with substantial AI-generated portions often require significantly more reviewer
+time (including extra scrutiny of tests) and may therefore take longer to review or be
+deprioritized, especially when the author is not actively engaging with maintainers
+(e.g., responding promptly on the PR, coordinating by email, or participating in
+developer calls). To help us review efficiently, contributors must disclose whether and
+how AI tools were used and highlight any areas of uncertainty or where they want focused
+reviewer feedback.
+
+The use of an AI agent to autonomously open, or comment on, PRs or issues is not
+permitted. When interacting with maintainers please do not use AI to speak for you.
+
+We recognize that generative AI tools are rapidly evolving and this AI contribution
+policy will be updated regularly based on our observations. The following list includes
+specific items we are seeing with AI-generated code contributions and our expectations:
+
+    * **Use of `mock` in unit tests is prohibited**: We do not allow the use of `mock`
+      in our unit tests unless the developer can explain why they can't do unit testing
+      without it. We have observed that AI-generated unit tests excessivly use `mock` to
+      write weak tests that ignore the broader context of the code being tested.
+    * **Keep comments concise and curated**: Humans are reading every comment on every
+      PR and issue. Help us out by keeping comments short and direct. PR review comments
+      can be marked as resolved without commenting "Done" on every one.
+ 
 Review Process
 --------------
 
