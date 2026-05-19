@@ -59,38 +59,6 @@ from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory("ipopt").available()
 k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
 
-
-def k_aug_runtime_available():
-    """
-    Check that k_aug is not only discoverable but also runnable in this
-    environment (e.g., no missing dynamic libraries).
-    """
-    if not k_aug_available.available(False):
-        return False
-    exe = k_aug_available.executable()
-    if not exe:
-        return False
-
-    try:
-        # Trigger dynamic loader checks; return code may be nonzero for usage,
-        # so we inspect output for runtime-linker failures.
-        proc = subprocess.run(
-            [exe, "--help"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
-        )
-    except OSError:
-        return False
-
-    output = (proc.stdout or "") + (proc.stderr or "")
-    bad_runtime_markers = ("Library not loaded", "dyld:", "libgfortran")
-    if any(marker in output for marker in bad_runtime_markers):
-        return False
-    return True
-
-
 currdir = this_file_dir()
 file_path = os.path.join(currdir, "..", "examples", "result.json")
 
@@ -475,8 +443,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
     # scheme is needed.
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     @unittest.skipIf(
-        not k_aug_runtime_available(),
-        "The 'k_aug' command is not available or not runnable in this environment",
+        not k_aug_available, "The 'k_aug' is not available in this environment"
     )
     def test_compute_FIM_kaug(self):
         fd_method = "forward"
@@ -1140,6 +1107,10 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         # Force the positive-definiteness check down the jitter path and verify
         # the matrix passed into Cholesky includes the expected diagonal shift.
         doe = self._make_template_doe("determinant")
+        # Keep the square initialization solve real (path under test), but
+        # stub the final solve. Without this, this test setup can fail
+        # before assertions with solver status=error on the final solve because
+        # rooney-biegler's model will not generate a negative eigval.
         doe.solver = self._make_square_solve_then_stub_solver(doe.solver)
 
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
@@ -1614,6 +1585,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             _Cholesky_option=False,
             _only_compute_fim_lower=False,
         )
+        # Keep the square initialization solve real and stub the final solve.
+        # Without this, this case can terminate at max iterations and the
+        # determinant assertion becomes solver-fragile/non-deterministic.
         doe.solver = self._make_square_solve_then_stub_solver(doe.solver)
         doe.optimize_experiments(n_exp=1)
 
