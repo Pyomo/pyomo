@@ -13,6 +13,7 @@ import pickle
 import time
 
 import pyomo.common.unittest as unittest
+import pyomo.common.dependencies as deps
 from pyomo.common.dependencies import multiprocessing
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
@@ -177,7 +178,7 @@ class TestPyomoUnittest(unittest.TestCase):
             ):
                 long_sleep()
             self.assertEqual(LOG.getvalue(), "")
-            capture_output.startup_shutdown.acquire()
+            deps.capture_output_lock.acquire()
             save = unittest._timeout_terminate_timeout
             unittest._timeout_terminate_timeout = 0.01
             try:
@@ -187,10 +188,10 @@ class TestPyomoUnittest(unittest.TestCase):
                     long_sleep()
             finally:
                 unittest._timeout_terminate_timeout = save
-                capture_output.startup_shutdown.release()
+                deps.capture_output_lock.release()
             self.assertEqual(
                 LOG.getvalue(),
-                "Failed to acquire capture_output.startup_shutdown Lock before "
+                "Failed to acquire capture_output_lock Lock before "
                 "terminating subprocess on timeout: process deadlock is likely.\n",
             )
         with self.assertRaisesRegex(
