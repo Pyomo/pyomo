@@ -17,6 +17,7 @@ literature.
 """
 
 import abc
+import contextlib
 import math
 import functools
 import itertools
@@ -524,6 +525,31 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    @property
+    def _cache(self):
+        """
+        dict : Cache for the bounds defining the minimum bounding box
+        of `self`. Each key is a 2-tuple containing the positional
+        index of a coordinate and an
+        :class:`~pyomo.common.enums.ObjectiveSense` object
+        indicating the type of bound (`minimize` for a lower bound,
+        `maximize for an upper bound) being specified for the
+        coordinate.
+        """
+        try:
+            return self.__cache
+        except AttributeError:
+            self.__cache = {}
+            return self.__cache
+
+    @contextlib.contextmanager
+    def _cache_manager(self):
+        assert (
+            not self._cache
+        ), f"Nonempty cache for {self.__class__.__name__} exact parameter bounds."
+        yield self
+        self._cache.clear()
+
     def _create_bounding_model(self):
         """
         Make uncertain parameter value bounding problems (optimize
@@ -667,6 +693,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         ValueError
             If nonemptiness check or boundedness check fails.
         """
+        # perform validation checks
         if not self.is_nonempty(config=config):
             raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
 
@@ -790,44 +817,106 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         if index is None:
             index = [(True, True)] * self.dim
 
-        # create bounding model and get all objectives
+        # create bounding model
         bounding_model = self._create_bounding_model()
-        objs_to_optimize = bounding_model.param_var_objectives.items()
 
         param_bounds = []
-        for idx, obj in objs_to_optimize:
-            # activate objective for corresponding dimension
-            obj.activate()
+        for idx in range(self.dim):
             bounds = []
-
-            # solve for lower bound, then upper bound
-            # solve should be successful
             for i, sense in enumerate((minimize, maximize)):
-                # check if the LB or UB should be solved
                 if not index[idx][i]:
                     bounds.append(None)
                     continue
-                obj.sense = sense
-                res = solver.solve(bounding_model, load_solutions=False)
-                if check_optimal_termination(res):
-                    bounding_model.solutions.load_from(res)
-                else:
-                    raise ValueError(
-                        "Could not compute "
-                        f"{'lower' if sense == minimize else 'upper'} "
-                        f"bound in dimension {idx + 1} of {self.dim}. "
-                        f"Solver status summary:\n {res.solver}."
+                # NOTE: variables are not initialized for the first
+                # exact bounds optimization, and are initialized to
+                # the solution of the most recent iteration at each
+                # subsequent evaluation.
+                bounds.append(
+                    self._solve_exact_bounds_optimization(
+                        bounding_model, idx, sense, solver
                     )
-                bounds.append(value(obj))
+                )
 
             # add parameter bounds for current dimension
             param_bounds.append(tuple(bounds))
 
+        return param_bounds
+
+    def _solve_exact_bounds_optimization(self, bounding_model, index, sense, solver):
+        """
+        Compute an exact lower or upper bound for a specified
+        coordinate of the points contained in `self`, by solving
+        a bounding model.
+
+        For efficiency, the result is cached if the bounding model
+        is solved successfully. Further, if the cache already contains
+        an entry corresponding to the coordinate bound of interest,
+        then that entry is returned and solution of the bounding model
+        is skipped.
+
+        Parameters
+        ----------
+        bounding_model : ConcreteModel
+            Bounding model, with an indexed minimization sense
+            Objective with name 'param_var_objectives' consisting
+            of `N` entries, all of which have been deactivated.
+        index : int
+            The positional index for the coordinate of interest.
+        sense : ~pyomo.common.ObjectiveSense
+            Optimization sense for the bounding model objective.
+            This also indicates the type of bound (lower or upper)
+            to be computed.
+            Select `minimize` to compute the lower bound or
+            `maximize` to compute the upper bound.
+        solver : ~pyomo.opt.base.solvers.OptSolver
+            Optimizer to invoke on the bounding model.
+
+        Returns
+        -------
+        bound : float
+            A value of the lower or upper bound for
+            the corresponding dimension at the specified index.
+
+        Raises
+        ------
+        ValueError
+            If there was an unsuccessful attempt to solve
+            the bounding model.
+        """
+        # we use saved optimization results for a given index
+        # for either `maximize` UB or `minimize` LB if they exist
+        if (index, sense) in self._cache:
+            return self._cache[index, sense]
+
+        # select objective corresponding to specified index
+        obj = bounding_model.param_var_objectives[index]
+        obj.activate()
+
+        # optimize with specified sense
+        obj.sense = sense
+        try:
+            res = solver.solve(bounding_model, load_solutions=False)
+        finally:
             # ensure sense is minimize when done, deactivate
             obj.sense = minimize
             obj.deactivate()
 
-        return param_bounds
+        if check_optimal_termination(res):
+            bounding_model.solutions.load_from(res)
+        else:
+            raise ValueError(
+                "Could not compute "
+                f"{'lower' if sense == minimize else 'upper'} "
+                f"bound in dimension {index + 1} of {self.dim}. "
+                f"Solver status summary:\n {res.solver}."
+            )
+
+        bound = value(obj)
+
+        # store in cache
+        self._cache[index, sense] = bound
+
+        return bound
 
     def _fbbt_parameter_bounds(self, config):
         """
@@ -859,9 +948,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 f"{fbbt_infeasible_con_exception!r}"
             )
 
-        param_bounds = [
-            (var.lower, var.upper) for var in bounding_model.param_vars.values()
-        ]
+        param_bounds = [(var.lb, var.ub) for var in bounding_model.param_vars.values()]
 
         return param_bounds
 
@@ -1949,7 +2036,8 @@ class BudgetSet(UncertaintySet):
         Each row corresponds to a single budget constraint,
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
-        All entries should be of value 0 or 1.
+        All entries should be of value 0 or 1,
+        and no row or column should be all zeros.
     rhs_vec : (L,) array_like
         Budget limits (upper bounds) with respect to
         the origin of the set.
@@ -2063,7 +2151,8 @@ class BudgetSet(UncertaintySet):
         constraints.  Each row corresponds to a single budget
         constraint and defines which uncertain parameters
         participate in that row's constraint.
-        All entries should be of value 0 or 1.
+        All entries should be of value 0 or 1,
+        and no row or column should be all zeros.
         """
         return self._budget_membership_mat
 
@@ -3742,6 +3831,19 @@ class IntersectionSet(UncertaintySet):
 
         return []
 
+    @contextlib.contextmanager
+    def _cache_manager(self):
+        with contextlib.ExitStack() as stack:
+            # Verify this (IntersectionSet's) cache is empty
+            stack.enter_context(super()._cache_manager())
+            for uset in self.all_sets:
+                # Verify all component caches are empty
+                stack.enter_context(uset._cache_manager())
+            yield self
+            # This will re-enter when this context manager is exited,
+            # which will exit the stack context, triggering all the
+            # context managers entered above to exit.
+
     def point_in_set(self, point):
         """
         Determine whether a given point lies in the intersection set.
@@ -3988,6 +4090,19 @@ class CartesianProductSet(UncertaintySet):
             else:
                 return []
         return parameter_bounds
+
+    @contextlib.contextmanager
+    def _cache_manager(self):
+        with contextlib.ExitStack() as stack:
+            # Verify this (CartesianProductSet's) cache is empty
+            stack.enter_context(super()._cache_manager())
+            for uset in self._all_sets:
+                # Verify all component caches are empty
+                stack.enter_context(uset._cache_manager())
+            yield self
+            # This will re-enter when this context manager is exited,
+            # which will exit the stack context, triggering all the
+            # context managers entered above to exit.
 
     def _iterate_over_all_sets(self):
         """

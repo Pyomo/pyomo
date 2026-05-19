@@ -24,7 +24,7 @@ from pyomo.common.dependencies import (
 )
 
 from pyomo.environ import SolverFactory
-from pyomo.core.base import ConcreteModel, Param, Var
+from pyomo.core.base import ConcreteModel, Param, Var, maximize, minimize, UnitInterval
 from pyomo.core.expr import RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
@@ -3736,6 +3736,37 @@ class CustomUncertaintySet(UncertaintySet):
         self._parameter_bounds = val
 
 
+class CustomDomainUncertaintySet(CustomUncertaintySet):
+    """
+    Test simple custom uncertainty set with specified uncertain parameter domains.
+    """
+
+    def __init__(self, dim):
+        self._dim = dim
+        self._parameter_bounds = [(0, 1)] * self.dim
+
+    def set_as_constraint(self, uncertain_params=None, block=None):
+        blk, param_var_list, conlist, aux_vars = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
+            )
+        )
+        conlist.add(sum(param_var_list) <= 1)
+        for var in param_var_list:
+            conlist.add(0 <= var)
+            var.domain = UnitInterval
+
+        return UncertaintyQuantification(
+            block=blk,
+            uncertainty_cons=list(conlist.values()),
+            uncertain_param_vars=param_var_list,
+            auxiliary_vars=aux_vars,
+        )
+
+
 class TestCustomUncertaintySet(unittest.TestCase):
     """
     Test for a custom uncertainty set subclass.
@@ -3766,6 +3797,33 @@ class TestCustomUncertaintySet(unittest.TestCase):
         self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
         self.assertEqual(
             custom_set._compute_exact_parameter_bounds(baron), [(-1, 1)] * 2
+        )
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_solve_exact_bounds_optimization(self):
+        """
+        Test parameter bounds computations are cached.
+        """
+        baron = SolverFactory("baron")
+        custom_set = CustomUncertaintySet(dim=2)
+
+        # check cache exists
+        self.assertTrue(hasattr(custom_set, "_cache"))
+
+        # check bounds calculation
+        self.assertEqual(
+            custom_set._solve_exact_bounds_optimization(
+                custom_set._create_bounding_model(), 0, minimize, baron
+            ),
+            -1.0,
+        )
+
+        # check cache access
+        self.assertIs(
+            custom_set._solve_exact_bounds_optimization(
+                custom_set._create_bounding_model(), 0, minimize, baron
+            ),
+            custom_set._cache[0, minimize],
         )
 
     @unittest.skipUnless(baron_available, "BARON is not available")
@@ -3836,6 +3894,15 @@ class TestCustomUncertaintySet(unittest.TestCase):
         exc_str = r"Could not successfully solve feasibility problem. .*"
         with self.assertRaisesRegex(ValueError, exc_str):
             custom_set.is_nonempty(config=CONFIG)
+
+    def test_fbbt_values(self):
+        """
+        Test that `_fbbt_parameter_bounds` returns correct values.
+        """
+        CONFIG = pyros_config()
+        custom_set = CustomDomainUncertaintySet(dim=2)
+
+        self.assertEqual(custom_set._fbbt_parameter_bounds(config=CONFIG), [(0, 1)] * 2)
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):
