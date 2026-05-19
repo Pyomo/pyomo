@@ -10,7 +10,8 @@
 from pyomo.core.base.block import BlockData
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.results import SolutionStatus
-from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect, ScipPersistent
+from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect
+from pyomo.contrib.solver.solvers.scip.scip_persistent import ScipPersistent
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
 import logging
 
