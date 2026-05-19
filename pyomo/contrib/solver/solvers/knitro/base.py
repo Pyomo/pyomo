@@ -119,6 +119,13 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             var.set_value(self._saved_var_values[id(var)])
         StaleFlagManager.mark_all_as_stale()
 
+    def _warm_start(self) -> None:
+        variables = []
+        for var in self._get_vars():
+            if var.value is not None:
+                variables.append(var)
+        self._engine.set_initial_values(variables)
+
     @abstractmethod
     def _presolve(
         self, model: BlockData, config: KnitroConfig, timer: HierarchicalTimer

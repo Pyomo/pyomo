@@ -48,6 +48,11 @@ class KnitroDirectSolver(KnitroSolverBase):
         self._engine.set_options(**config.solver_options)
         timer.stop("load_options")
 
+        if config.knitro_warm_start:
+            timer.start("knitro_warm_start")
+            self._warm_start()
+            timer.stop("knitro_warm_start")
+
         timer.start("solve")
         self._engine.solve()
         timer.stop("solve")
