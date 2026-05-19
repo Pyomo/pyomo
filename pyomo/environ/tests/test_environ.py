@@ -45,7 +45,7 @@ def collect_import_time(module, preimport=""):
     env = dict(os.environ)
     env.pop('COVERAGE_PROCESS_START', None)
     output = subprocess.check_output(
-        [sys.executable, '-X', 'importtime', '-c', cmd],
+        [sys.executable, '-S', '-X', 'importtime', '-c', cmd],
         stderr=subprocess.STDOUT,
         env=env,
     )
@@ -217,23 +217,24 @@ class TestPyomoEnviron(unittest.TestCase):
             'base64',  # Imported on Windows
             'bisect',  # Imported by dae, dataportal, contrib/mpc
             'cPickle',
+            'copy',  # Imported by ply, et al.
             'csv',
             'ctypes',  # mandatory import in core/base/external.py; TODO: fix this
             'datetime',  # imported by contrib.solver
             'decimal',
-            'encodings',  # We now tabulate modules imported by python
+            'encodings',  # We tabulate modules imported by python
             'gc',  # Imported on MacOS, Windows; Linux in 3.10
             'glob',
             'heapq',  # Added in Python 3.10
             'importlib',
             'inspect',
+            'io',
             'json',  # Imported on Windows
             'locale',  # Added in Python 3.9
             'logging',
             'pickle',
             'platform',
             'shlex',
-            'site',  # We now tabulate modules imported by python
             'socket',  # Imported on MacOS, Windows; Linux in 3.10
             'subprocess',
             'tempfile',  # Imported on MacOS, Windows
