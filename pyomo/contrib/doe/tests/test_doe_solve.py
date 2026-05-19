@@ -903,6 +903,45 @@ class TestComputeFIMFactorial(unittest.TestCase):
                 factorial_results=factorial_results,
             )
 
+    def test_compute_fim_factorial_nested_for_loop_order_on_two_by_two_grid(self):
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["logger_level"] = logging.ERROR
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        model = experiment.get_labeled_model()
+        design_components = {comp.name: comp for comp in model.experiment_inputs.keys()}
+        ca0 = design_components["CA[0]"]
+        t0 = design_components["T[0]"]
+
+        # Explicit 2x2 grid using component keys so we can verify nested-loop order.
+        design_vals = pyo.ComponentMap(((ca0, [1.0, 5.0]), (t0, [300.0, 700.0])))
+
+        factorial_results = doe_obj.compute_FIM_factorial(
+            design_vals=design_vals,
+            method="sequential",
+            return_df=False,
+            traversal_scheme="nested_for_loop",
+        )
+
+        # Hardcoded expected order for nested-for-loop traversal:
+        # first CA[0], then T[0] (product order).
+        self.assertStructuredAlmostEqual(
+            factorial_results["CA[0]"], [1.0, 1.0, 5.0, 5.0], abstol=1e-8, reltol=1e-8
+        )
+        self.assertStructuredAlmostEqual(
+            factorial_results["T[0]"],
+            [300.0, 700.0, 300.0, 700.0],
+            abstol=1e-8,
+            reltol=1e-8,
+        )
+        self.assertEqual(factorial_results["total_points"], 4)
+        self.assertEqual(factorial_results["success_count"], 4)
+        self.assertEqual(factorial_results["failure_count"], 0)
+
 
 class TestRooneyBieglerExample(unittest.TestCase):
     @unittest.skipUnless(pandas_available, "test requires pandas")
