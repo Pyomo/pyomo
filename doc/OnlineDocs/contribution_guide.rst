@@ -188,8 +188,7 @@ specific items we are seeing with AI-generated code contributions and our expect
       necessity. We have observed that AI-generated unit tests excessively use ``mock`` to
       write weak tests that ignore the broader context of the code being tested.
     * **Keep comments concise and curated**: Humans are reading every comment on every
-      PR and issue. Help us out by keeping comments short and direct. PR review comments
-      can be marked as resolved without commenting "Done" on every one.
+      PR and issue. Help us out by keeping comments short and direct.
  
 Review Process
 --------------
