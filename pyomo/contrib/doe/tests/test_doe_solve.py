@@ -665,6 +665,9 @@ class TestDoe(unittest.TestCase):
         )
 
 
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
 class TestComputeFIMFactorial(unittest.TestCase):
     def _assert_factorial_fim_matches_pointwise_fim(
         self, doe_obj, experiment, design_var, factorial_results

@@ -402,10 +402,21 @@ def compute_correlation_matrix(
     )
 
     if is_dataframe_like:
+        cov_index = list(covariance_matrix.index)
         cov_columns = list(covariance_matrix.columns)
+
+        if len(cov_index) != len(set(cov_index)):
+            raise ValueError(
+                "For DataFrame covariance_matrix input, row labels must be unique."
+            )
         if len(set(cov_columns)) != len(cov_columns):
             raise ValueError(
                 "For DataFrame covariance_matrix input, column labels must be unique."
+            )
+        if cov_index != cov_columns:
+            raise ValueError(
+                "For DataFrame covariance_matrix input, row and column labels "
+                "must match in the same order."
             )
         covariance_matrix_np = covariance_matrix.to_numpy()
     else:

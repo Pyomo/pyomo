@@ -19,7 +19,7 @@ from pyomo.contrib.doe.utils import (
     compute_FIM_metrics,
     get_FIM_metrics,
     snake_traversal_grid_sampling,
-    compute_correlation_matrix as compcorr,
+    compute_correlation_matrix,
     _SMALL_TOLERANCE_DEFINITENESS,
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
@@ -285,7 +285,9 @@ class TestUtilsFIM(unittest.TestCase):
         var_name = ["X1", "X2"]
 
         # Compute the correlation matrix
-        correlation_matrix = compcorr(covariance_matrix, var_name, significant_digits=3)
+        correlation_matrix = compute_correlation_matrix(
+            covariance_matrix, var_name, significant_digits=3
+        )
 
         # Expected correlation matrix
         expected_correlation_matrix = pd.DataFrame(
@@ -299,6 +301,64 @@ class TestUtilsFIM(unittest.TestCase):
             check_exact=False,
             atol=1e-6,
         )
+
+    def test_compute_correlation_matrix_dataframe_uses_dataframe_labels(self):
+        covariance_df = pd.DataFrame(
+            [[4.0, 2.0], [2.0, 3.0]],
+            index=["X1", "X2"],
+            columns=["X1", "X2"],
+        )
+
+        correlation_matrix = compute_correlation_matrix(covariance_df)
+
+        expected = pd.DataFrame(
+            [[1.0, 2.0 / np.sqrt(12.0)], [2.0 / np.sqrt(12.0), 1.0]],
+            index=["X1", "X2"],
+            columns=["X1", "X2"],
+        )
+        pd.testing.assert_frame_equal(
+            correlation_matrix, expected, check_exact=False, atol=1e-8
+        )
+
+    def test_compute_correlation_matrix_dataframe_rejects_duplicate_columns(self):
+        covariance_df = pd.DataFrame(
+            [[4.0, 2.0], [2.0, 3.0]],
+            index=["X1", "X2"],
+            columns=["X1", "X1"],
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "For DataFrame covariance_matrix input, column labels must be unique.",
+        ):
+            compute_correlation_matrix(covariance_df)
+
+    def test_compute_correlation_matrix_dataframe_rejects_duplicate_rows(self):
+        covariance_df = pd.DataFrame(
+            [[4.0, 2.0], [2.0, 3.0]],
+            index=["X1", "X1"],
+            columns=["X1", "X2"],
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "For DataFrame covariance_matrix input, row labels must be unique.",
+        ):
+            compute_correlation_matrix(covariance_df)
+
+    def test_compute_correlation_matrix_dataframe_rejects_row_column_mismatch(self):
+        covariance_df = pd.DataFrame(
+            [[4.0, 2.0], [2.0, 3.0]],
+            index=["X1", "X2"],
+            columns=["X1", "X3"],
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "For DataFrame covariance_matrix input, row and column labels "
+            "must match in the same order.",
+        ):
+            compute_correlation_matrix(covariance_df)
 
 
 if __name__ == "__main__":
