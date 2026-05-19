@@ -649,6 +649,36 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
         self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
 
+    @unittest.skipUnless(pandas_available, "test requires pandas")
+    def test_doe_A_optimality(self):
+        A_opt_value_expected = -2.2364242059539663
+        A_opt_design_value_expected = 9.999955457176451
+
+        A_opt_res = run_rooney_biegler_doe(optimization_objective="trace")
+        A_opt_value = A_opt_res["optimization"]["value"]
+        A_opt_design_value = A_opt_res["optimization"]["design"][0]
+
+        self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
+        # print("A optimal design value:", A_opt_design_value)
+        self.assertAlmostEqual(
+            A_opt_design_value, A_opt_design_value_expected, places=2
+        )
+
+
+class TestComputeFIMFactorial(unittest.TestCase):
+    def _assert_factorial_fim_matches_pointwise_fim(
+        self, doe_obj, experiment, design_var, factorial_results
+    ):
+        """Validate that factorial FIMs match direct pointwise compute_FIM results."""
+        for idx, design_point in enumerate(factorial_results[design_var.name]):
+            point_model = experiment.get_labeled_model().clone()
+            point_var = pyo.ComponentUID(design_var).find_component_on(point_model)
+            point_var.fix(design_point)
+
+            point_fim = doe_obj.compute_FIM(model=point_model, method="sequential")
+            factorial_fim = np.array(factorial_results["FIM_all"][idx])
+            self.assertTrue(np.allclose(factorial_fim, point_fim, rtol=1e-7, atol=1e-7))
+
     def test_compute_fim_factorial_matches_pointwise_compute_fim(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
@@ -812,21 +842,66 @@ class TestDoe(unittest.TestCase):
             factorial_results["hour"], expected_hour_points, abstol=1e-8, reltol=1e-8
         )
         self.assertEqual(factorial_results["total_points"], len(expected_hour_points))
-
-    @unittest.skipUnless(pandas_available, "test requires pandas")
-    def test_doe_A_optimality(self):
-        A_opt_value_expected = -2.2364242059539663
-        A_opt_design_value_expected = 9.999955457176451
-
-        A_opt_res = run_rooney_biegler_doe(optimization_objective="trace")
-        A_opt_value = A_opt_res["optimization"]["value"]
-        A_opt_design_value = A_opt_res["optimization"]["design"][0]
-
-        self.assertAlmostEqual(A_opt_value, A_opt_value_expected, places=2)
-        # print("A optimal design value:", A_opt_design_value)
-        self.assertAlmostEqual(
-            A_opt_design_value, A_opt_design_value_expected, places=2
+        self._assert_factorial_fim_matches_pointwise_fim(
+            doe_obj=doe_obj,
+            experiment=experiment,
+            design_var=next(
+                iter(experiment.get_labeled_model().experiment_inputs.keys())
+            ),
+            factorial_results=factorial_results,
         )
+
+    def test_compute_fim_factorial_supported_modes_generate_expected_points(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["logger_level"] = logging.ERROR
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        base_model = experiment.get_labeled_model()
+        design_var = next(iter(base_model.experiment_inputs.keys()))
+        design_var_cuid = pyo.ComponentUID(design_var)
+
+        # Each case exercises a distinct public input mode and checks the actual
+        # sampled design points from compute_FIM_factorial.
+        mode_cases = [
+            (
+                "design_vals_component_uid",
+                {"design_vals": {design_var_cuid: [2.0, 6.0, 10.0]}},
+                [2.0, 6.0, 10.0],
+            ),
+            ("n_design_points", {"n_design_points": 5}, [0.0, 2.5, 5.0, 7.5, 10.0]),
+            ("abs_step_only", {"abs_step": [4.0]}, [0.0, 4.0, 8.0]),
+            ("rel_step_only", {"rel_step": [0.25]}, [0.0, 2.5, 5.0, 7.5, 10.0]),
+            (
+                "abs_step_rel_step",
+                {"abs_step": [2.0], "rel_step": [0.1]},
+                [0.0, 3.0, 6.0, 9.0],
+            ),
+        ]
+
+        for _, mode_kwargs, expected_points in mode_cases:
+            factorial_results = doe_obj.compute_FIM_factorial(
+                method="sequential",
+                return_df=False,
+                traversal_scheme="nested_for_loop",
+                **mode_kwargs,
+            )
+
+            self.assertStructuredAlmostEqual(
+                factorial_results["hour"], expected_points, abstol=1e-6, reltol=1e-6
+            )
+            self.assertEqual(factorial_results["total_points"], len(expected_points))
+            self.assertEqual(factorial_results["success_count"], len(expected_points))
+            self.assertEqual(factorial_results["failure_count"], 0)
+            self._assert_factorial_fim_matches_pointwise_fim(
+                doe_obj=doe_obj,
+                experiment=experiment,
+                design_var=design_var,
+                factorial_results=factorial_results,
+            )
 
 
 class TestRooneyBieglerExample(unittest.TestCase):

@@ -851,10 +851,71 @@ class TestDoEErrors(unittest.TestCase):
         design_vals = pyo.ComponentMap(((design_var, 1.0),))
 
         with self.assertRaisesRegex(
-            TypeError,
-            "design_vals values must be 1D array-like iterables.",
+            TypeError, "design_vals values must be 1D array-like iterables."
         ):
             doe_obj.compute_FIM_factorial(design_vals=design_vals)
+
+    def test_compute_fim_factorial_requires_one_design_mode(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment_flag()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        # No design-mode arguments should fail early with a clear contract error.
+        with self.assertRaisesRegex(
+            ValueError,
+            "Missing required argument: specify one of design_vals, "
+            "n_design_points, or abs_step/rel_step.",
+        ):
+            doe_obj.compute_FIM_factorial()
+
+    def test_compute_fim_factorial_design_modes_are_mutually_exclusive(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment_flag()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        model = experiment.get_labeled_model()
+        design_var = next(iter(model.experiment_inputs.keys()))
+        design_vals = pyo.ComponentMap(((design_var, [1.0, 2.0]),))
+
+        # Supplying two modes at once should be rejected as ambiguous.
+        with self.assertRaisesRegex(
+            ValueError,
+            "design_vals, n_design_points, and abs_step/rel_step are "
+            "mutually exclusive.",
+        ):
+            doe_obj.compute_FIM_factorial(design_vals=design_vals, n_design_points=3)
+
+    def test_compute_fim_factorial_abs_step_length_must_match_design_vars(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment_flag()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        with self.assertRaisesRegex(
+            ValueError, "`abs_step` must have the same length of `1` as `design_keys`."
+        ):
+            doe_obj.compute_FIM_factorial(abs_step=[1.0, 2.0])
+
+    def test_compute_fim_factorial_rel_step_length_must_match_design_vars(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        experiment = get_rooney_biegler_experiment_flag()
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        with self.assertRaisesRegex(
+            ValueError, "`rel_step` must have the same length of `1` as `design_keys`."
+        ):
+            doe_obj.compute_FIM_factorial(rel_step=[0.1, 0.2])
 
 
 if __name__ == "__main__":

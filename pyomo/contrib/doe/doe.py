@@ -2276,7 +2276,9 @@ class DesignOfExperiments:
     def _write_factorial_dataframe(self, factorial_results):
         """Write user-requested factorial tabular output to stdout."""
         exclude_keys = {"total_points", "success_count", "failure_count", "FIM_all"}
-        dict_for_df = {k: v for k, v in factorial_results.items() if k not in exclude_keys}
+        dict_for_df = {
+            k: v for k, v in factorial_results.items() if k not in exclude_keys
+        }
         res_df = pd.DataFrame(dict_for_df)
         sys.stdout.write("\n\n=========Factorial results===========\n")
         sys.stdout.write(f"Total points: {factorial_results['total_points']}\n")
@@ -2393,8 +2395,7 @@ class DesignOfExperiments:
         design_suff = None
         if mode is FactorialDesignMode.design_vals:
             design_values, design_suff = self._normalize_factorial_design_vals(
-                model=model,
-                design_vals=design_vals,
+                model=model, design_vals=design_vals
             )
         else:
             design_values = self._generate_factorial_design_values_from_bounds(
@@ -2406,8 +2407,7 @@ class DesignOfExperiments:
             )
 
         factorial_points_list = self._materialize_factorial_points(
-            design_values=design_values,
-            traversal_scheme=traversal_scheme,
+            design_values=design_values, traversal_scheme=traversal_scheme
         )
 
         self.factorial_results = self._run_factorial_sweep(
