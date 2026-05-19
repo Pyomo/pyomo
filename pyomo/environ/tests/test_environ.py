@@ -11,6 +11,7 @@
 #
 
 import math
+import os
 import re
 import sys
 import subprocess
@@ -41,8 +42,12 @@ def collect_import_time(module, preimport=""):
         cmd = f"{preimport}; import {module}"
     else:
         cmd = f"import {module}"
+    env = dict(os.environ)
+    env.pop('COVERAGE_PROCESS_START', None)
     output = subprocess.check_output(
-        [sys.executable, '-X', 'importtime', '-c', cmd], stderr=subprocess.STDOUT
+        [sys.executable, '-X', 'importtime', '-c', cmd],
+        stderr=subprocess.STDOUT,
+        env=env,
     )
     # Note: test only runs in PY3
     output = output.decode()
