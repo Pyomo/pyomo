@@ -304,9 +304,7 @@ class TestUtilsFIM(unittest.TestCase):
 
     def test_compute_correlation_matrix_dataframe_uses_dataframe_labels(self):
         covariance_df = pd.DataFrame(
-            [[4.0, 2.0], [2.0, 3.0]],
-            index=["X1", "X2"],
-            columns=["X1", "X2"],
+            [[4.0, 2.0], [2.0, 3.0]], index=["X1", "X2"], columns=["X1", "X2"]
         )
 
         correlation_matrix = compute_correlation_matrix(covariance_df)
@@ -322,9 +320,7 @@ class TestUtilsFIM(unittest.TestCase):
 
     def test_compute_correlation_matrix_dataframe_rejects_duplicate_columns(self):
         covariance_df = pd.DataFrame(
-            [[4.0, 2.0], [2.0, 3.0]],
-            index=["X1", "X2"],
-            columns=["X1", "X1"],
+            [[4.0, 2.0], [2.0, 3.0]], index=["X1", "X2"], columns=["X1", "X1"]
         )
 
         with self.assertRaisesRegex(
@@ -335,9 +331,7 @@ class TestUtilsFIM(unittest.TestCase):
 
     def test_compute_correlation_matrix_dataframe_rejects_duplicate_rows(self):
         covariance_df = pd.DataFrame(
-            [[4.0, 2.0], [2.0, 3.0]],
-            index=["X1", "X1"],
-            columns=["X1", "X2"],
+            [[4.0, 2.0], [2.0, 3.0]], index=["X1", "X1"], columns=["X1", "X2"]
         )
 
         with self.assertRaisesRegex(
@@ -348,9 +342,7 @@ class TestUtilsFIM(unittest.TestCase):
 
     def test_compute_correlation_matrix_dataframe_rejects_row_column_mismatch(self):
         covariance_df = pd.DataFrame(
-            [[4.0, 2.0], [2.0, 3.0]],
-            index=["X1", "X2"],
-            columns=["X1", "X3"],
+            [[4.0, 2.0], [2.0, 3.0]], index=["X1", "X2"], columns=["X1", "X3"]
         )
 
         with self.assertRaisesRegex(
