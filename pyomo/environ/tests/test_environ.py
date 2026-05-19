@@ -51,7 +51,6 @@ def collect_import_time(module, preimport=""):
     )
     # Note: test only runs in PY3
     output = output.decode()
-    # print(output)
     line_re = re.compile(r'.*:\s*(\d+) \|\s*(\d+) \| ( *)([^ ]+)')
     header_re = re.compile(r'.*:\s*(.*)')
     results = []
@@ -86,12 +85,11 @@ def collect_import_time(module, preimport=""):
             if _module.startswith(basemodule):
                 data[_level].update(inner)
                 data[_level].module[_module] = _self
-            else:
-                # if _level > 0:
+            else:  # _level > 0:
                 data[_level].tpl[_module] = _cumul
         elif _module.startswith(basemodule):
             data[_level].module[_module] = _self
-        else:  # if _level > 0:
+        else:  # _level > 0:
             data[_level].tpl[_module] = _self
     ans = None
     for d in results:
