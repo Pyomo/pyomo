@@ -99,10 +99,13 @@ def collect_import_time(module, preimport=""):
                 "Multiple timing results imported target module '{module}'"
             )
         ans = d
-    return ans
+    return ans, output
 
 
-def summarize_import_time(module, data):
+def summarize_import_time(module, data, raw_output):
+    print(raw_output)
+    print("\n")
+
     modname = module.split('.')[0]
 
     N = int(math.log10(max(max(data.module.values()), max(data.tpl.values())))) + 4
@@ -178,7 +181,7 @@ class TestPyomoEnviron(unittest.TestCase):
         'pypy_version_info' in dir(sys), "PyPy does not support '-X importtime'"
     )
     def test_tpl_import_time(self):
-        data = collect_import_time(
+        data, output = collect_import_time(
             'pyomo.environ',
             # We used to pre-load and pre-start multiprocessing so that the
             # asynchronous task triggered by creating a Lock will not be
@@ -191,7 +194,7 @@ class TestPyomoEnviron(unittest.TestCase):
             # pyomo.environ.
         )
         python_time, module_tpl_time, pyomo_time, tpl_by_time = summarize_import_time(
-            'pyomo.environ', data
+            'pyomo.environ', data, output
         )
 
         # Arbitrarily choose a threshold 10% more than the expected
