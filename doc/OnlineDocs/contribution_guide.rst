@@ -183,9 +183,9 @@ We recognize that generative AI tools are rapidly evolving and this AI contribut
 policy will be updated regularly based on our observations. The following list includes
 specific items we are seeing with AI-generated code contributions and our expectations:
 
-    * **Use of `mock` in unit tests is prohibited**: We do not allow the use of `mock`
-      in our unit tests unless the developer can explain why they can't do unit testing
-      without it. We have observed that AI-generated unit tests excessively use `mock` to
+    * **Use of ``mock`` in unit tests is prohibited**: We do not allow the use of ``mock``
+      in our unit tests unless the developer can provide solid justification as to its
+      necessity. We have observed that AI-generated unit tests excessively use ``mock`` to
       write weak tests that ignore the broader context of the code being tested.
     * **Keep comments concise and curated**: Humans are reading every comment on every
       PR and issue. Help us out by keeping comments short and direct. PR review comments
