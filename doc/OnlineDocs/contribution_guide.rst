@@ -178,6 +178,8 @@ reviewer feedback.
 
 The use of an AI agent to autonomously open, or comment on, PRs or issues is not
 permitted. When interacting with maintainers please do not use AI to speak for you.
+The Pyomo Developers want to interact with humans, not chatbots. We reserve the right
+to close without review PRs and issues we deem to be "AI slop".
 
 We recognize that generative AI tools are rapidly evolving and this AI contribution
 policy will be updated regularly based on our observations. The following list includes
