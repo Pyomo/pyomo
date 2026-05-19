@@ -758,6 +758,11 @@ def compute_covariance_matrix(
         cov = np.linalg.pinv(FIM)
         logger.warning("The FIM is singular. Using pseudo-inverse instead.")
 
+    # check if the covariance matrix is positive semi-definite
+    eigen_values = np.linalg.eigvalsh(cov)
+    if any(eig_val < -1e-10 for eig_val in eigen_values):
+        logger.warning("The covariance matrix is not positive semi-definite.")
+
     cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
 
     return cov
@@ -1865,6 +1870,17 @@ class Estimator:
                             tee=self.tee,
                             solver_options=self.solver_options,
                         )
+                else:
+                    raise ValueError(
+                        'One or more values are missing from "measurement_error". All values of '
+                        'the measurement errors are required for the "SSE_weighted" objective.'
+                    )
+            else:
+                raise AttributeError(
+                    'Experiment model does not have suffix "measurement_error". '
+                    '"measurement_error" is a required suffix for the "SSE_weighted" '
+                    'objective.'
+                )
         else:
             raise ValueError(
                 f"Invalid objective function for covariance calculation. "
