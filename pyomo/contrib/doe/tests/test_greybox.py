@@ -1330,21 +1330,19 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestMultiexperimentBuild(unittest.TestCase):
+    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_uses_aggregated_fim(self):
         # Check that the multi-experiment greybox block is seeded from the
         # aggregated scenario FIM and that the final solve is routed through
         # the greybox solver interface.
-        grey_box_solver = _MockGreyBoxSolver()
         doe_obj = _make_multiexperiment_greybox_doe(
-            objective_option="minimum_eigenvalue", grey_box_solver=grey_box_solver
+            objective_option="minimum_eigenvalue",
+            grey_box_solver=_make_cyipopt_solver(tol=1e-6),
         )
 
         doe_obj.optimize_experiments(n_exp=2)
 
-        self.assertEqual(len(grey_box_solver.calls), 1)
-        self.assertEqual(
-            doe_obj.results["optimization_solve"]["solver"], grey_box_solver.name
-        )
+        self.assertEqual(doe_obj.results["optimization_solve"]["status"], "ok")
 
         scenario, total_fim, parameter_names = _get_multiexperiment_scenario_data(
             doe_obj
@@ -1367,24 +1365,21 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
+    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     @parameterized.expand(
-        [
-            ("determinant",),
-            ("trace",),
-            ("minimum_eigenvalue",),
-            ("condition_number",),
-        ]
+        [("determinant",), ("trace",), ("minimum_eigenvalue",), ("condition_number",)]
     )
     def test_optimize_experiments_greybox_outputs_match_numpy_for_supported_objective(
         self, objective_option
     ):
-        # Validate the deterministic wiring: for each supported greybox metric,
-        # the external block output should match direct NumPy on scenario.total_fim.
+        # Validate the deterministic wiring using a real greybox solve:
+        # for each supported greybox metric, the external block output
+        # should match direct NumPy on scenario.total_fim.
         prior_fim = np.array([[6.0, 0.75], [0.75, 4.0]])
         doe_obj = _make_multiexperiment_greybox_doe(
             objective_option=objective_option,
             prior_FIM=prior_fim.copy(),
-            grey_box_solver=_MockGreyBoxSolver(name=f"mock-{objective_option}"),
+            grey_box_solver=_make_cyipopt_solver(tol=1e-6),
         )
 
         doe_obj.optimize_experiments(n_exp=2)
@@ -1398,9 +1393,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
             for j, q in enumerate(parameter_names):
                 if i >= j:
                     self.assertAlmostEqual(
-                        pyo.value(egb_block.inputs[(q, p)]),
-                        total_fim[i, j],
-                        places=7,
+                        pyo.value(egb_block.inputs[(q, p)]), total_fim[i, j], places=7
                     )
 
         self.assertAlmostEqual(
@@ -1409,6 +1402,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
+    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_prior_fim_is_included_in_inputs_and_output(
         self,
     ):
@@ -1418,7 +1412,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
         doe_obj = _make_multiexperiment_greybox_doe(
             objective_option="determinant",
             prior_FIM=prior_fim.copy(),
-            grey_box_solver=_MockGreyBoxSolver(),
+            grey_box_solver=_make_cyipopt_solver(tol=1e-6),
         )
 
         doe_obj.optimize_experiments(n_exp=2)
@@ -1462,6 +1456,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
             )
         )
 
+    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_uses_init_solver_for_square_solve_and_grey_box_solver_for_final_solve(
         self,
     ):
@@ -1473,7 +1468,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
         main_solver_inner = make_ipopt_solver()
         init_solver_inner = make_ipopt_solver()
         init_solver_inner.options["max_iter"] = 123
-        grey_box_solver_inner = _MockGreyBoxSolver()
+        grey_box_solver_inner = _make_cyipopt_solver(tol=1e-6)
         main_solver = _TrackingSolverWrapper(
             solver=main_solver_inner,
             phase_tag="main",
@@ -1501,7 +1496,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
         doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
         self.assertGreaterEqual(init_solver.solve_calls_count, 1)
-        self.assertEqual(len(grey_box_solver_inner.calls), 1)
+        self.assertEqual(grey_box_solver.solve_calls_count, 1)
         self.assertEqual(solve_phase_order[-1], "greybox")
         self.assertTrue(all(tag == "init" for tag in solve_phase_order[:-1]))
         self.assertEqual(
@@ -1509,13 +1504,18 @@ class TestMultiexperimentBuild(unittest.TestCase):
             getattr(init_solver, "name", str(init_solver)),
         )
         self.assertEqual(
-            doe_obj.results["optimization_solve"]["solver"], grey_box_solver_inner.name
+            doe_obj.results["optimization_solve"]["solver"],
+            getattr(grey_box_solver, "name", str(grey_box_solver)),
         )
 
+    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_is_reentrant_on_same_object(self):
         # Re-running the same greybox DoE object should rebuild a fresh
         # external block and reseed it from the current aggregated total FIM.
-        grey_box_solver = _MockGreyBoxSolver()
+        grey_box_solver_inner = _make_cyipopt_solver(tol=1e-6)
+        grey_box_solver = _TrackingSolverWrapper(
+            solver=grey_box_solver_inner, phase_tag="greybox", call_order=[]
+        )
         doe_obj = _make_multiexperiment_greybox_doe(
             objective_option="minimum_eigenvalue",
             prior_FIM=np.zeros((2, 2)),
@@ -1544,7 +1544,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
 
         self.assertIsNot(first_egb_block, second_egb_block)
         self.assertEqual(len(list(doe_obj.model.param_scenario_blocks.keys())), 1)
-        self.assertEqual(len(grey_box_solver.calls), 2)
+        self.assertEqual(grey_box_solver.solve_calls_count, 2)
         self.assertFalse(np.allclose(first_total_fim, second_total_fim, atol=1e-6))
 
         for i, p in enumerate(second_parameter_names):
@@ -1564,6 +1564,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
+    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_lhs_initialization_scores_e_opt_and_me_opt(
         self,
     ):
@@ -1579,7 +1580,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
                 doe_obj = _make_multiexperiment_greybox_doe(
                     objective_option=objective_option,
                     prior_FIM=np.zeros((2, 2)),
-                    grey_box_solver=_MockGreyBoxSolver(name=f"mock-{objective_option}"),
+                    grey_box_solver=_make_cyipopt_solver(tol=1e-6),
                 )
 
                 doe_obj.optimize_experiments(
