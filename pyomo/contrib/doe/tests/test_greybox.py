@@ -1329,8 +1329,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
+@unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
 class TestMultiexperimentBuild(unittest.TestCase):
-    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_uses_aggregated_fim(self):
         # Check that the multi-experiment greybox block is seeded from the
         # aggregated scenario FIM and that the final solve is routed through
@@ -1365,7 +1365,6 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
-    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     @parameterized.expand(
         [("determinant",), ("trace",), ("minimum_eigenvalue",), ("condition_number",)]
     )
@@ -1402,7 +1401,6 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
-    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_prior_fim_is_included_in_inputs_and_output(
         self,
     ):
@@ -1456,7 +1454,6 @@ class TestMultiexperimentBuild(unittest.TestCase):
             )
         )
 
-    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_uses_init_solver_for_square_solve_and_grey_box_solver_for_final_solve(
         self,
     ):
@@ -1508,7 +1505,6 @@ class TestMultiexperimentBuild(unittest.TestCase):
             getattr(grey_box_solver, "name", str(grey_box_solver)),
         )
 
-    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_is_reentrant_on_same_object(self):
         # Re-running the same greybox DoE object should rebuild a fresh
         # external block and reseed it from the current aggregated total FIM.
@@ -1564,7 +1560,6 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
-    @unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
     def test_optimize_experiments_greybox_lhs_initialization_scores_e_opt_and_me_opt(
         self,
     ):
