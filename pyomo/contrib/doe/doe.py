@@ -714,18 +714,143 @@ class DesignOfExperiments:
             local optima.
 
         """
-        # Check results file name
-        if results_file is not None:
-            if not isinstance(results_file, (pathlib.Path, str)):
-                raise ValueError(
-                    "``results_file`` must be either a Path object or a string."
-                )
+        if results_file is not None and not isinstance(
+            results_file, (pathlib.Path, str)
+        ):
+            raise ValueError(
+                "``results_file`` must be either a Path object or a string."
+            )
 
-        # --- Resolve n_exp and determine operating mode ---
+        n_exp, _template_mode = self._resolve_n_exp_and_mode(n_exp=n_exp)
+        resolved_init_method, resolved_init_solver = (
+            self._resolve_optimize_experiments_initialization(
+                init_method=init_method,
+                init_n_samples=init_n_samples,
+                init_seed=init_seed,
+                init_solver=init_solver,
+                template_mode=_template_mode,
+            )
+        )
+        init_solver_name = getattr(
+            resolved_init_solver, "name", str(resolved_init_solver)
+        )
+
+        sp_timer = TicTocTimer()
+        sp_timer.tic(msg=None)
+        self.logger.info(
+            f"Beginning multi-experiment optimization with {n_exp} experiments."
+        )
+
+        self.model = pyo.ConcreteModel()
+        n_param_scenarios = 1
+        self.scenario_weights = (1.0,)
+        self.model.param_scenario_blocks = pyo.Block(range(n_param_scenarios))
+
+        symmetry_breaking_info = {
+            "enabled": n_exp > 1,
+            "variable": None,
+            "source": None,
+        }
+        diagnostics_warnings = []
+        lhs_init_diagnostics = None
+        lhs_initialization_time = 0.0
+        best_initial_points = None
+
+        primary_solver = self.solver
+        self.solver = resolved_init_solver
+        try:
+            self._build_multi_experiment_blocks(
+                n_param_scenarios=n_param_scenarios,
+                n_exp=n_exp,
+                template_mode=_template_mode,
+            )
+            self._add_symmetry_breaking_constraints(
+                n_param_scenarios=n_param_scenarios,
+                n_exp=n_exp,
+                symmetry_breaking_info=symmetry_breaking_info,
+                diagnostics_warnings=diagnostics_warnings,
+            )
+
+            self.create_multi_experiment_objective_function(self.model)
+            build_time = sp_timer.toc(msg=None)
+            self.logger.info(
+                "Successfully built the multi-experiment DoE model.\nBuild time: %0.1f seconds"
+                % build_time
+            )
+
+            best_initial_points, lhs_init_diagnostics, lhs_initialization_time = (
+                self._apply_optimize_experiment_initialization(
+                    resolved_init_method=resolved_init_method,
+                    init_n_samples=init_n_samples,
+                    init_seed=init_seed,
+                    n_param_scenarios=n_param_scenarios,
+                    n_exp=n_exp,
+                )
+            )
+
+            sp_timer.tic(msg=None)
+            initialization_time = self._run_square_initialization_solve(
+                n_param_scenarios=n_param_scenarios, n_exp=n_exp, timer=sp_timer
+            )
+
+            parameter_names = (
+                self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
+            )
+            self._initialize_scenario_quantities_from_square_solve(
+                n_param_scenarios=n_param_scenarios,
+                n_exp=n_exp,
+                parameter_names=parameter_names,
+            )
+        finally:
+            self.solver = primary_solver
+
+        final_solver = self.grey_box_solver if self.use_grey_box else self.solver
+        final_solver_name = getattr(final_solver, "name", str(final_solver))
+        res = final_solver.solve(
+            self.model, tee=self.grey_box_tee if self.use_grey_box else self.tee
+        )
+
+        solve_time = sp_timer.toc(msg=None)
+        self.logger.info(
+            (
+                "Successfully optimized multi-experiment design."
+                "\nSolve time: %0.1f seconds" % solve_time
+            )
+        )
+        self.logger.info(
+            "Total time for build, initialization, and solve: %0.1f seconds"
+            % (build_time + initialization_time + solve_time)
+        )
+
+        self.results = self._build_optimize_experiments_results(
+            res=res,
+            n_param_scenarios=n_param_scenarios,
+            n_exp=n_exp,
+            parameter_names=parameter_names,
+            template_mode=_template_mode,
+            resolved_init_method=resolved_init_method,
+            init_solver_name=init_solver_name,
+            init_n_samples=init_n_samples,
+            init_seed=init_seed,
+            best_initial_points=best_initial_points,
+            lhs_init_diagnostics=lhs_init_diagnostics,
+            lhs_initialization_time=lhs_initialization_time,
+            symmetry_breaking_info=symmetry_breaking_info,
+            diagnostics_warnings=diagnostics_warnings,
+            final_solver_name=final_solver_name,
+            build_time=build_time,
+            initialization_time=initialization_time,
+            solve_time=solve_time,
+        )
+
+        if results_file is not None:
+            with open(results_file, "w") as file:
+                json.dump(self.results, file, indent=2, cls=_DoEResultsJSONEncoder)
+
+    def _resolve_n_exp_and_mode(self, n_exp):
+        """Resolve experiment count and whether optimize_experiments() is in template mode."""
         n_list = len(self.experiment_list)
         if n_list > 1:
-            # User-initialized mode: experiment list already contains all
-            # pre-initialized experiment objects.
             if n_exp is not None:
                 raise ValueError(
                     "``n_exp`` must not be set when the experiment list contains "
@@ -733,20 +858,18 @@ class DesignOfExperiments:
                     "list).  Either pass a single template experiment and set "
                     "``n_exp``, or pass a fully-initialized list and omit ``n_exp``."
                 )
-            n_exp = n_list
-            _template_mode = False
-        else:
-            # Template mode: single experiment object cloned n_exp times.
-            if n_exp is None:
-                n_exp = 1  # default: single-experiment optimization
-            elif not isinstance(n_exp, int) or n_exp < 1:
-                raise ValueError(
-                    f"``n_exp`` must be a positive integer, got {n_exp!r}."
-                )
-            _template_mode = True
-        # ---------------------------------------------------
+            return n_list, False
 
-        # --- Validate initialization arguments ---
+        if n_exp is None:
+            return 1, True
+        if not isinstance(n_exp, int) or n_exp < 1:
+            raise ValueError(f"``n_exp`` must be a positive integer, got {n_exp!r}.")
+        return n_exp, True
+
+    def _resolve_optimize_experiments_initialization(
+        self, init_method, init_n_samples, init_seed, init_solver, template_mode
+    ):
+        """Validate and normalize optimize_experiments() initialization options."""
         if init_method is None:
             resolved_init_method = None
         else:
@@ -761,7 +884,7 @@ class DesignOfExperiments:
                 )
 
         if resolved_init_method == InitializationMethod.lhs:
-            if not _template_mode:
+            if not template_mode:
                 raise ValueError(
                     "``init_method='lhs'`` is currently supported only in "
                     "template mode (``len(experiment) == 1``)."
@@ -780,428 +903,320 @@ class DesignOfExperiments:
                 raise ValueError(
                     "``init_seed`` must be None or an integer, " f"got {init_seed!r}."
                 )
+
         if init_solver is not None and not hasattr(init_solver, "solve"):
             raise ValueError(
                 "``init_solver`` must be None or a solver object with a 'solve' method."
             )
-        # -----------------------------------------
+
         primary_solver = self.solver
         resolved_init_solver = primary_solver if init_solver is None else init_solver
-        init_solver_name = getattr(
-            resolved_init_solver, "name", str(resolved_init_solver)
-        )
-        lhs_init_diagnostics = None
-        lhs_initialization_time = 0.0
+        return resolved_init_method, resolved_init_solver
 
-        # Start timer
-        sp_timer = TicTocTimer()
-        sp_timer.tic(msg=None)
-        self.logger.info(
-            f"Beginning multi-experiment optimization with {n_exp} experiments."
-        )
-        # Rebuild the multi-experiment model from a clean base each call.
-        self.model = pyo.ConcreteModel()
+    def _build_multi_experiment_blocks(self, n_param_scenarios, n_exp, template_mode):
+        """Build scenario/experiment blocks and validate parameter alignment."""
+        for s in range(n_param_scenarios):
+            scenario_block = self.model.param_scenario_blocks[s]
+            scenario_block.exp_blocks = pyo.Block(range(n_exp))
+            reference_param_names = None
+            reference_param_values = None
 
-        n_param_scenarios = 1  # currently single-scenario optimization
-        # Use an immutable tuple since weights are not intended to be modified
-        self.scenario_weights = (1.0,)  # Single scenario, weight = 1
-        # Add parameter scenario blocks to the model
-        self.model.param_scenario_blocks = pyo.Block(range(n_param_scenarios))
-        symmetry_breaking_info = {
-            "enabled": n_exp > 1,
-            "variable": None,
-            "source": None,
-        }
-        diagnostics_warnings = []
-        # Route all pre-final solves through the initialization solver, then
-        # restore the primary solver for the final optimization solve.
-        self.solver = resolved_init_solver
-        try:
-            # Add experiment(s) for each scenario
-            # TODO: Add s_prev = 0 to handle parameter scenarios
-            for s in range(n_param_scenarios):
-                scenario_block = self.model.param_scenario_blocks[s]
-                scenario_block.exp_blocks = pyo.Block(range(n_exp))
-                reference_param_names = None
-                reference_param_values = None
-                for k in range(n_exp):
-                    # Generate FIM and Sensitivity expressions for each experiment.
-                    # In template mode all experiments share the single template
-                    # (experiment_index=0); in user-initialized mode each experiment
-                    # maps to its own entry in experiment_list (experiment_index=k).
-                    self.create_doe_model(
-                        model=scenario_block.exp_blocks[k],
-                        experiment_index=0 if _template_mode else k,
-                        _for_multi_experiment=True,  # Skip creating L matrix per experiment
+            for k in range(n_exp):
+                self.create_doe_model(
+                    model=scenario_block.exp_blocks[k],
+                    experiment_index=0 if template_mode else k,
+                    _for_multi_experiment=True,
+                )
+
+                if reference_param_names is None:
+                    reference_fd_block = scenario_block.exp_blocks[
+                        k
+                    ].fd_scenario_blocks[0]
+                    reference_param_names = [
+                        str(pyo.ComponentUID(param, context=reference_fd_block))
+                        for param in reference_fd_block.unknown_parameters
+                    ]
+                    reference_param_values = [
+                        float(value)
+                        for value in reference_fd_block.unknown_parameters.values()
+                    ]
+                    continue
+
+                current_fd_block = scenario_block.exp_blocks[k].fd_scenario_blocks[0]
+                current_param_names = [
+                    str(pyo.ComponentUID(param, context=current_fd_block))
+                    for param in current_fd_block.unknown_parameters
+                ]
+                if current_param_names != reference_param_names:
+                    raise ValueError(
+                        "All experiments passed to optimize_experiments() "
+                        "must define the same unknown_parameters in the same "
+                        "order. "
+                        f"Experiment 0 uses {reference_param_names}, while "
+                        f"experiment {k} uses {current_param_names}."
                     )
-                    if reference_param_names is None:
-                        reference_fd_block = scenario_block.exp_blocks[
-                            k
-                        ].fd_scenario_blocks[0]
-                        reference_param_names = [
-                            str(pyo.ComponentUID(param, context=reference_fd_block))
-                            for param in reference_fd_block.unknown_parameters
-                        ]
-                        reference_param_values = [
-                            float(value)
-                            for value in reference_fd_block.unknown_parameters.values()
-                        ]
-                    else:
-                        # Multi-experiment aggregation assumes every experiment FIM is
-                        # computed at the same nominal theta. Validate that user-
-                        # initialized experiments share both the unknown-parameter
-                        # labels and their nominal values instead of silently
-                        # overwriting one experiment with another.
-                        current_fd_block = scenario_block.exp_blocks[
-                            k
-                        ].fd_scenario_blocks[0]
-                        current_param_names = [
-                            str(pyo.ComponentUID(param, context=current_fd_block))
-                            for param in current_fd_block.unknown_parameters
-                        ]
-                        # The sensitivity scenarios and resulting FIM bookkeeping both
-                        # depend on the theta ordering used to build each experiment
-                        # block. Require the same parameter order across experiments so
-                        # the aggregated multi-experiment FIM is formed without
-                        # ambiguity or user confusion.
-                        if current_param_names != reference_param_names:
-                            raise ValueError(
-                                "All experiments passed to optimize_experiments() "
-                                "must define the same unknown_parameters in the same "
-                                "order. "
-                                f"Experiment 0 uses {reference_param_names}, while "
-                                f"experiment {k} uses {current_param_names}."
-                            )
 
-                        current_param_values = [
-                            float(value)
-                            for value in current_fd_block.unknown_parameters.values()
-                        ]
-                        for name, ref_val, cur_val in zip(
-                            reference_param_names,
-                            reference_param_values,
-                            current_param_values,
-                        ):
-                            if not math.isclose(
-                                ref_val, cur_val, rel_tol=1e-12, abs_tol=1e-12
-                            ):
-                                raise ValueError(
-                                    "All experiments passed to optimize_experiments() "
-                                    "must use the same nominal values for "
-                                    "unknown_parameters. "
-                                    f"Parameter '{name}' has value {ref_val} in "
-                                    f"experiment 0 and {cur_val} in experiment {k}."
-                                )
+                current_param_values = [
+                    float(value)
+                    for value in current_fd_block.unknown_parameters.values()
+                ]
+                for name, ref_val, cur_val in zip(
+                    reference_param_names, reference_param_values, current_param_values
+                ):
+                    if not math.isclose(ref_val, cur_val, rel_tol=1e-12, abs_tol=1e-12):
+                        raise ValueError(
+                            "All experiments passed to optimize_experiments() "
+                            "must use the same nominal values for "
+                            "unknown_parameters. "
+                            f"Parameter '{name}' has value {ref_val} in "
+                            f"experiment 0 and {cur_val} in experiment {k}."
+                        )
 
-            # Add symmetry breaking constraints to prevent equivalent permutations for
-            # multiple experiments
-            if n_exp > 1:
-                # Check if user provided a symmetry breaking variable via Suffix
-                # Use first scenario since variable names are the same across all scenarios
-                first_exp_block = (
-                    self.model.param_scenario_blocks[0]
-                    .exp_blocks[0]
+    def _add_symmetry_breaking_constraints(
+        self, n_param_scenarios, n_exp, symmetry_breaking_info, diagnostics_warnings
+    ):
+        """Add optional experiment-ordering constraints for permutation symmetry."""
+        if n_exp <= 1:
+            return
+
+        first_exp_block = (
+            self.model.param_scenario_blocks[0].exp_blocks[0].fd_scenario_blocks[0]
+        )
+
+        if (
+            hasattr(first_exp_block, 'sym_break_cons')
+            and len(first_exp_block.sym_break_cons) > 0
+        ):
+            sym_break_var_list = list(first_exp_block.sym_break_cons.keys())
+            if len(sym_break_var_list) > 1:
+                warning_msg = (
+                    "Multiple variables marked in sym_break_cons. "
+                    f"Using {sym_break_var_list[0].local_name} for symmetry breaking."
+                )
+                self.logger.warning(warning_msg)
+                diagnostics_warnings.append(warning_msg)
+
+            sym_break_var = sym_break_var_list[0]
+            if not any(
+                sym_break_var is inp for inp in first_exp_block.experiment_inputs.keys()
+            ):
+                raise ValueError(
+                    "Variable selected in ``sym_break_cons`` must also be an "
+                    "experiment input variable. "
+                    f"Got non-input variable '{sym_break_var.local_name}'."
+                )
+            symmetry_breaking_info["variable"] = sym_break_var.local_name
+            symmetry_breaking_info["source"] = "user"
+            self.logger.info(
+                f"Using user-specified variable '{sym_break_var.local_name}' for symmetry breaking."
+            )
+        else:
+            sym_break_var = next(iter(first_exp_block.experiment_inputs))
+            symmetry_breaking_info["variable"] = sym_break_var.local_name
+            symmetry_breaking_info["source"] = "auto"
+            self.logger.warning(
+                "No symmetry breaking variable specified. Automatically using the first "
+                f"experiment input '{sym_break_var.local_name}' for ordering constraints. "
+                "To specify a different variable, add: "
+                "m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
+                "m.sym_break_cons[m.your_variable] = None"
+            )
+            diagnostics_warnings.append(
+                "No symmetry breaking variable specified. Automatically using "
+                f"'{sym_break_var.local_name}'."
+            )
+
+        for s in range(n_param_scenarios):
+            for k in range(1, n_exp):
+                var_prev = pyo.ComponentUID(
+                    sym_break_var, context=first_exp_block
+                ).find_component_on(
+                    self.model.param_scenario_blocks[s]
+                    .exp_blocks[k - 1]
                     .fd_scenario_blocks[0]
                 )
+                var_curr = pyo.ComponentUID(
+                    sym_break_var, context=first_exp_block
+                ).find_component_on(
+                    self.model.param_scenario_blocks[s]
+                    .exp_blocks[k]
+                    .fd_scenario_blocks[0]
+                )
+                if var_prev is None or var_curr is None:
+                    raise RuntimeError(
+                        "Failed to map symmetry breaking variable "
+                        f"'{sym_break_var.local_name}' onto scenario {s}, "
+                        f"experiment pair ({k - 1}, {k}). Ensure the variable "
+                        "exists on all experiment blocks with compatible labels."
+                    )
 
-                # Determine symmetry breaking variable
-                if (
-                    hasattr(first_exp_block, 'sym_break_cons')
-                    and len(first_exp_block.sym_break_cons) > 0
-                ):
-                    # User provided symmetry breaking variable(s)
-                    sym_break_var_list = list(first_exp_block.sym_break_cons.keys())
+                con_name = f"symmetry_breaking_s{s}_exp{k}"
+                self.model.param_scenario_blocks[s].add_component(
+                    con_name, pyo.Constraint(expr=var_prev <= var_curr)
+                )
 
-                    if len(sym_break_var_list) > 1:
-                        warning_msg = (
-                            f"Multiple variables marked in sym_break_cons. "
-                            f"Using {sym_break_var_list[0].local_name} for symmetry breaking."
-                        )
-                        self.logger.warning(warning_msg)
-                        diagnostics_warnings.append(warning_msg)
+            self.logger.info(
+                f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
+                f"using variable: {sym_break_var.local_name}"
+            )
 
-                    sym_break_var = sym_break_var_list[0]
-                    if not any(
-                        sym_break_var is inp
-                        for inp in first_exp_block.experiment_inputs.keys()
-                    ):
-                        raise ValueError(
-                            "Variable selected in ``sym_break_cons`` must also be an "
-                            "experiment input variable. "
-                            f"Got non-input variable '{sym_break_var.local_name}'."
-                        )
-                    symmetry_breaking_info["variable"] = sym_break_var.local_name
-                    symmetry_breaking_info["source"] = "user"
-                    self.logger.info(
-                        f"Using user-specified variable '{sym_break_var.local_name}' for symmetry breaking."
+    def _apply_optimize_experiment_initialization(
+        self, resolved_init_method, init_n_samples, init_seed, n_param_scenarios, n_exp
+    ):
+        """Apply optional initialization strategy and return diagnostics."""
+        if resolved_init_method != InitializationMethod.lhs:
+            return None, None, 0.0
+
+        lhs_timer = TicTocTimer()
+        lhs_timer.tic(msg=None)
+        self.logger.info(
+            f"Applying LHS initialization with {init_n_samples} samples per "
+            f"experiment-input dimension..."
+        )
+        best_initial_points, lhs_init_diagnostics = self._lhs_initialize_experiments(
+            lhs_n_samples=init_n_samples, lhs_seed=init_seed, n_exp=n_exp
+        )
+        self.logger.info(
+            "Setting LHS best-found initial design in the optimization model..."
+        )
+        for s in range(n_param_scenarios):
+            for k in range(n_exp):
+                exp_input_vars = self._get_experiment_input_vars(
+                    self.model.param_scenario_blocks[s].exp_blocks[k]
+                )
+                for var, val in zip(exp_input_vars, best_initial_points[k]):
+                    var.set_value(val)
+        lhs_initialization_time = lhs_timer.toc(msg=None)
+        return best_initial_points, lhs_init_diagnostics, lhs_initialization_time
+
+    def _run_square_initialization_solve(self, n_param_scenarios, n_exp, timer):
+        """Run objective-free square solve used to initialize scenario quantities."""
+        self.model.objective.deactivate()
+        for s in range(n_param_scenarios):
+            if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
+                self.model.param_scenario_blocks[s].obj_cons.deactivate()
+
+        self._set_experiment_inputs_fixed(
+            n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=True
+        )
+
+        self.model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
+        self.solver.solve(self.model, tee=self.tee)
+        initialization_time = timer.toc(msg=None)
+
+        self.logger.info(
+            "Successfully initialized the multi-experiment DoE model."
+            "\nInitialization time: %0.1f seconds" % initialization_time
+        )
+
+        self.model.dummy_obj.deactivate()
+        self.model.del_component("dummy_obj")
+        self._set_experiment_inputs_fixed(
+            n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=False
+        )
+        self.model.objective.activate()
+        for s in range(n_param_scenarios):
+            if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
+                self.model.param_scenario_blocks[s].obj_cons.activate()
+
+        return initialization_time
+
+    def _initialize_scenario_quantities_from_square_solve(
+        self, n_param_scenarios, n_exp, parameter_names
+    ):
+        """Initialize objective-specific scenario variables from square-solve FIMs."""
+        for s in range(n_param_scenarios):
+            scenario = self.model.param_scenario_blocks[s]
+            for i, p in enumerate(parameter_names):
+                for j, q in enumerate(parameter_names):
+                    if self.only_compute_fim_lower and i < j:
+                        continue
+                    fim_sum = sum(
+                        pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
+                        for k in range(n_exp)
+                    )
+                    scenario.total_fim[p, q].set_value(fim_sum + self.prior_FIM[i, j])
+
+            total_fim_vals = [
+                pyo.value(scenario.total_fim[p, q])
+                for p in parameter_names
+                for q in parameter_names
+            ]
+            total_fim_np = np.array(total_fim_vals).reshape(
+                (len(parameter_names), len(parameter_names))
+            )
+            if self.only_compute_fim_lower:
+                total_fim_np = self._symmetrize_lower_tri(total_fim_np)
+            obj_cons = getattr(scenario, "obj_cons", None)
+
+            if self.use_grey_box:
+                self._initialize_grey_box_block(
+                    obj_cons.egb_fim_block, total_fim_np, parameter_names
+                )
+            elif obj_cons is not None and hasattr(obj_cons, "L"):
+                min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
+                if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
+                    jitter = np.min(
+                        [
+                            -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
+                            _SMALL_TOLERANCE_DEFINITENESS,
+                        ]
                     )
                 else:
-                    # Use first experiment input as default symmetry breaking variable
-                    sym_break_var = next(iter(first_exp_block.experiment_inputs))
-                    symmetry_breaking_info["variable"] = sym_break_var.local_name
-                    symmetry_breaking_info["source"] = "auto"
-                    self.logger.warning(
-                        "No symmetry breaking variable specified. Automatically using the first "
-                        f"experiment input '{sym_break_var.local_name}' for ordering constraints. "
-                        "To specify a different variable, add: "
-                        "m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL); "
-                        "m.sym_break_cons[m.your_variable] = None"
-                    )
-                    diagnostics_warnings.append(
-                        f"No symmetry breaking variable specified. Automatically using "
-                        f"'{sym_break_var.local_name}'."
-                    )
+                    jitter = 0
 
-                # Add constraints for each scenario
-                for s in range(n_param_scenarios):
-                    for k in range(1, n_exp):
-                        # Get the variable from experiment k-1
-                        var_prev = pyo.ComponentUID(
-                            sym_break_var, context=first_exp_block
-                        ).find_component_on(
-                            self.model.param_scenario_blocks[s]
-                            .exp_blocks[k - 1]
-                            .fd_scenario_blocks[0]
-                        )
-
-                        # Get the variable from experiment k
-                        var_curr = pyo.ComponentUID(
-                            sym_break_var, context=first_exp_block
-                        ).find_component_on(
-                            self.model.param_scenario_blocks[s]
-                            .exp_blocks[k]
-                            .fd_scenario_blocks[0]
-                        )
-                        if var_prev is None or var_curr is None:
-                            raise RuntimeError(
-                                "Failed to map symmetry breaking variable "
-                                f"'{sym_break_var.local_name}' onto scenario {s}, "
-                                f"experiment pair ({k - 1}, {k}). Ensure the variable "
-                                "exists on all experiment blocks with compatible labels."
-                            )
-
-                        # Add symmetry breaking constraint
-                        con_name = f"symmetry_breaking_s{s}_exp{k}"
-                        self.model.param_scenario_blocks[s].add_component(
-                            con_name, pyo.Constraint(expr=var_prev <= var_curr)
-                        )
-
-                    self.logger.info(
-                        f"Added {n_exp - 1} symmetry breaking constraints for scenario {s} "
-                        f"using variable: {sym_break_var.local_name}"
-                    )
-
-            # Create aggregated objective for multi-experiment optimization
-            self.create_multi_experiment_objective_function(self.model)
-
-            # Track time required to build the DoE model
-            build_time = sp_timer.toc(msg=None)
-            self.logger.info(
-                "Successfully built the multi-experiment DoE model.\nBuild time: %0.1f seconds"
-                % build_time
-            )
-
-            # --- Apply experiment initialization (if requested) ---
-            # This must be done AFTER the model is built but BEFORE the square solve
-            # so that the solver uses the correct starting design.
-            if resolved_init_method == InitializationMethod.lhs:
-                lhs_timer = TicTocTimer()
-                lhs_timer.tic(msg=None)
-                self.logger.info(
-                    f"Applying LHS initialization with {init_n_samples} samples per "
-                    f"experiment-input dimension..."
-                )
-                best_initial_points, lhs_init_diagnostics = (
-                    self._lhs_initialize_experiments(
-                        lhs_n_samples=init_n_samples, lhs_seed=init_seed, n_exp=n_exp
-                    )
-                )
-                self.logger.info(
-                    "Setting LHS best-found initial design in the optimization model..."
-                )
-                for s in range(n_param_scenarios):
-                    for k in range(n_exp):
-                        exp_input_vars = self._get_experiment_input_vars(
-                            self.model.param_scenario_blocks[s].exp_blocks[k]
-                        )
-                        for var, val in zip(exp_input_vars, best_initial_points[k]):
-                            var.set_value(val)
-                lhs_initialization_time = lhs_timer.toc(msg=None)
-
-            # ------------------------------------------------------
-            # Reset delta timing so initialization_time measures only square solve.
-            sp_timer.tic(msg=None)
-
-            # Solve the square problem first to initialize the FIM and sensitivity constraints
-            # Deactivate objective expression and objective constraints
-            self.model.objective.deactivate()
-            # Deactivate obj_cons for each scenario (holds Cholesky/determinant/trace constraints)
-            for s in range(n_param_scenarios):
-                if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
-                    self.model.param_scenario_blocks[s].obj_cons.deactivate()
-
-            # Fix the design variables across all scenarios and experiments
-            self._set_experiment_inputs_fixed(
-                n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=True
-            )
-
-            # Create and solve dummy objective for initialization
-            self.model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
-            self.solver.solve(self.model, tee=self.tee)
-
-            # Track time to initialize the DoE model
-            initialization_time = sp_timer.toc(msg=None)
-            self.logger.info(
-                (
-                    "Successfully initialized the multi-experiment DoE model."
-                    "\nInitialization time: %0.1f seconds" % initialization_time
-                )
-            )
-
-            # Deactivate dummy objective
-            self.model.dummy_obj.deactivate()
-            self.model.del_component("dummy_obj")
-
-            # Reactivate objective, obj_cons, and unfix experimental design decisions
-            self._set_experiment_inputs_fixed(
-                n_param_scenarios=n_param_scenarios, n_exp=n_exp, fixed=False
-            )
-            self.model.objective.activate()
-            for s in range(n_param_scenarios):
-                if hasattr(self.model.param_scenario_blocks[s], "obj_cons"):
-                    self.model.param_scenario_blocks[s].obj_cons.activate()
-
-            # Initialize scenario-level quantities from the square-solve FIM.
-            # For the algebraic objective path this means Cholesky/determinant
-            # variables. For the grey box path we explicitly seed the external
-            # block inputs/outputs from the aggregated scenario FIM before the
-            # final solve switches to the grey_box_solver.
-            parameter_names = (
-                self.model.param_scenario_blocks[0].exp_blocks[0].parameter_names
-            )
-
-            for s in range(n_param_scenarios):
-                scenario = self.model.param_scenario_blocks[s]
-                # Update total_fim values from solved individual experiment FIMs
-                # Individual experiment FIMs don't include prior_FIM in multi-experiment mode,
-                # so we add it once here to the aggregated total
+                fim_jittered = total_fim_np + jitter * np.eye(len(parameter_names))
+                L_vals = np.linalg.cholesky(fim_jittered)
                 for i, p in enumerate(parameter_names):
                     for j, q in enumerate(parameter_names):
-                        # When only_compute_fim_lower=True, only the lower triangle is computed
-                        # Upper triangle elements are fixed to 0, so only aggregate lower triangle
-                        if self.only_compute_fim_lower and i < j:
-                            continue
+                        obj_cons.L[p, q].set_value(L_vals[i, j])
 
-                        fim_sum = sum(
-                            pyo.value(scenario.exp_blocks[k].fim[p, q]) or 0
-                            for k in range(n_exp)
-                        )
-                        scenario.total_fim[p, q].set_value(
-                            fim_sum + self.prior_FIM[i, j]
-                        )
-
-                # Build scenario total FIM once and reuse for all objective initializations.
-                total_fim_vals = [
-                    pyo.value(scenario.total_fim[p, q])
-                    for p in parameter_names
-                    for q in parameter_names
-                ]
-                total_fim_np = np.array(total_fim_vals).reshape(
-                    (len(parameter_names), len(parameter_names))
-                )
-                if self.only_compute_fim_lower:
-                    total_fim_np = self._symmetrize_lower_tri(total_fim_np)
-                obj_cons = getattr(scenario, "obj_cons", None)
-
-                if self.use_grey_box:
-                    self._initialize_grey_box_block(
-                        obj_cons.egb_fim_block, total_fim_np, parameter_names
-                    )
-                # Initialize scenario-level variables based on total_fim
-                elif obj_cons is not None and hasattr(obj_cons, "L"):
-                    # Compute Cholesky factorization
-                    # Check positive definiteness and add jitter if needed
-                    min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
-                    if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-                        jitter = np.min(
-                            [
-                                -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
-                                _SMALL_TOLERANCE_DEFINITENESS,
-                            ]
-                        )
-                    else:
-                        jitter = 0
-
-                    fim_jittered = total_fim_np + jitter * np.eye(len(parameter_names))
-
-                    # Compute Cholesky decomposition
-                    L_vals = np.linalg.cholesky(fim_jittered)
-
-                    # Initialize L values
+                if hasattr(obj_cons, "L_inv"):
+                    L_inv_vals = np.linalg.inv(L_vals)
                     for i, p in enumerate(parameter_names):
                         for j, q in enumerate(parameter_names):
-                            obj_cons.L[p, q].set_value(L_vals[i, j])
+                            if i >= j:
+                                obj_cons.L_inv[p, q].set_value(L_inv_vals[i, j])
+                            else:
+                                obj_cons.L_inv[p, q].set_value(0.0)
 
-                    # If trace objective, also initialize L_inv, fim_inv, and cov_trace
-                    if hasattr(obj_cons, "L_inv"):
-                        L_inv_vals = np.linalg.inv(L_vals)
-
+                    if hasattr(obj_cons, "fim_inv"):
+                        fim_inv_np = np.linalg.inv(fim_jittered)
                         for i, p in enumerate(parameter_names):
                             for j, q in enumerate(parameter_names):
-                                if i >= j:
-                                    obj_cons.L_inv[p, q].set_value(L_inv_vals[i, j])
-                                else:
-                                    obj_cons.L_inv[p, q].set_value(0.0)
+                                obj_cons.fim_inv[p, q].set_value(fim_inv_np[i, j])
 
-                        # Initialize fim_inv
-                        if hasattr(obj_cons, "fim_inv"):
-                            fim_inv_np = np.linalg.inv(fim_jittered)
-                            for i, p in enumerate(parameter_names):
-                                for j, q in enumerate(parameter_names):
-                                    obj_cons.fim_inv[p, q].set_value(fim_inv_np[i, j])
+                    if hasattr(obj_cons, "cov_trace"):
+                        obj_cons.cov_trace.set_value(np.sum(L_inv_vals**2))
 
-                        # Initialize cov_trace
-                        if hasattr(obj_cons, "cov_trace"):
-                            initial_cov_trace = np.sum(L_inv_vals**2)
-                            obj_cons.cov_trace.set_value(initial_cov_trace)
+            if obj_cons is not None and hasattr(obj_cons, "determinant"):
+                obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
 
-                if obj_cons is not None and hasattr(obj_cons, "determinant"):
-                    # Initialize determinant
-                    obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
+            if obj_cons is not None and hasattr(obj_cons, "pseudo_trace"):
+                obj_cons.pseudo_trace.set_value(float(np.trace(total_fim_np)))
 
-                if obj_cons is not None and hasattr(obj_cons, "pseudo_trace"):
-                    # Initialize pseudo_trace
-                    pseudo_trace_val = float(np.trace(total_fim_np))
-                    obj_cons.pseudo_trace.set_value(pseudo_trace_val)
-        finally:
-            self.solver = primary_solver
-
-        # Initialization uses the regular/init solver because it operates on the
-        # algebraic square model. The final NLP solve switches to the grey box
-        # solver only after the external block has been fully seeded above.
-        final_solver = self.grey_box_solver if self.use_grey_box else self.solver
-        final_solver_name = getattr(final_solver, "name", str(final_solver))
-
-        # Solve the full model
-        res = final_solver.solve(
-            self.model, tee=self.grey_box_tee if self.use_grey_box else self.tee
-        )
-
-        # Track time used to solve the DoE model
-        solve_time = sp_timer.toc(msg=None)
-
-        self.logger.info(
-            (
-                "Successfully optimized multi-experiment design."
-                "\nSolve time: %0.1f seconds" % solve_time
-            )
-        )
-        self.logger.info(
-            "Total time for build, initialization, and solve: %0.1f seconds"
-            % (build_time + initialization_time + solve_time)
-        )
-
-        # Collect results
+    def _build_optimize_experiments_results(
+        self,
+        res,
+        n_param_scenarios,
+        n_exp,
+        parameter_names,
+        template_mode,
+        resolved_init_method,
+        init_solver_name,
+        init_n_samples,
+        init_seed,
+        best_initial_points,
+        lhs_init_diagnostics,
+        lhs_initialization_time,
+        symmetry_breaking_info,
+        diagnostics_warnings,
+        final_solver_name,
+        build_time,
+        initialization_time,
+        solve_time,
+    ):
+        """Create the optimize_experiments() structured results payload."""
         solver_status = str(res.solver.status)
         termination_condition = str(res.solver.termination_condition)
         if isinstance(res.solver.message, str):
@@ -1224,14 +1239,9 @@ class DesignOfExperiments:
                 )
                 return float("nan")
 
-        # Store results for each parameter scenario using a single structured
-        # payload. The outer ``solution.param_scenarios`` list is always present
-        # so the API shape stays the same for single- and multi-scenario cases.
         param_scenarios = []
         for s in range(n_param_scenarios):
             scenario = self.model.param_scenario_blocks[s]
-
-            # Get aggregated FIM for this scenario
             total_fim_vals = [
                 pyo.value(scenario.total_fim[p, q])
                 for p in parameter_names
@@ -1240,13 +1250,9 @@ class DesignOfExperiments:
             total_fim_np = np.array(total_fim_vals).reshape(
                 (len(parameter_names), len(parameter_names))
             )
-
-            # Complete FIM if only computing lower triangle
             if self.only_compute_fim_lower:
                 total_fim_np = self._symmetrize_lower_tri(total_fim_np)
 
-            # Statistics on the aggregated FIM (consistent with run_doe), guarded
-            # against singular/indefinite matrices and numerical failures.
             log10_a_opt = _safe_metric(
                 "log10 A-opt",
                 lambda fim=total_fim_np: np.log10(np.trace(np.linalg.inv(fim))),
@@ -1270,8 +1276,7 @@ class DesignOfExperiments:
                 lambda fim=total_fim_np: np.log10(np.linalg.cond(fim)),
                 s,
             )
-            # Scenario-level results capture the aggregate design quality and the
-            # common parameter values used by all experiments in the scenario.
+
             scenario_structured = {
                 "param_scenario_id": s,
                 "param_scenario_weight": float(self.scenario_weights[s]),
@@ -1290,9 +1295,6 @@ class DesignOfExperiments:
             }
             for k in range(n_exp):
                 exp_block = scenario.exp_blocks[k]
-                # Each experiment entry carries only quantities that differ from
-                # one experiment block to the next. Measurement-error data is
-                # reported once at the top level as shared problem metadata.
                 experiment_structured = {
                     "exp_id": k,
                     "design": self.get_experiment_input_values(model=exp_block),
@@ -1308,8 +1310,6 @@ class DesignOfExperiments:
 
             param_scenarios.append(scenario_structured)
 
-        # Store labels once because they describe the axes of every numeric list
-        # and matrix in the payload.
         first_exp_block_fd = (
             self.model.param_scenario_blocks[0].exp_blocks[0].fd_scenario_blocks[0]
         )
@@ -1340,14 +1340,11 @@ class DesignOfExperiments:
         )
         lhs_details = lhs_init_diagnostics or {}
 
-        self.results = {
+        return {
             "problem": {
-                # Each parameter scenario corresponds to one parameter vector in
-                # the solve, so this count matches the length of
-                # ``solution["param_scenarios"]``.
                 "number_of_param_scenarios": n_param_scenarios,
                 "number_of_experiments_per_scenario": n_exp,
-                "used_template_experiment": _template_mode,
+                "used_template_experiment": template_mode,
                 "finite_difference_scheme": self._enum_label(self.fd_formula),
                 "finite_difference_step": self.step,
                 "scaled_nominal_parameters": self.scale_nominal_param_value,
@@ -1415,11 +1412,6 @@ class DesignOfExperiments:
                 "param_scenarios": param_scenarios,
             },
         }
-
-        # Save results to file if requested
-        if results_file is not None:
-            with open(results_file, "w") as file:
-                json.dump(self.results, file, indent=2, cls=_DoEResultsJSONEncoder)
 
     # LHS-initialization helpers
     def _get_experiment_input_vars(self, exp_block):
