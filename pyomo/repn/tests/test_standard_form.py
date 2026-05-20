@@ -409,7 +409,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
             )
 
     def test_inf_bounds_normalized(self):
-        """Constraints returning ±inf bounds are treated as unbounded (None).
+        """Constraints returning +/-inf bounds are treated as unbounded (None).
 
         Both pyomo.kernel and AML constraints can return ±inf from
         to_bounded_expression() when the user explicitly passes float('inf').
@@ -417,6 +417,22 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         constraint is not misclassified as a range constraint, and a fully
         unbounded constraint is skipped rather than emitted as a range row.
         """
+        # --- AML: explicit float('inf') in RangedExpression ---
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        # One-sided: (-inf, x, 5) — lb should be treated as unbounded
+        m.c_ub = pyo.Constraint(rule=lambda m: (float('-inf'), m.x, 5))
+        # Fully unbounded: (-inf, x, inf) — should be skipped entirely
+        m.c_skip = pyo.Constraint(rule=lambda m: (float('-inf'), m.x, float('inf')))
+
+        repn2 = LinearStandardFormCompiler().write(
+            m, mixed_form=True, keep_range_constraints=True
+        )
+        by_con2 = {r.constraint: r.bound_type for r in repn2.rows}
+        self.assertEqual(by_con2[m.c_ub], 1)  # ≤, not range
+        self.assertNotIn(m.c_skip, by_con2)  # fully unbounded: skipped
+
+    def test_kernel_compatibility(self):
         import pyomo.kernel as pmo
 
         # --- kernel ---
@@ -444,21 +460,6 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertEqual(rr_map[mk.c_ub], 0.0)
         self.assertEqual(rr_map[mk.c_lb], 0.0)
         self.assertEqual(rr_map[mk.c_rng], 5.0)  # 4 - (-1)
-
-        # --- AML: explicit float('inf') in RangedExpression ---
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var()
-        # One-sided: (-inf, x, 5) — lb should be treated as unbounded
-        m.c_ub = pyo.Constraint(rule=lambda m: (float('-inf'), m.x, 5))
-        # Fully unbounded: (-inf, x, inf) — should be skipped entirely
-        m.c_skip = pyo.Constraint(rule=lambda m: (float('-inf'), m.x, float('inf')))
-
-        repn2 = LinearStandardFormCompiler().write(
-            m, mixed_form=True, keep_range_constraints=True
-        )
-        by_con2 = {r.constraint: r.bound_type for r in repn2.rows}
-        self.assertEqual(by_con2[m.c_ub], 1)  # ≤, not range
-        self.assertNotIn(m.c_skip, by_con2)  # fully unbounded: skipped
 
 
 class TestTemplatedLinearStandardFormCompiler(TestLinearStandardFormCompiler):
