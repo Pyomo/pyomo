@@ -24,6 +24,7 @@ import pytest
 
 scip = SolverFactory('scip_direct')
 ipopt = SolverFactory('ipopt')
+highs = SolverFactory('highs')
 
 
 class MockNLPSolver(SolverBase):
@@ -77,6 +78,7 @@ class TestExamples(unittest.TestCase):
 
 
 class TestInit(unittest.TestCase):
+    @unittest.skipUnless(highs.available(), 'highs is not available')
     def test_lp_init(self):
         """
         For this test, we will create a small linear program,
@@ -117,6 +119,7 @@ class TestInit(unittest.TestCase):
             method=ini.InitializationMethod.lp_approximation,
         )
 
+    @unittest.skipUnless(scip.available(), 'scip is not available')
     def test_global_init(self):
         """
         Same as test_lp_init
@@ -143,6 +146,7 @@ class TestInit(unittest.TestCase):
             method=ini.InitializationMethod.global_opt,
         )
 
+    @unittest.skipUnless(highs.available(), 'highs is not available')
     def test_pwl_init(self):
         """
         Here, we really just want to make sure that the
