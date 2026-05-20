@@ -62,8 +62,10 @@ from pyomo.devel.initialization.pwl_init import _minimize_infeasibility
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.repn.linear import LinearRepnVisitor, LinearRepn
 from pyomo.core.expr.visitor import identify_variables
-import numpy as np
-from scipy.stats import qmc
+from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import attempt_import
+
+qmc, _ = attempt_import('scipy.stats.qmc')
 
 logger = logging.getLogger(__name__)
 
