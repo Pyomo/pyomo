@@ -118,10 +118,10 @@ class FIMExternalGreyBox(
 
         # If logger level is None, use doe_object's logger level
         if logger_level is None:
-            logger_level = (
-                doe_object.logger.level if doe_object is not None else logging.WARNING
-            )
-
+            if doe_object is not None:
+                logger_level = doe_object.logger.level
+            else:
+                logger_level = logging.WARNING
         self.logger.setLevel(level=logger_level)
 
         # Set initial values for inputs
