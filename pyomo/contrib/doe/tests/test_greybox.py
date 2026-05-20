@@ -1585,7 +1585,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
 
                 doe_obj.optimize_experiments(
                     n_exp=2,
-                    init_method="lhs",
+                    init_method="latin_hypercube_sampling",
                     init_n_samples=lhs_n_samples,
                     init_seed=lhs_seed,
                 )
@@ -1603,7 +1603,10 @@ class TestMultiexperimentBuild(unittest.TestCase):
                     tuple(np.round(point, 8)) for point in candidate_points
                 }
 
-                self.assertEqual(doe_obj.results["initialization"]["method"], "lhs")
+                self.assertEqual(
+                    doe_obj.results["initialization"]["method"],
+                    "latin_hypercube_sampling",
+                )
                 self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
                 self.assertGreater(lhs_diag["best_obj"], 0.0)
 
@@ -1672,7 +1675,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
         try:
             doe_obj.optimize_experiments(
                 n_exp=1,
-                init_method="lhs",
+                init_method="latin_hypercube_sampling",
                 init_n_samples=lhs_n_samples,
                 init_seed=lhs_seed,
             )

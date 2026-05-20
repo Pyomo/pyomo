@@ -1257,7 +1257,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("trace")
         doe.optimize_experiments(
             n_exp=n_exp,
-            init_method="lhs",
+            init_method="latin_hypercube_sampling",
             init_n_samples=lhs_n_samples,
             init_seed=lhs_seed,
         )
@@ -1361,7 +1361,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(
             n_exp=n_exp,
-            init_method="lhs",
+            init_method="latin_hypercube_sampling",
             init_n_samples=lhs_n_samples,
             init_seed=lhs_seed,
         )

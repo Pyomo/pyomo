@@ -73,7 +73,7 @@ class FiniteDifferenceStep(Enum):
 
 
 class InitializationMethod(Enum):
-    lhs = "lhs"
+    latin_hypercube_sampling = "latin_hypercube_sampling"
 
 
 class _DoEResultsJSONEncoder(json.JSONEncoder):
@@ -652,7 +652,7 @@ class DesignOfExperiments:
               values from ``get_labeled_model()``. To provide a custom starting
               point, initialize the ``Experiment`` objects with the desired
               design values before passing them in ``experiment``.
-            - ``"lhs"`` (or ``InitializationMethod.lhs``): Use Latin Hypercube Sampling (LHS) to find a good
+            - ``"latin_hypercube_sampling"`` (or ``InitializationMethod.latin_hypercube_sampling``): Use Latin Hypercube Sampling (LHS) to find a good
               initial design. For each experiment-input dimension, ``init_n_samples``
               points are sampled independently using 1-D LHS, and their Cartesian
               product forms the set of candidate experiment designs. The FIM is
@@ -662,13 +662,13 @@ class DesignOfExperiments:
 
         init_n_samples:
             Number of LHS samples per experiment-input dimension when
-            ``init_method="lhs"``. The total number of candidate
+            ``init_method="latin_hypercube_sampling"``. The total number of candidate
             designs is ``init_n_samples ** n_exp_inputs``. A warning is issued
             when this exceeds 10,000. Default: 5.
 
         init_seed:
             Integer seed for the LHS random-number generator (for
-            reproducibility). Used only when ``init_method="lhs"``.
+            reproducibility). Used only when ``init_method="latin_hypercube_sampling"``.
             Default: ``None`` (non-deterministic).
         init_solver:
             Optional solver object used only for initialization phases
@@ -701,7 +701,7 @@ class DesignOfExperiments:
             for k = 1, ..., n_exp-1, which breaks permutation symmetry and can
             significantly reduce solve times.
 
-        LHS Initialization (init_method="lhs"):
+        LHS Initialization (init_method="latin_hypercube_sampling"):
             Each dimension of the experiment inputs is sampled independently
             using a 1-D Latin Hypercube, giving ``init_n_samples`` evenly-spaced
             stratified samples across the variable bounds. The joint candidate
@@ -883,16 +883,16 @@ class DesignOfExperiments:
                     + f"], got {init_method!r}."
                 )
 
-        if resolved_init_method == InitializationMethod.lhs:
+        if resolved_init_method == InitializationMethod.latin_hypercube_sampling:
             if not template_mode:
                 raise ValueError(
-                    "``init_method='lhs'`` is currently supported only in "
+                    "``init_method='latin_hypercube_sampling'`` is currently supported only in "
                     "template mode (``len(experiment) == 1``)."
                 )
             if not scipy_available:
                 raise ImportError(
                     "LHS initialization requires scipy. "
-                    "Please install scipy to use init_method='lhs'."
+                    "Please install scipy to use init_method='latin_hypercube_sampling'."
                 )
             if not isinstance(init_n_samples, int) or init_n_samples < 1:
                 raise ValueError(
@@ -1064,7 +1064,7 @@ class DesignOfExperiments:
         self, resolved_init_method, init_n_samples, init_seed, n_param_scenarios, n_exp
     ):
         """Apply optional initialization strategy and return diagnostics."""
-        if resolved_init_method != InitializationMethod.lhs:
+        if resolved_init_method != InitializationMethod.latin_hypercube_sampling:
             return None, None, 0.0
 
         lhs_timer = TicTocTimer()
@@ -1360,12 +1360,12 @@ class DesignOfExperiments:
                 "solver": init_solver_name,
                 "samples_per_design_variable": (
                     init_n_samples
-                    if resolved_init_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.latin_hypercube_sampling
                     else None
                 ),
                 "random_seed": (
                     init_seed
-                    if resolved_init_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.latin_hypercube_sampling
                     else None
                 ),
                 "candidate_fim_evaluation_mode": lhs_details.get("candidate_fim_mode"),
@@ -1383,7 +1383,7 @@ class DesignOfExperiments:
                 "timed_out": lhs_details.get("timed_out"),
                 "selected_initial_designs": (
                     best_initial_points
-                    if resolved_init_method == InitializationMethod.lhs
+                    if resolved_init_method == InitializationMethod.latin_hypercube_sampling
                     else None
                 ),
                 "best_initial_objective_value": lhs_details.get("best_obj"),
@@ -1655,7 +1655,7 @@ class DesignOfExperiments:
                 f"missing bounds: {missing}. "
                 "Set bounds in your experiment input variables before "
                 "calling ``optimize_experiments`` with "
-                "``init_method='lhs'``."
+                "``init_method='latin_hypercube_sampling'``."
             )
 
         lb_vals = np.array([v.lb for v in exp_input_vars])

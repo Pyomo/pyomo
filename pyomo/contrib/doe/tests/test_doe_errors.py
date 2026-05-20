@@ -850,23 +850,29 @@ class TestDoEErrors(unittest.TestCase):
                 "unsupported init_method",
                 {"init_method": "bad"},
                 ValueError,
-                r"``init_method`` must be one of \[None, 'lhs'\], got 'bad'.",
+                r"``init_method`` must be one of \[None, 'latin_hypercube_sampling'\], got 'bad'.",
             ),
             (
                 "enum init_method still validates init_n_samples",
-                {"init_method": InitializationMethod.lhs, "init_n_samples": 0},
+                {"init_method": InitializationMethod.latin_hypercube_sampling, "init_n_samples": 0},
                 ValueError,
                 r"``init_n_samples`` must be a positive integer, got 0.",
             ),
             (
                 "non-positive init_n_samples",
-                {"init_method": "lhs", "init_n_samples": 0},
+                {
+                    "init_method": "latin_hypercube_sampling",
+                    "init_n_samples": 0,
+                },
                 ValueError,
                 r"``init_n_samples`` must be a positive integer, got 0.",
             ),
             (
                 "non-integer init_n_samples",
-                {"init_method": "lhs", "init_n_samples": 2.5},
+                {
+                    "init_method": "latin_hypercube_sampling",
+                    "init_n_samples": 2.5,
+                },
                 ValueError,
                 r"``init_n_samples`` must be a positive integer, got 2.5.",
             ),
@@ -874,7 +880,7 @@ class TestDoEErrors(unittest.TestCase):
                 "init_seed must be integer",
                 {
                     "n_exp": 2,
-                    "init_method": "lhs",
+                    "init_method": "latin_hypercube_sampling",
                     "init_n_samples": 2,
                     "init_seed": 1.5,
                 },
@@ -898,9 +904,9 @@ class TestDoEErrors(unittest.TestCase):
         )
         with self.assertRaisesRegex(
             ValueError,
-            r"``init_method='lhs'`` is currently supported only in template mode",
+            r"``init_method='latin_hypercube_sampling'`` is currently supported only in template mode",
         ):
-            doe_obj.optimize_experiments(init_method="lhs")
+            doe_obj.optimize_experiments(init_method="latin_hypercube_sampling")
 
     def test_optimize_experiments_lhs_requires_scipy(self):
         # Tests that LHS initialization requires scipy to be available.
@@ -913,7 +919,7 @@ class TestDoEErrors(unittest.TestCase):
             with self.assertRaisesRegex(
                 ImportError, r"LHS initialization requires scipy"
             ):
-                doe_obj.optimize_experiments(init_method="lhs")
+                doe_obj.optimize_experiments(init_method="latin_hypercube_sampling")
         finally:
             doe_module.scipy_available = old_scipy_available
 
@@ -1226,7 +1232,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
                 )
                 try:
                     doe_obj.optimize_experiments(
-                        n_exp=2, init_method="lhs", init_n_samples=10001, init_seed=11
+                        n_exp=2, init_method="latin_hypercube_sampling", init_n_samples=10001, init_seed=11
                     )
                 finally:
                     doe_module.combinations = original_combinations
@@ -1250,7 +1256,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             r"LHS initialization requires explicit lower and upper bounds on all "
             "experiment input variables",
         ):
-            doe_obj.optimize_experiments(init_method="lhs", init_n_samples=2)
+            doe_obj.optimize_experiments(init_method="latin_hypercube_sampling", init_n_samples=2)
 
 
 if __name__ == "__main__":
