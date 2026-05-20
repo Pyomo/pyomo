@@ -43,6 +43,7 @@ def collect_import_time(module, preimport=""):
     else:
         cmd = f"import {module}"
     env = dict(os.environ)
+    env['PYTHONPATH'] = os.pathsep.join(filter(None, sys.path))
     env.pop('COVERAGE_PROCESS_START', None)
     output = subprocess.check_output(
         [sys.executable, '-S', '-X', 'importtime', '-c', cmd],
