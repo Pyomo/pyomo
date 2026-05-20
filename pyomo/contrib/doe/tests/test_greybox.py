@@ -10,6 +10,7 @@ import copy
 import itertools
 import json
 import os.path
+from parameterized import parameterized
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -1366,48 +1367,47 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
-    def test_optimize_experiments_greybox_outputs_match_numpy_for_all_supported_objectives(
-        self,
+    @parameterized.expand(
+        [
+            ("determinant",),
+            ("trace",),
+            ("minimum_eigenvalue",),
+            ("condition_number",),
+        ]
+    )
+    def test_optimize_experiments_greybox_outputs_match_numpy_for_supported_objective(
+        self, objective_option
     ):
         # Validate the deterministic wiring: for each supported greybox metric,
         # the external block output should match direct NumPy on scenario.total_fim.
         prior_fim = np.array([[6.0, 0.75], [0.75, 4.0]])
-        for objective_option in (
-            "determinant",
-            "trace",
-            "minimum_eigenvalue",
-            "condition_number",
-        ):
-            with self.subTest(objective=objective_option):
-                doe_obj = _make_multiexperiment_greybox_doe(
-                    objective_option=objective_option,
-                    prior_FIM=prior_fim.copy(),
-                    grey_box_solver=_MockGreyBoxSolver(name=f"mock-{objective_option}"),
-                )
+        doe_obj = _make_multiexperiment_greybox_doe(
+            objective_option=objective_option,
+            prior_FIM=prior_fim.copy(),
+            grey_box_solver=_MockGreyBoxSolver(name=f"mock-{objective_option}"),
+        )
 
-                doe_obj.optimize_experiments(n_exp=2)
+        doe_obj.optimize_experiments(n_exp=2)
 
-                scenario, total_fim, parameter_names = (
-                    _get_multiexperiment_scenario_data(doe_obj)
-                )
-                egb_block = scenario.obj_cons.egb_fim_block
+        scenario, total_fim, parameter_names = _get_multiexperiment_scenario_data(
+            doe_obj
+        )
+        egb_block = scenario.obj_cons.egb_fim_block
 
-                for i, p in enumerate(parameter_names):
-                    for j, q in enumerate(parameter_names):
-                        if i >= j:
-                            self.assertAlmostEqual(
-                                pyo.value(egb_block.inputs[(q, p)]),
-                                total_fim[i, j],
-                                places=7,
-                            )
+        for i, p in enumerate(parameter_names):
+            for j, q in enumerate(parameter_names):
+                if i >= j:
+                    self.assertAlmostEqual(
+                        pyo.value(egb_block.inputs[(q, p)]),
+                        total_fim[i, j],
+                        places=7,
+                    )
 
-                self.assertAlmostEqual(
-                    pyo.value(egb_block.outputs[doe_obj._grey_box_output_name()]),
-                    _expected_multiexperiment_greybox_output(
-                        objective_option, total_fim
-                    ),
-                    places=7,
-                )
+        self.assertAlmostEqual(
+            pyo.value(egb_block.outputs[doe_obj._grey_box_output_name()]),
+            _expected_multiexperiment_greybox_output(objective_option, total_fim),
+            places=7,
+        )
 
     def test_optimize_experiments_greybox_prior_fim_is_included_in_inputs_and_output(
         self,
