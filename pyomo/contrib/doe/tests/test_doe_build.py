@@ -961,7 +961,10 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=self._make_solver(),
         )
         doe_obj.optimize_experiments(
-            n_exp=2, init_method="latin_hypercube_sampling", init_n_samples=2, init_seed=11
+            n_exp=2,
+            init_method="latin_hypercube_sampling",
+            init_n_samples=2,
+            init_seed=11,
         )
 
         timing = doe_obj.results["timing"]
@@ -1007,7 +1010,10 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=self._make_solver(),
         )
         doe_obj.optimize_experiments(
-            n_exp=2, init_method="latin_hypercube_sampling", init_n_samples=2, init_seed=11
+            n_exp=2,
+            init_method="latin_hypercube_sampling",
+            init_n_samples=2,
+            init_seed=11,
         )
         lhs_init = doe_obj.results["initialization"]
         self.assertEqual(lhs_init["candidate_fim_evaluation_mode"], "serial")
@@ -1042,7 +1048,10 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             solver=self._make_solver(),
         )
         doe_obj.optimize_experiments(
-            n_exp=n_exp, init_method="latin_hypercube_sampling", init_n_samples=lhs_n_samples, init_seed=17
+            n_exp=n_exp,
+            init_method="latin_hypercube_sampling",
+            init_n_samples=lhs_n_samples,
+            init_seed=17,
         )
         lhs_init = doe_obj.results["initialization"]
 

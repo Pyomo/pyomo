@@ -158,8 +158,7 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Experiment model does not have suffix " + '"experiment_outputs".',
+            RuntimeError, "Experiment model does not have suffix 'experiment_outputs'."
         ):
             doe_obj.create_doe_model()
 
@@ -175,8 +174,7 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Experiment model does not have suffix " + '"measurement_error".',
+            RuntimeError, "Experiment model does not have suffix 'measurement_error'."
         ):
             doe_obj.create_doe_model()
 
@@ -192,8 +190,7 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Experiment model does not have suffix " + '"experiment_inputs".',
+            RuntimeError, "Experiment model does not have suffix 'experiment_inputs'."
         ):
             doe_obj.create_doe_model()
 
@@ -209,8 +206,7 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Experiment model does not have suffix " + '"unknown_parameters".',
+            RuntimeError, "Experiment model does not have suffix 'unknown_parameters'."
         ):
             doe_obj.create_doe_model()
 
@@ -854,25 +850,22 @@ class TestDoEErrors(unittest.TestCase):
             ),
             (
                 "enum init_method still validates init_n_samples",
-                {"init_method": InitializationMethod.latin_hypercube_sampling, "init_n_samples": 0},
-                ValueError,
-                r"``init_n_samples`` must be a positive integer, got 0.",
-            ),
-            (
-                "non-positive init_n_samples",
                 {
-                    "init_method": "latin_hypercube_sampling",
+                    "init_method": InitializationMethod.latin_hypercube_sampling,
                     "init_n_samples": 0,
                 },
                 ValueError,
                 r"``init_n_samples`` must be a positive integer, got 0.",
             ),
             (
+                "non-positive init_n_samples",
+                {"init_method": "latin_hypercube_sampling", "init_n_samples": 0},
+                ValueError,
+                r"``init_n_samples`` must be a positive integer, got 0.",
+            ),
+            (
                 "non-integer init_n_samples",
-                {
-                    "init_method": "latin_hypercube_sampling",
-                    "init_n_samples": 2.5,
-                },
+                {"init_method": "latin_hypercube_sampling", "init_n_samples": 2.5},
                 ValueError,
                 r"``init_n_samples`` must be a positive integer, got 2.5.",
             ),
@@ -1232,7 +1225,10 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
                 )
                 try:
                     doe_obj.optimize_experiments(
-                        n_exp=2, init_method="latin_hypercube_sampling", init_n_samples=10001, init_seed=11
+                        n_exp=2,
+                        init_method="latin_hypercube_sampling",
+                        init_n_samples=10001,
+                        init_seed=11,
                     )
                 finally:
                     doe_module.combinations = original_combinations
@@ -1256,7 +1252,9 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             r"LHS initialization requires explicit lower and upper bounds on all "
             "experiment input variables",
         ):
-            doe_obj.optimize_experiments(init_method="latin_hypercube_sampling", init_n_samples=2)
+            doe_obj.optimize_experiments(
+                init_method="latin_hypercube_sampling", init_n_samples=2
+            )
 
 
 if __name__ == "__main__":

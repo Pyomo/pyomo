@@ -67,7 +67,7 @@ optimize_experiments(
 
 - Uses current experiment design values from the model labels directly.
 
-### LHS Initialization (`init_method="lhs"`)
+### LHS Initialization (`init_method="latin_hypercube_sampling"`)
 
 - Currently supported in template mode.
 - Requires explicit lower and upper bounds for all experiment inputs.

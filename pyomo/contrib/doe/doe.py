@@ -1360,12 +1360,14 @@ class DesignOfExperiments:
                 "solver": init_solver_name,
                 "samples_per_design_variable": (
                     init_n_samples
-                    if resolved_init_method == InitializationMethod.latin_hypercube_sampling
+                    if resolved_init_method
+                    == InitializationMethod.latin_hypercube_sampling
                     else None
                 ),
                 "random_seed": (
                     init_seed
-                    if resolved_init_method == InitializationMethod.latin_hypercube_sampling
+                    if resolved_init_method
+                    == InitializationMethod.latin_hypercube_sampling
                     else None
                 ),
                 "candidate_fim_evaluation_mode": lhs_details.get("candidate_fim_mode"),
@@ -1383,7 +1385,8 @@ class DesignOfExperiments:
                 "timed_out": lhs_details.get("timed_out"),
                 "selected_initial_designs": (
                     best_initial_points
-                    if resolved_init_method == InitializationMethod.latin_hypercube_sampling
+                    if resolved_init_method
+                    == InitializationMethod.latin_hypercube_sampling
                     else None
                 ),
                 "best_initial_objective_value": lhs_details.get("best_obj"),
