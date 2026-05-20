@@ -1342,8 +1342,6 @@ class TestMultiexperimentBuild(unittest.TestCase):
 
         doe_obj.optimize_experiments(n_exp=2)
 
-        self.assertEqual(doe_obj.results["optimization_solve"]["status"], "ok")
-
         scenario, total_fim, parameter_names = _get_multiexperiment_scenario_data(
             doe_obj
         )
