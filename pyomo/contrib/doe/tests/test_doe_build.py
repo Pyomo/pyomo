@@ -38,6 +38,7 @@ if scipy_available:
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
+from pyomo.contrib.doe.tests.utils_for_doe_tests import make_ipopt_solver
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 import pyomo.environ as pyo
@@ -162,13 +163,8 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    # Make solver object with
-    # good linear subroutines
-    solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "ma57"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
-    args['solver'] = solver
+    # Make solver object with good linear subroutines.
+    args['solver'] = make_ipopt_solver()
     args['tee'] = False
     args['get_labeled_model_args'] = None
     args['_Cholesky_option'] = True
@@ -714,12 +710,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
     """Coverage for optimize_experiments() build, output, and diagnostics behavior."""
 
     def _make_solver(self):
-        # Make solver object with options for DoE runs.
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
-        return solver
+        return make_ipopt_solver()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_init_solver_used_for_initialization_only(self):

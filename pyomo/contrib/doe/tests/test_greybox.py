@@ -36,6 +36,7 @@ if scipy_available:
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
+from pyomo.contrib.doe.tests.utils_for_doe_tests import make_ipopt_solver
 
 import pyomo.environ as pyo
 
@@ -257,15 +258,8 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    solver = SolverFactory("ipopt")
-    args['solver'] = solver
-    # Make solver object with
-    # good linear subroutines
-    solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "ma57"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
-    args['solver'] = solver
+    # Make solver object with good linear subroutines.
+    args['solver'] = make_ipopt_solver()
     # Make greybox solver object with
     # good linear subroutines
     grey_box_solver = SolverFactory("cyipopt")
@@ -391,14 +385,6 @@ class _TrackingSolverWrapper:
         return getattr(self._solver, name)
 
 
-def _make_ipopt_solver():
-    solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "ma57"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
-    return solver
-
-
 def _make_cyipopt_solver(tol=1e-4):
     grey_box_solver = SolverFactory("cyipopt")
     grey_box_solver.config.options["linear_solver"] = "ma57"
@@ -417,7 +403,7 @@ def _make_multiexperiment_greybox_doe(
         objective_option=objective_option,
         use_grey_box_objective=True,
         step=1e-2,
-        solver=_make_ipopt_solver(),
+        solver=make_ipopt_solver(),
         grey_box_solver=(
             grey_box_solver if grey_box_solver is not None else _MockGreyBoxSolver()
         ),
@@ -1484,8 +1470,8 @@ class TestMultiexperimentBuild(unittest.TestCase):
         # Capture phase labels in solve-call order so we can assert that all
         # initialization solves happen before the single final greybox solve.
         solve_phase_order = []
-        main_solver_inner = _make_ipopt_solver()
-        init_solver_inner = _make_ipopt_solver()
+        main_solver_inner = make_ipopt_solver()
+        init_solver_inner = make_ipopt_solver()
         init_solver_inner.options["max_iter"] = 123
         grey_box_solver_inner = _MockGreyBoxSolver()
         main_solver = _TrackingSolverWrapper(
@@ -1722,7 +1708,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
             objective_option="minimum_eigenvalue",
             use_grey_box_objective=True,
             step=1e-2,
-            solver=_make_ipopt_solver(),
+            solver=make_ipopt_solver(),
             grey_box_solver=grey_box_solver,
             grey_box_tee=True,
         )
@@ -1808,7 +1794,7 @@ class TestMultiexperimentSolve(unittest.TestCase):
             experiment=exp_list,
             objective_option="minimum_eigenvalue",
             step=1e-2,
-            solver=_make_ipopt_solver(),
+            solver=make_ipopt_solver(),
             use_grey_box_objective=True,
             grey_box_solver=_make_cyipopt_solver(tol=1e-6),
             grey_box_tee=False,
@@ -1834,7 +1820,7 @@ class TestMultiexperimentSolve(unittest.TestCase):
             experiment=exp_list,
             objective_option="condition_number",
             step=1e-2,
-            solver=_make_ipopt_solver(),
+            solver=make_ipopt_solver(),
             use_grey_box_objective=True,
             grey_box_solver=_make_cyipopt_solver(tol=1e-6),
             grey_box_tee=False,
@@ -1867,7 +1853,7 @@ class TestSingleExperimentSolve(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
             objective_option="minimum_eigenvalue",
             step=1e-2,
-            solver=_make_ipopt_solver(),
+            solver=make_ipopt_solver(),
             use_grey_box_objective=True,
             grey_box_solver=grey_box_solver,
             grey_box_tee=False,
@@ -1919,7 +1905,7 @@ class TestMultiexperimentError(unittest.TestCase):
                     objective_option=objective_option,
                     use_grey_box_objective=True,
                     step=1e-2,
-                    solver=_make_ipopt_solver(),
+                    solver=make_ipopt_solver(),
                     grey_box_solver=_UnusedGreyBoxSolver(),
                 )
 

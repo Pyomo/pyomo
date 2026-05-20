@@ -46,6 +46,7 @@ if scipy_available:
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
+from pyomo.contrib.doe.tests.utils_for_doe_tests import make_ipopt_solver
 from pyomo.contrib.doe.utils import rescale_FIM
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 
@@ -157,10 +158,7 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
     # Make solver object with good linear subroutines
-    solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "ma57"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
+    solver = make_ipopt_solver()
     args['solver'] = solver
     args['tee'] = False
     args['get_labeled_model_args'] = None
@@ -966,10 +964,7 @@ class TestDoEFactorialFigure(unittest.TestCase):
 class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
     def _make_template_doe(self, objective_option="pseudo_trace"):
         exp = RooneyBieglerMultiExperiment(hour=2.0, y=10.0)
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
+        solver = make_ipopt_solver()
         return DesignOfExperiments(
             experiment=[exp],
             objective_option=objective_option,
@@ -1433,10 +1428,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
             RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
         ]
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
+        solver = make_ipopt_solver()
 
         doe = DesignOfExperiments(
             experiment=exp_list,
@@ -1462,10 +1454,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
             RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
         ]
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
+        solver = make_ipopt_solver()
         # prior_FIM from data `hour = 1, y = 8.3` with default value of parameters, which
         # is theta = {'asymptote': 15, 'rate_constant': 0.5}
         prior_FIM = np.array(
@@ -1517,10 +1506,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             RooneyBieglerMultiExperiment(hour=1.5, y=9.0),
             RooneyBieglerMultiExperiment(hour=3.5, y=12.0),
         ]
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
+        solver = make_ipopt_solver()
         prior_fim = np.array([[1.25, 0.05], [0.05, 0.9]])
 
         doe = DesignOfExperiments(
@@ -1556,10 +1542,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
     def test_optimize_experiments_non_cholesky_determinant_initialization(self):
         # Tests determinant initialization correctness when Cholesky formulation is disabled.
         exp = RooneyBieglerMultiExperiment(hour=2.0, y=10.0)
-        solver = SolverFactory("ipopt")
-        solver.options["linear_solver"] = "ma57"
-        solver.options["halt_on_ampl_error"] = "yes"
-        solver.options["max_iter"] = 3000
+        solver = make_ipopt_solver()
         doe = DesignOfExperiments(
             experiment=[exp],
             objective_option="determinant",

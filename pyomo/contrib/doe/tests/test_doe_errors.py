@@ -31,6 +31,7 @@ from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     RooneyBieglerMultiExperiment,
     RooneyBieglerMultiInputExperimentFlag,
 )
+from pyomo.contrib.doe.tests.utils_for_doe_tests import make_ipopt_solver
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
     RooneyBieglerExperiment,
 )
@@ -76,14 +77,6 @@ def get_rooney_biegler_experiment_flag():
     )
 
 
-def _make_ipopt_solver():
-    solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "ma57"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
-    return solver
-
-
 def get_standard_args(experiment, fd_method, obj_used, flag):
     args = {}
     args['experiment'] = None if experiment is None else [experiment]
@@ -96,13 +89,8 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    # Make solver object with
-    # good linear subroutines
-    solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "ma57"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
-    args['solver'] = solver
+    # Make solver object with good linear subroutines.
+    args['solver'] = make_ipopt_solver()
     args['tee'] = False
     if flag is not None:
         args['get_labeled_model_args'] = {"flag": flag}
@@ -980,7 +968,7 @@ class TestDoEErrors(unittest.TestCase):
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEErrorsRequiringSolver(unittest.TestCase):
     def _make_solver(self):
-        return _make_ipopt_solver()
+        return make_ipopt_solver()
 
     def test_optimize_experiments_non_greybox_rejects_e_and_me_objectives(self):
         # E-opt and ME-opt require the greybox objective path in
