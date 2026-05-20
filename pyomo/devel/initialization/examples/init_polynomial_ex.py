@@ -24,7 +24,7 @@ def main(method: ini.InitializationMethod):
     m = build_model()
     nlp_solver = SolverFactory('ipopt')
     global_solver = SolverFactory('scip_direct')
-    mip_solver = SolverFactory('scip_direct')
+    mip_solver = SolverFactory('highs')
     results = ini.initialize_nlp(
         nlp=m,
         nlp_solver=nlp_solver,
