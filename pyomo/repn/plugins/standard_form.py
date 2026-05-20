@@ -58,6 +58,9 @@ logger = logging.getLogger(__name__)
 
 RowEntry = collections.namedtuple('RowEntry', ['constraint', 'bound_type'])
 
+_inf = float('inf')
+_ninf = -_inf
+
 
 # TODO: make a proper base class
 class LinearStandardFormInfo:
@@ -492,11 +495,11 @@ class _LinearStandardFormCompiler_impl:
                 linear_data = repn.linear.values()
 
             # Normalize ±inf to None: both kernel constraints and AML
-            # RangedExpressions can return ±inf instead of None for unbounded
+            # RangedExpressions can return +/-inf instead of None for unbounded
             # sides (e.g., `(-inf, x, 5)`).  Treat them as unbounded.
-            if lb == -float('inf'):
+            if lb == _ninf:
                 lb = None
-            if ub == float('inf'):
+            if ub == _inf:
                 ub = None
 
             if lb is None and ub is None:
