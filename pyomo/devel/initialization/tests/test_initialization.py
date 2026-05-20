@@ -11,6 +11,7 @@ from typing import Tuple
 
 import pyomo.environ as pyo
 import pyomo.devel.initialization as ini
+from pyomo.devel.initialization.lp_approx_init import qmc_avail
 from pyomo.devel.initialization.examples.init_polynomial_ex import main
 from pyomo.common import unittest
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -79,6 +80,7 @@ class TestExamples(unittest.TestCase):
 
 class TestInit(unittest.TestCase):
     @unittest.skipUnless(highs.available(), 'highs is not available')
+    @unittest.skipUnless(qmc_avail, 'scipy.stats.qmc is not available')
     def test_lp_init(self):
         """
         For this test, we will create a small linear program,

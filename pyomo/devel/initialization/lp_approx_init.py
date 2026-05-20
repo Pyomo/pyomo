@@ -65,7 +65,7 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.dependencies import attempt_import
 
-qmc, _ = attempt_import('scipy.stats.qmc')
+qmc, qmc_avail = attempt_import('scipy.stats.qmc')
 
 logger = logging.getLogger(__name__)
 
