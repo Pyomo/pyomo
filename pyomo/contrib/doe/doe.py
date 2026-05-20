@@ -3491,7 +3491,7 @@ class DesignOfExperiments:
             outputs = [k.name for k, v in model.experiment_outputs.items()]
         except:
             raise RuntimeError(
-                "Experiment model does not have suffix " + '"experiment_outputs".'
+                "Experiment model does not have suffix 'experiment_outputs'."
             )
 
         # Check that experiment_outputs is not empty
@@ -3507,7 +3507,7 @@ class DesignOfExperiments:
             inputs = [k.name for k, v in model.experiment_inputs.items()]
         except:
             raise RuntimeError(
-                "Experiment model does not have suffix " + '"experiment_inputs".'
+                "Experiment model does not have suffix 'experiment_inputs'."
             )
 
         # Check that experiment_inputs is not empty
@@ -3523,7 +3523,7 @@ class DesignOfExperiments:
             parameters = [k.name for k, v in model.unknown_parameters.items()]
         except:
             raise RuntimeError(
-                "Experiment model does not have suffix " + '"unknown_parameters".'
+                "Experiment model does not have suffix 'unknown_parameters'."
             )
 
         # Check that unknown_parameters is not empty
@@ -3539,7 +3539,7 @@ class DesignOfExperiments:
             errors = [k.name for k, v in model.measurement_error.items()]
         except:
             raise RuntimeError(
-                "Experiment model does not have suffix " + '"measurement_error".'
+                "Experiment model does not have suffix 'measurement_error'."
             )
 
         # Check that measurement_error is not empty
