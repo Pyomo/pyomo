@@ -104,10 +104,10 @@ class LinearStandardFormInfo:
         in `A`.  Each element in the list is a 2-tuple of
         (ConstraintData, bound_type).  ``bound_type`` values:
 
-        * ``+1`` – upper-bound row (``Ax ≤ rhs``);
+        * ``+1`` – upper-bound row (``Ax <= rhs``);
         * ``-1`` – lower-bound row (see mode-dependent sign conventions);
         * ``0``  – equality row (``mixed_form`` only);
-        * ``+2`` – range row (``lb - offset ≤ Ax ≤ ub - offset``,
+        * ``+2`` – range row (``lb - offset <= Ax <= ub - offset``,
           coefficients in the upper-bound sense; only produced when
           ``keep_range_constraints=True``).
 
@@ -207,7 +207,7 @@ class LinearStandardFormCompiler:
         ConfigValue(
             default=False,
             domain=bool,
-            description='Emit range constraints (finite lb ≠ ub) as a single '
+            description='Emit range constraints (finite lb != ub) as a single '
             'row with bound_type=2 rather than splitting them into separate '
             'upper- and lower-bound rows.  The rhs entry for such a row is the '
             'adjusted upper bound (ub - offset); the range width (ub - lb) is '
@@ -494,7 +494,7 @@ class _LinearStandardFormCompiler_impl:
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
 
-            # Normalize ±inf to None: both kernel constraints and AML
+            # Normalize +/-inf to None: both kernel constraints and AML
             # RangedExpressions can return +/-inf instead of None for unbounded
             # sides (e.g., `(-inf, x, 5)`).  Treat them as unbounded.
             if lb == _ninf:
