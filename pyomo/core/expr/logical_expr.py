@@ -299,6 +299,10 @@ def count_if(*args):
     return CountIfExpression(tuple(_flattened_boolean_args(args)))
 
 
+@deprecated(
+    "UnaryBooleanExpression is no longer used; see UnaryExpression_Mixin",
+    version="6.10.1.dev0",
+)
 class UnaryBooleanExpression(BooleanExpression):
     """
     Abstract class for single-argument logical expressions.
@@ -332,6 +336,10 @@ class NotExpression(UnaryExpression_Mixin, BooleanExpression):
         return not result[0]
 
 
+@deprecated(
+    "BinaryBooleanExpression is no longer used; see BinaryExpression_Mixin",
+    version="6.10.1.dev0",
+)
 class BinaryBooleanExpression(BooleanExpression):
     """
     Abstract class for binary logical expressions.
